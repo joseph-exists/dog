@@ -71,8 +71,6 @@ class ArchetypeCreate(ArchetypeBase):
 class ArchetypeUpdate(ArchetypeBase):
     title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
 
-    # TODO: this needs to add or remove core traits that a specific Archetype
-
 
 class Archetype(ArchetypeBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
