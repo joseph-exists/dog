@@ -53,7 +53,18 @@ def create_persona(
     """
     Create new persona.
     """
-    persona = Persona.model_validate(persona_in, update={"enabled": True})
+    # Generate persona_name from title
+    persona_name = persona_in.title.lower().replace(" ", "_")[:50]
+    
+    persona = Persona.model_validate(
+        persona_in, 
+        update={
+            "enabled": True,
+            "owner_id": current_user.id,
+            "persona_name": persona_name
+        }
+    )
+    
     session.add(persona)
     session.commit()
     session.refresh(persona)

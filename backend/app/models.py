@@ -103,7 +103,7 @@ class PersonaBase(SQLModel):
 
 
 class PersonaCreate(PersonaBase):
-    pass
+    archetype_id: uuid.UUID | None = None
 
 
 class PersonaUpdate(PersonaBase):
@@ -127,6 +127,7 @@ class Persona(PersonaBase, table=True):
 
 class PersonaPublic(PersonaBase):
     id: uuid.UUID
+    archetype_id: uuid.UUID | None = None
 
 
 class PersonasPublic(SQLModel):
@@ -166,6 +167,35 @@ class ItemPublic(ItemBase):
 
 class ItemsPublic(SQLModel):
     data: list[ItemPublic]
+    count: int
+
+
+class QualityBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+
+
+class QualityCreate(QualityBase):
+    pass
+
+
+class QualityUpdate(QualityBase):
+    name: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+
+
+class Quality(QualityBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = None
+    # We might add relationships to archetypes later
+
+
+class QualityPublic(QualityBase):
+    id: uuid.UUID
+
+
+class QualitiesPublic(SQLModel):
+    data: list[QualityPublic]
     count: int
 
 

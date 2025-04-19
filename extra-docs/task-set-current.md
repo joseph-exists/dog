@@ -1,0 +1,432 @@
+# TinyFoot Backend Development Tasks
+
+This document outlines the tasks needed to complete the TinyFoot backend implementation as specified in the capture-structure.md requirements. Each task includes specific exit criteria and validation steps.
+
+## Existing Models and API Testing
+
+### Task 0: Fix and Test Existing Persona and Archetype Implementation
+**Description**: Add tests for the existing Persona and Archetype models and fix any issues with their implementation.
+
+**Implementation Details**:
+- Create test_archetypes.py in app/tests/api/routes/
+- Create test_personas.py in app/tests/api/routes/
+- Test CRUD operations for archetypes (create, read, update, delete)
+- Test CRUD operations for personas (create, read, update, delete)
+- Identify and fix any issues with the current implementation
+- Ensure archetype_name and persona_name are properly handled
+
+**Exit Criteria**:
+- All tests pass for the existing functionality
+- Any bugs in the current implementation are fixed
+
+**Validation**:
+- Run tests and verify they pass
+- Manually test the API endpoints
+
+## Data Models
+
+### Task 1: Create Quality Model
+**Description**: Create the Quality model class hierarchy in models.py following the SQLModel pattern (Base, Create, Update, DB, Public, Collection).
+
+**Implementation Details**:
+- Create QualityBase with name and description fields
+- Create QualityCreate extending QualityBase
+- Create QualityUpdate with nullable fields
+- Create Quality DB model with id, created_at, updated_at fields
+- Create QualityPublic response model
+- Create QualitiesPublic collection response model
+
+**Exit Criteria**:
+- All required model classes are in models.py
+- Models follow the established pattern
+- Fields have appropriate constraints
+
+**Validation**:
+- Run Alembic migration generation to verify model syntax
+- Write test to validate model field constraints
+
+### Task 2: Create Trait Model
+**Description**: Create the Trait model class hierarchy in models.py following the SQLModel pattern.
+
+**Implementation Details**:
+- Create TraitBase with name and description fields
+- Add fields for archetype_only (bool) and max_active_personas (int, nullable)
+- Create TraitCreate extending TraitBase
+- Create TraitUpdate with nullable fields
+- Create Trait DB model with id, created_at, updated_at fields
+- Add appropriate relationships to Archetype model
+- Create TraitPublic response model
+- Create TraitsPublic collection response model
+
+**Exit Criteria**:
+- All required model classes are in models.py
+- Models follow the established pattern
+- Fields have appropriate constraints
+- Relationships between models are properly defined
+
+**Validation**:
+- Run Alembic migration generation to verify model syntax
+- Write test to validate model field constraints
+
+### Task 3: Create TraitArchetype Relationship Model
+**Description**: Create a model to manage the many-to-many relationship between Traits and Archetypes, including configuration data.
+
+**Implementation Details**:
+- Create ArchetypeTraitLink model with trait_id and archetype_id foreign keys
+- Add fields to track if trait is modifiable (is_modifiable)
+- Add field to track if trait is only modifiable during creation (modifiable_at_creation_only)
+- Add field to track if trait is required for personas of this archetype
+- Add appropriate relationships to Trait and Archetype models
+
+**Exit Criteria**:
+- Relationship model properly defined
+- Association proxies or convenience methods defined if needed
+
+**Validation**:
+- Run Alembic migration generation to verify model syntax
+- Write test to validate relationship functionality
+
+### Task 4: Create TraitPersona Relationship Model
+**Description**: Create a model to manage the relationship between Traits and Personas.
+
+**Implementation Details**:
+- Create PersonaTraitLink model with trait_id and persona_id foreign keys
+- Add fields to store trait value or configuration if needed
+- Add appropriate relationships to Trait and Persona models
+
+**Exit Criteria**:
+- Relationship model properly defined
+- Association proxies or convenience methods defined if needed
+
+**Validation**:
+- Run Alembic migration generation to verify model syntax
+- Write test to validate relationship functionality
+
+### Task 5: Update Existing Models
+**Description**: Update existing Archetype and Persona models to include the new relationships.
+
+**Implementation Details**:
+- Add traits relationship to Archetype model
+- Add traits relationship to Persona model
+- Add archetype relationship to Persona model (if not already present)
+- Add appropriate cascading behavior for deletions
+
+**Exit Criteria**:
+- Existing models updated with new relationships
+- Relationships have correct cascade behavior
+
+**Validation**:
+- Run Alembic migration generation to verify model syntax
+- Write test to validate relationship behavior
+
+## Database Migrations
+
+### Task 6: Generate and Review Alembic Migration
+**Description**: Generate an Alembic migration for all model changes and review it for correctness.
+
+**Implementation Details**:
+- Start backend container interactive session
+- Run alembic revision with autogenerate
+- Carefully review the generated migration file
+- Ensure foreign keys, constraints, and indexes are correctly defined
+
+**Exit Criteria**:
+- Migration file generated and reviewed
+- All model changes are correctly captured in the migration
+
+**Validation**:
+- Verify the migration can be applied without errors
+- Verify the migration can be rolled back if needed
+
+### Task 7: Apply Alembic Migration
+**Description**: Apply the migration to the database.
+
+**Implementation Details**:
+- Run alembic upgrade head
+- Verify database schema matches expected changes
+
+**Exit Criteria**:
+- Migration applied successfully
+- Database schema updated correctly
+
+**Validation**:
+- Verify the database schema with a database inspection tool
+- Run application and verify it can connect to the database without errors
+
+## CRUD Operations
+
+### Task 8: Implement Quality CRUD Operations
+**Description**: Add CRUD operations for Quality model in crud.py.
+
+**Implementation Details**:
+- Create create_quality function
+- Create get_quality and get_qualities functions
+- Create update_quality function
+- Create delete_quality function
+
+**Exit Criteria**:
+- All required CRUD operations are implemented
+- Functions follow the established pattern
+- All operations include proper error handling
+
+**Validation**:
+- Write unit tests for each CRUD operation
+- Verify all tests pass
+
+### Task 9: Implement Trait CRUD Operations
+**Description**: Add CRUD operations for Trait model in crud.py.
+
+**Implementation Details**:
+- Create create_trait function
+- Create get_trait and get_traits functions
+- Create update_trait function
+- Create delete_trait function
+
+**Exit Criteria**:
+- All required CRUD operations are implemented
+- Functions follow the established pattern
+- All operations include proper error handling
+
+**Validation**:
+- Write unit tests for each CRUD operation
+- Verify all tests pass
+
+### Task 10: Implement Relationship CRUD Operations
+**Description**: Add CRUD operations for trait assignment to archetypes and personas.
+
+**Implementation Details**:
+- Create add_trait_to_archetype function with configuration parameters
+- Create remove_trait_from_archetype function
+- Create add_trait_to_persona function
+- Create remove_trait_from_persona function
+- Create update_trait_in_persona function if needed
+
+**Exit Criteria**:
+- All required relationship CRUD operations are implemented
+- Functions follow the established pattern
+- All operations include proper error handling
+
+**Validation**:
+- Write unit tests for each CRUD operation
+- Verify all tests pass
+
+### Task 11: Update Persona CRUD Operations
+**Description**: Update persona CRUD operations to handle archetype relationships.
+
+**Implementation Details**:
+- Update create_persona to associate with an archetype
+- Update create_persona to inherit traits from the archetype as needed
+- Update functions to handle trait inheritance rules
+
+**Exit Criteria**:
+- Updated CRUD operations handle archetype and trait relationships
+- Business rules for trait inheritance are properly implemented
+
+**Validation**:
+- Write unit tests for each updated CRUD operation
+- Verify all tests pass
+
+## API Routes
+
+### Task 12: Implement Qualities API Routes
+**Description**: Create qualities.py route file with CRUD endpoints.
+
+**Implementation Details**:
+- Create router with /qualities prefix
+- Add GET endpoint for retrieving all qualities with pagination
+- Add GET endpoint for retrieving a specific quality
+- Add POST endpoint for creating a quality (superuser only)
+- Add PUT endpoint for updating a quality (superuser only)
+- Add DELETE endpoint for deleting a quality (superuser only)
+
+**Exit Criteria**:
+- All required endpoints are implemented
+- Endpoints follow established pattern
+- Appropriate permissions are enforced
+- Response models are correctly defined
+
+**Validation**:
+- Write API tests for each endpoint
+- Verify all tests pass
+
+### Task 13: Implement Traits API Routes
+**Description**: Create traits.py route file with CRUD endpoints.
+
+**Implementation Details**:
+- Create router with /traits prefix
+- Add GET endpoint for retrieving all traits with pagination
+- Add GET endpoint for retrieving a specific trait
+- Add POST endpoint for creating a trait (superuser only)
+- Add PUT endpoint for updating a trait (superuser only)
+- Add DELETE endpoint for deleting a trait (superuser only)
+
+**Exit Criteria**:
+- All required endpoints are implemented
+- Endpoints follow established pattern
+- Appropriate permissions are enforced
+- Response models are correctly defined
+
+**Validation**:
+- Write API tests for each endpoint
+- Verify all tests pass
+
+### Task 14: Update Archetypes API Routes
+**Description**: Update archetypes.py to handle trait relationships.
+
+**Implementation Details**:
+- Add endpoint for adding a trait to an archetype
+- Add endpoint for removing a trait from an archetype
+- Add endpoint for listing traits associated with an archetype
+- Add endpoint for updating trait configuration within an archetype
+
+**Exit Criteria**:
+- New endpoints are implemented
+- Endpoints follow established pattern
+- Appropriate permissions are enforced
+- Response models are correctly defined
+
+**Validation**:
+- Write API tests for each new and updated endpoint
+- Verify all tests pass
+
+### Task 15: Update Personas API Routes
+**Description**: Update personas.py to handle archetype and trait relationships.
+
+**Implementation Details**:
+- Update create persona endpoint to require archetype association
+- Add endpoint for listing traits associated with a persona
+- Add endpoint for updating trait values within a persona
+- Add validation to ensure trait modifications follow archetype rules
+
+**Exit Criteria**:
+- Updated endpoints handle archetype and trait relationships
+- Business rules for trait inheritance and modification are enforced
+- Appropriate permissions are enforced
+- Response models are correctly defined
+
+**Validation**:
+- Write API tests for each updated endpoint
+- Verify all tests pass
+
+### Task 16: Update API Router Registration
+**Description**: Update app/api/main.py to include the new routers.
+
+**Implementation Details**:
+- Import new router modules
+- Add include_router statements for new routers
+- Ensure routes are included in the appropriate order
+
+**Exit Criteria**:
+- All new routers are registered correctly
+- API documentation shows all expected endpoints
+
+**Validation**:
+- Start the API server and verify all routes are accessible
+- Check the OpenAPI documentation for completeness
+
+## Tests
+
+### Task 17: Write Trait Model Tests
+**Description**: Create tests for the Trait model and its relationships.
+
+**Implementation Details**:
+- Create test_trait.py in app/tests/api/routes/
+- Add tests for creating, retrieving, updating, and deleting traits
+- Test permission enforcement for trait operations
+
+**Exit Criteria**:
+- All trait endpoints have corresponding tests
+- Tests verify both success and failure cases
+- Tests verify permission enforcement
+
+**Validation**:
+- Run tests and verify they pass
+- Verify test coverage with coverage tool
+
+### Task 18: Write Quality Model Tests
+**Description**: Create tests for the Quality model and its endpoints.
+
+**Implementation Details**:
+- Create test_quality.py in app/tests/api/routes/
+- Add tests for creating, retrieving, updating, and deleting qualities
+- Test permission enforcement for quality operations
+
+**Exit Criteria**:
+- All quality endpoints have corresponding tests
+- Tests verify both success and failure cases
+- Tests verify permission enforcement
+
+**Validation**:
+- Run tests and verify they pass
+- Verify test coverage with coverage tool
+
+### Task 19: Write Archetype-Trait Relationship Tests
+**Description**: Create tests for the archetype-trait relationship operations.
+
+**Implementation Details**:
+- Update or create tests for adding traits to archetypes
+- Test trait inheritance rules
+- Test trait configuration within archetypes
+
+**Exit Criteria**:
+- All archetype-trait relationship operations have corresponding tests
+- Tests verify both success and failure cases
+- Tests verify business rules are enforced
+
+**Validation**:
+- Run tests and verify they pass
+- Verify test coverage with coverage tool
+
+### Task 20: Write Persona-Trait Relationship Tests
+**Description**: Create tests for the persona-trait relationship operations.
+
+**Implementation Details**:
+- Update or create tests for persona creation with archetype
+- Test trait inheritance from archetype to persona
+- Test trait modification rules based on archetype configuration
+
+**Exit Criteria**:
+- All persona-trait relationship operations have corresponding tests
+- Tests verify both success and failure cases
+- Tests verify business rules are enforced
+
+**Validation**:
+- Run tests and verify they pass
+- Verify test coverage with coverage tool
+
+## Integration and Final Verification
+
+### Task 21: End-to-End Testing
+**Description**: Verify the complete flow works as expected.
+
+**Implementation Details**:
+- Create a test that simulates the user flow described in capture-structure.md
+- Test creating an archetype with traits
+- Test creating a persona with that archetype
+- Test trait inheritance and modification
+
+**Exit Criteria**:
+- End-to-end test passes successfully
+- All business requirements are met
+
+**Validation**:
+- Run the end-to-end test
+- Manually test the flow with API requests
+
+### Task 22: Documentation and Final Review
+**Description**: Document the new features and perform a final review.
+
+**Implementation Details**:
+- Update docstrings for all new functions and endpoints
+- Verify OpenAPI documentation is complete and accurate
+- Perform a code review against RULES.md guidelines
+
+**Exit Criteria**:
+- All new code has appropriate documentation
+- Code follows established patterns and guidelines
+- No regression issues are found
+
+**Validation**:
+- Run all tests and verify they pass
+- Review OpenAPI documentation for completeness
+- Manual verification of key workflows

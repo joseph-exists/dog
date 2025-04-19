@@ -53,7 +53,16 @@ def create_archetype(
     """
     Create new archetype.
     """
-    archetype = Archetype.model_validate(archetype_in, update={"enabled": True})
+    # Generate archetype_name from title
+    archetype_name = archetype_in.title.lower().replace(" ", "_")[:50]
+    
+    archetype = Archetype.model_validate(
+        archetype_in, 
+        update={
+            "enabled": True,
+            "archetype_name": archetype_name
+        }
+    )
     session.add(archetype)
     session.commit()
     session.refresh(archetype)
