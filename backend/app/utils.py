@@ -12,7 +12,7 @@ from jwt.exceptions import InvalidTokenError
 from app.core import security
 from app.core.config import settings
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 

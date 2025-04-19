@@ -72,6 +72,28 @@ class ArchetypeUpdate(ArchetypeBase):
     title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
 
 
+class ArchetypeTraitLink(SQLModel, table=True):
+    archetype_id: uuid.UUID = Field(
+        foreign_key="archetype.id", primary_key=True, ondelete="CASCADE"
+    )
+    trait_id: uuid.UUID = Field(
+        foreign_key="trait.id", primary_key=True, ondelete="CASCADE"
+    )
+    # Configuration fields
+    is_modifiable: bool = Field(default=True)
+    modifiable_at_creation_only: bool = Field(default=False)
+    is_required: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = None
+
+    # Define direct relationships to parent models
+    # These are the one-to-many relationships from parent to link table
+    # Note: We use string references for the type hints to avoid circular imports
+    archetype: "Archetype" = Relationship(back_populates="trait_links")
+    trait: "Trait" = Relationship(back_populates="archetype_links")
+
+
+# Update Archetype class to include relationship
 class Archetype(ArchetypeBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     title: str = Field(max_length=255)
@@ -79,16 +101,35 @@ class Archetype(ArchetypeBase, table=True):
     enabled: bool = True
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime | None = None
+
+    # maintain existing relationships
     personas: List["Persona"] = Relationship(
         back_populates="archetype", sa_relationship_kwargs={"lazy": "selectin"}
     )
-    # core_traits: List["Trait"] = Relationship(
-    #   back_populates="archetypal_source", sa_relationship_kwargs={"lazy": "selectin"}
-    # )
 
 
+
+    # direct relationship to the link table (one-to-many)
+    # this gives us access to the relationship configuration in ArchetypeTraitLink
+    trait_links: list["ArchetypeTraitLink"] = Relationship(back_populates="archetype")
+
+    # many-to-many relationship through the link table
+    # this gives us a convenience accessor to get associated traits directly
+    traits: list["Trait"] = Relationship(
+        back_populates="archetypes", # matches the name in Trait
+        link_model=ArchetypeTraitLink, # Specifies the link table
+        sa_relationship_kwargs={
+            "viewonly": True,  # can't modify traits through this relationship'
+            "lazy": "selectin", # Eager loading strategy for performance
+        },
+    )
+
+
+# Update ArchetypePublic to include traits
 class ArchetypePublic(ArchetypeBase):
     id: uuid.UUID
+    archetype_name: str
+    enabled: bool
 
 
 class ArchetypesPublic(SQLModel):
@@ -226,7 +267,21 @@ class Trait(TraitBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime | None = None
-    # Relationships to be added when we create the link models
+
+    # Direct relationship to the link table (one-to-many)
+    # This gives us access to the relationship configuration in ArchetypeTraitLink
+    archetype_links: list["ArchetypeTraitLink"] = Relationship(back_populates="trait")
+
+    # many to many relationship through the link table
+    # this gives us a convenience accessor to get associated archtypes directly
+    archetypes: list["Archetype"] = Relationship(
+        back_populates="traits", # matches the name in Archetype
+        link_model=ArchetypeTraitLink, # specifies the link table
+        sa_relationship_kwargs={
+            "viewonly": True, # NO MODIFYING ARCHETYPES THROUGH THIS RELATIONSHIP
+            "lazy": "selectin", # Eager loading strategy for performance
+        },
+    )
 
 
 class TraitPublic(TraitBase):
@@ -242,6 +297,33 @@ class TraitsPublic(SQLModel):
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# Schemas for public trait configuration display and manipulation
+class TraitConfigBase(SQLModel):
+    is_modifiable: bool = Field(default=True)
+    modifiable_at_creation_only: bool = Field(default=False)
+    is_required: bool = Field(default=False)
+
+
+class TraitConfigCreate(TraitConfigBase):
+    trait_id: uuid.UUID
+
+
+class TraitConfigUpdate(TraitConfigBase):
+    is_modifiable: bool | None = Field(default=None)
+    modifiable_at_creation_only: bool | None = Field(default=None)
+    is_required: bool | None = Field(default=None)
+
+
+class TraitConfigPublic(TraitConfigBase):
+    trait_id: uuid.UUID
+    trait: TraitPublic | None = None
+
+
+class TraitConfigsPublic(SQLModel):
+    data: list[TraitConfigPublic]
+    count: int
 
 
 # Contents of JWT token
