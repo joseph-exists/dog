@@ -204,6 +204,40 @@ class Message(SQLModel):
     message: str
 
 
+class TraitBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+    archetype_only: bool = Field(default=False)
+    max_active_personas: int | None = Field(default=None, ge=0)
+
+
+class TraitCreate(TraitBase):
+    pass
+
+
+class TraitUpdate(TraitBase):
+    name: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    description: str | None = Field(default=None, max_length=255)
+    archetype_only: bool | None = Field(default=None)
+    max_active_personas: int | None = Field(default=None, ge=0)
+
+
+class Trait(TraitBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = None
+    # Relationships to be added when we create the link models
+
+
+class TraitPublic(TraitBase):
+    id: uuid.UUID
+
+
+class TraitsPublic(SQLModel):
+    data: list[TraitPublic]
+    count: int
+
+
 # JSON payload containing access token
 class Token(SQLModel):
     access_token: str
