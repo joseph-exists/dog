@@ -30,7 +30,7 @@ def read_archetypes(
     statement = select(Archetype).offset(skip).limit(limit)
     archetypes = session.exec(statement).all()
 
-    return ArchetypesPublic(data=archetypes, count=count)
+    return ArchetypesPublic(data=archetypes, count=count) # type: ignore
 
 
 @router.get("/{id}", response_model=ArchetypePublic)
@@ -55,9 +55,9 @@ def create_archetype(
     """
     # Generate archetype_name from title
     archetype_name = archetype_in.title.lower().replace(" ", "_")[:50]
-    
+
     archetype = Archetype.model_validate(
-        archetype_in, 
+        archetype_in,
         update={
             "enabled": True,
             "archetype_name": archetype_name

@@ -30,7 +30,7 @@ def read_personas(
     statement = select(Persona).offset(skip).limit(limit)
     personas = session.exec(statement).all()
 
-    return PersonasPublic(data=personas, count=count)
+    return PersonasPublic(data=personas, count=count) # type:ignore
 
 
 @router.get("/{id}", response_model=Persona)
@@ -55,16 +55,16 @@ def create_persona(
     """
     # Generate persona_name from title
     persona_name = persona_in.title.lower().replace(" ", "_")[:50]
-    
+
     persona = Persona.model_validate(
-        persona_in, 
+        persona_in,
         update={
             "enabled": True,
             "owner_id": current_user.id,
             "persona_name": persona_name
         }
     )
-    
+
     session.add(persona)
     session.commit()
     session.refresh(persona)

@@ -14,6 +14,10 @@ from app.models import (
     ArchetypeCreate,
     Persona,
     PersonaCreate,
+    Trait,
+    TraitCreate,
+    Quality,
+    QualityCreate
 )
 
 
@@ -82,3 +86,20 @@ def create_persona(
     session.commit()
     session.refresh(db_persona)
     return db_persona
+
+def create_quality(*, session: Session, item_in: QualityCreate, owner_id: uuid.UUID) -> Quality:
+    db_quality = Quality.model_validate(quality_in, update={"owner_id": owner_id})
+    session.add(db_quality)
+    session.commit()
+    session.refresh(db_quality)
+    return db_quality
+
+
+def create_trait(
+    *, session: Session, trait_in: TraitCreate, owner_id: uuid.UUID
+) -> Trait:
+    db_trait = Trait.model_validate(trait_in, update={"owner_id": owner_id})
+    session.add(db_trait)
+    session.commit()
+    session.refresh(db_trait)
+    return db_trait
