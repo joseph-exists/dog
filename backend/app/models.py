@@ -226,6 +226,13 @@ class PersonaTraitLink(PersonaTraitLinkBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
+class PersonaQualityLink(PersonaQualityLinkBase, table=True):
+    """
+    database model for many-to-many relationship between Personas and Qualities.
+    relationships defined post model declaration.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
 
 class Archetype(ArchetypeBase, table=True):
     """
@@ -352,6 +359,30 @@ Quality.archetypes = Relationship(
     sa_relationship_kwargs={"lazy": "selectin"}
 )
 
+Quality.personas = Relationship(
+    back_populates="qualities",
+    link_model=PersonaQualityLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
+Persona.qualities = Relationship(
+    back_populates="personas",
+    link_model=PersonaQualityLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
+Persona.traits = Relationship(
+    back_populates="personas",
+    link_model=PersonaTraitLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
+Trait.personas = Relationship(
+    back_populates="traits",
+    link_model=PersonaTraitLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
 
 # Define relationships for the link model
 ArchetypeTraitLink.archetype = Relationship(back_populates="trait_links")
@@ -363,6 +394,8 @@ ArchetypePersonaLink.persona = Relationship(back_populates="archetype_links")
 ArchetypeQualityLink.archetype = Relationship(back_populates="quality_links")
 ArchetypeQualityLink.quality = Relationship(back_populates="archetype_links")
 
+PersonaTraitLink.persona = Relationship(back_populates="trait_links")
+PersonaTraitLink.trait = Relationship(back_populates="persona_links")
 
 # Add backref relationships to main models for the link tables
 Archetype.trait_links = Relationship(back_populates="archetype")
@@ -374,26 +407,17 @@ Persona.archetype_links = Relationship(back_populates="persona")
 Archetype.quality_links = Relationship(back_populates="archetype")
 Quality.archetype_links = Relationship(back_populates="quality")
 
+Persona.trait_links = Relationship(back_populates="persona")
+Trait.persona_links = Relationship(back_populates="trait")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Persona.quality_links = Relationship(back_populates="persona")
+Quality.persona_links = Relationship(back_populates="quality")
 
 
 
 # Schemas for public trait configuration display and manipulation
+# THIS IS NEXT BIG TODO
+
 class TraitConfigBase(SQLModel):
     is_modifiable: bool = Field(default=True)
     modifiable_at_creation_only: bool = Field(default=False)
@@ -418,32 +442,3 @@ class TraitConfigPublic(TraitConfigBase):
 class TraitConfigsPublic(SQLModel):
     data: list[TraitConfigPublic]
     count: int
-
-
-
-
-
-# ==================== Define Relationships ====================
-# Define relationships after all classes to avoid circular reference issues
-
-# Define the relationship from Archetype to Trait
-Archetype.traits = Relationship(
-    back_populates="archetypes",
-    link_model=ArchetypeTraitLink,
-    sa_relationship_kwargs={"lazy": "selectin"}
-)
-
-# Define the relationship from Trait to Archetype
-Trait.archetypes = Relationship(
-    back_populates="traits",
-    link_model=ArchetypeTraitLink,
-    sa_relationship_kwargs={"lazy": "selectin"}
-)
-
-# Define relationships for the link model
-ArchetypeTraitLink.archetype = Relationship(back_populates="trait_links")
-ArchetypeTraitLink.trait = Relationship(back_populates="archetype_links")
-
-# Add backref relationships to main models for the link tables
-Archetype.trait_links = Relationship(back_populates="archetype")
-Trait.archetype_links = Relationship(back_populates="trait")
