@@ -110,3 +110,30 @@ def delete_persona(
     session.delete(persona)
     session.commit()
     return Message(message="Persona deleted successfully")
+
+@router.post("/from-archetype/{archetype_id}", response_model=PersonaPublic)
+def create_persona_from_archetype(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    archetype_id: uuid.UUID,
+    persona_in: PersonaCreate
+) -> Any:
+    """
+    Create a new persona based on an archetype.
+    This will inherit traits and qualities from the archetype.
+    """
+    # Verify the archetype exists
+    archetype = session.get(Archetype, archetype_id)
+    if not archetype:
+        raise HTTPException(status_code=404, detail="Archetype not found")
+
+    try:
+        persona = crud.create_persona_with_archetype(
+            session=session,
+            persona_in=persona_in,
+            archetype_id=archetype_id
+        )
+        return persona
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

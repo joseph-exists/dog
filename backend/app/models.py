@@ -5,7 +5,7 @@ from pydantic import EmailStr
 from sqlalchemy.sql.sqltypes import UUID
 from sqlmodel import Field, Relationship, SQLModel
 from datetime import datetime
-
+from enum import Enum, auto
 
 # investigate datetime
 # investigate other sqlmodel imports
@@ -117,6 +117,71 @@ class ItemsPublic(SQLModel):
     data: list[ItemPublic]
     count: int
 
+# ============ Event Models ============
+
+class EventBase(SQLModel):
+    """ Base model for events that can trigger state changes"""
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=100)
+    event_type: str = Field(min_length=1, max_length=100)
+    # NOTE: event_type categories and structure?
+
+class EventCreate(EventBase):
+    """Model for creating events"""
+    pass
+
+class EventUpdate(EventBase):
+    """Model for updating events"""
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    event_type: str | None = Field(default=None, min_length=1, max_length=100)
+
+class Event(EventBase, table=True):
+    """Database model for events."""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+class EventPublic(EventBase):
+    """Public model for Event API responses."""
+    id: uuid.UUID
+    created_at: datetime
+
+class EventsPublic(SQLModel):
+    """Collection model for Event API responses."""
+    data: List[EventPublic]
+    count: int
+
+class QualityState(str, Enum):
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    REMOVED = "removed"
+
+class QualityEventTriggerBase(SQLModel):
+    """
+    Base model for defining events that can trigger quality state changes.
+    """
+    quality_id: uuid.UUID = Field(foreign_key="quality.id")
+    event_id: uuid.UUID = Field(foreign_key="event.id")
+    new_state: QualityState
+
+class QualityEventTrigger(QualityEventTriggerBase, table=True):
+    """
+    Database model for quality event triggers.
+    Defines what happens to a quality when a specific event occurs.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    # Optional condition logic (could be expanded later or refactored with maybe functor)
+    condition_json: str | None = Field(default=None)
+
+
+class QualitySourceType(str, Enum):
+    TRAIT_DEPENDENT = "trait_dependent"
+    DEFAULT = "default"
+    MANUALLY_ADDED = "manually_added"
+
+
+
 # ============ Base Models ++++++++
 
 class ArchetypeBase(SQLModel):
@@ -145,6 +210,7 @@ class ArchetypeTraitLinkBase(SQLModel):
 class PersonaTraitLinkBase(SQLModel):
     persona_id: uuid.UUID = Field(foreign_key="persona.id")
     trait_id: uuid.UUID = Field(foreign_key="trait.id")
+    is_inherited: bool = Field(default=False)
 
 class ArchetypeQualityLinkBase(SQLModel):
     archetype_id: uuid.UUID = Field(foreign_key="archetype.id")
@@ -153,12 +219,14 @@ class ArchetypeQualityLinkBase(SQLModel):
 class PersonaQualityLinkBase(SQLModel):
     persona_id: uuid.UUID = Field(foreign_key="persona.id")
     quality_id: uuid.UUID = Field(foreign_key="quality.id")
+    source_type: QualitySourceType = Field(default=QualitySourceType.TRAIT_DEPENDENT)
+    state: QualityState = Field(default=QualityState.ENABLED)
 
 class ArchetypePersonaLinkBase(SQLModel):
     archetype_id: uuid.UUID = Field(foreign_key="archetype.id")
     persona_id: uuid.UUID = Field(foreign_key="persona.id")
 
-class QualityTraitLinkbase(SQLModel):
+class QualityTraitLinkBase(SQLModel):
     quality_id: uuid.UUID = Field(foreign_key="quality.id")
     trait_id: uuid.UUID = Field(foreign_key="trait.id")
 
@@ -226,6 +294,10 @@ class PersonaTraitLink(PersonaTraitLinkBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
+    # If inherited, track which Archetype it came from
+    source_archetype_id: uuid.UUID | None = Field(default=None, foreign_key="archetype.id")
+
+
 class PersonaQualityLink(PersonaQualityLinkBase, table=True):
     """
     database model for many-to-many relationship between Personas and Qualities.
@@ -233,6 +305,11 @@ class PersonaQualityLink(PersonaQualityLinkBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
+    # if quality is trait dependent
+    source_trait_id: uuid.UUID | None = Field(default=None, foreign_key="trait.id")
+    # if a quality is inherited from an archetype
+    source_archetype_id: uuid.UUID | None = Field(default=None, foreign_key="archetype.id")
+
 
 class Archetype(ArchetypeBase, table=True):
     """
@@ -266,6 +343,31 @@ class Trait(TraitBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
+
+class QualityTraitLink(QualityTraitLinkBase, table=True):
+    """
+    Database model for the many-to-many relationship between Qualities and Traits.
+    Defines which Qualities are automatically associated with which Traits.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    # Define whether this Quality is automatically enabled when the Trait is present
+    auto_enable: bool = Field(default=True)
+
+    # Define the requirement level of this Quality for the Trait
+    is_required: bool = Field(default=False)
+
+# ========== api models for quality trait link special case ======
+
+class QualityTraitLinkCreate(QualityTraitLinkBase):
+    auto_enable: bool = Field(default=True)
+    is_required: bool = Field(default=False)
+
+class QualityTraitLinkUpdate(SQLModel):
+    auto_enable: bool = Field(default=True)
+    is_required: bool = Field(default=None)
+
 
 
 
@@ -314,6 +416,32 @@ class QualitiesPublic(SQLModel):
     count: int
 
 # need to understand union models - ephemeral, dynamic, and static?
+
+# ====== QualityTraitLink and QualityEvent classes need to go here after the above class declarations
+
+class QualityTraitLinkPublic(QualityTraitLinkBase):
+    id: uuid.UUID
+    created_at: datetime
+    auto_enable: bool
+    is_required: bool
+    trait: TraitPublic | None = None
+    quality: QualityPublic | None = None
+
+class QualityEventTriggerCreate(QualityEventTriggerBase):
+    condition_json: str | None = Field(default=None)
+
+class QualityEventTriggerUpdate(SQLModel):
+    new_state: QualityState | None = Field(default=None)
+    condition_json: str | None = Field(default=None)
+
+class QualityEventTriggerPublic(QualityEventTriggerBase):
+    id: uuid.UUID
+    created_at: datetime
+    condition_json: str | None
+    event: EventPublic | None = None
+    quality: QualityPublic | None = None
+
+
 
 # ==================== Define Relationships ====================
 
@@ -383,6 +511,19 @@ Trait.personas = Relationship(
     sa_relationship_kwargs={"lazy": "selectin"}
 )
 
+Quality.traits = Relationship(
+    back_populates="qualities",
+    link_model=QualityTraitLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
+Trait.qualities = Relationship(
+    back_populates="traits",
+    link_model=QualityTraitLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
+
 
 # Define relationships for the link model
 ArchetypeTraitLink.archetype = Relationship(back_populates="trait_links")
@@ -396,6 +537,9 @@ ArchetypeQualityLink.quality = Relationship(back_populates="archetype_links")
 
 PersonaTraitLink.persona = Relationship(back_populates="trait_links")
 PersonaTraitLink.trait = Relationship(back_populates="persona_links")
+
+QualityTraitLink.quality = Relationship(back_populates="trait_links")
+QualityTraitLink.trait = Relationship(back_populates="quality_links")
 
 # Add backref relationships to main models for the link tables
 Archetype.trait_links = Relationship(back_populates="archetype")
@@ -413,7 +557,16 @@ Trait.persona_links = Relationship(back_populates="trait")
 Persona.quality_links = Relationship(back_populates="persona")
 Quality.persona_links = Relationship(back_populates="quality")
 
+# Add Event relationships
+Event.quality_triggers = Relationship(back_populates="event")
+QualityEventTrigger.event = Relationship(back_populates="quality_triggers")
 
+QualityEventTrigger.quality = Relationship(back_populates="event_triggers")
+Quality.event_triggers = Relationship(back_populates="quality")
+
+# Add source relationships for quality links
+PersonaQualityLink.source_trait = Relationship()
+PersonaQualityLink.source_archetype = Relationship()
 
 # Schemas for public trait configuration display and manipulation
 # THIS IS NEXT BIG TODO
