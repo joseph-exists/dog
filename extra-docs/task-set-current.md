@@ -68,7 +68,7 @@ This document outlines the tasks needed to complete the TinyFoot backend impleme
 - Run Alembic migration generation to verify model syntax
 - Write test to validate model field constraints
 
-### Task 3: Create TraitArchetype Relationship Model
+### Task 3: COMPLETE: Create TraitArchetype Relationship Model
 **Description**: Create a model to manage the many-to-many relationship between Traits and Archetypes, including configuration data.
 
 **Implementation Details**:
@@ -193,6 +193,13 @@ This document outlines the tasks needed to complete the TinyFoot backend impleme
 
 ### Task 10: Implement Relationship CRUD Operations
 **Description**: Add CRUD operations for trait assignment to archetypes and personas.
+
+Additional during discovery for CRUD and API routes:
+
+Trait Inheritance: When a Persona is associated with an Archetype, it should inherit all of that Archetype's traits. We'll need to add code to handle this in the CRUD operation for creating a Persona.
+Trait Modification Rules: Some traits are marked as modifiable, some are modifiable only during creation, and some are required. We'll need to enforce these rules in the API endpoints.
+Maximum Active Personas: Some traits have a max_active_personas limit. We'll need to add validation logic to enforce this limit.
+Mutually Exclusive Traits: The example mentions "Chaotic" and "Harmonious" as mutually exclusive traits. We might need to add a way to define trait groups where only one trait from the group can be active on a Persona.
 
 **Implementation Details**:
 - Create add_trait_to_archetype function with configuration parameters

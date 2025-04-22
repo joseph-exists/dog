@@ -1,13 +1,6 @@
 # SQLModel, Pydantic, and Alembic Best Practices for Relationship Definitions
 
-This is the result of an extended Claude conversation, which I've edited over time.
-
-    SQLModel, Pydantic, and Alembic documentation
-    All documentation within this repo up to that point (4/21)
-    models.py
-    my frustration at not understanding
-
-SQLModel combines SQLAlchemy's ORM functionality with Pydantic's validation capabilities, creating a unique approach to handling model relationships. Let me explain how Option 1 (single file with relationships defined after all classes) fits within this ecosystem and outline best practices.
+SQLModel combines SQLAlchemy's ORM functionality with Pydantic's validation capabilities, creating a unique approach to handling model relationships.
 
 ## SQLModel Relationship Definition Best Practices
 
@@ -104,6 +97,6 @@ Hero.team = Relationship(back_populates="heroes")
 
 4. **Keep Creation/Update/Response Models Simple**: These don't need relationships, so they can be defined anywhere after their base classes.
 
-5. **Document Your Approach**: Add a comment explaining this pattern so future developers understand the organization.
+5. **Document Your Choices and Reasons**: Add thorough inline comments explaining how you are following these patterns so future developers understand the organization.
 
 This approach is fully compatible with SQLModel, Pydantic, and Alembic, and follows recommended practices for handling circular relationships in complex models.

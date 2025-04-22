@@ -1,6 +1,6 @@
 Generic single-database configuration.
 
-Local dev:
+Development workflow:
 
 Make changes to models (models.py)
 Restart the backend
@@ -12,9 +12,10 @@ Create an alembic revision
     (alembic revision --autogenerate -m "what the revision wants to do"
 Review that revision!
     /app/app/alembic/versions (note: there will be a nested app directory in docker container and you will start in the higher level app)
-Once you are satisfied with the revision!
+    note: i've found this is a good time to migrate it to my IDE so I can review there
 Run the migration
     alembic upgrade head
+
 
 Now you absolutely need to:
     move the file you've created through alembic autogenerate into your alembic/versions folder locally, with the same name.

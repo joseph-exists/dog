@@ -1,0 +1,274 @@
+import uuid
+from typing import List, Optional, Any
+from datetime import datetime
+from sqlmodel import SQLModel, Field, Relationship
+
+# ==================== Base Models ====================
+
+class ArchetypeBase(SQLModel):
+    """Base model for Archetype with common fields."""
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(min_length=1)
+
+
+class TraitBase(SQLModel):
+    """Base model for Trait with common fields."""
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(min_length=1)
+
+
+class ArchetypeTraitLinkBase(SQLModel):
+    """Base model for the link between Archetypes and Traits."""
+    archetype_id: uuid.UUID = Field(foreign_key="archetype.id")
+    trait_id: uuid.UUID = Field(foreign_key="trait.id")
+
+
+# ==================== Create Models ====================
+
+class ArchetypeCreate(ArchetypeBase):
+    """Model for creating an Archetype."""
+    pass
+
+
+class TraitCreate(TraitBase):
+    """Model for creating a Trait."""
+    pass
+
+
+# ==================== Update Models ====================
+
+class ArchetypeUpdate(SQLModel):
+    """Model for updating an Archetype."""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None, min_length=1)
+
+
+class TraitUpdate(SQLModel):
+    """Model for updating a Trait."""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None, min_length=1)
+
+
+# ==================== Database Models ====================
+
+class ArchetypeTraitLink(ArchetypeTraitLinkBase, table=True):
+    """
+    Database model for the many-to-many relationship between Archetypes and Traits.
+    Relationships will be defined after all models are declared.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Archetype(ArchetypeBase, table=True):
+    """
+    Database model for Archetype.
+    Relationships will be defined after all models are declared.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    # The traits relationship will be defined later
+
+
+class Trait(TraitBase, table=True):
+    """
+    Database model for Trait.
+    Relationships will be defined after all models are declared.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    # The archetypes relationship will be defined later
+
+
+# ==================== Public Models ====================
+
+class ArchetypePublic(ArchetypeBase):
+    """Public model for Archetype API responses."""
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class TraitPublic(TraitBase):
+    """Public model for Trait API responses."""
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class ArchetypesPublic(SQLModel):
+    """Collection model for Archetype API responses."""
+    data: List[ArchetypePublic]
+    count: int
+
+
+class TraitsPublic(SQLModel):
+    """Collection model for Trait API responses."""
+    data: List[TraitPublic]
+    count: int
+
+
+# ==================== Define Relationships ====================
+# Define relationships after all classes to avoid circular reference issues
+
+# Define the relationship from Archetype to Trait
+Archetype.traits = Relationship(
+    back_populates="archetypes",
+    link_model=ArchetypeTraitLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
+# Define the relationship from Trait to Archetype
+Trait.archetypes = Relationship(
+    back_populates="traits",
+    link_model=ArchetypeTraitLink,
+    sa_relationship_kwargs={"lazy": "selectin"}
+)
+
+# Define relationships for the link model
+ArchetypeTraitLink.archetype = Relationship(back_populates="trait_links")
+ArchetypeTraitLink.trait = Relationship(back_populates="archetype_links")
+
+# Add backref relationships to main models for the link tables
+Archetype.trait_links = Relationship(back_populates="archetype")
+Trait.archetype_links = Relationship(back_populates="trait")
+
+
+
+
+OLD FROM MODELS.PY
+
+class Persona(PersonaBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    enabled: bool = True
+    title: str = Field(max_length=255)
+    persona_name: str | None = Field(index=True)
+    # foreign key to archetype
+    archetype_id: uuid.UUID | None = Field(foreign_key="archetype.id", index=True)
+    archetype: Archetype = Relationship(back_populates="personas")
+    # TODO: add custom per-persona traits
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    # owner: User | None = Relationship(back_populates="personas")
+
+    trait_links: list["PersonaTraitLink"] = Relationship(back_populates="persona")
+    traits: list["Trait"] = Relationship(
+        back_populates="personas",
+        link_model=PersonaTraitLink,
+        sa_relationship_kwargs={
+            "viewonly": True,
+            "lazy": "selectin",
+        },
+)
+
+
+    # direct relationship to the link table (one-to-many)
+    """ # commenting out - maybe add back later
+    # this gives us access to the relationship configuration in ArchetypeTraitLink
+    trait_links: list["ArchetypeTraitLink"] = Relationship(back_populates="archetype")
+
+    # many-to-many relationship through the link table
+    # this gives us a convenience accessor to get associated traits directly
+    traits: list["Trait"] = Relationship(
+        back_populates="archetypes", # matches the name in Trait
+        link_model=ArchetypeTraitLink, # Specifies the link table
+        sa_relationship_kwargs={
+            "viewonly": True,  # can't modify traits through this relationship'
+            "lazy": "selectin", # Eager loading strategy for performance
+        },
+    )
+    """
+
+# class ArchetypeTraitLink(ArchetypeTraitLinkBase, table=True):
+    """ # this is old - delete after proving new pattern?
+        archetype_id: uuid.UUID = Field(
+            foreign_key="archetype.id", primary_key=True, ondelete="CASCADE"
+        )
+        trait_id: uuid.UUID = Field(
+            foreign_key="trait.id", primary_key=True, ondelete="CASCADE"
+        )
+        # Configuration fields
+        is_modifiable: bool = Field(default=True)
+        modifiable_at_creation_only: bool = Field(default=False)
+        is_required: bool = Field(default=False)
+        created_at: datetime = Field(default_factory=datetime.now)
+        updated_at: datetime | None = None
+
+        # Define direct relationships to parent models
+        # These are the one-to-many relationships from parent to link table
+        # Note: We use string references for the type hints to avoid circular imports
+        archetype: "Archetype" = Relationship(back_populates="trait_links")
+        trait: "Trait" = Relationship(back_populates="archetype_links")
+
+# Update Archetype class to include relationship
+    class Archetype(ArchetypeBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # title: str = Field(max_length=255)
+    # archetype_name: str = Field(index=True)
+    # enabled: bool = True
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = None
+
+     # delete only when relationship is reproduced
+    # maintain existing relationships
+    personas: List["Persona"] = Relationship(
+        back_populates="archetype", sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
+
+class Trait(TraitBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = None
+"""
+
+""" # delete later when replicated
+    # Direct relationship to the link table (one-to-many)
+    # This gives us access to the relationship configuration in ArchetypeTraitLink
+    archetype_links: list["ArchetypeTraitLink"] = Relationship(back_populates="trait")
+
+    # many to many relationship through the link table
+    # this gives us a convenience accessor to get associated archtypes directly
+    archetypes: list["Archetype"] = Relationship(
+        back_populates="traits", # matches the name in Archetype
+        link_model=ArchetypeTraitLink, # specifies the link table
+        sa_relationship_kwargs={
+            "viewonly": True, # NO MODIFYING ARCHETYPES THROUGH THIS RELATIONSHIP
+            "lazy": "selectin", # Eager loading strategy for performance
+        },
+    )
+
+    persona_links: list["PersonaTraitLink"] = Relationship(back_populates="trait")
+    personas: list["Persona"] = Relationship(
+        back_populates="traits",
+        link_model=PersonaTraitLink,
+        sa_relationship_kwargs={
+            "viewonly": True,
+            "lazy": "selectin",
+        },
+    )
+
+"""
+class PersonaTraitLink(SQLModel, table=True):
+    # Foreign keys with proper cascade behavior
+    persona_id: uuid.UUID = Field(
+        foreign_key="persona.id", primary_key=True, ondelete="CASCADE"
+    )
+    trait_id: uuid.UUID = Field(
+        foreign_key="trait.id", primary_key=True, ondelete="CASCADE"
+    )
+
+    # Configuration and value fields
+    # Note: This could vary based on updated requirements
+    # For example, if traits can have different values for different personas
+    trait_value: str | None = Field(default=None, max_length=255)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = None
+
+    # Direct relationships to parent models
+    persona: "Persona" = Relationship(back_populates="trait_links")
+    trait: "Trait" = Relationship(back_populates="persona_links")
