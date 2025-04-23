@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
+from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Archetype,
@@ -31,7 +32,7 @@ def read_personas(
     statement = select(Persona).offset(skip).limit(limit)
     personas = session.exec(statement).all()
 
-    return PersonasPublic(data=personas, count=count) # type:ignore
+    return PersonasPublic(data=personas, count=count)  # type:ignore
 
 
 @router.get("/{id}", response_model=Persona)
@@ -62,8 +63,8 @@ def create_persona(
         update={
             "enabled": True,
             "owner_id": current_user.id,
-            "persona_name": persona_name
-        }
+            "persona_name": persona_name,
+        },
     )
 
     session.add(persona)
@@ -112,13 +113,14 @@ def delete_persona(
     session.commit()
     return Message(message="Persona deleted successfully")
 
+
 @router.post("/from-archetype/{archetype_id}", response_model=PersonaPublic)
 def create_persona_from_archetype(
     *,
     session: SessionDep,
     current_user: CurrentUser,
     archetype_id: uuid.UUID,
-    persona_in: PersonaCreate
+    persona_in: PersonaCreate,
 ) -> Any:
     """
     Create a new persona based on an archetype.
@@ -131,9 +133,7 @@ def create_persona_from_archetype(
 
     try:
         persona = crud.create_persona_with_archetype(
-            session=session,
-            persona_in=persona_in,
-            archetype_id=archetype_id
+            session=session, persona_in=persona_in, archetype_id=archetype_id
         )
         return persona
     except Exception as e:

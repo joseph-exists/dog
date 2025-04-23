@@ -30,7 +30,7 @@ from app.models import (
     ArchetypePersonaLink,
     QualityState,
     QualitySourceType,
-    PersonaTraitLink
+    PersonaTraitLink,
 )
 
 
@@ -100,7 +100,10 @@ def create_persona(
     session.refresh(db_persona)
     return db_persona
 
-def create_quality(*, session: Session, item_in: QualityCreate, owner_id: uuid.UUID) -> Quality:
+
+def create_quality(
+    *, session: Session, quality_in: QualityCreate, owner_id: uuid.UUID
+) -> Quality:
     db_quality = Quality.model_validate(quality_in, update={"owner_id": owner_id})
     session.add(db_quality)
     session.commit()
@@ -117,6 +120,7 @@ def create_trait(
     session.refresh(db_trait)
     return db_trait
 
+
 # New CRUD functions for Event
 def create_event(*, session: Session, event_in: EventCreate) -> Event:
     db_event = Event.model_validate(event_in)
@@ -124,6 +128,7 @@ def create_event(*, session: Session, event_in: EventCreate) -> Event:
     session.commit()
     session.refresh(db_event)
     return db_event
+
 
 # New CRUD functions for QualityTraitLink
 def create_quality_trait_link(
@@ -135,6 +140,7 @@ def create_quality_trait_link(
     session.refresh(db_link)
     return db_link
 
+
 # New CRUD functions for QualityEventTrigger
 def create_quality_event_trigger(
     *, session: Session, trigger_in: QualityEventTriggerCreate
@@ -144,6 +150,7 @@ def create_quality_event_trigger(
     session.commit()
     session.refresh(db_trigger)
     return db_trigger
+
 
 # Enhanced Persona creation with Archetype inheritance
 def create_persona_with_archetype(
@@ -156,13 +163,16 @@ def create_persona_with_archetype(
 
     # Create the archetype-persona link
     archetype_link = ArchetypePersonaLink(
-        archetype_id=archetype_id,
-        persona_id=db_persona.id
+        archetype_id=archetype_id, persona_id=db_persona.id
     )
     session.add(archetype_link)
 
     # Get all traits from the archetype
-    stmt = select(Trait).join(ArchetypeTraitLink).where(ArchetypeTraitLink.archetype_id == archetype_id)
+    stmt = (
+        select(Trait)
+        .join(ArchetypeTraitLink)
+        .where(ArchetypeTraitLink.archetype_id == archetype_id)
+    )
     archetype_traits = session.exec(stmt).all()
 
     # Add all traits to the persona with inheritance tracking
@@ -171,13 +181,17 @@ def create_persona_with_archetype(
             persona_id=db_persona.id,
             trait_id=trait.id,
             is_inherited=True,
-            source_archetype_id=archetype_id
+            source_archetype_id=archetype_id,
         )
         session.add(trait_link)
 
     # Get all qualities that are trait-dependent
     trait_ids = [trait.id for trait in archetype_traits]
-    stmt = select(Quality).join(QualityTraitLink).where(QualityTraitLink.trait_id.in_(trait_ids))
+    stmt = (
+        select(Quality)
+        .join(QualityTraitLink)
+        .where(QualityTraitLink.trait_id.in_(trait_ids))
+    )
     trait_qualities = session.exec(stmt).all()
 
     # Add trait-dependent qualities to the persona
@@ -194,14 +208,18 @@ def create_persona_with_archetype(
                     for link in quality.trait_links
                     if link.trait_id in trait_ids
                 ),
-                None
+                None,
             ),
-            source_archetype_id=archetype_id
+            source_archetype_id=archetype_id,
         )
         session.add(quality_link)
 
     # Get all qualities that are directly associated with the archetype
-    stmt = select(Quality).join(ArchetypeQualityLink).where(ArchetypeQualityLink.archetype_id == archetype_id)
+    stmt = (
+        select(Quality)
+        .join(ArchetypeQualityLink)
+        .where(ArchetypeQualityLink.archetype_id == archetype_id)
+    )
     archetype_qualities = session.exec(stmt).all()
 
     # Add archetype-dependent qualities to the persona
@@ -211,7 +229,7 @@ def create_persona_with_archetype(
             quality_id=quality.id,
             source_type=QualitySourceType.DEFAULT,
             state=QualityState.ENABLED,
-            source_archetype_id=archetype_id
+            source_archetype_id=archetype_id,
         )
         session.add(quality_link)
 
@@ -219,6 +237,7 @@ def create_persona_with_archetype(
     session.commit()
     session.refresh(db_persona)
     return db_persona
+
 
 # Function to handle event processing for a persona
 def process_persona_event(
@@ -234,7 +253,7 @@ def process_persona_event(
         # Check if the persona has this quality
         stmt = select(PersonaQualityLink).where(
             PersonaQualityLink.persona_id == persona_id,
-            PersonaQualityLink.quality_id == trigger.quality_id
+            PersonaQualityLink.quality_id == trigger.quality_id,
         )
         quality_link = session.exec(stmt).first()
 
@@ -251,6 +270,7 @@ def process_persona_event(
 
     return affected_links
 
+
 # Function to add a quality to a persona
 def add_quality_to_persona(
     *, session: Session, persona_id: uuid.UUID, quality_id: uuid.UUID
@@ -258,7 +278,7 @@ def add_quality_to_persona(
     # Check if the persona already has this quality
     stmt = select(PersonaQualityLink).where(
         PersonaQualityLink.persona_id == persona_id,
-        PersonaQualityLink.quality_id == quality_id
+        PersonaQualityLink.quality_id == quality_id,
     )
     existing_link = session.exec(stmt).first()
 
@@ -277,12 +297,13 @@ def add_quality_to_persona(
         persona_id=persona_id,
         quality_id=quality_id,
         source_type=QualitySourceType.MANUALLY_ADDED,
-        state=QualityState.ENABLED
+        state=QualityState.ENABLED,
     )
     session.add(quality_link)
     session.commit()
     session.refresh(quality_link)
     return quality_link
+
 
 # Function to remove a quality from a persona
 def remove_quality_from_persona(
@@ -291,7 +312,7 @@ def remove_quality_from_persona(
     # Find the quality link
     stmt = select(PersonaQualityLink).where(
         PersonaQualityLink.persona_id == persona_id,
-        PersonaQualityLink.quality_id == quality_id
+        PersonaQualityLink.quality_id == quality_id,
     )
     quality_link = session.exec(stmt).first()
 
