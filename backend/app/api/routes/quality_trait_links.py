@@ -6,12 +6,15 @@ from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    QualitiesPublic,
+    QualityPublic,
     QualityTraitLink,
     QualityTraitLinkCreate,
     QualityTraitLinkPublic,
     QualityTraitLinkUpdate,
     Message,
     Trait,
+    TraitPublic,
     Quality,
 )
 from app import crud
@@ -19,28 +22,51 @@ from app import crud
 router = APIRouter(prefix="/quality-trait-links", tags=["quality-trait-links"])
 
 
-@router.get("/{quality_id}/traits", response_model=list[QualityTraitLinkPublic])
+@router.get("/{quality_id}/traits", response_model=list[TraitPublic])
 def read_quality_traits(
     session: SessionDep, current_user: CurrentUser, quality_id: uuid.UUID
 ) -> Any:
     """
     Get all traits linked to a quality.
     """
-    statement = select(QualityTraitLink).where(QualityTraitLink.quality_id == quality_id)
-    links = session.exec(statement).all()
-    return links
+    # verify that quality exists
+    quality = session.get(Quality, quality_id)
+    if not quality:
+        raise HTTPException(status_code=404, detail="This not quality, Grug. Be shame.")
+
+    # Get all qualities for this trait
+    statement = (
+        select(Trait)
+        .join(QualityTraitLink)
+        .where(QualityTraitLink.quality_id == quality_id)
+    )
+    traits = session.exec(statement).all()
+
+    return traits
 
 
-@router.get("/{trait_id}/qualities", response_model=list[QualityTraitLinkPublic])
+@router.get("/{trait_id}/qualities", response_model=list[QualityPublic])
 def read_trait_qualities(
     session: SessionDep, current_user: CurrentUser, trait_id: uuid.UUID
 ) -> Any:
     """
     Get all qualities linked to a trait.
     """
-    statement = select(QualityTraitLink).where(QualityTraitLink.trait_id == trait_id)
-    links = session.exec(statement).all()
-    return links
+    # Verify the trait exists
+    trait = session.get(Trait, trait_id)
+    if not trait:
+        raise HTTPException(status_code=404, detail="Trait not found")
+
+    # Get all qualities for this trait
+    statement = (
+        select(Quality)
+        .join(QualityTraitLink)
+        .where(QualityTraitLink.trait_id == trait_id)
+    )
+    qualities = session.exec(statement).all()
+
+    return qualities
+
 
 
 @router.post("/", response_model=QualityTraitLinkPublic)
