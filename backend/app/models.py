@@ -424,6 +424,12 @@ class QualityTraitLinkPublic(QualityTraitLinkBase):
     created_at: datetime
     auto_enable: bool
     is_required: bool
+
+    # including ids - there was a strange sqlmodel issue with relationship defs
+    trait_id: uuid.UUID
+    quality_id: uuid.UUID
+
+    # leaving these optional nested objects that can be loaded separately
     trait: TraitPublic | None = None
     quality: QualityPublic | None = None
 

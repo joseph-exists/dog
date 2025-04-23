@@ -67,10 +67,25 @@ def create_quality_trait_link(
     )
     existing_link = session.exec(statement).first()
     if existing_link:
-        return existing_link
+        # Convert to a dict and add the trait and quality objects
+        link_data = existing_link.model_dump()
+        link_data["trait"] = trait
+        link_data["quality"] = quality
+        # Create a new public model with all the data
+        return QualityTraitLinkPublic.model_validate(link_data)
 
-    link = crud.create_quality_trait_link(session=session, link_in=link_in)
-    return link
+    # Create new link
+    link = QualityTraitLink.model_validate(link_in)
+    session.add(link)
+    session.commit()
+    session.refresh(link)
+
+    # Convert to a dict and add the trait and quality objects
+    link_data = link.model_dump()
+    link_data["trait"] = trait
+    link_data["quality"] = quality
+    # Create a new public model with all the data
+    return QualityTraitLinkPublic.model_validate(link_data)
 
 
 @router.delete("/{quality_id}/{trait_id}")
