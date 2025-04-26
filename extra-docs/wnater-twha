@@ -1,7 +1,226 @@
-import uuid
-from typing import List, Optional, Any
-from datetime import datetime
-from sqlmodel import SQLModel, Field, Relationship
+Quality:
+
+    {
+      "title": "Chaotic",
+      "description": "Applies a stochastic variable to the probability of all outcomes.",
+      "id": "5d93433b-c47e-4a87-b56a-16e99e3b56e0",
+      "created_at": "2025-04-22T20:02:19.692285"
+    },
+
+Trait:
+    {
+      "title": "fitzelmonger",
+      "description": "warp drive 0200020",
+      "id": "8025d8b1-64fe-403a-91f9-c1bff006cdfb",
+      "created_at": "2025-04-22T21:26:40.072431"
+    },
+
+
+
+linking these two:
+
+{
+  "quality_id": "5d93433b-c47e-4a87-b56a-16e99e3b56e0",
+  "trait_id": "8025d8b1-64fe-403a-91f9-c1bff006cdfb",
+  "auto_enable": true,
+  "is_required": false
+}
+
+
+Next Quality:
+    {
+      "title": "thisn",
+      "description": "thatn",
+      "id": "34e03b42-bb05-48f2-9b8d-c3951ea9cce0",
+      "created_at": "2025-04-22T22:37:42.003992"
+    }
+
+
+Next Trait:
+
+{
+  "title": "everything",
+  "description": "you ever loved",
+  "id": "53a4046b-b157-4a21-aaa6-22754fb5e518",
+  "created_at": "2025-04-23T14:37:50.520548"
+}
+
+adding link for another trait to a quality which already has a trait:
+
+{
+  "quality_id": "5d93433b-c47e-4a87-b56a-16e99e3b56e0",
+  "trait_id": "53a4046b-b157-4a21-aaa6-22754fb5e518",
+  "auto_enable": true,
+  "is_required": false
+}
+
+
+
+Event:
+{
+  "name": "storm bigs",
+  "description": "storm bigs is a description that happens when storm does biggening",
+  "event_type": "catalyzable",
+  "id": "e2d12d2d-f40e-481a-9dd5-8c1a1a8e8e3f",
+  "created_at": "2025-04-22T23:45:55.698799"
+}
+
+Archetype:
+
+    {
+      "title": "Merlin",
+      "description": "Merlin the Awkward",
+      "id": "21fd0d2f-5e76-491c-a319-fabb7c7b5800",
+      "created_at": "2025-04-22T19:50:57.578421"
+    },
+
+
+Ok - we have the quality 5d93433b-c47e-4a87-b56a-16e99e3b56e0
+
+    {
+      "title": "Chaotic",
+      "description": "Applies a stochastic variable to the probability of all outcomes.",
+      "id": "5d93433b-c47e-4a87-b56a-16e99e3b56e0",
+      "created_at": "2025-04-22T20:02:19.692285"
+    },
+
+
+If we post: http://localhost:8000/api/v1/quality-trait-links/5d93433b-c47e-4a87-b56a-16e99e3b56e0/traits
+
+then we get back
+
+[
+  {
+    "title": "fitzelmonger",
+    "description": "warp drive 0200020",
+    "id": "8025d8b1-64fe-403a-91f9-c1bff006cdfb",
+    "created_at": "2025-04-22T21:26:40.072431"
+  },
+  {
+    "title": "everything",
+    "description": "you ever loved",
+    "id": "53a4046b-b157-4a21-aaa6-22754fb5e518",
+    "created_at": "2025-04-23T14:37:50.520548"
+  }
+]
+
+There's a few tests we're going to do.  First, change the title of one of those traits using the traits put api call.
+
+It worked!
+
+We updated fitzelmonger to fotzelgrubes.
+
+http://localhost:8000/api/v1/traits/8025d8b1-64fe-403a-91f9-c1bff006cdfb
+
+{
+  "title": "fotzelgrubes",
+  "description": "warp drive 0200020",
+  "id": "8025d8b1-64fe-403a-91f9-c1bff006cdfb",
+  "created_at": "2025-04-22T21:26:40.072431"
+}
+
+Now we need to read the quality again:
+
+http://localhost:8000/api/v1/quality-trait-links/5d93433b-c47e-4a87-b56a-16e99e3b56e0/traits
+
+
+Response body
+Download
+[
+  {
+    "title": "fotzelgrubes",
+    "description": "warp drive 0200020",
+    "id": "8025d8b1-64fe-403a-91f9-c1bff006cdfb",
+    "created_at": "2025-04-22T21:26:40.072431"
+  },
+  {
+    "title": "everything",
+    "description": "you ever loved",
+    "id": "53a4046b-b157-4a21-aaa6-22754fb5e518",
+    "created_at": "2025-04-23T14:37:50.520548"
+  }
+]
+
+Next test:
+
+Create an Archetype
+
+{
+  "title": "Banana Loves Monkey",
+  "description": "but does Monkey Love Banana?",
+  "id": "c8b0bf46-fb15-4690-b9b5-0e3de9ede44e",
+  "created_at": "2025-04-23T14:56:34.486244"
+}
+
+
+
+ with a required Trait.
+
+Create a Persona.
+
+Associate that Persona with that Archetype.
+
+Validate that the Required Traits are inherited by the Persona.
+
+Add a Quality with no associated traits to that Persona.
+
+Verify that the Persona now has that Quality.
+
+Add a Trait association to that Quality.
+
+Verify that the Persona now has that Trait.
+
+Add an existing Quality with multiple Traits to the Persona.
+
+Verify that the Persona has that Quality.
+
+Verify that the Persona has the Traits.
+
+Remove a Trait from the Quality.
+
+Verify that the Persona no longer has that Trait.
+
+Get a Persona:
+
+
+Response body
+Download
+{
+  "data": [
+    {
+      "title": "Barley",
+      "description": "Barley loves cheese.",
+      "id": "905e0e49-a831-4322-a7ad-c11bd749a29d",
+      "created_at": "2025-04-22T19:50:20.822095"
+    }
+  ],
+  "count": 1
+}
+
+update that persona, modify description:
+
+{
+  "title": "string",
+  "description": "Barley loves cheese and also tea.",
+  "id": "905e0e49-a831-4322-a7ad-c11bd749a29d",
+  "created_at": "2025-04-22T19:50:20.822095"
+}
+
+See if that persona has any qualities:
+
+http://localhost:8000/api/v1/personas/905e0e49-a831-4322-a7ad-c11bd749a29d/qualities/
+
+add a quality, then validate it's there
+
+add an event
+
+e2d12d2d-f40e-481a-9dd5-8c1a1a8e8e3f
+
+
+
+
+
+
 
 Hello Claude!!  Today  we're going to work on extending an abstraction that I'm implementing.   I need help understanding the relationship constructs as well as possibilities for expansion.
 
@@ -176,141 +395,3 @@ ArchetypeTraitLink.trait = Relationship(back_populates="archetype_links")
 # Add backref relationships to main models for the link tables
 Archetype.trait_links = Relationship(back_populates="archetype")
 Trait.archetype_links = Relationship(back_populates="trait")
-
-
-
-
-OLD FROM MODELS.PY
-
-class Persona(PersonaBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    enabled: bool = True
-    title: str = Field(max_length=255)
-    persona_name: str | None = Field(index=True)
-    # foreign key to archetype
-    archetype_id: uuid.UUID | None = Field(foreign_key="archetype.id", index=True)
-    archetype: Archetype = Relationship(back_populates="personas")
-    # TODO: add custom per-persona traits
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
-    )
-    # owner: User | None = Relationship(back_populates="personas")
-
-    trait_links: list["PersonaTraitLink"] = Relationship(back_populates="persona")
-    traits: list["Trait"] = Relationship(
-        back_populates="personas",
-        link_model=PersonaTraitLink,
-        sa_relationship_kwargs={
-            "viewonly": True,
-            "lazy": "selectin",
-        },
-)
-
-
-    # direct relationship to the link table (one-to-many)
-    """ # commenting out - maybe add back later
-    # this gives us access to the relationship configuration in ArchetypeTraitLink
-    trait_links: list["ArchetypeTraitLink"] = Relationship(back_populates="archetype")
-
-    # many-to-many relationship through the link table
-    # this gives us a convenience accessor to get associated traits directly
-    traits: list["Trait"] = Relationship(
-        back_populates="archetypes", # matches the name in Trait
-        link_model=ArchetypeTraitLink, # Specifies the link table
-        sa_relationship_kwargs={
-            "viewonly": True,  # can't modify traits through this relationship'
-            "lazy": "selectin", # Eager loading strategy for performance
-        },
-    )
-    """
-
-# class ArchetypeTraitLink(ArchetypeTraitLinkBase, table=True):
-    """ # this is old - delete after proving new pattern?
-        archetype_id: uuid.UUID = Field(
-            foreign_key="archetype.id", primary_key=True, ondelete="CASCADE"
-        )
-        trait_id: uuid.UUID = Field(
-            foreign_key="trait.id", primary_key=True, ondelete="CASCADE"
-        )
-        # Configuration fields
-        is_modifiable: bool = Field(default=True)
-        modifiable_at_creation_only: bool = Field(default=False)
-        is_required: bool = Field(default=False)
-        created_at: datetime = Field(default_factory=datetime.now)
-        updated_at: datetime | None = None
-
-        # Define direct relationships to parent models
-        # These are the one-to-many relationships from parent to link table
-        # Note: We use string references for the type hints to avoid circular imports
-        archetype: "Archetype" = Relationship(back_populates="trait_links")
-        trait: "Trait" = Relationship(back_populates="archetype_links")
-
-# Update Archetype class to include relationship
-    class Archetype(ArchetypeBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # title: str = Field(max_length=255)
-    # archetype_name: str = Field(index=True)
-    # enabled: bool = True
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime | None = None
-
-     # delete only when relationship is reproduced
-    # maintain existing relationships
-    personas: List["Persona"] = Relationship(
-        back_populates="archetype", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-
-
-class Trait(TraitBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime | None = None
-"""
-
-""" # delete later when replicated
-    # Direct relationship to the link table (one-to-many)
-    # This gives us access to the relationship configuration in ArchetypeTraitLink
-    archetype_links: list["ArchetypeTraitLink"] = Relationship(back_populates="trait")
-
-    # many to many relationship through the link table
-    # this gives us a convenience accessor to get associated archtypes directly
-    archetypes: list["Archetype"] = Relationship(
-        back_populates="traits", # matches the name in Archetype
-        link_model=ArchetypeTraitLink, # specifies the link table
-        sa_relationship_kwargs={
-            "viewonly": True, # NO MODIFYING ARCHETYPES THROUGH THIS RELATIONSHIP
-            "lazy": "selectin", # Eager loading strategy for performance
-        },
-    )
-
-    persona_links: list["PersonaTraitLink"] = Relationship(back_populates="trait")
-    personas: list["Persona"] = Relationship(
-        back_populates="traits",
-        link_model=PersonaTraitLink,
-        sa_relationship_kwargs={
-            "viewonly": True,
-            "lazy": "selectin",
-        },
-    )
-
-"""
-class PersonaTraitLink(SQLModel, table=True):
-    # Foreign keys with proper cascade behavior
-    persona_id: uuid.UUID = Field(
-        foreign_key="persona.id", primary_key=True, ondelete="CASCADE"
-    )
-    trait_id: uuid.UUID = Field(
-        foreign_key="trait.id", primary_key=True, ondelete="CASCADE"
-    )
-
-    # Configuration and value fields
-    # Note: This could vary based on updated requirements
-    # For example, if traits can have different values for different personas
-    trait_value: str | None = Field(default=None, max_length=255)
-    is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime | None = None
-
-    # Direct relationships to parent models
-    persona: "Persona" = Relationship(back_populates="trait_links")
-    trait: "Trait" = Relationship(back_populates="persona_links")

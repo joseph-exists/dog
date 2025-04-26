@@ -1,7 +1,8 @@
 import uuid
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_, and_
+from sqlalchemy import true
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
@@ -168,12 +169,12 @@ def create_persona_with_archetype(
     session.add(archetype_link)
 
     # Get all traits from the archetype
-    stmt = (
+    trait_stmt = (
         select(Trait)
         .join(ArchetypeTraitLink)
         .where(ArchetypeTraitLink.archetype_id == archetype_id)
     )
-    archetype_traits = session.exec(stmt).all()
+    archetype_traits = session.exec(trait_stmt).all()
 
     # Add all traits to the persona with inheritance tracking
     for trait in archetype_traits:
@@ -187,40 +188,53 @@ def create_persona_with_archetype(
 
     # Get all qualities that are trait-dependent
     trait_ids = [trait.id for trait in archetype_traits]
-    stmt = (
+    # Build OR conditions for each trait_id
+    trait_id_conditions = [
+        QualityTraitLink.trait_id == trait_id for trait_id in trait_ids
+    ]
+    quality_trait_stmt = (
         select(Quality)
         .join(QualityTraitLink)
-        .where(QualityTraitLink.trait_id.in_(trait_ids))
+        .where(or_(*trait_id_conditions) if trait_id_conditions else true())
     )
-    trait_qualities = session.exec(stmt).all()
+    trait_qualities = session.exec(quality_trait_stmt).all()
 
     # Add trait-dependent qualities to the persona
     for quality in trait_qualities:
+        # Find trait links for this quality
+        # Build OR conditions for each trait_id for this quality
+        qt_trait_id_conditions = [
+            and_(
+                QualityTraitLink.quality_id == quality.id,
+                QualityTraitLink.trait_id == trait_id,
+            )
+            for trait_id in trait_ids
+        ]
+        qt_link_stmt = select(QualityTraitLink).where(
+            or_(*qt_trait_id_conditions) if qt_trait_id_conditions else true()
+        )
+        qt_links = session.exec(qt_link_stmt).all()
+
+        # Use the first matching trait id if found
+        source_trait_id = next((link.trait_id for link in qt_links), None)
+
         quality_link = PersonaQualityLink(
             persona_id=db_persona.id,
             quality_id=quality.id,
             source_type=QualitySourceType.TRAIT_DEPENDENT,
             state=QualityState.ENABLED,
-            # Find one of the traits this quality is linked to
-            source_trait_id=next(
-                (
-                    link.trait_id
-                    for link in quality.trait_links
-                    if link.trait_id in trait_ids
-                ),
-                None,
-            ),
+            source_trait_id=source_trait_id,
             source_archetype_id=archetype_id,
         )
         session.add(quality_link)
 
     # Get all qualities that are directly associated with the archetype
-    stmt = (
+    quality_archetype_stmt = (
         select(Quality)
         .join(ArchetypeQualityLink)
         .where(ArchetypeQualityLink.archetype_id == archetype_id)
     )
-    archetype_qualities = session.exec(stmt).all()
+    archetype_qualities = session.exec(quality_archetype_stmt).all()
 
     # Add archetype-dependent qualities to the persona
     for quality in archetype_qualities:
@@ -244,18 +258,20 @@ def process_persona_event(
     *, session: Session, persona_id: uuid.UUID, event_id: uuid.UUID
 ) -> list[PersonaQualityLink]:
     # Find all quality event triggers for this event
-    stmt = select(QualityEventTrigger).where(QualityEventTrigger.event_id == event_id)
-    triggers = session.exec(stmt).all()
+    trigger_stmt = select(QualityEventTrigger).where(
+        QualityEventTrigger.event_id == event_id
+    )
+    triggers = session.exec(trigger_stmt).all()
 
     affected_links = []
 
     for trigger in triggers:
         # Check if the persona has this quality
-        stmt = select(PersonaQualityLink).where(
+        link_stmt = select(PersonaQualityLink).where(
             PersonaQualityLink.persona_id == persona_id,
             PersonaQualityLink.quality_id == trigger.quality_id,
         )
-        quality_link = session.exec(stmt).first()
+        quality_link = session.exec(link_stmt).first()
 
         if quality_link:
             # Update the quality state according to the trigger

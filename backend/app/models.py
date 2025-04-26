@@ -55,9 +55,17 @@ class UserRegister(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
 
 
+class UserBasePartial(SQLModel):
+    """Base model for user fields that can be updated (all optional)"""
+
+    email: EmailStr | None = Field(default=None, max_length=255)
+    is_active: bool | None = Field(default=None)
+    is_superuser: bool | None = Field(default=None)
+    full_name: str | None = Field(default=None, max_length=255)
+
+
 # Properties to receive via API on update, all are optional
-class UserUpdate(UserBase):
-    email: EmailStr | None = Field(default=None, max_length=255)  # type: ignore
+class UserUpdate(UserBasePartial):
     password: str | None = Field(default=None, min_length=8, max_length=40)
 
 
@@ -100,9 +108,16 @@ class ItemCreate(ItemBase):
     pass
 
 
+class ItemBasePartial(SQLModel):
+    """Base model for item fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+
+
 # Properties to receive on item update
-class ItemUpdate(ItemBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+class ItemUpdate(ItemBasePartial):
+    pass
 
 
 # maintain item class as an example of this ownership model
@@ -129,6 +144,15 @@ class ItemsPublic(SQLModel):
 # ============ Event Models ============
 
 
+# Base model for fields that can be updated (optional)
+class EventBasePartial(SQLModel):
+    """Base model for event fields that can be updated (all optional)"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=100)
+    event_type: str | None = Field(default=None, min_length=1, max_length=100)
+
+
 class EventBase(SQLModel):
     """Base model for events that can trigger state changes"""
 
@@ -144,11 +168,10 @@ class EventCreate(EventBase):
     pass
 
 
-class EventUpdate(EventBase):
+class EventUpdate(EventBasePartial):
     """Model for updating events"""
 
-    name: str | None = Field(default=None, min_length=1, max_length=100)
-    event_type: str | None = Field(default=None, min_length=1, max_length=100)
+    pass
 
 
 class Event(EventBase, table=True):
@@ -211,7 +234,7 @@ class QualitySourceType(str, Enum):
 
 
 class ArchetypeBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)  # type: ignore
+    title: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
 
 
@@ -290,20 +313,41 @@ class QualityCreate(QualityBase):
 # ======== Update Models ===========
 
 
-class ArchetypeUpdate(ArchetypeBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+class ArchetypeBasePartial(SQLModel):
+    """Base model for archetype fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
 
 
-class PersonaUpdate(PersonaBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+class ArchetypeUpdate(ArchetypeBasePartial):
+    pass
 
 
-class QualityUpdate(QualityBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+class PersonaBasePartial(SQLModel):
+    """Base model for persona fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+
+
+class PersonaUpdate(PersonaBasePartial):
+    pass
+
+
+class QualityBasePartial(SQLModel):
+    """Base model for quality fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+
+
+class QualityUpdate(QualityBasePartial):
+    pass
 
 
 class TraitUpdate(SQLModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    title: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 # ========= Database Models ===========
@@ -673,14 +717,20 @@ class TraitConfigBase(SQLModel):
     is_required: bool = Field(default=False)
 
 
+class TraitConfigBasePartial(SQLModel):
+    """Base model for trait config fields that can be updated (all optional)"""
+
+    is_modifiable: bool | None = Field(default=None)
+    modifiable_at_creation_only: bool | None = Field(default=None)
+    is_required: bool | None = Field(default=None)
+
+
 class TraitConfigCreate(TraitConfigBase):
     trait_id: uuid.UUID
 
 
-class TraitConfigUpdate(TraitConfigBase):
-    is_modifiable: bool | None = Field(default=None)
-    modifiable_at_creation_only: bool | None = Field(default=None)
-    is_required: bool | None = Field(default=None)
+class TraitConfigUpdate(TraitConfigBasePartial):
+    pass
 
 
 class TraitConfigPublic(TraitConfigBase):
