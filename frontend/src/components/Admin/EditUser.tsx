@@ -173,7 +173,7 @@ const EditUser = ({ user }: EditUserProps) => {
                 render={({ field }) => (
                   <Field disabled={field.disabled} colorPalette="teal">
                     <Checkbox
-                      checked={field.value}
+                      checked={!!field.value}
                       onCheckedChange={({ checked }) => field.onChange(checked)}
                     >
                       Is superuser?
@@ -187,7 +187,7 @@ const EditUser = ({ user }: EditUserProps) => {
                 render={({ field }) => (
                   <Field disabled={field.disabled} colorPalette="teal">
                     <Checkbox
-                      checked={field.value}
+                      checked={!!field.value}
                       onCheckedChange={({ checked }) => field.onChange(checked)}
                     >
                       Is active?

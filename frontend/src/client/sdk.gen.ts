@@ -4,6 +4,26 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
+  ArchetypesReadArchetypesData,
+  ArchetypesReadArchetypesResponse,
+  ArchetypesCreateArchetypeData,
+  ArchetypesCreateArchetypeResponse,
+  ArchetypesReadArchetypeData,
+  ArchetypesReadArchetypeResponse,
+  ArchetypesUpdateArchetypeData,
+  ArchetypesUpdateArchetypeResponse,
+  ArchetypesDeleteArchetypeData,
+  ArchetypesDeleteArchetypeResponse,
+  EventsReadEventsData,
+  EventsReadEventsResponse,
+  EventsCreateEventData,
+  EventsCreateEventResponse,
+  EventsReadEventData,
+  EventsReadEventResponse,
+  EventsUpdateEventData,
+  EventsUpdateEventResponse,
+  EventsDeleteEventData,
+  EventsDeleteEventResponse,
   ItemsReadItemsData,
   ItemsReadItemsResponse,
   ItemsCreateItemData,
@@ -23,6 +43,56 @@ import type {
   LoginResetPasswordResponse,
   LoginRecoverPasswordHtmlContentData,
   LoginRecoverPasswordHtmlContentResponse,
+  PersonaEventsProcessPersonaEventData,
+  PersonaEventsProcessPersonaEventResponse,
+  PersonaQualitiesReadPersonaQualitiesData,
+  PersonaQualitiesReadPersonaQualitiesResponse,
+  PersonaQualitiesAddQualityToPersonaData,
+  PersonaQualitiesAddQualityToPersonaResponse,
+  PersonaQualitiesRemoveQualityFromPersonaData,
+  PersonaQualitiesRemoveQualityFromPersonaResponse,
+  PersonasReadPersonasData,
+  PersonasReadPersonasResponse,
+  PersonasCreatePersonaData,
+  PersonasCreatePersonaResponse,
+  PersonasReadPersonaData,
+  PersonasReadPersonaResponse,
+  PersonasUpdatePersonaData,
+  PersonasUpdatePersonaResponse,
+  PersonasDeletePersonaData,
+  PersonasDeletePersonaResponse,
+  PersonasCreatePersonaFromArchetypeData,
+  PersonasCreatePersonaFromArchetypeResponse,
+  PrivateCreateUserData,
+  PrivateCreateUserResponse,
+  QualitiesReadQualitiesData,
+  QualitiesReadQualitiesResponse,
+  QualitiesCreateQualityData,
+  QualitiesCreateQualityResponse,
+  QualitiesReadQualityData,
+  QualitiesReadQualityResponse,
+  QualitiesUpdateQualityData,
+  QualitiesUpdateQualityResponse,
+  QualitiesDeleteQualityData,
+  QualitiesDeleteQualityResponse,
+  QualityTraitLinksReadQualityTraitsData,
+  QualityTraitLinksReadQualityTraitsResponse,
+  QualityTraitLinksReadTraitQualitiesData,
+  QualityTraitLinksReadTraitQualitiesResponse,
+  QualityTraitLinksCreateQualityTraitLinkData,
+  QualityTraitLinksCreateQualityTraitLinkResponse,
+  QualityTraitLinksDeleteQualityTraitLinkData,
+  QualityTraitLinksDeleteQualityTraitLinkResponse,
+  TraitsReadTraitsData,
+  TraitsReadTraitsResponse,
+  TraitsCreateTraitData,
+  TraitsCreateTraitResponse,
+  TraitsReadTraitData,
+  TraitsReadTraitResponse,
+  TraitsUpdateTraitData,
+  TraitsUpdateTraitResponse,
+  TraitsDeleteTraitData,
+  TraitsDeleteTraitResponse,
   UsersReadUsersData,
   UsersReadUsersResponse,
   UsersCreateUserData,
@@ -45,6 +115,248 @@ import type {
   UtilsTestEmailResponse,
   UtilsHealthCheckResponse,
 } from "./types.gen"
+
+export class ArchetypesService {
+  /**
+   * Read Archetypes
+   * Retrieve archetypes.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns ArchetypesPublic Successful Response
+   * @throws ApiError
+   */
+  public static readArchetypes(
+    data: ArchetypesReadArchetypesData = {},
+  ): CancelablePromise<ArchetypesReadArchetypesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/archetypes/",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Archetype
+   * Create new archetype.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns ArchetypePublic Successful Response
+   * @throws ApiError
+   */
+  public static createArchetype(
+    data: ArchetypesCreateArchetypeData,
+  ): CancelablePromise<ArchetypesCreateArchetypeResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/archetypes/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Archetype
+   * Get archetype by ID.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns ArchetypePublic Successful Response
+   * @throws ApiError
+   */
+  public static readArchetype(
+    data: ArchetypesReadArchetypeData,
+  ): CancelablePromise<ArchetypesReadArchetypeResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/archetypes/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Archetype
+   * Update an archetype.
+   * @param data The data for the request.
+   * @param data.id
+   * @param data.requestBody
+   * @returns ArchetypePublic Successful Response
+   * @throws ApiError
+   */
+  public static updateArchetype(
+    data: ArchetypesUpdateArchetypeData,
+  ): CancelablePromise<ArchetypesUpdateArchetypeResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/archetypes/{id}",
+      path: {
+        id: data.id,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Archetype
+   * Delete an archetype.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteArchetype(
+    data: ArchetypesDeleteArchetypeData,
+  ): CancelablePromise<ArchetypesDeleteArchetypeResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/archetypes/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class EventsService {
+  /**
+   * Read Events
+   * Retrieve events.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns EventsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readEvents(
+    data: EventsReadEventsData = {},
+  ): CancelablePromise<EventsReadEventsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/events/",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Event
+   * Create new event.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns EventPublic Successful Response
+   * @throws ApiError
+   */
+  public static createEvent(
+    data: EventsCreateEventData,
+  ): CancelablePromise<EventsCreateEventResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/events/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Event
+   * Get Event by ID.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns EventPublic Successful Response
+   * @throws ApiError
+   */
+  public static readEvent(
+    data: EventsReadEventData,
+  ): CancelablePromise<EventsReadEventResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/events/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Event
+   * Update an event.
+   * @param data The data for the request.
+   * @param data.id
+   * @param data.requestBody
+   * @returns EventPublic Successful Response
+   * @throws ApiError
+   */
+  public static updateEvent(
+    data: EventsUpdateEventData,
+  ): CancelablePromise<EventsUpdateEventResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/events/{id}",
+      path: {
+        id: data.id,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Event
+   * Delete an event.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteEvent(
+    data: EventsDeleteEventData,
+  ): CancelablePromise<EventsDeleteEventResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/events/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
 
 export class ItemsService {
   /**
@@ -264,6 +576,617 @@ export class LoginService {
       url: "/api/v1/password-recovery-html-content/{email}",
       path: {
         email: data.email,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class PersonaEventsService {
+  /**
+   * Process Persona Event
+   * Process an event for a persona, which may trigger quality state changes.
+   * @param data The data for the request.
+   * @param data.personaId
+   * @param data.eventId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static processPersonaEvent(
+    data: PersonaEventsProcessPersonaEventData,
+  ): CancelablePromise<PersonaEventsProcessPersonaEventResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/personas/{persona_id}/events/{event_id}",
+      path: {
+        persona_id: data.personaId,
+        event_id: data.eventId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class PersonaQualitiesService {
+  /**
+   * Read Persona Qualities
+   * Get all qualities for a persona.
+   * @param data The data for the request.
+   * @param data.personaId
+   * @returns QualityPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPersonaQualities(
+    data: PersonaQualitiesReadPersonaQualitiesData,
+  ): CancelablePromise<PersonaQualitiesReadPersonaQualitiesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/personas/{persona_id}/qualities/",
+      path: {
+        persona_id: data.personaId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Add Quality To Persona
+   * Add a quality to a persona.
+   * @param data The data for the request.
+   * @param data.personaId
+   * @param data.qualityId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static addQualityToPersona(
+    data: PersonaQualitiesAddQualityToPersonaData,
+  ): CancelablePromise<PersonaQualitiesAddQualityToPersonaResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/personas/{persona_id}/qualities/{quality_id}",
+      path: {
+        persona_id: data.personaId,
+        quality_id: data.qualityId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Remove Quality From Persona
+   * Remove a quality from a persona.
+   * @param data The data for the request.
+   * @param data.personaId
+   * @param data.qualityId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static removeQualityFromPersona(
+    data: PersonaQualitiesRemoveQualityFromPersonaData,
+  ): CancelablePromise<PersonaQualitiesRemoveQualityFromPersonaResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/personas/{persona_id}/qualities/{quality_id}",
+      path: {
+        persona_id: data.personaId,
+        quality_id: data.qualityId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class PersonasService {
+  /**
+   * Read Personas
+   * Retrieve personas.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns PersonasPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPersonas(
+    data: PersonasReadPersonasData = {},
+  ): CancelablePromise<PersonasReadPersonasResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/personas/",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Persona
+   * Create new persona.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns PersonaPublic Successful Response
+   * @throws ApiError
+   */
+  public static createPersona(
+    data: PersonasCreatePersonaData,
+  ): CancelablePromise<PersonasCreatePersonaResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/personas/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Persona
+   * Get persona by ID.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns Persona Successful Response
+   * @throws ApiError
+   */
+  public static readPersona(
+    data: PersonasReadPersonaData,
+  ): CancelablePromise<PersonasReadPersonaResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/personas/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Persona
+   * Update a persona.
+   * @param data The data for the request.
+   * @param data.id
+   * @param data.requestBody
+   * @returns PersonaPublic Successful Response
+   * @throws ApiError
+   */
+  public static updatePersona(
+    data: PersonasUpdatePersonaData,
+  ): CancelablePromise<PersonasUpdatePersonaResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/personas/{id}",
+      path: {
+        id: data.id,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Persona
+   * Delete a persona.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deletePersona(
+    data: PersonasDeletePersonaData,
+  ): CancelablePromise<PersonasDeletePersonaResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/personas/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Persona From Archetype
+   * Create a new persona based on an archetype.
+   * This will inherit traits and qualities from the archetype.
+   * @param data The data for the request.
+   * @param data.archetypeId
+   * @param data.requestBody
+   * @returns PersonaPublic Successful Response
+   * @throws ApiError
+   */
+  public static createPersonaFromArchetype(
+    data: PersonasCreatePersonaFromArchetypeData,
+  ): CancelablePromise<PersonasCreatePersonaFromArchetypeResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/personas/from-archetype/{archetype_id}",
+      path: {
+        archetype_id: data.archetypeId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class PrivateService {
+  /**
+   * Create User
+   * Create a new user.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns UserPublic Successful Response
+   * @throws ApiError
+   */
+  public static createUser(
+    data: PrivateCreateUserData,
+  ): CancelablePromise<PrivateCreateUserResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/private/users/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class QualitiesService {
+  /**
+   * Read Qualities
+   * Retrieve qualities.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns QualitiesPublic Successful Response
+   * @throws ApiError
+   */
+  public static readQualities(
+    data: QualitiesReadQualitiesData = {},
+  ): CancelablePromise<QualitiesReadQualitiesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/qualities/",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Quality
+   * Create new quality.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns QualityPublic Successful Response
+   * @throws ApiError
+   */
+  public static createQuality(
+    data: QualitiesCreateQualityData,
+  ): CancelablePromise<QualitiesCreateQualityResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/qualities/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Quality
+   * Get Quality by ID.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns QualityPublic Successful Response
+   * @throws ApiError
+   */
+  public static readQuality(
+    data: QualitiesReadQualityData,
+  ): CancelablePromise<QualitiesReadQualityResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/qualities/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Quality
+   * Update a quality.
+   * @param data The data for the request.
+   * @param data.id
+   * @param data.requestBody
+   * @returns QualityPublic Successful Response
+   * @throws ApiError
+   */
+  public static updateQuality(
+    data: QualitiesUpdateQualityData,
+  ): CancelablePromise<QualitiesUpdateQualityResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/qualities/{id}",
+      path: {
+        id: data.id,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Quality
+   * Delete a quality.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteQuality(
+    data: QualitiesDeleteQualityData,
+  ): CancelablePromise<QualitiesDeleteQualityResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/qualities/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class QualityTraitLinksService {
+  /**
+   * Read Quality Traits
+   * Get all traits linked to a quality.
+   * @param data The data for the request.
+   * @param data.qualityId
+   * @returns TraitPublic Successful Response
+   * @throws ApiError
+   */
+  public static readQualityTraits(
+    data: QualityTraitLinksReadQualityTraitsData,
+  ): CancelablePromise<QualityTraitLinksReadQualityTraitsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/quality-trait-links/{quality_id}/traits",
+      path: {
+        quality_id: data.qualityId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Trait Qualities
+   * Get all qualities linked to a trait.
+   * @param data The data for the request.
+   * @param data.traitId
+   * @returns QualityPublic Successful Response
+   * @throws ApiError
+   */
+  public static readTraitQualities(
+    data: QualityTraitLinksReadTraitQualitiesData,
+  ): CancelablePromise<QualityTraitLinksReadTraitQualitiesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/quality-trait-links/{trait_id}/qualities",
+      path: {
+        trait_id: data.traitId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Quality Trait Link
+   * Create new quality-trait link.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns QualityTraitLinkPublic Successful Response
+   * @throws ApiError
+   */
+  public static createQualityTraitLink(
+    data: QualityTraitLinksCreateQualityTraitLinkData,
+  ): CancelablePromise<QualityTraitLinksCreateQualityTraitLinkResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/quality-trait-links/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Quality Trait Link
+   * Delete a quality-trait link.
+   * @param data The data for the request.
+   * @param data.qualityId
+   * @param data.traitId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteQualityTraitLink(
+    data: QualityTraitLinksDeleteQualityTraitLinkData,
+  ): CancelablePromise<QualityTraitLinksDeleteQualityTraitLinkResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/quality-trait-links/{quality_id}/{trait_id}",
+      path: {
+        quality_id: data.qualityId,
+        trait_id: data.traitId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class TraitsService {
+  /**
+   * Read Traits
+   * Retrieve traits.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns TraitsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readTraits(
+    data: TraitsReadTraitsData = {},
+  ): CancelablePromise<TraitsReadTraitsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/traits/",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Trait
+   * Create new trait.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns TraitPublic Successful Response
+   * @throws ApiError
+   */
+  public static createTrait(
+    data: TraitsCreateTraitData,
+  ): CancelablePromise<TraitsCreateTraitResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/traits/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Trait
+   * Get Trait by ID.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns TraitPublic Successful Response
+   * @throws ApiError
+   */
+  public static readTrait(
+    data: TraitsReadTraitData,
+  ): CancelablePromise<TraitsReadTraitResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/traits/{id}",
+      path: {
+        id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Trait
+   * Update an trait.
+   * @param data The data for the request.
+   * @param data.id
+   * @param data.requestBody
+   * @returns TraitPublic Successful Response
+   * @throws ApiError
+   */
+  public static updateTrait(
+    data: TraitsUpdateTraitData,
+  ): CancelablePromise<TraitsUpdateTraitResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/traits/{id}",
+      path: {
+        id: data.id,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Trait
+   * Delete an trait.
+   * @param data The data for the request.
+   * @param data.id
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteTrait(
+    data: TraitsDeleteTraitData,
+  ): CancelablePromise<TraitsDeleteTraitResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/traits/{id}",
+      path: {
+        id: data.id,
       },
       errors: {
         422: "Validation Error",
