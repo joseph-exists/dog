@@ -1,17 +1,19 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type SubmitHandler, useForm } from "react-hook-form";
+
 import {
   Button,
-  ButtonGroup,
   DialogActionTrigger,
+  DialogTitle,
   Input,
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { type SubmitHandler, useForm } from "react-hook-form";
-import { FaExchangeAlt } from "react-icons/fa";
+import { FaPlus } from "react-icons/fa";
 
-import { type ApiError, type ItemPublic, ItemsService } from "@/client";
+import { type ArchetypeCreate, ArchetypesService } from "@/client";
+import type { ApiError } from "@/client/core/ApiError";
 import useCustomToast from "@/hooks/useCustomToast";
 import { handleError } from "@/utils";
 import {
@@ -21,21 +23,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogRoot,
-  DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
 import { Field } from "../ui/field";
 
-interface EditItemProps {
-  item: ItemPublic;
-}
-
-interface ItemUpdateForm {
-  title: string;
-  description?: string;
-}
-
-const EditItem = ({ item }: EditItemProps) => {
+const AddArchetype = () => {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
   const { showSuccessToast } = useCustomToast();
@@ -43,21 +35,21 @@ const EditItem = ({ item }: EditItemProps) => {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
-  } = useForm<ItemUpdateForm>({
+    formState: { errors, isValid, isSubmitting },
+  } = useForm<ArchetypeCreate>({
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      ...item,
-      description: item.description ?? undefined,
+      title: "",
+      description: "",
     },
   });
 
   const mutation = useMutation({
-    mutationFn: (data: ItemUpdateForm) =>
-      ItemsService.updateItem({ id: item.id, requestBody: data }),
+    mutationFn: (data: ArchetypeCreate) =>
+      ArchetypesService.createArchetype({ requestBody: data }),
     onSuccess: () => {
-      showSuccessToast("Item updated successfully.");
+      showSuccessToast("Archetype created successfully.");
       reset();
       setIsOpen(false);
     },
@@ -69,7 +61,7 @@ const EditItem = ({ item }: EditItemProps) => {
     },
   });
 
-  const onSubmit: SubmitHandler<ItemUpdateForm> = async (data) => {
+  const onSubmit: SubmitHandler<ArchetypeCreate> = (data) => {
     mutation.mutate(data);
   };
 
@@ -81,18 +73,18 @@ const EditItem = ({ item }: EditItemProps) => {
       onOpenChange={({ open }) => setIsOpen(open)}
     >
       <DialogTrigger asChild>
-        <Button variant="ghost">
-          <FaExchangeAlt fontSize="16px" />
-          Edit Item
+        <Button value="add-item" my={4}>
+          <FaPlus fontSize="16px" />
+          Add Item
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>Edit Item</DialogTitle>
+            <DialogTitle>Add Archetype</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <Text mb={4}>Update the item details below.</Text>
+            <Text mb={4}>Fill in the details to add a new Archetype.</Text>
             <VStack gap={4}>
               <Field
                 required
@@ -103,7 +95,7 @@ const EditItem = ({ item }: EditItemProps) => {
                 <Input
                   id="title"
                   {...register("title", {
-                    required: "Title is required",
+                    required: "Title is required.",
                   })}
                   placeholder="Title"
                   type="text"
@@ -126,20 +118,23 @@ const EditItem = ({ item }: EditItemProps) => {
           </DialogBody>
 
           <DialogFooter gap={2}>
-            <ButtonGroup>
-              <DialogActionTrigger asChild>
-                <Button
-                  variant="subtle"
-                  colorPalette="gray"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-              </DialogActionTrigger>
-              <Button variant="solid" type="submit" loading={isSubmitting}>
-                Save
+            <DialogActionTrigger asChild>
+              <Button
+                variant="subtle"
+                colorPalette="gray"
+                disabled={isSubmitting}
+              >
+                Cancel
               </Button>
-            </ButtonGroup>
+            </DialogActionTrigger>
+            <Button
+              variant="solid"
+              type="submit"
+              disabled={!isValid}
+              loading={isSubmitting}
+            >
+              Save
+            </Button>
           </DialogFooter>
         </form>
         <DialogCloseTrigger />
@@ -148,4 +143,4 @@ const EditItem = ({ item }: EditItemProps) => {
   );
 };
 
-export default EditItem;
+export default AddArchetype;

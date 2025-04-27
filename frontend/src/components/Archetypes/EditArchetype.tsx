@@ -11,7 +11,7 @@ import { useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { FaExchangeAlt } from "react-icons/fa";
 
-import { type ApiError, type ItemPublic, ItemsService } from "@/client";
+import { type ApiError, type ArchetypePublic, ArchetypesService } from "client";
 import useCustomToast from "@/hooks/useCustomToast";
 import { handleError } from "@/utils";
 import {
@@ -26,16 +26,16 @@ import {
 } from "../ui/dialog";
 import { Field } from "../ui/field";
 
-interface EditItemProps {
-  item: ItemPublic;
+interface EditArchetypeProps {
+  item: ArchetypePublic;
 }
 
-interface ItemUpdateForm {
+interface ArchetypeUpdateForm {
   title: string;
   description?: string;
 }
 
-const EditItem = ({ item }: EditItemProps) => {
+const EditArchetype = ({ archetype }: EditArchetypeProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
   const { showSuccessToast } = useCustomToast();
@@ -44,20 +44,20 @@ const EditItem = ({ item }: EditItemProps) => {
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<ItemUpdateForm>({
+  } = useForm<ArchetypeUpdateForm>({
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      ...item,
-      description: item.description ?? undefined,
+      ...archetype,
+      description: archetype.description ?? undefined,
     },
   });
 
   const mutation = useMutation({
-    mutationFn: (data: ItemUpdateForm) =>
-      ItemsService.updateItem({ id: item.id, requestBody: data }),
+    mutationFn: (data: ArchetypeUpdateForm) =>
+      ArchetypesService.updateArchetype({ id: item.id, requestBody: data }),
     onSuccess: () => {
-      showSuccessToast("Item updated successfully.");
+      showSuccessToast("Archetype updated successfully.");
       reset();
       setIsOpen(false);
     },
@@ -65,11 +65,11 @@ const EditItem = ({ item }: EditItemProps) => {
       handleError(err);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({ queryKey: ["archetypes"] });
     },
   });
 
-  const onSubmit: SubmitHandler<ItemUpdateForm> = async (data) => {
+  const onSubmit: SubmitHandler<ArchetypeUpdateForm> = async (data) => {
     mutation.mutate(data);
   };
 
@@ -148,4 +148,4 @@ const EditItem = ({ item }: EditItemProps) => {
   );
 };
 
-export default EditItem;
+export default EditArchetype;
