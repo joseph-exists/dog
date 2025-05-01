@@ -13,11 +13,11 @@ def test_create_persona(
 ) -> None:
     # Create an archetype first
     archetype = create_random_archetype(db)
-    
+
     data = {
-        "title": "Test Persona",
+        "name": "Test Persona",
         "description": "A test persona description",
-        "archetype_id": str(archetype.id)
+        "archetype_id": str(archetype.id),
     }
     response = client.post(
         f"{settings.API_V1_STR}/personas/",
@@ -26,7 +26,7 @@ def test_create_persona(
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["title"] == data["title"]
+    assert content["name"] == data["name"]
     assert content["description"] == data["description"]
     assert "id" in content
 
@@ -41,7 +41,7 @@ def test_read_persona(
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["title"] == persona.title
+    assert content["name"] == persona.name
     assert content["description"] == persona.description
     assert content["id"] == str(persona.id)
 
@@ -90,8 +90,8 @@ def test_update_persona(
 ) -> None:
     persona = create_random_persona(db)
     data = {
-        "title": "Updated Persona Title",
-        "description": "Updated persona description"
+        "name": "Updated Persona name",
+        "description": "Updated persona description",
     }
     response = client.put(
         f"{settings.API_V1_STR}/personas/{persona.id}",
@@ -100,7 +100,7 @@ def test_update_persona(
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["title"] == data["title"]
+    assert content["name"] == data["name"]
     assert content["description"] == data["description"]
     assert content["id"] == str(persona.id)
 
@@ -109,8 +109,8 @@ def test_update_persona_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     data = {
-        "title": "Updated Persona Title",
-        "description": "Updated persona description"
+        "name": "Updated Persona name",
+        "description": "Updated persona description",
     }
     response = client.put(
         f"{settings.API_V1_STR}/personas/{uuid.uuid4()}",
@@ -127,8 +127,8 @@ def test_update_persona_not_enough_permissions(
 ) -> None:
     persona = create_random_persona(db)
     data = {
-        "title": "Updated Persona Title", 
-        "description": "Updated persona description"
+        "name": "Updated Persona name",
+        "description": "Updated persona description",
     }
     response = client.put(
         f"{settings.API_V1_STR}/personas/{persona.id}",

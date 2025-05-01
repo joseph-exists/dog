@@ -1,22 +1,26 @@
 import uuid
-
+from datetime import datetime
+from enum import Enum
 from typing import List
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
-from datetime import datetime
-from enum import Enum
 
-# investigate datetime
-# investigate other sqlmodel imports
+
+# ===== Model Overview for Relational References Ordering
+#
+# First the User system relationships
+# Then the Story system relationships
+# Followed by Gameplay State relationships
+# Then Character system relationships
+# Event system relationships
+# And finally Link model relationships
 
 
 class Message(SQLModel):
     message: str
 
 
-# Contents of JWT token
-
-
+# for the JWT Tokn
 class TokenPayload(SQLModel):
     sub: str | None = None
 
@@ -32,196 +36,13 @@ class Token(SQLModel):
     token_type: str = "bearer"
 
 
-# User class and item class are from original template - if any changes are made
-# make all reasons explicit and maintain documentation on original
-# best to maintain these classes as is to help decrease any learning curve
-
-
-class UserBase(SQLModel):
-    email: EmailStr = Field(unique=True, index=True, max_length=255)
-    is_active: bool = True
-    is_superuser: bool = False
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on creation
-class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=40)
-
-
-class UserRegister(SQLModel):
-    email: EmailStr = Field(max_length=255)
-    password: str = Field(min_length=8, max_length=40)
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-class UserBasePartial(SQLModel):
-    """Base model for user fields that can be updated (all optional)"""
-
-    email: EmailStr | None = Field(default=None, max_length=255)
-    is_active: bool | None = Field(default=None)
-    is_superuser: bool | None = Field(default=None)
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on update, all are optional
-class UserUpdate(UserBasePartial):
-    password: str | None = Field(default=None, min_length=8, max_length=40)
-
-
-class UserUpdateMe(SQLModel):
-    full_name: str | None = Field(default=None, max_length=255)
-    email: EmailStr | None = Field(default=None, max_length=255)
-
-
-class UpdatePassword(SQLModel):
-    current_password: str = Field(min_length=8, max_length=40)
-    new_password: str = Field(min_length=8, max_length=40)
-
-
-# Database model, database table inferred from class name
-class User(UserBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    hashed_password: str
-    items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
-
-
-# Properties to return via API, id is always required
-class UserPublic(UserBase):
-    id: uuid.UUID
-
-
-class UsersPublic(SQLModel):
-    data: list[UserPublic]
-    count: int
-
-
-# Item classes from template all original
-#
-class ItemBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive on item creation
-class ItemCreate(ItemBase):
-    pass
-
-
-class ItemBasePartial(SQLModel):
-    """Base model for item fields that can be updated (all optional)"""
-
-    title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive on item update
-class ItemUpdate(ItemBasePartial):
-    pass
-
-
-# maintain item class as an example of this ownership model
-# Database model, database table inferred from class name
-class Item(ItemBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
-    )
-    owner: User | None = Relationship(back_populates="items")
-
-
-# Properties to return via API, id is always required
-class ItemPublic(ItemBase):
-    id: uuid.UUID
-    owner_id: uuid.UUID
-
-
-class ItemsPublic(SQLModel):
-    data: list[ItemPublic]
-    count: int
-
-
-# ============ Event Models ============
-
-
-# Base model for fields that can be updated (optional)
-class EventBasePartial(SQLModel):
-    """Base model for event fields that can be updated (all optional)"""
-
-    name: str | None = Field(default=None, min_length=1, max_length=100)
-    description: str | None = Field(default=None, max_length=100)
-    event_type: str | None = Field(default=None, min_length=1, max_length=100)
-
-
-class EventBase(SQLModel):
-    """Base model for events that can trigger state changes"""
-
-    name: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=100)
-    event_type: str = Field(min_length=1, max_length=100)
-    # NOTE: event_type categories and structure?
-
-
-class EventCreate(EventBase):
-    """Model for creating events"""
-
-    pass
-
-
-class EventUpdate(EventBasePartial):
-    """Model for updating events"""
-
-    pass
-
-
-class Event(EventBase, table=True):
-    """Database model for events."""
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-
-
-class EventPublic(EventBase):
-    """Public model for Event API responses."""
-
-    id: uuid.UUID
-    created_at: datetime
-
-
-class EventsPublic(SQLModel):
-    """Collection model for Event API responses."""
-
-    data: List[EventPublic]
-    count: int
+# ========= enum and constant classes here =================
 
 
 class QualityState(str, Enum):
     ENABLED = "enabled"
     DISABLED = "disabled"
     REMOVED = "removed"
-
-
-class QualityEventTriggerBase(SQLModel):
-    """
-    Base model for defining events that can trigger quality state changes.
-    """
-
-    quality_id: uuid.UUID = Field(foreign_key="quality.id")
-    event_id: uuid.UUID = Field(foreign_key="event.id")
-    new_state: QualityState
-
-
-class QualityEventTrigger(QualityEventTriggerBase, table=True):
-    """
-    Database model for quality event triggers.
-    Defines what happens to a quality when a specific event occurs.
-    """
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-
-    # Optional condition logic (could be expanded later or refactored with maybe functor)
-    condition_json: str | None = Field(default=None)
 
 
 class QualitySourceType(str, Enum):
@@ -233,26 +54,79 @@ class QualitySourceType(str, Enum):
 # ============ Base Models ++++++++
 
 
-class ArchetypeBase(SQLModel):
+class UserBase(SQLModel):
+    email: EmailStr = Field(unique=True, index=True, max_length=255)
+    is_active: bool = True
+    is_superuser: bool = False
+    full_name: str | None = Field(default=None, max_length=255)
+
+
+class EventBase(SQLModel):
+    """Base model for events that can trigger state changes"""
+
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=100)
+    event_type: str = Field(min_length=1, max_length=100)
+    # NOTE: event_type categories and structure?
+
+
+class ItemBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+
+
+class StoryBase(SQLModel):
     title: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    is_published: bool = Field(default=False)
+
+
+class ArchetypeBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
 
 
 class PersonaBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
+    name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
 
 
 class TraitBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
+    name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
+    # archetype_only: bool = Field(default=False)
+    # max_active_personas: int | None = Field(default=None, ge=0)
 
 
-#  archetype_only: bool = Field(default=False)
-# max_active_personas: int | None = Field(default=None, ge=0)
 class QualityBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
+    name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
+
+
+class StoryNodeBase(SQLModel):
+    title: str = Field(min_length=1, max_length=255)
+    content: str = Field(default="")
+    node_type: str = Field(
+        default="text", max_length=50
+    )  # text, image, choice, paradox, graph, calendly, etc.
+    is_start_node: bool = Field(default=False)
+    is_end_node: bool = Field(default=False)
+    # metadata: dict | None = Field(default=None)  # JSON field for storing type-specific data
+
+
+class TagBase(SQLModel):
+    name: str = Field(min_length=1, max_length=50, unique=True)
+    color: str | None = Field(default=None, max_length=20)
+
+
+class NodeChoiceBase(SQLModel):
+    """Base model for NodeChoice"""
+
+    text: str = Field(min_length=1, max_length=500)
+    order: int = Field(default=0)
+    # TODO : figure out if these can be passed in to NodeChoice model directly in NodeChoiceCreate Model
+    # requires_state: dict | None = Field (default=None)  # JSON field for required state variables
+    # sets_state: dict | None = Field(default=None)  # JSON field for state variables to set
 
 
 # =========== base models for creating linked relationships between classes
@@ -291,6 +165,11 @@ class QualityTraitLinkBase(SQLModel):
     trait_id: uuid.UUID = Field(foreign_key="trait.id")
 
 
+class StoryUserLinkBase(SQLModel):
+    story_id: uuid.UUID = Field(foreign_key="story.id")
+    user_id: uuid.UUID = Field(foreign_key="user.id")
+
+
 # ========== Create Models ===========
 
 
@@ -310,13 +189,73 @@ class QualityCreate(QualityBase):
     pass
 
 
+class StoryCreate(StoryBase):
+    pass
+
+
+class StoryNodeCreate(StoryNodeBase):
+    pass
+
+
+# Properties to receive on item creation
+class ItemCreate(ItemBase):
+    pass
+
+
+# Properties to receive via API on creation
+class UserCreate(UserBase):
+    password: str = Field(min_length=8, max_length=40)
+
+
+class EventCreate(EventBase):
+    """Model for creating events"""
+
+    pass
+
+
 # ======== Update Models ===========
+
+
+class UserBasePartial(SQLModel):
+    """Base model for user fields that can be updated (all optional)"""
+
+    email: EmailStr | None = Field(default=None, max_length=255)
+    is_active: bool | None = Field(default=None)
+    is_superuser: bool | None = Field(default=None)
+    full_name: str | None = Field(default=None, max_length=255)
+
+
+# Properties to receive via API on update, all are optional
+class UserUpdate(UserBasePartial):
+    password: str | None = Field(default=None, min_length=8, max_length=40)
+
+
+class UserUpdateMe(SQLModel):
+    full_name: str | None = Field(default=None, max_length=255)
+    email: EmailStr | None = Field(default=None, max_length=255)
+
+
+class UpdatePassword(SQLModel):
+    current_password: str = Field(min_length=8, max_length=40)
+    new_password: str = Field(min_length=8, max_length=40)
+
+
+class ItemBasePartial(SQLModel):
+    """Base model for item fields that can be updated (all optional)"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+
+
+# Properties to receive on item update
+class ItemUpdate(ItemBasePartial):
+    pass
 
 
 class ArchetypeBasePartial(SQLModel):
     """Base model for archetype fields that can be updated (all optional)"""
 
-    title: str | None = Field(default=None, min_length=1, max_length=255)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
 
 
@@ -327,7 +266,7 @@ class ArchetypeUpdate(ArchetypeBasePartial):
 class PersonaBasePartial(SQLModel):
     """Base model for persona fields that can be updated (all optional)"""
 
-    title: str | None = Field(default=None, min_length=1, max_length=255)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
 
 
@@ -335,10 +274,24 @@ class PersonaUpdate(PersonaBasePartial):
     pass
 
 
+class EventBasePartial(SQLModel):
+    """Base model for event fields that can be updated (all optional)"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=100)
+    event_type: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class EventUpdate(EventBasePartial):
+    """Model for updating events"""
+
+    pass
+
+
 class QualityBasePartial(SQLModel):
     """Base model for quality fields that can be updated (all optional)"""
 
-    title: str | None = Field(default=None, min_length=1, max_length=255)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
 
 
@@ -346,8 +299,77 @@ class QualityUpdate(QualityBasePartial):
     pass
 
 
-class TraitUpdate(SQLModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)
+class TraitBasePartial(SQLModel):
+    """Base model for trait fields that can be updated (all optional)"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=255)
+
+
+class TraitUpdate(TraitBasePartial):
+    pass
+
+
+class StoryBasePartial(SQLModel):
+    """Base model for story fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    is_published: bool | None = Field(default=None)
+
+
+class StoryUpdate(StoryBasePartial):
+    pass
+
+
+class StoryNodePartial(SQLModel):
+    """Base model for story fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    content: str | None = Field(default=None)
+    node_type: str | None = Field(default=None, max_length=50)
+    is_start_node: bool | None = Field(default=None)
+    is_end_node: bool | None = Field(default=None)
+    # metadata: dict | None = Field(default=None)
+
+
+class StoryNodeUpdate(StoryNodePartial):
+    pass
+
+
+class NodeChoiceBasePartial(SQLModel):
+    """Base model for node choice fields that can be updated, all optional"""
+
+    text: str = Field(min_length=1, max_length=500)
+    order: int | None = Field(default=0)
+    requires_state: dict | None = Field(
+        default=None
+    )  # JSON field for required state variables
+    sets_state: dict | None = Field(
+        default=None
+    )  # JSON field for  state variables to set
+
+
+class QualityEventTriggerBase(SQLModel):
+    """
+    Base model for defining events that can trigger quality state changes.
+    """
+
+    quality_id: uuid.UUID = Field(foreign_key="quality.id")
+    event_id: uuid.UUID = Field(foreign_key="event.id")
+    new_state: QualityState
+
+
+class QualityEventTrigger(QualityEventTriggerBase, table=True):
+    """
+    Database model for quality event triggers.
+    Defines what happens to a quality when a specific event occurs.
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    # Optional condition logic (could be expanded later or refactored with maybe functor)
+    condition_json: str | None = Field(default=None)
 
 
 # ========= Database Models ===========
@@ -414,10 +436,32 @@ class PersonaQualityLink(PersonaQualityLinkBase, table=True):
     )
 
 
+class User(UserBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    hashed_password: str
+    items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
+
+
+class Item(ItemBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: User | None = Relationship(back_populates="items")
+    # this might need to change to Persona? not sure how to do cascading multiple ownership
+
+
+class Event(EventBase, table=True):
+    """Database model for events."""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 class Archetype(ArchetypeBase, table=True):
     """
     Database model for Archetype.
-    Relationships will be defined after all models are declared.
+    Relationships are defined after model declarations.
     """
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -455,6 +499,39 @@ class Trait(TraitBase, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
 
 
+class Story(StoryBase, table=True):
+    """
+    DB model for Story
+    Relationships defined after models are declared.
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+
+
+# Database model for StoryNode
+class StoryNode(StoryNodeBase, table=True):
+    """
+    DB model for StoryNode
+    Relationships defined after model declaration
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", nullable=False, ondelete="CASCADE"
+    )
+
+
+class NodeChoice(NodeChoiceBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
 class QualityTraitLink(QualityTraitLinkBase, table=True):
     """
     Database model for the many-to-many relationship between Qualities and Traits.
@@ -487,11 +564,34 @@ class QualityTraitLinkUpdate(SQLModel):
 # ========== Public Models ========
 
 
+# Properties to return via API, id is always required
+class UserPublic(UserBase):
+    id: uuid.UUID
+
+
+class ItemPublic(ItemBase):
+    id: uuid.UUID
+    owner_id: uuid.UUID
+
+
+class EventPublic(EventBase):
+    """Public model for Event API responses."""
+
+    id: uuid.UUID
+    created_at: datetime
+
+
 class ArchetypePublic(ArchetypeBase):
     """Public model for Archetype API responses."""
 
     id: uuid.UUID
     created_at: datetime
+
+
+class NodeChoicePublic(NodeChoiceBase):
+    id: uuid.UUID
+    from_node_id: uuid.UUID
+    to_node_id: uuid.UUID
 
 
 class PersonaPublic(PersonaBase):
@@ -515,13 +615,64 @@ class QualityPublic(QualityBase):
     created_at: datetime
 
 
+class StoryPublic(StoryBase):
+    """Public model for Story API responses."""
+
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    owner_id: uuid.UUID
+
+
+class StoryNodePublic(StoryNodeBase):
+    """Public Model for Story Node API responses"""
+
+    id: uuid.UUID
+    story_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class TagPublic(TagBase):
+    id: uuid.UUID
+
+
 # ============ Public collection models for API requests ==============
+
+
+class UsersPublic(SQLModel):
+    """Collection model for User API responses."""
+
+    data: list[UserPublic]
+    count: int
+
+
+class ItemsPublic(SQLModel):
+    data: list[ItemPublic]
+    count: int
+
+
+class EventsPublic(SQLModel):
+    """Collection model for Event API responses."""
+
+    data: List[EventPublic]
+    count: int
+
+
+class TagsPublic(SQLModel):
+    data: list[TagPublic]
+    count: int
 
 
 class ArchetypesPublic(SQLModel):
     """Collection model for Archetype API responses."""
 
     data: List[ArchetypePublic]
+    count: int
+
+
+class NodeChoicesPublic(SQLModel):
+    data: list[NodeChoicePublic]
     count: int
 
 
@@ -543,6 +694,20 @@ class QualitiesPublic(SQLModel):
     """Collection model for Quality API responses."""
 
     data: List[QualityPublic]
+    count: int
+
+
+class StoriesPublic(SQLModel):
+    """Collection model for Stories API responses."""
+
+    data: list[StoryPublic]
+    count: int
+
+
+class StoryNodesPublic(SQLModel):
+    """Collection model for Story Node responses."""
+
+    data: list[StoryNodePublic]
     count: int
 
 
@@ -585,127 +750,163 @@ class QualityEventTriggerPublic(QualityEventTriggerBase):
 
 # ==================== Define Relationships ====================
 
-# Define relationships after all classes to avoid circular reference issues
 
-# Define the relationship from Archetype to Trait
+# ============ Character System Relationships ============
+
+# Archetype to Trait relationship
 Archetype.traits = Relationship(
     back_populates="archetypes",
     link_model=ArchetypeTraitLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
-# Define the relationship from Trait to Archetype
+# Trait to Archetype relationship
 Trait.archetypes = Relationship(
     back_populates="traits",
     link_model=ArchetypeTraitLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
-# Define the relationship from Persona to Archetype
+# Archetype to Persona relationship
 Archetype.personas = Relationship(
     back_populates="archetypes",
     link_model=ArchetypePersonaLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
+# Persona to Archetype relationship
 Persona.archetypes = Relationship(
     back_populates="personas",
     link_model=ArchetypePersonaLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
-# Define the relationship from Quality to Archetype
+# Archetype to Quality relationship
 Archetype.qualities = Relationship(
     back_populates="archetypes",
     link_model=ArchetypeQualityLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
+# Quality to Archetype relationship
 Quality.archetypes = Relationship(
     back_populates="qualities",
     link_model=ArchetypeQualityLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
-Quality.personas = Relationship(
-    back_populates="qualities",
-    link_model=PersonaQualityLink,
-    sa_relationship_kwargs={"lazy": "selectin"},
-)
-
+# Persona to Quality relationship
 Persona.qualities = Relationship(
     back_populates="personas",
     link_model=PersonaQualityLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
+# Quality to Persona relationship
+Quality.personas = Relationship(
+    back_populates="qualities",
+    link_model=PersonaQualityLink,
+    sa_relationship_kwargs={"lazy": "selectin"},
+)
+
+# Persona to Trait relationship
 Persona.traits = Relationship(
     back_populates="personas",
     link_model=PersonaTraitLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
+# Trait to Persona relationship
 Trait.personas = Relationship(
     back_populates="traits",
     link_model=PersonaTraitLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
+# Quality to Trait relationship
 Quality.traits = Relationship(
     back_populates="qualities",
     link_model=QualityTraitLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
+# Trait to Quality relationship
 Trait.qualities = Relationship(
     back_populates="traits",
     link_model=QualityTraitLink,
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 
+# ============ Event System Relationships ============
 
-# Define relationships for the link model
+# Event to QualityEventTrigger relationship
+Event.quality_triggers = Relationship(back_populates="event")
+
+# QualityEventTrigger to Event relationship
+QualityEventTrigger.event = Relationship(back_populates="quality_triggers")
+
+# QualityEventTrigger to Quality relationship
+QualityEventTrigger.quality = Relationship(back_populates="event_triggers")
+
+# Quality to QualityEventTrigger relationship
+Quality.event_triggers = Relationship(back_populates="quality")
+
+# ============ Link Model Relationships ============
+
+# Link table to parent table relationships
 ArchetypeTraitLink.archetype = Relationship(back_populates="trait_links")
+
 ArchetypeTraitLink.trait = Relationship(back_populates="archetype_links")
 
 ArchetypePersonaLink.archetype = Relationship(back_populates="persona_links")
+
 ArchetypePersonaLink.persona = Relationship(back_populates="archetype_links")
 
 ArchetypeQualityLink.archetype = Relationship(back_populates="quality_links")
+
 ArchetypeQualityLink.quality = Relationship(back_populates="archetype_links")
 
 PersonaTraitLink.persona = Relationship(back_populates="trait_links")
+
 PersonaTraitLink.trait = Relationship(back_populates="persona_links")
 
+PersonaQualityLink.persona = Relationship(back_populates="quality_links")
+
+PersonaQualityLink.quality = Relationship(back_populates="persona_links")
+
 QualityTraitLink.quality = Relationship(back_populates="trait_links")
+
 QualityTraitLink.trait = Relationship(back_populates="quality_links")
 
-# Add backref relationships to main models for the link tables
+# Source relationships for quality links (special case)
+PersonaQualityLink.source_trait = Relationship()
+PersonaQualityLink.source_archetype = Relationship()
+
+# Parent table to link table backref relationships
 Archetype.trait_links = Relationship(back_populates="archetype")
+
 Trait.archetype_links = Relationship(back_populates="trait")
 
 Archetype.persona_links = Relationship(back_populates="archetype")
+
 Persona.archetype_links = Relationship(back_populates="persona")
 
 Archetype.quality_links = Relationship(back_populates="archetype")
+
 Quality.archetype_links = Relationship(back_populates="quality")
 
 Persona.trait_links = Relationship(back_populates="persona")
+
 Trait.persona_links = Relationship(back_populates="trait")
 
 Persona.quality_links = Relationship(back_populates="persona")
+
 Quality.persona_links = Relationship(back_populates="quality")
 
-# Add Event relationships
-Event.quality_triggers = Relationship(back_populates="event")
-QualityEventTrigger.event = Relationship(back_populates="quality_triggers")
+Quality.trait_links = Relationship(back_populates="quality")
 
-QualityEventTrigger.quality = Relationship(back_populates="event_triggers")
-Quality.event_triggers = Relationship(back_populates="quality")
+Trait.quality_links = Relationship(back_populates="trait")
 
-# Add source relationships for quality links
-PersonaQualityLink.source_trait = Relationship()
-PersonaQualityLink.source_archetype = Relationship()
 
 # Schemas for public trait configuration display and manipulation
 # THIS IS NEXT BIG TODO
@@ -741,3 +942,162 @@ class TraitConfigPublic(TraitConfigBase):
 class TraitConfigsPublic(SQLModel):
     data: list[TraitConfigPublic]
     count: int
+
+
+# ---- NodeChoice Models ----
+
+# Base model for NodeChoice
+
+
+class NodeChoiceCreate(NodeChoiceBase):
+    from_node_id: uuid.UUID
+    to_node_id: uuid.UUID
+
+
+class TagBasePartial(SQLModel):
+    name: str = Field(min_length=1, max_length=50, unique=True)
+    color: str | None = Field(default=None, max_length=20)
+
+
+# Create model for NodeChoice
+
+
+# Update model for NodeChoice
+class NodeChoiceUpdate(NodeChoiceBasePartial):
+    text: str | None = Field(default=None, min_length=1, max_length=500)  # type: ignore
+    order: int | None = Field(default=None)
+    to_node_id: uuid.UUID | None = Field(default=None)
+    requires_state: dict | None = Field(default=None)
+    sets_state: dict | None = Field(default=None)
+
+
+# Create model for Tag
+class TagCreate(TagBase):
+    pass
+
+
+# Update model for Tag
+class TagUpdate(TagBasePartial):
+    pass
+
+
+# Database model for Tag
+class Tag(TagBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
+# Many-to-many relationship between Story and Tag
+class StoryToTag(SQLModel, table=True):
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", primary_key=True, ondelete="CASCADE"
+    )
+    tag_id: uuid.UUID = Field(
+        foreign_key="tag.id", primary_key=True, ondelete="CASCADE"
+    )
+
+
+# ---- StoryPlay Models for Tracking Game State ----
+
+
+# Base model for StoryPlay
+class StoryPlayBase(SQLModel):
+    player_name: str | None = Field(default=None, max_length=255)
+    is_completed: bool = Field(default=False)
+    # state_data: dict | None = Field(default=None)  # JSON field for storing game state
+
+
+# Create model for StoryPlay
+class StoryPlayCreate(StoryPlayBase):
+    story_id: uuid.UUID
+
+
+class StoryPlayBasePartial(SQLModel):
+    player_name: str | None = Field(default=None, max_length=255)
+    is_completed: bool | None = Field(default=None)
+    # state_data: dict | None = Field(default=None)
+
+
+# Update model for StoryPlay
+class StoryPlayUpdate(StoryPlayBasePartial):
+    pass
+
+
+# Database model for StoryPlay
+class StoryPlay(StoryPlayBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", nullable=False, ondelete="CASCADE"
+    )
+    user_id: uuid.UUID | None = Field(
+        foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
+
+
+# Public model for StoryPlay
+class StoryPlayPublic(StoryPlayBase):
+    id: uuid.UUID
+    story_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    user_id: uuid.UUID | None
+
+
+# Collection response for StoryPlays
+class StoryPlaysPublic(SQLModel):
+    data: list[StoryPlayPublic]
+    count: int
+
+
+# ---- PlayState Models for Tracking Node Visits ----
+
+
+# Base model for PlayState
+class PlayStateBase(SQLModel):
+    visited_at: datetime = Field(default_factory=datetime.now)
+    # state_data: dict | None = Field(default=None)  # JSON field for node-specific state
+
+
+# Create model for PlayState
+class PlayStateCreate(PlayStateBase):
+    play_id: uuid.UUID
+    node_id: uuid.UUID
+
+
+# Update model for PlayState
+class PlayStateUpdate(PlayStateBase):
+    state_data: dict | None = Field(default=None)
+
+
+# Database model for PlayState
+class PlayState(PlayStateBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    play_id: uuid.UUID = Field(
+        foreign_key="storyplay.id", nullable=False, ondelete="CASCADE"
+    )
+    node_id: uuid.UUID = Field(
+        foreign_key="storynode.id", nullable=False, ondelete="CASCADE"
+    )
+
+
+# Public model for PlayState
+class PlayStatePublic(PlayStateBase):
+    id: uuid.UUID
+    play_id: uuid.UUID
+    node_id: uuid.UUID
+
+
+# Collection response for PlayStates
+class PlayStatesPublic(SQLModel):
+    data: list[PlayStatePublic]
+    count: int
+
+
+# =============== user management stuff ===============
+
+
+class UserRegister(SQLModel):
+    email: EmailStr = Field(max_length=255)
+    password: str = Field(min_length=8, max_length=40)
+    full_name: str | None = Field(default=None, max_length=255)

@@ -30,13 +30,11 @@ def read_qualities(
     statement = select(Quality).offset(skip).limit(limit)
     qualities = session.exec(statement).all()
 
-    return QualitiesPublic(data=qualities, count=count) # type: ignore
+    return QualitiesPublic(data=qualities, count=count)  # type: ignore
 
 
 @router.get("/{id}", response_model=QualityPublic)
-def read_quality(
-    session: SessionDep, current_user: CurrentUser, id: uuid.UUID
-) -> Any:
+def read_quality(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) -> Any:
     """
     Get Quality by ID.
     """
@@ -53,15 +51,11 @@ def create_quality(
     """
     Create new quality.
     """
-    # Generate quality_name from title
-    quality_name = quality_in.title.lower().replace(" ", "_")[:50]
+    # Generate quality_name from name
+    quality_name = quality_in.name.lower().replace(" ", "_")[:50]
 
     quality = Quality.model_validate(
-        quality_in,
-        update={
-            "enabled": True,
-            "quality_name": quality_name
-        }
+        quality_in, update={"enabled": True, "quality_name": quality_name}
     )
     session.add(quality)
     session.commit()

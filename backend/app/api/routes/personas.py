@@ -55,8 +55,8 @@ def create_persona(
     """
     Create new persona.
     """
-    # Generate persona_name from title
-    persona_name = persona_in.title.lower().replace(" ", "_")[:50]
+    # Generate persona_name from name
+    persona_name = persona_in.name.lower().replace(" ", "_")[:50]
 
     persona = Persona.model_validate(
         persona_in,

@@ -10,7 +10,7 @@ def create_random_quality(db: Session) -> Quality:
     """
     name = random_lower_string()
     description = random_lower_string()
-    
+
     quality = Quality(
         name=name,
         description=description,

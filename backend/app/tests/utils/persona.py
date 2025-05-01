@@ -11,28 +11,25 @@ def create_random_persona(db: Session, archetype_id=None) -> Persona:
     user = create_random_user(db)
     owner_id = user.id
     assert owner_id is not None
-    
+
     # If no archetype_id is provided, create a random archetype
     if archetype_id is None:
         archetype = create_random_archetype(db)
         archetype_id = archetype.id
-    
-    title = random_lower_string()
+
+    name = random_lower_string()
     description = random_lower_string()
-    # Generate a valid persona_name from title
-    persona_name = title[:20].lower().replace(" ", "_")
-    
-    persona_in = PersonaCreate(title=title, description=description)
-    
+    # Generate a valid persona_name from name
+    persona_name = name[:20].lower().replace(" ", "_")
+
+    persona_in = PersonaCreate(name=name, description=description)
+
     # Create the persona instance directly because the crud function has issues
     persona = Persona.model_validate(
-        persona_in, 
+        persona_in,
         update={
-            "enabled": True,
-            "owner_id": owner_id,
-            "archetype_id": archetype_id,
-            "persona_name": persona_name
-        }
+            "persona_name": persona_name,
+        },
     )
     db.add(persona)
     db.commit()

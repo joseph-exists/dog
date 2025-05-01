@@ -23,7 +23,7 @@ This tells Python's type checker about the relationship without requiring Trait 
 
 ### 2. Post-Definition Relationship Binding
 
-The approach in Option 1 (defining relationships after all classes) is fully compatible with SQLModel and is actually recommended in the SQLModel documentation for complex circular relationships. For example:
+This approach (defining relationships after all classes) is fully compatible with SQLModel and is actually recommended in the SQLModel documentation for complex circular relationships. For example:
 
 ```python
 # First define all classes

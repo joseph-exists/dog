@@ -8,10 +8,7 @@ from app.tests.utils.trait import create_random_trait
 def create_archetype_trait_link(
     db: Session,
     archetype_id=None,
-    trait_id=None,
-    is_modifiable=True,
-    modifiable_at_creation_only=False,
-    is_required=False
+    trait_id=None
 ) -> ArchetypeTraitLink:
     """
     Create a relationship between an archetype and a trait for testing.
@@ -20,19 +17,16 @@ def create_archetype_trait_link(
     if archetype_id is None:
         archetype = create_random_archetype(db)
         archetype_id = archetype.id
-    
+
     if trait_id is None:
         trait = create_random_trait(db)
         trait_id = trait.id
-    
+
     link = ArchetypeTraitLink(
         archetype_id=archetype_id,
         trait_id=trait_id,
-        is_modifiable=is_modifiable,
-        modifiable_at_creation_only=modifiable_at_creation_only,
-        is_required=is_required
     )
-    
+
     db.add(link)
     db.commit()
     db.refresh(link)

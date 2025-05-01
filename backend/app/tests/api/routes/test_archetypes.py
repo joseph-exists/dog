@@ -10,10 +10,7 @@ from app.tests.utils.archetype import create_random_archetype
 def test_create_archetype(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {
-        "title": "Test Archetype",
-        "description": "A test archetype description"
-    }
+    data = {"name": "Test Archetype", "description": "A test archetype description"}
     response = client.post(
         f"{settings.API_V1_STR}/archetypes/",
         headers=superuser_token_headers,
@@ -21,7 +18,7 @@ def test_create_archetype(
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["title"] == data["title"]
+    assert content["name"] == data["name"]
     assert content["description"] == data["description"]
     assert "id" in content
 
@@ -36,7 +33,7 @@ def test_read_archetype(
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["title"] == archetype.title
+    assert content["name"] == archetype.name
     assert content["description"] == archetype.description
     assert content["id"] == str(archetype.id)
 
@@ -72,8 +69,8 @@ def test_update_archetype(
 ) -> None:
     archetype = create_random_archetype(db)
     data = {
-        "title": "Updated Archetype Title",
-        "description": "Updated archetype description"
+        "name": "Updated Archetype name",
+        "description": "Updated archetype description",
     }
     response = client.put(
         f"{settings.API_V1_STR}/archetypes/{archetype.id}",
@@ -82,7 +79,7 @@ def test_update_archetype(
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["title"] == data["title"]
+    assert content["name"] == data["name"]
     assert content["description"] == data["description"]
     assert content["id"] == str(archetype.id)
 
@@ -91,8 +88,8 @@ def test_update_archetype_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     data = {
-        "title": "Updated Archetype Title",
-        "description": "Updated archetype description"
+        "name": "Updated Archetype name",
+        "description": "Updated archetype description",
     }
     response = client.put(
         f"{settings.API_V1_STR}/archetypes/{uuid.uuid4()}",
@@ -109,8 +106,8 @@ def test_update_archetype_not_enough_permissions(
 ) -> None:
     archetype = create_random_archetype(db)
     data = {
-        "title": "Updated Archetype Title", 
-        "description": "Updated archetype description"
+        "name": "Updated Archetype name",
+        "description": "Updated archetype description",
     }
     response = client.put(
         f"{settings.API_V1_STR}/archetypes/{archetype.id}",

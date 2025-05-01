@@ -6,9 +6,8 @@ set -x
 # Let the DB start
 python app/backend_pre_start.py
 
-# ensure pgai init - need to move this later
-# echo 'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS ai CASCADE;"' >> backend/scripts/prestart.sh
-
+# ensure pgai init - this doesn't work the way it's written
+# psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS ai CASCADE;"
 
 # Run migrations
 alembic upgrade head

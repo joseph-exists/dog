@@ -30,13 +30,11 @@ def read_traits(
     statement = select(Trait).offset(skip).limit(limit)
     traits = session.exec(statement).all()
 
-    return TraitsPublic(data=traits, count=count) # type: ignore
+    return TraitsPublic(data=traits, count=count)  # type: ignore
 
 
 @router.get("/{id}", response_model=TraitPublic)
-def read_trait(
-    session: SessionDep, current_user: CurrentUser, id: uuid.UUID
-) -> Any:
+def read_trait(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) -> Any:
     """
     Get Trait by ID.
     """
@@ -53,15 +51,11 @@ def create_trait(
     """
     Create new trait.
     """
-    # Generate trait_name from title
-    trait_name = trait_in.title.lower().replace(" ", "_")[:50]
+    # Generate trait_name from name
+    trait_name = trait_in.name.lower().replace(" ", "_")[:50]
 
     trait = Trait.model_validate(
-        trait_in,
-        update={
-            "enabled": True,
-            "trait_name": trait_name
-        }
+        trait_in, update={"enabled": True, "trait_name": trait_name}
     )
     session.add(trait)
     session.commit()
