@@ -32,6 +32,17 @@ from app.models import (
     QualityState,
     QualitySourceType,
     PersonaTraitLink,
+    Story,
+    StoryCreate,
+    StoryUpdate,
+    StoryPublic,
+    StoriesPublic,
+    StoryNode,
+    StoryNodeCreate,
+    StoryNodeUpdate,
+    StoryNodePublic,
+    StoryNodesPublic,
+    Message,
 )
 
 
@@ -341,3 +352,43 @@ def remove_quality_from_persona(
     session.commit()
     session.refresh(quality_link)
     return quality_link
+
+
+def create_story(
+    *, session: Session, story_in: StoryCreate, owner_id: uuid.UUID
+) -> Story:
+    db_story = Story.model_validate(story_in, update={"owner_id": owner_id})
+    session.add(db_story)
+    session.commit()
+    session.refresh(db_story)
+    return db_story
+
+
+def create_storynode(
+    *, session: Session, storynode_in: StoryNodeCreate, owner_id: uuid.UUID
+) -> StoryNode:
+    db_storynode = StoryNode.model_validate(storynode_in, update={"owner_id": owner_id})
+    session.add(db_storynode)
+    session.commit()
+    session.refresh(db_storynode)
+    return db_storynode
+
+
+def update_story(*, session: Session, story_in: StoryUpdate) -> Story:
+    story = session.get(Story, story_in.id)
+    if not story:
+        raise ValueError("Story not found")
+    story.sqlmodel_update(story_in.model_dump(exclude_unset=True))
+    session.add(story)
+    session.commit()
+    session.refresh(story)
+    return story
+
+
+def delete_story(*, session: Session, story_id: uuid.UUID) -> Message:
+    story = session.get(Story, story_id)
+    if not story:
+        raise ValueError("Story not found")
+    session.delete(story)
+    session.commit()
+    return Message(message="Story deleted successfully")

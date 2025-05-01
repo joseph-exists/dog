@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import List
+
 from pydantic import EmailStr
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import SQLModel, Field, Relationship
 
 
 # ===== Model Overview for Relational References Ordering
@@ -655,7 +655,7 @@ class ItemsPublic(SQLModel):
 class EventsPublic(SQLModel):
     """Collection model for Event API responses."""
 
-    data: List[EventPublic]
+    data: list[EventPublic]
     count: int
 
 
@@ -667,7 +667,7 @@ class TagsPublic(SQLModel):
 class ArchetypesPublic(SQLModel):
     """Collection model for Archetype API responses."""
 
-    data: List[ArchetypePublic]
+    data: list[ArchetypePublic]
     count: int
 
 
@@ -679,21 +679,21 @@ class NodeChoicesPublic(SQLModel):
 class PersonasPublic(SQLModel):
     """Collection model for Personas API responses."""
 
-    data: List[PersonaPublic]
+    data: list[PersonaPublic]
     count: int
 
 
 class TraitsPublic(SQLModel):
     """Collection model for Trait API responses."""
 
-    data: List[TraitPublic]
+    data: list[TraitPublic]
     count: int
 
 
 class QualitiesPublic(SQLModel):
     """Collection model for Quality API responses."""
 
-    data: List[QualityPublic]
+    data: list[QualityPublic]
     count: int
 
 

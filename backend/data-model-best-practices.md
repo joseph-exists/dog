@@ -85,8 +85,8 @@ Hero.team = Relationship(back_populates="heroes")
 
 ## Best Practices for TinyFoot
 
-
 1. **Use String-Based Forward References for Type Hints**: Keep proper type hinting in your model definitions but use string-based references:
+
    ```python
    traits: list["Trait"]
    ```
