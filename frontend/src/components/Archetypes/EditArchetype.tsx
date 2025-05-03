@@ -11,7 +11,11 @@ import { useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { FaExchangeAlt } from "react-icons/fa";
 
-import { type ApiError, type ArchetypePublic, ArchetypesService } from "client";
+import {
+  type ApiError,
+  type ArchetypePublic,
+  ArchetypesService,
+} from "../../client";
 import useCustomToast from "@/hooks/useCustomToast";
 import { handleError } from "@/utils";
 import {
@@ -27,11 +31,11 @@ import {
 import { Field } from "../ui/field";
 
 interface EditArchetypeProps {
-  item: ArchetypePublic;
+  archetype: ArchetypePublic;
 }
 
 interface ArchetypeUpdateForm {
-  title: string;
+  name: string;
   description?: string;
 }
 
@@ -55,7 +59,10 @@ const EditArchetype = ({ archetype }: EditArchetypeProps) => {
 
   const mutation = useMutation({
     mutationFn: (data: ArchetypeUpdateForm) =>
-      ArchetypesService.updateArchetype({ id: item.id, requestBody: data }),
+      ArchetypesService.updateArchetype({
+        id: archetype.id,
+        requestBody: data,
+      }),
     onSuccess: () => {
       showSuccessToast("Archetype updated successfully.");
       reset();
@@ -83,7 +90,7 @@ const EditArchetype = ({ archetype }: EditArchetypeProps) => {
       <DialogTrigger asChild>
         <Button variant="ghost">
           <FaExchangeAlt fontSize="16px" />
-          Edit Item
+          Edit Archetype
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -92,20 +99,20 @@ const EditArchetype = ({ archetype }: EditArchetypeProps) => {
             <DialogTitle>Edit Item</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <Text mb={4}>Update the item details below.</Text>
+            <Text mb={4}>Update the archetype details below.</Text>
             <VStack gap={4}>
               <Field
                 required
-                invalid={!!errors.title}
-                errorText={errors.title?.message}
+                invalid={!!errors.name}
+                errorText={errors.name?.message}
                 label="Title"
               >
                 <Input
-                  id="title"
-                  {...register("title", {
-                    required: "Title is required",
+                  id="name"
+                  {...register("name", {
+                    required: "Name is required",
                   })}
-                  placeholder="Title"
+                  placeholder="Name"
                   type="text"
                 />
               </Field>

@@ -40,7 +40,7 @@ const AddArchetype = () => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      title: "",
+      name: "",
       description: "",
     },
   });
@@ -88,16 +88,16 @@ const AddArchetype = () => {
             <VStack gap={4}>
               <Field
                 required
-                invalid={!!errors.title}
-                errorText={errors.title?.message}
+                invalid={!!errors.name}
+                errorText={errors.name?.message}
                 label="Title"
               >
                 <Input
                   id="title"
-                  {...register("title", {
-                    required: "Title is required.",
+                  {...register("name", {
+                    required: "Name is required.",
                   })}
-                  placeholder="Title"
+                  placeholder="Name"
                   type="text"
                 />
               </Field>

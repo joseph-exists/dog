@@ -89,6 +89,12 @@ class ArchetypeBase(SQLModel):
 class PersonaBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
+    long_description: str | None = Field(default=None)
+    general_domain: str | None = Field(default=None, max_length=255)
+    specific_domain: str | None = Field(default=None, max_length=255)
+    general_domain_high: str | None = Field(default=None, max_length=255)
+    specific_domain_high: str | None = Field(default=None, max_length=255)
+
 
 
 class TraitBase(SQLModel):
@@ -268,7 +274,10 @@ class PersonaBasePartial(SQLModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
-
+    general_domain: str | None = Field(default=None, max_length=255)
+    specific_domain: str | None = Field(default=None, max_length=255)
+    general_domain_high: str | None = Field(default=None, max_length=255)
+    specific_domain_high: str | None = Field(default=None, max_length=255)
 
 class PersonaUpdate(PersonaBasePartial):
     pass

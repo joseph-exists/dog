@@ -11,42 +11,45 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { FiSearch } from "react-icons/fi";
 import { z } from "zod";
 
-import { ItemsService } from "@/client";
-import { ItemActionsMenu } from "@/components/Common/ItemActionsMenu";
-import AddItem from "@/components/Items/AddItem";
-import PendingItems from "@/components/Pending/PendingItems";
+import { ArchetypesService } from "../../client";
+import { ArchetypeActionsMenu } from "../../components/Common/ArchetypeActionsMenu";
+import AddArchetype from "../../components/Archetypes/AddArchetype";
+import PendingArchetypes from "../../components/Pending/PendingArchetypes";
 import {
   PaginationItems,
   PaginationNextTrigger,
   PaginationPrevTrigger,
   PaginationRoot,
-} from "@/components/ui/pagination.tsx";
+} from "../../components/ui/pagination.tsx";
 
-const itemsSearchSchema = z.object({
+const archetypesSearchSchema = z.object({
   page: z.number().catch(1),
 });
 
 const PER_PAGE = 5;
 
-function getItemsQueryOptions({ page }: { page: number }) {
+function getArchetypesQueryOptions({ page }: { page: number }) {
   return {
     queryFn: () =>
-      ItemsService.readItems({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE }),
-    queryKey: ["items", { page }],
+      ArchetypesService.readArchetypes({
+        skip: (page - 1) * PER_PAGE,
+        limit: PER_PAGE,
+      }),
+    queryKey: ["archetypes", { page }],
   };
 }
 
-export const Route = createFileRoute("/_layout/items")({
-  component: Items,
-  validateSearch: (search) => itemsSearchSchema.parse(search),
+export const Route = createFileRoute("/_layout/archetypes")({
+  component: Archetypes,
+  validateSearch: (search) => archetypesSearchSchema.parse(search),
 });
 
-function ItemsTable() {
+function ArchetypesTable() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { page } = Route.useSearch();
 
   const { data, isLoading, isPlaceholderData } = useQuery({
-    ...getItemsQueryOptions({ page }),
+    ...getArchetypesQueryOptions({ page }),
     placeholderData: (prevData) => prevData,
   });
 
@@ -55,14 +58,14 @@ function ItemsTable() {
       search: (prev: { [key: string]: string }) => ({ ...prev, page }),
     });
 
-  const items = data?.data.slice(0, PER_PAGE) ?? [];
+  const archetypes = data?.data.slice(0, PER_PAGE) ?? [];
   const count = data?.count ?? 0;
 
   if (isLoading) {
-    return <PendingItems />;
+    return <PendingArchetypes />;
   }
 
-  if (items.length === 0) {
+  if (archetypes.length === 0) {
     return (
       <EmptyState.Root>
         <EmptyState.Content>
@@ -70,9 +73,11 @@ function ItemsTable() {
             <FiSearch />
           </EmptyState.Indicator>
           <VStack textAlign="center">
-            <EmptyState.Title>You don't have any items yet</EmptyState.Title>
+            <EmptyState.Title>
+              You don't have any archetypes yet
+            </EmptyState.Title>
             <EmptyState.Description>
-              Add a new item to get started
+              Add a new archetype to get started
             </EmptyState.Description>
           </VStack>
         </EmptyState.Content>
@@ -92,23 +97,23 @@ function ItemsTable() {
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {items?.map((item) => (
-            <Table.Row key={item.id} opacity={isPlaceholderData ? 0.5 : 1}>
+          {archetypes?.map((archetype) => (
+            <Table.Row key={archetype.id} opacity={isPlaceholderData ? 0.5 : 1}>
               <Table.Cell truncate maxW="30%">
-                {item.id}
+                {archetype.id}
               </Table.Cell>
               <Table.Cell truncate maxW="30%">
-                {item.name}
+                {archetype.name}
               </Table.Cell>
               <Table.Cell
-                color={!item.description ? "gray" : "inherit"}
+                color={!archetype.description ? "gray" : "inherit"}
                 truncate
                 maxW="30%"
               >
-                {item.description || "N/A"}
+                {archetype.description || "N/A"}
               </Table.Cell>
               <Table.Cell width="10%">
-                <ItemActionsMenu item={item} />
+                <ArchetypeActionsMenu archetype={archetype} />
               </Table.Cell>
             </Table.Row>
           ))}
@@ -131,14 +136,14 @@ function ItemsTable() {
   );
 }
 
-function Items() {
+function Archetypes() {
   return (
     <Container maxW="full">
       <Heading size="lg" pt={12}>
-        Items Management
+        Archetypes Management
       </Heading>
-      <AddItem />
-      <ItemsTable />
+      <AddArchetype />
+      <ArchetypesTable />
     </Container>
   );
 }
