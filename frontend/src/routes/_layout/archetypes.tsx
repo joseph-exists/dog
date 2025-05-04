@@ -91,7 +91,7 @@ function ArchetypesTable() {
         <Table.Header>
           <Table.Row>
             <Table.ColumnHeader w="30%">ID</Table.ColumnHeader>
-            <Table.ColumnHeader w="30%">Title</Table.ColumnHeader>
+            <Table.ColumnHeader w="30%">Name</Table.ColumnHeader>
             <Table.ColumnHeader w="30%">Description</Table.ColumnHeader>
             <Table.ColumnHeader w="10%">Actions</Table.ColumnHeader>
           </Table.Row>

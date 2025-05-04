@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import useAuth from "@/hooks/useAuth";
 
-export const Route = createFileRoute("/_layout/")({
+export const Route = createFileRoute("/_layout/dashboard")({
   component: Dashboard,
 });
 
@@ -17,7 +17,7 @@ function Dashboard() {
           <Text fontSize="2xl">
             Hi, {currentUser?.full_name || currentUser?.email} 👋🏼
           </Text>
-          <Text>Welcome back, how nice to see you again!</Text>
+          <Text>Welcome back, nice to see you again!</Text>
         </Box>
         <Box>
           <Card.Root width="320px">
@@ -26,12 +26,12 @@ function Dashboard() {
                 <Avatar.Image src="https://picsum.photos/200/300" />
                 <Avatar.Fallback name="Beeboop The Flatterer" />
               </Avatar.Root>
-              <Card.Title mt="2">Boop Boop For Real Boop</Card.Title>
+              <Card.Title mt="2">Bee Slloop For Real Boop</Card.Title>
               <Card.Description>
-                This is IN THE INDEX card body. Lorem ipsum dolor sit amet,
-                consectetur adipiscing elit. Curabitur nec odio vel dui euismod
-                fermentum. Curabitur nec odio vel dui euismod fermentum. This is
-                the card body. Lorem ipsum dolor sit amet, consectetur
+                This is the card in THE DASHBOARD body. Lorem ipsum dolor sit
+                amet, consectetur adipiscing elit. Curabitur nec odio vel dui
+                euismod fermentum. Curabitur nec odio vel dui euismod fermentum.
+                This is the card body. Lorem ipsum dolor sit amet, consectetur
                 adipiscing elit. Curabitur nec odio vel dui euismod fermentum.
                 Curabitur nec odio vel dui euismod fermentum. This is the card
                 body. Lorem ipsum dolor sit amet, consectetur adipiscing elit.

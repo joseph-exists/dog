@@ -116,6 +116,11 @@ export type NewPassword = {
 export type Persona = {
   name: string
   description?: string | null
+  long_description?: string | null
+  general_domain?: string | null
+  specific_domain?: string | null
+  general_domain_high?: string | null
+  specific_domain_high?: string | null
   id?: string
   created_at?: string
 }
@@ -123,6 +128,11 @@ export type Persona = {
 export type PersonaCreate = {
   name: string
   description?: string | null
+  long_description?: string | null
+  general_domain?: string | null
+  specific_domain?: string | null
+  general_domain_high?: string | null
+  specific_domain_high?: string | null
 }
 
 /**
@@ -131,6 +141,11 @@ export type PersonaCreate = {
 export type PersonaPublic = {
   name: string
   description?: string | null
+  long_description?: string | null
+  general_domain?: string | null
+  specific_domain?: string | null
+  general_domain_high?: string | null
+  specific_domain_high?: string | null
   id: string
   created_at: string
 }
@@ -146,6 +161,11 @@ export type PersonasPublic = {
 export type PersonaUpdate = {
   name?: string | null
   description?: string | null
+  long_description?: string | null
+  general_domain?: string | null
+  specific_domain?: string | null
+  general_domain_high?: string | null
+  specific_domain_high?: string | null
 }
 
 export type PrivateUserCreate = {

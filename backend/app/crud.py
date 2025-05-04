@@ -42,6 +42,7 @@ from app.models import (
     StoryNodeUpdate,
     StoryNodePublic,
     StoryNodesPublic,
+    PersonaUpdate,
     Message,
 )
 
