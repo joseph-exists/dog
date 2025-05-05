@@ -21,6 +21,7 @@ import { Route as LayoutSimplestartImport } from './routes/_layout/simplestart'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
 import { Route as LayoutPersonasImport } from './routes/_layout/personas'
 import { Route as LayoutItemsImport } from './routes/_layout/items'
+import { Route as LayoutIndexchangesforreviewImport } from './routes/_layout/index changes_for_review'
 import { Route as LayoutDashboardImport } from './routes/_layout/dashboard'
 import { Route as LayoutArchetypesImport } from './routes/_layout/archetypes'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
@@ -77,6 +78,12 @@ const LayoutItemsRoute = LayoutItemsImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutIndexchangesforreviewRoute =
+  LayoutIndexchangesforreviewImport.update({
+    path: '/index changes_for_review',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+
 const LayoutDashboardRoute = LayoutDashboardImport.update({
   path: '/dashboard',
   getParentRoute: () => LayoutRoute,
@@ -128,6 +135,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDashboardImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/index changes_for_review': {
+      preLoaderRoute: typeof LayoutIndexchangesforreviewImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/items': {
       preLoaderRoute: typeof LayoutItemsImport
       parentRoute: typeof LayoutImport
@@ -158,6 +169,7 @@ export const routeTree = rootRoute.addChildren([
     LayoutAdminRoute,
     LayoutArchetypesRoute,
     LayoutDashboardRoute,
+    LayoutIndexchangesforreviewRoute,
     LayoutItemsRoute,
     LayoutPersonasRoute,
     LayoutSettingsRoute,

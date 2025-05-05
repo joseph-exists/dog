@@ -12,7 +12,7 @@ Create an alembic revision
     (alembic revision --autogenerate -m "what the revision wants to do"
 Review that revision!
     /app/app/alembic/versions (note: there will be a nested app directory in docker container and you will start in the higher level app)
-    note: i've found this is a good time to migrate it to my IDE so I can review there
+
 Run the migration
     alembic upgrade head
 
