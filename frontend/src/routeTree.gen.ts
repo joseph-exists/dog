@@ -20,6 +20,7 @@ import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LayoutSimplestartImport } from './routes/_layout/simplestart'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
 import { Route as LayoutPersonasImport } from './routes/_layout/personas'
+import { Route as LayoutPersonaSelectImport } from './routes/_layout/persona-select'
 import { Route as LayoutItemsImport } from './routes/_layout/items'
 import { Route as LayoutIndexchangesforreviewImport } from './routes/_layout/index changes_for_review'
 import { Route as LayoutDashboardImport } from './routes/_layout/dashboard'
@@ -70,6 +71,11 @@ const LayoutSettingsRoute = LayoutSettingsImport.update({
 
 const LayoutPersonasRoute = LayoutPersonasImport.update({
   path: '/personas',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutPersonaSelectRoute = LayoutPersonaSelectImport.update({
+  path: '/persona-select',
   getParentRoute: () => LayoutRoute,
 } as any)
 
@@ -143,6 +149,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutItemsImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/persona-select': {
+      preLoaderRoute: typeof LayoutPersonaSelectImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/personas': {
       preLoaderRoute: typeof LayoutPersonasImport
       parentRoute: typeof LayoutImport
@@ -171,6 +181,7 @@ export const routeTree = rootRoute.addChildren([
     LayoutDashboardRoute,
     LayoutIndexchangesforreviewRoute,
     LayoutItemsRoute,
+    LayoutPersonaSelectRoute,
     LayoutPersonasRoute,
     LayoutSettingsRoute,
     LayoutSimplestartRoute,

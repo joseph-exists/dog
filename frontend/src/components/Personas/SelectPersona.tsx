@@ -1,6 +1,6 @@
-// src/components/Personas/PersonaSelection.tsx
+// src/components/Personas/SelectPersona.tsx
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Box,
   SimpleGrid,
@@ -12,26 +12,19 @@ import {
   Flex,
   Spinner,
 } from "@chakra-ui/react";
-import { PersonasService } from "@/client";
-import { PersonaCard } from "@/components/Common/PersonaCard";
-import { PersonaPublic } from "@/client/types.gen";
-import useCustomToast from "@/hooks/useCustomToast";
-
-// This would be connected to an API in the future
-interface SelectPersonaMutationParams {
-  personaId: string;
-}
+import { PersonasService } from "../../client";
+import { PersonaCard } from '../../components/Common/PersonaCard';
+import useCustomToast from "../../hooks/useCustomToast";
+import { usePersona } from "../../contexts/PersonaContext";
 
 const PERSONA_LIMIT = 3; // Show only 3 personas for selection
 
 export const PersonaSelection = () => {
-  const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
-    null,
-  );
-  const [selectionMade, setSelectionMade] = useState(false);
-  const queryClient = useQueryClient();
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const { showSuccessToast, showErrorToast } = useCustomToast();
 
+  // Use the context for global state
+  const { selectedPersonaId, selectionComplete, selectPersona } = usePersona();
 
   // Fetch personas for selection
   const { data, isLoading, error } = useQuery({
@@ -39,37 +32,29 @@ export const PersonaSelection = () => {
     queryFn: () => PersonasService.readPersonas({ limit: PERSONA_LIMIT }),
   });
 
-  // Simulating a mutation to select a persona (will be replaced with actual API call)
-  const selectPersonaMutation = useMutation({
-    mutationFn: ({ personaId }: SelectPersonaMutationParams) => {
-      // This is a placeholder for the real API call
-      // Return a promise that resolves after a delay to simulate API call
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          resolve();
-        }, 800);
-      });
-    },
-    onSuccess: () => {
-      showSuccessToast("Persona selected successfully!");
-      setSelectionMade(true);
-
-      // Invalidate relevant queries if needed
-      queryClient.invalidateQueries({ queryKey: ["personas"] });
-    },
-    onError: (error) => {
-      showErrorToast("Failed to select persona. Please try again.");
-      console.error("Error selecting persona:", error);
-    },
+  // When selection complete, fetch selected persona details
+  const { data: selectedPersonaData } = useQuery({
+    queryKey: ["personas", selectedPersonaId],
+    queryFn: () =>
+      selectedPersonaId
+        ? PersonasService.readPersona({ id: selectedPersonaId })
+        : null,
+    enabled: !!selectedPersonaId && selectionComplete,
   });
 
   const handleSelectPersona = (personaId: string) => {
-    setSelectedPersonaId(personaId);
+    setLocalSelectedId(personaId);
   };
 
   const handleConfirmSelection = () => {
-    if (selectedPersonaId) {
-      selectPersonaMutation.mutate({ personaId: selectedPersonaId });
+    if (localSelectedId) {
+      try {
+        selectPersona(localSelectedId);
+        showSuccessToast("Persona selected successfully!");
+      } catch (err) {
+        showErrorToast("Failed to select persona");
+        console.error(err);
+      }
     }
   };
 
@@ -103,19 +88,15 @@ export const PersonaSelection = () => {
     );
   }
 
-  // When selection is made, show only the selected persona
-  if (selectionMade && selectedPersonaId) {
-    const selectedPersona = personas.find((p) => p.id === selectedPersonaId);
-
-    if (!selectedPersona) return null;
-
+  // When selection is complete, show only the selected persona
+  if (selectionComplete && selectedPersonaId && selectedPersonaData) {
     return (
       <Container maxW="xl" py={8}>
         <VStack>
           <Heading size="lg">Your Selected Persona</Heading>
           <Box width="100%" maxW="400px">
             <PersonaCard
-              persona={selectedPersona}
+              persona={selectedPersonaData}
               isSelected={true}
               buttonText="Your Active Persona"
             />
@@ -130,7 +111,7 @@ export const PersonaSelection = () => {
       <VStack>
         <Heading size="lg">Choose Your Persona</Heading>
         <Text>
-          Select a persona that best represents you in this application
+          Select the persona that best represents you in this application.
         </Text>
 
         <SimpleGrid columns={{ base: 1, md: 3 }} width="100%">
@@ -139,7 +120,7 @@ export const PersonaSelection = () => {
               key={persona.id}
               persona={persona}
               isSelectable
-              isSelected={selectedPersonaId === persona.id}
+              isSelected={localSelectedId === persona.id}
               onSelect={() => handleSelectPersona(persona.id)}
             />
           ))}
@@ -148,9 +129,8 @@ export const PersonaSelection = () => {
         <Button
           colorScheme="blue"
           size="lg"
-          disabled={!selectedPersonaId}
+          disabled={!localSelectedId}
           onClick={handleConfirmSelection}
-          loading={selectPersonaMutation.isPending}
         >
           Confirm Selection
         </Button>

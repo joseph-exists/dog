@@ -3,7 +3,9 @@ import { Outlet, createFileRoute, redirect } from "@tanstack/react-router"
 
 import Navbar from "@/components/Common/Navbar"
 import Sidebar from "@/components/Common/Sidebar"
+//import { usePersona } from "@/contexts/PersonaContext"
 import { isLoggedIn } from "@/hooks/useAuth"
+// import { Navigate } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
@@ -17,7 +19,13 @@ export const Route = createFileRoute("/_layout")({
 })
 
 function Layout() {
-  return (
+  // const { selectionComplete } = usePersona()
+  
+  // if (!selectionComplete && location.pathname !== '/select-persona') {
+  //  return <Navigate to="/select-persona" />
+ //  }
+
+ return (
     <Flex direction="column" h="100vh">
       <Navbar />
       <Flex flex="1" overflow="hidden">
@@ -29,5 +37,4 @@ function Layout() {
     </Flex>
   )
 }
-
 export default Layout

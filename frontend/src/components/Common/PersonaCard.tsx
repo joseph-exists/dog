@@ -2,24 +2,24 @@
 import {
   Button,
   Flex,
-  Heading,
   Text,
   BoxProps,
 } from "@chakra-ui/react";
 import { IconType } from "react-icons/lib";
 import { FiUser } from "react-icons/fi";
-import { PersonaPublic } from "@/client/types.gen";
+import { PersonaPublic, Persona } from "@/client/types.gen";
 import {
   CardRoot,
   CardHeader,
   CardBody,
   CardFooter,
   CardTitle,
-  CardDescription,
+  // CardDescription,
 } from "../ui/card";
 
 interface PersonaCardProps extends BoxProps {
-  persona: PersonaPublic;
+  // TODO: I should probably figure out which of these is correct and update the api
+  persona: PersonaPublic | Persona;
   isSelectable?: boolean;
   isSelected?: boolean;
   onSelect?: () => void;

@@ -2,6 +2,8 @@ Tinyfoot Frontend Structure Analysis
 Tech Stack
 The frontend is built with a modern React stack including:
 
+# TODO : add React Query for client side state management, see personacontext for details
+
 Vite as the build tool
 React with TypeScript
 TanStack Query for data fetching and cache management
