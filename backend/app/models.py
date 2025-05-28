@@ -61,6 +61,56 @@ class UserBase(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
 
 
+class UserPersonaBase(SQLModel):
+    """Base model for User's instance of a Persona"""
+
+    nickname: str | None = Field(default=None, max_length=255)
+    is_active: bool = Field(default=True)
+    # what other customization fields should we add?
+
+
+class UserPersonaCreate(UserPersonaBase):
+    persona_id: uuid.UUID
+
+
+class UserPersonaUpdate(SQLModel):
+    nickname: str | None = Field(default=None, max_length=255)
+    is_active: bool | None = Field(default=None)
+
+
+class UserPersona(UserPersonaBase, table=True):
+    """Database model for User's instance of a Persona"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    persona_id: uuid.UUID = Field(foreign_key="persona.id", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(
+        default_factory=datetime.now, sa_column_kwargs={"onupdate": datetime.now}
+    )
+
+    # Will add relationships later after all models are defined
+
+
+class UserPersonaPublic(UserPersonaBase):
+    """Public model for UserPersona API responses"""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    persona_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserPersonasPublic(SQLModel):
+    """Collection model for UserPersona API responses"""
+
+    data: list[UserPersonaPublic]
+    count: int
+
+
 class EventBase(SQLModel):
     """Base model for events that can trigger state changes"""
 
@@ -73,12 +123,6 @@ class EventBase(SQLModel):
 class ItemBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
-
-
-class StoryBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=1000)
-    is_published: bool = Field(default=False)
 
 
 class ArchetypeBase(SQLModel):
@@ -96,7 +140,6 @@ class PersonaBase(SQLModel):
     specific_domain_high: str | None = Field(default=None, max_length=255)
 
 
-
 class TraitBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
@@ -107,35 +150,6 @@ class TraitBase(SQLModel):
 class QualityBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
-
-
-class StoryNodeBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    content: str = Field(default="")
-    node_type: str = Field(
-        default="text", max_length=50
-    )  # text, image, choice, paradox, graph, calendly, etc.
-    is_start_node: bool = Field(default=False)
-    is_end_node: bool = Field(default=False)
-    # metadata: dict | None = Field(default=None)  # JSON field for storing type-specific data
-
-
-class TagBase(SQLModel):
-    name: str = Field(min_length=1, max_length=50, unique=True)
-    color: str | None = Field(default=None, max_length=20)
-
-
-class NodeChoiceBase(SQLModel):
-    """Base model for NodeChoice"""
-
-    text: str = Field(min_length=1, max_length=500)
-    order: int = Field(default=0)
-    # TODO : figure out if these can be passed in to NodeChoice model directly in NodeChoiceCreate Model
-    # requires_state: dict | None = Field (default=None)  # JSON field for required state variables
-    # sets_state: dict | None = Field(default=None)  # JSON field for state variables to set
-
-
-# =========== base models for creating linked relationships between classes
 
 
 class ArchetypeTraitLinkBase(SQLModel):
@@ -171,11 +185,6 @@ class QualityTraitLinkBase(SQLModel):
     trait_id: uuid.UUID = Field(foreign_key="trait.id")
 
 
-class StoryUserLinkBase(SQLModel):
-    story_id: uuid.UUID = Field(foreign_key="story.id")
-    user_id: uuid.UUID = Field(foreign_key="user.id")
-
-
 # ========== Create Models ===========
 
 
@@ -192,14 +201,6 @@ class TraitCreate(TraitBase):
 
 
 class QualityCreate(QualityBase):
-    pass
-
-
-class StoryCreate(StoryBase):
-    pass
-
-
-class StoryNodeCreate(StoryNodeBase):
     pass
 
 
@@ -280,6 +281,7 @@ class PersonaBasePartial(SQLModel):
     general_domain_high: str | None = Field(default=None, max_length=255)
     specific_domain_high: str | None = Field(default=None, max_length=255)
 
+
 class PersonaUpdate(PersonaBasePartial):
     pass
 
@@ -318,45 +320,6 @@ class TraitBasePartial(SQLModel):
 
 class TraitUpdate(TraitBasePartial):
     pass
-
-
-class StoryBasePartial(SQLModel):
-    """Base model for story fields that can be updated (all optional)"""
-
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
-    is_published: bool | None = Field(default=None)
-
-
-class StoryUpdate(StoryBasePartial):
-    pass
-
-
-class StoryNodePartial(SQLModel):
-    """Base model for story fields that can be updated (all optional)"""
-
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
-    content: str | None = Field(default=None)
-    node_type: str | None = Field(default=None, max_length=50)
-    is_start_node: bool | None = Field(default=None)
-    is_end_node: bool | None = Field(default=None)
-    # metadata: dict | None = Field(default=None)
-
-
-class StoryNodeUpdate(StoryNodePartial):
-    pass
-
-
-class NodeChoiceBasePartial(SQLModel):
-    """Base model for node choice fields that can be updated, all optional"""
-
-    text: str = Field(min_length=1, max_length=500)
-    order: int | None = Field(default=0)
-    requires_state: dict | None = Field(
-        default=None
-    )  # JSON field for required state variables
-    sets_state: dict | None = Field(
-        default=None
-    )  # JSON field for  state variables to set
 
 
 class QualityEventTriggerBase(SQLModel):
@@ -509,39 +472,6 @@ class Trait(TraitBase, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
 
 
-class Story(StoryBase, table=True):
-    """
-    DB model for Story
-    Relationships defined after models are declared.
-    """
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
-    )
-
-
-# Database model for StoryNode
-class StoryNode(StoryNodeBase, table=True):
-    """
-    DB model for StoryNode
-    Relationships defined after model declaration
-    """
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-    story_id: uuid.UUID = Field(
-        foreign_key="story.id", nullable=False, ondelete="CASCADE"
-    )
-
-
-class NodeChoice(NodeChoiceBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-
-
 class QualityTraitLink(QualityTraitLinkBase, table=True):
     """
     Database model for the many-to-many relationship between Qualities and Traits.
@@ -598,12 +528,6 @@ class ArchetypePublic(ArchetypeBase):
     created_at: datetime
 
 
-class NodeChoicePublic(NodeChoiceBase):
-    id: uuid.UUID
-    from_node_id: uuid.UUID
-    to_node_id: uuid.UUID
-
-
 class PersonaPublic(PersonaBase):
     """Public model for Persona API responses."""
 
@@ -623,28 +547,6 @@ class QualityPublic(QualityBase):
 
     id: uuid.UUID
     created_at: datetime
-
-
-class StoryPublic(StoryBase):
-    """Public model for Story API responses."""
-
-    id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-    owner_id: uuid.UUID
-
-
-class StoryNodePublic(StoryNodeBase):
-    """Public Model for Story Node API responses"""
-
-    id: uuid.UUID
-    story_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-
-
-class TagPublic(TagBase):
-    id: uuid.UUID
 
 
 # ============ Public collection models for API requests ==============
@@ -669,20 +571,10 @@ class EventsPublic(SQLModel):
     count: int
 
 
-class TagsPublic(SQLModel):
-    data: list[TagPublic]
-    count: int
-
-
 class ArchetypesPublic(SQLModel):
     """Collection model for Archetype API responses."""
 
     data: list[ArchetypePublic]
-    count: int
-
-
-class NodeChoicesPublic(SQLModel):
-    data: list[NodeChoicePublic]
     count: int
 
 
@@ -704,20 +596,6 @@ class QualitiesPublic(SQLModel):
     """Collection model for Quality API responses."""
 
     data: list[QualityPublic]
-    count: int
-
-
-class StoriesPublic(SQLModel):
-    """Collection model for Stories API responses."""
-
-    data: list[StoryPublic]
-    count: int
-
-
-class StoryNodesPublic(SQLModel):
-    """Collection model for Story Node responses."""
-
-    data: list[StoryNodePublic]
     count: int
 
 
@@ -758,7 +636,520 @@ class QualityEventTriggerPublic(QualityEventTriggerBase):
     quality: QualityPublic | None = None
 
 
+class NodeChoiceBase(SQLModel):
+    """Base model for NodeChoice"""
+
+    text: str = Field(min_length=1, max_length=500)
+    order: int = Field(default=0)
+    # TODO : figure out if these can be passed in to NodeChoice model
+    # directly in NodeChoiceCreate Model
+    requires_state: dict | None = Field(
+        default=None
+    )  # JSON field for required state variables
+    sets_state: dict | None = Field(
+        default=None
+    )  # JSON field for state variables to set
+
+
+class StoryBase(SQLModel):
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    is_published: bool = Field(default=False)
+
+
+class UserStoryProgressBase(SQLModel):
+    """Base model for tracking User's progress in a Story with a specific UserPersona"""
+
+    current_node_id: uuid.UUID | None = Field(default=None, foreign_key="storynode.id")
+    is_completed: bool = Field(default=False)
+    # Could add more fields for game state, achievements, etc.
+    # Add story state as JSON - stores variables that affect the story
+    # story_state: dict | None = Field(default=None, sa_column=Column(JSON))
+
+
+class UserStoryProgressCreate(UserStoryProgressBase):
+    user_persona_id: uuid.UUID
+    story_id: uuid.UUID
+
+
+class UserStoryProgressUpdate(SQLModel):
+    current_node_id: uuid.UUID | None = Field(default=None)
+    is_completed: bool | None = Field(default=None)
+    # Other updatable fields
+
+
+class UserStoryProgress(UserStoryProgressBase, table=True):
+    """Database model for User's progress in a Story with a specific UserPersona"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_persona_id: uuid.UUID = Field(
+        foreign_key="userpersona.id", nullable=False, ondelete="CASCADE"
+    )
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", nullable=False, ondelete="CASCADE"
+    )
+    started_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(
+        default_factory=datetime.now, sa_column_kwargs={"onupdate": datetime.now}
+    )
+
+    # Will add relationships later
+
+
+class UserStoryProgressPublic(UserStoryProgressBase):
+    """Public model for UserStoryProgress API responses"""
+
+    id: uuid.UUID
+    user_persona_id: uuid.UUID
+    story_id: uuid.UUID
+    started_at: datetime
+    updated_at: datetime
+
+
+class UserStoryProgressesPublic(SQLModel):
+    """Collection model for UserStoryProgress API responses"""
+
+    data: list[UserStoryProgressPublic]
+    count: int
+
+
+class StoryNodeBase(SQLModel):
+    title: str = Field(min_length=1, max_length=255)
+    content: str = Field(default="")
+    node_type: str = Field(
+        default="text", max_length=50
+    )  # text, image, choice, paradox, graph, calendly, etc.
+    is_start_node: bool = Field(default=False)
+    is_end_node: bool = Field(default=False)
+    # metadata: dict | None = Field(default=None)  # JSON field for storing type-specific data
+    #
+
+
+class StoryCreate(StoryBase):
+    pass
+
+
+class StoryNodeCreate(StoryNodeBase):
+    pass
+
+
+class StoryUserLinkBase(SQLModel):
+    story_id: uuid.UUID = Field(foreign_key="story.id")
+    user_id: uuid.UUID = Field(foreign_key="user.id")
+
+
+class StoryRequirementBase(SQLModel):
+    """Base model for Story requirements"""
+
+    requirement_type: str = Field(max_length=50)  # Could be "quality", "trait", etc.
+    target_id: uuid.UUID  # The ID of the quality, trait, etc.
+    description: str | None = Field(default=None, max_length=255)
+
+
+class StoryRequirementCreate(StoryRequirementBase):
+    story_id: uuid.UUID
+
+
+class StoryRequirementUpdate(SQLModel):
+    requirement_type: str | None = Field(default=None, max_length=50)
+    target_id: uuid.UUID | None = Field(default=None)
+    description: str | None = Field(default=None, max_length=255)
+
+
+class StoryRequirement(StoryRequirementBase, table=True):
+    """Database model for Story requirements"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", nullable=False, ondelete="CASCADE"
+    )
+
+    # Will add relationships later
+
+
+class StoryRequirementPublic(StoryRequirementBase):
+    """Public model for StoryRequirement API responses"""
+
+    id: uuid.UUID
+    story_id: uuid.UUID
+
+
+class StoryRequirementsPublic(SQLModel):
+    """Collection model for StoryRequirement API responses"""
+
+    data: list[StoryRequirementPublic]
+    count: int
+
+
+class StoryBasePartial(SQLModel):
+    """Base model for story fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    is_published: bool | None = Field(default=None)
+
+
+class StoryUpdate(StoryBasePartial):
+    pass
+
+
+class StoryNodePartial(SQLModel):
+    """Base model for story fields that can be updated (all optional)"""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    content: str | None = Field(default=None)
+    node_type: str | None = Field(default=None, max_length=50)
+    is_start_node: bool | None = Field(default=None)
+    is_end_node: bool | None = Field(default=None)
+    # metadata: dict | None = Field(default=None)
+
+
+class StoryNodeUpdate(StoryNodePartial):
+    pass
+
+
+class NodeChoiceBasePartial(SQLModel):
+    """Base model for node choice fields that can be updated, all optional"""
+
+    text: str = Field(min_length=1, max_length=500)
+    order: int | None = Field(default=0)
+    requires_state: dict | None = Field(
+        default=None
+    )  # JSON field for required state variables
+    sets_state: dict | None = Field(
+        default=None
+    )  # JSON field for  state variables to set
+
+
+class Story(StoryBase, table=True):
+    """
+    DB model for Story
+    Relationships defined after models are declared.
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+
+
+# Database model for StoryNode
+class StoryNode(StoryNodeBase, table=True):
+    """
+    DB model for StoryNode
+    Relationships defined after model declaration
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", nullable=False, ondelete="CASCADE"
+    )
+
+
+class NodeChoice(NodeChoiceBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
+class NodeChoicePublic(NodeChoiceBase):
+    id: uuid.UUID
+    from_node_id: uuid.UUID
+    to_node_id: uuid.UUID
+
+
+class StoryPublic(StoryBase):
+    """Public model for Story API responses."""
+
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    owner_id: uuid.UUID
+
+
+class StoryNodePublic(StoryNodeBase):
+    """Public Model for Story Node API responses"""
+
+    id: uuid.UUID
+    story_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class NodeChoicesPublic(SQLModel):
+    data: list[NodeChoicePublic]
+    count: int
+
+
+class StoriesPublic(SQLModel):
+    """Collection model for Stories API responses."""
+
+    data: list[StoryPublic]
+    count: int
+
+
+class StoryNodesPublic(SQLModel):
+    """Collection model for Story Node responses."""
+
+    data: list[StoryNodePublic]
+    count: int
+
+
+class NodeChoiceCreate(NodeChoiceBase):
+    from_node_id: uuid.UUID
+    to_node_id: uuid.UUID
+
+
+class TagBase(SQLModel):
+    name: str = Field(min_length=1, max_length=50, unique=True)
+    color: str | None = Field(default=None, max_length=20)
+
+
+class TagBasePartial(SQLModel):
+    name: str = Field(min_length=1, max_length=50, unique=True)
+    color: str | None = Field(default=None, max_length=20)
+
+
+class TagPublic(TagBase):
+    id: uuid.UUID
+
+
+class TagsPublic(SQLModel):
+    data: list[TagPublic]
+    count: int
+
+
+# Create model for Tag
+class TagCreate(TagBase):
+    pass
+
+
+# Update model for Tag
+class TagUpdate(TagBasePartial):
+    pass
+
+
+# Database model for Tag
+class Tag(TagBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
+# Update model for NodeChoice
+class NodeChoiceUpdate(NodeChoiceBasePartial):
+    text: str | None = Field(default=None, min_length=1, max_length=500)  # type: ignore
+    order: int | None = Field(default=None)
+    to_node_id: uuid.UUID | None = Field(default=None)
+    requires_state: dict | None = Field(default=None)
+    sets_state: dict | None = Field(default=None)
+
+
+# Many-to-many relationship between Story and Tag
+class StoryToTag(SQLModel, table=True):
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", primary_key=True, ondelete="CASCADE"
+    )
+    tag_id: uuid.UUID = Field(
+        foreign_key="tag.id", primary_key=True, ondelete="CASCADE"
+    )
+
+
+# ---- StoryPlay Models for Tracking Game State ----
+
+
+# Base model for StoryPlay
+class StoryPlayBase(SQLModel):
+    player_name: str | None = Field(default=None, max_length=255)
+    is_completed: bool = Field(default=False)
+    # state_data: dict | None = Field(default=None)  # JSON field for storing game state
+
+
+# Create model for StoryPlay
+class StoryPlayCreate(StoryPlayBase):
+    story_id: uuid.UUID
+
+
+class StoryPlayBasePartial(SQLModel):
+    player_name: str | None = Field(default=None, max_length=255)
+    is_completed: bool | None = Field(default=None)
+    # state_data: dict | None = Field(default=None)
+
+
+# Update model for StoryPlay
+class StoryPlayUpdate(StoryPlayBasePartial):
+    pass
+
+
+# Database model for StoryPlay
+class StoryPlay(StoryPlayBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id", nullable=False, ondelete="CASCADE"
+    )
+    user_id: uuid.UUID | None = Field(
+        foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
+
+
+# Public model for StoryPlay
+class StoryPlayPublic(StoryPlayBase):
+    id: uuid.UUID
+    story_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    user_id: uuid.UUID | None
+
+
+# Collection response for StoryPlays
+class StoryPlaysPublic(SQLModel):
+    data: list[StoryPlayPublic]
+    count: int
+
+
+# ---- PlayState Models for Tracking Node Visits ----
+
+
+# Base model for PlayState
+class PlayStateBase(SQLModel):
+    visited_at: datetime = Field(default_factory=datetime.now)
+    # state_data: dict | None = Field(default=None)  # JSON field for node-specific state
+
+
+# Create model for PlayState
+class PlayStateCreate(PlayStateBase):
+    play_id: uuid.UUID
+    node_id: uuid.UUID
+
+
+# Update model for PlayState
+class PlayStateUpdate(PlayStateBase):
+    state_data: dict | None = Field(default=None)
+
+
+# Database model for PlayState
+class PlayState(PlayStateBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    play_id: uuid.UUID = Field(
+        foreign_key="storyplay.id", nullable=False, ondelete="CASCADE"
+    )
+    node_id: uuid.UUID = Field(
+        foreign_key="storynode.id", nullable=False, ondelete="CASCADE"
+    )
+
+
+# Public model for PlayState
+class PlayStatePublic(PlayStateBase):
+    id: uuid.UUID
+    play_id: uuid.UUID
+    node_id: uuid.UUID
+
+
+# Collection response for PlayStates
+class PlayStatesPublic(SQLModel):
+    data: list[PlayStatePublic]
+    count: int
+
+
+# Story to StoryRequirement relationship
+Story.requirements = Relationship(
+    back_populates="story",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+)
+
+# StoryRequirement to Story relationship
+StoryRequirement.story = Relationship(back_populates="requirements")
+
 # ==================== Define Relationships ====================
+
+# User to UserPersona relationship
+User.user_personas = Relationship(
+    back_populates="user",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+)
+
+# UserPersona to User relationship
+UserPersona.user = Relationship(back_populates="user_personas")
+
+# Persona to UserPersona relationship
+Persona.user_personas = Relationship(back_populates="persona")
+
+# UserPersona to Persona relationship
+UserPersona.persona = Relationship(back_populates="user_personas")
+
+# UserPersona to UserStoryProgress relationship
+UserPersona.story_progresses = Relationship(
+    back_populates="user_persona",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+)
+
+# UserStoryProgress to UserPersona relationship
+UserStoryProgress.user_persona = Relationship(back_populates="story_progresses")
+
+# Story to UserStoryProgress relationship
+Story.user_progresses = Relationship(back_populates="story")
+
+# UserStoryProgress to Story relationship
+UserStoryProgress.story = Relationship(back_populates="user_progresses")
+
+# StoryNode to UserStoryProgress relationship
+StoryNode.current_for_progresses = Relationship(back_populates="current_node")
+
+# UserStoryProgress to StoryNode relationship
+UserStoryProgress.current_node = Relationship(back_populates="current_for_progresses")
+
+
+class UserNodeChoiceBase(SQLModel):
+    """Base model for tracking user's node choices"""
+
+    choice_text: str = Field(max_length=500)  # Text of the choice made
+    from_node_id: uuid.UUID = Field(foreign_key="storynode.id")
+    to_node_id: uuid.UUID = Field(foreign_key="storynode.id")
+    choice_time: datetime = Field(default_factory=datetime.now)
+
+
+class UserNodeChoiceCreate(UserNodeChoiceBase):
+    progress_id: uuid.UUID  # ID of the UserStoryProgress
+
+
+class UserNodeChoice(UserNodeChoiceBase, table=True):
+    """Database model for user's node choices"""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    progress_id: uuid.UUID = Field(
+        foreign_key="userstoryprogress.id", nullable=False, ondelete="CASCADE"
+    )
+    # State changes could be stored as JSON?
+    state_changes: dict | None = Field(default=None, sa_column=Column())
+
+    # Relationships will be added later
+
+
+class UserNodeChoicePublic(UserNodeChoiceBase):
+    """Public model for UserNodeChoice API responses"""
+
+    id: uuid.UUID
+    progress_id: uuid.UUID
+    state_changes: dict | None
+
+
+# UserStoryProgress to UserNodeChoice relationship
+UserStoryProgress.node_choices = Relationship(
+    back_populates="progress",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+)
+
+# UserNodeChoice to UserStoryProgress relationship
+UserNodeChoice.progress = Relationship(back_populates="node_choices")
+
+# StoryNode relationships for from_node and to_node
+UserNodeChoice.from_node = Relationship(
+    sa_relationship_kwargs={"foreign_keys": "[UserNodeChoice.from_node_id]"}
+)
+UserNodeChoice.to_node = Relationship(
+    sa_relationship_kwargs={"foreign_keys": "[UserNodeChoice.to_node_id]"}
+)
 
 
 # ============ Character System Relationships ============
@@ -951,156 +1342,6 @@ class TraitConfigPublic(TraitConfigBase):
 
 class TraitConfigsPublic(SQLModel):
     data: list[TraitConfigPublic]
-    count: int
-
-
-# ---- NodeChoice Models ----
-
-# Base model for NodeChoice
-
-
-class NodeChoiceCreate(NodeChoiceBase):
-    from_node_id: uuid.UUID
-    to_node_id: uuid.UUID
-
-
-class TagBasePartial(SQLModel):
-    name: str = Field(min_length=1, max_length=50, unique=True)
-    color: str | None = Field(default=None, max_length=20)
-
-
-# Create model for NodeChoice
-
-
-# Update model for NodeChoice
-class NodeChoiceUpdate(NodeChoiceBasePartial):
-    text: str | None = Field(default=None, min_length=1, max_length=500)  # type: ignore
-    order: int | None = Field(default=None)
-    to_node_id: uuid.UUID | None = Field(default=None)
-    requires_state: dict | None = Field(default=None)
-    sets_state: dict | None = Field(default=None)
-
-
-# Create model for Tag
-class TagCreate(TagBase):
-    pass
-
-
-# Update model for Tag
-class TagUpdate(TagBasePartial):
-    pass
-
-
-# Database model for Tag
-class Tag(TagBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-
-
-# Many-to-many relationship between Story and Tag
-class StoryToTag(SQLModel, table=True):
-    story_id: uuid.UUID = Field(
-        foreign_key="story.id", primary_key=True, ondelete="CASCADE"
-    )
-    tag_id: uuid.UUID = Field(
-        foreign_key="tag.id", primary_key=True, ondelete="CASCADE"
-    )
-
-
-# ---- StoryPlay Models for Tracking Game State ----
-
-
-# Base model for StoryPlay
-class StoryPlayBase(SQLModel):
-    player_name: str | None = Field(default=None, max_length=255)
-    is_completed: bool = Field(default=False)
-    # state_data: dict | None = Field(default=None)  # JSON field for storing game state
-
-
-# Create model for StoryPlay
-class StoryPlayCreate(StoryPlayBase):
-    story_id: uuid.UUID
-
-
-class StoryPlayBasePartial(SQLModel):
-    player_name: str | None = Field(default=None, max_length=255)
-    is_completed: bool | None = Field(default=None)
-    # state_data: dict | None = Field(default=None)
-
-
-# Update model for StoryPlay
-class StoryPlayUpdate(StoryPlayBasePartial):
-    pass
-
-
-# Database model for StoryPlay
-class StoryPlay(StoryPlayBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-    story_id: uuid.UUID = Field(
-        foreign_key="story.id", nullable=False, ondelete="CASCADE"
-    )
-    user_id: uuid.UUID | None = Field(
-        foreign_key="user.id", nullable=True, ondelete="SET NULL"
-    )
-
-
-# Public model for StoryPlay
-class StoryPlayPublic(StoryPlayBase):
-    id: uuid.UUID
-    story_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-    user_id: uuid.UUID | None
-
-
-# Collection response for StoryPlays
-class StoryPlaysPublic(SQLModel):
-    data: list[StoryPlayPublic]
-    count: int
-
-
-# ---- PlayState Models for Tracking Node Visits ----
-
-
-# Base model for PlayState
-class PlayStateBase(SQLModel):
-    visited_at: datetime = Field(default_factory=datetime.now)
-    # state_data: dict | None = Field(default=None)  # JSON field for node-specific state
-
-
-# Create model for PlayState
-class PlayStateCreate(PlayStateBase):
-    play_id: uuid.UUID
-    node_id: uuid.UUID
-
-
-# Update model for PlayState
-class PlayStateUpdate(PlayStateBase):
-    state_data: dict | None = Field(default=None)
-
-
-# Database model for PlayState
-class PlayState(PlayStateBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    play_id: uuid.UUID = Field(
-        foreign_key="storyplay.id", nullable=False, ondelete="CASCADE"
-    )
-    node_id: uuid.UUID = Field(
-        foreign_key="storynode.id", nullable=False, ondelete="CASCADE"
-    )
-
-
-# Public model for PlayState
-class PlayStatePublic(PlayStateBase):
-    id: uuid.UUID
-    play_id: uuid.UUID
-    node_id: uuid.UUID
-
-
-# Collection response for PlayStates
-class PlayStatesPublic(SQLModel):
-    data: list[PlayStatePublic]
     count: int
 
 

@@ -31,7 +31,11 @@ The backend follows this structure:
 
 - Use `def` for pure functions and `async def` for asynchronous operations.
 - Use type hints for all function signatures. Prefer Pydantic models over raw dictionaries for input validation.
-- For routes, use the pattern seen in existing route files:
+- For routes, use the pattern seen in existing route files.  Routes should never go in crud.py, only in an appropriately named file in the /backend/app/routes/ directory.
+
+- Once a routes file has been added, it will be necessary to add it to the /backend/app/api/main.py.
+
+
   ```python
   @router.get("/{parameter}", response_model=ResponseModel)
   def endpoint_name(

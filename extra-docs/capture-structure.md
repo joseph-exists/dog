@@ -23,7 +23,8 @@ Attempting to add Personas, Archetypes, Qualities, and Traits.
 
 At the end of this work, a superuser should be able to:
 
-Login to the frontend
+Login to the frontend as an admin
+
 Create an Archetype with a Name, a Description, and N number of additional Qualities with Names and Descriptions.
     Add Traits to that Archetype from existing Traits.
     Create new Traits for that Archetype.

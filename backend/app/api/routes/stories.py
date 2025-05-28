@@ -98,3 +98,49 @@ def delete_story(
     session.delete(story)
     session.commit()
     return Message(message="Story deleted successfully")
+
+@router.get("/{story_id}/current-node", response_model=Dict[str, Any])
+def get_current_node(
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_persona_id: uuid.UUID,
+    story_id: uuid.UUID,
+) -> Any:
+    """
+    Get the current node and available choices for the user's story progress.
+    """
+    # Check if the user persona belongs to the current user
+    user_persona = crud.get_user_persona(
+        session=session, id=user_persona_id, user_id=current_user.id
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    # Get the user's progress in this story
+    progress = crud.get_user_story_progress(
+        session=session, user_persona_id=user_persona_id, story_id=story_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="Story progress not found")
+
+    if not progress.current_node_id:
+        raise HTTPException(status_code=400, detail="No current node in this story")
+
+    # Get the current node
+    current_node = session.get(StoryNode, progress.current_node_id)
+    if not current_node:
+        raise HTTPException(status_code=404, detail="Current node not found")
+
+    # Get available choices
+    available_choices = crud.get_available_choices(
+        session=session,
+        node_id=progress.current_node_id,
+        story_state=progress.story_state,
+    )
+
+    # Return the node and available choices
+    return {
+        "node": current_node,
+        "available_choices": available_choices,
+        "story_state": progress.story_state,
+    }

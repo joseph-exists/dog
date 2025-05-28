@@ -1,9 +1,4 @@
-A: RULES.md and data-model-best-practices review and integration
-B: fix the problem with circular references : breaking issue has been added to top of task-set-current
 
-A: Notion board for issues, work in flight, and brainstorms
-B: bipartite graphs and petri net exploration - subtyping for heirarchical reconfiguratble petri nets
-C: Epistemic virtues, metavirtues, and computational complexity
 
 D: https://pragprog.com/tips/
 

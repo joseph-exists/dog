@@ -1,52 +1,5 @@
 # TinyFoot Backend Development Tasks
 
-This document outlines the tasks needed to complete the TinyFoot backend implementation as specified in the capture-structure.md requirements. Each task includes specific exit criteria and validation steps.
-
-## Existing Models and API Testing
-
-
-
-## CRUD Operations
-
-### TASK 7: REVIEW ALL TASKS BELOW TO ENSURE THEY STILL NEED TO HAPPEN
-
-### Task 8: Implement Quality CRUD Operations
-**Description**: Add CRUD operations for Quality model in crud.py.
-
-**Implementation Details**:
-- Create create_quality function
-- Create get_quality and get_qualities functions
-- Create update_quality function
-- Create delete_quality function
-
-**Exit Criteria**:
-- All required CRUD operations are implemented
-- Functions follow the established pattern
-- All operations include proper error handling
-
-**Validation**:
-- Write unit tests for each CRUD operation
-- Verify all tests pass
-
-### Task 9: Implement Trait CRUD Operations
-**Description**: Add CRUD operations for Trait model in crud.py.
-
-**Implementation Details**:
-- Create create_trait function
-- Create get_trait and get_traits functions
-- Create update_trait function
-- Create delete_trait function
-
-**Exit Criteria**:
-- All required CRUD operations are implemented
-- Functions follow the established pattern
-- All operations include proper error handling
-
-**Validation**:
-- Write unit tests for each CRUD operation
-- Verify all tests pass
-
-### Task 10: Implement Relationship CRUD Operations
 **Description**: Add CRUD operations for trait assignment to archetypes and personas.
 
 Additional during discovery for CRUD and API routes:
@@ -56,6 +9,8 @@ Trait Modification Rules: Some traits are marked as modifiable, some are modifia
 Maximum Active Personas: Some traits have a max_active_personas limit. We'll need to add validation logic to enforce this limit.
 Mutually Exclusive Traits: The example mentions "Chaotic" and "Harmonious" as mutually exclusive traits. We might need to add a way to define trait groups where only one trait from the group can be active on a Persona.
 
+Need to verify the following:
+
 **Implementation Details**:
 - Create add_trait_to_archetype function with configuration parameters
 - Create remove_trait_from_archetype function
@@ -63,14 +18,7 @@ Mutually Exclusive Traits: The example mentions "Chaotic" and "Harmonious" as mu
 - Create remove_trait_from_persona function
 - Create update_trait_in_persona function if needed
 
-**Exit Criteria**:
-- All required relationship CRUD operations are implemented
-- Functions follow the established pattern
-- All operations include proper error handling
 
-**Validation**:
-- Write unit tests for each CRUD operation
-- Verify all tests pass
 
 ### Task 11: Update Persona CRUD Operations
 **Description**: Update persona CRUD operations to handle archetype relationships.
