@@ -1,0 +1,67 @@
+V2 System Architecture Expansion
+1. Trait Intensity
+
+Each Trait can have an intensity value (e.g., 1-10 scale or percentage)
+Intensity affects the strength or expression of associated Qualities
+Intensity can vary when the same Trait comes from different Archetypes
+Control flow:
+
+During Persona creation, calculate final Trait intensity (especially for Traits from multiple Archetypes)
+Apply intensity modifiers to Quality effects
+Allow for intensity changes over time through events or experiences
+
+
+
+2. Quality Interactions
+
+Define interaction types between Qualities (enhancement, suppression, transformation, etc.)
+Create an interaction matrix or rule set for Quality pairs/groups
+Control flow:
+
+When a Quality state changes (enabled/disabled), check for interactions with other active Qualities
+Apply interaction effects (modify Quality strength, disable conflicting Qualities, enable synergistic Qualities)
+Recalculate Quality effects when their interaction dependencies change
+
+
+
+3. Situational Archetypes
+
+Define Situational Archetypes that represent context-dependent templates
+Situational Archetypes have their own Traits but are only activated in specific contexts
+Control flow:
+
+Define conditions for Situational Archetype activation
+When conditions are met, temporarily apply Situational Archetype Traits to Persona
+Calculate resulting Quality changes based on temporary Traits
+Remove Situational effects when conditions no longer apply
+
+
+
+4. Derived Situations
+
+Create a system for dynamic situation generation based on combinations of:
+
+Environmental factors
+Persona state (active Qualities and Traits)
+Presence of other Personas
+
+
+Control flow:
+
+Regularly evaluate context to identify potential Situations
+When Situation conditions are met, apply associated effects to relevant Personas
+Track active Situations and their effects
+Manage transitions between Situations, including gradual changes
+
+
+
+5. Integration Layer
+
+Create a system to manage interactions between these new components
+Handle priority and precedence (e.g., which effects take precedence when conflicts arise)
+Maintain state consistency when multiple systems are affecting Traits and Qualities
+Control flow:
+
+Define evaluation order for the different systems
+Implement conflict resolution for contradictory effects
+Create hooks for future V2 expansions
