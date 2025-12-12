@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+"""
+Test Script for Quixote Storytelling Agent
+
+This script tests the Quixote agent by:
+1. Running the agent 5 times with different topics
+2. Logging each interaction and response
+3. Collecting token usage statistics
+4. Saving results to a JSON file
+
+The Quixote agent is a storytelling AI that tells tales about various topics,
+teaching us about our better natures through narrative.
+
+Usage:
+    python test_quixote_agent.py
+
+Requirements:
+    - Backend server running
+    - OpenAI API key configured in environment
+    - pydantic-ai library installed
+
+Results saved to: test_results_quixote_agent.json
+"""
+
+import asyncio
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+# Add app directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from agents.quixote import agent
+
+# Configuration
+OUTPUT_FILE = "test_results_quixote_agent.json"
+
+# Test topics for story generation
+TEST_TOPICS = [
+    "courage",
+    "wisdom",
+    "friendship",
+    "perseverance",
+    "compassion"
+]
+
+
+def log_message(message: str, level: str = "INFO") -> None:
+    """Print a formatted log message with timestamp."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {level}: {message}")
+
+
+async def test_agent_story(topic: str, test_number: int) -> dict[str, Any]:
+    """
+    Test the Quixote agent with a specific topic.
+    
+    Args:
+        topic: The topic for the story
+        test_number: The test iteration number
+        
+    Returns:
+        Dictionary containing the test results
+    """
+    log_message(f"Test #{test_number}: Requesting story about '{topic}'")
+    
+    try:
+        # Run the agent with the topic
+        result = await agent.run(f"Tell me a story about {topic}")
+        
+        # Access the story using the correct pydantic-ai API
+        story = result.output
+        
+        # Get token usage information
+        usage = result.usage()
+        
+        # Get timestamp
+        result_timestamp = result.timestamp()
+        
+        log_message(f"Test #{test_number}: Story received ({len(story)} characters)")
+        log_message(f"Test #{test_number}: Tokens - Request: {usage.request_tokens}, Response: {usage.response_tokens}, Total: {usage.total_tokens}")
+        
+        return {
+            "test_number": test_number,
+            "topic": topic,
+            "success": True,
+            "story": story,
+            "story_length": len(story),
+            "usage": {
+                "request_tokens": usage.request_tokens,
+                "response_tokens": usage.response_tokens,
+                "total_tokens": usage.total_tokens,
+            },
+            "run_id": result.run_id,
+            "timestamp": result_timestamp.isoformat()
+        }
+        
+    except Exception as e:
+        log_message(f"Test #{test_number}: ERROR - {str(e)}", level="ERROR")
+        
+        return {
+            "test_number": test_number,
+            "topic": topic,
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+async def run_all_tests() -> dict[str, Any]:
+    """
+    Run all agent tests and compile results.
+    
+    Returns:
+        Dictionary containing all test results and summary statistics
+    """
+    log_message("=" * 60)
+    log_message("Starting Quixote Agent Test Suite")
+    log_message("=" * 60)
+    
+    results = {
+        "test_suite": "Quixote Storytelling Agent",
+        "start_time": datetime.now().isoformat(),
+        "tests": []
+    }
+    
+    # Run each test
+    for i, topic in enumerate(TEST_TOPICS, start=1):
+        test_result = await test_agent_story(topic, i)
+        results["tests"].append(test_result)
+        
+        # Display the story snippet
+        if test_result["success"]:
+            story_preview = test_result["story"][:200] + "..." if len(test_result["story"]) > 200 else test_result["story"]
+            print(f"\n--- Story Preview ---")
+            print(story_preview)
+            print(f"--- End Preview ---\n")
+    
+    # Compile summary statistics
+    results["end_time"] = datetime.now().isoformat()
+    results["total_tests"] = len(TEST_TOPICS)
+    results["successful_tests"] = sum(1 for t in results["tests"] if t["success"])
+    results["failed_tests"] = sum(1 for t in results["tests"] if not t["success"])
+    
+    # Calculate token usage statistics for successful tests
+    successful_tests = [t for t in results["tests"] if t["success"]]
+    if successful_tests:
+        total_tokens = sum(t["usage"]["total_tokens"] for t in successful_tests)
+        total_request_tokens = sum(t["usage"]["request_tokens"] for t in successful_tests)
+        total_response_tokens = sum(t["usage"]["response_tokens"] for t in successful_tests)
+        avg_story_length = sum(t["story_length"] for t in successful_tests) / len(successful_tests)
+        
+        results["token_usage_summary"] = {
+            "total_tokens": total_tokens,
+            "total_request_tokens": total_request_tokens,
+            "total_response_tokens": total_response_tokens,
+            "average_tokens_per_story": total_tokens / len(successful_tests),
+        }
+        results["average_story_length"] = avg_story_length
+    
+    return results
+
+
+def save_results(results: dict[str, Any]) -> None:
+    """Save test results to JSON file."""
+    output_path = Path(__file__).parent / OUTPUT_FILE
+    
+    with open(output_path, "w") as f:
+        json.dump(results, f, indent=2)
+    
+    log_message(f"Results saved to: {output_path}")
+
+
+def display_summary(results: dict[str, Any]) -> None:
+    """Display a summary of test results."""
+    log_message("=" * 60)
+    log_message("Test Suite Summary")
+    log_message("=" * 60)
+    log_message(f"Total Tests: {results['total_tests']}")
+    log_message(f"Successful: {results['successful_tests']}")
+    log_message(f"Failed: {results['failed_tests']}")
+    
+    if results["successful_tests"] > 0:
+        log_message(f"Average Story Length: {results['average_story_length']:.0f} characters")
+        
+        if "token_usage_summary" in results:
+            usage = results["token_usage_summary"]
+            log_message(f"Total Tokens Used: {usage['total_tokens']}")
+            log_message(f"  - Request Tokens: {usage['total_request_tokens']}")
+            log_message(f"  - Response Tokens: {usage['total_response_tokens']}")
+            log_message(f"Average Tokens per Story: {usage['average_tokens_per_story']:.0f}")
+    
+    log_message("=" * 60)
+
+
+async def main():
+    """Main entry point for the test script."""
+    try:
+        # Run all tests
+        results = await run_all_tests()
+        
+        # Save results to file
+        save_results(results)
+        
+        # Display summary
+        display_summary(results)
+        
+        # Exit with appropriate code
+        if results["failed_tests"] > 0:
+            log_message("Some tests failed. Check output for details.", level="WARNING")
+            sys.exit(1)
+        else:
+            log_message("All tests passed successfully!", level="SUCCESS")
+            sys.exit(0)
+            
+    except Exception as e:
+        log_message(f"Fatal error in test suite: {str(e)}", level="ERROR")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    # Run the async main function
+    asyncio.run(main())

@@ -18,13 +18,6 @@ https://github.com/brillout/awesome-react-components
 storage capabilities of Sui and Walrus."
 https://github.com/MystenLabs/walrus
 
-if i wanted to something with rust and uh whatever this shit is
-
-
-
-
-
-
 
 https://react-type-animation.netlify.app/
 

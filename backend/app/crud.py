@@ -1,57 +1,57 @@
 import uuid
 from typing import Any
 
-from sqlmodel import Session, select, func, or_, and_, true
+from sqlmodel import Session, and_, func, or_, select, true
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
-    Item,
-    ItemCreate,
-    User,
-    UserCreate,
-    UserUpdate,
     Archetype,
     ArchetypeCreate,
-    Persona,
-    PersonaCreate,
-    Trait,
-    TraitCreate,
-    Quality,
-    QualityCreate,
+    ArchetypePersonaLink,
+    ArchetypeQualityLink,
+    ArchetypeTraitLink,
     Event,
     EventCreate,
-    QualityTraitLink,
-    QualityTraitLinkCreate,
+    Item,
+    ItemCreate,
+    Message,
+    NodeChoice,
+    Persona,
+    PersonaCreate,
+    PersonaQualityLink,
+    PersonaTraitLink,
+    PersonaUpdate,
+    Quality,
+    QualityCreate,
     QualityEventTrigger,
     QualityEventTriggerCreate,
-    PersonaQualityLink,
-    ArchetypeTraitLink,
-    ArchetypeQualityLink,
-    ArchetypePersonaLink,
-    QualityState,
     QualitySourceType,
-    PersonaTraitLink,
+    QualityState,
+    QualityTraitLink,
+    QualityTraitLinkCreate,
+    StoriesPublic,
     Story,
     StoryCreate,
-    StoryUpdate,
-    # StoryPublic,
-    # StoriesPublic,
     StoryNode,
     StoryNodeCreate,
-    # StoryNodeUpdate,
-    # StoryNodePublic,
-    # StoryNodesPublic,
-    # PersonaUpdate,
-    Message,
+    StoryNodePublic,
+    StoryNodesPublic,
+    StoryNodeUpdate,
+    StoryPublic,
+    StoryRequirement,
+    StoryRequirementCreate,
+    StoryUpdate,
+    Trait,
+    TraitCreate,
+    User,
+    UserCreate,
     UserPersona,
     UserPersonaCreate,
     UserPersonaUpdate,
     UserStoryProgress,
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
-    StoryRequirement,
-    StoryRequirementCreate,
-    NodeChoice,
+    UserUpdate,
 )
 
 
@@ -479,7 +479,16 @@ def delete_user_persona(*, session: Session, db_user_persona: UserPersona) -> No
 def create_user_story_progress(
     *, session: Session, progress_in: UserStoryProgressCreate
 ) -> UserStoryProgress:
-    """Create a new user story progress."""
+    """
+    Create a new user story progress.
+    Locks the progress to the story's version specified in progress_in.
+    The calling code should ensure this matches the story's current_version.
+    Args:
+        session: Database session
+        progress_in: UserStoryProgressCreate input model
+    Returns:
+        Created UserStoryProgress
+    """
     db_progress = UserStoryProgress.model_validate(progress_in)
     session.add(db_progress)
     session.commit()
@@ -532,6 +541,53 @@ def update_user_story_progress(
     session.commit()
     session.refresh(db_progress)
     return db_progress
+
+
+def get_available_choices(
+    *, session: Session, node_id: uuid.UUID, story_state: dict | None = None
+) -> list[NodeChoice]:
+    """
+    Get available choices for a node, filtering by story state requirements.
+    
+    Choices are filtered based on their requires_state field:
+    - If a choice has no requires_state, it's always available
+    - If a choice has requires_state, all key-value pairs must match story_state
+    
+    Args:
+        session: Database session
+        node_id: StoryNode ID
+        story_state: Current story state dictionary (from UserStoryProgress)
+    
+    Returns:
+        List of available NodeChoice objects
+    """
+    # Get all choices for this node
+    statement = select(NodeChoice).where(NodeChoice.from_node_id == node_id)
+    choices = session.exec(statement).all()
+
+    # If there's no story state, return all choices
+    if not story_state:
+        return list(choices)
+
+    # Filter choices based on requirements
+    available_choices = []
+    for choice in choices:
+        # If the choice has no requirements, it's always available
+        if not choice.requires_state:
+            available_choices.append(choice)
+            continue
+
+        # Check if all required states are met
+        requirements_met = True
+        for key, value in choice.requires_state.items():
+            if key not in story_state or story_state[key] != value:
+                requirements_met = False
+                break
+
+        if requirements_met:
+            available_choices.append(choice)
+
+    return available_choices
 
 
 # Story Requirement CRUD functions
