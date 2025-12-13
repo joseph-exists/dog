@@ -1,4 +1,4 @@
-# FastAPI Project - Development
+# Tinyfoot Project - Development
 
 ## Docker Compose
 

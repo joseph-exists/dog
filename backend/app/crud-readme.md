@@ -1,5 +1,5 @@
 
-This file (`app/crud.py`) is a critical component of the application that handles all database operations through SQLModel (a library that combines SQLAlchemy and Pydantic). Here's a high-level summary:
+Our crud file (`backend/app/crud.py`) is a critical component of the application that handles all database operations through SQLModel (a library that combines SQLAlchemy and Pydantic). Here's a high-level summary:
 
 **Purpose:**
 This is a CRUD (Create, Read, Update, Delete) operations file that serves as the data access layer for the application. It provides a clean interface between the database and the business logic layer.

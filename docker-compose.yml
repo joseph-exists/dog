@@ -23,6 +23,13 @@ services:
       PGAI_VECTORIZER_WORKER_DB_URL: postgres://postgres:postgres@db:5432/tinyfoot
     command: ["--poll-interval", "180s", "--log-level", "DEBUG"]
 
+  redis:
+    image: redis:8.2-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+
   adminer:
     image: adminer
     restart: always

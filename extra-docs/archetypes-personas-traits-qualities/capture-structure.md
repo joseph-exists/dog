@@ -10,7 +10,7 @@ Routes:
 ./backend/app/api/routes/archetypes.py
 ./backend/app/api/routes/traits.py
 ./backend/app/api/routes/qualities.py
-./backend/app/api/routes/main.py (add routers and routes from above)
+./backend/app/api/routes/main.py 
 
 CRUD:
 ./backend/app/crud.py
@@ -18,20 +18,15 @@ CRUD:
 Models:
 ./backend/app/models.py
 
-Current Work in progress:
-Attempting to add Personas, Archetypes, Qualities, and Traits.
-
-At the end of this work, a superuser should be able to:
-
-Login to the frontend as an admin
+If functionality below is not marked PENDING, then it exists within the application.
 
 Create an Archetype with a Name, a Description, and N number of additional Qualities with Names and Descriptions.
     Add Traits to that Archetype from existing Traits.
     Create new Traits for that Archetype.
-    Modify values of Traits when those values are modifiable.
-    Set which values of Traits are modifiable for Personas created from that Archetype
-        Set which Traits are modifiable only during Persona creation.
-        Set which Traits are modifiable as an update to the Persona.
+    PENDING: Modify values of Traits when those values are modifiable.
+    PENDING: Set which values of Traits are modifiable for Personas created from that Archetype
+        PENDING: Set which Traits are modifiable only during Persona creation.
+        PENDING: Set which Traits are modifiable as an update to the Persona.
 
 
 Create a Persona and associate it with one and only one Archetype.
@@ -40,15 +35,15 @@ Create a Persona and associate it with one and only one Archetype.
 
  Traits:
     Properties:
-    Some Traits can only be added to Archetypes.
-    Some Traits can only be active on N number of Active Personas at any given time.
-    Traits can be extended with properties.
+    PENDING: Some Traits can only be added to Archetypes.
+    PENDING: Some Traits can only be active on N number of Active Personas at any given time.
+    PENDING: Traits can be extended with properties.
 
 Example of potential user flow:
 
 User logs in and selects Create Archetype.
 User gives Archetype the name "Magician" and adds the description "Represents a visionary and transformative individual or entity."
-User selects pre-existing Traits "Dynamic" and "Visionary" for the Magician Archetype.
+PENDING: User selects pre-existing Traits "Dynamic" and "Visionary" for the Magician Archetype.
 
 User creates Traits "Chaotic" and "Harmonious".
 User adds "Chaotic" and "Harmonious" as mutually exclusive traits for Personas which are associated with this Archetype.

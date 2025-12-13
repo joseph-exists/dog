@@ -1,4 +1,4 @@
-# FastAPI Project - Backend
+# Tinyfoot Project - Backend
 
 ## Requirements
 
