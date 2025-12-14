@@ -23,80 +23,10 @@ This service must also conform to other project requirements for pydantic, sqlmo
 
 ## Room CRUD skeleton
 
-Add Phase-1 room operations to the centralized CRUD layer (`backend/app/crud.py`) so API routes can remain thin and consistent with existing repository patterns.[^6][^5]
-All room-scoped operations must enforce authorization by checking active membership in `RoomParticipant` before allowing reads/writes, and owner-only actions must verify role `owner`.[^2][^1]
+In a new file (`backend/app/for-review-crud.py`) add Phase-1 room operations which can be reviewed for addition to the centralized CRUD layer (`backend/app/crud.py`) so API routes can remain thin and consistent with existing repository patterns.[^6][^5]
+All room-scoped operations must enforce authorization by checking active membership in `RoomParticipant` before allowing reads/writes, and owner-only actions must verify role `owner`.[^2][^1]  These membership checks should only use the dominant pre-existing pattern, and should require no additional utilities or bespoke implementation. Initial proposal follows.
 
-```python
-# backend/app/crud.py (additions for Phase 1)
-
-from __future__ import annotations
-
-from typing import Optional, Sequence
-from uuid import UUID
-
-from sqlmodel import Session
-
-# from app.models import Room, RoomCreate, RoomUpdate, RoomPublic, RoomsPublic
-# from app.models import RoomParticipant, Message, MessageCreate, MessagesPublic
-# from app.services.event_emitter import emit_event
-
-
-async def check_room_membership(*, room_id: UUID, user_id: UUID, session: Session) -> bool:
-    """Return True if user_id is an active user participant in room_id."""
-    # TODO: query RoomParticipant where:
-    # - room_id matches
-    # - participant_type == "user"
-    # - participant_id == str(user_id)
-    # - active == True
-    raise NotImplementedError
-
-
-async def check_room_owner(*, room_id: UUID, user_id: UUID, session: Session) -> bool:
-    """Return True if user_id is an active participant with role == 'owner'."""
-    # TODO: query RoomParticipant for active owner row.
-    raise NotImplementedError
-
-
-async def create_room(*, creator_id: UUID, story_id: Optional[UUID], title: Optional[str], session: Session):
-    """
-    Create a new room by emitting room.created and participant.joined (owner) events.
-
-    NOTE: This should be implemented as events + projections (do not insert projections directly).
-    """
-    # TODO: within a transaction, emit:
-    # - room.created payload: creator_id, story_id?, title?
-    # - participant.joined payload: participant_id=str(creator_id), participant_type="user", role="owner"
-    raise NotImplementedError
-
-
-async def list_rooms_for_user(*, user_id: UUID, session: Session):
-    """Return rooms where the user is an active participant, ordered by last_activity desc."""
-    # TODO: query the Room projection joined/filtered by active RoomParticipant.
-    raise NotImplementedError
-
-
-async def get_room_for_user(*, room_id: UUID, user_id: UUID, session: Session):
-    """Fetch a room projection, only if the user is an active participant."""
-    # TODO: check_room_membership; then session.get(Room, room_id) (or equivalent).
-    raise NotImplementedError
-
-
-async def update_room_metadata(*, room_id: UUID, user_id: UUID, title: Optional[str], session: Session):
-    """
-    Update room metadata via event emission (room.updated).
-
-    Decide policy: owner-only vs member-allowed; enforce consistently in routes + tests.
-    """
-    # TODO: authorize (owner-only recommended for Phase 1).
-    # TODO: emit room.updated with payload updated_fields={...}.
-    raise NotImplementedError
-
-
-async def list_room_messages(*, room_id: UUID, user_id: UUID, limit: int, before: Optional[str], session: Session):
-    """List messages from the Message projection with pagination constraints."""
-    # TODO: check_room_membership; then query Message projection filtered by room_id and time cursor.
-    raise NotImplementedError
-```
+- COMPLETE: file under review
 
 
 ## Participant API routes

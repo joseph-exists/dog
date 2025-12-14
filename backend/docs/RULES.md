@@ -1,6 +1,6 @@
 # TinyFoot Backend Development Rules
 
-This document outlines the conventions and patterns for the TinyFoot backend, which uses FastAPI, SQLModel, Pydantic, and PostgreSQL.
+This document outlines the conventions and patterns for the TinyFoot backend, which uses FastAPI, SQLModel, Redis, Pydantic, and PostgreSQL.
 
 > **IMPORTANT**: When adding or modifying data models, ensure that you follow the database migration workflow using Alembic as described in the [Database Migrations](#database-migrations) section below.
 

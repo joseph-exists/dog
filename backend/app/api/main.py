@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    agent_routes,
     archetypes,
     events,
     items,
@@ -11,6 +12,7 @@ from app.api.routes import (
     private,
     qualities,
     quality_trait_links,
+    rooms,
     stories,
     storynodes,
     traits,
@@ -18,7 +20,6 @@ from app.api.routes import (
     user_story_progress,
     users,
     utils,
-    agent_routes,
 )
 from app.core.config import settings
 
@@ -40,6 +41,7 @@ api_router.include_router(stories.router)
 api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
 api_router.include_router(agent_routes.router)
+api_router.include_router(rooms.router)
 
 if settings.ENVIRONMENT == "local":
     api_router.include_router(private.router)
