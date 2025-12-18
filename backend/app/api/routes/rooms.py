@@ -21,7 +21,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.api.deps import AsyncSessionDep, CurrentUser
-from app.for_review_crud import (
+from app.crud import (
     add_participant,
     change_participant_role,
     create_room,
@@ -32,10 +32,11 @@ from app.for_review_crud import (
     send_user_message,
     update_room_metadata,
 )
-from app.models import Message
-from app.rooms import (
-    MessagePublic,
-    MessagesPublic,
+from app.models import (
+    Message,
+    RoomMessage,
+    RoomMessagePublic,
+    RoomMessagesPublic,
     RoomParticipant,
     RoomParticipantPublic,
     RoomParticipantsPublic,

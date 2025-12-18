@@ -2,8 +2,6 @@
 
 ## Critical Gaps in Event Versioning Strategy
 
-The Minimog design document **completely omits event versioning and schema evolution mechanisms**, creating a fundamental architectural risk that expert architects would immediately flag as a showstopper. While the document correctly emphasizes immutability (DG1.1) and replay testing (DG5.1), it fails to address how the system will handle schema changes over time.[^1][^2]
-
 ### Missing Infrastructure
 
 **No Version Metadata in Event Schema**

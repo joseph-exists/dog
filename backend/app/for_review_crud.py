@@ -17,26 +17,6 @@ Authorization Pattern:
 - Uses existing patterns, no bespoke utilities
 """
 
-from __future__ import annotations
-
-from datetime import datetime
-from typing import Sequence
-from uuid import UUID
-
-from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.rooms import (
-    Message,
-    MessagePublic,
-    MessagesPublic,
-    Room,
-    RoomParticipant,
-    RoomPublic,
-    RoomsPublic,
-)
-from app.services.event_emitter import emit_event
 
 
 # ============================================================================
@@ -553,9 +533,9 @@ async def list_room_messages(
     limit: int,
     before: datetime | None,
     session: AsyncSession,
-) -> MessagesPublic:
+) -> RoomMessagesPublic:
     """
-    List messages from the Message projection with pagination constraints.
+    List room_messages from the RoomMessage projection with pagination constraints.
 
     Uses cursor-based pagination via 'before' timestamp for efficient
     pagination of large message histories.
@@ -568,7 +548,7 @@ async def list_room_messages(
         session: Async database session
 
     Returns:
-        MessagesPublic with data and count
+        RoomMessagesPublic with data and count
 
     Raises:
         HTTPException: 403 if user is not an active participant
@@ -579,26 +559,26 @@ async def list_room_messages(
 
     # Build query with optional cursor
     query = (
-        select(Message)
-        .where(Message.room_id == room_id)
-        .order_by(Message.created_at.desc())
+        select(RoomMessage)
+        .where(RoomMessage.room_id == room_id)
+        .order_by(RoomMessage.created_at.desc())
         .limit(limit)
     )
 
     if before:
-        query = query.where(Message.created_at < before)
+        query = query.where(RoomMessage.created_at < before)
 
     result = await session.execute(query)
     messages = result.scalars().all()
 
     # Get total count for this room
     count_result = await session.execute(
-        select(Message).where(Message.room_id == room_id)
+        select(RoomMessage).where(RoomMessage.room_id == room_id)
     )
     total_count = len(count_result.scalars().all())
 
-    return MessagesPublic(
-        data=[MessagePublic.model_validate(msg) for msg in messages],
+    return RoomMessagesPublic(
+        data=[RoomMessagePublic.model_validate(msg) for msg in room_messages],
         count=total_count,
     )
 
@@ -609,7 +589,7 @@ async def send_user_message(
     user_id: UUID,
     content: str,
     session: AsyncSession,
-) -> Message:
+) -> RoomMessage:
     """
     Send a user message to a room.
 
@@ -636,7 +616,7 @@ async def send_user_message(
         await emit_event(
             session=session,
             room_id=room_id,
-            event_type="message.user",
+            event_type="room_message.user",
             payload={
                 "sender_id": str(user_id),
                 "content": content,
@@ -645,13 +625,13 @@ async def send_user_message(
 
     # Fetch the most recent message for this user
     result = await session.execute(
-        select(Message)
+        select(RoomMessage)
         .where(
-            Message.room_id == room_id,
-            Message.sender_id == user_id,
+            RoomMessage.room_id == room_id,
+            RoomMessage.sender_id == user_id,
         )
-        .order_by(Message.created_at.desc())
+        .order_by(RoomMessage.created_at.desc())
         .limit(1)
     )
-    message = result.scalar_one()
-    return message
+    room_message = result.scalar_one()
+    return room_message

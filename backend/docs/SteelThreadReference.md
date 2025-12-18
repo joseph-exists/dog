@@ -20,7 +20,7 @@
 - [X] Health checks updated
 
 ### Event Sourcing (Phase 1)
-- [ ] `room_events` table created
+- [ ] `room_events` table created with event_version field, required for replayability until upcaster services and schema registry
 - [ ] `rooms` table created
 - [ ] `room_participants` table created
 - [ ] `messages` projection created

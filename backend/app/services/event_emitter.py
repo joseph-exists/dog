@@ -32,8 +32,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func
 
-from app.rooms import (
-    Message,
+from app.models import (
+    RoomMessage,
     Room,
     RoomEvent,
     RoomParticipant,

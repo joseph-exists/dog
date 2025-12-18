@@ -2153,6 +2153,27 @@ socket.on('event', (event) => {
 ```
 
 
+#### DG1.5 Idempotent Projection Handlers : UNDER REVIEW
+
+**Rule Type:** 
+
+**Statement:** 
+
+**Rationale:** 
+
+**Validation Method:**
+
+- 
+
+**Applies To:**
+
+- Requirements: 
+- Contracts: 
+
+**Example (Correct):**
+
+
+
 ***
 
 ### DG2. Performance and Scalability

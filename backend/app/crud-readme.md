@@ -25,6 +25,11 @@ This is a CRUD (Create, Read, Update, Delete) operations file that serves as the
    - User persona creation and management
    - Story progress tracking per user persona
 
+5. **Rooms and Room Messages**
+   - Room creation
+   - Room participant management
+   - Room Message Sending
+
 **How it's consumed:**
 1. **API Layer**: The functions in this file are called by API endpoints (as seen in the `get_current_node` endpoint at the bottom)
 

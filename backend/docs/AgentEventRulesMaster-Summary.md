@@ -21,11 +21,6 @@ A completely new, corrected version of Agent-Event-RULES.md that:
 
 ### 1. Architecture Shift: Session → Room
 
-**Original (Single-User):**
-- `chat_events` table with `session_id`
-- `chat_sessions` and `chat_messages` projections
-- Implicit single-user ownership
-- `ChatContext(session_id, user_id, story_id)`
 
 **Master (Multi-User):**
 - `room_events` table with `room_id` + `room_sequence`
@@ -35,10 +30,6 @@ A completely new, corrected version of Agent-Event-RULES.md that:
 
 ### 2. Agent Model: Responder → Participant
 
-**Original:**
-- Agents respond to user messages
-- No participant validation
-- Agents not tracked in database
 
 **Master:**
 - Agents are first-class room participants in `room_participants` table
@@ -48,11 +39,6 @@ A completely new, corrected version of Agent-Event-RULES.md that:
 
 ### 3. Event Types: Limited → Comprehensive
 
-**Original:**
-- message.user, message.agent
-- session.created
-- agent.handoff, tool.start, tool.end
-
 **Master:**
 - room.created, room.updated (lifecycle)
 - participant.joined, participant.left, participant.role_changed (membership)
@@ -61,11 +47,6 @@ A completely new, corrected version of Agent-Event-RULES.md that:
 
 ### 4. Authorization: Ownership → Membership
 
-**Original:**
-```python
-check_session_access(session_id, user_id)
-# Validates user owns session
-```
 
 **Master:**
 ```python
@@ -75,11 +56,6 @@ check_room_membership(room_id, user_id)
 
 ### 5. Context Provider: Single-User → Multi-User
 
-**Original:**
-```python
-build_chat_context(session_id, user_id)
-# Returns message history + story data
-```
 
 **Master:**
 ```python
