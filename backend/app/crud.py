@@ -1,6 +1,7 @@
-import uuid
-from typing import Any
 from __future__ import annotations
+from uuid import UUID, uuid4
+from typing import Any
+
 from datetime import datetime
 from typing import Sequence
 from fastapi import HTTPException
@@ -844,9 +845,8 @@ async def create_room(
                 session=session,
             )
     """
-    room_id = UUID(int=0)  # Temporary, will be replaced
-    from uuid import uuid4
-
+    # Generate room_id upfront (required for event sourcing - the event log
+    # is the source of truth, so we need the identifier before emitting events)
     room_id = uuid4()
 
     async with session.begin():
@@ -1311,7 +1311,7 @@ async def send_user_message(
     """
     Send a user message to a room.
 
-    Emits message.user event which creates the message projection.
+    Emits room_message.user event which creates the message projection.
 
     Args:
         room_id: UUID of the room

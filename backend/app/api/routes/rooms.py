@@ -34,6 +34,9 @@ from app.crud import (
 )
 from app.models import (
     Message,
+    MessageResponse,
+    ParticipantAddRequest,
+    ParticipantRoleChangeRequest,
     RoomMessage,
     RoomMessagePublic,
     RoomMessagesPublic,
@@ -42,47 +45,15 @@ from app.models import (
     RoomParticipantsPublic,
     RoomPublic,
     RoomsPublic,
+    RoomCreate,
+    RoomUpdate,
+    RoomMessageSend,
 )
+
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
 
-# ============================================================================
-# Request/Response Models
-# ============================================================================
-
-
-class RoomCreateRequest(BaseModel):
-    """Request model for creating a room."""
-
-    title: str | None = None
-    story_id: UUID | None = None
-
-
-class RoomUpdateRequest(BaseModel):
-    """Request model for updating room metadata."""
-
-    title: str | None = None
-
-
-class ParticipantAddRequest(BaseModel):
-    """Request model for adding a participant to a room."""
-
-    participant_id: str
-    participant_type: str  # "user" | "agent"
-    role: str = "member"  # "owner" | "member"
-
-
-class ParticipantRoleChangeRequest(BaseModel):
-    """Request model for changing a participant's role."""
-
-    new_role: str  # "owner" | "member"
-
-
-class MessageSendRequest(BaseModel):
-    """Request model for sending a message."""
-
-    content: str
 
 
 # ============================================================================
@@ -95,7 +66,7 @@ async def create_new_room(
     *,
     session: AsyncSessionDep,
     current_user: CurrentUser,
-    room_in: RoomCreateRequest,
+    room_in: RoomCreate,
 ) -> Any:
     """
     Create a new room.
@@ -162,7 +133,7 @@ async def update_room(
     room_id: UUID,
     session: AsyncSessionDep,
     current_user: CurrentUser,
-    room_in: RoomUpdateRequest,
+    room_in: RoomUpdate,
 ) -> Any:
     """
     Update room metadata (owner-only).
@@ -263,7 +234,7 @@ async def remove_room_participant(
     participant_id: str,
     session: AsyncSessionDep,
     current_user: CurrentUser,
-) -> Message:
+) -> MessageResponse:
     """
     Remove a participant from a room (owner-only, soft delete).
 
@@ -279,7 +250,7 @@ async def remove_room_participant(
         participant_id=participant_id,
         session=session,
     )
-    return Message(message="Participant removed successfully")
+    return MessageResponse(message="Participant removed successfully")
 
 
 @router.patch("/{room_id}/participants/{participant_id}/role", response_model=RoomParticipantPublic)
@@ -315,13 +286,13 @@ async def change_room_participant_role(
 # ============================================================================
 
 
-@router.post("/{room_id}/messages", response_model=MessagePublic)
+@router.post("/{room_id}/messages", response_model=RoomMessagePublic)
 async def send_message(
     *,
     room_id: UUID,
     session: AsyncSessionDep,
     current_user: CurrentUser,
-    message_in: MessageSendRequest,
+    message_in: RoomMessageSend,
 ) -> Any:
     """
     Send a message to a room.
@@ -331,16 +302,16 @@ async def send_message(
 
     Only accessible to active participants.
     """
-    message = await send_user_message(
+    room_message = await send_user_message(
         room_id=room_id,
         user_id=current_user.id,
         content=message_in.content,
         session=session,
     )
-    return message
+    return room_message
 
 
-@router.get("/{room_id}/messages", response_model=MessagesPublic)
+@router.get("/{room_id}/messages", response_model=RoomMessagesPublic)
 async def list_messages(
     room_id: UUID,
     session: AsyncSessionDep,
@@ -357,11 +328,11 @@ async def list_messages(
         limit: Maximum number of messages to return (max 100)
         before: Cursor timestamp - returns messages before this time
     """
-    messages = await list_room_messages(
+    room_messages = await list_room_messages(
         room_id=room_id,
         user_id=current_user.id,
         limit=limit,
         before=before,
         session=session,
     )
-    return messages
+    return room_messages

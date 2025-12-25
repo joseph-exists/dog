@@ -1,3 +1,5 @@
+### COPIED IN FROM CRUD.PY FOR ISOLATED REVIEW AND TESTING ###
+
 """
 Room CRUD Operations (Phase 1 - For Review)
 
@@ -593,7 +595,7 @@ async def send_user_message(
     """
     Send a user message to a room.
 
-    Emits message.user event which creates the message projection.
+    Emits room_message.user event which creates the message projection.
 
     Args:
         room_id: UUID of the room
@@ -635,3 +637,5 @@ async def send_user_message(
     )
     room_message = result.scalar_one()
     return room_message
+
+

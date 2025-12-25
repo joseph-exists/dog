@@ -1613,7 +1613,7 @@ class Room(RoomBase, table=True):
         back_populates="room",
         cascade_delete=True,
     )
-    messages: list["RoomMessage"] = Relationship(
+    room_messages: list["RoomMessage"] = Relationship(
         back_populates="room",
         cascade_delete=True,
     )
@@ -1665,7 +1665,7 @@ class RoomParticipantBase(SQLModel):
 class RoomParticipantCreate(RoomParticipantBase):
     """Properties required when adding a participant via API."""
 
-    room_id: uuid.UUID
+    pass
 
 
 class RoomParticipantUpdate(SQLModel):
@@ -1717,6 +1717,51 @@ class RoomParticipantsPublic(SQLModel):
     count: int
 
 
+class ParticipantAddRequest(SQLModel):
+    """
+    Request model for adding a participant to a room.
+    
+    Used by: POST /rooms/{room_id}/participants
+    """
+    participant_id: str = Field(
+        ...,
+        max_length=255,
+        description="UUID string for users, agent name for agents",
+        # examples=["550e8400-e29b-41d4-a716-446655440000", "StoryAdvisor"],
+    )
+    participant_type: Literal["user", "agent"] = Field(
+        ...,
+        description="Type of participant (user or agent)",
+    )
+    role: Literal["owner", "member"] = Field(
+        default="member",
+        description="Participant role (default: member)",
+    )
+
+
+class ParticipantRoleChangeRequest(SQLModel):
+    """
+    Request model for changing a participant's role.
+    
+    Used by: PATCH /rooms/{room_id}/participants/{participant_id}/role
+    """
+    new_role: Literal["owner", "member"] = Field(
+        ...,
+        description="New role for the participant",
+    )
+
+
+class MessageResponse(SQLModel):
+    """
+    Generic success message response.
+    
+    Used for operations that need to return a simple success message.
+    """
+    message: str = Field(
+        ...,
+        description="Success message",
+    )
+
 # ============================================================================
 # Message Models (Projection)
 # ============================================================================
@@ -1735,8 +1780,13 @@ class RoomMessageBase(SQLModel):
 class RoomMessageCreate(RoomMessageBase):
     """Properties required when creating a message via API."""
 
-    room_id: uuid.UUID
+    pass
     # sender_id and agent_name will be injected based on sender_type
+
+class RoomMessageSend(SQLModel):
+    """Properties required when sending a message via API."""
+
+    content: str = Field(description="Message text content")
 
 
 class RoomMessageUpdate(SQLModel):
@@ -1818,7 +1868,7 @@ class RoomEventBase(SQLModel):
     payload: dict[str, Any] = Field(
         default_factory=dict,
         description="Event-specific data as JSON",
-        sa_type=None,  # Will be JSONB in PostgreSQL
+        sa_type=JSON,  # Will be JSONB in PostgreSQL
     )
 
 
@@ -1893,7 +1943,6 @@ class RoomEventsPublic(SQLModel):
 
     data: list[RoomEventPublic]
     count: int
-
 
 # ============================================================================
 # Post-Definition Relationship Binding

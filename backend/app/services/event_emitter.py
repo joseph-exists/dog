@@ -63,7 +63,7 @@ async def emit_event(
     Args:
         session: Async database session (must be within a transaction)
         room_id: UUID of the room
-        event_type: Event type (e.g., "room.created", "message.user")
+        event_type: Event type (e.g., "room.created", "room_message.user")
         payload: Event-specific data as dict
 
     Returns:
@@ -78,7 +78,7 @@ async def emit_event(
             event = await emit_event(
                 session,
                 room_id,
-                "message.user",
+                "room_message.user",
                 {
                     "sender_id": str(user_id),
                     "content": "Hello world",
@@ -91,8 +91,8 @@ async def emit_event(
         - participant.joined: User or agent joined
         - participant.left: User or agent left (soft delete)
         - participant.role_changed: Participant role updated
-        - message.user: User sent message
-        - message.agent: Agent sent message
+        - room_message.user: User sent message
+        - room_message.agent: Agent sent message
     """
     # Generate next sequence number for this room
     next_sequence = await _get_next_room_sequence(session, room_id)
@@ -184,8 +184,8 @@ async def _update_projections(
         "participant.joined": _handle_participant_joined,
         "participant.left": _handle_participant_left,
         "participant.role_changed": _handle_participant_role_changed,
-        "message.user": _handle_message_user,
-        "message.agent": _handle_message_agent,
+        "room_message.user": _handle_room_message_user,
+        "room_message.agent": _handle_room_message_agent,
     }
 
     handler = handlers.get(event.event_type)
@@ -376,12 +376,12 @@ async def _handle_participant_role_changed(
 # ============================================================================
 
 
-async def _handle_message_user(
+async def _handle_room_message_user(
     session: AsyncSession,
     event: RoomEvent,
 ) -> None:
     """
-    Handle message.user event.
+    Handle room_message.user event.
 
     Payload:
         - sender_id: UUID string (required)
@@ -389,8 +389,8 @@ async def _handle_message_user(
     """
     payload = event.payload
 
-    message = Message(
-        message_id=uuid.uuid4(),
+    message = RoomMessage(
+        room_message_id=uuid.uuid4(),
         room_id=event.room_id,
         sender_type="user",
         sender_id=uuid.UUID(payload["sender_id"]),
@@ -399,15 +399,15 @@ async def _handle_message_user(
         created_at=event.created_at,
     )
 
-    session.add(message)
+    session.add(room_message)
 
 
-async def _handle_message_agent(
+async def _handle_room_message_agent(
     session: AsyncSession,
     event: RoomEvent,
 ) -> None:
     """
-    Handle message.agent event.
+    Handle room_message.agent event.
 
     Payload:
         - agent_name: str (required)
@@ -415,7 +415,7 @@ async def _handle_message_agent(
     """
     payload = event.payload
 
-    message = Message(
+    room_message = RoomMessage(
         message_id=uuid.uuid4(),
         room_id=event.room_id,
         sender_type="agent",
@@ -425,7 +425,7 @@ async def _handle_message_agent(
         created_at=event.created_at,
     )
 
-    session.add(message)
+    session.add(room_message)
 
 
 # ============================================================================
@@ -454,7 +454,7 @@ async def replay_events_for_room(
     """
     # Delete existing projections for this room
     await session.execute(
-        select(Message).where(Message.room_id == room_id)
+        select(RoomMessage).where(RoomMessage.room_id == room_id)
     )
     await session.execute(
         select(RoomParticipant).where(RoomParticipant.room_id == room_id)
