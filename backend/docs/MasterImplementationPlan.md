@@ -67,21 +67,21 @@ Events in a room are strictly ordered by a monotonically increasing per-room seq
 
 - `room.created`, `room.updated` for room lifecycle.[^5]
 - `participant.joined`, `participant.left`, `participant.role_changed` for membership and authorization.[^5]
-- `message.user`, `message.agent` for conversation content (both are first-class).[^4][^5]
+- `room_message.user`, `room_message.agent` for conversation content (both are first-class).[^4][^5]
 - `tool.start`, `tool.end`, and `agent.handoff` are reserved for advanced agent operations and observability.[^4]
 
 
 ### Projections (transactionally maintained)
 
 Projections are query-optimized tables derived from events and updated in the same transaction as the event insert.[^1]
-Recommended projections for V1: `rooms`, `room_participants`, and `messages`.[^5][^1]
+Recommended projections for V1: `rooms`, `room_participants`, and `room_messages`.[^5][^1]
 
 ### Required tables (conceptual schema)
 
 - `rooms` holds room metadata, optional `story_id`, and `last_activity` for ordering in room lists.[^5][^1]
 - `room_participants` is the foundation of multi-user operation and contains both user and agent participants with `participant_type`, `role`, and active flags.[^5][^1]
 - `room_events` is the immutable event log keyed by `room_id` + `room_sequence`, with indexes supporting replay.[^5][^1]
-- `messages` is the message projection keyed by room, with sender attribution (`sender_type`, `agent_name`) and optional interactive payload fields (e.g., `button_options`).[^5]
+- `room_messages` is the message projection keyed by room, with sender attribution (`sender_type`, `agent_name`) and optional interactive payload fields (e.g., `button_options`).[^5]
 
 ***
 
@@ -93,7 +93,7 @@ Recommended projections for V1: `rooms`, `room_participants`, and `messages`.[^5
 - Room Management handles room creation, listing, participant management, and room-scoped authorization checks.[^5][^1]
 - Event Emitter appends immutable events and updates projections transactionally.[^4][^1]
 - Context Provider assembles room-aware agent context (story outline + last N messages + participant metadata as needed) with strict size limits.[^4][^1]
-- Agent Runner executes PydanticAI agents with dependency-injected context, emits `message.agent` events, and optionally streams tokens.[^4][^1]
+- Agent Runner executes PydanticAI agents with dependency-injected context, emits `room_message.agent` events, and optionally streams tokens.[^4][^1]
 
 
 ### REST endpoints (Phase 1–3 baseline)
@@ -108,8 +108,8 @@ Room operations:
 
 Messaging operations:
 
-- `POST /rooms/{room_id}/messages` emits `message.user`, runs agent(s) as configured, and persists `message.agent` responses as events.[^4][^1][^5]
-- `GET /rooms/{room_id}/messages` returns message history from the `messages` projection with pagination.[^1][^5]
+- `POST /rooms/{room_id}/room_messages` emits `room_message.user`, runs agent(s) as configured, and persists `message.agent` responses as events.[^4][^1][^5]
+- `GET /rooms/{room_id}/room_messages` returns message history from the `room_messages` projection with pagination.[^1][^5]
 
 Agent operations (optional companion API):
 
@@ -143,7 +143,7 @@ Each phase delivers end-to-end value and remains deployable independently.[^3][^
 ### Phase 2: Multi-user agent integration (5–6 days)
 
 **Goal:** Make agents first-class room participants and run them with room-aware context.[^1][^5]
-**Deliverables:** StoryAdvisor agent with tools, agent registry, context provider, agent runner emitting `message.agent`, and support for multiple agents in one room.[^4][^5][^1]
+**Deliverables:** StoryAdvisor agent with tools, agent registry, context provider, agent runner emitting `room_message.agent`, and support for multiple agents in one room.[^4][^5][^1]
 **Success criteria:** Agent responses are visible to all participants, include story-aware context, and are persisted and replayable from events.[^5][^1]
 
 ### Phase 3: Frontend multi-user room UI (4–5 days)
