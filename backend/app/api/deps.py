@@ -11,7 +11,7 @@ from sqlmodel import Session
 
 from app.core import security
 from app.core.config import settings
-from app.core.db import engine, get_async_session
+from app.core.db import engine, get_async_session, async_session_maker
 from app.models import TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -26,6 +26,47 @@ def get_db() -> Generator[Session, None, None]:
 
 SessionDep = Annotated[Session, Depends(get_db)]
 AsyncSessionDep = Annotated[AsyncSession, Depends(get_async_session)]
+
+
+async def get_async_session_with_transaction() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Async session generator with automatic transaction management.
+
+    Provides a session with an active transaction that:
+    - Commits automatically on successful completion
+    - Rolls back automatically on exceptions
+    - Ensures atomic operations across CRUD functions
+
+    Use this dependency for all write operations (POST, PATCH, DELETE).
+    For read-only operations (GET), use AsyncSessionDep instead.
+
+    Example:
+        @router.post("/rooms/")
+        async def create_room(
+            session: AsyncSessionTransactionDep,
+            current_user: CurrentUser,
+            room_in: RoomCreate,
+        ):
+            # Transaction active throughout handler
+            room = await create_room(session=session, ...)
+            # Transaction commits here (on successful return)
+            # or rolls back (on exception)
+            return room
+    """
+    async with async_session_maker() as session:
+        async with session.begin():
+            try:
+                yield session
+            except Exception:
+                # Transaction automatically rolls back via context manager
+                # Re-raise exception for FastAPI error handling
+                raise
+
+
+AsyncSessionTransactionDep = Annotated[
+    AsyncSession,
+    Depends(get_async_session_with_transaction)
+]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 

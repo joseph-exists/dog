@@ -823,6 +823,10 @@ async def create_room(
     """
     Create a new room by emitting room.created and participant.joined events.
 
+    NOTE: This function expects to be called within an active transaction.
+    Use AsyncSessionTransactionDep in route handlers to ensure proper
+    transaction management.
+
     This operation creates a room with the creator as the owner participant.
     All state changes are recorded as events and projections are updated
     transactionally.
@@ -831,48 +835,49 @@ async def create_room(
         creator_id: UUID of the user creating the room
         story_id: Optional UUID of associated story
         title: Optional room title
-        session: Async database session
+        session: Async database session with active transaction
 
     Returns:
         The created Room projection
 
     Example:
-        async with session.begin():
+        # In route handler:
+        async def create_new_room(session: AsyncSessionTransactionDep, ...):
             room = await create_room(
                 creator_id=user.id,
                 story_id=story.id,
                 title="Chapter 1 Discussion",
-                session=session,
+                session=session,  # Transaction managed by route
             )
+            return room
     """
     # Generate room_id upfront (required for event sourcing - the event log
     # is the source of truth, so we need the identifier before emitting events)
     room_id = uuid4()
 
-    async with session.begin():
-        # Emit room.created event
-        await emit_event(
-            session=session,
-            room_id=room_id,
-            event_type="room.created",
-            payload={
-                "creator_id": str(creator_id),
-                "story_id": str(story_id) if story_id else None,
-                "title": title,
-            },
-        )
+    # Emit room.created event
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.created",
+        payload={
+            "creator_id": str(creator_id),
+            "story_id": str(story_id) if story_id else None,
+            "title": title,
+        },
+    )
 
-        # Emit participant.joined event for creator (as owner)
-        await emit_event(
-            session=session,
-            room_id=room_id,
-            event_type="participant.joined",
-            payload={
-                "participant_id": str(creator_id),
-                "participant_type": "user",
-                "role": "owner",
-            },
-        )
+    # Emit participant.joined event for creator (as owner)
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="participant.joined",
+        payload={
+            "participant_id": str(creator_id),
+            "participant_type": "user",
+            "role": "owner",
+        },
+    )
 
     # Fetch and return the created room projection
     result = await session.execute(select(Room).where(Room.room_id == room_id))
@@ -983,6 +988,8 @@ async def update_room_metadata(
     """
     Update room metadata via event emission (room.updated).
 
+    NOTE: This function expects to be called within an active transaction.
+
     Policy: Owner-only operation (enforced in Phase 1).
     Future phases may allow members to update certain fields.
 
@@ -990,7 +997,7 @@ async def update_room_metadata(
         room_id: UUID of the room
         user_id: UUID of the user (must be owner)
         title: New title for the room
-        session: Async database session
+        session: Async database session with active transaction
 
     Returns:
         Updated Room projection
@@ -1016,13 +1023,12 @@ async def update_room_metadata(
         return await get_room_for_user(room_id=room_id, user_id=user_id, session=session)
 
     # Emit room.updated event
-    async with session.begin():
-        await emit_event(
-            session=session,
-            room_id=room_id,
-            event_type="room.updated",
-            payload={"updated_fields": updated_fields},
-        )
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.updated",
+        payload={"updated_fields": updated_fields},
+    )
 
     # Fetch and return updated room
     result = await session.execute(select(Room).where(Room.room_id == room_id))
@@ -1047,6 +1053,8 @@ async def add_participant(
     """
     Add a user or agent to a room (owner-only operation).
 
+    NOTE: This function expects to be called within an active transaction.
+
     This operation is idempotent: re-adding an inactive participant
     will reactivate them via the participant.joined event handler.
 
@@ -1056,7 +1064,7 @@ async def add_participant(
         participant_id: UUID string for users, agent name for agents
         participant_type: "user" or "agent"
         role: "owner" or "member"
-        session: Async database session
+        session: Async database session with active transaction
 
     Returns:
         RoomParticipant projection
@@ -1087,17 +1095,16 @@ async def add_participant(
         )
 
     # Emit participant.joined event (idempotent via handler)
-    async with session.begin():
-        await emit_event(
-            session=session,
-            room_id=room_id,
-            event_type="participant.joined",
-            payload={
-                "participant_id": participant_id,
-                "participant_type": participant_type,
-                "role": role,
-            },
-        )
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="participant.joined",
+        payload={
+            "participant_id": participant_id,
+            "participant_type": participant_type,
+            "role": role,
+        },
+    )
 
     # Fetch and return participant
     result = await session.execute(
@@ -1120,6 +1127,8 @@ async def remove_participant(
     """
     Remove a participant from a room (owner-only, soft delete).
 
+    NOTE: This function expects to be called within an active transaction.
+
     Emits participant.left event which sets active=False in the projection.
     Historical events are preserved (never deleted).
 
@@ -1127,7 +1136,7 @@ async def remove_participant(
         room_id: UUID of the room
         user_id: UUID of the user performing the operation (must be owner)
         participant_id: UUID string for users, agent name for agents
-        session: Async database session
+        session: Async database session with active transaction
 
     Raises:
         HTTPException: 403 if user is not the owner
@@ -1153,13 +1162,12 @@ async def remove_participant(
         raise HTTPException(status_code=404, detail="Participant not found")
 
     # Emit participant.left event
-    async with session.begin():
-        await emit_event(
-            session=session,
-            room_id=room_id,
-            event_type="participant.left",
-            payload={"participant_id": participant_id},
-        )
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="participant.left",
+        payload={"participant_id": participant_id},
+    )
 
 
 async def change_participant_role(
@@ -1173,6 +1181,8 @@ async def change_participant_role(
     """
     Change a participant's role (owner-only operation).
 
+    NOTE: This function expects to be called within an active transaction.
+
     Emits participant.role_changed event to update the projection.
 
     Args:
@@ -1180,7 +1190,7 @@ async def change_participant_role(
         user_id: UUID of the user performing the operation (must be owner)
         participant_id: UUID string for users, agent name for agents
         new_role: "owner" or "member"
-        session: Async database session
+        session: Async database session with active transaction
 
     Returns:
         Updated RoomParticipant projection
@@ -1217,16 +1227,15 @@ async def change_participant_role(
         raise HTTPException(status_code=404, detail="Participant not found")
 
     # Emit participant.role_changed event
-    async with session.begin():
-        await emit_event(
-            session=session,
-            room_id=room_id,
-            event_type="participant.role_changed",
-            payload={
-                "participant_id": participant_id,
-                "new_role": new_role,
-            },
-        )
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="participant.role_changed",
+        payload={
+            "participant_id": participant_id,
+            "new_role": new_role,
+        },
+    )
 
     # Fetch and return updated participant
     result = await session.execute(
@@ -1287,7 +1296,7 @@ async def list_room_messages(
         query = query.where(RoomMessage.created_at < before)
 
     result = await session.execute(query)
-    messages = result.scalars().all()
+    room_messages = result.scalars().all()
 
     # Get total count for this room
     count_result = await session.execute(
@@ -1311,16 +1320,18 @@ async def send_user_message(
     """
     Send a user message to a room.
 
+    NOTE: This function expects to be called within an active transaction.
+
     Emits room_message.user event which creates the message projection.
 
     Args:
         room_id: UUID of the room
         user_id: UUID of the user sending the message
         content: Message content
-        session: Async database session
+        session: Async database session with active transaction
 
     Returns:
-        Created Message projection
+        Created RoomMessage projection
 
     Raises:
         HTTPException: 403 if user is not an active participant
@@ -1330,16 +1341,15 @@ async def send_user_message(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Emit message.user event
-    async with session.begin():
-        await emit_event(
-            session=session,
-            room_id=room_id,
-            event_type="room_message.user",
-            payload={
-                "sender_id": str(user_id),
-                "content": content,
-            },
-        )
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room_message.user",
+        payload={
+            "sender_id": str(user_id),
+            "content": content,
+        },
+    )
 
     # Fetch the most recent message for this user
     result = await session.execute(

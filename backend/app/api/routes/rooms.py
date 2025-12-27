@@ -20,7 +20,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from app.api.deps import AsyncSessionDep, CurrentUser
+from app.api.deps import AsyncSessionDep, AsyncSessionTransactionDep, CurrentUser
 from app.crud import (
     add_participant,
     change_participant_role,
@@ -64,7 +64,7 @@ router = APIRouter(prefix="/rooms", tags=["rooms"])
 @router.post("/", response_model=RoomPublic)
 async def create_new_room(
     *,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     room_in: RoomCreate,
 ) -> Any:
@@ -72,6 +72,10 @@ async def create_new_room(
     Create a new room.
 
     The current user becomes the room owner. Optionally associate with a story.
+
+    Transaction is automatically managed:
+    - Commits on successful completion
+    - Rolls back on any exception
 
     Event flow:
     1. Emits room.created event
@@ -131,14 +135,14 @@ async def get_room(
 async def update_room(
     *,
     room_id: UUID,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     room_in: RoomUpdate,
 ) -> Any:
     """
     Update room metadata (owner-only).
 
-    Emits room.updated event with changed fields.
+    Transaction automatically managed. Emits room.updated event with changed fields.
     """
     room = await update_room_metadata(
         room_id=room_id,
@@ -158,15 +162,15 @@ async def update_room(
 async def add_room_participant(
     *,
     room_id: UUID,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     participant_in: ParticipantAddRequest,
 ) -> Any:
     """
     Add a participant to a room (owner-only).
 
-    Supports adding both users and agents. Operation is idempotent:
-    re-adding an inactive participant will reactivate them.
+    Transaction automatically managed. Supports adding both users and agents.
+    Operation is idempotent: re-adding an inactive participant will reactivate them.
 
     Event flow:
     1. Verifies current user is room owner
@@ -232,13 +236,13 @@ async def remove_room_participant(
     *,
     room_id: UUID,
     participant_id: str,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
 ) -> MessageResponse:
     """
     Remove a participant from a room (owner-only, soft delete).
 
-    Emits participant.left event which sets active=False.
+    Transaction automatically managed. Emits participant.left event which sets active=False.
     Historical events are preserved.
 
     Args:
@@ -258,14 +262,14 @@ async def change_room_participant_role(
     *,
     room_id: UUID,
     participant_id: str,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     role_in: ParticipantRoleChangeRequest,
 ) -> Any:
     """
     Change a participant's role (owner-only).
 
-    Emits participant.role_changed event.
+    Transaction automatically managed. Emits participant.role_changed event.
 
     Args:
         participant_id: UUID string for users, agent name for agents
@@ -290,15 +294,15 @@ async def change_room_participant_role(
 async def send_message(
     *,
     room_id: UUID,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     message_in: RoomMessageSend,
 ) -> Any:
     """
     Send a message to a room.
 
-    Emits message.user event. In Phase 2, this will also trigger
-    agent execution if agents are configured to respond.
+    Transaction automatically managed. Emits message.user event.
+    In Phase 2, this will also trigger agent execution if agents are configured to respond.
 
     Only accessible to active participants.
     """

@@ -60,8 +60,13 @@ async def emit_event(
     3. Projections are updated in the same transaction
     4. Strong read-after-write consistency is maintained
 
+    TRANSACTION REQUIREMENTS:
+    This function expects to be called within an active transaction. The
+    transaction is managed by the route handler using AsyncSessionTransactionDep.
+    This ensures atomic operations across multiple events and projections.
+
     Args:
-        session: Async database session (must be within a transaction)
+        session: Async database session with active transaction
         room_id: UUID of the room
         event_type: Event type (e.g., "room.created", "room_message.user")
         payload: Event-specific data as dict
@@ -74,7 +79,13 @@ async def emit_event(
         sqlalchemy.exc.IntegrityError: If sequence constraint is violated
 
     Example:
-        async with session.begin():
+        # Route handler manages transaction
+        @router.post("/{room_id}/messages")
+        async def send_message(
+            session: AsyncSessionTransactionDep,  # Transaction starts here
+            ...
+        ):
+            # emit_event uses route-level transaction
             event = await emit_event(
                 session,
                 room_id,
@@ -84,6 +95,8 @@ async def emit_event(
                     "content": "Hello world",
                 },
             )
+            # Transaction commits automatically on return
+            return event
 
     Event Types (Phase 1):
         - room.created: New room created
