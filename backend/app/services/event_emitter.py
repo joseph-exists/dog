@@ -50,6 +50,7 @@ async def emit_event(
     room_id: uuid.UUID,
     event_type: str,
     payload: dict[str, Any],
+    enrichment_metadata: dict[str, Any] | None = None,
 ) -> RoomEvent:
     """
     Emit a room event and update projections transactionally.
@@ -70,6 +71,7 @@ async def emit_event(
         room_id: UUID of the room
         event_type: Event type (e.g., "room.created", "room_message.user")
         payload: Event-specific data as dict
+        enrichment_metadata: Optional metadata for trace IDs, performance metrics, etc.
 
     Returns:
         The created RoomEvent
@@ -106,6 +108,9 @@ async def emit_event(
         - participant.role_changed: Participant role updated
         - room_message.user: User sent message
         - room_message.agent: Agent sent message
+    
+    Future: see Phase2-addendum.md for usage post Phase 4.
+
     """
     # Generate next sequence number for this room
     next_sequence = await _get_next_room_sequence(session, room_id)
@@ -117,6 +122,7 @@ async def emit_event(
         room_sequence=next_sequence,
         event_type=event_type,
         payload=payload,
+        enrichment_metadata=enrichment_metadata,
         created_at=datetime.utcnow(),
     )
 
@@ -124,6 +130,10 @@ async def emit_event(
 
     # Update projections based on event type
     await _update_projections(session, event)
+
+    # Flush to make projection changes visible to subsequent queries in this transaction
+    # This is required for read-after-write consistency within the same request
+    await session.flush()
 
     # Phase 4: Redis pub/sub will be added here
     # await _publish_to_redis(room_id, event)
@@ -402,8 +412,8 @@ async def _handle_room_message_user(
     """
     payload = event.payload
 
-    message = RoomMessage(
-        room_message_id=uuid.uuid4(),
+    room_message = RoomMessage(
+        message_id=uuid.uuid4(),
         room_id=event.room_id,
         sender_type="user",
         sender_id=uuid.UUID(payload["sender_id"]),

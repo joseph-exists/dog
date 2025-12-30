@@ -1,7 +1,7 @@
 # Multi-User Multi-AI Chatroom System - Technical Specification
 
-**Version:** 1.0
-**Document Type:** Implementation-Ready System Specification
+**Version:** 0.8
+**Document Type:** REFERENCE
 **Status:** Final Review Prior to Implementation
 **Last Updated:** December 11, 2025
 **Tech Stack:** PydanticAI, FastAPI, AG-UI, Postgres, Redis, Docker
@@ -248,7 +248,7 @@ This specification is designed as an **interdependent system** where each sectio
 
 **Purpose:** Immutable, append-only log of every state change in the system. This is the source of truth.
 
-**Schema:* PENDING REVIEW PRIOR TO ADDING TO CODEBASE - NEEDS WORK - NOT APPROVED*
+**Schema:* PENDING REVIEW PRIOR TO ADDING TO CODEBASE - NEEDS WORK - NOT APPROVED - NOT CURRENT IMPLEMENTATION*
 
 ```sql
 CREATE TABLE room_events (

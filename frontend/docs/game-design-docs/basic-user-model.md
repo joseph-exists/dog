@@ -11,7 +11,7 @@ by changing the Stories that are in their own past
 
 Users:
 
-There are three User types - Storytellers, Players, and Operators.
+There are three User types - Storytellers, Players, and Operators.  There are many types of Agents.
 
 An Operator will be part of Version 2.
 

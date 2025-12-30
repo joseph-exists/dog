@@ -39,11 +39,11 @@ OUTPUT_FILE = "test_results_quixote_agent.json"
 
 # Test topics for story generation
 TEST_TOPICS = [
-    "courage",
-    "wisdom",
-    "friendship",
-    "perseverance",
-    "compassion"
+    "beans and morality",
+    "mountains and bananas",
+    "radical acceptance and irrational numbers",
+    "cheese pizza and the Mongolian Empire",
+    "refugees and the history of jazz",
 ]
 
 

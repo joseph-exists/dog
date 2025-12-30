@@ -20,40 +20,43 @@
 - [X] Health checks updated
 
 ### Event Sourcing (Phase 1)
-- [ ] `room_events` table created with event_version field, required for replayability until upcaster services and schema registry
-- [ ] `rooms` table created
-- [ ] `room_participants` table created
-- [ ] `messages` projection created
-- [ ] Migration applied
-- [ ] Event emitter service implemented
-- [ ] Room CRUD operations implemented
-- [ ] Participant management APIs working
-- [ ] Room API routes working
-- [ ] Tests passing (>80% coverage)
+- [X] `room_events` table created with event_version field, required for replayability until upcaster services and schema registry
+- [X] `rooms` table created
+- [X] `room_participants` table created
+- [X] `messages` projection created
+- [X] Migration applied
+- [X] Event emitter service implemented
+- [X] Room CRUD operations implemented
+- [X] Participant management APIs working
+- [X] Room API routes working
+- [X] Tests passing (>80% coverage)
 
-### Agent Integration (Phase 2)
-- [ ] `story_advisor.py` agent created
-- [ ] Agent registry implemented
-- [ ] Agent tools implemented (get_story_outline, etc.)
-- [ ] AgentRunner service implemented
-- [ ] ContextProvider service implemented (room-aware)
-- [ ] Agents added as first-class room participants
-- [ ] Room routes integrated with agent execution
-- [ ] `participant.joined` events for agents working
-- [ ] Agent tests passing
-- [ ] Documentation updated
+### Agent Integration (Phase 2) ✅ COMPLETE
+- [X] `story_advisor.py` agent created with PydanticAI
+- [X] Agent registry implemented (`agent_registry.py`)
+- [X] Agent tools implemented (get_story_outline, get_conversation_summary, get_room_participants)
+- [X] AgentRunner service implemented (`agent_runner.py`)
+- [X] ContextProvider service implemented (room-aware context with story + messages)
+- [X] Agents added as first-class room participants (participant_type='agent')
+- [X] Room routes integrated with agent execution (`send_message` triggers agents)
+- [X] `participant.joined` events for agents working
+- [X] Agent tests passing (19/19 tests - registry, context provider, agent runner, integration)
+- [X] Documentation updated (Phase 2 plan, test script + guide)
+- [X] End-to-end test script created (`test_agent_integration.py`)
 
 ### Frontend UI (Phase 3)
-- [ ] OpenAPI client regenerated
+- [X] OpenAPI client regenerated
 - [ ] Room UI component created
+- [ ] Room component added to frontend leftnav
 - [ ] ParticipantList component created
 - [ ] MessageList/Message components created (with sender attribution)
 - [ ] MessageInput component created
 - [ ] useRoom hook implemented
-- [ ] Room creation and joining flows implemented
-- [ ] Room integrated into StoryEditor
-- [ ] Mobile responsive
-- [ ] UI tests passing
+- [ ] Room creation and joining flows implemented #NEEDS DESIGN
+- [ ] Room navigation (invite, join, see available rooms, etc) #NEEDS DESIGN
+- [ ] Room archive and delete functionality implemented
+- [ ] Mobile responsive : Not in dev framework, external
+- [ ] UI tests passing : Not in dev framework, external
 
 
 ### Streaming (Phase 4)
@@ -69,29 +72,36 @@
 
 ## 🏗️ Architecture at a Glance
 
-
-## 🏗️ Architecture at a Glance
-
 ```
-User Message → REST/WebSocket → emit_event("message.user") 
-                                    ↓
-                            room_events (immutable log)
-                                    ↓
-                    Transactional Projection Updates
-                                    ↓
-                rooms, room_participants, messages (projections)
-                                    ↓
-                            AgentRunner.run_agent()
-                                    ↓
-                    StoryAdvisor Agent (as room participant)
-                                    ↓
-                            Tools (get_story_outline, etc.)
-                                    ↓
-                            emit_event("message.agent")
-                                    ↓
-                    Redis pub/sub → All connected participants
-                                    ↓
-                        Response → WebSocket/REST → All Users
+User Message → REST Endpoint (AsyncSessionTransactionDep)
+                        ↓
+                [TRANSACTION STARTS]
+                        ↓
+                CRUD: send_user_message()
+                        ↓
+                emit_event("message.user")
+                        ↓
+                room_events (append-only log)
+                        ↓
+                _update_projections()
+                        ↓
+                rooms, room_participants, room_messages (projections)
+                        ↓
+                session.flush() — makes changes visible
+                        ↓
+                [TRANSACTION COMMITS]
+                        ↓
+                AgentRunner.run_agent() (Phase 2)
+                        ↓
+                StoryAdvisor Agent (room participant)
+                        ↓
+                Tools (get_story_outline, etc.)
+                        ↓
+                emit_event("message.agent")
+                        ↓
+                Redis pub/sub → WebSocket fanout (Phase 4)
+                        ↓
+                All connected participants receive updates
 ```
 
 ---
@@ -102,19 +112,23 @@ User Message → REST/WebSocket → emit_event("message.user")
 backend/
 ├── app/
 │   ├── agents/
-│   │   ├── quixote.py ✅ (existing)
-│   │   ├── story_advisor.py 
-│   │   └── agent_registry.py 
+│   │   ├── __init__.py ✅ (Phase 2 - registers agents)
+│   │   ├── agent_registry.py ✅ (Phase 2 - AGENT_REGISTRY)
+│   │   ├── story_advisor.py ✅ (Phase 2 - with tools)
+│   │   └── quixote.py ✅ (existing)
 │   ├── services/
-│   │   ├── event_emitter.py 
-│   │   ├── room_manager.py 
-│   │   ├── agent_runner.py 
-│   │   └── context_provider.py  (room-aware)
+│   │   ├── event_emitter.py ✅ (Phase 1 complete)
+│   │   ├── agent_runner.py ✅ (Phase 2 - run_agents_for_message)
+│   │   └── context_provider.py ✅ (Phase 2 - build_room_context)
 │   ├── api/routes/
-│   │   ├── rooms.py 
-│   │   └── websocket.py  (Phase 4)
+│   │   ├── rooms.py ✅ (Phase 1 + 2 - agent integration at :316-321)
+│   │   └── websocket.py (Phase 4)
+│   ├── api/
+│   │   └── deps.py ✅ (AsyncSessionTransactionDep added)
+│   ├── crud.py ✅ (Room operations complete)
+│   ├── main.py ✅ (imports app.agents for registration)
 │   └── core/
-│       └── redis.py 
+│       └── redis.py ✅ (Phase 0 complete)
 frontend/
 ├── src/
 │   ├── components/Room/ 
@@ -175,13 +189,38 @@ async def my_tool(ctx: RunContext[RoomContext]) -> str:
 
 ```
 
-### Transaction Pattern
+### Transaction Pattern (Route-Level Management)
 ```python
-# Always emit events + update projections in same transaction
-with session.begin():
-    await emit_event(...)  # Writes to room_events
-    # Projections (rooms, room_participants, messages) updated atomically
-# Transaction commits - all succeed or all fail
+# ✅ CORRECT - Route handler owns transaction lifecycle
+@router.post("/rooms/{room_id}/messages")
+async def send_message(
+    session: AsyncSessionTransactionDep,  # Transaction starts here
+    room_id: UUID,
+    current_user: CurrentUser,
+    message_in: RoomMessageSend,
+):
+    # All operations use the route-level transaction
+    message = await send_user_message(
+        room_id=room_id,
+        user_id=current_user.id,
+        content=message_in.content,
+        session=session,  # Passes route's transaction to CRUD
+    )
+    # Transaction commits on successful return
+    # Transaction rolls back on any exception
+    return message
+
+# ❌ WRONG - Don't manage transactions in CRUD functions
+async def send_user_message(session: AsyncSession, ...):
+    async with session.begin():  # ❌ NO! Route already started transaction
+        await emit_event(session, ...)  # This will cause nested transaction error
+
+# ✅ CORRECT - CRUD functions are transaction-agnostic
+async def send_user_message(session: AsyncSession, ...):
+    # Uses session provided by route (transaction already active)
+    await emit_event(session, ...)
+    # emit_event writes to room_events, updates projections, calls session.flush()
+    # All changes are visible for subsequent queries in same transaction
 ```
 
 ### Authorization Pattern
@@ -198,30 +237,34 @@ if not await check_room_membership(room_id, user.id, session):
 ## 🧪 Testing Checklist
 
 ### Unit Tests
-- [ ] Event emitter creates events with correct per-room sequence
-- [ ] Projection updates work correctly (rooms, room_participants, messages)
-- [ ] Agent tools return expected formats
-- [ ] Context provider loads story data and room metadata
-- [ ] Participant management functions work correctly
+- [X] Event emitter creates events with correct per-room sequence
+- [X] Projection updates work correctly (rooms, room_participants, messages)
+- [X] Agent tools return expected formats (StoryAdvisor tools: 3/3 passing)
+- [X] Context provider loads story data and room metadata (5/5 tests passing)
+- [X] Participant management functions work correctly
+- [X] Agent registry validates registration and lookup (6/6 tests passing)
 
 ### Integration Tests
-- [ ] Can create room via API
-- [ ] Can add participants (users and agents) to room
-- [ ] Can send message and all participants receive updates
-- [ ] Agent responses are visible to all room participants
-- [ ] Events are written atomically with projections
-- [ ] Multi-user authorization enforced correctly
+- [X] Can create room via API
+- [X] Can add participants (users and agents) to room
+- [X] Can send message and all participants receive updates
+- [X] Agent responses are visible to all room participants
+- [X] Events are written atomically with projections
+- [X] Multi-user authorization enforced correctly
+- [X] Agent integration end-to-end works (`test_agent_integration.py`)
 - [ ] WebSocket connects and streams to multiple participants (Phase 4)
 
 ### Manual Tests
-- [ ] Create/join room from story editor
-- [ ] Invite another user and StoryAdvisor agent to room
-- [ ] Send message, all participants see it in real-time
-- [ ] Agent response visible to all participants
-- [ ] Reload page, conversation and participants persist
-- [ ] Agent mentions specific story details (room-aware context)
-- [ ] Multiple users can collaborate simultaneously
-- [ ] Participant list shows all active users and agents
+- [X] Can create room via REST API (POST /rooms)
+- [X] Can add StoryAdvisor agent to room (POST /rooms/{id}/participants)
+- [X] Send message triggers agent automatically
+- [X] Agent response persisted in messages
+- [X] Agent response visible via GET /rooms/{id}/messages
+- [X] Agent demonstrates story context awareness (tested)
+- [X] Agent demonstrates message history awareness (tested)
+- [X] Participant list shows all active users and agents
+- [ ] Frontend UI integration (Phase 3)
+- [ ] Real-time WebSocket updates (Phase 4)
 
 ---
 
@@ -230,10 +273,13 @@ if not await check_room_membership(room_id, user.id, session):
 | Pitfall | Solution |
 |---------|----------|
 | Updating events directly | Always emit new events instead |
-| Forgetting transaction scope | Wrap emit_event + projection in `with session.begin()` |
+| Managing transactions in CRUD | Use `AsyncSessionTransactionDep` in routes, not `session.begin()` in CRUD |
+| Using AsyncSessionDep for writes | Use `AsyncSessionTransactionDep` for POST/PATCH/DELETE routes |
+| Not flushing after emit_event | `emit_event()` includes `session.flush()` automatically |
+| Nested transaction errors | Route owns transaction; CRUD functions should not call `session.begin()` |
 | Loading too much context | Limit to 20 messages + story outline |
 | Blocking operations in tools | Use `async`/`await` or `asyncio.to_thread()` |
-| Missing authorization checks | Always call `check_session_access()` first |
+| Missing authorization checks | Always call `check_room_membership()` before operations |
 | Not handling agent errors | Wrap in try/except, return friendly message |
 | Not checking room membership | Always validate via room_participants before operations |
 | Missing participant events | Emit participant.joined/left for users AND agents |
@@ -363,10 +409,36 @@ async def run_agent(...):
 
 ### Events Not Persisting?
 ```python
-# Check transaction scope
-with session.begin():  # This is critical!
-    await emit_event(...)
-# Transaction commits here
+# ✅ Check if route uses AsyncSessionTransactionDep
+@router.post("/rooms/{room_id}/messages")
+async def send_message(
+    session: AsyncSessionTransactionDep,  # Must use this for writes!
+    ...
+):
+    await send_user_message(session=session, ...)
+    # Transaction commits here automatically
+
+# ❌ Common mistake - using AsyncSessionDep for write operations
+@router.post("/rooms/{room_id}/messages")
+async def send_message(
+    session: AsyncSessionDep,  # WRONG! No transaction
+    ...
+):
+    await send_user_message(session=session, ...)
+    # Changes may not be committed!
+```
+
+### Transaction Errors?
+```python
+# Check for nested transaction attempts in CRUD
+async def my_crud_function(session: AsyncSession, ...):
+    async with session.begin():  # ❌ Remove this!
+        await emit_event(session, ...)
+    # Error: "A transaction is already begun on this Session"
+
+# ✅ CRUD should be transaction-agnostic
+async def my_crud_function(session: AsyncSession, ...):
+    await emit_event(session, ...)  # Uses route's transaction
 ```
 
 ### WebSocket Not Connecting?
@@ -385,7 +457,9 @@ ws.onerror = (error) => {
 
 ## 📖 Quick Links
 
-- **MasterImplementationPlan Integration Plan is source of truth**
+- **Phase 2 Plan:** `/backend/docs/PLAN_phase2_agent_integration.md`
+- **Phase 2 Test:** `/backend/app/test_scripts/test_agent_integration.py`
+- **Test Guide:** `/backend/app/test_scripts/AGENT_INTEGRATION_TEST.md`
 - **Agent Patterns:** `/backend/AGENT-PATTERNS.md`
 - **Current Rules:** `/backend/RULES.md`
 - **PydanticAI Docs:** https://ai.pydantic.dev
@@ -400,25 +474,27 @@ The steel thread is complete when:
 
 The steel thread is complete when:
 
-1. ✅ Infrastructure is healthy (Redis + pgvector)
-2. ✅ Can create room via API (optionally with initial agents)
-3. ✅ Can add multiple users and agents as room participants
-4. ✅ Multiple authors can send messages in same room
-5. ✅ StoryAdvisor (as room participant) responds with story-aware answers
-6. ✅ All room participants see all messages with correct attribution
-7. ✅ Conversation and participants persist on page reload
-8. ✅ Room UI works in story editor with participant list
-9. ✅ All tests pass (unit + integration + multi-user scenarios)
-10. ✅ No regressions in existing features
-11. ✅ Authorization enforces room membership correctly
-12. ✅ Documentation updated
-13. ✅ Can demo multi-user end-to-end to stakeholder
+1. ✅ Infrastructure is healthy (Redis + pgvector) - **DONE Phase 0**
+2. ✅ Can create room via API (optionally with initial agents) - **DONE Phase 1**
+3. ✅ Can add multiple users and agents as room participants - **DONE Phase 1+2**
+4. ✅ Multiple authors can send messages in same room - **DONE Phase 1**
+5. ✅ StoryAdvisor (as room participant) responds with story-aware answers - **DONE Phase 2** ⭐
+6. ✅ All room participants see all messages with correct attribution - **DONE Phase 2** ⭐
+7. ✅ Conversation and participants persist on page reload - **DONE Phase 1+2** ⭐
+8. ⏳ Room UI works in story editor with participant list - **IN PROGRESS Phase 3**
+9. ✅ All tests pass (unit + integration + multi-user scenarios) - **DONE (19/19 passing)** ⭐
+10. ✅ No regressions in existing features - **VERIFIED**
+11. ✅ Authorization enforces room membership correctly - **DONE Phase 1**
+12. ✅ Documentation updated - **DONE Phase 2** ⭐
+13. ⏳ Can demo multi-user end-to-end to stakeholder - **Needs Phase 3 UI**
+
+**Phase 2 Backend Complete! Ready for Phase 3 (Frontend UI)** 🎉
 
 ---
 
 ## 🎯 Success Mantra
 
-> **"Events are immutable. Projections are transactional. Agents are stateless. Context is limited. Tests must pass."**
+> **"Events are immutable. Projections are transactional. Routes own transactions. Agents are stateless. Context is limited. Tests must pass."**
 
 ---
 

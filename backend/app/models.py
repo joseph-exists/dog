@@ -1832,6 +1832,8 @@ class RoomMessage(RoomMessageBase, table=True):
         index=True,
     )
 
+    button_options: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    # AG-UI interactive buttons: [{"label": str, "value": str, "style": str}]
     # Relationships
     room: Room = Relationship(back_populates="room_messages")
 
@@ -1844,6 +1846,7 @@ class RoomMessagePublic(RoomMessageBase):
     sender_id: uuid.UUID | None
     agent_name: str | None
     created_at: datetime
+    button_options: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
 
 class RoomMessagesPublic(SQLModel):
@@ -1924,7 +1927,8 @@ class RoomEvent(RoomEventBase, table=True):
         nullable=False,
         index=True,
     )
-
+    enrichment_metadata: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    # Optional metadata for event enrichment (trace IDs, performance metrics, etc.)
     # Relationships
     room: Room = Relationship(back_populates="events")
 

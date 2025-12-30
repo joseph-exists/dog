@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.routes import (
     agent_routes,
     archetypes,
+    catalog,
     events,
     items,
     login,
@@ -38,6 +39,7 @@ api_router.include_router(persona_qualities.router)
 api_router.include_router(persona_events.router)
 api_router.include_router(storynodes.router)
 api_router.include_router(stories.router)
+api_router.include_router(catalog.router)
 api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
 api_router.include_router(agent_routes.router)

@@ -18,7 +18,6 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
 
 from app.api.deps import AsyncSessionDep, AsyncSessionTransactionDep, CurrentUser
 from app.crud import (
@@ -33,27 +32,23 @@ from app.crud import (
     update_room_metadata,
 )
 from app.models import (
-    Message,
     MessageResponse,
     ParticipantAddRequest,
     ParticipantRoleChangeRequest,
-    RoomMessage,
+    RoomCreate,
     RoomMessagePublic,
+    RoomMessageSend,
     RoomMessagesPublic,
     RoomParticipant,
     RoomParticipantPublic,
     RoomParticipantsPublic,
     RoomPublic,
     RoomsPublic,
-    RoomCreate,
     RoomUpdate,
-    RoomMessageSend,
 )
-
+from app.services.agent_runner import run_agents_for_message
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
-
-
 
 
 # ============================================================================
@@ -207,7 +202,7 @@ async def list_room_participants(
     from sqlalchemy import select
 
     # Check membership first
-    from app.for_review_crud import check_room_membership
+    from app.crud import check_room_membership
 
     if not await check_room_membership(
         room_id=room_id,
@@ -257,7 +252,10 @@ async def remove_room_participant(
     return MessageResponse(message="Participant removed successfully")
 
 
-@router.patch("/{room_id}/participants/{participant_id}/role", response_model=RoomParticipantPublic)
+@router.patch(
+    "/{room_id}/participants/{participant_id}/role",
+    response_model=RoomParticipantPublic,
+)
 async def change_room_participant_role(
     *,
     room_id: UUID,
@@ -301,17 +299,28 @@ async def send_message(
     """
     Send a message to a room.
 
-    Transaction automatically managed. Emits message.user event.
-    In Phase 2, this will also trigger agent execution if agents are configured to respond.
+    After user message is persisted, triggers any active agents in the room.
+    All operations (user message + agent responses) are atomic within one transaction.
 
+    Transaction automatically managed. Emits message.user event, then triggers agents.
     Only accessible to active participants.
     """
+    # 1. Send user message
     room_message = await send_user_message(
         room_id=room_id,
         user_id=current_user.id,
         content=message_in.content,
         session=session,
     )
+
+    # 2. Trigger agents (within same transaction)
+    await run_agents_for_message(
+        room_id=room_id,
+        trigger_message=message_in.content,
+        session=session,
+    )
+
+    # 3. Transaction commits here (on return)
     return room_message
 
 
