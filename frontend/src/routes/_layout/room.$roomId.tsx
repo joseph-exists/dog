@@ -26,6 +26,7 @@ import MessageList from "@/components/Rooms/MessageList";
 import ParticipantList from "@/components/Rooms/ParticipantList";
 import RoomHeader from "@/components/Rooms/RoomHeader";
 import { useRoom } from "@/hooks/useRoom";
+import { useRoomStream } from "@/hooks/useRoomStream";
 
 export const Route = createFileRoute("/_layout/room/$roomId")({
   component: RoomView,
@@ -63,6 +64,10 @@ function RoomView() {
       navigate({ to: '/rooms' });
     },
   });
+
+  // Single WebSocket connection for the entire room view
+  // This hook is called ONCE per room and shared across child components
+  const { isConnected, sendMessage: sendViaWebSocket, streamingMessage } = useRoomStream(roomId);
 
   // Handle authorization errors (403 - not a participant)
   useEffect(() => {
@@ -134,6 +139,7 @@ function RoomView() {
               onLoadMore={loadMoreMessages}
               isLoadingMore={isLoadingMoreMessages}
               isLoading={isLoadingMessages}
+              streamingMessage={streamingMessage}
             />
           </Box>
 
@@ -142,6 +148,8 @@ function RoomView() {
             roomId={roomId}
             onSendMessage={sendMessage}
             isSending={isSending}
+            isConnected={isConnected}
+            sendViaWebSocket={sendViaWebSocket}
           />
         </Flex>
 

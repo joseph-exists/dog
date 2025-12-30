@@ -51,11 +51,17 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
+
+    # PostgreSQL Configuration
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+
+    # Redis Configuration (Phase 4: Real-time Streaming)
+    REDIS_HOST: str = "127.0.0.1"
+    REDIS_PORT: int = 6379
 
     @computed_field  # type: ignore[prop-decorator]
     @property

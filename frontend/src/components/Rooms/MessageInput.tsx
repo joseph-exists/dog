@@ -14,25 +14,26 @@
 import { useState } from "react";
 import { Box, Flex, IconButton, Input } from "@chakra-ui/react";
 import { FiSend } from "react-icons/fi";
-import { useRoomStream } from "@/hooks/useRoomStream";
 
 interface MessageInputProps {
   roomId: string;
   onSendMessage: (content: string) => Promise<void>;
   isSending: boolean;
   disabled?: boolean;
+  // Phase 4: WebSocket props (passed from parent to avoid multiple connections)
+  isConnected: boolean;
+  sendViaWebSocket: (content: string) => void;
 }
 
 const MessageInput = ({
-  roomId,
+  // roomId,
   onSendMessage,
   isSending,
   disabled = false,
+  isConnected,
+  sendViaWebSocket,
 }: MessageInputProps) => {
   const [content, setContent] = useState("");
-
-  // Phase 4: WebSocket streaming
-  const { sendMessage: sendViaWebSocket, isConnected } = useRoomStream(roomId);
 
   const handleSend = async () => {
     if (!content.trim() || isSending || disabled) return;

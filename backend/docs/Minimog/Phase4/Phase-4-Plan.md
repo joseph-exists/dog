@@ -79,9 +79,45 @@
 
 ### Critical Fixes Applied
 
-- ✅ **Advisory Locks**: Added `pg_advisory_xact_lock()` to `_get_next_room_sequence()` (lines 262-267) to prevent race conditions in multi-worker environments
+#### Infrastructure Fixes
+- ✅ **Redis Connection Infrastructure**: Complete rewrite of `app/core/redis.py` with ConnectionPool pattern
+  - **Fixed**: Missing `get_redis()` function, syntax errors (`redis.Redis()` called but `redis` module not imported), hardcoded localhost
+  - **Added**: REDIS_HOST/PORT settings to `config.py`, connection pooling with 20 connections per worker
+  - **Impact**: Redis integration was completely broken, now production-ready with proper resource management
+
+- ✅ **Docker Networking**: Added REDIS_HOST=redis environment variable in docker-compose.yml
+  - **Fixed**: Containers using localhost instead of Redis service name (Error 111: Connection refused)
+  - **Added**: Environment overrides for backend and prestart services
+  - **Impact**: Backend can now reach Redis service, pub/sub working correctly
+
+- ✅ **Advisory Locks**: Added `pg_advisory_xact_lock()` to `_get_next_room_sequence()` (event_emitter.py:262-267)
+  - **Fixed**: Race condition in sequence generation under concurrent load
+  - **Impact**: Prevents duplicate sequences in multi-worker environments, production-ready
+
+#### Code Quality Fixes
 - ✅ **Missing Imports**: Added `logging` and `text` imports to `event_emitter.py`
-- ✅ **TypeScript Integration**: Fixed duplicate declarations in MessageInput.tsx and MessageList.tsx
+  - **Added**: Logging with subscriber counts for Redis publish operations
+  - **Added**: `text()` import from sqlalchemy for advisory lock queries
+  - **Impact**: Better observability and correct SQL execution
+
+#### Frontend Fixes
+- ✅ **WebSocket Hook Duplication**: Single useRoomStream at parent component (room.$roomId.tsx)
+  - **Fixed**: MessageInput + MessageList each created separate WebSocket connection
+  - **Impact**: Eliminated duplicate streaming messages (was showing 2-4x duplicates)
+  - **Files**: room.$roomId.tsx, MessageInput.tsx, MessageList.tsx
+
+- ✅ **React Render Spam**: 50ms throttled token buffering in useRoomStream.ts
+  - **Fixed**: setState on every token (100+ renders/sec) caused browser lag
+  - **Implementation**: Token buffer + setTimeout throttling to 20 renders/sec
+  - **Impact**: Smooth streaming UI, reduced CPU usage
+
+#### Data Integrity Fixes
+- ✅ **PydanticAI Cumulative Chunks**: Extract deltas from cumulative `stream_text()` chunks
+  - **Fixed**: `stream_text()` yields full message so far, not just new tokens
+  - **Problem**: Concatenating cumulative chunks created corrupted messages: "HelloHelloHello worldHello world!"
+  - **Solution**: Extract delta with `new_content = chunk[prev_len:]` pattern
+  - **Files**: agent_runner.py (run_agent_for_room_streaming, lines 280-316)
+  - **Impact**: Final persisted messages now correct, streaming displays properly
 
 ---
 

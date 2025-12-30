@@ -183,12 +183,13 @@ async def _publish_to_redis(room_id: uuid.UUID, event: RoomEvent) -> None:
         }
 
         channel = f"room:{room_id}"
-        await redis.publish(channel, json.dumps(message))
+        result = await redis.publish(channel, json.dumps(message))
+        logger.info(f"Published event {event.event_type} to Redis channel {channel}, subscribers: {result}")
 
     except Exception as e:
         # Don't fail transaction if Redis publish fails
         # Clients will catch up via replay on reconnect
-        logger.warning(f"Failed to publish event to Redis: {e}")
+        logger.warning(f"Failed to publish event to Redis: {type(e).__name__}: {e}")
 
 ## Agent Token Streaming Support
 
@@ -222,11 +223,12 @@ async def publish_agent_token(
         }
 
         channel = f"room:{room_id}"
-        await redis.publish(channel, json.dumps(message))
+        result = await redis.publish(channel, json.dumps(message))
+        logger.info(f"Published token to Redis channel {channel}, subscribers: {result}")
 
     except Exception as e:
         # Gracefully ignore - full message will be delivered via event
-        logger.debug(f"Failed to publish token to Redis: {e}")
+        logger.warning(f"Failed to publish token to Redis: {type(e).__name__}: {e}")
 
 
 # ============================================================================

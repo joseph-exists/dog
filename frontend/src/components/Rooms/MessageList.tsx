@@ -13,7 +13,6 @@
 
 import { useEffect, useRef } from "react";
 import { Box, Button, EmptyState, Spinner, VStack } from "@chakra-ui/react";
-import { useRoomStream } from "@/hooks/useRoomStream";
 import type { MessageViewModel } from "@/services/roomService";
 import Message from "./Message";
 
@@ -24,6 +23,8 @@ interface MessageListProps {
   onLoadMore: () => Promise<void>;
   isLoadingMore: boolean;
   isLoading?: boolean;
+  // Phase 4: WebSocket streaming message (passed from parent to avoid multiple connections)
+  streamingMessage: { agent_name: string; content: string } | null;
 }
 
 const MessageList = ({
@@ -33,11 +34,9 @@ const MessageList = ({
   onLoadMore,
   isLoadingMore,
   isLoading = false,
+  streamingMessage,
 }: MessageListProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Phase 4: WebSocket streaming
-  const { streamingMessage } = useRoomStream(roomId);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

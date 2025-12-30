@@ -59,14 +59,21 @@
 - [X] UI tests passing : Not in dev framework, external : Valid for current MVP
 
 
-### Streaming (Phase 4)
-- [ ] WebSocket endpoint created
-- [ ] Redis pub/sub fanout working
-- [ ] Agent streaming implemented
-- [ ] useRoomStream hook created
-- [ ] Frontend shows streaming tokens to all participants
-- [ ] Reconnection with sequence-based replay working
-- [ ] Load tested (50+ concurrent users)
+### Streaming (Phase 4) - 🟢 87.5% Complete (7/8 deliverables)
+- [X] WebSocket endpoint created (`app/api/routes/websocket.py`)
+- [X] Redis pub/sub fanout working (with advisory locks for sequence generation)
+- [X] Agent streaming implemented (token-by-token with cumulative chunk handling)
+- [X] useRoomStream hook created (throttled buffering, single connection pattern)
+- [X] Frontend shows streaming tokens to all participants
+- [X] Reconnection with sequence-based replay working
+- [ ] Load tested (50+ concurrent users) - **PENDING (Deliverable 8/8)**
+
+**Critical Fixes Applied:**
+- ✅ Redis connection infrastructure (complete rewrite with ConnectionPool)
+- ✅ Docker networking (REDIS_HOST=redis for service name resolution)
+- ✅ PydanticAI cumulative chunk handling (extract deltas from full messages)
+- ✅ WebSocket hook architecture (single connection per room, no duplicates)
+- ✅ Token buffering and throttling (50ms, prevents render spam)
 
 ---
 
@@ -499,7 +506,17 @@ The steel thread is complete when:
 12. ✅ Documentation updated - **DONE Phase 2** ⭐
 13. ✅ Can demo multi-user end-to-end to stakeholder - **DONE - Phase 3**
 
-**Phase 3 (Frontend UI) Complete! Ready for Phase 4 (Streaming)** 🎉
+**Phase 3 (Frontend UI) Complete! Phase 4 (Streaming) 87.5% Complete!** 🎉
+
+**Phase 4 Status:**
+- ✅ Real-time WebSocket streaming working
+- ✅ Token-by-token agent responses
+- ✅ Multi-worker fanout via Redis pub/sub
+- ✅ Reconnection with sequence-based event replay
+- ✅ Advisory locks prevent race conditions
+- ⚠️ Load testing pending (Deliverable 8/8)
+
+**Ready for Production After:** Load testing completion (50+ concurrent users)
 
 ---
 

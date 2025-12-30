@@ -278,28 +278,42 @@ async def run_agent_for_room_streaming(
             full_prompt = f"{conversation_context}\nUser message: {trigger_message}"
 
             # Stream response
+            # NOTE: stream_text() yields CUMULATIVE text (full message so far), not deltas
+            prev_len = 0
             async with story_advisor.run_stream(full_prompt, deps=deps) as result:
-                async for token in result.stream_text():
-                    full_response += token
+                async for chunk in result.stream_text():
+                    # Extract only the new content since last iteration
+                    new_content = chunk[prev_len:]
+                    full_response = chunk  # Update to latest full response
+                    prev_len = len(chunk)
 
-                    # Publish token to Redis for real-time delivery
-                    await publish_agent_token(
-                        room_id=room_id,
-                        agent_name=agent_name,
-                        token=token,
-                    )
+                    # Publish only the new content to Redis
+                    if new_content:
+                        await publish_agent_token(
+                            room_id=room_id,
+                            agent_name=agent_name,
+                            token=new_content,
+                        )
 
         else:
             # Generic agent streaming
+            # NOTE: stream_text() yields CUMULATIVE text (full message so far), not deltas
             agent = get_agent(agent_name)
+            prev_len = 0
             async with agent.run_stream(trigger_message) as result:
-                async for token in result.stream_text():
-                    full_response += token
-                    await publish_agent_token(
-                        room_id=room_id,
-                        agent_name=agent_name,
-                        token=token,
-                    )
+                async for chunk in result.stream_text():
+                    # Extract only the new content since last iteration
+                    new_content = chunk[prev_len:]
+                    full_response = chunk  # Update to latest full response
+                    prev_len = len(chunk)
+
+                    # Publish only the new content to Redis
+                    if new_content:
+                        await publish_agent_token(
+                            room_id=room_id,
+                            agent_name=agent_name,
+                            token=new_content,
+                        )
 
         # Emit final complete message event
         await emit_event(

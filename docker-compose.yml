@@ -84,6 +84,8 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - SENTRY_DSN=${SENTRY_DSN}
 
   backend:
@@ -117,6 +119,8 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - SENTRY_DSN=${SENTRY_DSN}
 
     healthcheck:

@@ -58,6 +58,13 @@ export function useRoomStream(
     content: string
   } | null>(null)
 
+  // Buffer for accumulating tokens before UI update (prevents render spam)
+  const tokenBufferRef = useRef<{
+    agent_name: string
+    content: string
+  } | null>(null)
+  const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
+
   // Send message to room
   const sendMessage = useCallback((content: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -86,6 +93,18 @@ export function useRoomStream(
           // Update last sequence
           setLastSequence(message.sequence)
 
+          // Clear streaming message BEFORE invalidating queries
+          // This prevents race condition where streaming message and final message are both visible
+          if (message.event_type === 'room_message.agent') {
+            // Clear buffer and timer
+            if (updateTimerRef.current) {
+              clearTimeout(updateTimerRef.current)
+              updateTimerRef.current = null
+            }
+            tokenBufferRef.current = null
+            setStreamingMessage(null)
+          }
+
           // Invalidate queries to refresh UI
           if (message.event_type === 'room_message.user' ||
               message.event_type === 'room_message.agent') {
@@ -99,19 +118,30 @@ export function useRoomStream(
               queryKey: ['rooms', roomId, 'participants']
             })
           }
-
-          // Clear streaming message when agent message complete
-          if (message.event_type === 'room_message.agent') {
-            setStreamingMessage(null)
-          }
           break
 
         case 'message.delta':
-          // Accumulate streaming tokens
-          setStreamingMessage(prev => ({
-            agent_name: message.agent_name,
-            content: (prev?.content || '') + message.content,
-          }))
+          // Accumulate tokens in buffer (throttled UI updates prevent render spam)
+          if (!tokenBufferRef.current || tokenBufferRef.current.agent_name !== message.agent_name) {
+            // New streaming message started
+            tokenBufferRef.current = {
+              agent_name: message.agent_name,
+              content: message.content,
+            }
+          } else {
+            // Append token to buffer
+            tokenBufferRef.current.content += message.content
+          }
+
+          // Throttle UI updates to every 50ms
+          if (updateTimerRef.current) {
+            clearTimeout(updateTimerRef.current)
+          }
+          updateTimerRef.current = setTimeout(() => {
+            if (tokenBufferRef.current) {
+              setStreamingMessage({ ...tokenBufferRef.current })
+            }
+          }, 50)
           break
 
         case 'error':
@@ -170,6 +200,9 @@ export function useRoomStream(
     return () => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.close()
+      }
+      if (updateTimerRef.current) {
+        clearTimeout(updateTimerRef.current)
       }
     }
   }, [roomId, enabled, lastSequence, handleMessage, onError])
