@@ -24,16 +24,17 @@ Architecture Compliance:
 
 from __future__ import annotations
 
+import json
+import logging
 import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func
 
 from app.core.redis import get_redis
-import json
 
 from app.models import (
     RoomMessage,
@@ -41,6 +42,8 @@ from app.models import (
     RoomEvent,
     RoomParticipant,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================

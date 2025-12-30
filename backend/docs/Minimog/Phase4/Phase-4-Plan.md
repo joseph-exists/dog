@@ -19,8 +19,69 @@
 ✅ Agent responses stream token-by-token to all room participants
 ✅ Disconnected clients reconnect and replay missed events seamlessly
 ✅ No duplicate or dropped events under normal conditions
-✅ System handles 50+ concurrent WebSocket connections with <100ms latency (p95)
+⚠️ System handles 50+ concurrent WebSocket connections with <100ms latency (p95) - Load testing pending
 ✅ Graceful degradation when Redis unavailable (events still persisted)
+
+---
+
+## Implementation Status (Updated 2025-12-30)
+
+**Overall Progress: 87.5% Complete (7/8 deliverables)**
+
+### ✅ Completed Deliverables
+
+1. **Redis Event Publisher** - `app/services/event_emitter.py`
+   - ✅ Event fanout via Redis pub/sub
+   - ✅ Agent token streaming support
+   - ✅ Advisory locks for sequence generation (race-condition free)
+   - ✅ Graceful degradation on Redis failure
+
+2. **WebSocket Connection Manager** - `app/services/websocket_manager.py`
+   - ✅ Per-room subscription management
+   - ✅ Multi-worker fanout
+   - ✅ Automatic cleanup on disconnect
+
+3. **AG-UI WebSocket Endpoint** - `app/api/routes/websocket.py`
+   - ✅ JWT authentication
+   - ✅ Session handshake with replay
+   - ✅ Bidirectional messaging
+
+4. **Agent Streaming Service** - `app/services/agent_runner.py`
+   - ✅ Token-by-token streaming via `run_agent_for_room_streaming()`
+   - ✅ StoryAdvisor integration with context
+   - ✅ Generic agent streaming support
+
+5. **Event Replay Service** - `app/services/event_replay.py`
+   - ✅ Sequence-based replay
+   - ✅ AG-UI compatible format
+   - ✅ Configurable limits with warnings
+
+6. **Frontend WebSocket Hook** - `frontend/src/hooks/useRoomStream.ts`
+   - ✅ Automatic connection management
+   - ✅ Sequence tracking for reconnection
+   - ✅ React Query cache invalidation
+   - ✅ Streaming message accumulation
+
+7. **Frontend UI Integration** - `frontend/src/components/Rooms/`
+   - ✅ Optimistic streaming message display
+   - ✅ Visual indicators (pulsing border, "typing...")
+   - ✅ REST API fallback
+   - ✅ Connection status feedback
+
+### ⚠️ Pending Deliverable
+
+8. **Load Testing & Optimization** - `backend/tests/load/`
+   - ❌ Locust load test implementation
+   - ❌ 50+ concurrent user validation
+   - ❌ p95 latency benchmarks
+   - ❌ Reconnection storm testing
+   - ❌ Memory leak detection
+
+### Critical Fixes Applied
+
+- ✅ **Advisory Locks**: Added `pg_advisory_xact_lock()` to `_get_next_room_sequence()` (lines 262-267) to prevent race conditions in multi-worker environments
+- ✅ **Missing Imports**: Added `logging` and `text` imports to `event_emitter.py`
+- ✅ **TypeScript Integration**: Fixed duplicate declarations in MessageInput.tsx and MessageList.tsx
 
 ---
 
@@ -423,16 +484,16 @@ connection_manager = ConnectionManager()
 ```
 
 ### Acceptance Criteria
-- [ ] `connect()` accepts WebSocket and subscribes to Redis channel
-- [ ] `disconnect()` cleans up and unsubscribes if last connection
-- [ ] `send_to_room()` broadcasts to all local connections
-- [ ] Redis listener forwards events to WebSocket clients
-- [ ] Multiple connections to same room share one Redis subscription
-- [ ] Disconnected sockets removed automatically
+- [x] `connect()` accepts WebSocket and subscribes to Redis channel
+- [x] `disconnect()` cleans up and unsubscribes if last connection
+- [x] `send_to_room()` broadcasts to all local connections
+- [x] Redis listener forwards events to WebSocket clients
+- [x] Multiple connections to same room share one Redis subscription
+- [x] Disconnected sockets removed automatically
 
 ---
 
-## Deliverable 3: AG-UI WebSocket Endpoint
+## [x] Deliverable 3: AG-UI WebSocket Endpoint
 
 **File:** `app/api/routes/websocket.py` (new)
 **Purpose:** AG-UI protocol compliant WebSocket endpoint
@@ -661,17 +722,17 @@ async def get_current_user_from_token(token: str) -> User:
 ```
 
 ### Acceptance Criteria
-- [ ] WebSocket connects with JWT in query param
-- [ ] Invalid token/auth closes connection with 1008
-- [ ] Non-member of room closes connection with 1008
-- [ ] Handshake response sent after replay complete
-- [ ] User messages trigger event emission and agents
-- [ ] Errors sent as JSON error messages
-- [ ] Disconnect cleans up connection manager
+- [x] WebSocket connects with JWT in query param
+- [x] Invalid token/auth closes connection with 1008
+- [x] Non-member of room closes connection with 1008
+- [x] Handshake response sent after replay complete
+- [x] User messages trigger event emission and agents
+- [x] Errors sent as JSON error messages
+- [x] Disconnect cleans up connection manager
 
 ---
 
-## Deliverable 4: Agent Streaming Service
+## [x] Deliverable 4: Agent Streaming Service
 
 **File:** `app/services/agent_runner.py` (modify)
 **Purpose:** Stream agent responses token-by-token
@@ -870,15 +931,15 @@ async def run_agents_for_message(
 ```
 
 ### Acceptance Criteria
-- [ ] `run_agent_for_room_streaming()` uses `agent.run_stream()`
-- [ ] Tokens published to Redis as `message.delta` events
-- [ ] Final complete message persisted as `room_message.agent` event
-- [ ] Streaming errors handled gracefully
-- [ ] StoryAdvisor supports streaming with context
+- [x] `run_agent_for_room_streaming()` uses `agent.run_stream()`
+- [x] Tokens published to Redis as `message.delta` events
+- [x] Final complete message persisted as `room_message.agent` event
+- [x] Streaming errors handled gracefully
+- [x] StoryAdvisor supports streaming with context
 
 ---
 
-## Deliverable 5: Event Replay Service
+## [x] Deliverable 5: Event Replay Service
 
 **File:** `app/services/event_replay.py` (new)
 **Purpose:** Replay missed events for reconnecting clients
@@ -999,16 +1060,16 @@ async def get_latest_sequence(
 ```
 
 ### Acceptance Criteria
-- [ ] Returns events with sequence > after_sequence
-- [ ] Events ordered by room_sequence ascending
-- [ ] Respects limit parameter (default 1000)
-- [ ] Returns AG-UI compatible format
-- [ ] Empty result if no new events
-- [ ] Logs warning if limit reached
+- [x] Returns events with sequence > after_sequence
+- [x] Events ordered by room_sequence ascending
+- [x] Respects limit parameter (default 1000)
+- [x] Returns AG-UI compatible format
+- [x] Empty result if no new events
+- [x] Logs warning if limit reached
 
 ---
 
-## Deliverable 6: Frontend WebSocket Hook
+## [x] Deliverable 6: Frontend WebSocket Hook
 
 **File:** `frontend/src/hooks/useRoomStream.ts` (new)
 **Purpose:** React hook for WebSocket connection management
@@ -1203,17 +1264,17 @@ export function useRoomStream(
 ```
 
 ### Acceptance Criteria
-- [ ] Connects to WebSocket on mount
-- [ ] Sends handshake with last_sequence
-- [ ] Handles all AG-UI message types
-- [ ] Invalidates React Query cache on events
-- [ ] Accumulates streaming tokens
-- [ ] Disconnects on unmount
-- [ ] Handles errors gracefully
+- [x] Connects to WebSocket on mount
+- [x] Sends handshake with last_sequence
+- [x] Handles all AG-UI message types
+- [x] Invalidates React Query cache on events
+- [x] Accumulates streaming tokens
+- [x] Disconnects on unmount
+- [x] Handles errors gracefully
 
 ---
 
-## Deliverable 7: Frontend UI Integration
+## [x] Deliverable 7: Frontend UI Integration
 
 **Files:** Modify existing room components
 **Purpose:** Integrate streaming hook and display real-time updates
@@ -1299,12 +1360,12 @@ export function MessageInput({ roomId }: { roomId: string }) {
 ```
 
 ### Acceptance Criteria
-- [ ] MessageList shows streaming messages optimistically
-- [ ] Streaming messages have visual indicator (e.g., typing effect)
-- [ ] MessageInput uses WebSocket when connected
-- [ ] Falls back to REST API if WebSocket unavailable
-- [ ] Connection status visible to user
-- [ ] Streaming messages replace with persisted message on completion
+- [x] MessageList shows streaming messages optimistically
+- [x] Streaming messages have visual indicator (e.g., typing effect)
+- [x] MessageInput uses WebSocket when connected
+- [x] Falls back to REST API if WebSocket unavailable
+- [x] Connection status visible to user
+- [x] Streaming messages replace with persisted message on completion
 
 ---
 
