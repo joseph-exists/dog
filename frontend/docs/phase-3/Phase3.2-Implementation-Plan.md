@@ -834,7 +834,7 @@ Consolidate edit and delete actions into a dropdown menu in the room header (own
 
 2. [x] **Implement menu component**
 
-3. **Integrate into RoomHeader**
+3. [x] **Integrate into RoomHeader**
    ```typescript
    // In RoomHeader.tsx:
    import { RoomActionsMenu } from '@/components/Common/RoomActionsMenu';
@@ -856,7 +856,7 @@ Consolidate edit and delete actions into a dropdown menu in the room header (own
    )}
    ```
 
-4. **Update room route to pass functions**
+4. [x] **Update room route to pass functions**
    ```typescript
    <RoomHeader
      room={room}
@@ -977,21 +977,21 @@ Final integration of all components and comprehensive testing of the complete Ph
    # Phase 3.2 Test Checklist
 
    ## Room Creation
-   - [ ] Click "Create Room" button
-   - [ ] Enter title (min 3 chars)
-   - [ ] Submit creates room
-   - [ ] Navigates to new room
-   - [ ] Toast shows success
-   - [ ] Validation errors show
+   - [X] Click "Create Room" button
+   - [X] Enter title (min 3 chars)
+   - [X] Submit creates room
+   - [X] Navigates to new room
+   - [X] Toast shows success
+   - [X] Validation errors show
 
    ## Participant Management
-   - [ ] Add agent (owner only)
-   - [ ] Agent appears in list
-   - [ ] Remove agent (owner only)
-   - [ ] Agent disappears
-   - [ ] Toggle agent off
-   - [ ] Toggle agent on
-   - [ ] Filter already-added agents
+   - [X] Add agent (owner only)
+   - [X] Agent appears in list
+   - [X] Remove agent (owner only)
+   - [X] Agent disappears
+   - [X] Toggle agent off
+   - [X] Toggle agent on
+   - [X] Filter already-added agents
 
    ## Room Metadata
    - [ ] Edit room title (owner only)
@@ -1001,10 +1001,10 @@ Final integration of all components and comprehensive testing of the complete Ph
    - [ ] Navigates to /rooms after delete
 
    ## Display
-   - [ ] User messages show full name
-   - [ ] Agent messages show agent name
-   - [ ] Own messages highlighted
-   - [ ] Timestamps display correctly
+   - [X] User messages show full name
+   - [X] Agent messages show agent name
+   - [X] Own messages highlighted
+   - [X] Timestamps display correctly
 
    ## Authorization
    - [ ] Members don't see owner actions
@@ -1092,40 +1092,7 @@ Then both tracks merge at Task 10 (Testing).
 
 ## Risk Mitigation
 
-### Risk: Backend Delete Endpoint Missing
 
-**Impact**: Task 2 assumes `deleteRoom` exists in backend
-**Mitigation**:
-1. Check backend routes for delete endpoint
-2. If missing, stub out mutation with error message
-3. File backend ticket for delete endpoint
-4. Complete Task 8 once backend ready
-
-### Risk: User Lookup Performance
-
-**Impact**: Task 1 makes additional API calls for user details
-**Mitigation**:
-1. Implement simple in-memory cache (`Map`)
-2. Batch fetch user details for all messages at once
-3. Monitor performance, optimize if needed
-4. Future: Add user details to message response in backend
-
-### Risk: Agent List Hardcoded
-
-**Impact**: Task 4 hardcodes agent list (not fetched from backend)
-**Mitigation**:
-1. Acceptable for Phase 3.2 MVP
-2. Document for Phase 4 enhancement
-3. Backend agent registry endpoint can be added later
-
-### Risk: Design Changes
-
-**Impact**: UX review may change component structure
-**Mitigation**:
-1. Components are minimal and focused
-2. Easy to refactor based on feedback
-3. Data layer (hooks, services) remains stable
-4. Only UI layer needs adjustment
 
 ---
 

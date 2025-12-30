@@ -1,3 +1,6 @@
+### COMPLETE - PHASE 1 is Completed for MVP
+
+
 Phase 1 (Event Sourcing + Room Management) should ship four SQLModel-conformant models (rooms, room_events, room_participants, messages), plus a documented event-emitter skeleton, plus CRUD skeletons that make it fast to finish endpoints without violating the “append-only events + transactional projections” rules.[^1][^2][^3]
 
 ## Data models

@@ -809,7 +809,7 @@ async def get_messages(room_id: UUID, limit: int = 50, before: int = None) -> li
 - Execute `agent.run()` with streaming enabled
 - Emit `step.start`/`step.end` events from tool execution
 - Handle multi-agent handoffs via special `transfer_to_agent` tool
-- Execute pg_duckdb analytics queries (with timeout)
+- Execute analytics queries (with timeout)
 
 **Owns Domain Objects:**
 

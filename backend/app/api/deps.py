@@ -67,6 +67,7 @@ AsyncSessionTransactionDep = Annotated[
     AsyncSession,
     Depends(get_async_session_with_transaction)
 ]
+
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 
@@ -91,6 +92,31 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
+async def get_current_user_from_token(token: str) -> User:
+    """
+    Validate JWT token and return user.
+
+    Used for WebSocket authentication (can't use Depends() in WebSocket routes).
+    """
+    from app.core.security import verify_token
+
+    payload = verify_token(token)
+    user_id = UUID(payload.get("sub"))
+
+    # Get user from database
+    async for session in get_db():
+        result = await session.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+
+        return user
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:
     if not current_user.is_superuser:

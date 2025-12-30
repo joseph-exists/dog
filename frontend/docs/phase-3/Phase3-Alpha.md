@@ -498,9 +498,9 @@ interface EmptyStateProps {
 
 18. [X] Create ParticipantList component
 19. [X] Integrate with room view
-20. [ ] Test participant display
+20. [X] Test participant display
 
-### Phase 6: Polish & Testing (Day 6)
+### Phase 6: Polish & Testing (Day 6)  (DEFERRED)
 21. [ ] Add loading states (skeletons)
 22. [ ] Add error handling (error boundaries)
 23. [ ] Add empty states
@@ -656,9 +656,9 @@ src/components/Common/SidebarItems.tsx  # Add Rooms link
 ## Next Steps After Alpha
 
 ### Phase 3 Complete (Post-Alpha)
-- [ ] Room creation UI
-- [ ] Add participant UI (invite users/agents)
-- [ ] Remove participant UI (owner only)
+- [X] Room creation UI
+- [X] Add participant UI (invite users/agents)
+- [X] Remove participant UI (owner only)
 - [ ] Room settings/metadata editing
 - [ ] Enhanced styling and UX polish
 - [ ] Mobile responsive design

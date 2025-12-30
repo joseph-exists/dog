@@ -31,7 +31,7 @@ from app.agents.character_forge import run_character_forge
 from app.agents.symbol_weaver import run_symbol_weaver
 from app.models import RoomParticipant
 from app.services.context_provider import build_room_context
-from app.services.event_emitter import emit_event
+from app.services.event_emitter import emit_event, publish_agent_token
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +206,145 @@ async def should_agent_respond(
 
     return participant is not None
 
+async def run_agent_for_room_streaming(
+    *,
+    room_id: uuid.UUID,
+    agent_name: str,
+    trigger_message: str,
+    session: AsyncSession,
+) -> dict[str, Any]:
+    """
+    Run an agent with token-by-token streaming.
+
+    This is the Phase 4 enhancement of run_agent_for_room().
+
+    Differences from non-streaming version:
+    1. Uses agent.run_stream() instead of agent.run()
+    2. Publishes tokens to Redis as they arrive
+    3. Still emits final room_message.agent event with complete response
+
+    Token streaming:
+    - Tokens published via Redis as ephemeral message.delta events
+    - NOT persisted to Postgres (only final message is persisted)
+    - Clients receive tokens in real-time for progressive rendering
+
+    Args:
+        room_id: UUID of the room
+        agent_name: Name of the agent to run
+        trigger_message: The message that triggered the agent
+        session: Async database session
+
+    Returns:
+        Dict with agent response details
+    """
+    if not is_agent_registered(agent_name):
+        logger.warning(f"Attempted to run unregistered agent: {agent_name}")
+        return {
+            "agent_name": agent_name,
+            "content": "",
+            "success": False,
+            "error": f"Agent '{agent_name}' not found",
+        }
+
+    try:
+        # Build room context
+        context = await build_room_context(
+            room_id=room_id,
+            session=session,
+            message_limit=20,
+        )
+
+        # Run agent with streaming
+        full_response = ""
+
+        if agent_name == "StoryAdvisor":
+            # StoryAdvisor with streaming
+            from app.agents.story_advisor import story_advisor, StoryAdvisorDeps
+
+            deps = StoryAdvisorDeps(context=context)
+
+            # Build prompt with context
+            conversation_context = ""
+            if context.story_data:
+                conversation_context += f"\nStory: {context.story_data.get('title', 'Untitled')}\n"
+
+            if context.recent_messages:
+                recent = context.recent_messages[-5:]
+                conversation_context += "\nRecent messages:\n"
+                for msg in recent:
+                    sender = msg.get("agent_name") or "User"
+                    conversation_context += f"{sender}: {msg.get('content', '')}\n"
+
+            full_prompt = f"{conversation_context}\nUser message: {trigger_message}"
+
+            # Stream response
+            async with story_advisor.run_stream(full_prompt, deps=deps) as result:
+                async for token in result.stream_text():
+                    full_response += token
+
+                    # Publish token to Redis for real-time delivery
+                    await publish_agent_token(
+                        room_id=room_id,
+                        agent_name=agent_name,
+                        token=token,
+                    )
+
+        else:
+            # Generic agent streaming
+            agent = get_agent(agent_name)
+            async with agent.run_stream(trigger_message) as result:
+                async for token in result.stream_text():
+                    full_response += token
+                    await publish_agent_token(
+                        room_id=room_id,
+                        agent_name=agent_name,
+                        token=token,
+                    )
+
+        # Emit final complete message event
+        await emit_event(
+            session=session,
+            room_id=room_id,
+            event_type="room_message.agent",
+            payload={
+                "agent_name": agent_name,
+                "content": full_response,
+            },
+        )
+
+        logger.info(f"Agent {agent_name} streamed response in room {room_id}")
+
+        return {
+            "agent_name": agent_name,
+            "content": full_response,
+            "success": True,
+            "error": None,
+        }
+
+    except Exception as e:
+        logger.error(f"Agent {agent_name} streaming error in room {room_id}: {e}")
+
+        error_content = "I encountered an error while processing your request."
+
+        try:
+            await emit_event(
+                session=session,
+                room_id=room_id,
+                event_type="room_message.agent",
+                payload={
+                    "agent_name": agent_name,
+                    "content": error_content,
+                },
+            )
+        except Exception as emit_error:
+            logger.error(f"Failed to emit error message: {emit_error}")
+
+        return {
+            "agent_name": agent_name,
+            "content": error_content,
+            "success": False,
+            "error": str(e),
+        }
 
 async def run_agents_for_message(
     *,
@@ -214,7 +353,7 @@ async def run_agents_for_message(
     session: AsyncSession,
 ) -> list[dict[str, Any]]:
     """
-    Run all active agents in a room that should respond to a message.
+    Run all active agents in a room (with streaming support) that should respond to a message.
 
     This is the high-level function called from route handlers.
     It checks which agents are active in the room and runs each one.
@@ -243,7 +382,7 @@ async def run_agents_for_message(
 
         # Only run if agent is registered
         if is_agent_registered(agent_name):
-            response = await run_agent_for_room(
+            response = await run_agent_for_room_streaming(
                 room_id=room_id,
                 agent_name=agent_name,
                 trigger_message=trigger_message,

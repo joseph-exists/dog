@@ -128,6 +128,7 @@ function RoomView() {
         <Flex flex={1} direction="column" overflow="hidden">
           <Box flex={1} overflowY="auto" p={4}>
             <MessageList
+              roomId={roomId}
               messages={messages}
               hasMore={hasMoreMessages}
               onLoadMore={loadMoreMessages}
@@ -138,6 +139,7 @@ function RoomView() {
 
           {/* Message Input */}
           <MessageInput
+            roomId={roomId}
             onSendMessage={sendMessage}
             isSending={isSending}
           />

@@ -6,6 +6,7 @@
  * - Message content
  * - Timestamp (relative format)
  * - Visual distinction for user/agent/own messages
+ * - Phase 4: Streaming indicator for real-time agent responses
  *
  * Phase 3 Alpha - Task 9
  */
@@ -16,6 +17,7 @@ import type { MessageViewModel } from "@/services/roomService";
 
 interface MessageProps {
   message: MessageViewModel;
+  isStreaming?: boolean;
 }
 
 /**
@@ -35,7 +37,7 @@ const formatTimestamp = (date: Date): string => {
   return `${diffDays}d ago`;
 };
 
-const Message = ({ message }: MessageProps) => {
+const Message = ({ message, isStreaming = false }: MessageProps) => {
   return (
     <Box
       alignSelf={message.sender_type === "user" ? "flex-end" : "flex-start"}
@@ -60,10 +62,19 @@ const Message = ({ message }: MessageProps) => {
         color: message.sender_type === "agent" ? "white" : "white",
       }}
       wordBreak="break-word"
+      // Phase 4: Add border animation for streaming messages
+      borderWidth={isStreaming ? 2 : 0}
+      borderColor={isStreaming ? "blue.400" : "transparent"}
+      animation={isStreaming ? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" : undefined}
     >
       {/* Sender name */}
       <Text fontSize="xs" opacity={0.8} mb={1} fontWeight="medium">
         {message.sender_name}
+        {isStreaming && (
+          <Text as="span" ml={2} fontSize="xs" opacity={0.6}>
+            typing...
+          </Text>
+        )}
       </Text>
 
       {/* Message content */}
@@ -71,7 +82,7 @@ const Message = ({ message }: MessageProps) => {
 
       {/* Timestamp */}
       <Text fontSize="xs" opacity={0.6} mt={1}>
-        {formatTimestamp(message.created_at)}
+        {isStreaming ? "streaming..." : formatTimestamp(message.created_at)}
       </Text>
     </Box>
   );

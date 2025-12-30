@@ -32,6 +32,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func
 
+from app.core.redis import get_redis
+import json
+
 from app.models import (
     RoomMessage,
     Room,
@@ -109,6 +112,9 @@ async def emit_event(
         - room_message.user: User sent message
         - room_message.agent: Agent sent message
     
+    Phase 4 Enhancement: Publishes event to Redis after transaction flush
+    for real-time delivery to WebSocket clients.
+    
     Future: see Phase2-addendum.md for usage post Phase 4.
 
     """
@@ -135,10 +141,89 @@ async def emit_event(
     # This is required for read-after-write consistency within the same request
     await session.flush()
 
-    # Phase 4: Redis pub/sub will be added here
-    # await _publish_to_redis(room_id, event)
+    await _publish_to_redis(room_id, event)
 
     return event
+
+async def _publish_to_redis(room_id: uuid.UUID, event: RoomEvent) -> None:
+    """
+    Publish event to Redis pub/sub for real-time delivery.
+
+    This enables multi-worker fanout - all workers subscribed to the room
+    channel will receive the event and forward to their connected WebSocket clients.
+
+    Channel naming: room:{room_id}
+
+    Message format (AG-UI compatible):
+    {
+        "type": "event",
+        "sequence": room_sequence,
+        "event_type": event_type,
+        "payload": {...},
+        "created_at": ISO timestamp
+    }
+
+    Failure handling:
+    - If Redis unavailable, logs error but does NOT fail transaction
+    - Event is still persisted in Postgres (clients will catch up via replay)
+    - This ensures graceful degradation
+    """
+    try:
+        redis = await get_redis()
+
+        message = {
+            "type": "event",
+            "sequence": event.room_sequence,
+            "event_type": event.event_type,
+            "payload": event.payload,
+            "created_at": event.created_at.isoformat(),
+        }
+
+        channel = f"room:{room_id}"
+        await redis.publish(channel, json.dumps(message))
+
+    except Exception as e:
+        # Don't fail transaction if Redis publish fails
+        # Clients will catch up via replay on reconnect
+        logger.warning(f"Failed to publish event to Redis: {e}")
+
+## Agent Token Streaming Support
+
+async def publish_agent_token(
+    room_id: uuid.UUID,
+    agent_name: str,
+    token: str,
+) -> None:
+    """
+    Publish a single token from agent streaming.
+
+    This is an EPHEMERAL message (not persisted to Postgres).
+    Used for real-time token-by-token streaming during agent responses.
+
+    Final complete message is still persisted via room_message.agent event.
+
+    Message format (AG-UI compatible):
+    {
+        "type": "message.delta",
+        "agent_name": str,
+        "content": str (single token)
+    }
+    """
+    try:
+        redis = await get_redis()
+
+        message = {
+            "type": "message.delta",
+            "agent_name": agent_name,
+            "content": token,
+        }
+
+        channel = f"room:{room_id}"
+        await redis.publish(channel, json.dumps(message))
+
+    except Exception as e:
+        # Gracefully ignore - full message will be delivered via event
+        logger.debug(f"Failed to publish token to Redis: {e}")
 
 
 # ============================================================================
@@ -167,7 +252,19 @@ async def _get_next_room_sequence(
 
     Returns:
         Next sequence number (1 for first event, MAX + 1 for subsequent)
+
+    Uses Postgres advisory lock to prevent race conditions in multi-worker
+    environments. The lock is automatically released at transaction end.
+
+    Lock key is hash of room_id to ensure per-room locking granularity.
     """
+    
+    # Advisory lock for this room (transaction-scoped)
+    lock_key = hash(room_id) % (2**31)  # Postgres bigint range
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:lock_key)"),
+        {"lock_key": lock_key}
+    )
     result = await session.execute(
         select(func.max(RoomEvent.room_sequence)).where(
             RoomEvent.room_id == room_id

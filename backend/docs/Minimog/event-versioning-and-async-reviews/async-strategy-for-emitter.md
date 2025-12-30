@@ -1,3 +1,7 @@
+  ## CONVERSATION HISTORY
+  ## async strategy already integrated
+  
+  
   Async Strategy: Recommended ✅
 
   Non-Negotiable Technical Constraints

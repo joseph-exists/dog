@@ -7,33 +7,46 @@
  * - Clear input after send
  * - Loading state while sending
  * - Validation (no empty messages)
+ * - Phase 4: WebSocket streaming support with REST API fallback
  *
- * Phase 3 Alpha - Task 14
  */
 
 import { useState } from "react";
 import { Box, Flex, IconButton, Input } from "@chakra-ui/react";
 import { FiSend } from "react-icons/fi";
+import { useRoomStream } from "@/hooks/useRoomStream";
 
 interface MessageInputProps {
+  roomId: string;
   onSendMessage: (content: string) => Promise<void>;
   isSending: boolean;
   disabled?: boolean;
 }
 
 const MessageInput = ({
+  roomId,
   onSendMessage,
   isSending,
   disabled = false,
 }: MessageInputProps) => {
   const [content, setContent] = useState("");
 
+  // Phase 4: WebSocket streaming
+  const { sendMessage: sendViaWebSocket, isConnected } = useRoomStream(roomId);
+
   const handleSend = async () => {
     if (!content.trim() || isSending || disabled) return;
 
     try {
-      await onSendMessage(content.trim());
-      setContent(""); // Clear on success
+      // Phase 4: Prefer WebSocket if connected, fallback to REST API
+      if (isConnected) {
+        sendViaWebSocket(content.trim());
+        setContent(""); // Clear immediately for WebSocket (optimistic)
+      } else {
+        // Fallback to REST API (Phase 1-3 behavior)
+        await onSendMessage(content.trim());
+        setContent(""); // Clear on success
+      }
     } catch (error) {
       // Error handling is done by the parent component
       console.error("Failed to send message:", error);
@@ -60,7 +73,11 @@ const MessageInput = ({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder={
+            isConnected
+              ? "Type a message..."
+              : "Type a message... (offline)"
+          }
           disabled={disabled || isSending}
           flex={1}
         />

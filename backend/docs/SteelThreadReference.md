@@ -46,17 +46,17 @@
 
 ### Frontend UI (Phase 3)
 - [X] OpenAPI client regenerated
-- [ ] Room UI component created
-- [ ] Room component added to frontend leftnav
-- [ ] ParticipantList component created
-- [ ] MessageList/Message components created (with sender attribution)
-- [ ] MessageInput component created
-- [ ] useRoom hook implemented
-- [ ] Room creation and joining flows implemented #NEEDS DESIGN
-- [ ] Room navigation (invite, join, see available rooms, etc) #NEEDS DESIGN
-- [ ] Room archive and delete functionality implemented
-- [ ] Mobile responsive : Not in dev framework, external
-- [ ] UI tests passing : Not in dev framework, external
+- [X] Room UI component created
+- [X] Room component added to frontend leftnav
+- [X] ParticipantList component created
+- [X] MessageList/Message components created (with sender attribution)
+- [X] MessageInput component created
+- [X] useRoom hook implemented
+- [X] Room creation and joining flows implemented 
+- [X] Room navigation (invite, join, see available rooms, etc)
+- [*] Room archive and delete functionality implemented (DEFERRED)
+- [*] Mobile responsive : Not in dev framework, external
+- [X] UI tests passing : Not in dev framework, external : Valid for current MVP
 
 
 ### Streaming (Phase 4)
@@ -131,17 +131,28 @@ backend/
 │       └── redis.py ✅ (Phase 0 complete)
 frontend/
 ├── src/
-│   ├── components/Room/ 
-│   │   ├── RoomSidebar.tsx (or ChatRoom.tsx)
-│   │   ├── ParticipantList.tsx
-│   │   ├── MessageList.tsx
-│   │   ├── Message.tsx (with sender attribution)
-│   │   └── MessageInput.tsx
+│   ├── components/Rooms/
+│   │   ├── addParticipantDialog.tsx 
+│   │   ├── addRoom.tsx ✅
+│   │   ├── AgentToggle.tsx ✅
+│   │   ├── EditRoomDialog.tsx ✅
+│   │   ├── Message.tsx ✅
+│   │   ├── MessageInput.tsx ✅
+│   │   ├── MessageList.tsx ✅
+│   │   ├── ParticipantList.tsx ✅
+│   │   ├── RemoveParticipantButton.tsx ✅
+│   │   ├── RoomCard.tsx ✅
+│   │   ├── RoomHeader.tsx ✅
+│   │   ├── RoomList.tsx ✅
 │   ├── hooks/
-│   │   ├── useRoom.ts 
+│   │   ├── useRoom.ts ✅
+│   │   ├── useRoomMessages.ts ✅
 │   │   └── useRoomStream.ts  (Phase 4)
+│   ├── routes/_layout/
+│       └── room.$roomId.tsx ✅
+│       └── rooms.tsx ✅
 │   └── services/
-│       └── roomService.ts 
+│       └── roomService.ts ✅
 
 ```
 
@@ -263,7 +274,7 @@ if not await check_room_membership(room_id, user.id, session):
 - [X] Agent demonstrates story context awareness (tested)
 - [X] Agent demonstrates message history awareness (tested)
 - [X] Participant list shows all active users and agents
-- [ ] Frontend UI integration (Phase 3)
+- [X] Frontend UI integration (Phase 3)
 - [ ] Real-time WebSocket updates (Phase 4)
 
 ---
@@ -481,14 +492,14 @@ The steel thread is complete when:
 5. ✅ StoryAdvisor (as room participant) responds with story-aware answers - **DONE Phase 2** ⭐
 6. ✅ All room participants see all messages with correct attribution - **DONE Phase 2** ⭐
 7. ✅ Conversation and participants persist on page reload - **DONE Phase 1+2** ⭐
-8. ⏳ Room UI works in story editor with participant list - **IN PROGRESS Phase 3**
+8. ✅ Room UI works with participant list multi-user and multi-agent - **DONE Phase 3**
 9. ✅ All tests pass (unit + integration + multi-user scenarios) - **DONE (19/19 passing)** ⭐
 10. ✅ No regressions in existing features - **VERIFIED**
 11. ✅ Authorization enforces room membership correctly - **DONE Phase 1**
 12. ✅ Documentation updated - **DONE Phase 2** ⭐
-13. ⏳ Can demo multi-user end-to-end to stakeholder - **Needs Phase 3 UI**
+13. ✅ Can demo multi-user end-to-end to stakeholder - **DONE - Phase 3**
 
-**Phase 2 Backend Complete! Ready for Phase 3 (Frontend UI)** 🎉
+**Phase 3 (Frontend UI) Complete! Ready for Phase 4 (Streaming)** 🎉
 
 ---
 
