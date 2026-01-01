@@ -68,7 +68,7 @@ const MessageFilters = ({
   onClearFilters,
 }: MessageFiltersProps) => {
   return (
-    <HStack gap={4} p={4} bg="gray.50" borderRadius="md" flexWrap="wrap">
+    <HStack gap={4} p={4} borderRadius="md" flexWrap="wrap">
       <Text fontWeight="medium" fontSize="sm">
         Filters:
       </Text>

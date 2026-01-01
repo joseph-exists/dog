@@ -50,7 +50,7 @@ const RoomHeader = ({
           </Text>
 
           {/* Participant and agent counts */}
-          <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.400" }}>
+          <Text fontSize="sm">
             {participants.length} participant{participants.length !== 1 ? "s" : ""}
             {activeAgents.length > 0 &&
               ` • ${activeAgents.length} agent${activeAgents.length !== 1 ? "s" : ""}`}

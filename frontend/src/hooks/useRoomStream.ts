@@ -169,15 +169,17 @@ export function useRoomStream(
   useEffect(() => {
     if (!roomId || !enabled) return
 
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('access_token')
     if (!token) {
       console.error('No auth token available')
       return
     }
 
-    // WebSocket URL
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/rooms/${roomId}?token=${token}`
+    // WebSocket URL - use API base URL from env
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost'
+    const wsUrl = apiUrl
+      .replace('http://', 'ws://')
+      .replace('https://', 'wss://') + `/api/v1/ws/rooms/${roomId}?token=${token}`
 
     console.log('Connecting to WebSocket:', wsUrl)
 

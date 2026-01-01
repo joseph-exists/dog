@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator, Generator
 from typing import Annotated
+from uuid import UUID
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -7,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core import security
 from app.core.config import settings
@@ -103,8 +104,8 @@ async def get_current_user_from_token(token: str) -> User:
     payload = verify_token(token)
     user_id = UUID(payload.get("sub"))
 
-    # Get user from database
-    async for session in get_db():
+    # Get user from database using async session
+    async with async_session_maker() as session:
         result = await session.execute(
             select(User).where(User.id == user_id)
         )

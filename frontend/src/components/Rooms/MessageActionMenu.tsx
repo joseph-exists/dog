@@ -105,7 +105,7 @@ const MessageActionMenu = ({
         <IconButton
           aria-label="Message actions"
           variant="ghost"
-          size="xs"
+          size="xl"
           opacity={0.6}
           _hover={{ opacity: 1 }}
         >

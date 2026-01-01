@@ -59,7 +59,7 @@
 
      return (
        <DialogRoot
-         size={{ base: "xs", md: "md" }}
+         size={{ base: "xl", md: "md" }}
          placement="center"
          open={isOpen}
          onOpenChange={({ open }) => {
@@ -108,8 +108,6 @@
              <DialogFooter gap={2}>
                <DialogActionTrigger asChild>
                  <Button
-                   variant="subtle"
-                   colorPalette="gray"
                    disabled={isSubmitting}
                  >
                    Cancel

@@ -21,6 +21,7 @@ from app.api.routes import (
     user_story_progress,
     users,
     utils,
+    websocket,
 )
 from app.core.config import settings
 
@@ -44,6 +45,7 @@ api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
 api_router.include_router(agent_routes.router)
 api_router.include_router(rooms.router)
+api_router.include_router(websocket.router)
 
 if settings.ENVIRONMENT == "local":
     api_router.include_router(private.router)

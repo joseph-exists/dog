@@ -136,15 +136,22 @@ async def emit_event(
     )
 
     session.add(event)
+    logger.debug(f"[EMIT] Added event {event_type} to session for room {room_id}")
 
     # Update projections based on event type
     await _update_projections(session, event)
+    logger.debug(f"[EMIT] Updated projections for event {event_type} in room {room_id}")
 
     # Flush to make projection changes visible to subsequent queries in this transaction
     # This is required for read-after-write consistency within the same request
+    logger.debug(f"[EMIT] Flushing session for event {event_type} in room {room_id}")
     await session.flush()
+    logger.debug(f"[EMIT] Session flushed for event {event_type} in room {room_id}")
 
+    # Publish to Redis (still within transaction - will be visible after commit)
+    logger.info(f"[EMIT] About to publish to Redis: room={room_id}, event_type={event_type}, sequence={event.room_sequence}")
     await _publish_to_redis(room_id, event)
+    logger.info(f"[EMIT] Redis publish completed for event {event_type} in room {room_id}")
 
     return event
 
@@ -171,8 +178,11 @@ async def _publish_to_redis(room_id: uuid.UUID, event: RoomEvent) -> None:
     - Event is still persisted in Postgres (clients will catch up via replay)
     - This ensures graceful degradation
     """
+    logger.info(f"[REDIS_PUB] Starting publish for event {event.event_type} to room {room_id}")
     try:
+        logger.debug(f"[REDIS_PUB] Getting Redis client...")
         redis = await get_redis()
+        logger.debug(f"[REDIS_PUB] Got Redis client: {redis}")
 
         message = {
             "type": "event",
@@ -183,13 +193,25 @@ async def _publish_to_redis(room_id: uuid.UUID, event: RoomEvent) -> None:
         }
 
         channel = f"room:{room_id}"
-        result = await redis.publish(channel, json.dumps(message))
-        logger.info(f"Published event {event.event_type} to Redis channel {channel}, subscribers: {result}")
+        message_json = json.dumps(message)
+        logger.debug(f"[REDIS_PUB] Publishing to channel '{channel}': {message_json[:200]}")
+
+        result = await redis.publish(channel, message_json)
+
+        logger.info(f"[REDIS_PUB] Published event {event.event_type} to Redis channel {channel}, subscribers: {result}")
+
+        if result == 0:
+            logger.warning(f"[REDIS_PUB] WARNING: No subscribers for channel {channel}! Event will not be delivered in real-time.")
+
+        # Debug: Check Redis connection
+        logger.debug(f"[REDIS_PUB] Redis ping test...")
+        await redis.ping()
+        logger.debug(f"[REDIS_PUB] Redis ping successful")
 
     except Exception as e:
         # Don't fail transaction if Redis publish fails
         # Clients will catch up via replay on reconnect
-        logger.warning(f"Failed to publish event to Redis: {type(e).__name__}: {e}")
+        logger.error(f"[REDIS_PUB] Failed to publish event to Redis: {type(e).__name__}: {e}", exc_info=True)
 
 ## Agent Token Streaming Support
 

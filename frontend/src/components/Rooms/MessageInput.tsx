@@ -77,7 +77,7 @@ const MessageInput = ({
           placeholder={
             isConnected
               ? "Type a message..."
-              : "Type a message... (offline)"
+              : "Type a message... (isConnected: offline bug?)"
           }
           disabled={disabled || isSending}
           flex={1}

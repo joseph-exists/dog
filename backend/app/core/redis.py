@@ -8,19 +8,24 @@ Provides async Redis client for:
 
 Pattern follows app/core/db.py for consistency.
 """
+import logging
 from typing import AsyncGenerator
 
 from redis.asyncio import Redis, ConnectionPool
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
+
 # Create connection pool at module level
 # This is reused across all connections for efficiency
+logger.info(f"[REDIS_INIT] Creating Redis connection pool: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
 redis_pool = ConnectionPool.from_url(
     f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
     max_connections=20,
-    decode_responses=True,  # Automatically decode bytes to strings
+    # decode_responses=True,  # Automatically decode bytes to strings
 )
+logger.info(f"[REDIS_INIT] Redis connection pool created: {redis_pool}")
 
 
 async def get_redis() -> Redis:
@@ -44,4 +49,7 @@ async def get_redis() -> Redis:
     event_emitter.py and websocket_manager.py use it in non-dependency
     injection contexts where they can't use 'async for' generators.
     """
-    return Redis(connection_pool=redis_pool)
+    logger.debug(f"[REDIS_GET] Creating Redis client from pool")
+    client = Redis(connection_pool=redis_pool)
+    logger.debug(f"[REDIS_GET] Redis client created: {client}")
+    return client

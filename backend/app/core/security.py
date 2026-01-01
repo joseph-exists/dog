@@ -19,6 +19,23 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
     return encoded_jwt
 
 
+def verify_token(token: str) -> dict[str, Any]:
+    """
+    Verify and decode a JWT token.
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        Decoded token payload (dict with 'sub', 'exp', etc.)
+
+    Raises:
+        jwt.PyJWTError: If token is invalid, expired, or malformed
+    """
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    return payload
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
