@@ -6,8 +6,9 @@
  * - Message history (MessageList)
  * - Message input (MessageInput)
  * - Participant list (ParticipantList)
+ * - Phase 5: Message management (edit, pin, delete, toggle context)
  *
- * Phase 3 Alpha - Tasks 3, 12, 15, 19
+ * Phase 3 Alpha - Tasks 3, 12, 15, 19 | Phase 5 - Message Management
  */
 
 import {
@@ -19,14 +20,17 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import MessageInput from "@/components/Rooms/MessageInput";
 import MessageList from "@/components/Rooms/MessageList";
 import ParticipantList from "@/components/Rooms/ParticipantList";
 import RoomHeader from "@/components/Rooms/RoomHeader";
+import EditDrawer from "@/components/Common/EditDrawer";
 import { useRoom } from "@/hooks/useRoom";
 import { useRoomStream } from "@/hooks/useRoomStream";
+import useCustomToast from "@/hooks/useCustomToast";
+import type { MessageViewModel } from "@/services/roomService";
 
 export const Route = createFileRoute("/_layout/room/$roomId")({
   component: RoomView,
@@ -35,6 +39,11 @@ export const Route = createFileRoute("/_layout/room/$roomId")({
 function RoomView() {
   const { roomId } = Route.useParams();
   const navigate = useNavigate();
+  const { showSuccessToast } = useCustomToast();
+
+  // Phase 5: Edit drawer state
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<MessageViewModel | null>(null);
 
   // Use the aggregate room hook with polling enabled
   const {
@@ -57,6 +66,13 @@ function RoomView() {
     removeParticipant,
     updateRoom,
     deleteRoom,
+    // Phase 5: Message management
+    editMessage,
+    isEditing,
+    pinMessage,
+    unpinMessage,
+    toggleContext,
+    deleteMessage,
   } = useRoom(roomId, {
     enablePolling: true,
     onDeleteSuccess: () => {
@@ -82,6 +98,43 @@ function RoomView() {
       await addParticipant(agentId, 'agent');
     } else {
       await removeParticipant(agentId);
+    }
+  };
+
+  // Phase 5: Message management handlers
+  const handleEditMessage = (message: MessageViewModel) => {
+    setEditingMessage(message);
+    setIsEditDrawerOpen(true);
+  };
+
+  const handleSaveEdit = async (content: string) => {
+    if (!editingMessage) return;
+    await editMessage(editingMessage.message_id, content);
+    showSuccessToast("Message updated successfully");
+    setIsEditDrawerOpen(false);
+    setEditingMessage(null);
+  };
+
+  const handlePinMessage = async (messageId: string) => {
+    await pinMessage(messageId);
+    showSuccessToast("Message pinned");
+  };
+
+  const handleUnpinMessage = async (messageId: string) => {
+    await unpinMessage(messageId);
+    showSuccessToast("Message unpinned");
+  };
+
+  const handleToggleContext = async (messageId: string, active: boolean) => {
+    await toggleContext(messageId, active);
+    showSuccessToast(active ? "Added to context" : "Removed from context");
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    // TODO: Add confirmation dialog
+    if (window.confirm("Are you sure you want to delete this message?")) {
+      await deleteMessage(messageId);
+      showSuccessToast("Message deleted");
     }
   };
 
@@ -140,6 +193,12 @@ function RoomView() {
               isLoadingMore={isLoadingMoreMessages}
               isLoading={isLoadingMessages}
               streamingMessage={streamingMessage}
+              room={room}
+              onEditMessage={handleEditMessage}
+              onPinMessage={handlePinMessage}
+              onUnpinMessage={handleUnpinMessage}
+              onToggleContext={handleToggleContext}
+              onDeleteMessage={handleDeleteMessage}
             />
           </Box>
 
@@ -163,6 +222,22 @@ function RoomView() {
           onToggleAgent={handleToggleAgent}
         />
       </VStack>
+
+      {/* Phase 5: Edit Message Drawer */}
+      {editingMessage && (
+        <EditDrawer
+          isOpen={isEditDrawerOpen}
+          onClose={() => {
+            setIsEditDrawerOpen(false);
+            setEditingMessage(null);
+          }}
+          onSave={handleSaveEdit}
+          initialContent={editingMessage.content}
+          title="Edit Message"
+          description="Changes will be visible to all participants."
+          isSaving={isEditing}
+        />
+      )}
     </Container>
   );
 }

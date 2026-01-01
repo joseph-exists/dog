@@ -58,7 +58,7 @@ export interface UseRoomResult {
   loadMoreMessages: () => Promise<void>;
   updateRoom: (data: { title?: string | null }) => Promise<void>;
   deleteRoom: () => Promise<void>;
-  
+
   isUpdatingRoom: boolean;
   isDeletingRoom: boolean;
   // Pagination
@@ -67,6 +67,18 @@ export interface UseRoomResult {
 
   // Message Sending
   isSending: boolean;
+
+  // Phase 5: Message Management Actions
+  editMessage: (messageId: string, content: string) => Promise<void>;
+  isEditing: boolean;
+  pinMessage: (messageId: string) => Promise<void>;
+  isPinning: boolean;
+  unpinMessage: (messageId: string) => Promise<void>;
+  isUnpinning: boolean;
+  toggleContext: (messageId: string, active: boolean) => Promise<void>;
+  isTogglingContext: boolean;
+  deleteMessage: (messageId: string) => Promise<void>;
+  isDeleting: boolean;
 
   // Derived State
   currentUserRole: 'owner' | 'member' | null;
@@ -161,6 +173,17 @@ export function useRoom(
     isLoadingMore: isLoadingMoreMessages,
     sendMessage,
     isSending,
+    // Phase 5: Message management
+    editMessage,
+    isEditing,
+    pinMessage,
+    isPinning,
+    unpinMessage,
+    isUnpinning,
+    toggleContext,
+    isTogglingContext,
+    deleteMessage: deleteMessageFn,
+    isDeleting,
   } = useRoomMessages(roomId, {
     enablePolling,
     pollingInterval: options?.pollingInterval ?? 3000, // 3 seconds for messages
@@ -332,6 +355,18 @@ export function useRoom(
 
     // Message Sending
     isSending,
+
+    // Phase 5: Message Management (from useRoomMessages)
+    editMessage,
+    isEditing,
+    pinMessage,
+    isPinning,
+    unpinMessage,
+    isUnpinning,
+    toggleContext,
+    isTogglingContext,
+    deleteMessage: deleteMessageFn,
+    isDeleting,
 
     // Derived State
     currentUserRole,

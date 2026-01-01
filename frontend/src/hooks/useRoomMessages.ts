@@ -43,6 +43,18 @@ export interface UseRoomMessagesResult {
   sendMessage: (content: string) => Promise<void>;
   isSending: boolean;
 
+  // Phase 5: Message management actions
+  editMessage: (messageId: string, content: string) => Promise<void>;
+  isEditing: boolean;
+  pinMessage: (messageId: string) => Promise<void>;
+  isPinning: boolean;
+  unpinMessage: (messageId: string) => Promise<void>;
+  isUnpinning: boolean;
+  toggleContext: (messageId: string, active: boolean) => Promise<void>;
+  isTogglingContext: boolean;
+  deleteMessage: (messageId: string) => Promise<void>;
+  isDeleting: boolean;
+
   // Polling Status
   isPolling: boolean;
   lastUpdated: Date | null;
@@ -148,6 +160,9 @@ export function useRoomMessages(
           button_options: null,
           created_at: new Date(),
           is_own_message: true,
+          // Phase 5 fields
+          is_pinned: false,
+          active_for_context: false,
         };
 
         return {
@@ -168,6 +183,71 @@ export function useRoomMessages(
     onSuccess: () => {
       // Refetch to get the real message + any agent responses
       queryClient.invalidateQueries({ queryKey: messagesQueryKey });
+    },
+  });
+
+  // Phase 5: Edit message mutation
+  const editMessageMutation = useMutation({
+    mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
+      return await RoomService.editMessage(roomId, messageId, content, user?.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagesQueryKey });
+    },
+    onError: (err: ApiError) => {
+      handleError(err);
+    },
+  });
+
+  // Phase 5: Pin message mutation
+  const pinMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return await RoomService.pinMessage(roomId, messageId, user?.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagesQueryKey });
+    },
+    onError: (err: ApiError) => {
+      handleError(err);
+    },
+  });
+
+  // Phase 5: Unpin message mutation
+  const unpinMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return await RoomService.unpinMessage(roomId, messageId, user?.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagesQueryKey });
+    },
+    onError: (err: ApiError) => {
+      handleError(err);
+    },
+  });
+
+  // Phase 5: Toggle message context mutation
+  const toggleContextMutation = useMutation({
+    mutationFn: async ({ messageId, active }: { messageId: string; active: boolean }) => {
+      return await RoomService.toggleMessageContext(roomId, messageId, active, user?.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagesQueryKey });
+    },
+    onError: (err: ApiError) => {
+      handleError(err);
+    },
+  });
+
+  // Phase 5: Delete message mutation
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return await RoomService.deleteMessage(roomId, messageId, user?.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagesQueryKey });
+    },
+    onError: (err: ApiError) => {
+      handleError(err);
     },
   });
 
@@ -214,6 +294,42 @@ export function useRoomMessages(
     [sendMessageMutation]
   );
 
+  // Phase 5: Message management wrappers
+  const editMessage = useCallback(
+    async (messageId: string, content: string) => {
+      await editMessageMutation.mutateAsync({ messageId, content });
+    },
+    [editMessageMutation]
+  );
+
+  const pinMessage = useCallback(
+    async (messageId: string) => {
+      await pinMessageMutation.mutateAsync(messageId);
+    },
+    [pinMessageMutation]
+  );
+
+  const unpinMessage = useCallback(
+    async (messageId: string) => {
+      await unpinMessageMutation.mutateAsync(messageId);
+    },
+    [unpinMessageMutation]
+  );
+
+  const toggleContext = useCallback(
+    async (messageId: string, active: boolean) => {
+      await toggleContextMutation.mutateAsync({ messageId, active });
+    },
+    [toggleContextMutation]
+  );
+
+  const deleteMessage = useCallback(
+    async (messageId: string) => {
+      await deleteMessageMutation.mutateAsync(messageId);
+    },
+    [deleteMessageMutation]
+  );
+
   // Determine if polling is active
   const isPolling = enablePolling && !isLoading;
 
@@ -230,6 +346,18 @@ export function useRoomMessages(
     // Actions
     sendMessage,
     isSending: sendMessageMutation.isPending,
+
+    // Phase 5: Message management actions
+    editMessage,
+    isEditing: editMessageMutation.isPending,
+    pinMessage,
+    isPinning: pinMessageMutation.isPending,
+    unpinMessage,
+    isUnpinning: unpinMessageMutation.isPending,
+    toggleContext,
+    isTogglingContext: toggleContextMutation.isPending,
+    deleteMessage,
+    isDeleting: deleteMessageMutation.isPending,
 
     // Polling Status
     isPolling,

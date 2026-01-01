@@ -203,7 +203,6 @@ Each phase delivers end-to-end value and remains deployable independently.[^3][^
 
 ---
 
-<div align="center">⁂</div>
 
 [^1]: TechSpecTinyfoot-Minimog.md
 

@@ -1831,6 +1831,17 @@ class RoomMessage(RoomMessageBase, table=True):
         nullable=False,
         index=True,
     )
+    # Editing fields
+    edited_at: datetime | None = None
+    edited_by: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+
+    # Pinning fields
+    is_pinned: bool = Field(default=False, index=True)  # Index for filtering
+    pinned_at: datetime | None = None
+    pinned_by: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+
+    # Context inclusion field
+    active_for_context: bool = Field(default=True, index=True)  # Index for filtering
 
     button_options: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     # AG-UI interactive buttons: [{"label": str, "value": str, "style": str}]
@@ -1846,6 +1857,15 @@ class RoomMessagePublic(RoomMessageBase):
     sender_id: uuid.UUID | None
     agent_name: str | None
     created_at: datetime
+
+    # Message management fields (Phase 5)
+    edited_at: datetime | None = None
+    edited_by: uuid.UUID | None = None
+    is_pinned: bool = False
+    pinned_at: datetime | None = None
+    pinned_by: uuid.UUID | None = None
+    active_for_context: bool = True
+
     button_options: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
 
@@ -1854,6 +1874,23 @@ class RoomMessagesPublic(SQLModel):
 
     data: list[RoomMessagePublic]
     count: int
+
+
+# ============================================================================
+# Message Management Request Models (Phase 5)
+# ============================================================================
+
+
+class MessageEdit(SQLModel):
+    """Request model for editing message content."""
+
+    content: str
+
+
+class MessageContextToggle(SQLModel):
+    """Request model for toggling message context inclusion."""
+
+    active_for_context: bool
 
 
 # ============================================================================

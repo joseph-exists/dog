@@ -311,6 +311,12 @@ async def _update_projections(
         "participant.role_changed": _handle_participant_role_changed,
         "room_message.user": _handle_room_message_user,
         "room_message.agent": _handle_room_message_agent,
+        # Phase 5: Message Management
+        "message.edited": _handle_message_edited,
+        "message.pinned": _handle_message_pinned,
+        "message.unpinned": _handle_message_unpinned,
+        "message.context_toggled": _handle_message_context_toggled,
+        "message.deleted": _handle_message_deleted,
     }
 
     handler = handlers.get(event.event_type)
@@ -551,6 +557,154 @@ async def _handle_room_message_agent(
     )
 
     session.add(room_message)
+
+
+# ============================================================================
+# Message Management Event Handlers (Phase 5)
+# ============================================================================
+
+
+async def _handle_message_edited(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    Handle message.edited event.
+
+    Updates message content and editing metadata.
+    Does NOT change active_for_context status.
+
+    Payload:
+        - message_id: UUID string (required)
+        - new_content: str (required)
+        - edited_by: UUID string (required)
+    """
+    payload = event.payload
+
+    result = await session.execute(
+        select(RoomMessage).where(
+            RoomMessage.message_id == uuid.UUID(payload["message_id"])
+        )
+    )
+    message = result.scalar_one()
+
+    message.content = payload["new_content"]
+    message.edited_at = event.created_at
+    message.edited_by = uuid.UUID(payload["edited_by"])
+
+    session.add(message)
+
+
+async def _handle_message_pinned(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    Handle message.pinned event.
+
+    Pins message and auto-marks it as active for context.
+
+    Payload:
+        - message_id: UUID string (required)
+        - pinned_by: UUID string (required)
+    """
+    payload = event.payload
+
+    result = await session.execute(
+        select(RoomMessage).where(
+            RoomMessage.message_id == uuid.UUID(payload["message_id"])
+        )
+    )
+    message = result.scalar_one()
+
+    message.is_pinned = True
+    message.pinned_at = event.created_at
+    message.pinned_by = uuid.UUID(payload["pinned_by"])
+    message.active_for_context = True  # Auto-mark active
+
+    session.add(message)
+
+
+async def _handle_message_unpinned(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    Handle message.unpinned event.
+
+    Unpins message. Does NOT change active_for_context status.
+
+    Payload:
+        - message_id: UUID string (required)
+    """
+    payload = event.payload
+
+    result = await session.execute(
+        select(RoomMessage).where(
+            RoomMessage.message_id == uuid.UUID(payload["message_id"])
+        )
+    )
+    message = result.scalar_one()
+
+    message.is_pinned = False
+    message.pinned_at = None
+    message.pinned_by = None
+
+    session.add(message)
+
+
+async def _handle_message_context_toggled(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    Handle message.context_toggled event.
+
+    Updates active_for_context status.
+
+    Payload:
+        - message_id: UUID string (required)
+        - active_for_context: bool (required)
+    """
+    payload = event.payload
+
+    result = await session.execute(
+        select(RoomMessage).where(
+            RoomMessage.message_id == uuid.UUID(payload["message_id"])
+        )
+    )
+    message = result.scalar_one()
+
+    message.active_for_context = payload["active_for_context"]
+
+    session.add(message)
+
+
+async def _handle_message_deleted(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    Handle message.deleted event.
+
+    Soft-deletes message by removing from projection.
+    Historical event is preserved in room_events table.
+
+    Payload:
+        - message_id: UUID string (required)
+        - deleted_by: UUID string (required)
+    """
+    payload = event.payload
+
+    result = await session.execute(
+        select(RoomMessage).where(
+            RoomMessage.message_id == uuid.UUID(payload["message_id"])
+        )
+    )
+    message = result.scalar_one_or_none()
+
+    if message:
+        await session.delete(message)
 
 
 # ============================================================================

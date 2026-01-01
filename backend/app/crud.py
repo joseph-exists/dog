@@ -808,6 +808,98 @@ async def check_room_owner(
     return participant is not None
 
 
+async def check_can_edit_message(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> bool:
+    """
+    Return True if user can edit the message.
+
+    Authorization rules:
+    - User messages: Author OR room owner can edit
+    - Agent messages: Owner only can edit
+
+    Args:
+        room_id: UUID of the room
+        message_id: UUID of the message
+        user_id: UUID of the user
+        session: Async database session
+
+    Returns:
+        True if user is authorized to edit the message, False otherwise
+    """
+    # Get the message
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    message = result.scalar_one_or_none()
+    if not message:
+        return False
+
+    # Check if room owner
+    is_owner = await check_room_owner(
+        room_id=room_id, user_id=user_id, session=session
+    )
+
+    # Agent messages: owner only
+    if message.sender_type == "agent":
+        return is_owner
+
+    # User messages: author or owner
+    return message.sender_id == user_id or is_owner
+
+
+async def check_can_pin_message(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> bool:
+    """
+    Return True if user can pin messages (owner only).
+
+    Reuses existing check_room_owner helper.
+
+    Args:
+        room_id: UUID of the room
+        user_id: UUID of the user
+        session: Async database session
+
+    Returns:
+        True if user is a room owner, False otherwise
+    """
+    return await check_room_owner(
+        room_id=room_id, user_id=user_id, session=session
+    )
+
+
+async def check_can_delete_message(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> bool:
+    """
+    Return True if user can delete messages (owner only).
+
+    Reuses existing check_room_owner helper.
+
+    Args:
+        room_id: UUID of the room
+        user_id: UUID of the user
+        session: Async database session
+
+    Returns:
+        True if user is a room owner, False otherwise
+    """
+    return await check_room_owner(
+        room_id=room_id, user_id=user_id, session=session
+    )
+
+
 # ============================================================================
 # Room Creation & Management
 # ============================================================================
@@ -1363,3 +1455,266 @@ async def send_user_message(
     )
     room_message = result.scalar_one()
     return room_message
+
+
+# ============================================================================
+# Message Management Operations (Phase 5)
+# ============================================================================
+
+
+async def edit_message(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    user_id: UUID,
+    new_content: str,
+    session: AsyncSession,
+) -> RoomMessage:
+    """
+    Edit a message's content.
+
+    NOTE: This function expects to be called within an active transaction.
+
+    Authorization must be checked by caller:
+    - User messages: Author OR room owner can edit
+    - Agent messages: Owner only can edit
+
+    Args:
+        room_id: UUID of the room
+        message_id: UUID of the message to edit
+        user_id: UUID of the user performing the edit
+        new_content: New message content
+        session: Async database session with active transaction
+
+    Returns:
+        Updated RoomMessage projection
+
+    Raises:
+        HTTPException: 404 if message does not exist
+    """
+    # Verify message exists
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Emit message.edited event
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="message.edited",
+        payload={
+            "message_id": str(message_id),
+            "new_content": new_content,
+            "edited_by": str(user_id),
+        },
+    )
+
+    # Fetch and return updated message
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    return result.scalar_one()
+
+
+async def pin_message(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> RoomMessage:
+    """
+    Pin a message and auto-mark it as active for context.
+
+    NOTE: This function expects to be called within an active transaction.
+
+    Authorization must be checked by caller (owner only).
+
+    Args:
+        room_id: UUID of the room
+        message_id: UUID of the message to pin
+        user_id: UUID of the user performing the pin
+        session: Async database session with active transaction
+
+    Returns:
+        Updated RoomMessage projection
+
+    Raises:
+        HTTPException: 404 if message does not exist
+    """
+    # Verify message exists
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Emit message.pinned event
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="message.pinned",
+        payload={
+            "message_id": str(message_id),
+            "pinned_by": str(user_id),
+        },
+    )
+
+    # Fetch and return updated message
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    return result.scalar_one()
+
+
+async def unpin_message(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    session: AsyncSession,
+) -> RoomMessage:
+    """
+    Unpin a message. Does NOT change active_for_context status.
+
+    NOTE: This function expects to be called within an active transaction.
+
+    Authorization must be checked by caller (owner only).
+
+    Args:
+        room_id: UUID of the room
+        message_id: UUID of the message to unpin
+        session: Async database session with active transaction
+
+    Returns:
+        Updated RoomMessage projection
+
+    Raises:
+        HTTPException: 404 if message does not exist
+    """
+    # Verify message exists
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Emit message.unpinned event
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="message.unpinned",
+        payload={
+            "message_id": str(message_id),
+        },
+    )
+
+    # Fetch and return updated message
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    return result.scalar_one()
+
+
+async def toggle_message_context(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    active_for_context: bool,
+    session: AsyncSession,
+) -> RoomMessage:
+    """
+    Toggle message active_for_context status.
+
+    NOTE: This function expects to be called within an active transaction.
+
+    Authorization must be checked by caller (any active participant).
+
+    Args:
+        room_id: UUID of the room
+        message_id: UUID of the message
+        active_for_context: New active_for_context value
+        session: Async database session with active transaction
+
+    Returns:
+        Updated RoomMessage projection
+
+    Raises:
+        HTTPException: 404 if message does not exist
+    """
+    # Verify message exists
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Emit message.context_toggled event
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="message.context_toggled",
+        payload={
+            "message_id": str(message_id),
+            "active_for_context": active_for_context,
+        },
+    )
+
+    # Fetch and return updated message
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    return result.scalar_one()
+
+
+async def delete_message(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> None:
+    """
+    Delete a message (soft delete via event).
+
+    NOTE: This function expects to be called within an active transaction.
+
+    Authorization must be checked by caller (owner only).
+
+    Args:
+        room_id: UUID of the room
+        message_id: UUID of the message to delete
+        user_id: UUID of the user performing the deletion
+        session: Async database session with active transaction
+
+    Raises:
+        HTTPException: 404 if message does not exist
+    """
+    # Verify message exists
+    result = await session.execute(
+        select(RoomMessage).where(RoomMessage.message_id == message_id)
+    )
+    message = result.scalar_one_or_none()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Emit message.deleted event
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="message.deleted",
+        payload={
+            "message_id": str(message_id),
+            "deleted_by": str(user_id),
+        },
+    )

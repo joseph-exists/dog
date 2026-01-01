@@ -67,6 +67,7 @@ export interface RoomViewModel {
  * - Computes sender_name from participant lookup or agent_name
  * - Adds is_own_message flag for visual distinction
  * - Normalizes sender_type to strict union type
+ * - Phase 5: Includes message management fields (edited, pinned, active_for_context)
  */
 export interface MessageViewModel {
   message_id: string;
@@ -81,6 +82,14 @@ export interface MessageViewModel {
 
   // Computed fields
   is_own_message: boolean;
+
+  // Phase 5: Message management fields
+  edited_at?: string | null;
+  edited_by?: string | null;
+  is_pinned: boolean;
+  pinned_at?: string | null;
+  pinned_by?: string | null;
+  active_for_context: boolean;
 }
 
 /**
@@ -183,6 +192,9 @@ function transformMessage(
     message.sender_type === 'user' &&
     message.sender_id === currentUserId;
 
+  // Cast to any to access Phase 5 fields from backend
+  const msg = message as any;
+
   return {
     message_id: message.message_id,
     room_id: message.room_id,
@@ -194,6 +206,13 @@ function transformMessage(
     button_options: message.button_options,
     created_at: new Date(message.created_at),
     is_own_message,
+    // Phase 5: Message management fields
+    edited_at: msg.edited_at ?? null,
+    edited_by: msg.edited_by ?? null,
+    is_pinned: msg.is_pinned ?? false,
+    pinned_at: msg.pinned_at ?? null,
+    pinned_by: msg.pinned_by ?? null,
+    active_for_context: msg.active_for_context ?? false,
   };
 }
 
@@ -469,6 +488,137 @@ export const RoomService = {
     });
 
     return transformMessage(message, currentUserId || null);
+  },
+
+  // ==========================================================================
+  // Phase 5: Message Management Operations
+  // ==========================================================================
+
+  /**
+   * Edit a message's content
+   *
+   * Authorization: Message author OR room owner can edit user messages.
+   * Only room owner can edit agent messages.
+   * Does NOT change active_for_context status.
+   *
+   * @param roomId - Room UUID
+   * @param messageId - Message UUID
+   * @param content - New message content
+   * @param currentUserId - Current user's ID
+   * @returns The updated message as MessageViewModel
+   * @throws ApiError - 403 if not authorized, 404 if message not found
+   */
+  async editMessage(
+    roomId: string,
+    messageId: string,
+    content: string,
+    currentUserId?: string | null
+  ): Promise<MessageViewModel> {
+    const message: RoomMessagePublic = await RoomsService.editMessageEndpoint({
+      roomId,
+      messageId,
+      requestBody: { content },
+    });
+
+    return transformMessage(message, currentUserId || null);
+  },
+
+  /**
+   * Pin a message (room owner only)
+   *
+   * Pinning automatically marks the message as active_for_context.
+   *
+   * @param roomId - Room UUID
+   * @param messageId - Message UUID
+   * @param currentUserId - Current user's ID
+   * @returns The updated message as MessageViewModel
+   * @throws ApiError - 403 if not room owner, 404 if message not found
+   */
+  async pinMessage(
+    roomId: string,
+    messageId: string,
+    currentUserId?: string | null
+  ): Promise<MessageViewModel> {
+    const message: RoomMessagePublic = await RoomsService.pinMessageEndpoint({
+      roomId,
+      messageId,
+    });
+
+    return transformMessage(message, currentUserId || null);
+  },
+
+  /**
+   * Unpin a message (room owner only)
+   *
+   * Unpinning does NOT change active_for_context status.
+   *
+   * @param roomId - Room UUID
+   * @param messageId - Message UUID
+   * @param currentUserId - Current user's ID
+   * @returns The updated message as MessageViewModel
+   * @throws ApiError - 403 if not room owner, 404 if message not found
+   */
+  async unpinMessage(
+    roomId: string,
+    messageId: string,
+    currentUserId?: string | null
+  ): Promise<MessageViewModel> {
+    const message: RoomMessagePublic = await RoomsService.unpinMessageEndpoint({
+      roomId,
+      messageId,
+    });
+
+    return transformMessage(message, currentUserId || null);
+  },
+
+  /**
+   * Toggle message active_for_context status
+   *
+   * Any active participant can toggle context inclusion.
+   *
+   * @param roomId - Room UUID
+   * @param messageId - Message UUID
+   * @param active - New active_for_context value
+   * @param currentUserId - Current user's ID
+   * @returns The updated message as MessageViewModel
+   * @throws ApiError - 403 if not a participant, 404 if message not found
+   */
+  async toggleMessageContext(
+    roomId: string,
+    messageId: string,
+    active: boolean,
+    currentUserId?: string | null
+  ): Promise<MessageViewModel> {
+    const message: RoomMessagePublic =
+      await RoomsService.toggleMessageContextEndpoint({
+        roomId,
+        messageId,
+        requestBody: { active_for_context: active },
+      });
+
+    return transformMessage(message, currentUserId || null);
+  },
+
+  /**
+   * Delete a message (room owner only, soft delete)
+   *
+   * Message is removed from API responses but preserved in event log.
+   *
+   * @param roomId - Room UUID
+   * @param messageId - Message UUID
+   * @param _currentUserId - Current user's ID (unused, for consistency)
+   * @returns Promise that resolves when deletion is complete
+   * @throws ApiError - 403 if not room owner, 404 if message not found
+   */
+  async deleteMessage(
+    roomId: string,
+    messageId: string,
+    _currentUserId?: string | null
+  ): Promise<void> {
+    await RoomsService.deleteMessageEndpoint({
+      roomId,
+      messageId,
+    });
   },
 
    /**

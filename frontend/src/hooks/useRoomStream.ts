@@ -118,6 +118,17 @@ export function useRoomStream(
               queryKey: ['rooms', roomId, 'participants']
             })
           }
+
+          // Phase 5: Message management events - invalidate messages query
+          if (message.event_type === 'message.edited' ||
+              message.event_type === 'message.pinned' ||
+              message.event_type === 'message.unpinned' ||
+              message.event_type === 'message.context_toggled' ||
+              message.event_type === 'message.deleted') {
+            queryClient.invalidateQueries({
+              queryKey: ['rooms', roomId, 'messages']
+            })
+          }
           break
 
         case 'message.delta':

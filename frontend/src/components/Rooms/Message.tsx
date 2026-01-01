@@ -7,17 +7,31 @@
  * - Timestamp (relative format)
  * - Visual distinction for user/agent/own messages
  * - Phase 4: Streaming indicator for real-time agent responses
+ * - Phase 5: Status badges (edited, pinned, active/inactive)
+ * - Phase 5: Action menu (edit, pin, delete, toggle context)
  *
- * Phase 3 Alpha - Task 9
+ * Phase 3 Alpha - Task 9 | Phase 5 - Message Management
  */
 
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Text, HStack } from "@chakra-ui/react";
+import { MessageBadge } from "@/components/ui/message-badge";
+import MessageActionMenu from "./MessageActionMenu";
 
-import type { MessageViewModel } from "@/services/roomService";
+import type { MessageViewModel, RoomViewModel } from "@/services/roomService";
 
 interface MessageProps {
   message: MessageViewModel;
   isStreaming?: boolean;
+  // Phase 5: Message management props
+  room?: RoomViewModel;
+  isPinned?: boolean;
+  isActiveForContext?: boolean;
+  editedAt?: string | null;
+  onEdit?: () => void;
+  onPin?: () => void;
+  onUnpin?: () => void;
+  onToggleContext?: (active: boolean) => void;
+  onDelete?: () => void;
 }
 
 /**
@@ -37,9 +51,22 @@ const formatTimestamp = (date: Date): string => {
   return `${diffDays}d ago`;
 };
 
-const Message = ({ message, isStreaming = false }: MessageProps) => {
+const Message = ({
+  message,
+  isStreaming = false,
+  room,
+  isPinned = false,
+  isActiveForContext = false,
+  editedAt = null,
+  onEdit,
+  onPin,
+  onUnpin,
+  onToggleContext,
+  onDelete,
+}: MessageProps) => {
   return (
     <Box
+      position="relative"
       alignSelf={message.sender_type === "user" ? "flex-end" : "flex-start"}
       maxW="70%"
       p={3}
@@ -67,6 +94,23 @@ const Message = ({ message, isStreaming = false }: MessageProps) => {
       borderColor={isStreaming ? "blue.400" : "transparent"}
       animation={isStreaming ? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" : undefined}
     >
+      {/* Phase 5: Action menu - top right corner */}
+      {room && onEdit && !isStreaming && (
+        <Box position="absolute" top={2} right={2}>
+          <MessageActionMenu
+            message={message}
+            room={room}
+            onEdit={onEdit}
+            onPin={onPin || (() => {})}
+            onUnpin={onUnpin || (() => {})}
+            onToggleContext={onToggleContext || (() => {})}
+            onDelete={onDelete || (() => {})}
+            isPinned={isPinned}
+            isActiveForContext={isActiveForContext}
+          />
+        </Box>
+      )}
+
       {/* Sender name */}
       <Text fontSize="xs" opacity={0.8} mb={1} fontWeight="medium">
         {message.sender_name}
@@ -76,6 +120,19 @@ const Message = ({ message, isStreaming = false }: MessageProps) => {
           </Text>
         )}
       </Text>
+
+      {/* Phase 5: Status badges */}
+      {!isStreaming && (editedAt || isPinned || isActiveForContext !== undefined) && (
+        <HStack gap={2} mb={2} flexWrap="wrap">
+          {editedAt && <MessageBadge variant="edited" timestamp={editedAt} />}
+          {isPinned && <MessageBadge variant="pinned" />}
+          {isActiveForContext !== undefined && (
+            <MessageBadge
+              variant={isActiveForContext ? "active" : "inactive"}
+            />
+          )}
+        </HStack>
+      )}
 
       {/* Message content */}
       <Text whiteSpace="pre-wrap">{message.content}</Text>

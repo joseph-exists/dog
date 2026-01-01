@@ -176,6 +176,20 @@ export type Message = {
 };
 
 /**
+ * Request model for toggling message context inclusion.
+ */
+export type MessageContextToggle = {
+    active_for_context: boolean;
+};
+
+/**
+ * Request model for editing message content.
+ */
+export type MessageEdit = {
+    content: string;
+};
+
+/**
  * Generic success message response.
  *
  * Used for operations that need to return a simple success message.
@@ -390,6 +404,12 @@ export type RoomMessagePublic = {
     sender_id: (string | null);
     agent_name: (string | null);
     created_at: string;
+    edited_at?: (string | null);
+    edited_by?: (string | null);
+    is_pinned?: boolean;
+    pinned_at?: (string | null);
+    pinned_by?: (string | null);
+    active_for_context?: boolean;
     button_options?: ({
     [key: string]: unknown;
 } | null);
@@ -1043,12 +1063,53 @@ export type RoomsSendMessageData = {
 export type RoomsSendMessageResponse = (RoomMessagePublic);
 
 export type RoomsListMessagesData = {
+    activeForContext?: (boolean | null);
     before?: (string | null);
+    isPinned?: (boolean | null);
     limit?: number;
     roomId: string;
+    senderId?: (string | null);
+    senderType?: (string | null);
 };
 
 export type RoomsListMessagesResponse = (RoomMessagesPublic);
+
+export type RoomsEditMessageEndpointData = {
+    messageId: string;
+    requestBody: MessageEdit;
+    roomId: string;
+};
+
+export type RoomsEditMessageEndpointResponse = (RoomMessagePublic);
+
+export type RoomsDeleteMessageEndpointData = {
+    messageId: string;
+    roomId: string;
+};
+
+export type RoomsDeleteMessageEndpointResponse = (void);
+
+export type RoomsPinMessageEndpointData = {
+    messageId: string;
+    roomId: string;
+};
+
+export type RoomsPinMessageEndpointResponse = (RoomMessagePublic);
+
+export type RoomsUnpinMessageEndpointData = {
+    messageId: string;
+    roomId: string;
+};
+
+export type RoomsUnpinMessageEndpointResponse = (RoomMessagePublic);
+
+export type RoomsToggleMessageContextEndpointData = {
+    messageId: string;
+    requestBody: MessageContextToggle;
+    roomId: string;
+};
+
+export type RoomsToggleMessageContextEndpointResponse = (RoomMessagePublic);
 
 export type StoriesReadStoriesData = {
     limit?: number;

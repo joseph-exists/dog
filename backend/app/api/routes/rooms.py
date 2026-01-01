@@ -23,15 +23,26 @@ from app.api.deps import AsyncSessionDep, AsyncSessionTransactionDep, CurrentUse
 from app.crud import (
     add_participant,
     change_participant_role,
+    check_can_delete_message,
+    check_can_edit_message,
+    check_can_pin_message,
+    check_room_membership,
     create_room,
+    delete_message,
+    edit_message,
     get_room_for_user,
     list_room_messages,
     list_rooms_for_user,
+    pin_message,
     remove_participant,
     send_user_message,
+    toggle_message_context,
+    unpin_message,
     update_room_metadata,
 )
 from app.models import (
+    MessageContextToggle,
+    MessageEdit,
     MessageResponse,
     ParticipantAddRequest,
     ParticipantRoleChangeRequest,
@@ -331,10 +342,14 @@ async def list_messages(
     current_user: CurrentUser,
     limit: int = Query(default=50, le=100),
     before: datetime | None = Query(default=None),
+    active_for_context: bool | None = None,  # None = both, True = active only, False = inactive only
+    is_pinned: bool | None = None,           # None = both, True = pinned only, False = unpinned only
+    sender_type: str | None = None,          # "user" | "agent" | None
+    sender_id: UUID | None = None,           # Specific user/agent
 ) -> Any:
     """
-    List messages in a room with cursor-based pagination.
-
+    List messages in a room with cursor-based pagination and optional filters.
+    All filters applied server-side.
     Only accessible to active participants.
 
     Args:
@@ -349,3 +364,192 @@ async def list_messages(
         session=session,
     )
     return room_messages
+
+
+# ============================================================================
+# Message Management Endpoints (Phase 5)
+# ============================================================================
+
+
+@router.patch("/{room_id}/messages/{message_id}", response_model=RoomMessagePublic)
+async def edit_message_endpoint(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    message_update: MessageEdit,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Edit message content.
+
+    Authorization:
+    - User messages: Message author OR room owner can edit
+    - Agent messages: Owner only can edit
+
+    Does NOT change active_for_context status.
+    Transaction automatically managed. Emits message.edited event.
+    """
+    # Check authorization
+    can_edit = await check_can_edit_message(
+        room_id=room_id,
+        message_id=message_id,
+        user_id=current_user.id,
+        session=session,
+    )
+    if not can_edit:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to edit this message"
+        )
+
+    # Edit message
+    message = await edit_message(
+        room_id=room_id,
+        message_id=message_id,
+        user_id=current_user.id,
+        new_content=message_update.content,
+        session=session,
+    )
+    return message
+
+
+@router.post("/{room_id}/messages/{message_id}/pin", response_model=RoomMessagePublic)
+async def pin_message_endpoint(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Pin message and auto-mark as active for context.
+
+    Authorization: Room owner only.
+    Transaction automatically managed. Emits message.pinned event.
+    """
+    # Check authorization
+    can_pin = await check_can_pin_message(
+        room_id=room_id,
+        user_id=current_user.id,
+        session=session,
+    )
+    if not can_pin:
+        raise HTTPException(
+            status_code=403,
+            detail="Only room owners can pin messages"
+        )
+
+    # Pin message
+    message = await pin_message(
+        room_id=room_id,
+        message_id=message_id,
+        user_id=current_user.id,
+        session=session,
+    )
+    return message
+
+
+@router.delete("/{room_id}/messages/{message_id}/pin", response_model=RoomMessagePublic)
+async def unpin_message_endpoint(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Unpin message. Does NOT change active_for_context status.
+
+    Authorization: Room owner only.
+    Transaction automatically managed. Emits message.unpinned event.
+    """
+    # Check authorization
+    can_pin = await check_can_pin_message(
+        room_id=room_id,
+        user_id=current_user.id,
+        session=session,
+    )
+    if not can_pin:
+        raise HTTPException(
+            status_code=403,
+            detail="Only room owners can unpin messages"
+        )
+
+    # Unpin message
+    message = await unpin_message(
+        room_id=room_id,
+        message_id=message_id,
+        session=session,
+    )
+    return message
+
+
+@router.patch("/{room_id}/messages/{message_id}/context", response_model=RoomMessagePublic)
+async def toggle_message_context_endpoint(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    context_update: MessageContextToggle,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Toggle message active_for_context status.
+
+    Authorization: Any active participant can toggle.
+    Transaction automatically managed. Emits message.context_toggled event.
+    """
+    # Check membership
+    is_member = await check_room_membership(
+        room_id=room_id,
+        user_id=current_user.id,
+        session=session,
+    )
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Toggle context
+    message = await toggle_message_context(
+        room_id=room_id,
+        message_id=message_id,
+        active_for_context=context_update.active_for_context,
+        session=session,
+    )
+    return message
+
+
+@router.delete("/{room_id}/messages/{message_id}", status_code=204)
+async def delete_message_endpoint(
+    *,
+    room_id: UUID,
+    message_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> None:
+    """
+    Delete a message (soft delete via event).
+
+    Authorization: Room owner only.
+    Transaction automatically managed. Emits message.deleted event.
+    Historical event is preserved.
+    """
+    # Check authorization
+    can_delete = await check_can_delete_message(
+        room_id=room_id,
+        user_id=current_user.id,
+        session=session,
+    )
+    if not can_delete:
+        raise HTTPException(
+            status_code=403,
+            detail="Only room owners can delete messages"
+        )
+
+    # Delete message
+    await delete_message(
+        room_id=room_id,
+        message_id=message_id,
+        user_id=current_user.id,
+        session=session,
+    )
