@@ -592,7 +592,9 @@ class UserStoryProgressUpdate(SQLModel):
     current_node_id: uuid.UUID | None = Field(default=None)
     is_completed: bool | None = Field(default=None)
     story_state: dict[str, Any] | None = Field(default=None)
-
+    #(for admin/debug only)
+    head_choice_id: uuid.UUID | None = Field(default=None)
+    head_version: int | None = Field(default=None)
 
 class UserStoryProgress(UserStoryProgressBase, table=True):
     """
@@ -609,10 +611,23 @@ class UserStoryProgress(UserStoryProgressBase, table=True):
     story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
     story_version: int = Field(nullable=False)  # Locked at creation
     
+    # NEW: Head pointer (active timeline position) - Phase 1
+    head_choice_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="usernodechoice.id",
+        description="Current active event in timeline tree (null = at story start)"
+    )
+
+    # NEW: Optimistic concurrency control - Phase 1
+    head_version: int = Field(
+        default=0,
+        description="Increments on every head move (for optimistic locking)"
+    )
+
     # Timestamps
     started_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
-    
+
     # Relationships defined after all models
     # user_persona: "UserPersona" = Relationship(back_populates="story_progresses")
     # story: "Story" = Relationship(back_populates="user_progresses")
@@ -626,6 +641,8 @@ class UserStoryProgressPublic(UserStoryProgressBase):
     user_persona_id: uuid.UUID
     story_id: uuid.UUID
     story_version: int
+    head_choice_id: uuid.UUID | None  # NEW in Phase 1
+    head_version: int  # NEW in Phase 1
     started_at: datetime
     updated_at: datetime
 
@@ -635,15 +652,61 @@ class UserStoryProgressesPublic(SQLModel):
     data: list[UserStoryProgressPublic]
     count: int
 
+# ==================== Timeline Navigation Models (Phase 3) ====================
 
+class JumpRequest(SQLModel):
+    """
+    Request model for jumping to ancestor choice.
+
+    Used by jump endpoint to specify target and optimistic concurrency check.
+    """
+    choice_id: uuid.UUID | None = Field(
+        default=None,
+        description="Target choice to jump to (null = jump to story start)"
+    )
+    expected_head_version: int = Field(
+        description="Optimistic concurrency check - must match current head_version"
+    )
+
+
+class TimelineEvent(SQLModel):
+    """
+    Timeline entry for UI breadcrumbs.
+
+    Represents a single event in the player's active timeline.
+    Abandoned branches are NOT included in timeline responses.
+    """
+    choice_id: uuid.UUID | None = Field(
+        description="Choice ID (null for story start event)"
+    )
+    choice_text: str = Field(description="Text of the choice made")
+    node_title: str = Field(description="Title of the node reached")
+    choice_time: datetime = Field(description="When choice was made")
+    is_current: bool = Field(description="Is this the current head position?")
+
+
+class Timeline(SQLModel):
+    """
+    Active timeline from root → head.
+
+    Contains only the ancestor chain (root to current head).
+    Siblings and abandoned branches are filtered out.
+    """
+    events: list[TimelineEvent]
+    head_version: int = Field(description="Current head version for optimistic locking")
+
+
+# NOTE: These are request/response models (not database models)
+# so they don't need the full Base/Create/Update/Database/Public/Collection pattern per TinyFoot data-model-best-practices.md.
 # ==================== UserNodeChoice Models (PLAYING) ====================
 
 class UserNodeChoiceBase(SQLModel):
     """
     Base model for recording a player's choice at a node.
     Historical breadcrumb trail through the story.
+    Choice text can be modified by Pydantic AI as necessary for summary.
     """
-    choice_text: str = Field(max_length=500)
+    choice_text: str = Field(max_length=1000)
     from_node_id: uuid.UUID
     to_node_id: uuid.UUID
     
@@ -654,28 +717,51 @@ class UserNodeChoiceBase(SQLModel):
 class UserNodeChoiceCreate(UserNodeChoiceBase):
     """Input model for recording a choice"""
     progress_id: uuid.UUID
+    parent_choice_id: uuid.UUID | None = Field(
+        default=None,
+        description="Parent event in timeline tree (null for initial state)"
+    )
 
+    # NEW in Phase 1
+    rng_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Captured RNG outcomes for deterministic replay"
+    )
 
 class UserNodeChoice(UserNodeChoiceBase, table=True):
     """
     Database model for player's choice history.
+    parent_choice_id for tree structure and branching timelines
     Immutable record of decisions made.
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     progress_id: uuid.UUID = Field(foreign_key="userstoryprogress.id", nullable=False, ondelete="CASCADE")
+    
+    parent_choice_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="usernodechoice.id",
+        description="Parent event in timeline tree (null for initial state)"
+    )
+    
     choice_time: datetime = Field(default_factory=datetime.now)
     
     # Relationships defined after all models
     # progress: "UserStoryProgress" = Relationship(back_populates="choice_history")
     # from_node: "StoryNode" = Relationship()
     # to_node: "StoryNode" = Relationship()
-
+    rng_data: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Captured RNG outcomes for deterministic replay (seeds, rolls, outcomes)"
+    )
 
 class UserNodeChoicePublic(UserNodeChoiceBase):
     """Public API response model for UserNodeChoice"""
     id: uuid.UUID
     progress_id: uuid.UUID
+    parent_choice_id: uuid.UUID | None  # NEW in Phase 1
     choice_time: datetime
+    rng_data: dict[str, Any] | None 
 
 
 class UserNodeChoicesPublic(SQLModel):
@@ -683,7 +769,15 @@ class UserNodeChoicesPublic(SQLModel):
     data: list[UserNodeChoicePublic]
     count: int
 
-
+class UserNodeChoiceUpdate(SQLModel):
+    """
+    Update model for UserNodeChoice.
+    Note: In event sourcing, choices are immutable - this exists for consistency
+    but should rarely/never be used.
+    """
+    choice_text: str | None = Field(default=None, max_length=1000)  # type: ignore
+    state_changes: dict[str, Any] | None = Field(default=None)
+    rng_data: dict[str, Any] | None = Field(default=None)
 
 # ========= Database Models ===========
 
@@ -1271,14 +1365,6 @@ StoryNode.current_for_progresses = Relationship(back_populates="current_node")
 # UserStoryProgress to StoryNode relationship
 UserStoryProgress.current_node = Relationship(back_populates="current_for_progresses")
 
-
-class UserNodeChoiceBase(SQLModel):
-    """Base model for tracking user's node choices"""
-
-    choice_text: str = Field(max_length=500)  # Text of the choice made
-    from_node_id: uuid.UUID = Field(foreign_key="storynode.id")
-    to_node_id: uuid.UUID = Field(foreign_key="storynode.id")
-    choice_time: datetime = Field(default_factory=datetime.now)
 
 
 
@@ -1984,6 +2070,32 @@ class RoomEventsPublic(SQLModel):
 
     data: list[RoomEventPublic]
     count: int
+
+# ============================================================================
+# Phase 1: Event Tree Relationships
+# ============================================================================
+
+# UserNodeChoice tree structure relationships
+UserNodeChoice.parent_choice = Relationship(
+    sa_relationship_kwargs={
+        "foreign_keys": "[UserNodeChoice.parent_choice_id]",
+        "remote_side": "[UserNodeChoice.id]"
+    }
+)
+
+UserNodeChoice.children = Relationship(
+    back_populates="parent_choice",
+    sa_relationship_kwargs={
+        "foreign_keys": "[UserNodeChoice.parent_choice_id]"
+    }
+)
+
+# UserStoryProgress to head choice relationship
+UserStoryProgress.head_choice = Relationship(
+    sa_relationship_kwargs={
+        "foreign_keys": "[UserStoryProgress.head_choice_id]"
+    }
+)
 
 # ============================================================================
 # Post-Definition Relationship Binding

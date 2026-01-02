@@ -1718,3 +1718,273 @@ async def delete_message(
             "deleted_by": str(user_id),
         },
     )
+
+# ==================== Phase 2 CYOA: State Replay Functions ====================
+#
+# These functions implement event sourcing replay logic:
+#
+# 1. get_choice_ancestor_chain() - Traverses parent pointers from head to root
+# 2. replay_state_from_head() - Reconstructs state by merging state_changes
+# 3. get_current_node_from_head() - Derives current node from head position
+#
+# In Phase 2, these functions VALIDATE existing mutable state.
+# In Phase 5, these become the SOURCE OF TRUTH for state.
+#
+# Performance: O(n) where n = chain length. Target < 50ms for 100 choices.
+# Optimization: Snapshots added in Phase 5 reduce replay cost.
+# ===========================================================================
+
+def get_choice_ancestor_chain(
+    *, session: Session, choice_id: uuid.UUID
+) -> list[UserNodeChoice]:
+    """
+    Get ancestor chain from root to specified choice (inclusive).
+
+    Returns events in order: [root_choice, ..., parent_choice, choice_id]
+    Used for replay and timeline display.
+
+    Args:
+        session: Database session
+        choice_id: Target choice UUID
+
+    Returns:
+        List of UserNodeChoice objects from root to target (ordered)
+
+    Raises:
+        ValueError: If choice_id doesn't exist in database
+    """
+    chain = []
+    current_id = choice_id
+
+    while current_id is not None:
+        choice = session.get(UserNodeChoice, current_id)
+        if not choice:
+            # If we can't find a choice in the chain, something is corrupt
+            raise ValueError(f"Choice {current_id} not found in database (data corruption)")
+        chain.append(choice)
+        current_id = choice.parent_choice_id
+
+    return list(reversed(chain))  # Root → head order
+
+def replay_state_from_head(
+    *, session: Session, progress_id: uuid.UUID, head_choice_id: uuid.UUID | None
+) -> dict[str, Any]:
+    """
+    Reconstruct story_state by replaying all events from root to head.
+
+    This is the SOURCE OF TRUTH for state in event-sourced model.
+    The UserStoryProgress.story_state field becomes a denormalized cache.
+
+    Args:
+        session: Database session
+        progress_id: UserStoryProgress UUID (for validation)
+        head_choice_id: Current head position (null = story start)
+
+    Returns:
+        Reconstructed state dictionary
+
+    Raises:
+        ValueError: If choice doesn't belong to progress_id
+    """
+    if head_choice_id is None:
+        return {}  # At story start
+
+    # Get all events from root to head
+    chain = get_choice_ancestor_chain(session=session, choice_id=head_choice_id)
+
+    # Validate all choices belong to this progress
+    for choice in chain:
+        if choice.progress_id != progress_id:
+            raise ValueError(
+                f"Choice {choice.id} doesn't belong to progress {progress_id}"
+            )
+
+    # Replay events (shallow merge)
+    state: dict[str, Any] = {}
+    for choice in chain:
+        if choice.state_changes:
+            state.update(choice.state_changes)
+
+    return state
+
+def get_current_node_from_head(
+    *,
+    session: Session,
+    head_choice_id: uuid.UUID | None,
+    story_id: uuid.UUID,
+    story_version: int,
+) -> uuid.UUID:
+    """
+    Derive current_node_id from head position.
+
+    If head_choice_id is None, return start node.
+    Otherwise, return to_node_id of head choice.
+
+    Args:
+        session: Database session
+        head_choice_id: Current head position (null = story start)
+        story_id: Story UUID (for finding start node)
+        story_version: Story version (for finding start node)
+
+    Returns:
+        UUID of current story node
+
+    Raises:
+        ValueError: If no start node found or head choice missing
+    """
+    if head_choice_id is None:
+        # At story start - find start node
+        statement = select(StoryNode).where(
+            StoryNode.story_id == story_id,
+            StoryNode.story_version == story_version,
+            StoryNode.is_start_node == True,  # noqa: E712
+        )
+        start_node = session.exec(statement).first()
+        if not start_node:
+            raise ValueError(
+                f"No start node for story {story_id} version {story_version}"
+            )
+        return start_node.id
+
+    # Return destination of head choice
+    choice = session.get(UserNodeChoice, head_choice_id)
+    if not choice:
+        raise ValueError(f"Head choice {head_choice_id} not found")
+    return choice.to_node_id
+
+def get_choice_children(
+    *, session: Session, choice_id: uuid.UUID
+) -> list[UserNodeChoice]:
+    """
+    Get all direct children of a choice (for debugging/admin tools).
+
+    In normal gameplay, children are hidden (abandoned branches).
+    This is used for admin visualization of the full event tree.
+
+    Args:
+        session: Database session
+        choice_id: Parent choice UUID
+
+    Returns:
+        List of child UserNodeChoice objects
+    """
+    statement = select(UserNodeChoice).where(
+        UserNodeChoice.parent_choice_id == choice_id
+    )
+    return list(session.exec(statement).all())
+
+# ==================== Phase 3: Timeline Navigation Functions ====================
+#
+# IMPROVEMENT OVER MIGRATION PLAN:
+# The migration plan shows inline replay logic in undo/jump endpoints.
+# These helper functions extract common logic for DRY and maintainability.
+# This follows TinyFoot functional patterns from RULES.md.
+# ==============================================================================
+
+def validate_ancestor_constraint(
+    *, session: Session, target_choice_id: uuid.UUID, current_head_id: uuid.UUID
+) -> bool:
+    """
+    Validate that target choice is an ancestor of current head.
+
+    Used by jump endpoint to prevent forward jumps (which would expose hidden branches).
+    Forward jumps are prohibited because they would reveal abandoned timeline branches.
+
+    Args:
+        session: Database session
+        target_choice_id: Proposed jump target
+        current_head_id: Current head position
+
+    Returns:
+        True if target is ancestor of current head, False otherwise
+
+    Raises:
+        ValueError: If current_head_id doesn't exist (via get_choice_ancestor_chain)
+
+    Example:
+        # Before jump, validate target is in ancestor chain
+        is_ancestor = crud.validate_ancestor_constraint(
+            session=session,
+            target_choice_id=target,
+            current_head_id=progress.head_choice_id
+        )
+        if not is_ancestor:
+            raise HTTPException(400, "Target is not an ancestor")
+    """
+    # Get ancestor chain from current head to root
+    ancestors = get_choice_ancestor_chain(session=session, choice_id=current_head_id)
+    ancestor_ids = {c.id for c in ancestors}
+
+    # Check if target is in the ancestor chain
+    return target_choice_id in ancestor_ids
+
+
+def move_head_to_choice(
+    *,
+    session: Session,
+    progress: UserStoryProgress,
+    target_choice_id: uuid.UUID | None,
+) -> UserStoryProgress:
+    """
+    Move head pointer to target choice and update derived state.
+
+    This is the core function for undo/jump operations.
+    Encapsulates head movement, state replay, and node derivation.
+
+    IMPORTANT: This function uses replay to UPDATE story_state.
+    Unlike make_story_choice (which still uses mutable updates in Phase 3),
+    timeline navigation MUST replay because we're moving backward in time.
+
+    Args:
+        session: Database session
+        progress: UserStoryProgress instance to update
+        target_choice_id: Target choice (null = story start)
+
+    Returns:
+        Updated UserStoryProgress instance (mutated in place)
+
+    Side effects:
+        - Updates progress.head_choice_id to target
+        - Increments progress.head_version (optimistic lock)
+        - Replays state from new head (replaces progress.story_state)
+        - Updates progress.current_node_id
+        - Resets progress.is_completed flag (might not be at end anymore)
+
+    Raises:
+        ValueError: If target_choice_id doesn't exist or state replay fails
+
+    Example:
+        # In undo endpoint
+        current_choice = session.get(UserNodeChoice, progress.head_choice_id)
+        progress = crud.move_head_to_choice(
+            session=session,
+            progress=progress,
+            target_choice_id=current_choice.parent_choice_id  # Move to parent
+        )
+        session.add(progress)
+        session.commit()
+    """
+    # Move head pointer
+    progress.head_choice_id = target_choice_id
+    progress.head_version += 1
+
+    # Replay state from new head position
+    # Uses Phase 2 replay_state_from_head (NOT the optimized version from Phase 5)
+    progress.story_state = replay_state_from_head(
+        session=session,
+        progress_id=progress.id,
+        head_choice_id=target_choice_id,
+    )
+
+    # Derive current node from new head position
+    progress.current_node_id = get_current_node_from_head(
+        session=session,
+        head_choice_id=target_choice_id,
+        story_id=progress.story_id,
+        story_version=progress.story_version,
+    )
+
+    # Reset completion flag (might not be at end node anymore)
+    progress.is_completed = False
+
+    return progress

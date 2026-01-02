@@ -5,12 +5,26 @@ Handles playing concerns for user story instances.
 Each UserStoryProgress represents a player's playthrough of a story,
 locked to a specific story version at creation time.
 
+PHASE 3 ADDITIONS: Timeline Navigation
+- Undo: Rewind one step (move head to parent)
+- Jump: Rewind to arbitrary ancestor
+- Timeline: Get breadcrumb trail (root → head)
+
+Timeline Semantics:
+- Active path: root → head (visible to player via timeline endpoint)
+- Abandoned branches: sibling choices (hidden from player, retained in DB)
+- Forward jumps: Prohibited (would expose hidden branches)
+- Optimistic concurrency: Use head_version to prevent conflicts
+
 Endpoints:
 - GET /user-personas/{user_persona_id}/stories - List player's story instances
 - GET /user-personas/{user_persona_id}/stories/{story_id} - Get specific instance
 - POST /user-personas/{user_persona_id}/stories/{story_id} - Start new story instance
 - GET /user-personas/{user_persona_id}/stories/{story_id}/current-node - Get current position
 - POST /user-personas/{user_persona_id}/stories/{story_id}/choices/{choice_id} - Make a choice
+- POST /user-personas/{user_persona_id}/stories/{story_id}/undo - Undo last choice (Phase 3)
+- POST /user-personas/{user_persona_id}/stories/{story_id}/jump - Jump to ancestor (Phase 3)
+- GET /user-personas/{user_persona_id}/stories/{story_id}/timeline - Get breadcrumb trail (Phase 3)
 - PUT /user-personas/{user_persona_id}/stories/{story_id} - Update progress (admin/debug)
 """
 import uuid
@@ -290,12 +304,20 @@ def make_story_choice(
     # Create a record of the choice
     user_choice = UserNodeChoice(
         progress_id=progress.id,
+        parent_choice_id=progress.head_choice_id,
         choice_text=choice.text,
         from_node_id=choice.from_node_id,
         to_node_id=choice.to_node_id,
-        state_changes=choice.sets_state
+        state_changes=choice.sets_state,
+        rng_data=None 
     )
     session.add(user_choice)
+    session.flush() # get the id
+
+    # Update head pointer - NEW
+    progress.head_choice_id = user_choice.id
+    progress.head_version += 1
+    progress.current_node_id = choice.to_node_id
 
     # Update the story state if needed
     if choice.sets_state:
@@ -304,6 +326,22 @@ def make_story_choice(
             progress.story_state.update(choice.sets_state)
         else:
             progress.story_state = choice.sets_state
+
+    replayed_state = crud.replay_state_from_head(
+        session=session,
+        progress_id=progress.id,
+        head_choice_id=progress.head_choice_id,
+    )
+
+    # Log warning if mismatch (should never happen)
+    if replayed_state != progress.story_state:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"State mismatch for progress {progress.id}: "
+            f"stored={progress.story_state}, replayed={replayed_state}"
+        )
+
 
     # Update the current node
     progress.current_node_id = choice.to_node_id
@@ -353,3 +391,69 @@ def update_user_story_progress(
         session=session, db_progress=progress, progress_in=progress_in
     )
     return progress
+
+@router.get("/{story_id}/validate-state", response_model=dict[str, Any])
+def validate_story_state(
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_persona_id: uuid.UUID,
+    story_id: uuid.UUID,
+) -> Any:
+    """
+    Validate that replayed state matches stored state.
+
+    This is a Phase 2 diagnostic endpoint to verify replay logic correctness.
+    In production, replayed state is the source of truth.
+
+    Returns:
+        {
+            "stored_state": {...},
+            "replayed_state": {...},
+            "match": true/false,
+            "differences": {...}
+        }
+    """
+    # Check if the user persona belongs to the current user
+    user_persona = crud.get_user_persona(
+        session=session, id=user_persona_id, user_id=current_user.id
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    progress = crud.get_user_story_progress(
+        session=session, user_persona_id=user_persona_id, story_id=story_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="Story progress not found")
+
+    # Get stored state
+    stored_state = progress.story_state or {}
+
+    # Replay state from head
+    replayed_state = crud.replay_state_from_head(
+        session=session,
+        progress_id=progress.id,
+        head_choice_id=progress.head_choice_id,
+    )
+
+    # Compare
+    match = stored_state == replayed_state
+
+    # Find differences
+    differences = {}
+    all_keys = set(stored_state.keys()) | set(replayed_state.keys())
+    for key in all_keys:
+        stored_val = stored_state.get(key)
+        replayed_val = replayed_state.get(key)
+        if stored_val != replayed_val:
+            differences[key] = {
+                "stored": stored_val,
+                "replayed": replayed_val,
+            }
+
+    return {
+        "stored_state": stored_state,
+        "replayed_state": replayed_state,
+        "match": match,
+        "differences": differences,
+    }

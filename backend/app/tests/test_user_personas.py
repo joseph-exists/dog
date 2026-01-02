@@ -1,10 +1,10 @@
 import pytest
 from sqlmodel import Session, select
+from fastapi.testclient import TestClient
 
 from app.models import User, Persona, UserPersona
 
-
-def test_create_user_persona(session: Session, test_user: User, test_persona: Persona):
+def test_create_user_persona(client: TestClient, session: Session, test_user: User, test_persona: Persona):
     # Create a UserPersona
     user_persona = UserPersona(
         user_id=test_user.id,
