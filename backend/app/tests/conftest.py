@@ -21,12 +21,19 @@ from app.core.db import engine, init_db
 from app.main import app
 from app.models import (
     Item,
+    NodeChoice,
+    Persona,
     Room,
     RoomMessage,
     RoomParticipant,
     Story,
+    StoryNode,
     User,
     UserCreate,
+    UserPersona,
+    UserStoryProgress,
+    ProgressSnapshot,
+    ProgressSnapshotsPublic,
 )
 from app.tests.utils.user import authentication_token_from_email
 from app.tests.utils.utils import get_superuser_token_headers
@@ -50,7 +57,6 @@ def db() -> Generator[Session, None, None]:
         logger.info("Cleaning up test database")
         statement = delete(Item)
         session.execute(statement)
-        statement = delete(User)
         session.execute(statement)
         session.commit()
 
@@ -66,13 +72,13 @@ def client() -> Generator[TestClient, None, None]:
 def superuser_token_headers(client: TestClient, db: Session) -> dict[str, str]:
     logger.info("Setting up superuser token headers")
     # Ensure superuser exists
-    user = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).first()
+    user = db.exec(select(User).where(User.email == settings.FIRST_SUPERTESTUSER)).first()
 
     if not user:
-        logger.info(f"Creating superuser with email: {settings.FIRST_SUPERUSER}")
+        logger.info(f"Creating superuser with email: {settings.FIRST_SUPERTESTUSER}")
         user_in = UserCreate(
-            email=settings.FIRST_SUPERUSER,
-            password=settings.FIRST_SUPERUSER_PASSWORD,
+            email=settings.FIRST_SUPERTESTUSER,
+            password=settings.FIRST_SUPERTESTUSER_PASSWORD,
             is_superuser=True,
         )
         from app import crud
@@ -106,7 +112,7 @@ def sync_test_room(db: Session) -> Room:
 
     # Get superuser
     superuser = db.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
+        select(User).where(User.email == settings.FIRST_SUPERTESTUSER)
     ).first()
 
     room = Room(
@@ -140,7 +146,7 @@ def sync_test_room_with_agent(db: Session) -> Room:
 
     # Get superuser
     superuser = db.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
+        select(User).where(User.email == settings.FIRST_SUPERTESTUSER)
     ).first()
 
     room = Room(
@@ -387,3 +393,194 @@ async def test_room_with_multiple_agents(
     await async_session.commit()
     await async_session.refresh(test_room)
     return test_room
+
+
+# =============================================================================
+# Story Progress Fixtures for Phase 1/2/3 Tests
+# =============================================================================
+
+
+@pytest.fixture(scope="function")
+def db_story_with_progress(db: Session) -> tuple[Story, UserStoryProgress]:
+    """
+    Create a complete test story with progress for testing timeline features.
+
+    Returns tuple of (Story, UserStoryProgress) with:
+    - A test user
+    - A test persona
+    - A user persona instance
+    - A story with multiple nodes and choices
+    - A user story progress instance at the start
+    """
+    # Get or create test user (reuse superuser for simplicity)
+    user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
+    if not user:
+        from app import crud
+        user_in = UserCreate(
+            email=settings.EMAIL_TEST_USER,
+            password="password",
+            is_superuser=False,
+        )
+        user = crud.create_user(session=db, user_create=user_in)
+        db.commit()
+        db.refresh(user)
+
+    # Create a test Persona
+    persona = Persona(
+        id=uuid4(),
+        name="Test Persona",
+        description="A test persona for story testing",
+    )
+    db.add(persona)
+    db.commit()
+    db.refresh(persona)
+
+    # Create UserPersona linking user to persona
+    user_persona = UserPersona(
+        id=uuid4(),
+        user_id=user.id,
+        persona_id=persona.id,
+        nickname="Test Character",
+        is_active=True,
+    )
+    db.add(user_persona)
+    db.commit()
+    db.refresh(user_persona)
+
+    # Create a Story
+    story = Story(
+        id=uuid4(),
+        title="Test Story for Timeline",
+        description="A test story with nodes and choices",
+        owner_id=user.id,
+        is_published=True,
+        current_version=1,
+    )
+    db.add(story)
+    db.commit()
+    db.refresh(story)
+
+    # Create story nodes
+    start_node = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Start Node",
+        content="You begin your adventure...",
+        node_type="text",
+        is_start_node=True,
+        is_end_node=False,
+    )
+    db.add(start_node)
+
+    node2 = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Second Node",
+        content="You continue your journey...",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=False,
+    )
+    db.add(node2)
+
+    node3 = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Third Node",
+        content="You reach a crossroads...",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=False,
+    )
+    db.add(node3)
+
+    node4 = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Fourth Node",
+        content="You approach the finale...",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=False,
+    )
+    db.add(node4)
+
+    node5 = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Fifth Node",
+        content="The adventure concludes...",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=True,
+    )
+    db.add(node5)
+
+    db.commit()
+    db.refresh(start_node)
+    db.refresh(node2)
+    db.refresh(node3)
+    db.refresh(node4)
+    db.refresh(node5)
+
+    # Create choices between nodes (4 choices for timeline tests)
+    choice1 = NodeChoice(
+        id=uuid4(),
+        from_node_id=start_node.id,
+        to_node_id=node2.id,
+        text="Go forward",
+        order=0,
+    )
+    db.add(choice1)
+
+    choice2 = NodeChoice(
+        id=uuid4(),
+        from_node_id=node2.id,
+        to_node_id=node3.id,
+        text="Continue journey",
+        order=0,
+    )
+    db.add(choice2)
+
+    choice3 = NodeChoice(
+        id=uuid4(),
+        from_node_id=node3.id,
+        to_node_id=node4.id,
+        text="Press onward",
+        order=0,
+    )
+    db.add(choice3)
+
+    choice4 = NodeChoice(
+        id=uuid4(),
+        from_node_id=node4.id,
+        to_node_id=node5.id,
+        text="Finish the story",
+        order=0,
+    )
+    db.add(choice4)
+
+    db.commit()
+
+    # Create UserStoryProgress at the start
+    progress = UserStoryProgress(
+        id=uuid4(),
+        user_persona_id=user_persona.id,
+        story_id=story.id,
+        story_version=1,
+        current_node_id=start_node.id,
+        is_completed=False,
+        story_state={},
+        head_choice_id=None,  # At start, no choices made yet
+        head_version=0,  # Version 0 = start
+    )
+    db.add(progress)
+    db.commit()
+    db.refresh(progress)
+
+    return (story, progress)

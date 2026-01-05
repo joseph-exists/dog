@@ -440,7 +440,7 @@ Examples:
         
         # Step 3: Fetch personas
         print_header("Step 3: Finding Personas")
-        print(f"  🔍 Fetching all personas...")
+        print("  🔍 Fetching all personas...")
         all_personas = get_all_personas(session)
         print(f"  📊 Found {len(all_personas)} total personas")
         
@@ -478,7 +478,7 @@ Examples:
         if len(assignments) < len(missing_personas):
             print(f"\n  ⚠️  Warning: Only generated {len(assignments)} assignments")
             print(f"     for {len(missing_personas)} personas")
-            print(f"     (Ran out of attributes in pool)")
+            print("     (Ran out of attributes in pool)")
         
         print(f"  ✅ Generated {len(assignments)} assignments")
         
@@ -490,7 +490,7 @@ Examples:
         
         success_count = 0
         
-        for i, (persona, attrs) in enumerate(zip(missing_personas, assignments), 1):
+        for i, (persona, attrs) in enumerate(zip(missing_personas, assignments, strict=False), 1):
             print(f"\n  [{i}/{len(assignments)}] {persona['name']}")
             print(f"     Assigning: {args.separator.join(attrs)}")
             
@@ -510,16 +510,16 @@ Examples:
                 results.add_assignment(persona['name'], persona['id'], attrs, success)
                 
                 if success:
-                    print(f"     ✅ Updated")
+                    print("     ✅ Updated")
                     success_count += 1
                 else:
-                    print(f"     ❌ Failed to update")
+                    print("     ❌ Failed to update")
                     results.add_error(f"Failed to update persona {persona['name']} ({persona['id']})")
         
         # Step 6: Summary
         print_header("Summary")
         print(f"  ⏱️  Duration: {(datetime.now() - results.start_time).total_seconds():.2f} seconds")
-        print(f"\n  📊 Statistics:")
+        print("\n  📊 Statistics:")
         print(f"    • Attributes loaded:     {len(attributes)}")
         print(f"    • Total personas:        {len(all_personas)}")
         print(f"    • Missing field:         {len(missing_personas)}")

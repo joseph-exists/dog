@@ -1,13 +1,13 @@
 from __future__ import annotations
-from uuid import UUID, uuid4
-from typing import Any
 
+import uuid
 from datetime import datetime
-from typing import Sequence
-from fastapi import HTTPException
+from typing import Any
+from uuid import UUID, uuid4
 
-from sqlmodel import Session, and_, func, or_, select, true
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Session, and_, func, or_, select, true
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
@@ -35,6 +35,13 @@ from app.models import (
     QualityState,
     QualityTraitLink,
     QualityTraitLinkCreate,
+    Room,
+    RoomMessage,
+    RoomMessagePublic,
+    RoomMessagesPublic,
+    RoomParticipant,
+    RoomPublic,
+    RoomsPublic,
     StoriesPublic,
     Story,
     StoryCreate,
@@ -51,6 +58,7 @@ from app.models import (
     TraitCreate,
     User,
     UserCreate,
+    UserNodeChoice,
     UserPersona,
     UserPersonaCreate,
     UserPersonaUpdate,
@@ -58,16 +66,12 @@ from app.models import (
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
     UserUpdate,
-    RoomMessage,
-    RoomMessagePublic,
-    RoomMessagesPublic,
-    Room,
-    RoomParticipant,
-    RoomPublic,
-    RoomsPublic,
+    ProgressSnapshot,
+    ProgressSnapshotsPublic,
+    ProgressSnapshotPublic,
 )
-
 from app.services.event_emitter import emit_event
+
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
     db_obj = User.model_validate(
@@ -601,7 +605,7 @@ def get_available_choices(
         if requirements_met:
             available_choices.append(choice)
 
-    return available_choices
+    return list[NodeChoice](available_choices)
 
 
 # Story Requirement CRUD functions
@@ -682,40 +686,6 @@ def check_story_requirements(
     # All requirements are met
     return True
 
-
-def get_available_choices(
-    *, session: Session, node_id: uuid.UUID, story_state: dict | None = None
-) -> list[NodeChoice]:
-    """
-    Get available choices for a node, considering the story state.
-    """
-    # Get all choices for this node
-    statement = select(NodeChoice).where(NodeChoice.from_node_id == node_id)
-    choices = session.exec(statement).all()
-
-    # If there's no story state, return all choices
-    if not story_state:
-        return list(choices)
-
-    # Filter choices based on requirements
-    available_choices = []
-    for choice in choices:
-        # If the choice has no requirements, it's always available
-        if not choice.requires_state:
-            available_choices.append(choice)
-            continue
-
-        # Check if all required states are met
-        requirements_met = True
-        for key, value in choice.requires_state.items():
-            if key not in story_state or story_state[key] != value:
-                requirements_met = False
-                break
-
-        if requirements_met:
-            available_choices.append(choice)
-
-    return list(available_choices)
 
 """
 Room CRUD Operations (Phase 1 - For Review)
@@ -1988,3 +1958,192 @@ def move_head_to_choice(
     progress.is_completed = False
 
     return progress
+
+def replay_state_from_head_optimized(
+    *,
+    session: Session,
+    progress_id: uuid.UUID,
+    head_choice_id: uuid.UUID | None
+) -> dict[str, Any]:
+    """
+    Reconstruct story_state by replaying events, using snapshots for optimization.
+
+    This is the FINAL SOURCE OF TRUTH for state in event-sourced model.
+
+    Algorithm:
+    1. If head is None, return {} (at story start)
+    2. Get ancestor chain (root → head)
+    3. Find nearest snapshot in ancestor chain
+    4. If snapshot exists, start from snapshot and replay events after it
+    5. If no snapshot, replay from root
+
+    Args:
+        session: Database session
+        progress_id: UserStoryProgress ID
+        head_choice_id: Current head position (null = story start)
+
+    Returns:
+        Reconstructed state dict
+
+    Performance:
+        - Without snapshots: O(n) where n = chain length
+        - With snapshots: O(k) where k = choices since last snapshot
+        - Target: < 10ms for 100-choice chain with snapshots
+    """
+    if head_choice_id is None:
+        return {}  # At story start
+
+    # Get full ancestor chain
+    ancestor_chain = get_choice_ancestor_chain(
+        session=session,
+        choice_id=head_choice_id
+    )
+
+    if not ancestor_chain:
+        return {}
+
+    # Find nearest snapshot in ancestor chain
+    ancestor_ids = [c.id for c in ancestor_chain]
+
+    snapshot_stmt = (
+        select(ProgressSnapshot)
+        .where(
+            ProgressSnapshot.progress_id == progress_id,
+            ProgressSnapshot.choice_id.in_(ancestor_ids)
+        )
+        .order_by(ProgressSnapshot.created_at.desc())
+        .limit(1)
+    )
+
+    snapshot = session.exec(snapshot_stmt).first()
+
+    if snapshot:
+        # Start from snapshot and replay events after it
+        state = snapshot.story_state.copy()
+
+        # Find snapshot position in ancestor chain
+        snapshot_idx = next(
+            i for i, c in enumerate(ancestor_chain)
+            if c.id == snapshot.choice_id
+        )
+
+        # Replay events AFTER snapshot
+        for choice in ancestor_chain[snapshot_idx + 1:]:
+            if choice.state_changes:
+                state.update(choice.state_changes)
+    else:
+        # No snapshot - replay from root
+        state = {}
+        for choice in ancestor_chain:
+            if choice.state_changes:
+                state.update(choice.state_changes)
+
+    return state
+
+
+def create_snapshot_if_needed(
+    *,
+    session: Session,
+    progress: UserStoryProgress,
+    snapshot_interval: int = 10
+) -> ProgressSnapshot | None:
+    """
+    Create snapshot if we've reached the snapshot interval.
+
+    Call this after making a choice or moving head.
+
+    Args:
+        session: Database session
+        progress: UserStoryProgress record (must have head_choice_id set)
+        snapshot_interval: Create snapshot every N choices (default: 10)
+
+    Returns:
+        Created snapshot, or None if not needed
+
+    Example:
+        # After creating choice
+        progress.head_choice_id = user_choice.id
+        snapshot = crud.create_snapshot_if_needed(
+            session=session,
+            progress=progress,
+            snapshot_interval=10
+        )
+        if snapshot:
+            session.add(snapshot)
+    """
+    if progress.head_choice_id is None:
+        return None  # At story start, no snapshot needed
+
+    # Get chain length
+    chain = get_choice_ancestor_chain(
+        session=session,
+        choice_id=progress.head_choice_id
+    )
+    chain_length = len(chain)
+
+    # Check if we should create snapshot
+    if chain_length % snapshot_interval == 0:
+        # Check if snapshot already exists at this position
+        existing = session.exec(
+            select(ProgressSnapshot).where(
+                ProgressSnapshot.progress_id == progress.id,
+                ProgressSnapshot.choice_id == progress.head_choice_id
+            )
+        ).first()
+
+        if existing:
+            return None  # Already have snapshot at this position
+
+        # Create snapshot
+        snapshot = ProgressSnapshot(
+            progress_id=progress.id,
+            choice_id=progress.head_choice_id,
+            story_state=progress.story_state.copy() if progress.story_state else {},
+            current_node_id=progress.current_node_id
+        )
+
+        return snapshot
+
+    return None
+
+
+def get_nearest_snapshot(
+    *,
+    session: Session,
+    progress_id: uuid.UUID,
+    head_choice_id: uuid.UUID
+) -> ProgressSnapshot | None:
+    """
+    Get nearest snapshot at or before head position.
+
+    Args:
+        session: Database session
+        progress_id: UserStoryProgress ID
+        head_choice_id: Target head position
+
+    Returns:
+        Nearest snapshot, or None if no snapshots exist
+    """
+    # Get ancestor chain to find all possible snapshot positions
+    chain = get_choice_ancestor_chain(
+        session=session,
+        choice_id=head_choice_id
+    )
+
+    if not chain:
+        return None
+
+    ancestor_ids = [c.id for c in chain]
+
+    # Find most recent snapshot in ancestor chain
+    statement = (
+        select(ProgressSnapshot)
+        .where(
+            ProgressSnapshot.progress_id == progress_id,
+            ProgressSnapshot.choice_id.in_(ancestor_ids)
+        )
+        .order_by(ProgressSnapshot.created_at.desc())
+        .limit(1)
+    )
+
+    return session.exec(statement).first()

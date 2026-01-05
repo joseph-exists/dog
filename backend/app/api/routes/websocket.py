@@ -14,11 +14,10 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 
 from app.core.db import async_session_maker
-from app.api.deps import get_db, get_current_user_from_token
+from app.api.deps import get_current_user_from_token
 from app.models import User
 from app.services.websocket_manager import connection_manager
 from app.services.event_replay import replay_events_since
@@ -156,6 +155,197 @@ async def websocket_room_session(
             logger.info(f"[WS] Cleaning up connection for room {room_id}")
             await connection_manager.disconnect(websocket)
 
+@router.websocket("/ws/stories/{story_id}")
+async def websocket_story_session(
+    websocket: WebSocket,
+    story_id: UUID,
+) -> None:
+    """
+    WebSocket endpoint for real-time CYOA story updates.
+
+    Protocol Flow:
+    1. Client connects with JWT in query param
+    2. Server validates auth and story access
+    3. Client sends handshake with last_head_version (optional)
+    4. Server sends current timeline if version mismatch
+    5. Server subscribes to Redis for live events
+    6. Bidirectional messaging begins (future: allow choices via WS)
+
+    URL: ws://host/api/v1/ws/stories/{story_id}?token={jwt}
+
+    Server -> Client messages:
+    - session.created: Handshake complete
+    - event: Story event (ChoiceMade, HeadMoved)
+    - timeline.sync: Full timeline sync (on version mismatch)
+    - error: Error notification
+    """
+    logger.info(f"[WS_STORY] Connection attempt for story {story_id}")
+
+    # Extract token from query params
+    token = websocket.query_params.get("token")
+    if not token:
+        logger.warning(f"[WS_STORY] No token provided for story {story_id}")
+        await websocket.close(code=1008)  # Policy violation
+        return
+
+    # Authenticate user
+    try:
+        user = await get_current_user_from_token(token)
+        logger.info(f"[WS_STORY] Authenticated user {user.id} for story {story_id}")
+    except Exception as e:
+        logger.warning(f"[WS_STORY] Auth failed for story {story_id}: {e}")
+        await websocket.close(code=1008)
+        return
+
+    # Get database session
+    async with async_session_maker() as session:
+        # Verify user has access to this story
+        # (Check via UserStoryProgress or Story.creator_id)
+        from app import crud
+        from sqlmodel import select
+        from app.models import UserStoryProgress, Story
+
+        # Check if user has progress for this story (any persona)
+        has_access = await session.execute(
+            select(UserStoryProgress)
+            .join(Story)
+            .where(
+                UserStoryProgress.story_id == story_id,
+                Story.creator_id == user.id,  # User owns story OR has progress
+            )
+        )
+        if not has_access.first():
+            logger.warning(f"[WS_STORY] User {user.id} has no access to story {story_id}")
+            await websocket.close(code=1008)
+            return
+
+        logger.info(f"[WS_STORY] User {user.id} verified for story {story_id}")
+
+        # Connect WebSocket using existing ConnectionManager
+        # TRICK: ConnectionManager expects room_id, but it's just a UUID
+        # We'll use story_id and manually subscribe to story:{story_id}
+        await websocket.accept()
+
+        # We need to subscribe to story:{story_id} channel instead of room:{story_id}
+        # Two options:
+        # Option A: Modify ConnectionManager to support custom channel prefix
+        # Option B: Manually manage this connection (simpler for now)
+
+        # Let's do Option B for simplicity:
+        from app.core.redis import get_redis
+        import json
+
+        redis = await get_redis()
+        pubsub = redis.pubsub()
+        channel = f"story:{story_id}"
+
+        try:
+            await pubsub.subscribe(channel)
+            logger.info(f"[WS_STORY] Subscribed to {channel}")
+
+            # Wait for handshake from client
+            handshake_data = await websocket.receive_json()
+            last_head_version = handshake_data.get("last_head_version", None)
+            user_persona_id = handshake_data.get("user_persona_id")  # Required
+
+            if not user_persona_id:
+                raise ValueError("user_persona_id required in handshake")
+
+            logger.info(
+                f"[WS_STORY] Handshake for story {story_id}, "
+                f"persona={user_persona_id}, last_version={last_head_version}"
+            )
+
+            # Get current progress
+            from app.models import UserStoryProgress
+            from sqlmodel import select
+
+            progress = await session.execute(
+                select(UserStoryProgress).where(
+                    UserStoryProgress.user_persona_id == UUID(user_persona_id),
+                    UserStoryProgress.story_id == story_id,
+                )
+            )
+            current_progress = progress.scalar_one_or_none()
+
+            # If head_version changed, send timeline sync
+            if current_progress and last_head_version is not None:
+                if current_progress.head_version != last_head_version:
+                    logger.info(
+                        f"[WS_STORY] Head version mismatch: "
+                        f"client={last_head_version}, server={current_progress.head_version}"
+                    )
+
+                    # Get current timeline
+                    from app.crud import get_choice_ancestor_chain
+                    from app.models import StoryNode
+
+                    timeline_events = []
+                    if current_progress.head_choice_id:
+                        chain = await get_choice_ancestor_chain(
+                            session=session,
+                            choice_id=current_progress.head_choice_id
+                        )
+                        for choice in chain:
+                            timeline_events.append({
+                                "choice_id": str(choice.id),
+                                "choice_text": choice.choice_text,
+                                "from_node_id": str(choice.from_node_id),
+                                "to_node_id": str(choice.to_node_id),
+                                "choice_time": choice.choice_time.isoformat(),
+                            })
+
+                    await websocket.send_json({
+                        "type": "timeline.sync",
+                        "head_version": current_progress.head_version,
+                        "timeline": timeline_events,
+                        "current_node_id": str(current_progress.current_node_id),
+                        "story_state": current_progress.story_state,
+                    })
+
+            # Send handshake response
+            await websocket.send_json({
+                "type": "session.created",
+                "story_id": str(story_id),
+                "head_version": current_progress.head_version if current_progress else 0,
+            })
+
+            # Start background task to forward Redis messages
+            async def forward_redis_to_websocket():
+                async for message in pubsub.listen():
+                    if message["type"] == "message":
+                        await websocket.send_text(message["data"])
+
+            import asyncio
+            forward_task = asyncio.create_task(forward_redis_to_websocket())
+
+            # Main message loop (for future: accept choices via WebSocket)
+            try:
+                while True:
+                    data = await websocket.receive_json()
+                    logger.debug(f"[WS_STORY] Received: {data.get('type')}")
+
+                    # Future: Handle choice.make, jump, undo via WebSocket
+                    # For now, just echo back as not implemented
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Story mutations via WebSocket not yet implemented. Use REST API.",
+                    })
+
+            except WebSocketDisconnect:
+                logger.info(f"[WS_STORY] Client disconnected from story {story_id}")
+                forward_task.cancel()
+
+        except Exception as e:
+            logger.error(f"[WS_STORY] Error: {e}", exc_info=True)
+            await websocket.send_json({
+                "type": "error",
+                "message": "Internal server error",
+            })
+        finally:
+            await pubsub.unsubscribe(channel)
+            await pubsub.close()
+            logger.info(f"[WS_STORY] Cleanup complete for story {story_id}")
 
 async def handle_user_message(
     websocket: WebSocket,

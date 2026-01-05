@@ -23,6 +23,7 @@ Architecture Compliance:
 """
 
 from __future__ import annotations
+from app.services.realtime_publisher import publish_event_to_redis, publish_ephemeral_message
 
 import json
 import logging
@@ -178,40 +179,46 @@ async def _publish_to_redis(room_id: uuid.UUID, event: RoomEvent) -> None:
     - Event is still persisted in Postgres (clients will catch up via replay)
     - This ensures graceful degradation
     """
-    logger.info(f"[REDIS_PUB] Starting publish for event {event.event_type} to room {room_id}")
-    try:
-        logger.debug(f"[REDIS_PUB] Getting Redis client...")
-        redis = await get_redis()
-        logger.debug(f"[REDIS_PUB] Got Redis client: {redis}")
+    await publish_event_to_redis(
+        channel=f"room:{room_id}",
+        event_type=event.event_type,
+        sequence=event.room_sequence,
+        payload=event.payload,
+        created_at=event.created_at,
+    )
+    #logger.info(f"[REDIS_PUB] Starting publish for event {event.event_type} to room {room_id}")
+    #try:
+     #   logger.debug(f"[REDIS_PUB] Getting Redis client...")
+     #   redis = await get_redis()
+     #   logger.debug(f"[REDIS_PUB] Got Redis client: {redis}")
 
-        message = {
-            "type": "event",
-            "sequence": event.room_sequence,
-            "event_type": event.event_type,
-            "payload": event.payload,
-            "created_at": event.created_at.isoformat(),
-        }
+     #   message = {
+     #       "type": "event",
+     #       "sequence": event.room_sequence,
+     #       "event_type": event.event_type,
+     #       "payload": event.payload,
+     #       "created_at": event.created_at.#isoformat(),
+      #  }
 
-        channel = f"room:{room_id}"
-        message_json = json.dumps(message)
-        logger.debug(f"[REDIS_PUB] Publishing to channel '{channel}': {message_json[:200]}")
+      #  channel = f"room:{room_id}"
+        # message_json = json.dumps(message)
+        # logger.debug(f"[REDIS_PUB] Publishing to channel '{channel}': {message_json[:200]}")
 
-        result = await redis.publish(channel, message_json)
+       # result = await redis.publish(channel, #message_json)
 
-        logger.info(f"[REDIS_PUB] Published event {event.event_type} to Redis channel {channel}, subscribers: {result}")
+        #logger.info(f"[REDIS_PUB] Published event {event.event_type} to Redis channel {channel}, subscribers: {result}")
 
-        if result == 0:
-            logger.warning(f"[REDIS_PUB] WARNING: No subscribers for channel {channel}! Event will not be delivered in real-time.")
+        ##   logger.warning(f"[REDIS_PUB] WARNING: No subscribers for channel {channel}! Event will not be delivered in real-time.")
 
         # Debug: Check Redis connection
-        logger.debug(f"[REDIS_PUB] Redis ping test...")
-        await redis.ping()
-        logger.debug(f"[REDIS_PUB] Redis ping successful")
+        #logger.debug(f"[REDIS_PUB] Redis ping test...")
+        #await redis.ping()
+        #logger.debug(f"[REDIS_PUB] Redis ping successful")
 
-    except Exception as e:
+    #except Exception as e:
         # Don't fail transaction if Redis publish fails
         # Clients will catch up via replay on reconnect
-        logger.error(f"[REDIS_PUB] Failed to publish event to Redis: {type(e).__name__}: {e}", exc_info=True)
+     #   logger.error(f"[REDIS_PUB] Failed to publish event to Redis: {type(e).__name__}: {e}", exc_info=True)
 
 ## Agent Token Streaming Support
 
@@ -235,24 +242,31 @@ async def publish_agent_token(
         "content": str (single token)
     }
     """
-    try:
-        redis = await get_redis()
+    #try:
+    #    redis = await get_redis()
 
-        message = {
-            "type": "message.delta",
+    #    message = {
+    #        "type": "message.delta",
+    #        "agent_name": agent_name,
+   #         "content": token,
+   #     }
+
+    #    channel = f"room:{room_id}"
+    #    result = await redis.publish(channel, json.#dumps(message))
+    #    logger.info(f"Published token to Redis #channel {channel}, subscribers: {result}")
+
+    #except Exception as e:
+        # Gracefully ignore - full message will be delivered via event
+    #    logger.warning(f"Failed to publish token #to Redis: {type(e).__name__}: {e}")
+
+    await publish_ephemeral_message(
+        channel=f"room:{room_id}",
+        message_type="message.delta",
+        payload={
             "agent_name": agent_name,
             "content": token,
-        }
-
-        channel = f"room:{room_id}"
-        result = await redis.publish(channel, json.dumps(message))
-        logger.info(f"Published token to Redis channel {channel}, subscribers: {result}")
-
-    except Exception as e:
-        # Gracefully ignore - full message will be delivered via event
-        logger.warning(f"Failed to publish token to Redis: {type(e).__name__}: {e}")
-
-
+        },
+    )
 # ============================================================================
 # Sequence Generation
 # ============================================================================

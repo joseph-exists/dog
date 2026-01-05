@@ -8,7 +8,8 @@ Other Users can also select and use that Persona, and they will have their own V
 User & Persona References
 - Users have Personas available to Use
 - Users select a Persona from a list of available (to them) Personas
-- Users have Personas they are currently using
+- this creates a user-persona
+- Users have Personas they are currentl3y using (user-personas) 
 - these instances of the Persona have their own data being tracked
 - specific Persona instances will have data updates (query and mutation)
 

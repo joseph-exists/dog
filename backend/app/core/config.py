@@ -98,8 +98,11 @@ class Settings(BaseSettings):
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
 
     EMAIL_TEST_USER: EmailStr = "test@example.com"
+    EMAIL_TEST_USER_PASSWORD: str = "pooppants"
     FIRST_SUPERUSER: EmailStr = ""
-    FIRST_SUPERUSER_PASSWORD: str = ""
+    FIRST_SUPERTESTUSER_PASSWORD: str = ""
+    FIRST_SUPERTESTUSER: EmailStr = ""
+    FIRST_SUPERTESTUSER_PASSWORD: str = ""
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
@@ -117,7 +120,7 @@ class Settings(BaseSettings):
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
         self._check_default_secret(
-            "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
+            "FIRST_SUPERTESTUSER_PASSWORD", self.FIRST_SUPERTESTUSER_PASSWORD
         )
 
         return self

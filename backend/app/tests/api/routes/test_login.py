@@ -14,8 +14,8 @@ from app.utils import generate_password_reset_token
 
 def test_get_access_token(client: TestClient) -> None:
     login_data = {
-        "username": settings.FIRST_SUPERUSER,
-        "password": settings.FIRST_SUPERUSER_PASSWORD,
+        "username": settings.FIRST_SUPERTESTUSER,
+        "password": settings.FIRST_SUPERTESTUSER_PASSWORD,
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
     tokens = r.json()
@@ -26,7 +26,7 @@ def test_get_access_token(client: TestClient) -> None:
 
 def test_get_access_token_incorrect_password(client: TestClient) -> None:
     login_data = {
-        "username": settings.FIRST_SUPERUSER,
+        "username": settings.FIRST_SUPERTESTUSER,
         "password": "incorrect",
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)

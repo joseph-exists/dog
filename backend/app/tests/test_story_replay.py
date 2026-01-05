@@ -4,12 +4,14 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core.config import settings
+
 from app import crud
-from app.models import UserNodeChoice, UserStoryProgress
+from app.models import UserNodeChoice, UserStoryProgress, ProgressSnapshot
 
 
 def test_replay_state_from_single_choice(
-    session: Session,
+    db: Session,
     db_story_with_progress: tuple,
 ) -> None:
     """
@@ -30,13 +32,13 @@ def test_replay_state_from_single_choice(
         to_node_id=uuid.uuid4(),
         state_changes={"has_torch": True},
     )
-    session.add(choice)
-    session.commit()
-    session.refresh(choice)
+    db.add(choice)
+    db.commit()
+    db.refresh(choice)
 
     # Replay state
     replayed = crud.replay_state_from_head(
-        session=session,
+        session=db,
         progress_id=progress.id,
         head_choice_id=choice.id,
     )
@@ -45,7 +47,7 @@ def test_replay_state_from_single_choice(
 
 
 def test_replay_state_from_chain(
-    session: Session,
+    db: Session,
     db_story_with_progress: tuple,
 ) -> None:
     """
@@ -66,8 +68,8 @@ def test_replay_state_from_chain(
         to_node_id=uuid.uuid4(),
         state_changes={"has_torch": True, "location": "forest"},
     )
-    session.add(choice1)
-    session.flush()
+    db.add(choice1)
+    db.flush()
 
     choice2 = UserNodeChoice(
         progress_id=progress.id,
@@ -77,8 +79,8 @@ def test_replay_state_from_chain(
         to_node_id=uuid.uuid4(),
         state_changes={"location": "cave", "visited_cave": True},
     )
-    session.add(choice2)
-    session.flush()
+    db.add(choice2)
+    db.flush()
 
     choice3 = UserNodeChoice(
         progress_id=progress.id,
@@ -88,12 +90,12 @@ def test_replay_state_from_chain(
         to_node_id=uuid.uuid4(),
         state_changes={"has_treasure": True, "gold": 100},
     )
-    session.add(choice3)
-    session.commit()
+    db.add(choice3)
+    db.commit()
 
     # Replay state from choice3
     replayed = crud.replay_state_from_head(
-        session=session,
+        session=db,
         progress_id=progress.id,
         head_choice_id=choice3.id,
     )
@@ -110,7 +112,7 @@ def test_replay_state_from_chain(
 
 
 def test_replay_state_at_story_start(
-    session: Session,
+    db: Session,
     db_story_with_progress: tuple,
 ) -> None:
     """
@@ -123,7 +125,7 @@ def test_replay_state_at_story_start(
     story, progress = db_story_with_progress
 
     replayed = crud.replay_state_from_head(
-        session=session,
+        session=db,
         progress_id=progress.id,
         head_choice_id=None,
     )
@@ -132,7 +134,7 @@ def test_replay_state_at_story_start(
 
 
 def test_ancestor_chain_order(
-    session: Session,
+    db: Session,
     db_story_with_progress: tuple,
 ) -> None:
     """
@@ -153,8 +155,8 @@ def test_ancestor_chain_order(
         to_node_id=uuid.uuid4(),
         state_changes=None,
     )
-    session.add(choice_a)
-    session.flush()
+    db.add(choice_a)
+    db.flush()
 
     choice_b = UserNodeChoice(
         progress_id=progress.id,
@@ -164,8 +166,8 @@ def test_ancestor_chain_order(
         to_node_id=uuid.uuid4(),
         state_changes=None,
     )
-    session.add(choice_b)
-    session.flush()
+    db.add(choice_b)
+    db.flush()
 
     choice_c = UserNodeChoice(
         progress_id=progress.id,
@@ -175,11 +177,11 @@ def test_ancestor_chain_order(
         to_node_id=uuid.uuid4(),
         state_changes=None,
     )
-    session.add(choice_c)
-    session.commit()
+    db.add(choice_c)
+    db.commit()
 
     # Get ancestor chain
-    chain = crud.get_choice_ancestor_chain(session=session, choice_id=choice_c.id)
+    chain = crud.get_choice_ancestor_chain(session=db, choice_id=choice_c.id)
 
     assert len(chain) == 3
     assert chain[0].id == choice_a.id
@@ -189,7 +191,7 @@ def test_ancestor_chain_order(
 
 def test_validate_state_endpoint(
     client: TestClient,
-    session: Session,
+    db: Session,
     normal_user_token_headers: dict[str, str],
     db_story_with_progress: tuple,
 ) -> None:
@@ -229,7 +231,7 @@ def test_validate_state_endpoint(
 
 
 def test_replay_validates_progress_ownership(
-    session: Session,
+    db: Session,
     db_story_with_progress: tuple,
 ) -> None:
     """
@@ -247,8 +249,8 @@ def test_replay_validates_progress_ownership(
         story_id=story.id,
         story_version=1,
     )
-    session.add(progress2)
-    session.flush()
+    db.add(progress2)
+    db.flush()
 
     # Create choice for progress1
     choice = UserNodeChoice(
@@ -259,15 +261,15 @@ def test_replay_validates_progress_ownership(
         to_node_id=uuid.uuid4(),
         state_changes={"test": True},
     )
-    session.add(choice)
-    session.commit()
+    db.add(choice)
+    db.commit()
 
     # Try to replay with wrong progress_id
     import pytest
 
     with pytest.raises(ValueError, match="doesn't belong to progress"):
         crud.replay_state_from_head(
-            session=session,
+            session=db,
             progress_id=progress2.id,
             head_choice_id=choice.id,
         )

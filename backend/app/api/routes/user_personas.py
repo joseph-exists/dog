@@ -2,20 +2,16 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
-    UserPersona,
+    Message,
     UserPersonaCreate,
     UserPersonaPublic,
     UserPersonasPublic,
     UserPersonaUpdate,
-    Message,
 )
-
-# TODO:
 
 router = APIRouter(prefix="/user-personas", tags=["user-personas"])
 

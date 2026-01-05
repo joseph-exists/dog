@@ -6,12 +6,17 @@ from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    Message,
+    NodeChoice,
+    NodeChoiceBase,
+    NodeChoiceCreate,
+    NodeChoicePublic,
+    NodeChoicesPublic,
     StoryNode,
     StoryNodeCreate,
     StoryNodePublic,
     StoryNodesPublic,
     StoryNodeUpdate,
-    Message,
 )
 
 router = APIRouter(prefix="/storynodes", tags=["storynodes"])
@@ -104,3 +109,70 @@ def delete_storynode(
     session.delete(storynode)
     session.commit()
     return Message(message="StoryNode deleted successfully")
+
+@router.get("/{node_id}/choices", response_model=NodeChoicesPublic)
+def read_node_choices(
+    session: SessionDep,
+    current_user: CurrentUser,
+    node_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100
+) -> Any:
+    """
+    Get all choices originating from this node.
+
+    Convenience endpoint for: GET /node-choices?from_node_id={node_id}
+    """
+    # Verify node exists
+    node = session.get(StoryNode, node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    # Get choices
+    count_query = select(func.count()).select_from(NodeChoice).where(
+        NodeChoice.from_node_id == node_id
+    )
+    count = session.exec(count_query).one()
+
+    query = select(NodeChoice).where(
+        NodeChoice.from_node_id == node_id
+    ).order_by(NodeChoice.order).offset(skip).limit(limit)
+
+    choices = session.exec(query).all()
+
+    return NodeChoicesPublic(data=choices, count=count)
+
+@router.post("/{node_id}/choices", response_model=NodeChoicePublic)
+def create_node_choice_from_node(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    node_id: uuid.UUID,
+    choice_in: NodeChoiceBase  # Uses base, not create (no from_node_id)
+) -> Any:
+    """
+    Create choice from this node.
+
+    Convenience endpoint that automatically sets from_node_id.
+    """
+    # Verify node exists
+    from_node = session.get(StoryNode, node_id)
+    if not from_node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    # Create full choice object with from_node_id
+    choice_create = NodeChoiceCreate(
+        from_node_id=node_id,
+        to_node_id=choice_in.to_node_id,
+        text=choice_in.text,
+        order=choice_in.order,
+        requires_state=choice_in.requires_state,
+        sets_state=choice_in.sets_state
+    )
+
+    # Reuse main create logic (call the function from node_choices.py)
+    return create_node_choice(
+        session=session,
+        current_user=current_user,
+        choice_in=choice_create
+    )

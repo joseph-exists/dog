@@ -22,6 +22,74 @@ class Message(SQLModel):
     message: str
 
 
+# ==================== ProgressSnapshot Models (PHASE 5) ====================
+
+class ProgressSnapshotBase(SQLModel):
+    """
+    Base model for progress snapshots.
+
+    Snapshots are performance optimization - cached replayed state
+    at specific head positions to avoid replaying from root.
+    """
+    story_state: dict[str, Any] = Field(sa_column=Column(JSON))
+    current_node_id: uuid.UUID
+
+
+class ProgressSnapshotCreate(ProgressSnapshotBase):
+    """Input model for creating snapshot"""
+    progress_id: uuid.UUID
+    choice_id: uuid.UUID
+
+
+class ProgressSnapshotUpdate(SQLModel):
+    """Update model for ProgressSnapshot (rarely used)"""
+    story_state: dict[str, Any] | None = Field(default=None)
+    current_node_id: uuid.UUID | None = Field(default=None)
+
+
+class ProgressSnapshot(ProgressSnapshotBase, table=True):
+    """
+    Database model for progress state snapshots.
+
+    Created every N choices to optimize replay performance.
+    Replay can start from nearest snapshot instead of root.
+
+    Semantics:
+    - Immutable once created (no updates after creation)
+    - Each snapshot linked to specific choice_id (head position)
+    - Replaying from snapshot: start with snapshot.story_state,
+      then apply events from (snapshot.choice_id → target]
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    progress_id: uuid.UUID = Field(
+        foreign_key="userstoryprogress.id",
+        nullable=False,
+        ondelete="CASCADE"
+    )
+    choice_id: uuid.UUID = Field(
+        foreign_key="usernodechoice.id",
+        nullable=False,
+        description="Head position of this snapshot"
+    )
+
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+
+class ProgressSnapshotPublic(ProgressSnapshotBase):
+    """Public API response model for ProgressSnapshot"""
+    id: uuid.UUID
+    progress_id: uuid.UUID
+    choice_id: uuid.UUID
+    created_at: datetime
+
+
+class ProgressSnapshotsPublic(SQLModel):
+    """Collection response for ProgressSnapshots"""
+    data: list[ProgressSnapshotPublic]
+    count: int
+
+
 # for the JWT Tokn
 class TokenPayload(SQLModel):
     sub: str | None = None
@@ -126,6 +194,7 @@ class StoryBase(SQLModel):
     """Base model for Story template properties"""
     title: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
+    is_published: bool = Field(default=False)
 
 class ItemBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
@@ -761,7 +830,8 @@ class UserNodeChoicePublic(UserNodeChoiceBase):
     progress_id: uuid.UUID
     parent_choice_id: uuid.UUID | None  # NEW in Phase 1
     choice_time: datetime
-    rng_data: dict[str, Any] | None 
+    rng_data: dict[str, Any] | None
+    state_changes: dict[str, Any] | None
 
 
 class UserNodeChoicesPublic(SQLModel):
@@ -1080,36 +1150,10 @@ class NodeChoiceBase(SQLModel):
     requires_state: dict[str, Any] | None = Field(default=None)  # Conditions to show this choice
     sets_state: dict[str, Any] | None = Field(default=None)  # State changes when chosen
 
-class StoryBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=1000)
-    is_published: bool = Field(default=False)
-
-
-class StoryNodeBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    content: str = Field(default="")
-    node_type: str = Field(
-        default="text", max_length=50
-    )  # text, image, choice, paradox, graph, calendly, etc.
-    is_start_node: bool = Field(default=False)
-    is_end_node: bool = Field(default=False)
-    # metadata: dict | None = Field(default=None)  # JSON field for storing type-specific data
-    #
-
 
 class StoryUserLinkBase(SQLModel):
     story_id: uuid.UUID = Field(foreign_key="story.id")
     user_id: uuid.UUID = Field(foreign_key="user.id")
-
-
-class StoryRequirementBase(SQLModel):
-    """Base model for Story requirements"""
-
-    requirement_type: str = Field(max_length=50)  # Could be "quality", "trait", etc.
-    target_id: uuid.UUID  # The ID of the quality, trait, etc.
-    description: str | None = Field(default=None, max_length=255)
-
 
 
 
@@ -1148,24 +1192,6 @@ class NodeChoicePublic(NodeChoiceBase):
     id: uuid.UUID
     from_node_id: uuid.UUID
     to_node_id: uuid.UUID
-
-
-class StoryPublic(StoryBase):
-    """Public model for Story API responses."""
-
-    id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-    owner_id: uuid.UUID
-
-
-class StoryNodePublic(StoryNodeBase):
-    """Public Model for Story Node API responses"""
-
-    id: uuid.UUID
-    story_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
 
 
 class TagBase(SQLModel):
@@ -1366,14 +1392,6 @@ StoryNode.current_for_progresses = Relationship(back_populates="current_node")
 UserStoryProgress.current_node = Relationship(back_populates="current_for_progresses")
 
 
-
-
-class UserNodeChoicePublic(UserNodeChoiceBase):
-    """Public model for UserNodeChoice API responses"""
-
-    id: uuid.UUID
-    progress_id: uuid.UUID
-    state_changes: dict | None
 
 
 # UserStoryProgress to UserNodeChoice relationship
@@ -2094,6 +2112,36 @@ UserNodeChoice.children = Relationship(
 UserStoryProgress.head_choice = Relationship(
     sa_relationship_kwargs={
         "foreign_keys": "[UserStoryProgress.head_choice_id]"
+    }
+)
+
+# ProgressSnapshot → UserStoryProgress (many-to-one)
+ProgressSnapshot.progress = Relationship(
+    back_populates="snapshots",
+    sa_relationship_kwargs={"lazy": "joined"}
+)
+
+# ProgressSnapshot → UserNodeChoice (many-to-one)
+ProgressSnapshot.choice = Relationship(
+    back_populates="snapshots",
+    sa_relationship_kwargs={"lazy": "joined"}
+)
+
+# UserStoryProgress → ProgressSnapshot (one-to-many, reverse)
+UserStoryProgress.snapshots = Relationship(
+    back_populates="progress",
+    sa_relationship_kwargs={
+        "cascade": "all, delete-orphan",
+        "lazy": "select"
+    }
+)
+
+# UserNodeChoice → ProgressSnapshot (one-to-many, reverse)
+UserNodeChoice.snapshots = Relationship(
+    back_populates="choice",
+    sa_relationship_kwargs={
+        "cascade": "all, delete-orphan",
+        "lazy": "select"
     }
 )
 

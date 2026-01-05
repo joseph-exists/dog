@@ -17,6 +17,21 @@ Endpoints:
 
 Note: These endpoints work with current_version for editing.
 For browsing published stories, use /catalog endpoints instead.
+
+Story Requirement Routes - Access Gating CRUD
+
+Handles creating and managing story access requirements.
+Requirements gate which UserPersonas can start a story.
+
+Endpoints:
+- GET /stories/{story_id}/requirements - List story requirements
+- POST /stories/{story_id}/requirements - Create requirement
+- DELETE /stories/{story_id}/requirements/{requirement_id} - Delete requirement
+
+Note: these are story requirements, not node requirements.
+Note: No update endpoint - requirements are create/delete only
+
+
 """
 import uuid
 from typing import Any
@@ -28,13 +43,19 @@ from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Message,
     NodeChoice,
+    Quality,
+    StoriesPublic,
     Story,
     StoryCreate,
-    StoryPublic,
-    StoriesPublic,
-    StoryUpdate,
     StoryNode,
     StoryNodePublic,
+    StoryPublic,
+    StoryRequirement,
+    StoryRequirementBase,
+    StoryRequirementPublic,
+    StoryRequirementsPublic,
+    StoryUpdate,
+    Trait,
 )
 
 router = APIRouter(prefix="/stories", tags=["stories"])
@@ -77,7 +98,7 @@ def read_stories(
 def read_story(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) -> Any:
     """
     Retrieve a story by ID.
-    
+  
     Users can only access their own stories unless they are superusers.
     """
     story = session.get(Story, id)
@@ -330,3 +351,160 @@ def delete_story(
     session.delete(story)
     session.commit()
     return Message(message="Story deleted successfully")
+
+@router.get("/{story_id}/requirements", response_model=StoryRequirementsPublic)
+def read_story_requirements(
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100
+) -> Any:
+    """
+    Retrieve story requirements.
+
+    Requirements gate which UserPersonas can start this story.
+    Public endpoint (anyone can see requirements).
+    """
+    # Verify story exists
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Count total
+    count_query = select(func.count()).select_from(StoryRequirement).where(
+        StoryRequirement.story_id == story_id
+    )
+    count = session.exec(count_query).one()
+
+    # Get requirements
+    query = select(StoryRequirement).where(
+        StoryRequirement.story_id == story_id
+    ).offset(skip).limit(limit)
+
+    requirements = session.exec(query).all()
+
+    return StoryRequirementsPublic(data=requirements, count=count)
+
+@router.post("/{story_id}/requirements", response_model=StoryRequirementPublic)
+def create_story_requirement(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    requirement_in: StoryRequirementBase  # Uses base, not create (no story_id)
+) -> Any:
+    """
+    Create story requirement.
+
+    Validates:
+    - Story exists
+    - User owns story
+    - No duplicate requirements
+    - requirement_type is valid
+    """
+    # Verify story exists
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Check ownership
+    if not current_user.is_superuser and story.owner_id != current_user.id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Validate requirement_type
+    # TODO this should be an enum on the model not here
+    valid_types = ["quality", "trait", "archetype", "level"]
+    if requirement_in.requirement_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid requirement_type. Must be one of: {valid_types}"
+        )
+
+    # Check for duplicate
+    existing = session.exec(
+        select(StoryRequirement).where(
+            StoryRequirement.story_id == story_id,
+            StoryRequirement.requirement_type == requirement_in.requirement_type,
+            StoryRequirement.target_id == requirement_in.target_id
+        )
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Requirement already exists for this story"
+        )
+
+    # Soft validation: warn if target doesn't exist (don't fail)
+    if requirement_in.requirement_type == "quality":
+        target = session.get(Quality, requirement_in.target_id)
+        if not target:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Creating requirement for non-existent quality: {requirement_in.target_id}"
+            )
+    elif requirement_in.requirement_type == "trait":
+        target = session.get(Trait, requirement_in.target_id)
+        if not target:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Creating requirement for non-existent trait: {requirement_in.target_id}"
+            )
+
+    # Create requirement
+    requirement = StoryRequirement(
+        story_id=story_id,
+        requirement_type=requirement_in.requirement_type,
+        target_id=requirement_in.target_id,
+        description=requirement_in.description
+    )
+
+    session.add(requirement)
+    session.commit()
+    session.refresh(requirement)
+
+    return requirement
+
+@router.delete("/{story_id}/requirements/{requirement_id}")
+def delete_story_requirement(
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    requirement_id: uuid.UUID
+) -> Message:
+    """
+    Delete story requirement.
+
+    Validates:
+    - Requirement exists
+    - Requirement belongs to this story
+    - User owns story
+    """
+    # Get requirement
+    requirement = session.get(StoryRequirement, requirement_id)
+    if not requirement:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+
+    # Verify belongs to story
+    if requirement.story_id != story_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Requirement does not belong to this story"
+        )
+
+    # Get story for ownership check
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Check ownership
+    if not current_user.is_superuser and story.owner_id != current_user.id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    session.delete(requirement)
+    session.commit()
+
+    return Message(message="Requirement deleted successfully")

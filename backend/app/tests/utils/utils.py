@@ -1,6 +1,6 @@
+import logging
 import random
 import string
-import logging
 
 from fastapi.testclient import TestClient
 
@@ -18,17 +18,17 @@ def random_email() -> str:
 
 
 def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
-    if not settings.FIRST_SUPERUSER or not settings.FIRST_SUPERUSER_PASSWORD:
+    if not settings.FIRST_SUPERTESTUSER or not settings.FIRST_SUPERTESTUSER_PASSWORD:
         logger.error("Missing superuser credentials in settings")
         raise ValueError(
-            "FIRST_SUPERUSER and FIRST_SUPERUSER_PASSWORD must be set in .env file"
+            "FIRST_SUPERTESTUSER and FIRST_SUPERTESTUSER_PASSWORD must be set in .env file"
         )
 
-    logger.info(f"Attempting to login with email: {settings.FIRST_SUPERUSER}")
+    logger.info(f"Attempting to login with email: {settings.FIRST_SUPERTESTUSER}")
 
     login_data = {
-        "username": settings.FIRST_SUPERUSER,
-        "password": settings.FIRST_SUPERUSER_PASSWORD,
+        "username": settings.FIRST_SUPERTESTUSER,
+        "password": settings.FIRST_SUPERTESTUSER_PASSWORD,
     }
     logger.debug(f"Login request data: {login_data}")
 

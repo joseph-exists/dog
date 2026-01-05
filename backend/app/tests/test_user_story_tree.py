@@ -4,12 +4,12 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.models import UserNodeChoice, UserStoryProgress
+from app.models import UserNodeChoice, UserStoryProgress, ProgressSnapshot
 
 
 def test_choice_creates_parent_link(
     client: TestClient,
-    session: Session,
+    db: Session,
     normal_user_token_headers: dict[str, str],
     db_story_with_progress: tuple,  # Assumes fixture exists
 ) -> None:
@@ -43,7 +43,7 @@ def test_choice_creates_parent_link(
     assert response.status_code == 200
 
     # Verify first choice has parent_choice_id = None
-    first_user_choice = session.exec(
+    first_user_choice = db.exec(
         select(UserNodeChoice)
         .where(UserNodeChoice.progress_id == progress.id)
         .order_by(UserNodeChoice.choice_time)
@@ -65,7 +65,7 @@ def test_choice_creates_parent_link(
     assert response.status_code == 200
 
     # Verify second choice has parent_choice_id = first choice
-    choices = session.exec(
+    choices = db.exec(
         select(UserNodeChoice)
         .where(UserNodeChoice.progress_id == progress.id)
         .order_by(UserNodeChoice.choice_time)
@@ -76,7 +76,7 @@ def test_choice_creates_parent_link(
 
 def test_head_pointer_updates(
     client: TestClient,
-    session: Session,
+    db: Session,
     normal_user_token_headers: dict[str, str],
     db_story_with_progress: tuple,
 ) -> None:
@@ -91,7 +91,7 @@ def test_head_pointer_updates(
     persona_id = progress.user_persona_id
 
     # Verify initial state
-    session.refresh(progress)
+    db.refresh(progress)
     assert progress.head_choice_id is None
     assert progress.head_version == 0
 
@@ -109,19 +109,19 @@ def test_head_pointer_updates(
     assert response.status_code == 200
 
     # Verify head updated
-    session.refresh(progress)
+    db.refresh(progress)
     assert progress.head_choice_id is not None
     assert progress.head_version == 1
 
     # Verify head points to the choice we made
-    user_choice = session.get(UserNodeChoice, progress.head_choice_id)
+    user_choice = db.get(UserNodeChoice, progress.head_choice_id)
     assert user_choice is not None
     assert user_choice.progress_id == progress.id
 
 
 def test_rng_data_field_exists(
     client: TestClient,
-    session: Session,
+    db: Session,
     normal_user_token_headers: dict[str, str],
     db_story_with_progress: tuple,
 ) -> None:
@@ -148,7 +148,7 @@ def test_rng_data_field_exists(
     assert response.status_code == 200
 
     # Verify rng_data exists
-    user_choice = session.exec(
+    user_choice = db.exec(
         select(UserNodeChoice).where(UserNodeChoice.progress_id == progress.id)
     ).first()
     assert user_choice is not None

@@ -4,15 +4,14 @@ Room System Unit Tests
 
 Focused tests for individual CRUD operations to verify bug fixes
 and core functionality. This script tests:
-- Event type consistency (Bug #1)
-- Model correctness (Bug #2)
-- Variable naming (Bug #4)
+- Event type consistency 
+- Model correctness 
+- Variable naming
 - Transaction integrity
 - Authorization enforcement
 - Message pagination
 - Role changes
 
-Run this AFTER fixing the bugs identified in the Phase 1 review.
 
 Results saved to: test_results_room_unit_tests.json
 """
@@ -246,8 +245,8 @@ def test_add_agent_participant(session: requests.Session, results: UnitTestResul
 
 
 def test_send_user_message(session: requests.Session, results: UnitTestResults, room: dict) -> Optional[dict]:
-    """Test: Send a user message - CRITICAL TEST FOR BUG #1 (event type)"""
-    print_test_header("Test 4: Send User Message (Bug #1 Check)")
+    """Test: Send a user message - CRITICAL TEST FOR event type"""
+    print_test_header("Test 4: Send User Message")
     print("  This test verifies the event type fix: 'message.user' not 'room_message.user'")
     
     try:

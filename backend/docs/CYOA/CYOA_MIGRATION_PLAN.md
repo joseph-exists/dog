@@ -1,6 +1,6 @@
 # CYOA Event Model Migration Plan
 
-**Last Updated:** 2026-01-01
+**Last Updated:** 2026-01-04
 **Status:** 🔄 Design Document
 **Purpose:** Bridge current STORY_SYSTEM to event-sourced branching timeline model
 
@@ -34,124 +34,202 @@ This document outlines the **minimal set of changes** needed to evolve the curre
 
 ---
 
-## [X] COMPLETE Phase 1: Event Tree Foundation
+## []  Phase 1: Event Tree Foundation
 
 ### Goal
 Transform `UserNodeChoice` from append-only log to tree structure without breaking existing APIs.
 
-### Database Schema Changes
+### Solution: Complete Model Definitions
 
-#### 1.1 Add Tree Structure to UserNodeChoice
+#### Phase 1: UserNodeChoice Model Pattern
 
 ```python
+# ==================== UserNodeChoice Models (PLAYING) ====================
+
+class UserNodeChoiceBase(SQLModel):
+    """
+    Base model for recording a player's choice at a node.
+    Historical breadcrumb trail through the story.
+    """
+    choice_text: str = Field(max_length=500)
+    from_node_id: uuid.UUID
+    to_node_id: uuid.UUID
+
+    # Snapshot of state changes applied by this choice
+    state_changes: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+
+
+class UserNodeChoiceCreate(UserNodeChoiceBase):
+    """Input model for recording a choice"""
+    progress_id: uuid.UUID
+    parent_choice_id: uuid.UUID | None = Field(
+        default=None,
+        description="Parent event in timeline tree (null for initial state)"
+    )
+
+    # NEW in Phase 1
+    rng_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Captured RNG outcomes for deterministic replay"
+    )
+
+
+class UserNodeChoiceUpdate(SQLModel):
+    """
+    Update model for UserNodeChoice.
+    Note: In event sourcing, choices are immutable - this exists for consistency
+    but should rarely/never be used.
+    """
+    # All fields optional (though we don't expect updates in event sourcing)
+    choice_text: str | None = Field(default=None, max_length=500)  # type: ignore
+    state_changes: dict[str, Any] | None = Field(default=None)
+    rng_data: dict[str, Any] | None = Field(default=None)
+
+
 class UserNodeChoice(UserNodeChoiceBase, table=True):
     """
-    MODIFIED: Now forms a tree via parent_choice_id.
-    Each choice event has exactly one parent (except root).
+    Database model for player's choice history.
+
+    MODIFIED in Phase 1: Added parent_choice_id for tree structure.
+    Immutable record of decisions made.
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    progress_id: uuid.UUID = Field(foreign_key="userstoryprogress.id", nullable=False, ondelete="CASCADE")
+    progress_id: uuid.UUID = Field(
+        foreign_key="userstoryprogress.id",
+        nullable=False,
+        ondelete="CASCADE"
+    )
 
-    # NEW: Tree structure
+    # NEW: Tree structure (Phase 1)
     parent_choice_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="usernodechoice.id",
         description="Parent event in timeline tree (null for initial state)"
     )
 
-    choice_text: str = Field(max_length=500)
-    from_node_id: uuid.UUID
-    to_node_id: uuid.UUID
-
-    state_changes: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     choice_time: datetime = Field(default_factory=datetime.now)
 
-    # NEW: Deterministic randomness support
+    # NEW: Deterministic randomness support (Phase 1)
     rng_data: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Captured RNG outcomes for deterministic replay (seeds, rolls, outcomes)"
     )
+
+    # Relationships defined after all models (see bottom of models.py)
+
+
+class UserNodeChoicePublic(UserNodeChoiceBase):
+    """Public API response model for UserNodeChoice"""
+    id: uuid.UUID
+    progress_id: uuid.UUID
+    parent_choice_id: uuid.UUID | None  # NEW in Phase 1
+    choice_time: datetime
+    rng_data: dict[str, Any] | None  # NEW in Phase 1
+
+
+class UserNodeChoicesPublic(SQLModel):
+    """Collection response for UserNodeChoices"""
+    data: list[UserNodeChoicePublic]
+    count: int
 ```
 
-**Migration SQL:**
-```sql
--- Add parent_choice_id column
-ALTER TABLE usernodechoice
-ADD COLUMN parent_choice_id UUID REFERENCES usernodechoice(id);
-
--- Add rng_data column
-ALTER TABLE usernodechoice
-ADD COLUMN rng_data JSONB;
-
--- Create index for tree traversal
-CREATE INDEX idx_usernodechoice_parent ON usernodechoice(parent_choice_id);
-CREATE INDEX idx_usernodechoice_progress ON usernodechoice(progress_id);
-```
-
-#### 1.2 Add Head Pointer to UserStoryProgress
+#### Phase 1: UserStoryProgress Model Pattern
 
 ```python
+# ==================== UserStoryProgress Models (PLAYING) ====================
+
+class UserStoryProgressBase(SQLModel):
+    """
+    Base model for tracking a player's progress through a Story.
+    This is the player's instance - locked to a specific story version.
+    """
+    current_node_id: uuid.UUID | None = Field(default=None)
+    is_completed: bool = Field(default=False)
+
+    # State accumulator - grows as player makes choices
+    story_state: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+
+
+class UserStoryProgressCreate(UserStoryProgressBase):
+    """Input model for starting a Story (creating progress instance)"""
+    user_persona_id: uuid.UUID
+    story_id: uuid.UUID
+    story_version: int  # Lock to this version at creation
+
+
+class UserStoryProgressUpdate(SQLModel):
+    """Input model for updating progress (all fields optional)"""
+    current_node_id: uuid.UUID | None = Field(default=None)
+    is_completed: bool | None = Field(default=None)
+    story_state: dict[str, Any] | None = Field(default=None)
+
+    # NEW in Phase 1 (for admin/debug only)
+    head_choice_id: uuid.UUID | None = Field(default=None)
+    head_version: int | None = Field(default=None)
+
+
 class UserStoryProgress(UserStoryProgressBase, table=True):
     """
-    MODIFIED: Add head pointer and versioning for event sourcing.
-    story_state becomes READ-ONLY derived field.
+    Database model for player's Story instance.
+
+    MODIFIED in Phase 1: Added head_choice_id and head_version for event sourcing.
+
+    Key semantics:
+    - Locked to story_version at creation (immutable)
+    - References template StoryNodes via current_node_id
+    - Accumulates state in story_state dict
+    - Tracks history via UserNodeChoice records
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_persona_id: uuid.UUID = Field(foreign_key="userpersona.id", nullable=False, ondelete="CASCADE")
-    story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
-    story_version: int = Field(nullable=False)
-
-    # MODIFIED: Still used for current position, but semantics changed
-    current_node_id: uuid.UUID | None = Field(
-        default=None,
-        description="Current node (derived from head_choice_id path)"
+    user_persona_id: uuid.UUID = Field(
+        foreign_key="userpersona.id",
+        nullable=False,
+        ondelete="CASCADE"
     )
+    story_id: uuid.UUID = Field(
+        foreign_key="story.id",
+        nullable=False,
+        ondelete="CASCADE"
+    )
+    story_version: int = Field(nullable=False)  # Locked at creation
 
-    # NEW: Head pointer (active timeline position)
+    # NEW: Head pointer (active timeline position) - Phase 1
     head_choice_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="usernodechoice.id",
         description="Current active event in timeline tree (null = at story start)"
     )
 
-    # NEW: Optimistic concurrency control
+    # NEW: Optimistic concurrency control - Phase 1
     head_version: int = Field(
         default=0,
         description="Increments on every head move (for optimistic locking)"
     )
 
-    is_completed: bool = Field(default=False)
-
-    # DEPRECATED: Will become derived field in Phase 2
-    story_state: dict[str, Any] | None = Field(
-        default=None,
-        sa_column=Column(JSON),
-        description="DEPRECATED: Use replay_state_from_head() instead"
-    )
-
+    # Timestamps
     started_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
-```
 
-**Migration SQL:**
-```sql
--- Add head pointer columns
-ALTER TABLE userstoryprogress
-ADD COLUMN head_choice_id UUID REFERENCES usernodechoice(id),
-ADD COLUMN head_version INTEGER DEFAULT 0 NOT NULL;
+    # Relationships defined after all models (see bottom of models.py)
 
--- Create index for head lookups
-CREATE INDEX idx_userstoryprogress_head ON userstoryprogress(head_choice_id);
 
--- Initialize existing records
-UPDATE userstoryprogress
-SET head_choice_id = (
-    SELECT id FROM usernodechoice
-    WHERE progress_id = userstoryprogress.id
-    ORDER BY choice_time DESC
-    LIMIT 1
-);
+class UserStoryProgressPublic(UserStoryProgressBase):
+    """Public API response model for UserStoryProgress"""
+    id: uuid.UUID
+    user_persona_id: uuid.UUID
+    story_id: uuid.UUID
+    story_version: int
+    head_choice_id: uuid.UUID | None  # NEW in Phase 1
+    head_version: int  # NEW in Phase 1
+    started_at: datetime
+    updated_at: datetime
+
+
+class UserStoryProgressesPublic(SQLModel):
+    """Collection response for UserStoryProgresses"""
+    data: list[UserStoryProgressPublic]
+    count: int
 ```
 
 ### Backward Compatibility
@@ -167,6 +245,43 @@ SET head_choice_id = (
 - Tree structure exists but undo/rewind not exposed yet
 
 ---
+## Relationship Definition Validation
+
+### Problem: Missing Post-Definition Binding
+
+### Solution: Add Relationships at End of models.py
+
+Per `data-model-best-practices.md`, relationships should be defined AFTER all models are declared.
+
+Add this section to the **bottom of `backend/app/models.py`** in Phase 1:
+
+```python
+# ============================================================================
+# Phase 1: Event Tree Relationships
+# ============================================================================
+
+# UserNodeChoice tree structure relationships
+UserNodeChoice.parent_choice = Relationship(
+    sa_relationship_kwargs={
+        "foreign_keys": "[UserNodeChoice.parent_choice_id]",
+        "remote_side": "[UserNodeChoice.id]"
+    }
+)
+
+UserNodeChoice.children = Relationship(
+    back_populates="parent_choice",
+    sa_relationship_kwargs={
+        "foreign_keys": "[UserNodeChoice.parent_choice_id]"
+    }
+)
+
+# UserStoryProgress to head choice relationship
+UserStoryProgress.head_choice = Relationship(
+    sa_relationship_kwargs={
+        "foreign_keys": "[UserStoryProgress.head_choice_id]"
+    }
+)
+```
 
 ## Phase 2: Replay & Projection Logic
 
@@ -337,6 +452,7 @@ Expose timeline navigation (jump to ancestor, undo).
 ### New API Endpoints
 
 #### 3.1 Undo (Jump to Parent)
+#### 
 
 ```python
 @router.post("/{story_id}/undo", response_model=UserStoryProgressPublic)
@@ -591,187 +707,8 @@ def get_timeline(
 
 ## Phase 4: Real-Time Distribution
 
-### Goal
-Add WebSocket + Redis pub/sub for live timeline updates.
+NOT DOCUMENTED HERE.  SEE CYOA_MIGRATION_ADDENDUM FOR CHANGES.  NO OUTBOX PATTERN AT THIS TIME.
 
-### New Infrastructure
-
-#### 4.1 Redis Pub/Sub Setup
-
-```python
-# backend/app/core/redis.py
-import redis.asyncio as redis
-
-redis_client: redis.Redis | None = None
-
-async def get_redis() -> redis.Redis:
-    global redis_client
-    if redis_client is None:
-        redis_client = await redis.from_url(
-            settings.REDIS_URL,
-            encoding="utf-8",
-            decode_responses=True
-        )
-    return redis_client
-```
-
-#### 4.2 Outbox Pattern (Transactional)
-
-```python
-# backend/app/models.py
-
-class Outbox(SQLModel, table=True):
-    """
-    Transactional outbox for reliable pub/sub.
-    Ensures event publication is atomic with database commit.
-    """
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    topic: str = Field(max_length=255)  # e.g., "game:{game_id}"
-    event_type: str = Field(max_length=100)  # "HeadMoved", "GameStateChanged"
-    payload: dict[str, Any] = Field(sa_column=Column(JSON))
-
-    created_at: datetime = Field(default_factory=datetime.now)
-    published_at: datetime | None = Field(default=None)
-
-    # Retry tracking
-    retry_count: int = Field(default=0)
-    last_error: str | None = Field(default=None)
-```
-
-**Migration SQL:**
-```sql
-CREATE TABLE outbox (
-    id UUID PRIMARY KEY,
-    topic VARCHAR(255) NOT NULL,
-    event_type VARCHAR(100) NOT NULL,
-    payload JSONB NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    published_at TIMESTAMP,
-    retry_count INTEGER DEFAULT 0,
-    last_error TEXT
-);
-
-CREATE INDEX idx_outbox_unpublished ON outbox(published_at) WHERE published_at IS NULL;
-```
-
-#### 4.3 Outbox Publisher (Background Worker)
-
-```python
-# backend/app/workers/outbox_publisher.py
-
-async def publish_outbox_events():
-    """
-    Background worker that polls outbox table and publishes to Redis.
-    Runs continuously with configurable interval.
-    """
-    redis = await get_redis()
-
-    while True:
-        async with SessionDep() as session:
-            # Get unpublished events
-            statement = select(Outbox).where(
-                Outbox.published_at == None
-            ).limit(100)
-
-            events = session.exec(statement).all()
-
-            for event in events:
-                try:
-                    # Publish to Redis
-                    await redis.publish(
-                        event.topic,
-                        json.dumps({
-                            "event_type": event.event_type,
-                            "payload": event.payload,
-                            "published_at": datetime.now().isoformat()
-                        })
-                    )
-
-                    # Mark as published
-                    event.published_at = datetime.now()
-                    session.add(event)
-                    session.commit()
-
-                except Exception as e:
-                    event.retry_count += 1
-                    event.last_error = str(e)
-                    session.add(event)
-                    session.commit()
-
-        await asyncio.sleep(0.1)  # 100ms poll interval
-```
-
-#### 4.4 WebSocket Endpoint
-
-```python
-# backend/app/api/routes/websocket.py
-
-@router.websocket("/stories/{story_id}/stream")
-async def story_stream(
-    websocket: WebSocket,
-    story_id: uuid.UUID,
-    token: str = Query(...),
-):
-    """
-    WebSocket endpoint for real-time story updates.
-
-    Subscribes to Redis topic: story:{story_id}
-
-    Events pushed:
-    - HeadMoved: Timeline navigation occurred
-    - GameStateChanged: New choice made
-    """
-    # Authenticate token
-    user = await authenticate_websocket_token(token)
-
-    await websocket.accept()
-
-    redis = await get_redis()
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(f"story:{story_id}")
-
-    try:
-        async for message in pubsub.listen():
-            if message["type"] == "message":
-                await websocket.send_text(message["data"])
-    except WebSocketDisconnect:
-        await pubsub.unsubscribe(f"story:{story_id}")
-```
-
-### Modified Choice Endpoint (With Outbox)
-
-```python
-@router.post("/{story_id}/choices/{choice_id}", response_model=UserStoryProgressPublic)
-def make_story_choice(...) -> Any:
-    """
-    MODIFIED: Add outbox event in same transaction as choice.
-    """
-    # ... existing choice creation logic ...
-
-    # BEGIN TRANSACTION
-    session.add(user_choice)
-    session.add(progress)
-
-    # NEW: Add outbox event
-    outbox_event = Outbox(
-        topic=f"story:{story_id}",
-        event_type="GameStateChanged",
-        payload={
-            "progress_id": str(progress.id),
-            "choice_id": str(user_choice.id),
-            "head_version": progress.head_version,
-            "new_node_id": str(progress.current_node_id),
-            "new_state": progress.story_state,
-        }
-    )
-    session.add(outbox_event)
-
-    session.commit()
-    # END TRANSACTION
-
-    session.refresh(progress)
-    return progress
-```
 
 ---
 

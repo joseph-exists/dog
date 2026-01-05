@@ -5,7 +5,7 @@ Handles playing concerns for user story instances.
 Each UserStoryProgress represents a player's playthrough of a story,
 locked to a specific story version at creation time.
 
-PHASE 3 ADDITIONS: Timeline Navigation
+Timeline Navigation
 - Undo: Rewind one step (move head to parent)
 - Jump: Rewind to arbitrary ancestor
 - Timeline: Get breadcrumb trail (root → head)
@@ -28,19 +28,26 @@ Endpoints:
 - PUT /user-personas/{user_persona_id}/stories/{story_id} - Update progress (admin/debug)
 """
 import uuid
+from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlmodel import select
-
+from app.services.realtime_publisher import publish_event_to_redis
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    JumpRequest,
+    Timeline,
+    TimelineEvent,
     UserStoryProgress,
     UserStoryProgressCreate,
     UserStoryProgressPublic,
     UserStoryProgressesPublic,
     UserStoryProgressUpdate,
+    ProgressSnapshotsPublic,
+    ProgressSnapshotPublic,
+    ProgressSnapshot,
     Story,
     StoryNode,
     NodeChoice,
@@ -157,7 +164,7 @@ def create_user_story_progress(
     statement = select(StoryNode).where(
         StoryNode.story_id == story_id,
         StoryNode.story_version == story.current_version,
-        StoryNode.is_start_node is True
+        StoryNode.is_start_node == True  # noqa: E712
     )
     start_node = session.exec(statement).first()
 
@@ -171,7 +178,7 @@ def create_user_story_progress(
     progress_in = UserStoryProgressCreate(
         user_persona_id=user_persona_id,
         story_id=story_id,
-        story_version=story.current_version,  # Lock to current version
+        story_version=story.published_version,  # Lock to current published version at time of creating the player story play
         current_node_id=start_node.id
     )
 
@@ -243,6 +250,7 @@ def make_story_choice(
     user_persona_id: uuid.UUID,
     story_id: uuid.UUID,
     choice_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
 ) -> Any:
     """
     Make a choice in the story and progress to the next node.
@@ -314,34 +322,55 @@ def make_story_choice(
     session.add(user_choice)
     session.flush() # get the id
 
-    # Update head pointer - NEW
+    # prior to CYOA phase 5 event implementation
+    # progress.head_choice_id = user_choice.id
+    # progress.head_version += 1
+    # progress.current_node_id = choice.to_node_id
+
+    # # Update the story state if needed
+    # if choice.sets_state:
+    #     if progress.story_state:
+    #         # Merge the existing state with the new state changes
+    #         progress.story_state.update(choice.sets_state)
+    #     else:
+    #         progress.story_state = choice.sets_state
+
+    # replayed_state = crud.replay_state_from_head(
+    #     session=session,
+    #     progress_id=progress.id,
+    #     head_choice_id=progress.head_choice_id,
+    # )
+
+
+    # Phase 5 - derive state from events (single source of truth)
+    # Update head pointer (atomic move)
     progress.head_choice_id = user_choice.id
     progress.head_version += 1
-    progress.current_node_id = choice.to_node_id
 
-    # Update the story state if needed
-    if choice.sets_state:
-        if progress.story_state:
-            # Merge the existing state with the new state changes
-            progress.story_state.update(choice.sets_state)
-        else:
-            progress.story_state = choice.sets_state
-
-    replayed_state = crud.replay_state_from_head(
+    # FINAL: Always derive state from events (single source of truth)
+    progress.story_state = crud.replay_state_from_head_optimized(
         session=session,
         progress_id=progress.id,
-        head_choice_id=progress.head_choice_id,
+        head_choice_id=progress.head_choice_id
     )
 
-    # Log warning if mismatch (should never happen)
-    if replayed_state != progress.story_state:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(
-            f"State mismatch for progress {progress.id}: "
-            f"stored={progress.story_state}, replayed={replayed_state}"
-        )
+    progress.current_node_id = crud.get_current_node_from_head(
+        session=session,
+        head_choice_id=progress.head_choice_id,
+        story_id=progress.story_id,
+        story_version=progress.story_version
+    )
 
+    # Create snapshot if needed (every 10 choices)
+    snapshot = crud.create_snapshot_if_needed(
+        session=session,
+        progress=progress,
+        snapshot_interval=10
+    )
+    if snapshot:
+        session.add(snapshot)
+
+    session.commit()
 
     # Update the current node
     progress.current_node_id = choice.to_node_id
@@ -354,6 +383,25 @@ def make_story_choice(
     session.add(progress)
     session.commit()
     session.refresh(progress)
+
+    # Publish to Redis in background (non-blocking)
+    background_tasks.add_task(
+        publish_event_to_redis,
+        channel=f"story:{progress.story_id}",
+        event_type="choice.made",
+        sequence=None,  # CYOA doesn't use sequences, uses parent pointers
+        payload={
+            "progress_id": str(progress.story_id),
+            "user_persona_id": str(user_persona_id),
+            "choice_id": str(user_choice.id),
+            "choice_text": user_choice.choice_text,
+            "head_version": progress.head_version,
+            "new_node_id": str(progress.current_node_id),
+            "new_state": progress.story_state,
+            "is_completed": progress.is_completed,
+        },
+        created_at=user_choice.choice_time,
+    )
 
     return progress
 
@@ -457,3 +505,470 @@ def validate_story_state(
         "match": match,
         "differences": differences,
     }
+
+@router.post("/{story_id}/undo", response_model=UserStoryProgressPublic)
+def undo_story_choice(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_persona_id: uuid.UUID,
+    story_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+) -> Any:
+    """
+    Move head to parent choice (rewind one step).
+
+    Behavior:
+    - Moves head_choice_id to parent of current head
+    - Increments head_version (optimistic lock)
+    - Replays state from new head
+    - Old future remains in database but becomes hidden
+
+    Errors:
+        400: Already at story start, cannot undo
+        404: User persona or story progress not found
+
+    Returns:
+        Updated progress with new head position
+
+    Example:
+        POST /api/v1/user-personas/{id}/stories/{story_id}/undo
+
+        Response: UserStoryProgressPublic with head at parent choice
+    """
+    # Verify ownership
+    user_persona = crud.get_user_persona(
+        session=session, id=user_persona_id, user_id=current_user.id
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    # Get progress
+    progress = crud.get_user_story_progress(
+        session=session, user_persona_id=user_persona_id, story_id=story_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="Story progress not found")
+
+    # Check if at story start
+    if progress.head_choice_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Already at story start, cannot undo"
+        )
+
+    # Get current choice to find parent
+    current_choice = session.get(UserNodeChoice, progress.head_choice_id)
+    if not current_choice:
+        raise HTTPException(
+            status_code=500,
+            detail="Head choice not found (data corruptiton possible)"
+        )
+
+    # Save old head for event payload
+    old_head_id = progress.head_choice_id
+    old_node_id = progress.current_node_id
+
+    # move head to parent (atomic update)
+    progress.head_choice_id = current_choice.parent_choice_id
+    progress.head_version += 1
+
+    # OLD: Move head to parent using helper function
+    # progress = crud.move_head_to_choice(
+    #     session=session,
+    #     progress=progress,
+    #     target_choice_id=current_choice.parent_choice_id,
+    # )
+
+    # PHASE 5: Always derive state from events (single source of truth)
+    progress.story_state = crud.replay_state_from_head_optimized(
+        session=session,
+        progress_id=progress.id,
+        head_choice_id=progress.head_choice_id
+    )
+
+    # Derive current node from new head
+    progress.current_node_id = crud.get_current_node_from_head(
+        session=session,
+        head_choice_id=progress.head_choice_id,
+        story_id=progress.story_id,
+        story_version=progress.story_version
+    )
+
+    # Check if still completed (may no longer be at end node)
+    if progress.current_node_id:
+        current_node = session.get(StoryNode, progress.current_node_id)
+        if current_node:
+            progress.is_completed = current_node.is_end_node
+        else:
+            progress.is_completed = False
+    else:
+        progress.is_completed = False
+
+    session.add(progress)
+    session.commit()
+    session.refresh(progress)
+
+    # Publish HeadMoved event to Redis in background
+    background_tasks.add_task(
+        publish_event_to_redis,
+        channel=f"story:{story_id}",
+        event_type="head.moved",
+        sequence=None,  # CYOA doesn't use sequences
+        payload={
+            "progress_id": str(progress.id),
+            "user_persona_id": str(user_persona_id),
+            "operation": "undo",
+            "old_head_id": str(old_head_id) if old_head_id else None,
+            "new_head_id": str(progress.head_choice_id) if progress.head_choice_id else None,
+            "head_version": progress.head_version,
+            "old_node_id": str(old_node_id),
+            "new_node_id": str(progress.current_node_id),
+            "new_state": progress.story_state,
+            "is_completed": progress.is_completed,
+        },
+        created_at=datetime.utcnow(),
+    )
+
+    return progress
+
+@router.post("/{story_id}/jump", response_model=UserStoryProgressPublic)
+def jump_story_head(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_persona_id: uuid.UUID,
+    story_id: uuid.UUID,
+    jump_request: JumpRequest,
+    background_tasks: BackgroundTasks,
+) -> Any:
+    """
+    Jump head to any ancestor choice (rewind to arbitrary point).
+    - Uses optimized replay with snapshots for state derivation
+    - Publishes real-time events to WebSocket clients
+    - Enforces ancestor constraint (no forward jumps)
+
+
+    Validation:
+    - Target choice must be ancestor of current head (enforces no forward jumps)
+    - Optimistic concurrency via expected_head_version
+    - Target can be None (jump to story start)
+    
+    Behavior:
+    - Moves head_choice_id to target
+    - Replays state from target using nearest snapshot
+    - All future choices after target become hidden
+    - Increments head_version
+
+    Errors:
+        400: Target not ancestor, or other validation error
+        404: User persona, story progress, or target choice not found
+        409: Head version conflict (concurrent modification)
+
+    Returns:
+        Updated progress at new head position with replayed state
+
+    Example:
+        POST /api/v1/user-personas/{id}/stories/{story_id}/jump
+        Body: {
+            "choice_id": "uuid-of-ancestor", # or null for story start
+            "expected_head_version": 5
+        }
+
+        Response: UserStoryProgressPublic with head at target choice
+    """
+    # Verify ownership
+    user_persona = crud.get_user_persona(
+        session=session, id=user_persona_id, user_id=current_user.id
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    # Get progress
+    progress = crud.get_user_story_progress(
+        session=session, user_persona_id=user_persona_id, story_id=story_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="Story progress not found")
+
+    # Optimistic concurrency check
+    if jump_request.expected_head_version != progress.head_version:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Head version conflict: expected {jump_request.expected_head_version}, "
+            f"got {progress.head_version}. Refetch progress and retry."
+        )
+
+    target_choice_id = jump_request.choice_id
+
+    # Validate target is ancestor (if not jumping to start)
+    if target_choice_id is not None:
+        # Check target exists and belongs to this progress
+        target_choice = session.get(UserNodeChoice, target_choice_id)
+        if not target_choice or target_choice.progress_id != progress.id:
+            raise HTTPException(
+                status_code=404,
+                detail="Target choice not found or doesn't belong to this progress"
+            )
+
+        # Verify target is ancestor of current head (prevents forward jumps)
+        if progress.head_choice_id is not None:
+            is_ancestor = crud.validate_ancestor_constraint(
+                session=session,
+                target_choice_id=target_choice_id,
+                current_head_id=progress.head_choice_id,
+            )
+
+            if not is_ancestor:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Target choice is not an ancestor of current head "
+                    "(forward jumps not allowed - would expose hidden branches)"
+                )
+
+    # Save old head for event payload
+    old_head_id = progress.head_choice_id
+    old_node_id = progress.current_node_id
+    # Move head to target (atomic update)
+    progress.head_choice_id = target_choice_id
+    progress.head_version += 1
+
+    # PHASE 5: Always derive state from events (single source of truth)
+    progress.story_state = crud.replay_state_from_head_optimized(
+        session=session,
+        progress_id=progress.id,
+        head_choice_id=progress.head_choice_id
+    )
+
+    # Derive current node from new head
+    progress.current_node_id = crud.get_current_node_from_head(
+        session=session,
+        head_choice_id=progress.head_choice_id,
+        story_id=progress.story_id,
+        story_version=progress.story_version
+    )
+
+    # Check if still completed (may no longer be at end node)
+    if progress.current_node_id:
+        current_node = session.get(StoryNode, progress.current_node_id)
+        if current_node:
+            progress.is_completed = current_node.is_end_node
+        else:
+            progress.is_completed = False
+    else:
+        progress.is_completed = False
+
+    # ========== Database Commit ==========
+
+    session.add(progress)
+    session.commit()
+    session.refresh(progress)
+
+
+    # Publish HeadMoved event to Redis (non-blocking)
+    background_tasks.add_task(
+        publish_event_to_redis,
+        channel=f"story:{story_id}",
+        event_type="head.moved",
+        sequence=None,  # CYOA doesn't use sequences
+        payload={
+            "progress_id": str(progress.id),
+            "user_persona_id": str(user_persona_id),
+            "operation": "jump",
+            "old_head_id": str(old_head_id) if old_head_id else None,
+            "new_head_id": str(progress.head_choice_id) if progress.head_choice_id else None,
+            "target_choice_id": str(target_choice_id) if target_choice_id else None,
+            "head_version": progress.head_version,
+            "old_node_id": str(old_node_id),
+            "new_node_id": str(progress.current_node_id),
+            "new_state": progress.story_state,
+            "is_completed": progress.is_completed,
+        },
+        created_at=datetime.utcnow(),
+    )
+
+    return progress
+
+@router.get("/{story_id}/timeline", response_model=Timeline)
+def read_story_timeline(
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_persona_id: uuid.UUID,
+    story_id: uuid.UUID,
+) -> Any:
+    """
+    Get active timeline (root → head) for breadcrumb UI.
+
+    Returns ONLY the ancestor chain, never siblings or abandoned branches.
+    This ensures abandoned branches remain hidden from the player.
+
+    Response includes:
+    - Story start event (choice_id=null)
+    - All choices from root to current head
+    - Current head_version for optimistic locking
+
+    Returns:
+        Timeline with events list and head_version
+
+    Example:
+        GET /api/v1/user-personas/{id}/stories/{story_id}/timeline
+
+        Response: {
+            "events": [
+                {"choice_id": null, "choice_text": "Story Start", "is_current": false, ...},
+                {"choice_id": "uuid-1", "choice_text": "Enter forest", "is_current": false, ...},
+                {"choice_id": "uuid-2", "choice_text": "Find cave", "is_current": true, ...}
+            ],
+            "head_version": 3
+        }
+    """
+    # Verify ownership
+    user_persona = crud.get_user_persona(
+        session=session, id=user_persona_id, user_id=current_user.id
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    # Get progress
+    progress = crud.get_user_story_progress(
+        session=session, user_persona_id=user_persona_id, story_id=story_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="Story progress not found")
+
+    # Get start node for story start event
+    start_node = session.exec(
+        select(StoryNode).where(
+            StoryNode.story_id == story_id,
+            StoryNode.story_version == progress.story_version,
+            StoryNode.is_start_node == True,  # noqa: E712
+        )
+    ).first()
+
+    # Build timeline starting with story start
+    events = [
+        TimelineEvent(
+            choice_id=None,
+            choice_text="Story Start",
+            node_title=start_node.title if start_node else "Unknown",
+            choice_time=progress.started_at,
+            is_current=(progress.head_choice_id is None),
+        )
+    ]
+
+    # Add ancestor chain (root → head)
+    # Uses Phase 2 get_choice_ancestor_chain to get only active path
+    if progress.head_choice_id:
+        chain = crud.get_choice_ancestor_chain(
+            session=session, choice_id=progress.head_choice_id
+        )
+
+        for choice in chain:
+            # Get the node this choice led to
+            node = session.get(StoryNode, choice.to_node_id)
+
+            events.append(
+                TimelineEvent(
+                    choice_id=choice.id,
+                    choice_text=choice.choice_text,
+                    node_title=node.title if node else "Unknown",
+                    choice_time=choice.choice_time,
+                    is_current=(choice.id == progress.head_choice_id),
+                )
+            )
+
+    return Timeline(events=events, head_version=progress.head_version)
+@router.get("/{story_id}/snapshots", response_model=ProgressSnapshotsPublic)
+def read_story_snapshots(
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_persona_id: uuid.UUID,
+    story_id: uuid.UUID,
+) -> Any:
+    """
+    Get all snapshots for this story progress (admin/debug).
+
+    Useful for monitoring snapshot coverage and debugging replay.
+    """
+    user_persona = crud.get_user_persona(
+        session=session, id=user_persona_id, user_id=current_user.id
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    progress = crud.get_user_story_progress(
+        session=session, user_persona_id=user_persona_id, story_id=story_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="Story progress not found")
+
+    # Get all snapshots for this progress
+    statement = (
+        select(ProgressSnapshot)
+        .where(ProgressSnapshot.progress_id == progress.id)
+        .order_by(ProgressSnapshot.created_at.asc())
+    )
+
+    snapshots = session.exec(statement).all()
+
+    return ProgressSnapshotsPublic(
+        data=snapshots,
+        count=len(snapshots)
+    )
+
+
+@router.post("/{story_id}/snapshots/create", response_model=ProgressSnapshotPublic)
+def create_story_snapshot(
+    session: SessionDep,
+    current_user: CurrentUser,
+    user_persona_id: uuid.UUID,
+    story_id: uuid.UUID,
+) -> Any:
+    """
+    Manually create snapshot at current head position (admin/debug).
+
+    Normally snapshots are created automatically every N choices.
+    This endpoint allows manual snapshot creation for testing.
+    """
+    user_persona = crud.get_user_persona(
+        session=session, id=user_persona_id, user_id=current_user.id
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    progress = crud.get_user_story_progress(
+        session=session, user_persona_id=user_persona_id, story_id=story_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="Story progress not found")
+
+    if progress.head_choice_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot create snapshot at story start"
+        )
+
+    # Check if snapshot already exists
+    existing = session.exec(
+        select(ProgressSnapshot).where(
+            ProgressSnapshot.progress_id == progress.id,
+            ProgressSnapshot.choice_id == progress.head_choice_id
+        )
+    ).first()
+
+    if existing:
+        return existing  # Already have snapshot
+
+    # Create snapshot
+    snapshot = ProgressSnapshot(
+        progress_id=progress.id,
+        choice_id=progress.head_choice_id,
+        story_state=progress.story_state.copy() if progress.story_state else {},
+        current_node_id=progress.current_node_id
+    )
+
+    session.add(snapshot)
+    session.commit()
+    session.refresh(snapshot)
+
+    return snapshot

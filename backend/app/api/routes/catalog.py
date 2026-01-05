@@ -22,12 +22,12 @@ from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
-    Story,
-    StoryPublic,
     StoriesPublic,
+    Story,
     StoryNode,
     StoryNodePublic,
     StoryNodesPublic,
+    StoryPublic,
     StoryRequirement,
     StoryRequirementPublic,
     StoryRequirementsPublic,

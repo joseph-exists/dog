@@ -1,10 +1,10 @@
 # CYOA Phase 5 Quick Reference Card
 ## Full Event Sourcing (Derived State + Snapshotting)
 
-**Last Updated:** 2026-01-01
+**Last Updated:** 2026-01-04
 **Status:** 🎯 Implementation Guide
-**Prerequisites:** ✅ Phase 1, 2, 3, 4 complete
-**Estimated Time:** ~12 hours
+**Prerequisites:** ✅ Phase 1, 2, 3, 4 complete (see EVENT_SYSTEMS_ALIGNMENT.md)
+**Estimated Time:** ~6.5-7.25 hours (core implementation + optional snapshot endpoints)
 
 ---
 
@@ -26,10 +26,19 @@ Phase 5 completes the migration to full event sourcing by:
 
 ## Pre-Implementation Checklist
 
-- [ ] Phase 4 complete and tested
-- [ ] Replay correctness validated (Phase 2 tests passing)
-- [ ] Performance baseline established (measure current replay time)
-- [ ] Backup database before migration (optional but recommended)
+- [X] Phase 4 complete and tested (EVENT_SYSTEMS_ALIGNMENT.md)
+  - ✅ Real-time publishing via `realtime_publisher.py`
+  - ✅ WebSocket story updates implemented
+  - ✅ Direct Redis publish pattern (NO Outbox table)
+- [X] Replay correctness validated (Phase 2 tests passing)
+- [X] Performance baseline established (measure current replay time)
+- [X] Backup database before migration (optional but recommended)
+
+**Note on Real-Time Distribution:**
+Phase 4 was implemented following the **Room Chat pattern** (direct Redis publish)
+as documented in EVENT_SYSTEMS_ALIGNMENT.md. The Outbox pattern mentioned in
+early Phase 4 planning was NOT implemented. Both CYOA and Room Chat systems
+use direct Redis publish via `realtime_publisher.py` with graceful degradation.
 
 ---
 
@@ -37,103 +46,18 @@ Phase 5 completes the migration to full event sourcing by:
 
 ### Step 1: Create ProgressSnapshot Model (60 min)
 
-#### 1.1 Add ProgressSnapshot Model to models.py
+### SEE PHASE5_MODEL_ADDENDUM FOR IMPLEMENTATION OF FOLLOWING STEPS
 
-Add this AFTER Outbox models, BEFORE relationship definitions:
+#### [x] 1.1 Add ProgressSnapshot Model to models.py
 
-```python
-# ==================== ProgressSnapshot Models (PHASE 5) ====================
+#### [x] 1.2 Create Alembic Migration
 
-class ProgressSnapshotBase(SQLModel):
-    """
-    Base model for progress snapshots.
-
-    Snapshots are performance optimization - cached replayed state
-    at specific head positions to avoid replaying from root.
-    """
-    story_state: dict[str, Any] = Field(sa_column=Column(JSON))
-    current_node_id: uuid.UUID
-
-
-class ProgressSnapshotCreate(ProgressSnapshotBase):
-    """Input model for creating snapshot"""
-    progress_id: uuid.UUID
-    choice_id: uuid.UUID
-
-
-class ProgressSnapshotUpdate(SQLModel):
-    """Update model for ProgressSnapshot (rarely used)"""
-    story_state: dict[str, Any] | None = Field(default=None)
-    current_node_id: uuid.UUID | None = Field(default=None)
-
-
-class ProgressSnapshot(ProgressSnapshotBase, table=True):
-    """
-    Database model for progress state snapshots.
-
-    Created every N choices to optimize replay performance.
-    Replay can start from nearest snapshot instead of root.
-
-    Semantics:
-    - Immutable once created (no updates after creation)
-    - Each snapshot linked to specific choice_id (head position)
-    - Replaying from snapshot: start with snapshot.story_state,
-      then apply events from (snapshot.choice_id → target]
-    """
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    progress_id: uuid.UUID = Field(
-        foreign_key="userstoryprogress.id",
-        nullable=False,
-        ondelete="CASCADE"
-    )
-    choice_id: uuid.UUID = Field(
-        foreign_key="usernodechoice.id",
-        nullable=False,
-        description="Head position of this snapshot"
-    )
-
-    created_at: datetime = Field(default_factory=datetime.now)
-
-
-class ProgressSnapshotPublic(ProgressSnapshotBase):
-    """Public API response model for ProgressSnapshot"""
-    id: uuid.UUID
-    progress_id: uuid.UUID
-    choice_id: uuid.UUID
-    created_at: datetime
-
-
-class ProgressSnapshotsPublic(SQLModel):
-    """Collection response for ProgressSnapshots"""
-    data: list[ProgressSnapshotPublic]
-    count: int
-```
-
-#### 1.2 Create Alembic Migration
-
-```bash
-# In backend container
-alembic revision --autogenerate -m "Add ProgressSnapshot model for event sourcing optimization"
-```
-
-**Review migration file** - verify it includes:
-- `progresssnapshot` table creation
-- Foreign keys to `userstoryprogress` and `usernodechoice`
-- Index on `(progress_id, choice_id)` for fast snapshot lookup
-- All columns: id, progress_id, choice_id, story_state, current_node_id, created_at
-
-#### 1.3 Apply Migration
-
-```bash
-alembic upgrade head
-alembic current  # Verify migration applied
-```
+#### [x] 1.3 Apply Migration
 
 ---
-
 ### Step 2: Add Optimized Replay CRUD Functions (90 min)
 
-#### 2.1 Add to backend/app/crud.py
+#### [x] 2.1 Add to backend/app/crud.py
 
 ```python
 # ==================== Optimized Replay CRUD (Phase 5) ====================
@@ -336,50 +260,18 @@ def get_nearest_snapshot(
 
 Find the section where `progress.story_state` is updated and replace with derived replay:
 
-**BEFORE (Phase 4):**
+**BEFORE :**
 ```python
-    # Update head pointer (atomic move)
-    progress.head_choice_id = user_choice.id
-    progress.head_version += 1
-    progress.current_node_id = choice.to_node_id
-
-    # TRANSITION: Still update story_state mutably for backward compat
-    if choice.sets_state:
-        if progress.story_state:
-            progress.story_state.update(choice.sets_state)
-        else:
-            progress.story_state = choice.sets_state
+# no longer in code, already replaced -
+# Original code exists in function, commented out as reference
 ```
 
-**AFTER (Phase 5):**
+**CURRENT(Phase 5 + Real-Time):**
 ```python
-    # Update head pointer (atomic move)
-    progress.head_choice_id = user_choice.id
-    progress.head_version += 1
-
-    # FINAL: Always derive state from events (single source of truth)
-    progress.story_state = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-
-    progress.current_node_id = crud.get_current_node_from_head(
-        session=session,
-        head_choice_id=progress.head_choice_id,
-        story_id=progress.story_id,
-        story_version=progress.story_version
-    )
-
-    # Create snapshot if needed (every 10 choices)
-    snapshot = crud.create_snapshot_if_needed(
-        session=session,
-        progress=progress,
-        snapshot_interval=10
-    )
-    if snapshot:
-        session.add(snapshot)
+# this has been migrated to user_story_progress.py in make_story_choice
 ```
+
+**Note:** need to review: might need to import `publish_event_to_redis` from `app.services.realtime_publisher` and add `background_tasks: BackgroundTasks` parameter to route handler.
 
 ---
 
@@ -387,75 +279,20 @@ Find the section where `progress.story_state` is updated and replace with derive
 
 #### 4.1 Modify undo_story_choice in backend/app/api/routes/user_story_progress.py
 
-Replace mutable state update with derived replay:
+[X] COMPLETE
+---
 
-**BEFORE (Phase 3):**
-```python
-    # Move head to parent
-    progress.head_choice_id = current_choice.parent_choice_id
-    progress.head_version += 1
+### [X] complete: Step 5: Update Jump Endpoint to Use Derived State (30 min)
 
-    # Replay state from new head
-    progress.story_state = replay_state_from_head(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-```
+#### [X] 5.1 Modify jump_story_head in backend/app/api/routes/user_story_progress.py
 
-**AFTER (Phase 5):**
-```python
-    # Move head to parent
-    progress.head_choice_id = current_choice.parent_choice_id
-    progress.head_version += 1
+Replace mutable state update with derived replay
 
-    # FINAL: Use optimized replay with snapshots
-    progress.story_state = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-```
+
 
 ---
 
-### Step 5: Update Jump Endpoint to Use Derived State (30 min)
-
-#### 5.1 Modify jump_story_head in backend/app/api/routes/user_story_progress.py
-
-Replace mutable state update with derived replay:
-
-**BEFORE (Phase 3):**
-```python
-    # Move head to target
-    progress.head_choice_id = target_choice_id
-    progress.head_version += 1
-
-    # Replay state from new head
-    progress.story_state = replay_state_from_head(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-```
-
-**AFTER (Phase 5):**
-```python
-    # Move head to target
-    progress.head_choice_id = target_choice_id
-    progress.head_version += 1
-
-    # FINAL: Use optimized replay with snapshots
-    progress.story_state = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-```
-
----
-
-### Step 6: Add Snapshot Management Endpoints (Optional, 45 min)
+### [x]  Step 6: Add Snapshot Management Endpoints (Optional, 45 min)
 
 #### 6.1 Add Snapshot Routes to backend/app/api/routes/user_story_progress.py
 
@@ -560,54 +397,63 @@ def create_story_snapshot(
 
 ---
 
-### Step 7: Add Performance Monitoring (60 min)
+### Step 7: Performance Monitoring (Future Enhancement)
 
-#### 7.1 Add Replay Performance Metrics
+**Status:** Deferred to observability setup phase
 
-Add logging to measure replay performance:
+**Rationale:** Direct logging in CRUD functions is not the preferred pattern.
+Performance monitoring should be handled at the route/service layer or via
+external observability tools (Prometheus, DataDog, OpenTelemetry).
 
+**Recommended Approach (when implementing):**
+
+**Option A: Route-Level Performance Decorator**
 ```python
-# At top of crud.py
+# backend/app/api/deps.py
 import time
 import logging
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
+def monitor_performance(operation: str):
+    """Decorator to monitor endpoint performance."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start_time = time.perf_counter()
+            try:
+                result = func(*args, **kwargs)
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
+                logger.info(f"{operation}: {elapsed_ms:.2f}ms")
+                return result
+            except Exception as e:
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
+                logger.error(f"{operation} failed after {elapsed_ms:.2f}ms: {e}")
+                raise
+        return wrapper
+    return decorator
 
-# In replay_state_from_head_optimized function
-def replay_state_from_head_optimized(
-    *,
-    session: Session,
-    progress_id: uuid.UUID,
-    head_choice_id: uuid.UUID | None
-) -> dict[str, Any]:
-    """..."""
-    start_time = time.perf_counter()
-
-    # ... existing replay logic ...
-
-    elapsed_ms = (time.perf_counter() - start_time) * 1000
-
-    # Log performance
-    chain_length = len(ancestor_chain) if ancestor_chain else 0
-    used_snapshot = snapshot is not None
-
-    logger.info(
-        f"Replay: {elapsed_ms:.2f}ms | "
-        f"chain_length={chain_length} | "
-        f"used_snapshot={used_snapshot}"
-    )
-
-    # Warn if replay is slow
-    if elapsed_ms > 50:
-        logger.warning(
-            f"Slow replay detected: {elapsed_ms:.2f}ms for {chain_length} choices"
-        )
-
-    return state
+# Usage in routes:
+@router.post("/{story_id}/choices/{choice_id}")
+@monitor_performance("make_story_choice")
+def make_story_choice(...):
+    ...
 ```
 
-#### 7.2 Add Snapshot Coverage Metrics
+**Option B: External Observability (Recommended for Production)**
+- Integrate Prometheus metrics for replay timing
+- Use OpenTelemetry tracing for distributed performance analysis
+- Structured logging with JSON format for log aggregation
+
+**For MVP:** Skip detailed performance monitoring. Rely on:
+- Manual testing with various chain lengths (10, 50, 100+ choices)
+- Database query logs to identify slow queries
+- Simple endpoint response time logging at route level
+
+#### 7.2 Add Snapshot Coverage Metrics (Optional)
+
+**Note:** This is a useful debugging/monitoring utility but not required for core functionality.
 
 ```python
 def get_snapshot_coverage(
@@ -701,330 +547,8 @@ def get_snapshot_coverage(
 
 ### Step 8: Testing (120 min)
 
-#### 8.1 Create backend/app/tests/test_event_sourcing.py
+#### 8.1 refactor backend/app/tests/test_event_sourcing.py based on actual implementation
 
-```python
-"""Tests for full event sourcing implementation (Phase 5)."""
-
-import uuid
-import time
-import pytest
-from fastapi.testclient import TestClient
-from sqlmodel import Session, select
-
-from app.models import ProgressSnapshot, UserNodeChoice
-from app import crud
-
-
-def test_snapshot_created_every_10_choices(
-    client: TestClient, session: Session, user_persona_with_story
-):
-    """Test that snapshots are created automatically every 10 choices."""
-    user_persona_id, story_id = user_persona_with_story
-
-    # Make 25 choices
-    for i in range(25):
-        response = client.get(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/current-node"
-        )
-        current_node = response.json()
-
-        if not current_node["choices"]:
-            break  # End node reached
-
-        choice_id = current_node["choices"][0]["id"]
-        response = client.post(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/choices/{choice_id}"
-        )
-        assert response.status_code == 200
-
-    # Get progress
-    progress = crud.get_user_story_progress(
-        session=session,
-        user_persona_id=user_persona_id,
-        story_id=story_id
-    )
-
-    # Check snapshots
-    snapshots = session.exec(
-        select(ProgressSnapshot).where(
-            ProgressSnapshot.progress_id == progress.id
-        )
-    ).all()
-
-    # Should have snapshots at choices 10, 20 (assuming we made at least 20 choices)
-    assert len(snapshots) >= 2
-
-    # Verify snapshot positions
-    for snapshot in snapshots:
-        chain = crud.get_choice_ancestor_chain(
-            session=session,
-            choice_id=snapshot.choice_id
-        )
-        chain_length = len(chain)
-
-        # Chain length should be multiple of 10
-        assert chain_length % 10 == 0
-
-
-def test_replay_uses_snapshots(
-    client: TestClient, session: Session, user_persona_with_story
-):
-    """Test that replay uses snapshots when available."""
-    user_persona_id, story_id = user_persona_with_story
-
-    # Make 15 choices to trigger snapshot at choice 10
-    for i in range(15):
-        response = client.get(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/current-node"
-        )
-        current_node = response.json()
-
-        if not current_node["choices"]:
-            break
-
-        choice_id = current_node["choices"][0]["id"]
-        client.post(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/choices/{choice_id}"
-        )
-
-    # Get progress
-    progress = crud.get_user_story_progress(
-        session=session,
-        user_persona_id=user_persona_id,
-        story_id=story_id
-    )
-
-    # Verify snapshot exists
-    snapshot = crud.get_nearest_snapshot(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-    assert snapshot is not None
-
-    # Replay with snapshot
-    replayed_state = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-
-    # Should match current state
-    assert replayed_state == progress.story_state
-
-
-def test_replay_performance_with_snapshots(
-    client: TestClient, session: Session, user_persona_with_story
-):
-    """Test that replay with snapshots is faster than without."""
-    user_persona_id, story_id = user_persona_with_story
-
-    # Make 50 choices (will create snapshots at 10, 20, 30, 40, 50)
-    for i in range(50):
-        response = client.get(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/current-node"
-        )
-        current_node = response.json()
-
-        if not current_node["choices"]:
-            break
-
-        choice_id = current_node["choices"][0]["id"]
-        client.post(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/choices/{choice_id}"
-        )
-
-    # Get progress
-    progress = crud.get_user_story_progress(
-        session=session,
-        user_persona_id=user_persona_id,
-        story_id=story_id
-    )
-
-    # Measure replay WITH snapshots
-    start = time.perf_counter()
-    state_with_snapshot = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-    time_with_snapshot = (time.perf_counter() - start) * 1000
-
-    # Measure replay WITHOUT snapshots (from root)
-    start = time.perf_counter()
-    state_without_snapshot = crud.replay_state_from_head(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-    time_without_snapshot = (time.perf_counter() - start) * 1000
-
-    # Both should produce same result
-    assert state_with_snapshot == state_without_snapshot
-
-    # With snapshot should be faster (or at least not slower)
-    # Target: < 10ms with snapshots
-    assert time_with_snapshot < 10, f"Replay too slow: {time_with_snapshot}ms"
-
-    print(f"Replay performance:")
-    print(f"  With snapshots: {time_with_snapshot:.2f}ms")
-    print(f"  Without snapshots: {time_without_snapshot:.2f}ms")
-    print(f"  Speedup: {time_without_snapshot / time_with_snapshot:.2f}x")
-
-
-def test_state_always_derived_from_events(
-    client: TestClient, session: Session, user_persona_with_story
-):
-    """Test that story_state is ALWAYS derived from events, never mutated."""
-    user_persona_id, story_id = user_persona_with_story
-
-    # Make choice
-    response = client.get(
-        f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/current-node"
-    )
-    current_node = response.json()
-    choice_id = current_node["choices"][0]["id"]
-
-    response = client.post(
-        f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/choices/{choice_id}"
-    )
-    assert response.status_code == 200
-    progress_data = response.json()
-
-    # Get progress from database
-    progress = crud.get_user_story_progress(
-        session=session,
-        user_persona_id=user_persona_id,
-        story_id=story_id
-    )
-
-    # Replay state from events
-    replayed_state = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-
-    # Stored state MUST match replayed state
-    assert progress.story_state == replayed_state
-
-    # API response state MUST match replayed state
-    assert progress_data["story_state"] == replayed_state
-
-
-def test_undo_derives_state_from_events(
-    client: TestClient, session: Session, user_persona_with_progress
-):
-    """Test that undo derives state from events (not mutable update)."""
-    user_persona_id, story_id = user_persona_with_progress
-
-    # Undo
-    response = client.post(
-        f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/undo"
-    )
-    assert response.status_code == 200
-
-    # Get progress
-    progress = crud.get_user_story_progress(
-        session=session,
-        user_persona_id=user_persona_id,
-        story_id=story_id
-    )
-
-    # Replay state
-    replayed_state = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-
-    # Must match
-    assert progress.story_state == replayed_state
-
-
-def test_jump_derives_state_from_events(
-    client: TestClient, session: Session, user_persona_with_progress
-):
-    """Test that jump derives state from events (not mutable update)."""
-    user_persona_id, story_id = user_persona_with_progress
-
-    # Get timeline
-    response = client.get(
-        f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/timeline"
-    )
-    timeline = response.json()
-
-    # Jump to start
-    response = client.post(
-        f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/jump",
-        json={
-            "choice_id": None,
-            "expected_head_version": timeline["head_version"]
-        }
-    )
-    assert response.status_code == 200
-
-    # Get progress
-    progress = crud.get_user_story_progress(
-        session=session,
-        user_persona_id=user_persona_id,
-        story_id=story_id
-    )
-
-    # Replay state
-    replayed_state = crud.replay_state_from_head_optimized(
-        session=session,
-        progress_id=progress.id,
-        head_choice_id=progress.head_choice_id
-    )
-
-    # Must match (should be empty dict since at start)
-    assert progress.story_state == replayed_state
-    assert replayed_state == {}
-
-
-def test_snapshot_coverage_metrics(
-    client: TestClient, session: Session, user_persona_with_story
-):
-    """Test snapshot coverage metrics calculation."""
-    user_persona_id, story_id = user_persona_with_story
-
-    # Make 35 choices
-    for i in range(35):
-        response = client.get(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/current-node"
-        )
-        current_node = response.json()
-
-        if not current_node["choices"]:
-            break
-
-        choice_id = current_node["choices"][0]["id"]
-        client.post(
-            f"/api/v1/user-personas/{user_persona_id}/stories/{story_id}/choices/{choice_id}"
-        )
-
-    # Get progress
-    progress = crud.get_user_story_progress(
-        session=session,
-        user_persona_id=user_persona_id,
-        story_id=story_id
-    )
-
-    # Get coverage metrics
-    metrics = crud.get_snapshot_coverage(
-        session=session,
-        progress_id=progress.id
-    )
-
-    # Verify metrics
-    assert metrics["total_choices"] >= 30
-    assert metrics["total_snapshots"] >= 3  # At 10, 20, 30
-    assert metrics["coverage_percent"] > 0
-    assert metrics["max_gap"] <= 10  # Should never exceed interval
-    assert metrics["avg_gap"] <= 10
-```
 
 #### 8.2 Run Tests
 
@@ -1219,13 +743,17 @@ grep -r "story_state.update\|story_state\[" backend/app/api/routes/
 |------|------|------|
 | 1 | Create ProgressSnapshot model | 60 min |
 | 2 | Add optimized replay CRUD functions | 90 min |
-| 3 | Update choice endpoint | 60 min |
-| 4 | Update undo endpoint | 30 min |
-| 5 | Update jump endpoint | 30 min |
-| 6 | Add snapshot management endpoints | 45 min |
-| 7 | Add performance monitoring | 60 min |
+| 3 | Update choice endpoint (+ real-time) | 60 min |
+| 4 | Update undo endpoint (+ real-time) | 30 min |
+| 5 | Update jump endpoint (+ real-time) | 30 min |
+| 6 | Add snapshot management endpoints (optional) | 45 min |
+| 7 | Add performance monitoring (deferred) | ~~60 min~~ |
 | 8 | Testing | 120 min |
-| **Total** | | **~12 hours** |
+| **Total (Core)** | | **~6.5 hours** |
+| **Total (with optional Step 6)** | | **~7.25 hours** |
+
+**Note:** Steps 3-5 now include real-time event publishing (Phase 4 integration).
+Performance monitoring (Step 7) deferred to observability setup phase.
 
 ---
 
@@ -1233,17 +761,19 @@ grep -r "story_state.update\|story_state\[" backend/app/api/routes/
 
 ✅ **Phase 5 Complete When:**
 1. ProgressSnapshot model exists and migrated
-2. Replay functions use snapshots for optimization
-3. All endpoints (choice/undo/jump) derive state from events
-4. NO mutable state updates remain in codebase
-5. Snapshots created automatically every 10 choices
-6. Replay performance < 10ms for 100-choice chain with snapshots
-7. Replayed state ALWAYS matches stored state
-8. Events are single source of truth
-9. All tests pass (7 tests minimum)
-10. Performance monitoring shows replay < 50ms without snapshots
-11. No errors in backend logs
-12. State consistency validated across all operations
+2. Replay functions use snapshots for optimization (`replay_state_from_head_optimized`)
+3. All endpoints (choice/undo/jump) derive state from events (NO mutable updates)
+4. All endpoints publish real-time events via `realtime_publisher.py` (Phase 4 integration)
+5. NO mutable state updates remain in codebase (`story_state` is always derived)
+6. Snapshots created automatically every 10 choices
+7. Replay performance < 10ms for 100-choice chain with snapshots
+8. Replayed state ALWAYS matches stored state (validation test passes)
+9. Events are single source of truth (can delete `story_state` and replay from events)
+10. All tests pass (Phase 2, 3, 5 event sourcing tests)
+11. Manual testing: Story playthrough with 50+ choices completes successfully
+12. WebSocket clients receive real-time updates for choice/undo/jump operations
+13. No errors in backend logs
+14. State consistency validated across all operations
 
 ---
 
@@ -1279,7 +809,9 @@ Congratulations! You've successfully migrated from mutable state to full event s
 ---
 
 **Questions? See:**
+- EVENT_SYSTEMS_ALIGNMENT.md - Real-time event distribution (Phase 4)
+- STORY_SYSTEM_V2.md - Current system documentation (Phases 1-4)
+- app/services/realtime_publisher.py - Shared Redis publisher implementation
 - CYOA_MIGRATION_PLAN.md - Overall strategy
 - CYOA_MIGRATION_ADDENDUM.md - TinyFoot patterns
 - backend/docs/RULES.md - Backend conventions
-- STORY_SYSTEM.md - Original system documentation

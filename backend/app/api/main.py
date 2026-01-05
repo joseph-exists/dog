@@ -19,6 +19,7 @@ from app.api.routes import (
     traits,
     user_personas,
     user_story_progress,
+    node_choices,
     users,
     utils,
     websocket,
@@ -45,6 +46,7 @@ api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
 api_router.include_router(agent_routes.router)
 api_router.include_router(rooms.router)
+api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)
 
 if settings.ENVIRONMENT == "local":

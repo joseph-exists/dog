@@ -6,6 +6,9 @@
 **Prerequisites:** ✅ Phase 1, 2, 3 complete
 **Estimated Time:** ~10 hours
 
+IMPORTANT: NOT ALL FUNCTIONALITY IMPLEMENTED DUE TO TECHNICAL DESIGN CHANGES
+
+
 ---
 
 ## Overview
@@ -24,11 +27,11 @@ Phase 4 adds real-time event distribution so connected clients receive live upda
 
 ## Pre-Implementation Checklist
 
-- [ ] Phase 3 complete and tested
-- [ ] Redis server accessible (local or cloud)
-- [ ] `redis` Python package installed
-- [ ] Docker Compose updated with Redis service
-- [ ] WebSocket support enabled in FastAPI
+- [X] Phase 3 complete and tested
+- [X] Redis server accessible (local or cloud)
+- [X] `redis` Python package installed
+- [X] Docker Compose updated with Redis service
+- [X] WebSocket support enabled in FastAPI
 
 ---
 
@@ -994,9 +997,7 @@ wscat -c "ws://localhost:8000/api/v1/ws/stories/{id}/stream?token={jwt}"
 | Step | Task | Time |
 |------|------|------|
 | 1 | Add Redis to infrastructure | 30 min |
-| 2 | Create Outbox model & migration | 45 min |
 | 3 | Create Redis connection module | 30 min |
-| 4 | Create outbox publisher worker | 90 min |
 | 5 | Create WebSocket endpoint | 60 min |
 | 6 | Add outbox CRUD functions | 45 min |
 | 7 | Update choice endpoint | 45 min |
@@ -1010,10 +1011,8 @@ wscat -c "ws://localhost:8000/api/v1/ws/stories/{id}/stream?token={jwt}"
 
 ✅ **Phase 4 Complete When:**
 1. Redis service running in Docker Compose
-2. Outbox model exists and migrated
-3. Outbox publisher worker running
 4. WebSocket endpoint accepts connections
-5. All endpoints (choice/undo/jump) create outbox events
+5. All endpoints (choice/undo/jump) create events
 6. Events published to Redis within 200ms
 7. WebSocket clients receive events in real-time
 8. All tests pass (5 tests minimum)
@@ -1021,17 +1020,3 @@ wscat -c "ws://localhost:8000/api/v1/ws/stories/{id}/stream?token={jwt}"
 10. No errors in backend logs
 
 ---
-
-## Next Steps
-
-After Phase 4 is complete and tested:
-1. Review performance (outbox publish latency)
-2. Test with multiple concurrent WebSocket clients
-3. Proceed to Phase 5 (Full Event Sourcing)
-
----
-
-**Questions? See:**
-- CYOA_MIGRATION_PLAN.md - Overall strategy
-- CYOA_MIGRATION_ADDENDUM.md - TinyFoot patterns
-- backend/docs/RULES.md - Backend conventions

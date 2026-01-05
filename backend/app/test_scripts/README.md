@@ -19,7 +19,85 @@ TEST_USER_PASSWORD=yourpassword
 
 ## Scripts
 
-### 1. test_quixote_agent.py
+### 1. test_story_system.py
+
+Tests the complete CYOA story system including event sourcing and timeline navigation.
+
+**What it tests:**
+- **Phase 1:** Story creation, nodes, choices
+- **Phase 2:** Progress tracking and choice making
+- **Phase 3:** Timeline navigation (undo/jump/breadcrumbs)
+- **Validation:** Event sourcing foundations (parent pointers, head versioning, state replay)
+
+**Usage:**
+```bash
+# Run full test suite (15 tests)
+python test_story_system.py
+
+# Run with verbose output
+python test_story_system.py --verbose
+
+# Run specific phase only
+python test_story_system.py --phase 1  # Story/Node CRUD
+python test_story_system.py --phase 2  # Progress & Choices
+python test_story_system.py --phase 3  # Timeline Navigation
+
+# Use existing persona
+python test_story_system.py --persona-id YOUR-PERSONA-UUID
+```
+
+**Requirements:**
+- Backend server running on `http://localhost:8000`
+- Database with migrations applied (especially Phase 1-3 CYOA migrations)
+- Test credentials in `test.env`
+- User persona (created automatically if not specified)
+
+**Output:**
+- Console logs with detailed test results and bug hints
+- `test_results_story_system.json` - Complete results with:
+  - All 15 test results (pass/fail)
+  - Created entity IDs (story, nodes, choices, progress)
+  - Phase-by-phase breakdown
+  - Success rate and timing
+
+**Features:**
+- ✅ Comprehensive CYOA validation (15 tests across 4 phases)
+- ✅ Automatic bug detection with helpful hints
+- ✅ Tests tree structure (parent_choice_id linkage)
+- ✅ Tests optimistic concurrency (head_version)
+- ✅ Tests state replay correctness
+- ✅ Timeline navigation validation
+- ✅ Exit codes (0 for success, 1 for failures)
+
+**Example Output:**
+```
+======================================================================
+  STORY SYSTEM TEST SUITE
+  CYOA Phase 1-3 Validation
+======================================================================
+
+──────────────────────────────────────────────────────────────────────
+  Test 1: Create Story
+──────────────────────────────────────────────────────────────────────
+  ✅ PASSED: create_story
+     Story created: "The Enchanted Forest" (ID: 12345678...)
+
+[... more tests ...]
+
+======================================================================
+  TEST SUMMARY
+======================================================================
+  Total Tests:  15
+  ✅ Passed:    15
+  ❌ Failed:    0
+  Success Rate: 100.0%
+```
+
+**See:** `STORY_TEST_SUITE.md` for complete documentation
+
+---
+
+### 2. test_quixote_agent.py
 
 Tests the Quixote storytelling AI agent by running it 5 times with different topics.
 
@@ -68,7 +146,7 @@ else in the world. He faced dragons and demons, storms and shadows...
 
 ---
 
-### 2. populate_jungian_system.py
+### 3. populate_jungian_system.py
 
 Creates a complete Jungian archetype-based character system with full relationship linking.
 
@@ -98,7 +176,7 @@ python populate_jungian_system.py
 
 ---
 
-### 2. assign_persona_attributes.py
+### 4. assign_persona_attributes.py
 
 Assigns attributes from a CSV file to personas missing data in specified fields.
 
