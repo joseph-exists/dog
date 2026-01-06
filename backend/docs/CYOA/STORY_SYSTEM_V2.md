@@ -457,8 +457,6 @@ DELETE /stories/{story_id}
 **Who:** Authors (currently superuser only for updates/deletes)
 **Access:** Authenticated users (create), superuser (update/delete)
 
-**⚠️ ROUTE NOTE:** Endpoint is `/storynodes` (no hyphen), not `/story-nodes`
-
 #### List Nodes
 
 ```http

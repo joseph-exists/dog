@@ -687,7 +687,7 @@ class UserStoryProgress(UserStoryProgressBase, table=True):
         description="Current active event in timeline tree (null = at story start)"
     )
 
-    # NEW: Optimistic concurrency control - Phase 1
+    # Optimistic concurrency control
     head_version: int = Field(
         default=0,
         description="Increments on every head move (for optimistic locking)"
@@ -791,7 +791,6 @@ class UserNodeChoiceCreate(UserNodeChoiceBase):
         description="Parent event in timeline tree (null for initial state)"
     )
 
-    # NEW in Phase 1
     rng_data: dict[str, Any] | None = Field(
         default=None,
         description="Captured RNG outcomes for deterministic replay"
@@ -1139,16 +1138,16 @@ class QualityEventTriggerPublic(QualityEventTriggerBase):
     event: EventPublic | None = None
     quality: QualityPublic | None = None
 
+# potential duplicate - exception of sa_column defintions
+# class NodeChoiceBaseOld?(SQLModel):
+#     """Base model for NodeChoice (decision branch in story template)"""
 
-class NodeChoiceBase(SQLModel):
-    """Base model for NodeChoice (decision branch in story template)"""
+#     text: str = Field(min_length=1, max_length=500)
+#     order: int = Field(default=0)
 
-    text: str = Field(min_length=1, max_length=500)
-    order: int = Field(default=0)
-
-    # State management for conditional branches
-    requires_state: dict[str, Any] | None = Field(default=None)  # Conditions to show this choice
-    sets_state: dict[str, Any] | None = Field(default=None)  # State changes when chosen
+#     # State management for conditional branches
+#     requires_state: dict[str, Any] | None = Field(default=None)  # Conditions to show this choice
+#     sets_state: dict[str, Any] | None = Field(default=None)  # State changes when chosen
 
 
 class StoryUserLinkBase(SQLModel):
@@ -1186,12 +1185,6 @@ class NodeChoiceBasePartial(SQLModel):
     sets_state: dict | None = Field(
         default=None
     )  # JSON field for  state variables to set
-
-
-class NodeChoicePublic(NodeChoiceBase):
-    id: uuid.UUID
-    from_node_id: uuid.UUID
-    to_node_id: uuid.UUID
 
 
 class TagBase(SQLModel):

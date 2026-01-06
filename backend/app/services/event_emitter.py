@@ -107,7 +107,7 @@ async def emit_event(
             # Transaction commits automatically on return
             return event
 
-    Event Types (Phase 1):
+    Event Types:
         - room.created: New room created
         - room.updated: Room metadata changed
         - participant.joined: User or agent joined
@@ -116,10 +116,15 @@ async def emit_event(
         - room_message.user: User sent message
         - room_message.agent: Agent sent message
     
-    Phase 4 Enhancement: Publishes event to Redis after transaction flush
+    Publishes event to Redis after transaction flush
     for real-time delivery to WebSocket clients.
     
-    Future: see Phase2-addendum.md for usage post Phase 4.
+    Enrichment metadata example:
+        enrichment_metadata = {
+            "trace_id": request_context.trace_id,
+            "latency_ms": 1234,
+            "model": "smashface"
+        }
 
     """
     # Generate next sequence number for this room
@@ -347,7 +352,6 @@ async def _update_projections(
         "participant.role_changed": _handle_participant_role_changed,
         "room_message.user": _handle_room_message_user,
         "room_message.agent": _handle_room_message_agent,
-        # Phase 5: Message Management
         "message.edited": _handle_message_edited,
         "message.pinned": _handle_message_pinned,
         "message.unpinned": _handle_message_unpinned,

@@ -248,26 +248,38 @@ This specification is designed as an **interdependent system** where each sectio
 
 **Purpose:** Immutable, append-only log of every state change in the system. This is the source of truth.
 
-**Schema:* PENDING REVIEW PRIOR TO ADDING TO CODEBASE - NEEDS WORK - NOT APPROVED - NOT CURRENT IMPLEMENTATION*
+
 
 ```sql
-CREATE TABLE room_events (
-    event_id BIGSERIAL PRIMARY KEY,           -- Global monotonic ordering
-    room_id UUID NOT NULL,                     -- Partition key
-    room_sequence BIGINT NOT NULL,             -- Per-room monotonic sequence (sparse gaps allowed)
-    event_type VARCHAR(50) NOT NULL,           -- 'message.user', 'message.assistant', 'step.start', etc.
-    payload JSONB NOT NULL,                    -- Event-specific data
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    UNIQUE (room_id, room_sequence)            -- Enforce per-room sequence uniqueness
-);
+room_events:
+    event_id        -- Global monotonic ordering
+    room_id         -- Partition key
+    room_sequence  -- Per-room monotonic sequence (sparse gaps allowed)
+    event_type     -- 'message.user', 'message.assistant', 'step.start', etc.
+    payload          -- Event-specific data
 
-CREATE INDEX idx_room_events_replay ON room_events (room_id, room_sequence);
-CREATE INDEX idx_room_events_type ON room_events (event_type, created_at);
+                             Table "public.room_events"
+       Column        |            Type             | Collation | Nullable | Default
+---------------------+-----------------------------+-----------+----------+---------
+ event_type          | character varying(50)       |           | not null |
+ payload             | json                        |           | not null |
+ event_id            | uuid                        |           | not null |
+ room_id             | uuid                        |           | not null |
+ room_sequence       | integer                     |           | not null |
+ created_at          | timestamp without time zone |           | not null |
+ enrichment_metadata | json                        |           |          |
+Indexes:
+    "room_events_pkey" PRIMARY KEY, btree (event_id)
+    "ix_room_events_created_at" btree (created_at)
+    "ix_room_events_room_id" btree (room_id)
+Foreign-key constraints:
+    "room_events_room_id_fkey" FOREIGN KEY (room_id) REFERENCES rooms(room_id)
 ```
+
 
 **Event Types:**
 
+## TODO: EVALUATION AGAINST IMPLEMENTATION AND DESIGN REQUIRED
 
 | Event Type | Payload Schema | Trigger | Projections Updated |
 | :-- | :-- | :-- | :-- |
@@ -285,9 +297,12 @@ CREATE INDEX idx_room_events_type ON room_events (event_type, created_at);
 
 - **Created by:** Any service via `emit_event(room_id, event_type, payload)` helper (S3)
 - **Modified by:** NEVER (immutable)
-- **Deleted by:** Archival process after 1 year (moved to cold storage)
+- **Deleted by:** 
+## TODO: define delete/purge mechanism
 
 **Sequence Generation (AC3.1):**
+
+## TODO: Extract actual sequence generation pattern from implementation and update this design
 
 ```python
 # In multi-worker environment
@@ -315,26 +330,28 @@ async def next_room_sequence(room_id: UUID) -> int:
 
 **Purpose:** User identity and profile information
 
-**Schema: PENDING REVIEW PRIOR TO ADDING TO CODEBASE - NEEDS WORK - NOT APPROVED**
+**Schema:**
 
-```sql
-CREATE TABLE users (
-    user_id UUID PRIMARY KEY,
-    external_id VARCHAR(255) UNIQUE NOT NULL,  -- From JWT 'sub' claim
-    email VARCHAR(255) UNIQUE NOT NULL,
-    display_name VARCHAR(100) NOT NULL,
-    avatar_url TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT true
-);
+```
 
-CREATE INDEX idx_users_external_id ON users (external_id);
+                            Table "public.user"
+     Column      |          Type          | Collation | Nullable | Default
+-----------------+------------------------+-----------+----------+---------
+ email           | character varying(255) |           | not null |
+ is_active       | boolean                |           | not null |
+ is_superuser    | boolean                |           | not null |
+ full_name       | character varying(255) |           |          |
+ hashed_password | character varying      |           | not null |
+ id              | uuid                   |           | not null |
+Indexes:
+    "user_pkey" PRIMARY KEY, btree (id)
+    "ix_user_email" UNIQUE, btree (email)
 ```
 
 **Lifecycle:**
 
 - **Created by:** S1 on first JWT validation (upsert pattern)
-- **Modified by:** S1 via admin API (future)
+- **Modified by:** S1 via admin API
 - **Deleted/Archived:** Soft delete via `is_active=false`
 
 ***
@@ -350,19 +367,28 @@ CREATE INDEX idx_users_external_id ON users (external_id);
 **Schema:**
 
 ```sql
-CREATE TABLE rooms (
-    room_id UUID PRIMARY KEY,
-    title VARCHAR(200),
-    created_by UUID NOT NULL REFERENCES users(user_id),
-    is_group BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    last_activity TIMESTAMPTZ DEFAULT NOW(),      -- Updated on each message
-    metadata JSONB DEFAULT '{}'                    -- Extensible (e.g., room_type, tags)
-);
-
-CREATE INDEX idx_rooms_created_by ON rooms (created_by);
-CREATE INDEX idx_rooms_last_activity ON rooms (last_activity DESC);
+                             Table "public.rooms"
+    Column     |            Type             | Collation | Nullable | Default
+---------------+-----------------------------+-----------+----------+---------
+ title         | character varying(255)      |           |          |
+ story_id      | uuid                        |           |          |
+ room_id       | uuid                        |           | not null |
+ creator_id    | uuid                        |           | not null |
+ created_at    | timestamp without time zone |           | not null |
+ last_activity | timestamp without time zone |           | not null |
+Indexes:
+    "rooms_pkey" PRIMARY KEY, btree (room_id)
+Foreign-key constraints:
+    "rooms_creator_id_fkey" FOREIGN KEY (creator_id) REFERENCES "user"(id)
+    "rooms_story_id_fkey" FOREIGN KEY (story_id) REFERENCES story(id)
+Referenced by:
+    TABLE "room_events" CONSTRAINT "room_events_room_id_fkey" FOREIGN KEY (room_id) REFERENCES rooms(room_id)
+    TABLE "room_messages" CONSTRAINT "room_messages_room_id_fkey" FOREIGN KEY (room_id) REFERENCES rooms(room_id)
+    TABLE "room_participants" CONSTRAINT "room_participants_room_id_fkey" FOREIGN KEY (room_id) REFERENCES rooms(room_id)
 ```
+#### NOTE: may need enrichment_metadata JSON object at some point
+#### NOTE: may need CREATE INDEX idx_rooms_last_activity ON rooms (last_activity DESC) and idx_rooms_created_by ... 
+#### NOTE: do we need the is_group column?  need to understand what is_group is for (what was that about??)
 
 **Projection Logic:**
 

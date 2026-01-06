@@ -879,15 +879,15 @@ WHERE p.id IS NULL;
 
 ## Success Criteria
 
-- [ ] `get_choice_ancestor_chain()` returns correct order
-- [ ] `replay_state_from_head()` reconstructs state correctly
-- [ ] `get_current_node_from_head()` derives node correctly
-- [ ] `validate-state` endpoint works and shows match=true
-- [ ] All Phase 1 tests still pass
-- [ ] All Phase 2 tests pass
-- [ ] Replay performance < 50ms for 100 choices
-- [ ] No state mismatches in logs
-- [ ] Code committed and pushed
+- [X] `get_choice_ancestor_chain()` returns correct order
+- [X] `replay_state_from_head()` reconstructs state correctly
+- [X] `get_current_node_from_head()` derives node correctly
+- [X] `validate-state` endpoint works and shows match=true
+- [X] All Phase 1 tests still pass
+- [X] All Phase 2 tests pass
+- [X] Replay performance < 50ms for 100 choices
+- [X] No state mismatches in logs
+- [X] Code committed and pushed
 
 ---
 

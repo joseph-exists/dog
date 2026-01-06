@@ -584,3 +584,340 @@ def db_story_with_progress(db: Session) -> tuple[Story, UserStoryProgress]:
     db.refresh(progress)
 
     return (story, progress)
+
+@pytest.fixture(scope="function")
+def db_story_with_long_path(db: Session) -> tuple[Story, UserStoryProgress]:
+    """
+    Create a story with 60 nodes (59 choices) for testing snapshots.
+
+    This fixture supports event sourcing tests that need to make 25-50 choices
+    to test snapshot creation at 10-choice intervals.
+
+    Structure: Linear path Start → N1 → N2 → ... → N59 → End
+
+    Returns:
+        tuple[Story, UserStoryProgress]: Story and progress at start (head_version=0)
+    """
+    # Get or create test user
+    user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
+    if not user:
+        from app import crud
+        user_in = UserCreate(
+            email=settings.EMAIL_TEST_USER,
+            password="password",
+            is_superuser=False,
+        )
+        user = crud.create_user(session=db, user_create=user_in)
+        db.commit()
+        db.refresh(user)
+
+    # Create Persona and UserPersona
+    persona = Persona(
+        id=uuid4(),
+        name="Long Path Test Persona",
+        description="For testing long story paths",
+    )
+    db.add(persona)
+    db.commit()
+    db.refresh(persona)
+
+    user_persona = UserPersona(
+        id=uuid4(),
+        user_id=user.id,
+        persona_id=persona.id,
+        nickname="Long Path Character",
+        is_active=True,
+    )
+    db.add(user_persona)
+    db.commit()
+    db.refresh(user_persona)
+
+    # Create Story
+    story = Story(
+        id=uuid4(),
+        title="Long Path Test Story",
+        description="A story with 60 nodes for testing snapshots",
+        owner_id=user.id,
+        is_published=True,
+        current_version=1,
+    )
+    db.add(story)
+    db.commit()
+    db.refresh(story)
+
+    # Create 60 nodes (Start + 58 middle nodes + 1 end node)
+    nodes = []
+
+    # Start node
+    start_node = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Start",
+        content="Begin the long journey...",
+        node_type="text",
+        is_start_node=True,
+        is_end_node=False,
+    )
+    db.add(start_node)
+    nodes.append(start_node)
+
+    # Create 58 middle nodes
+    for i in range(1, 59):
+        node = StoryNode(
+            id=uuid4(),
+            story_id=story.id,
+            story_version=1,
+            title=f"Node {i}",
+            content=f"You continue to step {i}...",
+            node_type="text",
+            is_start_node=False,
+            is_end_node=False,
+        )
+        db.add(node)
+        nodes.append(node)
+
+    # End node
+    end_node = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="End",
+        content="You have reached the end of the long path.",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=True,
+    )
+    db.add(end_node)
+    nodes.append(end_node)
+
+    db.commit()
+    for node in nodes:
+        db.refresh(node)
+
+    # Create 59 choices connecting nodes sequentially
+    for i in range(59):
+        choice = NodeChoice(
+            id=uuid4(),
+            from_node_id=nodes[i].id,
+            to_node_id=nodes[i + 1].id,
+            text=f"Continue to step {i + 1}",
+            order=0,
+            sets_state={"step": i + 1},  # Track which step we're on
+        )
+        db.add(choice)
+
+    db.commit()
+
+    # Create UserStoryProgress at start
+    progress = UserStoryProgress(
+        id=uuid4(),
+        user_persona_id=user_persona.id,
+        story_id=story.id,
+        story_version=1,
+        current_node_id=start_node.id,
+        is_completed=False,
+        story_state={},
+        head_choice_id=None,
+        head_version=0,
+    )
+    db.add(progress)
+    db.commit()
+    db.refresh(progress)
+
+    return (story, progress)
+
+@pytest.fixture(scope="function")
+def db_story_with_simple_branch(db: Session) -> tuple[Story, UserStoryProgress]:
+    """
+    Create a story with simple branching: one branch point, two paths.
+
+    Structure:
+        Start Node (2 choices)
+        ├─ "Go Left" → Left Node → "Continue Left" → Left End
+        └─ "Go Right" → Right Node → "Continue Right" → Right End
+
+    Use cases:
+    - Test that node has multiple available_choices
+    - Test that different choices lead to different nodes
+    - Test that each branch has different subsequent choices
+    - Test that state changes differ by branch
+
+    Returns:
+        tuple[Story, UserStoryProgress]: Story and progress at start
+    """
+    # Get or create test user
+    user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
+    if not user:
+        from app import crud
+        user_in = UserCreate(
+            email=settings.EMAIL_TEST_USER,
+            password="password",
+            is_superuser=False,
+        )
+        user = crud.create_user(session=db, user_create=user_in)
+        db.commit()
+        db.refresh(user)
+
+    # Create Persona and UserPersona
+    persona = Persona(
+        id=uuid4(),
+        name="Branch Test Persona",
+        description="For testing story branching",
+    )
+    db.add(persona)
+    db.commit()
+    db.refresh(persona)
+
+    user_persona = UserPersona(
+        id=uuid4(),
+        user_id=user.id,
+        persona_id=persona.id,
+        nickname="Branch Test Character",
+        is_active=True,
+    )
+    db.add(user_persona)
+    db.commit()
+    db.refresh(user_persona)
+
+    # Create Story
+    story = Story(
+        id=uuid4(),
+        title="Simple Branch Test Story",
+        description="A story with one branch point",
+        owner_id=user.id,
+        is_published=True,
+        current_version=1,
+    )
+    db.add(story)
+    db.commit()
+    db.refresh(story)
+
+    # Create nodes
+    start_node = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Crossroads",
+        content="You stand at a crossroads. Which path do you take?",
+        node_type="text",
+        is_start_node=True,
+        is_end_node=False,
+    )
+    db.add(start_node)
+
+    left_node = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Left Path",
+        content="You walk down the left path through the forest.",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=False,
+    )
+    db.add(left_node)
+
+    right_node = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Right Path",
+        content="You walk down the right path across the bridge.",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=False,
+    )
+    db.add(right_node)
+
+    left_end = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Forest End",
+        content="You emerge from the forest at a cottage.",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=True,
+    )
+    db.add(left_end)
+
+    right_end = StoryNode(
+        id=uuid4(),
+        story_id=story.id,
+        story_version=1,
+        title="Bridge End",
+        content="You cross the bridge and reach a castle.",
+        node_type="text",
+        is_start_node=False,
+        is_end_node=True,
+    )
+    db.add(right_end)
+
+    db.commit()
+    db.refresh(start_node)
+    db.refresh(left_node)
+    db.refresh(right_node)
+    db.refresh(left_end)
+    db.refresh(right_end)
+
+    # Create choices - NOTE: Start has 2 choices
+    choice_left = NodeChoice(
+        id=uuid4(),
+        from_node_id=start_node.id,
+        to_node_id=left_node.id,
+        text="Go left through the forest",
+        order=0,
+        sets_state={"path": "left", "environment": "forest"},
+    )
+    db.add(choice_left)
+
+    choice_right = NodeChoice(
+        id=uuid4(),
+        from_node_id=start_node.id,
+        to_node_id=right_node.id,
+        text="Go right across the bridge",
+        order=1,
+        sets_state={"path": "right", "environment": "bridge"},
+    )
+    db.add(choice_right)
+
+    choice_left_continue = NodeChoice(
+        id=uuid4(),
+        from_node_id=left_node.id,
+        to_node_id=left_end.id,
+        text="Continue through the forest",
+        order=0,
+        sets_state={"destination": "cottage"},
+    )
+    db.add(choice_left_continue)
+
+    choice_right_continue = NodeChoice(
+        id=uuid4(),
+        from_node_id=right_node.id,
+        to_node_id=right_end.id,
+        text="Cross the bridge",
+        order=0,
+        sets_state={"destination": "castle"},
+    )
+    db.add(choice_right_continue)
+
+    db.commit()
+
+    # Create UserStoryProgress at start
+    progress = UserStoryProgress(
+        id=uuid4(),
+        user_persona_id=user_persona.id,
+        story_id=story.id,
+        story_version=1,
+        current_node_id=start_node.id,
+        is_completed=False,
+        story_state={},
+        head_choice_id=None,
+        head_version=0,
+    )
+    db.add(progress)
+    db.commit()
+    db.refresh(progress)
+
+    return (story, progress)

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AgentsRunAgentResponse, ArchetypesReadArchetypesData, ArchetypesReadArchetypesResponse, ArchetypesCreateArchetypeData, ArchetypesCreateArchetypeResponse, ArchetypesReadArchetypeData, ArchetypesReadArchetypeResponse, ArchetypesUpdateArchetypeData, ArchetypesUpdateArchetypeResponse, ArchetypesDeleteArchetypeData, ArchetypesDeleteArchetypeResponse, CatalogReadCatalogData, CatalogReadCatalogResponse, CatalogReadCatalogStoryData, CatalogReadCatalogStoryResponse, CatalogReadCatalogStoryNodesData, CatalogReadCatalogStoryNodesResponse, CatalogReadCatalogStoryRequirementsData, CatalogReadCatalogStoryRequirementsResponse, EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PersonaEventsProcessPersonaEventData, PersonaEventsProcessPersonaEventResponse, PersonaQualitiesReadPersonaQualitiesData, PersonaQualitiesReadPersonaQualitiesResponse, PersonaQualitiesAddQualityToPersonaData, PersonaQualitiesAddQualityToPersonaResponse, PersonaQualitiesRemoveQualityFromPersonaData, PersonaQualitiesRemoveQualityFromPersonaResponse, PersonasReadPersonasData, PersonasReadPersonasResponse, PersonasCreatePersonaData, PersonasCreatePersonaResponse, PersonasReadPersonaData, PersonasReadPersonaResponse, PersonasUpdatePersonaData, PersonasUpdatePersonaResponse, PersonasDeletePersonaData, PersonasDeletePersonaResponse, PersonasCreatePersonaFromArchetypeData, PersonasCreatePersonaFromArchetypeResponse, PrivateCreateUserData, PrivateCreateUserResponse, QualitiesReadQualitiesData, QualitiesReadQualitiesResponse, QualitiesCreateQualityData, QualitiesCreateQualityResponse, QualitiesReadQualityData, QualitiesReadQualityResponse, QualitiesUpdateQualityData, QualitiesUpdateQualityResponse, QualitiesDeleteQualityData, QualitiesDeleteQualityResponse, QualityTraitLinksReadQualityTraitsData, QualityTraitLinksReadQualityTraitsResponse, QualityTraitLinksReadTraitQualitiesData, QualityTraitLinksReadTraitQualitiesResponse, QualityTraitLinksCreateQualityTraitLinkData, QualityTraitLinksCreateQualityTraitLinkResponse, QualityTraitLinksDeleteQualityTraitLinkData, QualityTraitLinksDeleteQualityTraitLinkResponse, RoomsCreateNewRoomData, RoomsCreateNewRoomResponse, RoomsListUserRoomsData, RoomsListUserRoomsResponse, RoomsGetRoomData, RoomsGetRoomResponse, RoomsUpdateRoomData, RoomsUpdateRoomResponse, RoomsAddRoomParticipantData, RoomsAddRoomParticipantResponse, RoomsListRoomParticipantsData, RoomsListRoomParticipantsResponse, RoomsRemoveRoomParticipantData, RoomsRemoveRoomParticipantResponse, RoomsChangeRoomParticipantRoleData, RoomsChangeRoomParticipantRoleResponse, RoomsSendMessageData, RoomsSendMessageResponse, RoomsListMessagesData, RoomsListMessagesResponse, RoomsEditMessageEndpointData, RoomsEditMessageEndpointResponse, RoomsDeleteMessageEndpointData, RoomsDeleteMessageEndpointResponse, RoomsPinMessageEndpointData, RoomsPinMessageEndpointResponse, RoomsUnpinMessageEndpointData, RoomsUnpinMessageEndpointResponse, RoomsToggleMessageContextEndpointData, RoomsToggleMessageContextEndpointResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, StoriesCreateStoryData, StoriesCreateStoryResponse, StoriesReadStoryData, StoriesReadStoryResponse, StoriesUpdateStoryData, StoriesUpdateStoryResponse, StoriesDeleteStoryData, StoriesDeleteStoryResponse, StoriesGetStoryStartNodeData, StoriesGetStoryStartNodeResponse, StoriesPublishStoryData, StoriesPublishStoryResponse, StoriesUnpublishStoryData, StoriesUnpublishStoryResponse, StoriesCreateNewStoryVersionData, StoriesCreateNewStoryVersionResponse, StorynodesReadStorynodesData, StorynodesReadStorynodesResponse, StorynodesCreateStorynodeData, StorynodesCreateStorynodeResponse, StorynodesReadStorynodeData, StorynodesReadStorynodeResponse, StorynodesUpdateStorynodeData, StorynodesUpdateStorynodeResponse, StorynodesDeleteStorynodeData, StorynodesDeleteStorynodeResponse, TraitsReadTraitsData, TraitsReadTraitsResponse, TraitsCreateTraitData, TraitsCreateTraitResponse, TraitsReadTraitData, TraitsReadTraitResponse, TraitsUpdateTraitData, TraitsUpdateTraitResponse, TraitsDeleteTraitData, TraitsDeleteTraitResponse, UserPersonasReadUserPersonasData, UserPersonasReadUserPersonasResponse, UserPersonasCreateUserPersonaData, UserPersonasCreateUserPersonaResponse, UserPersonasReadUserPersonaData, UserPersonasReadUserPersonaResponse, UserPersonasUpdateUserPersonaData, UserPersonasUpdateUserPersonaResponse, UserPersonasDeleteUserPersonaData, UserPersonasDeleteUserPersonaResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UserStoryProgressReadUserStoryProgressesData, UserStoryProgressReadUserStoryProgressesResponse, UserStoryProgressReadUserStoryProgressData, UserStoryProgressReadUserStoryProgressResponse, UserStoryProgressCreateUserStoryProgressData, UserStoryProgressCreateUserStoryProgressResponse, UserStoryProgressUpdateUserStoryProgressData, UserStoryProgressUpdateUserStoryProgressResponse, UserStoryProgressGetCurrentNodeData, UserStoryProgressGetCurrentNodeResponse, UserStoryProgressMakeStoryChoiceData, UserStoryProgressMakeStoryChoiceResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AgentsRunAgentResponse, ArchetypesReadArchetypesData, ArchetypesReadArchetypesResponse, ArchetypesCreateArchetypeData, ArchetypesCreateArchetypeResponse, ArchetypesReadArchetypeData, ArchetypesReadArchetypeResponse, ArchetypesUpdateArchetypeData, ArchetypesUpdateArchetypeResponse, ArchetypesDeleteArchetypeData, ArchetypesDeleteArchetypeResponse, CatalogReadCatalogData, CatalogReadCatalogResponse, CatalogReadCatalogStoryData, CatalogReadCatalogStoryResponse, CatalogReadCatalogStoryNodesData, CatalogReadCatalogStoryNodesResponse, CatalogReadCatalogStoryRequirementsData, CatalogReadCatalogStoryRequirementsResponse, EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NodeChoicesReadNodeChoicesData, NodeChoicesReadNodeChoicesResponse, NodeChoicesCreateNodeChoiceData, NodeChoicesCreateNodeChoiceResponse, NodeChoicesReadNodeChoiceData, NodeChoicesReadNodeChoiceResponse, NodeChoicesUpdateNodeChoiceData, NodeChoicesUpdateNodeChoiceResponse, NodeChoicesDeleteNodeChoiceData, NodeChoicesDeleteNodeChoiceResponse, PersonaEventsProcessPersonaEventData, PersonaEventsProcessPersonaEventResponse, PersonaQualitiesReadPersonaQualitiesData, PersonaQualitiesReadPersonaQualitiesResponse, PersonaQualitiesAddQualityToPersonaData, PersonaQualitiesAddQualityToPersonaResponse, PersonaQualitiesRemoveQualityFromPersonaData, PersonaQualitiesRemoveQualityFromPersonaResponse, PersonasReadPersonasData, PersonasReadPersonasResponse, PersonasCreatePersonaData, PersonasCreatePersonaResponse, PersonasReadPersonaData, PersonasReadPersonaResponse, PersonasUpdatePersonaData, PersonasUpdatePersonaResponse, PersonasDeletePersonaData, PersonasDeletePersonaResponse, PersonasCreatePersonaFromArchetypeData, PersonasCreatePersonaFromArchetypeResponse, PrivateCreateUserData, PrivateCreateUserResponse, QualitiesReadQualitiesData, QualitiesReadQualitiesResponse, QualitiesCreateQualityData, QualitiesCreateQualityResponse, QualitiesReadQualityData, QualitiesReadQualityResponse, QualitiesUpdateQualityData, QualitiesUpdateQualityResponse, QualitiesDeleteQualityData, QualitiesDeleteQualityResponse, QualityTraitLinksReadQualityTraitsData, QualityTraitLinksReadQualityTraitsResponse, QualityTraitLinksReadTraitQualitiesData, QualityTraitLinksReadTraitQualitiesResponse, QualityTraitLinksCreateQualityTraitLinkData, QualityTraitLinksCreateQualityTraitLinkResponse, QualityTraitLinksDeleteQualityTraitLinkData, QualityTraitLinksDeleteQualityTraitLinkResponse, RoomsCreateNewRoomData, RoomsCreateNewRoomResponse, RoomsListUserRoomsData, RoomsListUserRoomsResponse, RoomsGetRoomData, RoomsGetRoomResponse, RoomsUpdateRoomData, RoomsUpdateRoomResponse, RoomsAddRoomParticipantData, RoomsAddRoomParticipantResponse, RoomsListRoomParticipantsData, RoomsListRoomParticipantsResponse, RoomsRemoveRoomParticipantData, RoomsRemoveRoomParticipantResponse, RoomsChangeRoomParticipantRoleData, RoomsChangeRoomParticipantRoleResponse, RoomsSendMessageData, RoomsSendMessageResponse, RoomsListMessagesData, RoomsListMessagesResponse, RoomsEditMessageEndpointData, RoomsEditMessageEndpointResponse, RoomsDeleteMessageEndpointData, RoomsDeleteMessageEndpointResponse, RoomsPinMessageEndpointData, RoomsPinMessageEndpointResponse, RoomsUnpinMessageEndpointData, RoomsUnpinMessageEndpointResponse, RoomsToggleMessageContextEndpointData, RoomsToggleMessageContextEndpointResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, StoriesCreateStoryData, StoriesCreateStoryResponse, StoriesReadStoryData, StoriesReadStoryResponse, StoriesUpdateStoryData, StoriesUpdateStoryResponse, StoriesDeleteStoryData, StoriesDeleteStoryResponse, StoriesGetStoryStartNodeData, StoriesGetStoryStartNodeResponse, StoriesPublishStoryData, StoriesPublishStoryResponse, StoriesUnpublishStoryData, StoriesUnpublishStoryResponse, StoriesCreateNewStoryVersionData, StoriesCreateNewStoryVersionResponse, StoriesReadStoryRequirementsData, StoriesReadStoryRequirementsResponse, StoriesCreateStoryRequirementData, StoriesCreateStoryRequirementResponse, StoriesDeleteStoryRequirementData, StoriesDeleteStoryRequirementResponse, StorynodesReadStorynodesData, StorynodesReadStorynodesResponse, StorynodesCreateStorynodeData, StorynodesCreateStorynodeResponse, StorynodesReadStorynodeData, StorynodesReadStorynodeResponse, StorynodesUpdateStorynodeData, StorynodesUpdateStorynodeResponse, StorynodesDeleteStorynodeData, StorynodesDeleteStorynodeResponse, StorynodesReadNodeChoicesData, StorynodesReadNodeChoicesResponse, StorynodesCreateNodeChoiceFromNodeData, StorynodesCreateNodeChoiceFromNodeResponse, TraitsReadTraitsData, TraitsReadTraitsResponse, TraitsCreateTraitData, TraitsCreateTraitResponse, TraitsReadTraitData, TraitsReadTraitResponse, TraitsUpdateTraitData, TraitsUpdateTraitResponse, TraitsDeleteTraitData, TraitsDeleteTraitResponse, UserPersonasReadUserPersonasData, UserPersonasReadUserPersonasResponse, UserPersonasCreateUserPersonaData, UserPersonasCreateUserPersonaResponse, UserPersonasReadUserPersonaData, UserPersonasReadUserPersonaResponse, UserPersonasUpdateUserPersonaData, UserPersonasUpdateUserPersonaResponse, UserPersonasDeleteUserPersonaData, UserPersonasDeleteUserPersonaResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UserStoryProgressReadUserStoryProgressesData, UserStoryProgressReadUserStoryProgressesResponse, UserStoryProgressReadUserStoryProgressData, UserStoryProgressReadUserStoryProgressResponse, UserStoryProgressCreateUserStoryProgressData, UserStoryProgressCreateUserStoryProgressResponse, UserStoryProgressUpdateUserStoryProgressData, UserStoryProgressUpdateUserStoryProgressResponse, UserStoryProgressGetCurrentNodeData, UserStoryProgressGetCurrentNodeResponse, UserStoryProgressMakeStoryChoiceData, UserStoryProgressMakeStoryChoiceResponse, UserStoryProgressValidateStoryStateData, UserStoryProgressValidateStoryStateResponse, UserStoryProgressUndoStoryChoiceData, UserStoryProgressUndoStoryChoiceResponse, UserStoryProgressJumpStoryHeadData, UserStoryProgressJumpStoryHeadResponse, UserStoryProgressReadStoryTimelineData, UserStoryProgressReadStoryTimelineResponse, UserStoryProgressReadStorySnapshotsData, UserStoryProgressReadStorySnapshotsResponse, UserStoryProgressCreateStorySnapshotData, UserStoryProgressCreateStorySnapshotResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AgentsService {
     /**
@@ -163,7 +163,7 @@ export class CatalogService {
      * Retrieve a published story by ID for catalog browsing.
      * @param data The data for the request.
      * @param data.storyId
-     * @returns app__models__StoryPublic__2 Successful Response
+     * @returns StoryPublic Successful Response
      * @throws ApiError
      */
     public static readCatalogStory(data: CatalogReadCatalogStoryData): CancelablePromise<CatalogReadCatalogStoryResponse> {
@@ -548,6 +548,146 @@ export class LoginService {
             url: '/api/v1/password-recovery-html-content/{email}',
             path: {
                 email: data.email
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+}
+
+export class NodeChoicesService {
+    /**
+     * Read Node Choices
+     * Retrieve node choices with optional filtering.
+     *
+     * Filters:
+     * - from_node_id: Get choices originating from specific node
+     * - story_id: Get all choices for a story (joins through StoryNode)
+     * @param data The data for the request.
+     * @param data.fromNodeId
+     * @param data.storyId
+     * @param data.skip
+     * @param data.limit
+     * @returns NodeChoicesPublic Successful Response
+     * @throws ApiError
+     */
+    public static readNodeChoices(data: NodeChoicesReadNodeChoicesData = {}): CancelablePromise<NodeChoicesReadNodeChoicesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/node-choices/',
+            query: {
+                from_node_id: data.fromNodeId,
+                story_id: data.storyId,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Node Choice
+     * Create new node choice.
+     *
+     * Validates:
+     * - Both nodes exist
+     * - Nodes belong to same story and version
+     * - from_node is not an end node
+     * - User owns the story
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns NodeChoicePublic Successful Response
+     * @throws ApiError
+     */
+    public static createNodeChoice(data: NodeChoicesCreateNodeChoiceData): CancelablePromise<NodeChoicesCreateNodeChoiceResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/node-choices/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Node Choice
+     * Get node choice by ID.
+     * @param data The data for the request.
+     * @param data.choiceId
+     * @returns NodeChoicePublic Successful Response
+     * @throws ApiError
+     */
+    public static readNodeChoice(data: NodeChoicesReadNodeChoiceData): CancelablePromise<NodeChoicesReadNodeChoiceResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/node-choices/{choice_id}',
+            path: {
+                choice_id: data.choiceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Node Choice
+     * Update a node choice.
+     *
+     * Validates:
+     * - Choice exists
+     * - User owns the story
+     * - If updating to_node_id, new node is valid
+     * - Choice belongs to current_version (not published_version)
+     * @param data The data for the request.
+     * @param data.choiceId
+     * @param data.requestBody
+     * @returns NodeChoicePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateNodeChoice(data: NodeChoicesUpdateNodeChoiceData): CancelablePromise<NodeChoicesUpdateNodeChoiceResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/node-choices/{choice_id}',
+            path: {
+                choice_id: data.choiceId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Node Choice
+     * Delete a node choice.
+     *
+     * Validates:
+     * - Choice exists
+     * - User owns the story
+     * - Choice belongs to current_version (not published_version)
+     *
+     * Warning: This will not cascade delete UserNodeChoice records.
+     * Players who made this choice will have orphaned history.
+     * @param data The data for the request.
+     * @param data.choiceId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteNodeChoice(data: NodeChoicesDeleteNodeChoiceData): CancelablePromise<NodeChoicesDeleteNodeChoiceResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/node-choices/{choice_id}',
+            path: {
+                choice_id: data.choiceId
             },
             errors: {
                 422: 'Validation Error'
@@ -1489,7 +1629,7 @@ export class StoriesService {
      * The story is automatically associated with the current user as owner.
      * @param data The data for the request.
      * @param data.requestBody
-     * @returns app__models__StoryPublic__2 Successful Response
+     * @returns StoryPublic Successful Response
      * @throws ApiError
      */
     public static createStory(data: StoriesCreateStoryData): CancelablePromise<StoriesCreateStoryResponse> {
@@ -1511,7 +1651,7 @@ export class StoriesService {
      * Users can only access their own stories unless they are superusers.
      * @param data The data for the request.
      * @param data.id
-     * @returns app__models__StoryPublic__2 Successful Response
+     * @returns StoryPublic Successful Response
      * @throws ApiError
      */
     public static readStory(data: StoriesReadStoryData): CancelablePromise<StoriesReadStoryResponse> {
@@ -1536,7 +1676,7 @@ export class StoriesService {
      * @param data The data for the request.
      * @param data.id
      * @param data.requestBody
-     * @returns app__models__StoryPublic__2 Successful Response
+     * @returns StoryPublic Successful Response
      * @throws ApiError
      */
     public static updateStory(data: StoriesUpdateStoryData): CancelablePromise<StoriesUpdateStoryResponse> {
@@ -1591,7 +1731,7 @@ export class StoriesService {
      * Users can only access their own stories unless they are superusers.
      * @param data The data for the request.
      * @param data.id
-     * @returns app__models__StoryNodePublic__2 Successful Response
+     * @returns StoryNodePublic Successful Response
      * @throws ApiError
      */
     public static getStoryStartNode(data: StoriesGetStoryStartNodeData): CancelablePromise<StoriesGetStoryStartNodeResponse> {
@@ -1616,7 +1756,7 @@ export class StoriesService {
      * Players will be locked to this published_version when they start the story.
      * @param data The data for the request.
      * @param data.id
-     * @returns app__models__StoryPublic__2 Successful Response
+     * @returns StoryPublic Successful Response
      * @throws ApiError
      */
     public static publishStory(data: StoriesPublishStoryData): CancelablePromise<StoriesPublishStoryResponse> {
@@ -1641,7 +1781,7 @@ export class StoriesService {
      * Existing players continue playing the published_version unaffected.
      * @param data The data for the request.
      * @param data.id
-     * @returns app__models__StoryPublic__2 Successful Response
+     * @returns StoryPublic Successful Response
      * @throws ApiError
      */
     public static unpublishStory(data: StoriesUnpublishStoryData): CancelablePromise<StoriesUnpublishStoryResponse> {
@@ -1668,7 +1808,7 @@ export class StoriesService {
      * Use this when you want to edit a published story without affecting existing players.
      * @param data The data for the request.
      * @param data.id
-     * @returns app__models__StoryPublic__2 Successful Response
+     * @returns StoryPublic Successful Response
      * @throws ApiError
      */
     public static createNewStoryVersion(data: StoriesCreateNewStoryVersionData): CancelablePromise<StoriesCreateNewStoryVersionResponse> {
@@ -1677,6 +1817,94 @@ export class StoriesService {
             url: '/api/v1/stories/{id}/new-version',
             path: {
                 id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Story Requirements
+     * Retrieve story requirements.
+     *
+     * Requirements gate which UserPersonas can start this story.
+     * Public endpoint (anyone can see requirements).
+     * @param data The data for the request.
+     * @param data.storyId
+     * @param data.skip
+     * @param data.limit
+     * @returns StoryRequirementsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readStoryRequirements(data: StoriesReadStoryRequirementsData): CancelablePromise<StoriesReadStoryRequirementsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/stories/{story_id}/requirements',
+            path: {
+                story_id: data.storyId
+            },
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Story Requirement
+     * Create story requirement.
+     *
+     * Validates:
+     * - Story exists
+     * - User owns story
+     * - No duplicate requirements
+     * - requirement_type is valid
+     * @param data The data for the request.
+     * @param data.storyId
+     * @param data.requestBody
+     * @returns StoryRequirementPublic Successful Response
+     * @throws ApiError
+     */
+    public static createStoryRequirement(data: StoriesCreateStoryRequirementData): CancelablePromise<StoriesCreateStoryRequirementResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/stories/{story_id}/requirements',
+            path: {
+                story_id: data.storyId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Story Requirement
+     * Delete story requirement.
+     *
+     * Validates:
+     * - Requirement exists
+     * - Requirement belongs to this story
+     * - User owns story
+     * @param data The data for the request.
+     * @param data.storyId
+     * @param data.requirementId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteStoryRequirement(data: StoriesDeleteStoryRequirementData): CancelablePromise<StoriesDeleteStoryRequirementResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/stories/{story_id}/requirements/{requirement_id}',
+            path: {
+                story_id: data.storyId,
+                requirement_id: data.requirementId
             },
             errors: {
                 422: 'Validation Error'
@@ -1715,7 +1943,7 @@ export class StorynodesService {
      * Create new storynode.
      * @param data The data for the request.
      * @param data.requestBody
-     * @returns app__models__StoryNodePublic__2 Successful Response
+     * @returns StoryNodePublic Successful Response
      * @throws ApiError
      */
     public static createStorynode(data: StorynodesCreateStorynodeData): CancelablePromise<StorynodesCreateStorynodeResponse> {
@@ -1735,7 +1963,7 @@ export class StorynodesService {
      * Get storynode by ID.
      * @param data The data for the request.
      * @param data.id
-     * @returns app__models__StoryNodePublic__2 Successful Response
+     * @returns StoryNodePublic Successful Response
      * @throws ApiError
      */
     public static readStorynode(data: StorynodesReadStorynodeData): CancelablePromise<StorynodesReadStorynodeResponse> {
@@ -1757,7 +1985,7 @@ export class StorynodesService {
      * @param data The data for the request.
      * @param data.id
      * @param data.requestBody
-     * @returns app__models__StoryNodePublic__2 Successful Response
+     * @returns StoryNodePublic Successful Response
      * @throws ApiError
      */
     public static updateStorynode(data: StorynodesUpdateStorynodeData): CancelablePromise<StorynodesUpdateStorynodeResponse> {
@@ -1790,6 +2018,61 @@ export class StorynodesService {
             path: {
                 id: data.id
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Node Choices
+     * Get all choices originating from this node.
+     *
+     * Convenience endpoint for: GET /node-choices?from_node_id={node_id}
+     * @param data The data for the request.
+     * @param data.nodeId
+     * @param data.skip
+     * @param data.limit
+     * @returns NodeChoicesPublic Successful Response
+     * @throws ApiError
+     */
+    public static readNodeChoices(data: StorynodesReadNodeChoicesData): CancelablePromise<StorynodesReadNodeChoicesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/storynodes/{node_id}/choices',
+            path: {
+                node_id: data.nodeId
+            },
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Node Choice From Node
+     * Create choice from this node.
+     *
+     * Convenience endpoint that automatically sets from_node_id.
+     * @param data The data for the request.
+     * @param data.nodeId
+     * @param data.requestBody
+     * @returns NodeChoicePublic Successful Response
+     * @throws ApiError
+     */
+    public static createNodeChoiceFromNode(data: StorynodesCreateNodeChoiceFromNodeData): CancelablePromise<StorynodesCreateNodeChoiceFromNodeResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/storynodes/{node_id}/choices',
+            path: {
+                node_id: data.nodeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -2391,6 +2674,236 @@ export class UserStoryProgressService {
                 user_persona_id: data.userPersonaId,
                 story_id: data.storyId,
                 choice_id: data.choiceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Validate Story State
+     * Validate that replayed state matches stored state.
+     *
+     * This is a Phase 2 diagnostic endpoint to verify replay logic correctness.
+     * In production, replayed state is the source of truth.
+     *
+     * Returns:
+     * {
+     * "stored_state": {...},
+     * "replayed_state": {...},
+     * "match": true/false,
+     * "differences": {...}
+     * }
+     * @param data The data for the request.
+     * @param data.userPersonaId
+     * @param data.storyId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static validateStoryState(data: UserStoryProgressValidateStoryStateData): CancelablePromise<UserStoryProgressValidateStoryStateResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/user-personas/{user_persona_id}/stories/{story_id}/validate-state',
+            path: {
+                user_persona_id: data.userPersonaId,
+                story_id: data.storyId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Undo Story Choice
+     * Move head to parent choice (rewind one step).
+     *
+     * Behavior:
+     * - Moves head_choice_id to parent of current head
+     * - Increments head_version (optimistic lock)
+     * - Replays state from new head
+     * - Old future remains in database but becomes hidden
+     *
+     * Errors:
+     * 400: Already at story start, cannot undo
+     * 404: User persona or story progress not found
+     *
+     * Returns:
+     * Updated progress with new head position
+     *
+     * Example:
+     * POST /api/v1/user-personas/{id}/stories/{story_id}/undo
+     *
+     * Response: UserStoryProgressPublic with head at parent choice
+     * @param data The data for the request.
+     * @param data.userPersonaId
+     * @param data.storyId
+     * @returns UserStoryProgressPublic Successful Response
+     * @throws ApiError
+     */
+    public static undoStoryChoice(data: UserStoryProgressUndoStoryChoiceData): CancelablePromise<UserStoryProgressUndoStoryChoiceResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/user-personas/{user_persona_id}/stories/{story_id}/undo',
+            path: {
+                user_persona_id: data.userPersonaId,
+                story_id: data.storyId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Jump Story Head
+     * Jump head to any ancestor choice (rewind to arbitrary point).
+     * - Uses optimized replay with snapshots for state derivation
+     * - Publishes real-time events to WebSocket clients
+     * - Enforces ancestor constraint (no forward jumps)
+     *
+     *
+     * Validation:
+     * - Target choice must be ancestor of current head (enforces no forward jumps)
+     * - Optimistic concurrency via expected_head_version
+     * - Target can be None (jump to story start)
+     *
+     * Behavior:
+     * - Moves head_choice_id to target
+     * - Replays state from target using nearest snapshot
+     * - All future choices after target become hidden
+     * - Increments head_version
+     *
+     * Errors:
+     * 400: Target not ancestor, or other validation error
+     * 404: User persona, story progress, or target choice not found
+     * 409: Head version conflict (concurrent modification)
+     *
+     * Returns:
+     * Updated progress at new head position with replayed state
+     *
+     * Example:
+     * POST /api/v1/user-personas/{id}/stories/{story_id}/jump
+     * Body: {
+     * "choice_id": "uuid-of-ancestor", # or null for story start
+     * "expected_head_version": 5
+     * }
+     *
+     * Response: UserStoryProgressPublic with head at target choice
+     * @param data The data for the request.
+     * @param data.userPersonaId
+     * @param data.storyId
+     * @param data.requestBody
+     * @returns UserStoryProgressPublic Successful Response
+     * @throws ApiError
+     */
+    public static jumpStoryHead(data: UserStoryProgressJumpStoryHeadData): CancelablePromise<UserStoryProgressJumpStoryHeadResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/user-personas/{user_persona_id}/stories/{story_id}/jump',
+            path: {
+                user_persona_id: data.userPersonaId,
+                story_id: data.storyId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Story Timeline
+     * Get active timeline (root → head) for breadcrumb UI.
+     *
+     * Returns ONLY the ancestor chain, never siblings or abandoned branches.
+     * This ensures abandoned branches remain hidden from the player.
+     *
+     * Response includes:
+     * - Story start event (choice_id=null)
+     * - All choices from root to current head
+     * - Current head_version for optimistic locking
+     *
+     * Returns:
+     * Timeline with events list and head_version
+     *
+     * Example:
+     * GET /api/v1/user-personas/{id}/stories/{story_id}/timeline
+     *
+     * Response: {
+     * "events": [
+     * {"choice_id": null, "choice_text": "Story Start", "is_current": false, ...},
+     * {"choice_id": "uuid-1", "choice_text": "Enter forest", "is_current": false, ...},
+     * {"choice_id": "uuid-2", "choice_text": "Find cave", "is_current": true, ...}
+     * ],
+     * "head_version": 3
+     * }
+     * @param data The data for the request.
+     * @param data.userPersonaId
+     * @param data.storyId
+     * @returns Timeline Successful Response
+     * @throws ApiError
+     */
+    public static readStoryTimeline(data: UserStoryProgressReadStoryTimelineData): CancelablePromise<UserStoryProgressReadStoryTimelineResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/user-personas/{user_persona_id}/stories/{story_id}/timeline',
+            path: {
+                user_persona_id: data.userPersonaId,
+                story_id: data.storyId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Story Snapshots
+     * Get all snapshots for this story progress (admin/debug).
+     *
+     * Useful for monitoring snapshot coverage and debugging replay.
+     * @param data The data for the request.
+     * @param data.userPersonaId
+     * @param data.storyId
+     * @returns ProgressSnapshotsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readStorySnapshots(data: UserStoryProgressReadStorySnapshotsData): CancelablePromise<UserStoryProgressReadStorySnapshotsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/user-personas/{user_persona_id}/stories/{story_id}/snapshots',
+            path: {
+                user_persona_id: data.userPersonaId,
+                story_id: data.storyId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Story Snapshot
+     * Manually create snapshot at current head position (admin/debug).
+     *
+     * Normally snapshots are created automatically every N choices.
+     * This endpoint allows manual snapshot creation for testing.
+     * @param data The data for the request.
+     * @param data.userPersonaId
+     * @param data.storyId
+     * @returns ProgressSnapshotPublic Successful Response
+     * @throws ApiError
+     */
+    public static createStorySnapshot(data: UserStoryProgressCreateStorySnapshotData): CancelablePromise<UserStoryProgressCreateStorySnapshotResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/user-personas/{user_persona_id}/stories/{story_id}/snapshots/create',
+            path: {
+                user_persona_id: data.userPersonaId,
+                story_id: data.storyId
             },
             errors: {
                 422: 'Validation Error'
