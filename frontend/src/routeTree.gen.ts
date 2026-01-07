@@ -27,6 +27,7 @@ import { Route as LayoutIndexchangesforreviewImport } from './routes/_layout/ind
 import { Route as LayoutDashboardImport } from './routes/_layout/dashboard'
 import { Route as LayoutArchetypesImport } from './routes/_layout/archetypes'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
+import { Route as LayoutStoriesIndexImport } from './routes/_layout/stories/index'
 import { Route as LayoutRoomRoomIdImport } from './routes/_layout/room.$roomId'
 
 // Create/Update Routes
@@ -112,6 +113,11 @@ const LayoutAdminRoute = LayoutAdminImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutStoriesIndexRoute = LayoutStoriesIndexImport.update({
+  path: '/stories/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 const LayoutRoomRoomIdRoute = LayoutRoomRoomIdImport.update({
   path: '/room/$roomId',
   getParentRoute: () => LayoutRoute,
@@ -189,6 +195,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutRoomRoomIdImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/stories/': {
+      preLoaderRoute: typeof LayoutStoriesIndexImport
+      parentRoute: typeof LayoutImport
+    }
   }
 }
 
@@ -208,6 +218,7 @@ export const routeTree = rootRoute.addChildren([
     LayoutSimplestartRoute,
     LayoutIndexRoute,
     LayoutRoomRoomIdRoute,
+    LayoutStoriesIndexRoute,
   ]),
   LoginRoute,
   RecoverPasswordRoute,

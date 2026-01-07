@@ -305,7 +305,7 @@ class StoryRequirement:
 
 **Example:** Require "Detective" trait to access mystery stories
 
-**⚠️ MISSING IMPLEMENTATION:** StoryRequirement CRUD API endpoints do not exist. Requirements must be created directly via SQL. See [Known Limitations](#known-limitations).
+**⚠️ WARNING:** StoryRequirement CRUD API endpoints have not been reviewed against this guide. Review actual backend implementation. See [Known Limitations](#known-limitations).
 
 ---
 
@@ -1301,7 +1301,7 @@ WHERE requires_state @> '{"has_torch": true}';
 
 ### Current Constraints
 
-#### 1. Version Locking Behavior ⚠️ KNOWN BUG
+#### 1. Version Locking Behavior : NEEDS REVIW - has this been fixed?
 
 **Issue:** `POST /user-personas/{id}/stories/{story_id}` locks to `current_version`, not `published_version`
 

@@ -12,7 +12,6 @@
  * - Manages participant operations
  * - Polling coordination for all data sources
  *
- * @see Phase3-TechnicalSpec.md §3.2
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
