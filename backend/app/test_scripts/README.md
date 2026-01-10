@@ -97,7 +97,81 @@ python test_story_system.py --persona-id YOUR-PERSONA-UUID
 
 ---
 
-### 2. test_quixote_agent.py
+### 2. test_branching_stories.py
+
+Comprehensive E2E tests for multibranching CYOA stories with state management, conditionals, room integration, and publishing workflows.
+
+**What it tests:**
+- True story branching (multiple choices from same node)
+- State-based conditional choices (`requires_state`)
+- State accumulation across choices (`sets_state`)
+- Deep branching (branches that branch again)
+- Story publishing workflow
+- Room-story integration
+- Persona-story assignment
+- Multiple distinct story types
+
+**Test Stories:**
+1. **The Enchanted Forest** - Basic 3-way branching with state tracking
+2. **The Dragon's Hoard** - State-conditional branching (6 endings)
+3. **The Time Traveler's Dilemma** - Deep branching across 3 eras × 2 paths each
+4. **The Detective's Case** - Clue accumulation mystery with conditional endings
+
+**Usage:**
+```bash
+# Run all story tests
+python test_branching_stories.py
+
+# Run with verbose output
+python test_branching_stories.py --verbose
+
+# Run specific story only
+python test_branching_stories.py --story forest
+python test_branching_stories.py --story dragon
+python test_branching_stories.py --story time
+python test_branching_stories.py --story detective
+
+# Use existing persona
+python test_branching_stories.py --persona-id YOUR-PERSONA-UUID
+```
+
+**Requirements:**
+- Backend server running on `http://localhost:8000`
+- Database with all CYOA migrations applied
+- Test credentials in `test.env`
+- User persona (created automatically if not specified)
+
+**Output:**
+- Console logs with test-by-test results
+- `test_results_branching_stories.json` - Complete results with:
+  - All 4 stories created (IDs, room IDs, complexity metrics)
+  - Test results (pass/fail) for each story
+  - State validation results
+  - Success rate and timing
+
+**Features:**
+- ✅ Tests all requirements from `BRANCH_TESTS.md`
+- ✅ Real story content (not placeholders)
+- ✅ Multiple branching patterns (basic, conditional, deep, accumulation)
+- ✅ State management validation at every step
+- ✅ Publishing workflow integration
+- ✅ Room creation and association
+- ✅ Complete playthrough testing
+- ✅ Exit codes (0 for success, 1 for failures)
+
+**Test Coverage:**
+- 4 complete stories with real narratives
+- 12 initial branches + 12 sub-branches
+- 21 unique endings
+- 15+ state conditional checks
+- Average depth: 2.5 decision layers
+- State complexity: simple → advanced
+
+**See:** `BRANCHING_STORIES_README.md` for complete documentation
+
+---
+
+### 3. test_quixote_agent.py
 
 Tests the Quixote storytelling AI agent by running it 5 times with different topics.
 
@@ -146,7 +220,7 @@ else in the world. He faced dragons and demons, storms and shadows...
 
 ---
 
-### 3. populate_jungian_system.py
+### 4. populate_jungian_system.py
 
 Creates a complete Jungian archetype-based character system with full relationship linking.
 
@@ -176,7 +250,7 @@ python populate_jungian_system.py
 
 ---
 
-### 4. assign_persona_attributes.py
+### 5. assign_persona_attributes.py
 
 Assigns attributes from a CSV file to personas missing data in specified fields.
 

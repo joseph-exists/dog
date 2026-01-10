@@ -7,14 +7,14 @@
      Input,
      VStack,
    } from "@chakra-ui/react";
-   import {
-     DialogBody,
-     DialogCloseTrigger,
-     DialogContent,
-     DialogFooter,
-     DialogHeader,
-     DialogRoot,
-   } from "../ui/dialog";
+  import {
+    DialogBody,
+    DialogCloseTrigger,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogRoot,
+  } from "../ui/dialog";
    import { Field } from "../ui/field";
    import { MenuItem } from "../ui/menu";
    import type { RoomViewModel } from "@/services/roomService";
@@ -66,13 +66,22 @@
            setIsOpen(open);
            if (!open) reset(); // Reset form when closing
          }}
-       >
-         {/* Trigger as MenuItem for ActionsMenu */}
-         <MenuItem value="edit" onClick={() => setIsOpen(true)}>
-           Edit Room
-         </MenuItem>
+      >
+        {/* Trigger as MenuItem for ActionsMenu */}
+        <MenuItem 
+          value="edit" 
+          onClick={(e) => {
+            e.stopPropagation();
+            // Use setTimeout to allow menu to close before opening dialog
+            setTimeout(() => {
+              setIsOpen(true);
+            }, 0);
+          }}
+        >
+          Edit Room
+        </MenuItem>
 
-         <DialogContent>
+        <DialogContent>
            <form onSubmit={handleSubmit(onSubmit)}>
              <DialogHeader>
                <DialogTitle>Edit Room</DialogTitle>

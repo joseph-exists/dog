@@ -37,6 +37,8 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
+export type ContentFormat = 'text' | 'html' | 'markdown' | 'json';
+
 /**
  * Response model for getting current node with available choices.
  * Used by players to understand their current position in a story.
@@ -539,6 +541,7 @@ export type StoriesPublic = {
  */
 export type StoryCreate = {
     title: string;
+    content_format?: (ContentFormat | null);
     description?: (string | null);
     is_published?: boolean;
 };
@@ -549,7 +552,8 @@ export type StoryCreate = {
 export type StoryNodeCreate = {
     title: string;
     content?: string;
-    node_type?: string;
+    content_format?: ContentFormat;
+    node_type?: (string | null);
     is_start_node?: boolean;
     is_end_node?: boolean;
     story_id: string;
@@ -562,7 +566,8 @@ export type StoryNodeCreate = {
 export type StoryNodePublic = {
     title: string;
     content?: string;
-    node_type?: string;
+    content_format?: (ContentFormat | null);
+    node_type?: (string | null);
     is_start_node?: boolean;
     is_end_node?: boolean;
     id: string;
@@ -586,6 +591,7 @@ export type StoryNodesPublic = {
 export type StoryNodeUpdate = {
     title?: (string | null);
     content?: (string | null);
+    content_format?: (ContentFormat | null);
     node_type?: (string | null);
     is_start_node?: (boolean | null);
     is_end_node?: (boolean | null);
@@ -596,6 +602,7 @@ export type StoryNodeUpdate = {
  */
 export type StoryPublic = {
     title: string;
+    content_format?: (ContentFormat | null);
     description?: (string | null);
     is_published: boolean;
     id: string;
@@ -640,6 +647,7 @@ export type StoryRequirementsPublic = {
 export type StoryUpdate = {
     title?: (string | null);
     description?: (string | null);
+    content_format?: (ContentFormat | null);
 };
 
 /**

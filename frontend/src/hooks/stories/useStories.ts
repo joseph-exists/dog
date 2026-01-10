@@ -87,3 +87,25 @@ export const useUnpublishStory = () => {
     },
   })
 }
+
+// Mutation hook for creating a new version of a published story
+export const useCreateNewVersion = () => {
+  const queryClient = useQueryClient()
+  const { showSuccessToast } = useCustomToast()
+
+  return useMutation({
+    mutationFn: (storyId: string) =>
+      StoriesService.createNewStoryVersion({ id: storyId }),
+    onSuccess: (data) => {
+      showSuccessToast(
+        `Version ${data.current_version} created! You can now edit without affecting published version.`
+      )
+      queryClient.invalidateQueries({ queryKey: ["stories"] })
+      queryClient.invalidateQueries({ queryKey: ["stories", data.id] })
+      queryClient.invalidateQueries({ queryKey: ["stories", data.id, "nodes"] })
+    },
+    onError: (err: ApiError) => {
+      handleError(err)
+    },
+  })
+}

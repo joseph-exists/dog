@@ -60,14 +60,14 @@ A grid/list view of the author's stories with cards showing status badges, versi
 **File:** `src/hooks/stories/useStories.ts`
 
 **Acceptance Criteria:**
-- [ ] Export `useStories` hook that calls `StoriesService.readStories()`
-- [ ] Use query key `["stories"]`
-- [ ] Return query result with `data`, `isLoading`, `error`
-- [ ] Export `useCreateStory` mutation hook
-- [ ] Export `useDeleteStory` mutation hook (for superusers)
-- [ ] Mutations invalidate `["stories"]` on success
-- [ ] Use `useCustomToast` for success messages
-- [ ] Use `handleError` for error handling
+- [X] Export `useStories` hook that calls `StoriesService.readStories()`
+- [X] Use query key `["stories"]`
+- [X] Return query result with `data`, `isLoading`, `error`
+- [X] Export `useCreateStory` mutation hook
+- [X] Export `useDeleteStory` mutation hook (for superusers)
+- [X] Mutations invalidate `["stories"]` on success
+- [X] Use `useCustomToast` for success messages
+- [X] Use `handleError` for error handling
 
 **Technical Notes:**
 ```typescript
@@ -94,17 +94,17 @@ useMutation({
 **File:** `src/components/Stories/StoryList/StoryCard.tsx`
 
 **Acceptance Criteria:**
-- [ ] Accepts `story: StoryPublic` as prop
-- [ ] Display title, description (truncated to 150 chars), timestamps
-- [ ] Calculate and show status badge based on lifecycle state:
+- [X] Accepts `story: StoryPublic` as prop
+- [X] Display title, description (truncated to 150 chars), timestamps
+- [X] Calculate and show status badge based on lifecycle state:
   - Draft: `is_published === false && published_version === null` (gray badge)
   - Published: `is_published === true` (blue badge with version)
   - Unpublished: `is_published === false && published_version !== null` (orange badge)
   - Editing: `current_version > (published_version ?? 0)` (yellow badge "Draft v{N}")
-- [ ] Show version info: "v{current_version}" / "Published: v{published_version}"
-- [ ] Include "Edit" button that navigates to `/stories/${storyId}/edit`
-- [ ] Include Publish/Unpublish toggle (uses mutation from Task 1.5)
-- [ ] Include Delete button (conditional on user permissions)
+- [X] Show version info: "v{current_version}" / "Published: v{published_version}"
+- [X] Include "Edit" button that navigates to `/stories/${storyId}/edit`
+- [X] Include Publish/Unpublish toggle (uses mutation from Task 1.5)
+- [X] Include Delete button (conditional on user permissions)
 - [X] Use Chakra UI Card/Box component for layout
 - [X] Responsive design (stack on mobile, grid on desktop)
 
@@ -120,14 +120,14 @@ useMutation({
 **File:** `src/components/Stories/StoryList/CreateStoryModal.tsx`
 
 **Acceptance Criteria:**
-- [ ] Renders Chakra `DialogRoot` with trigger button "+ New Story"
-- [ ] Form uses React Hook Form with `mode: "onBlur"`
-- [ ] Form fields: `title` (required, max 100 chars), `description` (optional, max 500 chars)
-- [ ] Uses `Field` component from `@/components/ui/field` for inputs
-- [ ] Submit button disabled when form invalid
-- [ ] On success: show toast, close modal, invalidate queries
-- [ ] On error: use `handleError` utility
-- [ ] Form includes `defaultValues`: `{ title: "", description: "" }`
+- [X] Renders Chakra `DialogRoot` with trigger button "+ New Story"
+- [X] Form uses React Hook Form with `mode: "onBlur"`
+- [X] Form fields: `title` (required, max 100 chars), `description` (optional, max 500 chars)
+- [X] Uses `Field` component from `@/components/ui/field` for inputs
+- [X] Submit button disabled when form invalid
+- [X] On success: show toast, close modal, invalidate queries
+- [X] On error: use `handleError` utility
+- [X] Form includes `defaultValues`: `{ title: "", description: "" }`
 
 **Form Validation:**
 ```typescript
@@ -146,13 +146,13 @@ register("description", {
 **File:** `src/components/Stories/StoryList/StoryList.tsx`
 
 **Acceptance Criteria:**
-- [ ] Uses `useStories` hook to fetch data
-- [ ] Shows loading state with Chakra `Spinner` or skeleton
-- [ ] Shows empty state with friendly message and CreateStoryModal trigger
-- [ ] Renders grid of StoryCard components
-- [ ] Grid responsive: 1 column mobile, 2 tablet, 3 desktop
-- [ ] Includes page header "My Stories" with CreateStoryModal button
-- [ ] Handles error state with error message
+- [X] Uses `useStories` hook to fetch data
+- [X] Shows loading state with Chakra `Spinner` or skeleton
+- [X] Shows empty state with friendly message and CreateStoryModal trigger
+- [X] Renders grid of StoryCard components
+- [X] Grid responsive: 1 column mobile, 2 tablet, 3 desktop
+- [X] Includes page header "My Stories" with CreateStoryModal button
+- [X] Handles error state with error message
 
 **Layout:**
 ```tsx
@@ -173,14 +173,14 @@ register("description", {
 **File:** `src/hooks/stories/useStories.ts` (extend)
 
 **Acceptance Criteria:**
-- [ ] Export `usePublishStory` mutation hook
-- [ ] Export `useUnpublishStory` mutation hook
-- [ ] Both call respective `StoriesService` methods
-- [ ] Invalidate `["stories"]` and `["stories", storyId]` on success
-- [ ] Show success toast with appropriate message
-- [ ] Handle errors with `handleError`
-- [ ] Publish mutation accepts `storyId: string`
-- [ ] Unpublish mutation accepts `storyId: string`
+- [X] Export `usePublishStory` mutation hook
+- [X] Export `useUnpublishStory` mutation hook
+- [X] Both call respective `StoriesService` methods
+- [X] Invalidate `["stories"]` and `["stories", storyId]` on success
+- [X] Show success toast with appropriate message
+- [X] Handle errors with `handleError`
+- [X] Publish mutation accepts `storyId: string`
+- [X] Unpublish mutation accepts `storyId: string`
 
 ---
 
@@ -188,12 +188,12 @@ register("description", {
 **File:** `src/routes/_layout/stories/index.tsx`
 
 **Acceptance Criteria:**
-- [ ] Route path: `/stories`
-- [ ] Uses TanStack Router's `createFileRoute`
-- [ ] Protected with `beforeLoad` auth check
-- [ ] Renders `StoryList` component
-- [ ] Includes page title/meta for SEO
-- [ ] Exports route configuration
+- [X] Route path: `/stories`
+- [X] Uses TanStack Router's `createFileRoute`
+- [X] Protected with `beforeLoad` auth check
+- [X] Renders `StoryList` component
+- [X] Includes page title/meta for SEO
+- [X] Exports route configuration
 
 **Route Pattern:**
 ```typescript
@@ -235,14 +235,14 @@ The main editing interface with three panels: NodeTree (left), NodeEditor (cente
 **File:** `src/hooks/stories/useStoryEditor.ts`
 
 **Acceptance Criteria:**
-- [ ] Export `useStoryEditor` hook accepting `storyId: string`
-- [ ] Fetch story with query key `["stories", storyId]`
-- [ ] Fetch nodes for story with query key `["stories", storyId, "nodes"]`
-- [ ] Filter nodes by `story.current_version` in the fetch or post-processing
-- [ ] Return `story`, `nodes`, `isLoading`, `error`
-- [ ] Include helper: `getStartNode()` - finds node with `is_start_node === true`
-- [ ] Include helper: `getEndNodes()` - filters nodes with `is_end_node === true`
-- [ ] Include helper: `validateForPublish()` - runs validation checks
+- [X] Export `useStoryEditor` hook accepting `storyId: string`
+- [X] Fetch story with query key `["stories", storyId]`
+- [X] Fetch nodes for story with query key `["stories", storyId, "nodes"]`
+- [X] Filter nodes by `story.current_version` in the fetch or post-processing
+- [X] Return `story`, `nodes`, `isLoading`, `error`
+- [X] Include helper: `getStartNode()` - finds node with `is_start_node === true`
+- [X] Include helper: `getEndNodes()` - filters nodes with `is_end_node === true`
+- [X] Include helper: `validateForPublish()` - runs validation checks
 
 **Key Implementation:**
 ```typescript
@@ -265,20 +265,16 @@ const nodesQuery = useQuery({
 **File:** `src/components/Stories/StoryEditor/NodeTree/NodeTree.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `nodes: StoryNodePublic[]`, `selectedNodeId: string | null`, `onSelectNode: (id: string) => void`
-- [ ] Display hierarchical tree of nodes
-- [ ] Start node at top with special icon (🏁 or star)
-- [ ] End nodes marked with icon (🏆 or flag)
-- [ ] Selected node highlighted with different background
-- [ ] Click on node triggers `onSelectNode`
-- [ ] Shows node title and truncated content
-- [ ] Empty state: "No nodes yet. Create your first node!"
-- [ ] Scrollable if many nodes
+- [X] Props: `nodes: StoryNodePublic[]`, `selectedNodeId: string | null`, `onSelectNode: (id: string) => void`
+- [X] Display hierarchical tree of nodes
+- [X] Start node at top with special icon (🏁 or star)
+- [X] End nodes marked with icon (🏆 or flag)
+- [X] Selected node highlighted with different background
+- [X] Click on node triggers `onSelectNode`
+- [X] Shows node title and truncated content
+- [X] Empty state: "No nodes yet. Create your first node!"
+- [X] Scrollable if many nodes
 
-**Layout Approach (Simplified for MVP):**
-- For MVP: flat list of nodes, not true tree structure
-- Group by: Start node → Regular nodes → End nodes
-- Future enhancement: show choice-based hierarchy
 
 ---
 
@@ -286,12 +282,12 @@ const nodesQuery = useQuery({
 **File:** `src/components/Stories/StoryEditor/NodeTree/NodeTreeItem.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `node: StoryNodePublic`, `isSelected: boolean`, `onClick: () => void`
-- [ ] Display node title and icon based on type
-- [ ] Hover effect with cursor pointer
-- [ ] Selected state with highlighted background
-- [ ] Badge showing node type if not standard
-- [ ] Compact layout for list view
+- [X] Props: `node: StoryNodePublic`, `isSelected: boolean`, `onClick: () => void`
+- [X] Display node title and icon based on type
+- [X] Hover effect with cursor pointer
+- [X] Selected state with highlighted background
+- [X] Badge showing node type if not standard
+- [X] Compact layout for list view
 
 **Styling:**
 ```tsx
@@ -317,17 +313,17 @@ const nodesQuery = useQuery({
 **File:** `src/components/Stories/StoryEditor/PropertiesPanel/PropertiesPanel.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `story: StoryPublic`, `nodes: StoryNodePublic[]`
-- [ ] Display story metadata: title, description, created/updated dates
-- [ ] Show version info: current_version, published_version
-- [ ] Display statistics:
+- [X] Props: `story: StoryPublic`, `nodes: StoryNodePublic[]`
+- [X] Display story metadata: title, description, created/updated dates
+- [X] Show version info: current_version, published_version
+- [X] Display statistics:
   - Total node count
   - Start node count (should be 1)
   - End node count
   - Warning if no start node or multiple start nodes
-- [ ] Show publish status badge
-- [ ] Include "Create New Version" button (if published)
-- [ ] Include "Publish" button (triggers modal from Act IV)
+- [X] Show publish status badge
+- [X] Include "Create New Version" button (if published)
+- [X] Include "Publish" button (triggers modal from Act IV)
 
 **Layout Sections:**
 1. Story Info (title, desc, dates)
@@ -341,12 +337,12 @@ const nodesQuery = useQuery({
 **File:** `src/components/Stories/StoryEditor/PropertiesPanel/StoryMetadata.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `story: StoryPublic`
-- [ ] Editable title and description using inline editing or modal
-- [ ] Uses `useUpdateStory` mutation (create in hook)
-- [ ] Displays created/updated timestamps with relative time
-- [ ] Shows owner info if available
-- [ ] Version badges for current and published versions
+- [X] Props: `story: StoryPublic`
+- [X] Editable title and description using inline editing or modal
+- [X] Uses `useUpdateStory` mutation (create in hook)
+- [X] Displays created/updated timestamps with relative time
+- [X] Shows owner info if available
+- [X] Version badges for current and published versions
 
 ---
 
@@ -354,15 +350,15 @@ const nodesQuery = useQuery({
 **File:** `src/components/Stories/StoryEditor/NodeEditor/NodeEditor.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `nodeId: string | null`, `storyId: string`, `storyVersion: number`
-- [ ] If `nodeId` is null, show empty state: "Select a node to edit"
-- [ ] If `nodeId` is set, fetch and display node details
-- [ ] Two sections: Node Form (top) and Choices List (bottom)
-- [ ] Node form uses React Hook Form for editing
-- [ ] Form fields: title, content, node_type, is_start_node, is_end_node
-- [ ] Save button triggers update mutation
-- [ ] Choices list shows outgoing choices from this node
-- [ ] "+ Add Choice" button (will implement in Act III)
+- [X] Props: `nodeId: string | null`, `storyId: string`, `storyVersion: number`
+- [X] If `nodeId` is null, show empty state: "Select a node to edit"
+- [X] If `nodeId` is set, fetch and display node details
+- [X] Two sections: Node Form (top) and Choices List (bottom)
+- [X] Node form uses React Hook Form for editing
+- [X] Form fields: title, content, node_type, is_start_node, is_end_node
+- [X] Save button triggers update mutation
+- [X] Choices list shows outgoing choices from this node
+- [X] "+ Add Choice" button 
 
 ---
 
@@ -370,14 +366,14 @@ const nodesQuery = useQuery({
 **File:** `src/components/Stories/StoryEditor/StoryEditor.tsx`
 
 **Acceptance Criteria:**
-- [ ] Three-panel layout: NodeTree (left), NodeEditor (center), PropertiesPanel (right)
-- [ ] Uses Chakra `Grid` or `Flex` for responsive layout
-- [ ] On mobile: stack vertically, show one panel at a time with tabs
-- [ ] On desktop: three columns (20% / 50% / 30% width)
-- [ ] Manages `selectedNodeId` in local state
-- [ ] Passes data and callbacks to child components
-- [ ] Header shows story title and "Back to My Stories" link
-- [ ] Uses `useStoryEditor` hook to fetch data
+- [X] Three-panel layout: NodeTree (left), NodeEditor (center), PropertiesPanel (right)
+- [X] Uses Chakra `Grid` or `Flex` for responsive layout
+- [X] On mobile: stack vertically, show one panel at a time with tabs
+- [X] On desktop: three columns (20% / 50% / 30% width)
+- [X] Manages `selectedNodeId` in local state
+- [X] Passes data and callbacks to child components
+- [X] Header shows story title and "Back to My Stories" link
+- [X] Uses `useStoryEditor` hook to fetch data
 
 **Layout Structure:**
 ```tsx
@@ -404,13 +400,13 @@ const nodesQuery = useQuery({
 **File:** `src/routes/_layout/stories/$storyId/edit.tsx`
 
 **Acceptance Criteria:**
-- [ ] Route path: `/stories/:storyId/edit`
-- [ ] Uses TanStack Router's `createFileRoute`
-- [ ] Protected with `beforeLoad` auth check
-- [ ] Validates `storyId` param exists
-- [ ] Renders `StoryEditor` component with `storyId` from params
-- [ ] Includes breadcrumb navigation
-- [ ] Page title shows story name
+- [X] Route path: `/stories/:storyId/edit`
+- [X] Uses TanStack Router's `createFileRoute`
+- [X] Protected with `beforeLoad` auth check
+- [X] Validates `storyId` param exists
+- [X] Renders `StoryEditor` component with `storyId` from params
+- [X] Includes breadcrumb navigation
+- [X] Page title shows story name
 
 ---
 
@@ -441,15 +437,15 @@ Modals and forms for creating nodes and choices, including the powerful StateCon
 **File:** `src/hooks/stories/useStoryNodes.ts`
 
 **Acceptance Criteria:**
-- [ ] Export `useCreateNode` mutation hook
-- [ ] Export `useUpdateNode` mutation hook
-- [ ] Export `useDeleteNode` mutation hook
-- [ ] All mutations invalidate `["stories", storyId, "nodes"]` and `["nodes", nodeId]`
-- [ ] Create mutation enforces `story_id` and `story_version` from context
-- [ ] Update mutation accepts `nodeId` and `StoryNodeUpdate` data
-- [ ] Delete mutation confirms before deletion (or just executes, leave confirm to UI)
-- [ ] Success toasts for each operation
-- [ ] Error handling with `handleError`
+- [X] Export `useCreateNode` mutation hook
+- [x] Export `useUpdateNode` mutation hook
+- [X] Export `useDeleteNode` mutation hook
+- [X] All mutations invalidate `["stories", storyId, "nodes"]` and `["nodes", nodeId]`
+- [X] Create mutation enforces `story_id` and `story_version` from context
+- [X] Update mutation accepts `nodeId` and `StoryNodeUpdate` data
+- [X] Delete mutation confirms before deletion (or just executes, leave confirm to UI)
+- [X] Success toasts for each operation
+- [X] Error handling with `handleError`
 
 ---
 
@@ -457,18 +453,18 @@ Modals and forms for creating nodes and choices, including the powerful StateCon
 **File:** `src/components/Stories/StoryEditor/NodeEditor/CreateNodeModal.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `storyId: string`, `storyVersion: number`, `onSuccess?: () => void`
-- [ ] Trigger button: "+ New Node"
-- [ ] Form fields:
+- [X] Props: `storyId: string`, `storyVersion: number`, `onSuccess?: () => void`
+- [X] Trigger button: "+ New Node"
+- [X] Form fields:
   - `title` (required, max 100 chars)
   - `content` (optional, textarea)
   - `node_type` (optional, select: "text" | "image" | "choice")
   - `is_start_node` (checkbox)
   - `is_end_node` (checkbox)
-- [ ] Validation warning if setting `is_start_node` and one already exists
-- [ ] Uses `useCreateNode` mutation
-- [ ] Auto-sets `story_id` and `story_version` in mutation payload
-- [ ] Closes modal and calls `onSuccess` after creation
+- [X] Validation warning if setting `is_start_node` and one already exists
+- [X] Uses `useCreateNode` mutation
+- [X] Auto-sets `story_id` and `story_version` in mutation payload
+- [X] Closes modal and calls `onSuccess` after creation
 
 ---
 
@@ -476,15 +472,15 @@ Modals and forms for creating nodes and choices, including the powerful StateCon
 **File:** `src/components/Stories/shared/StateConditionEditor.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `value: Record<string, unknown> | null`, `onChange: (val) => void`, `label: string`
-- [ ] Displays key-value pairs as editable rows
-- [ ] "+ Add Condition" button adds new row
-- [ ] Each row: key input, type selector (boolean/string/number), value input
-- [ ] Type selector changes value input type
-- [ ] Remove button for each row
-- [ ] JSON preview toggle showing raw JSON
-- [ ] Validates key uniqueness (no duplicate keys)
-- [ ] Emits valid JSON object or null
+- [X] Props: `value: Record<string, unknown> | null`, `onChange: (val) => void`, `label: string`
+- [X] Displays key-value pairs as editable rows
+- [X] "+ Add Condition" button adds new row
+- [X] Each row: key input, type selector (boolean/string/number), value input
+- [X] Type selector changes value input type
+- [X] Remove button for each row
+- [X] JSON preview toggle showing raw JSON
+- [X] Validates key uniqueness (no duplicate keys)
+- [X] Emits valid JSON object or null
 
 **UI Pattern:**
 ```tsx
@@ -508,15 +504,15 @@ Modals and forms for creating nodes and choices, including the powerful StateCon
 **File:** `src/hooks/stories/useNodeChoices.ts`
 
 **Acceptance Criteria:**
-- [ ] Export `useChoicesForNode` query hook - fetches choices from a node
-- [ ] Export `useCreateChoice` mutation hook
-- [ ] Export `useUpdateChoice` mutation hook
-- [ ] Export `useDeleteChoice` mutation hook
-- [ ] Query key: `["nodes", nodeId, "choices"]`
-- [ ] Mutations invalidate relevant queries
-- [ ] Create uses `StorynodesService.createNodeChoiceFromNode` or `NodeChoicesService.createNodeChoice`
-- [ ] Update uses `NodeChoicesService.updateNodeChoice`
-- [ ] Delete uses `NodeChoicesService.deleteNodeChoice`
+- [X] Export `useChoicesForNode` query hook - fetches choices from a node
+- [X] Export `useCreateChoice` mutation hook
+- [X] Export `useUpdateChoice` mutation hook
+- [X] Export `useDeleteChoice` mutation hook
+- [X] Query key: `["nodes", nodeId, "choices"]`
+- [X] Mutations invalidate relevant queries
+- [X] Create uses `StorynodesService.createNodeChoiceFromNode` or `NodeChoicesService.createNodeChoice`
+- [X] Update uses `NodeChoicesService.updateNodeChoice`
+- [X] Delete uses `NodeChoicesService.deleteNodeChoice`
 
 ---
 
@@ -524,17 +520,17 @@ Modals and forms for creating nodes and choices, including the powerful StateCon
 **File:** `src/components/Stories/StoryEditor/NodeEditor/ChoiceEditor.tsx`
 
 **Acceptance Criteria:**
-- [ ] Props: `choice: NodeChoicePublic`, `availableNodes: StoryNodePublic[]`, `onSuccess?: () => void`
-- [ ] Can be used for both create and edit modes
-- [ ] Form fields:
+- [X] Props: `choice: NodeChoicePublic`, `availableNodes: StoryNodePublic[]`, `onSuccess?: () => void`
+- [X] Can be used for both create and edit modes
+- [X] Form fields:
   - `text` (required, max 200 chars) - what player sees
   - `to_node_id` (required, select from availableNodes)
   - `order` (number, default 0)
   - `requires_state` (uses StateConditionEditor)
   - `sets_state` (uses StateConditionEditor)
-- [ ] Uses `useUpdateChoice` or `useCreateChoice` based on mode
-- [ ] Dialog/modal pattern for editing
-- [ ] Shows node title for destination instead of just ID
+- [X] Uses `useUpdateChoice` or `useCreateChoice` based on mode
+- [X] Dialog/modal pattern for editing
+- [X] Shows node title for destination instead of just ID
 
 **Advanced UI:**
 - Collapsible "Advanced" section for state conditions
@@ -546,14 +542,14 @@ Modals and forms for creating nodes and choices, including the powerful StateCon
 **File:** `src/components/Stories/StoryEditor/NodeEditor/NodeEditor.tsx` (extend)
 
 **Acceptance Criteria:**
-- [ ] Below node form, show "Choices from this node"
-- [ ] Use `useChoicesForNode` to fetch choices
-- [ ] Display each choice with: text, destination node title, order
-- [ ] Show badges if choice has `requires_state` or `sets_state`
-- [ ] Edit button opens ChoiceEditor in edit mode
-- [ ] Delete button with confirmation
-- [ ] "+ Add Choice" button opens ChoiceEditor in create mode
-- [ ] Empty state: "No choices yet. Add one to create branching paths!"
+- [X] Below node form, show "Choices from this node"
+- [X] Use `useChoicesForNode` to fetch choices
+- [X] Display each choice with: text, destination node title, order
+- [X] Show badges if choice has `requires_state` or `sets_state`
+- [X] Edit button opens ChoiceEditor in edit mode
+- [X] Delete button with confirmation
+- [X] "+ Add Choice" button opens ChoiceEditor in create mode
+- [X] Empty state: "No choices yet. Add one to create branching paths!"
 
 ---
 
@@ -561,10 +557,10 @@ Modals and forms for creating nodes and choices, including the powerful StateCon
 **File:** `src/components/Stories/StoryEditor/NodeTree/NodeTree.tsx` (extend)
 
 **Acceptance Criteria:**
-- [ ] Add "+ New Node" button at top or bottom of tree
-- [ ] Opens CreateNodeModal
-- [ ] After node creation, auto-select the new node in tree
-- [ ] Refresh node list after creation
+- [X] Add "+ New Node" button at top or bottom of tree
+- [X] Opens CreateNodeModal
+- [X] After node creation, auto-select the new node in tree
+- [X] Refresh node list after creation
 
 ---
 
@@ -596,9 +592,9 @@ Validation system and publish workflow to safely release stories.
 **File:** `src/components/Stories/shared/storyValidation.ts`
 
 **Acceptance Criteria:**
-- [ ] Export `validateStoryForPublish` function
-- [ ] Takes `story: StoryPublic`, `nodes: StoryNodePublic[]`, `choices: NodeChoicePublic[]`
-- [ ] Returns validation result object:
+- [X] Export `validateStoryForPublish` function
+- [X] Takes `story: StoryPublic`, `nodes: StoryNodePublic[]`, `choices: NodeChoicePublic[]`
+- [X] Returns validation result object:
   ```typescript
   {
     isValid: boolean
@@ -606,7 +602,7 @@ Validation system and publish workflow to safely release stories.
     warnings: string[]
   }
   ```
-- [ ] Checks:
+- [X] Checks:
   1. Exactly one start node
   2. At least one end node
   3. All nodes reachable from start (graph traversal)
@@ -760,7 +756,7 @@ function findReachableNodes(startNode, choices) {
 **What We're Building:**
 Quality-of-life improvements and polish.
 
-### Task 5.1: Add Keyboard Shortcuts
+### DEFERRED:  Task 5.1: Add Keyboard Shortcuts
 
 **Files to Update:**
 - `src/components/Stories/StoryEditor/StoryEditor.tsx`
@@ -777,7 +773,7 @@ Quality-of-life improvements and polish.
 
 ---
 
-### Task 5.2: Add Autosave for Node Content
+### DEFERRED:  Task 5.2: Add Autosave for Node Content
 
 **Files to Update:**
 - `src/components/Stories/StoryEditor/NodeEditor/NodeEditor.tsx`
@@ -797,11 +793,11 @@ Quality-of-life improvements and polish.
 - `src/components/Stories/StoryEditor/NodeTree/NodeTree.tsx`
 
 **Acceptance Criteria:**
-- [ ] Show hierarchical relationships based on choices (not just flat list)
-- [ ] Indent child nodes
-- [ ] Collapse/expand branches
-- [ ] Visual lines connecting parent to child nodes
-- [ ] Highlight path from start to selected node
+- [X] Show hierarchical relationships based on choices (not just flat list)
+- [X] Indent child nodes
+- [X] Collapse/expand branches
+- [X] Visual lines connecting parent to child nodes
+- [X] Highlight path from start to selected node
 
 **Enhancement Approach:**
 - Build tree structure from choices
@@ -816,15 +812,14 @@ Quality-of-life improvements and polish.
 - `src/components/Stories/StoryEditor/NodeTree/NodeTree.tsx`
 
 **Acceptance Criteria:**
-- [ ] Enable drag-and-drop to reorder nodes in tree
-- [ ] Visual feedback during drag (ghost element)
-- [ ] Update node `order` field on drop (may need to add this field to backend)
-- [ ] Persist order to backend
-- [ ] Works on touch devices
+- [X] Enable drag-and-drop to reorder nodes in tree
+- [X] Visual feedback during drag (ghost element)
+- [X] Update node `order` field on drop (may need to add this field to backend)
+- [X] Persist order to backend
+- [X] Works on touch devices
 
 **Libraries to Consider:**
 - `@dnd-kit/core` (recommended by Chakra docs)
-- `react-beautiful-dnd` (older but stable)
 
 ---
 
@@ -851,9 +846,9 @@ Quality-of-life improvements and polish.
 
 **Acceptance Criteria:**
 - [ ] Replace plain textarea with rich text editor
-- [ ] Support: bold, italic, headings, lists, links
+- [ ] Support: code blocks, bold, italic, headings, lists, links
 - [ ] Store as HTML or Markdown in backend
-- [ ] Use library: `@tiptap/react` or `slate`
+- [ ] Use library: `@tiptap/react` (already installed in project)
 - [ ] Maintain current autosave behavior
 
 ---
@@ -864,13 +859,13 @@ Quality-of-life improvements and polish.
 - `src/components/Stories/StoryPlayer/StoryPreview.tsx`
 
 **Acceptance Criteria:**
-- [ ] "Preview" button in editor header
-- [ ] Opens story player in test mode
-- [ ] Starts from start node
-- [ ] Shows choices, allows navigation
-- [ ] Displays current state (debug panel)
-- [ ] "Exit Preview" button returns to editor
-- [ ] Uses same story playing logic as player (if exists)
+- [X] "Preview" button in editor header
+- [X] Opens story player in test mode
+- [X] Starts from start node
+- [X] Shows choices, allows navigation
+- [X] Displays current state (debug panel)
+- [X] "Exit Preview" button returns to editor
+- [X] Uses same story playing logic as player (if exists)
 
 ---
 
@@ -898,22 +893,22 @@ Quality-of-life improvements and polish.
 ## Final Quest Checklist 📋
 
 ### Phase 1: Story Gallery ✅
-- [ ] useStories hook with queries and mutations
-- [ ] StoryCard component with status badges
-- [ ] CreateStoryModal with validation
-- [ ] StoryList container with grid layout
-- [ ] Publish/unpublish mutations
-- [ ] Story list route at `/stories`
+- [X] useStories hook with queries and mutations
+- [X] StoryCard component with status badges
+- [X] CreateStoryModal with validation
+- [X] StoryList container with grid layout
+- [X] Publish/unpublish mutations
+- [X] Story list route at `/stories`
 
 ### Phase 2: Three-Panel Workshop ✅
-- [ ] useStoryEditor hook with data fetching
-- [ ] NodeTree component with selection
-- [ ] NodeTreeItem component
-- [ ] PropertiesPanel with stats
+- [X] useStoryEditor hook with data fetching
+- [X] NodeTree component with selection
+- [X] NodeTreeItem component
+- [X] PropertiesPanel with stats
 - [ ] StoryMetadata component
-- [ ] NodeEditor container
-- [ ] StoryEditor layout with three panels
-- [ ] Story editor route at `/stories/:storyId/edit`
+- [X] NodeEditor container
+- [X] StoryEditor layout with three panels
+- [X] Story editor route at `/stories/:storyId/edit`
 
 ### Phase 3: Nodes & Choices ✅
 - [ ] useStoryNodes hook with CRUD operations

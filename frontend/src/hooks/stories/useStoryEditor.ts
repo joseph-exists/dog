@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { StoriesService, StorynodesService, type StoryNodePublic, type StoryPublic } from "@/client"
+import { StoriesService, StorynodesService, type StoryNodePublic, type NodeChoicePublic } from "@/client"
 
 interface UseStoryEditorOptions {
   storyId: string
@@ -29,6 +29,29 @@ export const useStoryEditor = ({ storyId }: UseStoryEditorOptions) => {
   })
 
   const nodes = nodesQuery.data ?? []
+
+  // Fetch all choices for all nodes in this story
+  const choicesQuery = useQuery({
+    queryKey: ["stories", storyId, "choices"],
+    queryFn: async () => {
+      const allChoices: NodeChoicePublic[] = []
+
+      // Fetch choices for each node
+      for (const node of nodes) {
+        const result = await StorynodesService.readNodeChoices({
+          nodeId: node.id,
+          skip: 0,
+          limit: 100,
+        })
+        allChoices.push(...result.data)
+      }
+
+      return allChoices
+    },
+    enabled: nodes.length > 0, // Only fetch if we have nodes
+  })
+
+  const choices = choicesQuery.data ?? []
 
   // Helper: Get the start node
   const getStartNode = (): StoryNodePublic | undefined => {
@@ -74,8 +97,9 @@ export const useStoryEditor = ({ storyId }: UseStoryEditorOptions) => {
   return {
     story,
     nodes,
-    isLoading: storyQuery.isLoading || nodesQuery.isLoading,
-    error: storyQuery.error || nodesQuery.error,
+    choices,
+    isLoading: storyQuery.isLoading || nodesQuery.isLoading || choicesQuery.isLoading,
+    error: storyQuery.error || nodesQuery.error || choicesQuery.error,
     getStartNode,
     getEndNodes,
     validateForPublish,

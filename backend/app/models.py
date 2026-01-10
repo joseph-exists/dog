@@ -7,7 +7,6 @@ from sqlalchemy import Column, JSON
 from sqlmodel import SQLModel, Field, Relationship
 
 
-
 # ===== Model Overview for Relational References Ordering
 #
 # First the User system relationships
@@ -120,6 +119,11 @@ class QualitySourceType(str, Enum):
     DEFAULT = "default"
     MANUALLY_ADDED = "manually_added"
 
+class ContentFormat(str, Enum):
+    TEXT = "text"
+    HTML = "html"
+    MARKDOWN = "markdown"
+    JSON = "json"
 
 
 # ============ Base Models ++++++++
@@ -162,9 +166,6 @@ class UserPersona(UserPersonaBase, table=True):
         default_factory=datetime.now, sa_column_kwargs={"onupdate": datetime.now}
     )
 
-    # Will add relationships later after all models are defined
-
-
 class UserPersonaPublic(UserPersonaBase):
     """Public model for UserPersona API responses"""
 
@@ -193,6 +194,7 @@ class EventBase(SQLModel):
 class StoryBase(SQLModel):
     """Base model for Story template properties"""
     title: str = Field(min_length=1, max_length=255)
+    content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)
     description: str | None = Field(default=None, max_length=1000)
     is_published: bool = Field(default=False)
 
@@ -426,7 +428,8 @@ class QualityEventTrigger(QualityEventTriggerBase, table=True):
 class StoryUpdate(SQLModel):
     """Input model for updating Story template (all fields optional)"""
     title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
-    description: str | None = Field(default=None, max_length=1000)  # type: ignore
+    description: str | None = Field(default=None, max_length=1000)
+    content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)  # type: ignore
 
 class Story(StoryBase, table=True):
     """
@@ -479,7 +482,8 @@ class StoryNodeBase(SQLModel):
     """Base model for StoryNode template properties"""
     title: str = Field(min_length=1, max_length=255)
     content: str = Field(default="")
-    node_type: str = Field(default="text", max_length=50)  # text, image, choice, etc.
+    content_format: ContentFormat = Field(default=ContentFormat.TEXT) # not nullable
+    node_type: str | None = Field(default=None, max_length=50)  # type: ignore
     is_start_node: bool = Field(default=False)
     is_end_node: bool = Field(default=False)
 
@@ -488,12 +492,14 @@ class StoryNodeCreate(StoryNodeBase):
     """Input model for creating a StoryNode"""
     story_id: uuid.UUID
     story_version: int  # Must specify which version this node belongs to
+    content_format: ContentFormat = Field(default=ContentFormat.TEXT)
 
 
 class StoryNodeUpdate(SQLModel):
     """Input model for updating StoryNode (all fields optional)"""
     title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
     content: str | None = Field(default=None)  # type: ignore
+    content_format: ContentFormat | None = Field(default=None, max_length=50)
     node_type: str | None = Field(default=None, max_length=50)  # type: ignore
     is_start_node: bool | None = Field(default=None)
     is_end_node: bool | None = Field(default=None)
@@ -512,6 +518,7 @@ class StoryNode(StoryNodeBase, table=True):
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)
     
     # Relationships defined after all models
     # story: "Story" = Relationship(back_populates="nodes")
@@ -525,6 +532,7 @@ class StoryNodePublic(StoryNodeBase):
     id: uuid.UUID
     story_id: uuid.UUID
     story_version: int
+    content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)
     created_at: datetime
     updated_at: datetime
 
@@ -1169,6 +1177,7 @@ class StoryNodePartial(SQLModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
     content: str | None = Field(default=None)
     node_type: str | None = Field(default=None, max_length=50)
+    content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)
     is_start_node: bool | None = Field(default=None)
     is_end_node: bool | None = Field(default=None)
     # metadata: dict | None = Field(default=None)

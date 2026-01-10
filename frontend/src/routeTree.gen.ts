@@ -29,6 +29,7 @@ import { Route as LayoutArchetypesImport } from './routes/_layout/archetypes'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
 import { Route as LayoutStoriesIndexImport } from './routes/_layout/stories/index'
 import { Route as LayoutRoomRoomIdImport } from './routes/_layout/room.$roomId'
+import { Route as LayoutStoriesStoryIdEditImport } from './routes/_layout/stories/$storyId/edit'
 
 // Create/Update Routes
 
@@ -123,6 +124,11 @@ const LayoutRoomRoomIdRoute = LayoutRoomRoomIdImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutStoriesStoryIdEditRoute = LayoutStoriesStoryIdEditImport.update({
+  path: '/stories/$storyId/edit',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -199,6 +205,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutStoriesIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/stories/$storyId/edit': {
+      preLoaderRoute: typeof LayoutStoriesStoryIdEditImport
+      parentRoute: typeof LayoutImport
+    }
   }
 }
 
@@ -219,6 +229,7 @@ export const routeTree = rootRoute.addChildren([
     LayoutIndexRoute,
     LayoutRoomRoomIdRoute,
     LayoutStoriesIndexRoute,
+    LayoutStoriesStoryIdEditRoute,
   ]),
   LoginRoute,
   RecoverPasswordRoute,

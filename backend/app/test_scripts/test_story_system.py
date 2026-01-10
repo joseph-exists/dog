@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 """
 Story System Test Suite
 
@@ -366,6 +366,44 @@ class TestRunner:
 
     # ==================== Phase 2: Progress & Choice Making ====================
 
+    def test_publish_story(self, story_id: str) -> str:
+        """Test 4.5: Publish the Story"""
+        self.test_header("Test 4.5: Publish the Story")
+
+        try:
+            response = self.session.put(f"{BASE_URL}/stories/{story_id}/publish")
+            response.raise_for_status()
+            story = response.json()
+
+            # Verify the story was published correctly
+            if not story.get("is_published"):
+                raise ValueError("Story was not marked as published")
+
+            if story.get("published_version") is None:
+                raise ValueError("Story published_version was not set")
+
+            published_version = story["published_version"]
+            current_version = story["current_version"]
+
+            # Store published version for later tests
+            test_entities["published_version"] = published_version
+
+            self.record_test(
+                "publish_story",
+                True,
+                f"Story published successfully: current_version={current_version}, published_version={published_version}",
+                "phase_2"
+            )
+            return story_id
+
+        except requests.exceptions.RequestException as e:
+            self.record_test(
+                "publish_story",
+                False,
+                f"HTTP {e.response.status_code if e.response else 'ERROR'}: {e.response.text if e.response else str(e)}",
+                "phase_2"
+            )
+            raise
     def test_start_story_progress(self, persona_id: str, story_id: str) -> str:
         """Test 5: Start Story Progress."""
         self.test_header("Test 5: Start Story Progress")
@@ -723,6 +761,9 @@ class TestRunner:
                 other_node_ids = self.test_create_story_nodes(story_id)
                 node_ids = [start_node_id] + other_node_ids
                 choice_ids = self.test_create_node_choices(node_ids)
+
+                # Publish the story before allowing progress
+                self.test_publish_story(story_id)
 
             # Phase 2: Progress & Choice Making
             if phase_filter is None or phase_filter == 2:

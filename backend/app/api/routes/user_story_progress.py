@@ -160,10 +160,17 @@ def create_user_story_progress(
             detail="User persona does not meet story requirements"
         )
 
-    # Find the starting node of the story (for current version)
+    # Check if the story is published
+    if not story.is_published:
+        raise HTTPException(
+            status_code=400,
+            detail="Story is not published"
+        )
+
+    # Find the starting node of the story (for published version)
     statement = select(StoryNode).where(
         StoryNode.story_id == story_id,
-        StoryNode.story_version == story.current_version,
+        StoryNode.story_version == story.published_version,
         StoryNode.is_start_node == True  # noqa: E712
     )
     start_node = session.exec(statement).first()
@@ -174,7 +181,8 @@ def create_user_story_progress(
             detail=f"No start node found for story version {story.current_version}"
         )
 
-    # Create the progress locked to current version
+
+    # Create the progress locked to published version
     progress_in = UserStoryProgressCreate(
         user_persona_id=user_persona_id,
         story_id=story_id,

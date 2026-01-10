@@ -66,7 +66,7 @@ const CreateStoryModal = () => {
             <DialogTitle>Create New Story</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <Text mb={4} color="gray.600">
+            <Text mb={4} color="fg.muted">
               Begin crafting your adventure! Give your story a title and description to get started.
             </Text>
             <VStack gap={4}>

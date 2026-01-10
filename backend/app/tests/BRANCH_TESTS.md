@@ -74,17 +74,15 @@ Analysis: Branching Node Choice Test Coverage
   - Verify state replay works correctly regardless of which path taken
   - Verify timeline shows correct path (e.g., Start → A → A2)
 
-  Fixture Needed
+  Fixtures as available:
 
-  You'll need a new fixture like db_story_with_branching:
+
   Start Node (id: start_id)
   ├─ Choice "left" → Left Node → Choice "left_continue" → Left End
   └─ Choice "right" → Right Node → Choice "right_continue" → Right End
 
-  Recommendation
+  
 
-  Create a new test file: test_story_branching.py with:
-  1. New fixture db_story_with_branching that creates a tree structure (not linear)
   2. Tests that verify multiple choices are available
   3. Tests that verify different choices lead to different outcomes
   4. Tests that verify undo/jump work correctly with branching

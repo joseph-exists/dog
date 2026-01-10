@@ -109,12 +109,12 @@ const StoryCard = ({ story }: StoryCardProps) => {
           </Flex>
 
           {/* Description */}
-          <Text fontSize="sm" color="gray.600" minH="40px">
+          <Text fontSize="sm" color="fg.muted" minH="40px">
             {story.description || "No description"}
           </Text>
 
           {/* Version Info */}
-          <HStack fontSize="xs" color="gray.500" gap={4}>
+          <HStack fontSize="xs" color="fg.muted" gap={4}>
             <Text>Current: v{story.current_version}</Text>
             {story.published_version && (
               <Text>Published: v{story.published_version}</Text>
@@ -122,7 +122,7 @@ const StoryCard = ({ story }: StoryCardProps) => {
           </HStack>
 
           {/* Timestamp */}
-          <Text fontSize="xs" color="gray.400">
+          <Text fontSize="xs" color="fg.subtle">
             Updated {formatDate(story.updated_at)}
           </Text>
 
