@@ -932,7 +932,7 @@ class Item(ItemBase, table=True):
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
     owner: User | None = Relationship(back_populates="items")
-    # this might need to change to Persona? not sure how to do cascading multiple ownership
+
 
 
 class Event(EventBase, table=True):

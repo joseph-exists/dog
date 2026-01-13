@@ -1,170 +1,91 @@
 ---
 name: typer-builder
-description: Add functionality to the TinyFoot Typer CLI as commands and modules
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
+description: Build and extend the TinyFoot Typer CLI with new commands and modules. Use when: (1) creating new CLI command modules, (2) adding commands to existing modules, (3) exposing API endpoints as CLI commands, (4) working with backend/app/test_scripts/typer/
 ---
 
 # Typer Builder
 
 Build and extend the TinyFoot CLI with new Typer commands and modules.
 
-## Quick Start
+## When NOT to Use
 
-To add a new command module:
+- General Python CLI questions (not TinyFoot-specific)
+- Backend API route development (use standard FastAPI patterns)
+- Frontend tooling
 
-1. **Create the command module** in `backend/app/test_scripts/typer/commands/`:
-```python
-# commands/my_feature.py
-import typer
-import json
-from typing import Annotated
-from auth_helper import get_authenticated_session
+## Workflow
 
-app = typer.Typer(help="My feature commands")
-BASE_URL = "http://localhost:8000/api/v1"
+1. **Read the template**: `backend/app/test_scripts/typer/commands/_template.py`
+2. **Copy template** to `commands/<feature>.py`
+3. **Implement commands** following template patterns
+4. **Register** in `main.py`:
+   ```python
+   from commands import my_feature
+   app.add_typer(my_feature.app, name="myfeature", help="My feature commands")
+   ```
+5. **Test** with `--verbose` flag
+6. **Document** in `COMMANDS.md`
 
-@app.command()
-def my_command(
-    name: Annotated[str, typer.Argument(help="Name argument")],
-    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
-):
-    """Command description."""
-    session = get_authenticated_session()
-    # ... implementation
-```
+## Environment Setup
 
-2. **Register in main.py**:
-```python
-from commands import my_feature
-app.add_typer(my_feature.app, name="myfeature", help="My feature commands")
-```
-
-3. **Document in COMMANDS.md**
-
-## Reference Files
-
-- **README**: `backend/app/test_scripts/typer/TYPER-README.md`
-- **Commands Reference**: `backend/app/test_scripts/typer/COMMANDS.md`
-- **Template**: `backend/app/test_scripts/typer/commands/_template.py`
-- **Example Module**: `backend/app/test_scripts/typer/commands/personas.py`
-
-## Requirements
-
-The dog backend environment must be activated:
 ```bash
 source /home/josep/dog/backend/.venv/bin/activate
 cd /home/josep/dog/backend/app/test_scripts/typer
 ```
 
-## Command Patterns
+## Key Files
 
-### Standard CRUD Commands
+| File | Purpose |
+|------|---------|
+| `commands/_template.py` | **Start here** - copy for new modules |
+| `main.py` | Register new command modules |
+| `COMMANDS.md` | Document commands |
+| `auth_helper.py` | Authentication utilities |
 
-For a resource, implement these commands:
-- `create` - Create new resource
-- `list` / `list-{resources}` - List with pagination
-- `get` / `get-{resource}` - Get by ID
-- `update` - Update resource
-- `delete` - Delete with confirmation
+## Existing Modules
 
-### Common Options
-
-```python
-# Pagination
-limit: Annotated[int, typer.Option(help="Max items")] = 20
-offset: Annotated[int, typer.Option(help="Pagination offset")] = 0
-
-# Output format
-json_output: Annotated[bool, typer.Option("--json")] = False
-
-# Debugging
-verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
-
-# Confirmation skip
-force: Annotated[bool, typer.Option("--force", "-f")] = False
-```
-
-### Response Handling
-
-```python
-if response.status_code in [200, 201]:
-    data = response.json()
-    if json_output:
-        typer.echo(json.dumps(data, indent=2))
-    else:
-        typer.secho("✅ Success!", fg=typer.colors.GREEN)
-        typer.echo(f"ID: {data['id']}")
-elif response.status_code == 404:
-    typer.secho("❌ Not found", fg=typer.colors.RED, err=True)
-    raise typer.Exit(1)
-else:
-    typer.secho(f"❌ Failed", fg=typer.colors.RED, err=True)
-    typer.echo(f"Status: {response.status_code}")
-    typer.echo(f"Error: {response.text}")
-    raise typer.Exit(1)
-```
-
-### Verbose Logging Pattern
-
-```python
-def log(msg: str):
-    if verbose:
-        typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
-
-log(f"POST {BASE_URL}/endpoint")
-log(f"Payload: {json.dumps(payload, indent=2)}")
-```
-
-### Confirmation Prompts
-
-```python
-if not force:
-    typer.secho(f"⚠️  This will delete {item_id}", fg=typer.colors.YELLOW)
-    if not typer.confirm("Are you sure?"):
-        typer.echo("Cancelled.")
-        raise typer.Exit(0)
-```
-
-## Existing Command Modules
-
-| Module | Name | Description |
-|--------|------|-------------|
+| Module | CLI Name | Description |
+|--------|----------|-------------|
 | `stories.py` | stories | Story and state schema management |
 | `personas.py` | personas | Archetypes, traits, qualities, personas |
 | `rooms.py` | rooms | Chat rooms and participants |
-| `users.py` | users | Current user info and data |
-| `trait_conflicts.py` | conflicts | Trait conflict groups for logic |
-| `items.py` | items | Basic item CRUD example |
+| `users.py` | users | Current user info |
+| `trait_conflicts.py` | conflicts | Trait conflict groups |
+| `items.py` | items | Basic CRUD example |
 
-## Testing Commands
+## Quick Patterns
 
-```bash
-# Test module directly
-python -m backend.app.test_scripts.typer.commands.my_feature my_command "test"
-
-# Test through main CLI
-python main.py myfeature my-command "test"
-
-# Show help
-python main.py myfeature --help
-python main.py myfeature my-command --help
+### Import Auth Helper
+```python
+from ..auth_helper import get_authenticated_session
 ```
 
-## Workflow
+### Standard Options
+```python
+limit: Annotated[int, typer.Option(help="Max items")] = 20
+offset: Annotated[int, typer.Option(help="Pagination offset")] = 0
+json_output: Annotated[bool, typer.Option("--json")] = False
+verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
+force: Annotated[bool, typer.Option("--force", "-f")] = False
+```
 
-1. **Identify API endpoints** to expose (check `backend/app/api/routes/`)
-2. **Copy template** from `commands/_template.py`
-3. **Implement commands** following existing patterns
-4. **Register** in `main.py`
-5. **Document** in `COMMANDS.md`
-6. **Test** with `--verbose` flag
-7. **Update Documentation** 
+### Standard CRUD Commands
+For a resource, implement: `create`, `list`, `get`, `update`, `delete`
 
 ## Style Guidelines
 
-- Use emoji for status: ✅ success, ❌ error, ⚠️ warning, 🔍 info
-- Human-readable output by default, `--json` for scripting
-- Include `--verbose` for debugging
-- Add docstrings with examples
-- Use descriptive help text for all arguments/options
-- Exit code 0 for success, 1 for errors
+- Emoji status: ✅ success, ❌ error, ⚠️ warning, 🔍 info
+- Human-readable by default, `--json` for scripting
+- Always include `--verbose` for debugging
+- Exit code 0 success, 1 error
+
+## Testing
+
+```bash
+# Through main CLI
+python main.py <module> <command> [args]
+python main.py <module> --help
+
+# Direct module test
+python -m backend.app.test_scripts.typer.commands.<module> <command> [args]
+```

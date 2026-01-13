@@ -226,6 +226,74 @@ def list_traits(
         raise typer.Exit(1)
 
 
+@app.command()
+def update_trait(
+    trait_id: Annotated[str, typer.Argument(help="Trait ID to update")],
+    name: Annotated[str, typer.Option("--name", "-n", help="New name")] = None,
+    description: Annotated[str, typer.Option("--desc", "-d", help="New description")] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False
+):
+    """
+    Update an existing trait.
+
+    Example:
+        python main.py personas update-trait abc123 --desc "New description"
+        python main.py personas update-trait abc123 --name "Renamed Trait" --desc "Updated"
+    """
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    # Build payload with only provided fields
+    payload = {}
+    if name is not None:
+        payload["name"] = name
+    if description is not None:
+        payload["description"] = description
+
+    if not payload:
+        typer.secho("⚠️  No updates provided. Use --name or --desc", fg=typer.colors.YELLOW)
+        raise typer.Exit(1)
+
+    log(f"Updating trait: {trait_id}")
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    log(f"PUT {BASE_URL}/traits/{trait_id}")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.put(f"{BASE_URL}/traits/{trait_id}", json=payload)
+
+    log(f"Response status: {response.status_code}")
+    log(f"Response: {response.text[:500]}")
+
+    if response.status_code == 200:
+        trait = response.json()
+
+        if json_output:
+            typer.echo(json.dumps(trait, indent=2))
+        else:
+            typer.secho("✅ Trait updated successfully!", fg=typer.colors.GREEN)
+            typer.echo(f"ID: {trait['id']}")
+            typer.echo(f"Name: {trait['name']}")
+            if trait.get('description'):
+                typer.echo(f"Description: {trait['description']}")
+    elif response.status_code == 404:
+        typer.secho(f"❌ Trait not found: {trait_id}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    else:
+        typer.secho(f"❌ Failed to update trait", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
 # ============================================================================
 # Quality Commands
 # ============================================================================

@@ -143,18 +143,18 @@ class TraitConflictGroupMembersPublic(SQLModel):
 # Add these at the end of models.py after all classes are defined
 # =============================================================================
 
-# TraitConflictGroup.members = Relationship(
-#     back_populates="group",
-#     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-# )
-#
-# TraitConflictGroupMember.group = Relationship(back_populates="members")
-# TraitConflictGroupMember.trait = Relationship(back_populates="conflict_memberships")
-#
-# # Also add to Trait model:
-# Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(
-#     back_populates="trait"
-# )
+TraitConflictGroup.members = Relationship(
+    back_populates="group",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+)
+
+TraitConflictGroupMember.group = Relationship(back_populates="members")
+TraitConflictGroupMember.trait = Relationship(back_populates="conflict_memberships")
+
+# Also add to Trait model:
+Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(
+    back_populates="trait"
+)
 ```
 
 ---

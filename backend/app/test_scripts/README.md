@@ -220,7 +220,8 @@ else in the world. He faced dragons and demons, storms and shadows...
 
 ---
 
-### 4. populate_jungian_system.py
+### 4. populate_jungian_system.py  (loader example)
+
 
 Creates a complete Jungian archetype-based character system with full relationship linking.
 
