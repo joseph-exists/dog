@@ -20,40 +20,23 @@
 - 📞 [Traefik](https://traefik.io) as a reverse proxy / load balancer.
 - 🚢 Deployment instructions using Docker Compose, including how to set up a frontend Traefik proxy to handle automatic HTTPS certificates.
 - 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
-
+- 🔴 [Redis](https://redis.io) for real-time event pub/sub and caching.
+- 🌊 Real-time WebSocket streaming for multi-user collaboration.
+- 🔄 Event sourcing architecture with CQRS projections.
+- WebSocket streaming for real-time updates across all room participants
+- Token-by-token agent response streaming
+- Redis pub/sub for multi-worker event fanout
+- Sequence-based reconnection with event replay
+- Graceful degradation when Redis unavailable
 ### Dashboard Login
 
-[![API docs](img/login.png)](https://github.com/fastapi/full-stack-fastapi-template)
 
-### Dashboard - Admin
-
-[![API docs](img/dashboard.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - Create User
-
-[![API docs](img/dashboard-create.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - Items
-
-[![API docs](img/dashboard-items.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - User Settings
-
-[![API docs](img/dashboard-user-settings.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Dashboard - Dark Mode
-
-[![API docs](img/dashboard-dark.png)](https://github.com/fastapi/full-stack-fastapi-template)
-
-### Interactive API Documentation
-
-[![API docs](img/docs.png)](https://github.com/fastapi/full-stack-fastapi-template)
 
 ## How To Use It
 
 ### Configure
 
-You can then update configs in the `.env` files to customize your configurations.
+update configs in the `.env` files to customize your configurations.
 
 Before deploying it, make sure you change at least the values for:
 

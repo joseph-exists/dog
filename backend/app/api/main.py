@@ -17,6 +17,7 @@ from app.api.routes import (
     stories,
     storynodes,
     traits,
+    trait_conflicts,
     user_personas,
     user_story_progress,
     node_choices,
@@ -48,6 +49,7 @@ api_router.include_router(agent_routes.router)
 api_router.include_router(rooms.router)
 api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)
+api_router.include_router(trait_conflicts.router)
 
 if settings.ENVIRONMENT == "local":
     api_router.include_router(private.router)

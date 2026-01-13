@@ -1,3 +1,22 @@
+import "@/components/tiptap-ui-primitive/tooltip/tooltip.scss"
+import {
+  FloatingDelayGroup,
+  FloatingPortal,
+  type Placement,
+  type ReferenceType,
+  type UseFloatingReturn,
+  autoUpdate,
+  flip,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useFocus,
+  useHover,
+  useInteractions,
+  useMergeRefs,
+  useRole,
+} from "@floating-ui/react"
 import {
   cloneElement,
   createContext,
@@ -8,25 +27,6 @@ import {
   useState,
   version,
 } from "react"
-import {
-  useFloating,
-  autoUpdate,
-  offset,
-  flip,
-  shift,
-  useHover,
-  useFocus,
-  useDismiss,
-  useRole,
-  useInteractions,
-  useMergeRefs,
-  FloatingPortal,
-  type Placement,
-  type UseFloatingReturn,
-  type ReferenceType,
-  FloatingDelayGroup,
-} from "@floating-ui/react"
-import "@/components/tiptap-ui-primitive/tooltip/tooltip.scss"
 
 interface TooltipProviderProps {
   children: React.ReactNode
@@ -57,10 +57,10 @@ interface TooltipContextValue extends UseFloatingReturn<ReferenceType> {
   open: boolean
   setOpen: (open: boolean) => void
   getReferenceProps: (
-    userProps?: React.HTMLProps<HTMLElement>
+    userProps?: React.HTMLProps<HTMLElement>,
   ) => Record<string, unknown>
   getFloatingProps: (
-    userProps?: React.HTMLProps<HTMLDivElement>
+    userProps?: React.HTMLProps<HTMLDivElement>,
   ) => Record<string, unknown>
 }
 
@@ -119,7 +119,7 @@ function useTooltip({
       ...interactions,
       ...data,
     }),
-    [open, setOpen, interactions, data]
+    [open, setOpen, interactions, data],
   )
 }
 
@@ -162,7 +162,7 @@ export const TooltipTrigger = forwardRef<HTMLElement, TooltipTriggerProps>(
   function TooltipTrigger({ children, asChild = false, ...props }, propRef) {
     const context = useTooltipContext()
     const childrenRef = isValidElement(children)
-      ? parseInt(version, 10) >= 19
+      ? Number.parseInt(version, 10) >= 19
         ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (children as { props: { ref?: React.Ref<any> } }).props.ref
         : // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -182,7 +182,7 @@ export const TooltipTrigger = forwardRef<HTMLElement, TooltipTriggerProps>(
           ...props,
           ...(typeof children.props === "object" ? children.props : {}),
           ...dataAttributes,
-        })
+        }),
       )
     }
 
@@ -195,13 +195,13 @@ export const TooltipTrigger = forwardRef<HTMLElement, TooltipTriggerProps>(
         {children}
       </button>
     )
-  }
+  },
 )
 
 export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
   function TooltipContent(
     { style, children, portal = true, portalProps = {}, ...props },
-    propRef
+    propRef,
   ) {
     const context = useTooltipContext()
     const ref = useMergeRefs([context.refs.setFloating, propRef])
@@ -227,7 +227,7 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
     }
 
     return content
-  }
+  },
 )
 
 Tooltip.displayName = "Tooltip"

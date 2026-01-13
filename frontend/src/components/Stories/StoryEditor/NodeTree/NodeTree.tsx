@@ -1,31 +1,39 @@
-import { useState, useMemo } from "react"
-import { Box, EmptyState, Flex, Heading, VStack, IconButton, Text } from "@chakra-ui/react"
-import { FiFileText, FiChevronDown, FiChevronRight } from "react-icons/fi"
+import {
+  Box,
+  EmptyState,
+  Flex,
+  Heading,
+  IconButton,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
 import {
   DndContext,
-  closestCenter,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core"
 import {
-  arrayMove,
   SortableContext,
+  arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
+import { useMemo, useState } from "react"
+import { FiChevronDown, FiChevronRight, FiFileText } from "react-icons/fi"
 
-import type { StoryNodePublic, NodeChoicePublic } from "@/client"
-import NodeTreeItem from "./NodeTreeItem"
+import type { NodeChoicePublic, StoryNodePublic } from "@/client"
 import CreateNodeModal from "../NodeEditor/CreateNodeModal"
+import NodeTreeItem from "./NodeTreeItem"
 import {
+  type TreeNode,
   buildNodeTree,
   flattenTree,
-  toggleNodeExpansion,
   getOrphanedNodes,
-  type TreeNode,
+  toggleNodeExpansion,
 } from "./treeUtils"
 
 interface NodeTreeProps {
@@ -57,7 +65,10 @@ const NodeTree = ({
   const flatNodes = useMemo(() => flattenTree(tree), [tree])
 
   // Get orphaned nodes (not connected to start node)
-  const orphanedNodes = useMemo(() => getOrphanedNodes(nodes, tree), [nodes, tree])
+  const orphanedNodes = useMemo(
+    () => getOrphanedNodes(nodes, tree),
+    [nodes, tree],
+  )
 
   const hasStartNode = nodes.some((n) => n.is_start_node)
 
@@ -66,7 +77,7 @@ const NodeTree = ({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -80,7 +91,10 @@ const NodeTree = ({
         // For now, just reorder in the flat list
         // In the future, you could update the backend with new order
         const reordered = arrayMove(flatNodes, oldIndex, newIndex)
-        console.log("Reordered nodes:", reordered.map((n) => n.node.title))
+        console.log(
+          "Reordered nodes:",
+          reordered.map((n) => n.node.title),
+        )
       }
     }
   }
@@ -129,7 +143,11 @@ const NodeTree = ({
         />
       </Flex>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
         <VStack align="stretch" gap={1}>
           {/* Hierarchical Tree */}
           {tree && (
@@ -167,7 +185,11 @@ const NodeTree = ({
                           onClick={() => handleToggleExpand(treeNode.node.id)}
                           mr={1}
                         >
-                          {treeNode.isExpanded ? <FiChevronDown /> : <FiChevronRight />}
+                          {treeNode.isExpanded ? (
+                            <FiChevronDown />
+                          ) : (
+                            <FiChevronRight />
+                          )}
                         </IconButton>
                       ) : (
                         <Box width="24px" flexShrink={0} />
@@ -192,7 +214,13 @@ const NodeTree = ({
           {/* Orphaned Nodes Section */}
           {orphanedNodes.length > 0 && (
             <>
-              <Text fontSize="xs" fontWeight="bold" color="orange.500" mt={4} mb={2}>
+              <Text
+                fontSize="xs"
+                fontWeight="bold"
+                color="orange.500"
+                mt={4}
+                mb={2}
+              >
                 Orphaned Nodes ({orphanedNodes.length})
               </Text>
               <Text fontSize="2xs" color="fg.muted" mb={2}>

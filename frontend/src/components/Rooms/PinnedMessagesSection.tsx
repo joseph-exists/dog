@@ -13,10 +13,10 @@
  * Phase 5 - Message Management Features
  */
 
+import type { MessageViewModel } from "@/services/roomService"
 import { Box, HStack, Icon, Text, VStack } from "@chakra-ui/react"
 import { FaThumbtack } from "react-icons/fa"
 import Message from "./Message"
-import type { MessageViewModel } from "@/services/roomService"
 
 interface PinnedMessagesSectionProps {
   /** Pinned messages to display */
@@ -40,9 +40,7 @@ interface PinnedMessagesSectionProps {
  * )}
  * ```
  */
-const PinnedMessagesSection = ({
-  messages,
-}: PinnedMessagesSectionProps) => {
+const PinnedMessagesSection = ({ messages }: PinnedMessagesSectionProps) => {
   // Don't render if no pinned messages
   if (messages.length === 0) {
     return null

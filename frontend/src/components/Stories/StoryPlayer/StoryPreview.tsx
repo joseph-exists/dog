@@ -1,21 +1,32 @@
-import { useState, useMemo } from "react"
-import DOMPurify from 'dompurify'
 import {
+  Badge,
   Box,
   Button,
   Card,
   Container,
   Flex,
-  Heading,
   HStack,
+  Heading,
+  Separator,
   Text,
   VStack,
-  Badge,
-  Separator,
 } from "@chakra-ui/react"
+import DOMPurify from "dompurify"
+import { useMemo, useState } from "react"
 import { FaArrowLeft, FaArrowRight, FaUndo } from "react-icons/fa"
 
-import type { StoryPublic, StoryNodePublic, NodeChoicePublic, ContentFormat } from "@/client"
+import type {
+  ContentFormat,
+  NodeChoicePublic,
+  StoryNodePublic,
+  StoryPublic,
+} from "@/client"
+import {
+  applySetsState,
+  evaluateRequiresState,
+  type StateConditions,
+  type StateMutations,
+} from "@/utils/stateConditions"
 
 interface StoryPreviewProps {
   story: StoryPublic
@@ -45,32 +56,47 @@ const renderContent = (node: StoryNodePublic) => {
           lineHeight="tall"
           css={{
             // Apply same styling as CSS for consistency
-            '& p': { margin: '0.5em 0' },
-            '& h1': { fontSize: '2em', fontWeight: 'bold', margin: '0.75em 0 0.5em' },
-            '& h2': { fontSize: '1.5em', fontWeight: 'bold', margin: '0.75em 0 0.5em' },
-            '& h3': { fontSize: '1.25em', fontWeight: 'bold', margin: '0.75em 0 0.5em' },
-            '& ul, & ol': { paddingLeft: '1.5em', margin: '0.5em 0' },
-            '& code': {
-              backgroundColor: 'rgba(128, 128, 128, 0.1)',
-              borderRadius: '3px',
-              padding: '0.2em 0.4em',
-              fontFamily: 'monospace',
+            "& p": { margin: "0.5em 0" },
+            "& h1": {
+              fontSize: "2em",
+              fontWeight: "bold",
+              margin: "0.75em 0 0.5em",
             },
-            '& pre': {
-              backgroundColor: 'rgba(128, 128, 128, 0.1)',
-              borderRadius: '5px',
-              padding: '1em',
-              overflow: 'auto',
+            "& h2": {
+              fontSize: "1.5em",
+              fontWeight: "bold",
+              margin: "0.75em 0 0.5em",
             },
-            '& blockquote': {
-              borderLeft: '3px solid',
-              borderLeftColor: 'var(--chakra-colors-border)',
-              paddingLeft: '1em',
-              fontStyle: 'italic',
-              color: 'var(--chakra-colors-fg-muted)',
+            "& h3": {
+              fontSize: "1.25em",
+              fontWeight: "bold",
+              margin: "0.75em 0 0.5em",
             },
-            '& a': { color: 'var(--chakra-colors-blue-500)', textDecoration: 'underline' },
-            '& img': { maxWidth: '100%', borderRadius: '5px' },
+            "& ul, & ol": { paddingLeft: "1.5em", margin: "0.5em 0" },
+            "& code": {
+              backgroundColor: "rgba(128, 128, 128, 0.1)",
+              borderRadius: "3px",
+              padding: "0.2em 0.4em",
+              fontFamily: "monospace",
+            },
+            "& pre": {
+              backgroundColor: "rgba(128, 128, 128, 0.1)",
+              borderRadius: "5px",
+              padding: "1em",
+              overflow: "auto",
+            },
+            "& blockquote": {
+              borderLeft: "3px solid",
+              borderLeftColor: "var(--chakra-colors-border)",
+              paddingLeft: "1em",
+              fontStyle: "italic",
+              color: "var(--chakra-colors-fg-muted)",
+            },
+            "& a": {
+              color: "var(--chakra-colors-blue-500)",
+              textDecoration: "underline",
+            },
+            "& img": { maxWidth: "100%", borderRadius: "5px" },
           }}
         />
       )
@@ -90,13 +116,16 @@ const renderContent = (node: StoryNodePublic) => {
         )
       } catch {
         return (
-          <Text whiteSpace="pre-wrap" fontSize="lg" lineHeight="tall" color="red.500">
+          <Text
+            whiteSpace="pre-wrap"
+            fontSize="lg"
+            lineHeight="tall"
+            color="red.500"
+          >
             [Invalid JSON content]
           </Text>
         )
       }
-
-    case "text":
     default:
       return (
         <Text whiteSpace="pre-wrap" fontSize="lg" lineHeight="tall">
@@ -111,7 +140,9 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
   const startNode = nodes.find((n) => n.is_start_node)
 
   // Initialize state
-  const [currentNodeId, setCurrentNodeId] = useState<string | null>(startNode?.id || null)
+  const [currentNodeId, setCurrentNodeId] = useState<string | null>(
+    startNode?.id || null,
+  )
   const [playerState, setPlayerState] = useState<Record<string, unknown>>({})
   const [history, setHistory] = useState<HistoryEntry[]>([])
 
@@ -124,14 +155,12 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
 
     const nodeChoices = choices.filter((c) => c.from_node_id === currentNodeId)
 
-    // Filter by requires_state
+    // Filter by requires_state using the evaluator
     return nodeChoices.filter((choice) => {
-      if (!choice.requires_state) return true
-
-      // Check if all required state conditions are met
-      return Object.entries(choice.requires_state).every(([key, value]) => {
-        return playerState[key] === value
-      })
+      return evaluateRequiresState(
+        choice.requires_state as StateConditions | null,
+        playerState,
+      )
     })
   }, [currentNodeId, choices, playerState])
 
@@ -148,12 +177,11 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
       },
     ])
 
-    // Apply state changes
+    // Apply state changes using the evaluator
     if (choice.sets_state) {
-      setPlayerState((prev) => ({
-        ...prev,
-        ...choice.sets_state,
-      }))
+      setPlayerState((prev) =>
+        applySetsState(choice.sets_state as StateMutations, prev),
+      )
     }
 
     // Navigate to next node
@@ -181,7 +209,9 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
         <Card.Root>
           <Card.Body>
             <VStack gap={4}>
-              <Text color="red.500">No start node found. Please set a start node to preview.</Text>
+              <Text color="red.500">
+                No start node found. Please set a start node to preview.
+              </Text>
               <Button onClick={onExit}>
                 <FaArrowLeft />
                 Back to Editor
@@ -221,7 +251,12 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
               <Heading size="md">{story.title}</Heading>
             </HStack>
             <HStack gap={2}>
-              <Button size="sm" variant="ghost" onClick={handleUndo} disabled={history.length === 0}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleUndo}
+                disabled={history.length === 0}
+              >
                 <FaUndo />
                 Undo
               </Button>
@@ -262,7 +297,12 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
                     <>
                       <Separator />
                       <Box>
-                        <Text fontSize="sm" fontWeight="bold" color="fg.muted" mb={3}>
+                        <Text
+                          fontSize="sm"
+                          fontWeight="bold"
+                          color="fg.muted"
+                          mb={3}
+                        >
                           What do you do?
                         </Text>
                         <VStack align="stretch" gap={3}>
@@ -371,8 +411,8 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
                 <Card.Body>
                   <VStack align="stretch" gap={2}>
                     <Text fontSize="xs" color="fg.muted">
-                      {availableChoices.length} choice{availableChoices.length !== 1 ? "s" : ""}{" "}
-                      available
+                      {availableChoices.length} choice
+                      {availableChoices.length !== 1 ? "s" : ""} available
                     </Text>
                     {availableChoices.map((choice) => (
                       <Box key={choice.id}>

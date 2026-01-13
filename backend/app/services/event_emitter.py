@@ -1,7 +1,7 @@
 """
 Event Emitter Service: Single write-path for room state changes.
 
-This module implements the Phase 1 event-sourcing pattern with transactional
+This module implements the event-sourcing pattern with transactional
 projections. It is the ONLY supported mechanism for room-related writes.
 
 CRITICAL INVARIANTS:
@@ -11,7 +11,7 @@ CRITICAL INVARIANTS:
 - Projections are fully rebuildable by replaying events in sequence order
 - All writes must go through emit_event() to maintain consistency
 
-Phase 4 Preparation:
+##  TODO: VALIDATE THE FOLLOWING ASAP
 - Redis pub/sub fan-out will be added to emit_event()
 - WebSocket clients will receive events in real-time
 - Sequence-based replay will handle reconnections

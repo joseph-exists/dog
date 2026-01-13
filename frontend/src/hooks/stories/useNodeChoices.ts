@@ -1,20 +1,25 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { ApiError } from "@/client/core/ApiError"
 import {
-  NodeChoicesService,
-  StorynodesService,
   type NodeChoiceBase,
   type NodeChoiceCreate,
   type NodeChoiceUpdate,
+  NodeChoicesService,
+  StorynodesService,
 } from "@/client"
+import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 // Query hook for fetching choices from a node
 export const useChoicesForNode = (nodeId: string | null) => {
   return useQuery({
     queryKey: ["nodes", nodeId, "choices"],
-    queryFn: () => StorynodesService.readNodeChoices({ nodeId: nodeId!, skip: 0, limit: 100 }),
+    queryFn: () =>
+      StorynodesService.readNodeChoices({
+        nodeId: nodeId!,
+        skip: 0,
+        limit: 100,
+      }),
     enabled: !!nodeId, // Only run query if nodeId exists
   })
 }
@@ -47,7 +52,9 @@ export const useCreateChoice = () => {
       NodeChoicesService.createNodeChoice({ requestBody: data }),
     onSuccess: (result) => {
       showSuccessToast("Choice created successfully!")
-      queryClient.invalidateQueries({ queryKey: ["nodes", result.from_node_id, "choices"] })
+      queryClient.invalidateQueries({
+        queryKey: ["nodes", result.from_node_id, "choices"],
+      })
     },
     onError: (err: ApiError) => {
       handleError(err)
@@ -61,11 +68,16 @@ export const useUpdateChoice = (fromNodeId: string) => {
   const { showSuccessToast } = useCustomToast()
 
   return useMutation({
-    mutationFn: ({ choiceId, data }: { choiceId: string; data: NodeChoiceUpdate }) =>
+    mutationFn: ({
+      choiceId,
+      data,
+    }: { choiceId: string; data: NodeChoiceUpdate }) =>
       NodeChoicesService.updateNodeChoice({ choiceId, requestBody: data }),
     onSuccess: () => {
       showSuccessToast("Choice updated successfully!")
-      queryClient.invalidateQueries({ queryKey: ["nodes", fromNodeId, "choices"] })
+      queryClient.invalidateQueries({
+        queryKey: ["nodes", fromNodeId, "choices"],
+      })
     },
     onError: (err: ApiError) => {
       handleError(err)
@@ -84,7 +96,9 @@ export const useDeleteChoice = (fromNodeId: string | null) => {
     onSuccess: () => {
       showSuccessToast("Choice deleted successfully.")
       if (fromNodeId) {
-        queryClient.invalidateQueries({ queryKey: ["nodes", fromNodeId, "choices"] })
+        queryClient.invalidateQueries({
+          queryKey: ["nodes", fromNodeId, "choices"],
+        })
       }
     },
     onError: (err: ApiError) => {

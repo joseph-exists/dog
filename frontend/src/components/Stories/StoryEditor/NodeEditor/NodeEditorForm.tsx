@@ -1,21 +1,21 @@
-import { useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import type { ContentFormat, StoryNodePublic, StoryNodeUpdate } from "@/client"
+import RichTextEditor from "@/components/Stories/shared/RichTextEditor"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Field } from "@/components/ui/field"
+import { useUpdateNode } from "@/hooks/stories/useStoryNodes"
 import {
   Box,
   Button,
-  Heading,
   HStack,
+  Heading,
+  NativeSelectField,
+  NativeSelectRoot,
   Separator,
   Textarea,
   VStack,
-  NativeSelectRoot,
-  NativeSelectField,
 } from "@chakra-ui/react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Field } from "@/components/ui/field"
-import type { StoryNodePublic, StoryNodeUpdate, ContentFormat } from "@/client"
-import { useUpdateNode } from "@/hooks/stories/useStoryNodes"
-import RichTextEditor from "@/components/Stories/shared/RichTextEditor"
+import { useEffect } from "react"
+import { Controller, useForm } from "react-hook-form"
 
 interface NodeEditorFormProps {
   node: StoryNodePublic
@@ -66,7 +66,15 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
       is_start_node: node.is_start_node || false,
       is_end_node: node.is_end_node || false,
     })
-  }, [node.id, node.title, node.content, node.content_format, node.is_start_node, node.is_end_node, reset])
+  }, [
+    node.id,
+    node.title,
+    node.content,
+    node.content_format,
+    node.is_start_node,
+    node.is_end_node,
+    reset,
+  ])
 
   const onSubmit = (data: NodeFormData) => {
     const updateData: StoryNodeUpdate = {
@@ -87,13 +95,12 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
   const handleFormatChange = (newFormat: ContentFormat) => {
     if (currentContent && currentContent.length > 0) {
       const confirmed = window.confirm(
-        "Changing format may affect how your content is displayed. Continue?"
+        "Changing format may affect how your content is displayed. Continue?",
       )
       if (!confirmed) return
     }
     setValue("content_format", newFormat, { shouldDirty: true })
   }
-
 
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)}>
@@ -108,7 +115,10 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
           <Textarea
             {...register("title", {
               required: "Title is required",
-              maxLength: { value: 200, message: "Title must be 200 characters or less" },
+              maxLength: {
+                value: 200,
+                message: "Title must be 200 characters or less",
+              },
             })}
             placeholder="Enter node title..."
             size="md"
@@ -120,7 +130,10 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
         </Field>
 
         {/* Content Format Selector */}
-        <Field label="Content Format" helperText="Choose how content is stored and edited">
+        <Field
+          label="Content Format"
+          helperText="Choose how content is stored and edited"
+        >
           <Controller
             name="content_format"
             control={control}
@@ -128,7 +141,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
               <NativeSelectRoot size="md">
                 <NativeSelectField
                   value={field.value}
-                  onChange={(e) => handleFormatChange(e.target.value as ContentFormat)}
+                  onChange={(e) =>
+                    handleFormatChange(e.target.value as ContentFormat)
+                  }
                 >
                   <option value="html">Rich Text (HTML)</option>
                   <option value="text">Plain Text</option>
@@ -147,13 +162,17 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
           <VStack align="stretch" gap={2}>
             <Checkbox
               checked={isStartNode}
-              onCheckedChange={(e) => setValue("is_start_node", !!e.checked, { shouldDirty: true })}
+              onCheckedChange={(e) =>
+                setValue("is_start_node", !!e.checked, { shouldDirty: true })
+              }
             >
               Mark as Start Node (story entry point)
             </Checkbox>
             <Checkbox
               checked={isEndNode}
-              onCheckedChange={(e) => setValue("is_end_node", !!e.checked, { shouldDirty: true })}
+              onCheckedChange={(e) =>
+                setValue("is_end_node", !!e.checked, { shouldDirty: true })
+              }
             >
               Mark as End Node (story conclusion)
             </Checkbox>
@@ -172,8 +191,8 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
             contentFormat === "html"
               ? "Use the toolbar to format your story text"
               : contentFormat === "json"
-              ? "Enter valid JSON structure for programmatic content"
-              : "Plain text content for simple nodes"
+                ? "Enter valid JSON structure for programmatic content"
+                : "Plain text content for simple nodes"
           }
         >
           <Controller
@@ -181,7 +200,10 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
             control={control}
             rules={{
               required: "Content is required",
-              maxLength: { value: 10000, message: "Content must be 10000 characters or less" },
+              maxLength: {
+                value: 10000,
+                message: "Content must be 10000 characters or less",
+              },
             }}
             render={({ field }) => {
               if (contentFormat === "html") {
@@ -191,7 +213,8 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     onChange={field.onChange}
                   />
                 )
-              } else if (contentFormat === "json") {
+              }
+              if (contentFormat === "json") {
                 return (
                   <Textarea
                     value={field.value}
@@ -203,18 +226,17 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     fontSize="sm"
                   />
                 )
-              } else {
-                // TEXT format
-                return (
-                  <Textarea
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Enter the story content for this node..."
-                    minH="300px"
-                    resize="vertical"
-                  />
-                )
               }
+              // TEXT format
+              return (
+                <Textarea
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Enter the story content for this node..."
+                  minH="300px"
+                  resize="vertical"
+                />
+              )
             }}
           />
         </Field>

@@ -1,13 +1,13 @@
-import { IconButton } from "@chakra-ui/react";
-import { BsThreeDotsVertical } from "react-icons/bs";
-import { MenuContent, MenuRoot, MenuTrigger } from "../ui/menu";
+import { IconButton } from "@chakra-ui/react"
+import { BsThreeDotsVertical } from "react-icons/bs"
+import { MenuContent, MenuRoot, MenuTrigger } from "../ui/menu"
 
-import type { ArchetypePublic } from "../../client";
-import DeleteArchetype from "../Archetypes/DeleteArchetype";
-import EditArchetype from "../Archetypes/EditArchetype";
+import type { ArchetypePublic } from "../../client"
+import DeleteArchetype from "../Archetypes/DeleteArchetype"
+import EditArchetype from "../Archetypes/EditArchetype"
 
 interface ArchetypeActionsMenuProps {
-  archetype: ArchetypePublic;
+  archetype: ArchetypePublic
 }
 
 export const ArchetypeActionsMenu = ({
@@ -25,5 +25,5 @@ export const ArchetypeActionsMenu = ({
         <DeleteArchetype id={archetype.id} />
       </MenuContent>
     </MenuRoot>
-  );
-};
+  )
+}

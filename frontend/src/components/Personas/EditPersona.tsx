@@ -5,19 +5,19 @@ import {
   Input,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { type SubmitHandler, useForm } from "react-hook-form";
-import { FaExchangeAlt } from "react-icons/fa";
+} from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { type SubmitHandler, useForm } from "react-hook-form"
+import { FaExchangeAlt } from "react-icons/fa"
 
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 import {
   type ApiError,
   type PersonaPublic,
   PersonasService,
-} from "../../client";
-import useCustomToast from "@/hooks/useCustomToast";
-import { handleError } from "@/utils";
+} from "../../client"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -27,27 +27,27 @@ import {
   DialogRoot,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
-import { Field } from "../ui/field";
+} from "../ui/dialog"
+import { Field } from "../ui/field"
 
 interface EditPersonaProps {
-  persona: PersonaPublic;
+  persona: PersonaPublic
 }
 
 interface PersonaUpdateForm {
-  name: string;
-  description?: string | null;
-  long_description?: string | null;
-  general_domain?: string | null;
-  specific_domain?: string | null;
-  general_domain_high?: string | null;
-  specific_domain_high?: string | null;
+  name: string
+  description?: string | null
+  long_description?: string | null
+  general_domain?: string | null
+  specific_domain?: string | null
+  general_domain_high?: string | null
+  specific_domain_high?: string | null
 }
 
 const EditPersona = ({ persona }: EditPersonaProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const { showSuccessToast } = useCustomToast();
+  const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const { showSuccessToast } = useCustomToast()
   const {
     register,
     handleSubmit,
@@ -60,7 +60,7 @@ const EditPersona = ({ persona }: EditPersonaProps) => {
       ...persona,
       description: persona.description ?? undefined,
     },
-  });
+  })
 
   const mutation = useMutation({
     mutationFn: (data: PersonaUpdateForm) =>
@@ -69,21 +69,21 @@ const EditPersona = ({ persona }: EditPersonaProps) => {
         requestBody: data,
       }),
     onSuccess: () => {
-      showSuccessToast("Persona updated successfully.");
-      reset();
-      setIsOpen(false);
+      showSuccessToast("Persona updated successfully.")
+      reset()
+      setIsOpen(false)
     },
     onError: (err: ApiError) => {
-      handleError(err);
+      handleError(err)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["personas"] });
+      queryClient.invalidateQueries({ queryKey: ["personas"] })
     },
-  });
+  })
 
   const onSubmit: SubmitHandler<PersonaUpdateForm> = async (data) => {
-    mutation.mutate(data);
-  };
+    mutation.mutate(data)
+  }
 
   return (
     <DialogRoot
@@ -217,7 +217,7 @@ const EditPersona = ({ persona }: EditPersonaProps) => {
         <DialogCloseTrigger />
       </DialogContent>
     </DialogRoot>
-  );
-};
+  )
+}
 
-export default EditPersona;
+export default EditPersona

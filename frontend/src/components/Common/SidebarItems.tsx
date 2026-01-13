@@ -1,10 +1,16 @@
-import { Box, Flex, Icon, Text } from "@chakra-ui/react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Link as RouterLink } from "@tanstack/react-router";
-import { FiBriefcase, FiHome, FiMessageSquare, FiSettings, FiUsers } from "react-icons/fi";
-import type { IconType } from "react-icons/lib";
+import { Box, Flex, Icon, Text } from "@chakra-ui/react"
+import { useQueryClient } from "@tanstack/react-query"
+import { Link as RouterLink } from "@tanstack/react-router"
+import {
+  FiBriefcase,
+  FiHome,
+  FiMessageSquare,
+  FiSettings,
+  FiUsers,
+} from "react-icons/fi"
+import type { IconType } from "react-icons/lib"
 
-import type { UserPublic } from "@/client";
+import type { UserPublic } from "@/client"
 
 const items = [
   { icon: FiHome, title: "Dashboard", path: "/" },
@@ -13,25 +19,26 @@ const items = [
   { icon: FiSettings, title: "User Settings", path: "/settings" },
   { icon: FiSettings, title: "Personas", path: "/personas" },
   { icon: FiMessageSquare, title: "Rooms", path: "/rooms" },
-];
+  { icon: FiMessageSquare, title: "Stories", path: "/stories" },
+]
 
 interface SidebarItemsProps {
-  onClose?: () => void;
+  onClose?: () => void
 }
 
 interface Item {
-  icon: IconType;
-  title: string;
-  path: string;
+  icon: IconType
+  title: string
+  path: string
 }
 
 const SidebarItems = ({ onClose }: SidebarItemsProps) => {
-  const queryClient = useQueryClient();
-  const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"]);
+  const queryClient = useQueryClient()
+  const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
 
   const finalItems: Item[] = currentUser?.is_superuser
     ? [...items, { icon: FiUsers, title: "Admin", path: "/admin" }]
-    : items;
+    : items
 
   const listItems = finalItems.map(({ icon, title, path }) => (
     <RouterLink key={title} to={path} onClick={onClose}>
@@ -49,7 +56,7 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
         <Text ml={2}>{title}</Text>
       </Flex>
     </RouterLink>
-  ));
+  ))
 
   return (
     <>
@@ -58,7 +65,7 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
       </Text>
       <Box>{listItems}</Box>
     </>
-  );
-};
+  )
+}
 
-export default SidebarItems;
+export default SidebarItems

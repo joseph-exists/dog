@@ -5,19 +5,19 @@ import {
   Input,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { type SubmitHandler, useForm } from "react-hook-form";
-import { FaExchangeAlt } from "react-icons/fa";
+} from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { type SubmitHandler, useForm } from "react-hook-form"
+import { FaExchangeAlt } from "react-icons/fa"
 
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 import {
   type ApiError,
   type ArchetypePublic,
   ArchetypesService,
-} from "../../client";
-import useCustomToast from "@/hooks/useCustomToast";
-import { handleError } from "@/utils";
+} from "../../client"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -27,22 +27,22 @@ import {
   DialogRoot,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
-import { Field } from "../ui/field";
+} from "../ui/dialog"
+import { Field } from "../ui/field"
 
 interface EditArchetypeProps {
-  archetype: ArchetypePublic;
+  archetype: ArchetypePublic
 }
 
 interface ArchetypeUpdateForm {
-  name: string;
-  description?: string;
+  name: string
+  description?: string
 }
 
 const EditArchetype = ({ archetype }: EditArchetypeProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const { showSuccessToast } = useCustomToast();
+  const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const { showSuccessToast } = useCustomToast()
   const {
     register,
     handleSubmit,
@@ -55,7 +55,7 @@ const EditArchetype = ({ archetype }: EditArchetypeProps) => {
       ...archetype,
       description: archetype.description ?? undefined,
     },
-  });
+  })
 
   const mutation = useMutation({
     mutationFn: (data: ArchetypeUpdateForm) =>
@@ -64,21 +64,21 @@ const EditArchetype = ({ archetype }: EditArchetypeProps) => {
         requestBody: data,
       }),
     onSuccess: () => {
-      showSuccessToast("Archetype updated successfully.");
-      reset();
-      setIsOpen(false);
+      showSuccessToast("Archetype updated successfully.")
+      reset()
+      setIsOpen(false)
     },
     onError: (err: ApiError) => {
-      handleError(err);
+      handleError(err)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["archetypes"] });
+      queryClient.invalidateQueries({ queryKey: ["archetypes"] })
     },
-  });
+  })
 
   const onSubmit: SubmitHandler<ArchetypeUpdateForm> = async (data) => {
-    mutation.mutate(data);
-  };
+    mutation.mutate(data)
+  }
 
   return (
     <DialogRoot
@@ -152,7 +152,7 @@ const EditArchetype = ({ archetype }: EditArchetypeProps) => {
         <DialogCloseTrigger />
       </DialogContent>
     </DialogRoot>
-  );
-};
+  )
+}
 
-export default EditArchetype;
+export default EditArchetype

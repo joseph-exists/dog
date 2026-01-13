@@ -1,5 +1,9 @@
 import { HStack, Icon, Text, VStack } from "@chakra-ui/react"
-import { FaCheckCircle, FaTimesCircle, FaExclamationTriangle } from "react-icons/fa"
+import {
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaTimesCircle,
+} from "react-icons/fa"
 import type { ValidationResult } from "../shared/storyValidation"
 
 interface ValidationSummaryProps {

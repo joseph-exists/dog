@@ -1,14 +1,3 @@
-import { useState } from "react"
-import {
-  Box,
-  Button,
-  DialogActionTrigger,
-  Heading,
-  Separator,
-  Spinner,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DialogBody,
@@ -20,6 +9,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { usePublishWorkflow } from "@/hooks/stories/usePublishWorkflow"
+import {
+  Box,
+  Button,
+  DialogActionTrigger,
+  Heading,
+  Separator,
+  Spinner,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
+import { useState } from "react"
 import ValidationSummary from "./ValidationSummary"
 
 interface PublishModalProps {
@@ -30,14 +30,8 @@ interface PublishModalProps {
 
 const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
   const [confirmChecked, setConfirmChecked] = useState(false)
-  const {
-    story,
-    validation,
-    isReady,
-    isLoading,
-    publish,
-    isPublishing,
-  } = usePublishWorkflow({ storyId })
+  const { story, validation, isReady, isLoading, publish, isPublishing } =
+    usePublishWorkflow({ storyId })
 
   const handlePublish = () => {
     publish()
@@ -69,8 +63,8 @@ const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
         <DialogBody>
           <VStack align="stretch" gap={4}>
             <Text fontSize="sm" color="fg.muted">
-              Publishing will make your story available in the catalog for all users to
-              discover and play.
+              Publishing will make your story available in the catalog for all
+              users to discover and play.
             </Text>
 
             {isLoading ? (
@@ -94,8 +88,9 @@ const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
                 {validation.warnings.length > 0 && (
                   <Box p={3} bg="orange.50" borderRadius="md">
                     <Text fontSize="sm" color="orange.800">
-                      <strong>Note:</strong> You can publish despite warnings, but we
-                      recommend addressing them for the best player experience.
+                      <strong>Note:</strong> You can publish despite warnings,
+                      but we recommend addressing them for the best player
+                      experience.
                     </Text>
                   </Box>
                 )}
@@ -108,7 +103,8 @@ const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
                   disabled={!isReady}
                 >
                   <Text fontSize="sm">
-                    I understand this will make the story available in the catalog
+                    I understand this will make the story available in the
+                    catalog
                   </Text>
                 </Checkbox>
               </>

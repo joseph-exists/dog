@@ -360,6 +360,46 @@ python auth_helper.py
 
 ---
 
+ Test Groups (8 total, ~40 individual tests):
+  ┌────────────────────────┬──────────────────────────────────────────────────────┬──────────┐
+  │         Group          │                     Description                      │  Tests   │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 1. CRUD                │ Create/Read/Update/Delete for all value types        │ 10 tests │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 2. Value Types         │ Type constraints, enum validation                    │ 6 tests  │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 3. Undefined Variables │ Detection in sets_state/requires_state               │ 5 tests  │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 4. Valid Schema        │ Passes when all vars defined                         │ 3 tests  │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 5. Complex Scenarios   │ Mixed valid/invalid, deep branching, repeated vars   │ 3 tests  │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 6. Publish Integration │ Soft block behavior                                  │ 3 tests  │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 7. Edge Cases          │ Underscores, numbers, unicode, long text, categories │ 7 tests  │
+  ├────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+  │ 8. Error Handling      │ Non-existent entities, missing fields, invalid types │ 6 tests  │
+  └────────────────────────┴──────────────────────────────────────────────────────┴──────────┘
+  Usage:
+  # Run all tests
+  python test_branching_story_state.py
+
+  # Run with verbose output
+  python test_branching_story_state.py --verbose
+
+  # Run specific test group
+  python test_branching_story_state.py --test crud
+  python test_branching_story_state.py --test types
+  python test_branching_story_state.py --test undefined
+  python test_branching_story_state.py --test valid
+  python test_branching_story_state.py --test complex
+  python test_branching_story_state.py --test publish
+  python test_branching_story_state.py --test edge
+  python test_branching_story_state.py --test errors
+
+  Output: test_results_story_state.json with full results including test entities created.
+---
+
 ## Workflow Example
 
 ### 1. Initial Setup - Create Character System

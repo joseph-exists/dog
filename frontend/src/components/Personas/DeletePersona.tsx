@@ -1,10 +1,10 @@
-import { Button, DialogTitle, Text } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { FiTrash2 } from "react-icons/fi";
+import { Button, DialogTitle, Text } from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { FiTrash2 } from "react-icons/fi"
 
-import { PersonasService } from "@/client";
+import { PersonasService } from "@/client"
 import {
   DialogActionTrigger,
   DialogBody,
@@ -14,39 +14,41 @@ import {
   DialogHeader,
   DialogRoot,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import useCustomToast from "@/hooks/useCustomToast";
+} from "@/components/ui/dialog"
+import useCustomToast from "@/hooks/useCustomToast"
 
 const DeletePersona = ({ id }: { id: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const { showSuccessToast, showErrorToast } = useCustomToast();
+  const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
   const {
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm();
+  } = useForm()
 
   const deletePersona = async (id: string) => {
-    await PersonasService.deletePersona({ id: id });
-  };
+    await PersonasService.deletePersona({ id: id })
+  }
 
   const mutation = useMutation({
     mutationFn: deletePersona,
     onSuccess: () => {
-      showSuccessToast("The Persona was deleted successfully.  You're a monster.");
-      setIsOpen(false);
+      showSuccessToast(
+        "The Persona was deleted successfully.  You're a monster.",
+      )
+      setIsOpen(false)
     },
     onError: () => {
-      showErrorToast("An error occurred while deleting the Persona");
+      showErrorToast("An error occurred while deleting the Persona")
     },
     onSettled: () => {
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries()
     },
-  });
+  })
 
   const onSubmit = async () => {
-    mutation.mutate(id);
-  };
+    mutation.mutate(id)
+  }
 
   return (
     <DialogRoot
@@ -98,7 +100,7 @@ const DeletePersona = ({ id }: { id: string }) => {
         </form>
       </DialogContent>
     </DialogRoot>
-  );
-};
+  )
+}
 
-export default DeletePersona;
+export default DeletePersona

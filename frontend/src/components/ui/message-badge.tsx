@@ -10,14 +10,10 @@
  * Design System Component - Phase 5
  */
 
-import { Badge, Icon, type BadgeProps } from "@chakra-ui/react"
-import { FaEdit, FaThumbtack, FaCheckCircle, FaCircle } from "react-icons/fa"
+import { Badge, type BadgeProps, Icon } from "@chakra-ui/react"
+import { FaCheckCircle, FaCircle, FaEdit, FaThumbtack } from "react-icons/fa"
 
-export type MessageBadgeVariant =
-  | "edited"
-  | "pinned"
-  | "active"
-  | "inactive"
+export type MessageBadgeVariant = "edited" | "pinned" | "active" | "inactive"
 
 export interface MessageBadgeProps extends Omit<BadgeProps, "variant"> {
   variant: MessageBadgeVariant
@@ -31,22 +27,22 @@ const badgeConfig: Record<
   edited: {
     icon: FaEdit,
     colorScheme: "gray",
-    label: "Edited"
+    label: "Edited",
   },
   pinned: {
     icon: FaThumbtack,
     colorScheme: "yellow",
-    label: "Pinned"
+    label: "Pinned",
   },
   active: {
     icon: FaCheckCircle,
     colorScheme: "green",
-    label: "Active for Context"
+    label: "Active for Context",
   },
   inactive: {
     icon: FaCircle,
     colorScheme: "gray",
-    label: "Inactive"
+    label: "Inactive",
   },
 }
 
@@ -69,9 +65,7 @@ export const MessageBadge = ({
   ...props
 }: MessageBadgeProps) => {
   const config = badgeConfig[variant]
-  const title = timestamp
-    ? `${config.label} - ${timestamp}`
-    : config.label
+  const title = timestamp ? `${config.label} - ${timestamp}` : config.label
 
   return (
     <Badge

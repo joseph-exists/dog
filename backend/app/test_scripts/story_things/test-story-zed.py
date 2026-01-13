@@ -9,7 +9,7 @@ import requests
 
 # Import auth helper
 sys.path.append(str(Path(__file__).parent))
-from app.test_scripts.test_story_system import test_entities
+from app.test_scripts.story_things.test_story_system import test_entities
 from auth_helper import get_authenticated_session, AuthenticationError
 
 

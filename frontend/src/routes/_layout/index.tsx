@@ -1,14 +1,14 @@
-import { Avatar, Button, Box, Container, Text, Card } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Avatar, Box, Button, Card, Container, Text } from "@chakra-ui/react"
+import { createFileRoute } from "@tanstack/react-router"
 
-import useAuth from "@/hooks/useAuth";
+import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
-});
+})
 
 function Dashboard() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useAuth()
 
   return (
     <>
@@ -47,5 +47,5 @@ function Dashboard() {
         </Box>
       </Container>
     </>
-  );
+  )
 }

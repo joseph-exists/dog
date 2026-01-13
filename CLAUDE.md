@@ -43,14 +43,9 @@ This application has the following structure:
 cd backend
 uv sync                    # Install dependencies (uses uv for fast dependency management)
 source .venv/bin/activate  # Activate virtual environment (Linux/Mac)
-# OR for Windows:
-.venv\Scripts\activate     # Windows activation
 fastapi dev app/main.py    # Run development server (auto-reload enabled)
-bash ./scripts/test.sh     # Run tests with coverage reporting
 pytest app/tests/         # Run tests directly
 pytest -v app/tests/test_specific.py::test_function  # Run single test
-alembic revision --autogenerate -m "description"  # Create migration
-alembic upgrade head       # Apply migrations
 alembic current           # Check current migration
 alembic history           # View migration history
 ruff check app/           # Run linter
@@ -99,8 +94,8 @@ docker compose exec backend bash  # Access backend container
 
 - Database models defined in `backend/app/models.py` using SQLModel
 - Migrations managed with Alembic
-- **CRITICAL**: Always create migrations after model changes: `alembic revision --autogenerate -m "description"`
-- Apply migrations: `alembic upgrade head`
+- **CRITICAL**: Always have user create migrations after model changes: `alembic revision --autogenerate -m "description"`
+- Always have user apply migrations: `alembic upgrade head`
 - Migration files stored in `backend/app/alembic/versions/`
 - **Never edit applied migrations** - create new ones to fix issues
 
@@ -118,7 +113,7 @@ docker compose exec backend bash  # Access backend container
 - RESTful API with OpenAPI/Swagger documentation at `/docs`
 - CRUD operations centralized in `backend/app/crud.py`
 - Route handlers in `backend/app/api/routes/`
-- Automatic client generation for frontend
+- Automatic client generation for frontend (npm run generate-client)
 
 ### Frontend Patterns
 
@@ -132,7 +127,6 @@ docker compose exec backend bash  # Access backend container
 ### Backend Tests
 
 - Location: `backend/app/tests/`
-- Run: `bash ./scripts/test.sh` (includes coverage)
 - Test with running stack: `docker compose exec backend bash scripts/tests-start.sh`
 
 ### Frontend Tests
@@ -229,12 +223,15 @@ def user_endpoint(current_user: CurrentUser): ...
 ### Workflow for New Features
 
 1. Define models in `models.py` (Base → Create → Update → Database → Public → Collection)
-2. Create migration: `alembic revision --autogenerate -m "Add Feature"`
-3. Apply migration: `alembic upgrade head`
+2. User needs to Create migration: `alembic revision --autogenerate -m "Add Feature"`
+3. User needs to Apply migration: `alembic upgrade head`
 4. Add CRUD operations in `crud.py`
 5. Create routes in `app/api/routes/feature.py`
 6. Register router in `app/api/main.py` (see current pattern with prefix/tags)
 7. Write tests in `app/tests/`
+8. Create standalone test scripts in app/test_scripts
+9. Typer CLI integration in app/test_scripts/typer
+10. Documentation updates
 
 ### Context-Specific Development Patterns
 

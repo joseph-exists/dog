@@ -12,25 +12,25 @@
  * Phase 5 - Message Management Features
  */
 
-import { useState } from "react"
+import { useRoomPermissions } from "@/hooks/useRoomPermissions"
+import type { MessageViewModel, RoomViewModel } from "@/services/roomService"
 import {
-  MenuRoot,
-  MenuTrigger,
   MenuContent,
   MenuItem,
+  MenuRoot,
   MenuSeparator,
+  MenuTrigger,
 } from "@chakra-ui/react"
 import { IconButton } from "@chakra-ui/react"
+import { useState } from "react"
 import {
   FaEdit,
-  FaThumbtack,
-  FaTrash,
+  FaEllipsisV,
   FaEye,
   FaEyeSlash,
-  FaEllipsisV,
+  FaThumbtack,
+  FaTrash,
 } from "react-icons/fa"
-import type { MessageViewModel, RoomViewModel } from "@/services/roomService"
-import { useRoomPermissions } from "@/hooks/useRoomPermissions"
 
 interface MessageActionMenuProps {
   message: MessageViewModel
@@ -135,17 +135,14 @@ const MessageActionMenu = ({
         {/* Toggle context - any participant */}
         {permissions.canToggleContext() && (
           <>
-            {(permissions.canEditMessage(message) || permissions.canPinMessage()) && (
-              <MenuSeparator />
-            )}
+            {(permissions.canEditMessage(message) ||
+              permissions.canPinMessage()) && <MenuSeparator />}
             <MenuItem
               value="toggle-context"
               onClick={() => onToggleContext(!isActiveForContext)}
             >
               {isActiveForContext ? <FaEyeSlash /> : <FaEye />}
-              {isActiveForContext
-                ? "Remove from Context"
-                : "Add to Context"}
+              {isActiveForContext ? "Remove from Context" : "Add to Context"}
             </MenuItem>
           </>
         )}

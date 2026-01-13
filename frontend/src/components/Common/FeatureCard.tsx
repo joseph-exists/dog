@@ -1,26 +1,26 @@
 import {
+  Button,
   Card,
-  CardHeader,
   CardBody,
   CardFooter,
+  CardHeader,
+  type CardRootProps,
   Heading,
-  Text,
-  Button,
   Icon,
-  CardRootProps,
-} from "@chakra-ui/react";
-import { CloseButton } from "../ui/close-button";
-import { Link } from "@tanstack/react-router";
-import { FiArrowRight } from "react-icons/fi";
-import { IconType } from "react-icons/lib";
+  Text,
+} from "@chakra-ui/react"
+import { Link } from "@tanstack/react-router"
+import { FiArrowRight } from "react-icons/fi"
+import type { IconType } from "react-icons/lib"
+import { CloseButton } from "../ui/close-button"
 
 interface FeatureCardProps extends CardRootProps {
-  title: string;
-  description: string;
-  icon: IconType;
-  linkTo: string;
-  buttonText: string;
-  colorScheme?: string;
+  title: string
+  description: string
+  icon: IconType
+  linkTo: string
+  buttonText: string
+  colorScheme?: string
 }
 
 export const FeatureCard = ({
@@ -58,8 +58,8 @@ export const FeatureCard = ({
         >
           {buttonText}
         </Button>
-        <CloseButton></CloseButton>
+        <CloseButton />
       </CardFooter>
     </FeatureCard>
-  );
-};
+  )
+}

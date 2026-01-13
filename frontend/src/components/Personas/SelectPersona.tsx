@@ -1,36 +1,36 @@
-// src/components/Personas/SelectPersona.tsx
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Box,
-  SimpleGrid,
-  Heading,
-  Text,
   Button,
   Container,
-  VStack,
   Flex,
+  Heading,
+  SimpleGrid,
   Spinner,
-} from "@chakra-ui/react";
-import { PersonasService } from "../../client";
-import { PersonaCard } from '../../components/Common/PersonaCard';
-import useCustomToast from "../../hooks/useCustomToast";
-import { usePersona } from "../../contexts/PersonaContext";
+  Text,
+  VStack,
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+// src/components/Personas/SelectPersona.tsx
+import { useState } from "react"
+import { PersonasService } from "../../client"
+import { PersonaCard } from "../../components/Common/PersonaCard"
+import { usePersona } from "../../contexts/PersonaContext"
+import useCustomToast from "../../hooks/useCustomToast"
 
-const PERSONA_LIMIT = 3; // Show only 3 personas for selection
+const PERSONA_LIMIT = 3 // Show only 3 personas for selection
 
 export const PersonaSelection = () => {
-  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
-  const { showSuccessToast, showErrorToast } = useCustomToast();
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null)
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   // Use the context for global state
-  const { selectedPersonaId, selectionComplete, selectPersona } = usePersona();
+  const { selectedPersonaId, selectionComplete, selectPersona } = usePersona()
 
   // Fetch personas for selection
   const { data, isLoading, error } = useQuery({
     queryKey: ["personas", "selection"],
     queryFn: () => PersonasService.readPersonas({ limit: PERSONA_LIMIT }),
-  });
+  })
 
   // When selection complete, fetch selected persona details
   const { data: selectedPersonaData } = useQuery({
@@ -40,30 +40,30 @@ export const PersonaSelection = () => {
         ? PersonasService.readPersona({ id: selectedPersonaId })
         : null,
     enabled: !!selectedPersonaId && selectionComplete,
-  });
+  })
 
   const handleSelectPersona = (personaId: string) => {
-    setLocalSelectedId(personaId);
-  };
+    setLocalSelectedId(personaId)
+  }
 
   const handleConfirmSelection = () => {
     if (localSelectedId) {
       try {
-        selectPersona(localSelectedId);
-        showSuccessToast("Persona selected successfully!");
+        selectPersona(localSelectedId)
+        showSuccessToast("Persona selected successfully!")
       } catch (err) {
-        showErrorToast("Failed to select persona");
-        console.error(err);
+        showErrorToast("Failed to select persona")
+        console.error(err)
       }
     }
-  };
+  }
 
   if (isLoading) {
     return (
       <Flex justify="center" align="center" height="300px">
         <Spinner size="xl" />
       </Flex>
-    );
+    )
   }
 
   if (error) {
@@ -74,10 +74,10 @@ export const PersonaSelection = () => {
         </Heading>
         <Text mt={4}>Please try again later</Text>
       </Box>
-    );
+    )
   }
 
-  const personas = data?.data || [];
+  const personas = data?.data || []
 
   if (personas.length === 0) {
     return (
@@ -85,7 +85,7 @@ export const PersonaSelection = () => {
         <Heading size="md">No personas available</Heading>
         <Text mt={4}>Please create some personas first</Text>
       </Box>
-    );
+    )
   }
 
   // When selection is complete, show only the selected persona
@@ -103,7 +103,7 @@ export const PersonaSelection = () => {
           </Box>
         </VStack>
       </Container>
-    );
+    )
   }
 
   return (
@@ -136,7 +136,7 @@ export const PersonaSelection = () => {
         </Button>
       </VStack>
     </Container>
-  );
-};
+  )
+}
 
-export default PersonaSelection;
+export default PersonaSelection

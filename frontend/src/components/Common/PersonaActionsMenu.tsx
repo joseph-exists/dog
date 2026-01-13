@@ -1,13 +1,13 @@
-import { IconButton } from "@chakra-ui/react";
-import { BsThreeDotsVertical } from "react-icons/bs";
-import { MenuContent, MenuRoot, MenuTrigger } from "../ui/menu";
+import { IconButton } from "@chakra-ui/react"
+import { BsThreeDotsVertical } from "react-icons/bs"
+import { MenuContent, MenuRoot, MenuTrigger } from "../ui/menu"
 
-import type { PersonaPublic } from "../../client";
-import DeletePersona from "../Personas/DeletePersona";
-import EditPersona from "../Personas/EditPersona";
+import type { PersonaPublic } from "../../client"
+import DeletePersona from "../Personas/DeletePersona"
+import EditPersona from "../Personas/EditPersona"
 
 interface PersonaActionsMenuProps {
-  persona: PersonaPublic;
+  persona: PersonaPublic
 }
 
 export const PersonaActionsMenu = ({ persona }: PersonaActionsMenuProps) => {
@@ -23,5 +23,5 @@ export const PersonaActionsMenu = ({ persona }: PersonaActionsMenuProps) => {
         <DeletePersona id={persona.id} />
       </MenuContent>
     </MenuRoot>
-  );
-};
+  )
+}

@@ -5,28 +5,28 @@ import {
   Heading,
   Table,
   VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { FiSearch } from "react-icons/fi";
-import { z } from "zod";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { FiSearch } from "react-icons/fi"
+import { z } from "zod"
 
-import { PersonasService } from "../../client";
-import { PersonaActionsMenu } from "../../components/Common/PersonaActionsMenu";
-import AddPersona from "../../components/Personas/AddPersona";
-import PendingPersonas from "../../components/Pending/PendingPersonas";
+import { PersonasService } from "../../client"
+import { PersonaActionsMenu } from "../../components/Common/PersonaActionsMenu"
+import PendingPersonas from "../../components/Pending/PendingPersonas"
+import AddPersona from "../../components/Personas/AddPersona"
 import {
   PaginationItems,
   PaginationNextTrigger,
   PaginationPrevTrigger,
   PaginationRoot,
-} from "../../components/ui/pagination";
+} from "../../components/ui/pagination"
 
 const personasSearchSchema = z.object({
   page: z.number().catch(1),
-});
+})
 
-const PER_PAGE = 5;
+const PER_PAGE = 5
 
 function getPersonasQueryOptions({ page }: { page: number }) {
   return {
@@ -36,33 +36,33 @@ function getPersonasQueryOptions({ page }: { page: number }) {
         limit: PER_PAGE,
       }),
     queryKey: ["personas", { page }],
-  };
+  }
 }
 
 export const Route = createFileRoute("/_layout/personas")({
   component: Personas,
   validateSearch: (search) => personasSearchSchema.parse(search),
-});
+})
 
 function PersonasTable() {
-  const navigate = useNavigate({ from: Route.fullPath });
-  const { page } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath })
+  const { page } = Route.useSearch()
 
   const { data, isLoading, isPlaceholderData } = useQuery({
     ...getPersonasQueryOptions({ page }),
     placeholderData: (prevData) => prevData,
-  });
+  })
 
   const setPage = (page: number) =>
     navigate({
       search: (prev: { [key: string]: string }) => ({ ...prev, page }),
-    });
+    })
 
-  const personas = data?.data.slice(0, PER_PAGE) ?? [];
-  const count = data?.count ?? 0;
+  const personas = data?.data.slice(0, PER_PAGE) ?? []
+  const count = data?.count ?? 0
 
   if (isLoading) {
-    return <PendingPersonas />;
+    return <PendingPersonas />
   }
 
   if (personas.length === 0) {
@@ -80,7 +80,7 @@ function PersonasTable() {
           </VStack>
         </EmptyState.Content>
       </EmptyState.Root>
-    );
+    )
   }
 
   return (
@@ -172,7 +172,7 @@ function PersonasTable() {
         </PaginationRoot>
       </Flex>
     </>
-  );
+  )
 }
 
 function Personas() {
@@ -184,5 +184,5 @@ function Personas() {
       <AddPersona />
       <PersonasTable />
     </Container>
-  );
+  )
 }

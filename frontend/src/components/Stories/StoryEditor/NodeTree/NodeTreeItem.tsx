@@ -1,7 +1,7 @@
 import { Box, HStack, Icon, Text } from "@chakra-ui/react"
-import { FaFlag, FaTrophy, FaFileAlt, FaGripVertical } from "react-icons/fa"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { FaFileAlt, FaFlag, FaGripVertical, FaTrophy } from "react-icons/fa"
 
 import type { StoryNodePublic } from "@/client"
 
@@ -12,8 +12,20 @@ interface NodeTreeItemProps {
   level: number
 }
 
-const NodeTreeItem = ({ node, isSelected, onClick, level }: NodeTreeItemProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+const NodeTreeItem = ({
+  node,
+  isSelected,
+  onClick,
+  level,
+}: NodeTreeItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: node.id,
   })
 
@@ -64,10 +76,20 @@ const NodeTreeItem = ({ node, isSelected, onClick, level }: NodeTreeItemProps) =
           />
 
           {/* Node Icon */}
-          <Icon as={getIcon()} color={getIconColor()} boxSize={4} flexShrink={0} />
+          <Icon
+            as={getIcon()}
+            color={getIconColor()}
+            boxSize={4}
+            flexShrink={0}
+          />
 
           {/* Node Title */}
-          <Text fontWeight={isSelected ? "bold" : "normal"} fontSize="sm" flex={1} truncate>
+          <Text
+            fontWeight={isSelected ? "bold" : "normal"}
+            fontSize="sm"
+            flex={1}
+            truncate
+          >
             {node.title}
           </Text>
         </HStack>

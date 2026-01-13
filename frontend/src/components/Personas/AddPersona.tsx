@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type SubmitHandler, useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { type SubmitHandler, useForm } from "react-hook-form"
 
 import {
   Button,
@@ -8,14 +8,14 @@ import {
   Input,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useState } from "react";
-import { FaPlus } from "react-icons/fa";
+} from "@chakra-ui/react"
+import { useState } from "react"
+import { FaPlus } from "react-icons/fa"
 
-import { type PersonaCreate, PersonasService } from "@/client";
-import type { ApiError } from "@/client/core/ApiError";
-import useCustomToast from "@/hooks/useCustomToast";
-import { handleError } from "@/utils";
+import { type PersonaCreate, PersonasService } from "@/client"
+import type { ApiError } from "@/client/core/ApiError"
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -24,13 +24,13 @@ import {
   DialogHeader,
   DialogRoot,
   DialogTrigger,
-} from "../ui/dialog";
-import { Field } from "../ui/field";
+} from "../ui/dialog"
+import { Field } from "../ui/field"
 
 const AddPersona = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const { showSuccessToast } = useCustomToast();
+  const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const { showSuccessToast } = useCustomToast()
   const {
     register,
     handleSubmit,
@@ -47,27 +47,27 @@ const AddPersona = () => {
       general_domain_high: "Default General Domain High",
       specific_domain_high: "Default Specific Domain High",
     },
-  });
+  })
 
   const mutation = useMutation({
     mutationFn: (data: PersonaCreate) =>
       PersonasService.createPersona({ requestBody: data }),
     onSuccess: () => {
-      showSuccessToast("Persona created successfully.");
-      reset();
-      setIsOpen(false);
+      showSuccessToast("Persona created successfully.")
+      reset()
+      setIsOpen(false)
     },
     onError: (err: ApiError) => {
-      handleError(err);
+      handleError(err)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["personas"] });
+      queryClient.invalidateQueries({ queryKey: ["personas"] })
     },
-  });
+  })
 
   const onSubmit: SubmitHandler<PersonaCreate> = (data) => {
-    mutation.mutate(data);
-  };
+    mutation.mutate(data)
+  }
 
   return (
     <DialogRoot
@@ -144,7 +144,7 @@ const AddPersona = () => {
         <DialogCloseTrigger />
       </DialogContent>
     </DialogRoot>
-  );
-};
+  )
+}
 
-export default AddPersona;
+export default AddPersona

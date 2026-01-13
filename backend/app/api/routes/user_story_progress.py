@@ -330,25 +330,6 @@ def make_story_choice(
     session.add(user_choice)
     session.flush() # get the id
 
-    # prior to CYOA phase 5 event implementation
-    # progress.head_choice_id = user_choice.id
-    # progress.head_version += 1
-    # progress.current_node_id = choice.to_node_id
-
-    # # Update the story state if needed
-    # if choice.sets_state:
-    #     if progress.story_state:
-    #         # Merge the existing state with the new state changes
-    #         progress.story_state.update(choice.sets_state)
-    #     else:
-    #         progress.story_state = choice.sets_state
-
-    # replayed_state = crud.replay_state_from_head(
-    #     session=session,
-    #     progress_id=progress.id,
-    #     head_choice_id=progress.head_choice_id,
-    # )
-
 
     # Phase 5 - derive state from events (single source of truth)
     # Update head pointer (atomic move)

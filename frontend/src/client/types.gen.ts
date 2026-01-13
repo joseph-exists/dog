@@ -528,6 +528,25 @@ export type RoomUpdate = {
     title?: (string | null);
 };
 
+export type StateSchemaValidationError = {
+    variable_key: string;
+    used_in: string;
+    choice_id: string;
+    choice_text: string;
+    from_node_id: string;
+    from_node_title: string;
+};
+
+export type StateSchemaValidationResult = {
+    is_valid: boolean;
+    errors: Array<StateSchemaValidationError>;
+    defined_variables: Array<(string)>;
+    used_variables: Array<(string)>;
+    undefined_variables: Array<(string)>;
+};
+
+export type StateValueType = 'boolean' | 'number' | 'string' | 'enum';
+
 /**
  * Collection response for Story templates
  */
@@ -641,6 +660,41 @@ export type StoryRequirementsPublic = {
     count: number;
 };
 
+export type StoryStateVariableBase = {
+    key: string;
+    value_type?: StateValueType;
+    default_value?: (unknown | null);
+    enum_values?: (Array<(string)> | null);
+    description?: (string | null);
+    category?: (string | null);
+};
+
+export type StoryStateVariablePublic = {
+    key: string;
+    value_type?: StateValueType;
+    default_value?: (unknown | null);
+    enum_values?: (Array<(string)> | null);
+    description?: (string | null);
+    category?: (string | null);
+    id: string;
+    story_id: string;
+    story_version: number;
+};
+
+export type StoryStateVariablesPublic = {
+    data: Array<StoryStateVariablePublic>;
+    count: number;
+};
+
+export type StoryStateVariableUpdate = {
+    key?: (string | null);
+    value_type?: (StateValueType | null);
+    default_value?: (unknown | null);
+    enum_values?: (Array<(string)> | null);
+    description?: (string | null);
+    category?: (string | null);
+};
+
 /**
  * Input model for updating Story template (all fields optional)
  */
@@ -696,6 +750,91 @@ export type TimelineEvent = {
 export type Token = {
     access_token: string;
     token_type?: string;
+};
+
+/**
+ * Input model for creating a TraitConflictGroup.
+ */
+export type TraitConflictGroupCreate = {
+    name: string;
+    description?: (string | null);
+    /**
+     * Type of logical conflict: 'contradictory', 'contrary', or 'subcontrary'
+     */
+    conflict_type: string;
+    /**
+     * Explanation of why these traits conflict - aids author judgment for edge cases
+     */
+    reason?: (string | null);
+    /**
+     * Optional list of trait IDs to add as members during creation
+     */
+    trait_ids?: (Array<(string)> | null);
+};
+
+/**
+ * Input model for adding a trait to a conflict group.
+ */
+export type TraitConflictGroupMemberCreate = {
+    /**
+     * ID of the trait to add to this conflict group
+     */
+    trait_id: string;
+};
+
+/**
+ * Public model for TraitConflictGroupMember API responses.
+ */
+export type TraitConflictGroupMemberPublic = {
+    id: string;
+    group_id: string;
+    trait_id: string;
+    created_at: string;
+};
+
+/**
+ * Collection model for paginated member responses.
+ */
+export type TraitConflictGroupMembersPublic = {
+    data: Array<TraitConflictGroupMemberPublic>;
+    count: number;
+};
+
+/**
+ * Public model for TraitConflictGroup API responses.
+ */
+export type TraitConflictGroupPublic = {
+    name: string;
+    description?: (string | null);
+    /**
+     * Type of logical conflict: 'contradictory', 'contrary', or 'subcontrary'
+     */
+    conflict_type: string;
+    /**
+     * Explanation of why these traits conflict - aids author judgment for edge cases
+     */
+    reason?: (string | null);
+    id: string;
+    created_at: string;
+    updated_at: (string | null);
+};
+
+/**
+ * Collection model for paginated TraitConflictGroup responses.
+ */
+export type TraitConflictGroupsPublic = {
+    data: Array<TraitConflictGroupPublic>;
+    count: number;
+};
+
+/**
+ * Update model for TraitConflictGroup - all fields optional.
+ */
+export type TraitConflictGroupUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    conflict_type?: (string | null);
+    reason?: (string | null);
 };
 
 export type TraitCreate = {
@@ -1205,6 +1344,14 @@ export type RoomsListRoomParticipantsData = {
 
 export type RoomsListRoomParticipantsResponse = (RoomParticipantsPublic);
 
+export type RoomsGetRoomsForStoryData = {
+    limit?: number;
+    skip?: number;
+    storyId: string;
+};
+
+export type RoomsGetRoomsForStoryResponse = (RoomsPublic);
+
 export type RoomsRemoveRoomParticipantData = {
     participantId: string;
     roomId: string;
@@ -1315,6 +1462,7 @@ export type StoriesGetStoryStartNodeData = {
 export type StoriesGetStoryStartNodeResponse = (StoryNodePublic);
 
 export type StoriesPublishStoryData = {
+    force?: boolean;
     id: string;
 };
 
@@ -1353,6 +1501,47 @@ export type StoriesDeleteStoryRequirementData = {
 };
 
 export type StoriesDeleteStoryRequirementResponse = (Message);
+
+export type StoriesReadStoryStateSchemaData = {
+    limit?: number;
+    skip?: number;
+    storyId: string;
+    version: number;
+};
+
+export type StoriesReadStoryStateSchemaResponse = (StoryStateVariablesPublic);
+
+export type StoriesCreateStoryStateVariableData = {
+    requestBody: StoryStateVariableBase;
+    storyId: string;
+    version: number;
+};
+
+export type StoriesCreateStoryStateVariableResponse = (StoryStateVariablePublic);
+
+export type StoriesUpdateStoryStateVariableData = {
+    requestBody: StoryStateVariableUpdate;
+    storyId: string;
+    variableId: string;
+    version: number;
+};
+
+export type StoriesUpdateStoryStateVariableResponse = (StoryStateVariablePublic);
+
+export type StoriesDeleteStoryStateVariableData = {
+    storyId: string;
+    variableId: string;
+    version: number;
+};
+
+export type StoriesDeleteStoryStateVariableResponse = (Message);
+
+export type StoriesValidateStoryStateSchemaData = {
+    storyId: string;
+    version: number;
+};
+
+export type StoriesValidateStoryStateSchemaResponse = (StateSchemaValidationResult);
 
 export type StorynodesReadStorynodesData = {
     limit?: number;
@@ -1400,6 +1589,94 @@ export type StorynodesCreateNodeChoiceFromNodeData = {
 };
 
 export type StorynodesCreateNodeChoiceFromNodeResponse = (NodeChoicePublic);
+
+export type TraitConflictsReadTraitConflictGroupsData = {
+    /**
+     * Filter by conflict type: contradictory, contrary, subcontrary
+     */
+    conflictType?: (string | null);
+    limit?: number;
+    skip?: number;
+};
+
+export type TraitConflictsReadTraitConflictGroupsResponse = (TraitConflictGroupsPublic);
+
+export type TraitConflictsCreateTraitConflictGroupData = {
+    requestBody: TraitConflictGroupCreate;
+};
+
+export type TraitConflictsCreateTraitConflictGroupResponse = (TraitConflictGroupPublic);
+
+export type TraitConflictsReadTraitConflictGroupData = {
+    groupId: string;
+};
+
+export type TraitConflictsReadTraitConflictGroupResponse = (TraitConflictGroupPublic);
+
+export type TraitConflictsUpdateTraitConflictGroupData = {
+    groupId: string;
+    requestBody: TraitConflictGroupUpdate;
+};
+
+export type TraitConflictsUpdateTraitConflictGroupResponse = (TraitConflictGroupPublic);
+
+export type TraitConflictsDeleteTraitConflictGroupData = {
+    groupId: string;
+};
+
+export type TraitConflictsDeleteTraitConflictGroupResponse = (Message);
+
+export type TraitConflictsReadConflictGroupMembersData = {
+    groupId: string;
+};
+
+export type TraitConflictsReadConflictGroupMembersResponse = (TraitConflictGroupMembersPublic);
+
+export type TraitConflictsAddTraitToConflictGroupData = {
+    groupId: string;
+    requestBody: TraitConflictGroupMemberCreate;
+};
+
+export type TraitConflictsAddTraitToConflictGroupResponse = (TraitConflictGroupMemberPublic);
+
+export type TraitConflictsRemoveTraitFromConflictGroupData = {
+    groupId: string;
+    traitId: string;
+};
+
+export type TraitConflictsRemoveTraitFromConflictGroupResponse = (Message);
+
+export type TraitConflictsCheckPersonaTraitConflictsData = {
+    personaId: string;
+    /**
+     * Trait ID to check for conflicts
+     */
+    traitId: string;
+};
+
+export type TraitConflictsCheckPersonaTraitConflictsResponse = (unknown);
+
+export type TraitConflictsCheckArchetypeTraitConflictsData = {
+    archetypeId: string;
+    /**
+     * Trait ID to check for conflicts
+     */
+    traitId: string;
+};
+
+export type TraitConflictsCheckArchetypeTraitConflictsResponse = (unknown);
+
+export type TraitConflictsGetConflictGroupsByTraitData = {
+    traitId: string;
+};
+
+export type TraitConflictsGetConflictGroupsByTraitResponse = (TraitConflictGroupsPublic);
+
+export type TraitConflictsValidateConflictGroupData = {
+    groupId: string;
+};
+
+export type TraitConflictsValidateConflictGroupResponse = (unknown);
 
 export type TraitsReadTraitsData = {
     limit?: number;

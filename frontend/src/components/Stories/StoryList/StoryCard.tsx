@@ -1,10 +1,18 @@
-import { Button, Card, Flex, HStack, Text, VStack, Badge } from "@chakra-ui/react"
-import { useNavigate } from "@tanstack/react-router"
-import { FaEdit, FaTrash } from "react-icons/fa"
+import {
+  Badge,
+  Button,
+  Card,
+  Flex,
+  HStack,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
+import { FaComments, FaEdit, FaTrash } from "react-icons/fa"
 
-import type { StoryPublic } from "@/client"
-import { useDeleteStory, usePublishStory, useUnpublishStory } from "@/hooks/stories/useStories"
+import { RoomsService, type StoryPublic } from "@/client"
 import {
   DialogActionTrigger,
   DialogBody,
@@ -16,6 +24,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  useDeleteStory,
+  usePublishStory,
+  useUnpublishStory,
+} from "@/hooks/stories/useStories"
 
 interface StoryCardProps {
   story: StoryPublic
@@ -28,6 +41,11 @@ const StoryCard = ({ story }: StoryCardProps) => {
   const publishMutation = usePublishStory()
   const unpublishMutation = useUnpublishStory()
   const deleteMutation = useDeleteStory()
+
+  const { data: roomsData } = useQuery({
+    queryKey: ["rooms", "story", story.id],
+    queryFn: () => RoomsService.getRoomsForStory({ storyId: story.id }),
+  })
 
   // Determine story lifecycle state for badge
   const getStatusBadge = () => {
@@ -54,7 +72,10 @@ const StoryCard = ({ story }: StoryCardProps) => {
 
   // Show editing badge if current version > published version
   const getEditingBadge = () => {
-    if (story.published_version && story.current_version > story.published_version) {
+    if (
+      story.published_version &&
+      story.current_version > story.published_version
+    ) {
       return (
         <Badge colorPalette="yellow" size="sm">
           Draft v{story.current_version}
@@ -84,7 +105,9 @@ const StoryCard = ({ story }: StoryCardProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+    const diffInDays = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+    )
 
     if (diffInDays === 0) return "Today"
     if (diffInDays === 1) return "Yesterday"
@@ -128,12 +151,7 @@ const StoryCard = ({ story }: StoryCardProps) => {
 
           {/* Actions */}
           <Flex gap={2} mt={2}>
-            <Button
-              size="sm"
-              onClick={handleEdit}
-              colorPalette="blue"
-              flex={1}
-            >
+            <Button size="sm" onClick={handleEdit} colorPalette="blue" flex={1}>
               <FaEdit />
               Edit
             </Button>
@@ -152,11 +170,7 @@ const StoryCard = ({ story }: StoryCardProps) => {
               onOpenChange={({ open }) => setShowDeleteDialog(open)}
             >
               <DialogTrigger asChild>
-                <Button
-                  size="sm"
-                  colorPalette="red"
-                  variant="ghost"
-                >
+                <Button size="sm" colorPalette="red" variant="ghost">
                   <FaTrash />
                 </Button>
               </DialogTrigger>
@@ -166,7 +180,8 @@ const StoryCard = ({ story }: StoryCardProps) => {
                 </DialogHeader>
                 <DialogBody>
                   <Text>
-                    Are you sure you want to delete "{story.title}"? This action cannot be undone.
+                    Are you sure you want to delete "{story.title}"? This action
+                    cannot be undone.
                   </Text>
                 </DialogBody>
                 <DialogFooter gap={2}>
@@ -187,6 +202,34 @@ const StoryCard = ({ story }: StoryCardProps) => {
               </DialogContent>
             </DialogRoot>
           </Flex>
+
+          {/* Linked Rooms */}
+          {roomsData && roomsData.data.length > 0 && (
+            <VStack align="stretch" gap={1} mt={2}>
+              <HStack fontSize="xs" color="fg.muted">
+                <FaComments />
+                <Text>Linked Rooms:</Text>
+              </HStack>
+              <HStack gap={2} flexWrap="wrap">
+                {roomsData.data.map((room) => (
+                  <Link
+                    key={room.room_id}
+                    to="/room/$roomId"
+                    params={{ roomId: room.room_id }}
+                  >
+                    <Badge
+                      colorPalette="purple"
+                      size="sm"
+                      cursor="pointer"
+                      _hover={{ opacity: 0.8 }}
+                    >
+                      {room.title || "Untitled Room"}
+                    </Badge>
+                  </Link>
+                ))}
+              </HStack>
+            </VStack>
+          )}
         </VStack>
       </Card.Body>
     </Card.Root>

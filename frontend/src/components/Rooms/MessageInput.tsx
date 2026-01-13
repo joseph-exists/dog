@@ -11,18 +11,18 @@
  *
  */
 
-import { useState } from "react";
-import { Box, Flex, IconButton, Input } from "@chakra-ui/react";
-import { FiSend } from "react-icons/fi";
+import { Box, Flex, IconButton, Input } from "@chakra-ui/react"
+import { useState } from "react"
+import { FiSend } from "react-icons/fi"
 
 interface MessageInputProps {
-  roomId: string;
-  onSendMessage: (content: string) => Promise<void>;
-  isSending: boolean;
-  disabled?: boolean;
+  roomId: string
+  onSendMessage: (content: string) => Promise<void>
+  isSending: boolean
+  disabled?: boolean
   // Phase 4: WebSocket props (passed from parent to avoid multiple connections)
-  isConnected: boolean;
-  sendViaWebSocket: (content: string) => void;
+  isConnected: boolean
+  sendViaWebSocket: (content: string) => void
 }
 
 const MessageInput = ({
@@ -33,33 +33,33 @@ const MessageInput = ({
   isConnected,
   sendViaWebSocket,
 }: MessageInputProps) => {
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState("")
 
   const handleSend = async () => {
-    if (!content.trim() || isSending || disabled) return;
+    if (!content.trim() || isSending || disabled) return
 
     try {
       // Phase 4: Prefer WebSocket if connected, fallback to REST API
       if (isConnected) {
-        sendViaWebSocket(content.trim());
-        setContent(""); // Clear immediately for WebSocket (optimistic)
+        sendViaWebSocket(content.trim())
+        setContent("") // Clear immediately for WebSocket (optimistic)
       } else {
         // Fallback to REST API (Phase 1-3 behavior)
-        await onSendMessage(content.trim());
-        setContent(""); // Clear on success
+        await onSendMessage(content.trim())
+        setContent("") // Clear on success
       }
     } catch (error) {
       // Error handling is done by the parent component
-      console.error("Failed to send message:", error);
+      console.error("Failed to send message:", error)
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+      e.preventDefault()
+      handleSend()
     }
-  };
+  }
 
   return (
     <Box
@@ -93,7 +93,7 @@ const MessageInput = ({
         </IconButton>
       </Flex>
     </Box>
-  );
-};
+  )
+}
 
-export default MessageInput;
+export default MessageInput

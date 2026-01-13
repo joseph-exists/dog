@@ -10,8 +10,8 @@ import {
 import { FiBook } from "react-icons/fi"
 
 import { useStories } from "@/hooks/stories/useStories"
-import StoryCard from "./StoryCard"
 import CreateStoryModal from "./CreateStoryModal"
+import StoryCard from "./StoryCard"
 
 const StoryList = () => {
   const { data, isLoading, error } = useStories()
@@ -63,7 +63,8 @@ const StoryList = () => {
             <VStack textAlign="center">
               <EmptyState.Title>No Stories Yet</EmptyState.Title>
               <EmptyState.Description>
-                Create your first interactive story and start crafting branching adventures!
+                Create your first interactive story and start crafting branching
+                adventures!
               </EmptyState.Description>
             </VStack>
           </EmptyState.Content>
@@ -79,7 +80,11 @@ const StoryList = () => {
         <CreateStoryModal />
       </Flex>
       <Grid
-        templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }}
+        templateColumns={{
+          base: "1fr",
+          md: "repeat(2, 1fr)",
+          lg: "repeat(3, 1fr)",
+        }}
         gap={6}
       >
         {stories.map((story) => (

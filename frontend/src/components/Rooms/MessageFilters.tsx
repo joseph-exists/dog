@@ -13,7 +13,7 @@
  */
 
 import { HStack, IconButton, Text } from "@chakra-ui/react"
-import { NativeSelectRoot, NativeSelectField } from "@chakra-ui/react"
+import { NativeSelectField, NativeSelectRoot } from "@chakra-ui/react"
 import { FaTimes } from "react-icons/fa"
 
 export interface MessageFilters {
@@ -31,7 +31,7 @@ interface MessageFiltersProps {
   /** Callback when a filter value changes */
   onFilterChange: <K extends keyof MessageFilters>(
     key: K,
-    value: MessageFilters[K]
+    value: MessageFilters[K],
   ) => void
   /** Callback to reset all filters */
   onClearFilters: () => void
@@ -85,7 +85,7 @@ const MessageFilters = ({
             const val = e.target.value
             onFilterChange(
               "activeForContext",
-              val === "all" ? null : val === "true"
+              val === "all" ? null : val === "true",
             )
           }}
         >
@@ -117,7 +117,10 @@ const MessageFilters = ({
         <NativeSelectField
           value={filters.senderType}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-            onFilterChange("senderType", e.target.value as "all" | "user" | "agent")
+            onFilterChange(
+              "senderType",
+              e.target.value as "all" | "user" | "agent",
+            )
           }
         >
           <option value="all">All Senders</option>

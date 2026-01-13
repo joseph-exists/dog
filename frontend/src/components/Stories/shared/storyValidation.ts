@@ -1,4 +1,4 @@
-import type { StoryNodePublic, NodeChoicePublic } from "@/client"
+import type { NodeChoicePublic, StoryNodePublic } from "@/client"
 
 export interface ValidationResult {
   isValid: boolean
@@ -11,7 +11,7 @@ export interface ValidationResult {
  * Maps: node_id -> array of destination node_ids
  */
 export function buildNodeGraph(
-  choices: NodeChoicePublic[]
+  choices: NodeChoicePublic[],
 ): Map<string, string[]> {
   const graph = new Map<string, string[]>()
 
@@ -29,7 +29,7 @@ export function buildNodeGraph(
  */
 export function findReachableNodes(
   startNodeId: string,
-  graph: Map<string, string[]>
+  graph: Map<string, string[]>,
 ): Set<string> {
   const visited = new Set<string>()
   const queue: string[] = [startNodeId]
@@ -57,7 +57,7 @@ export function findReachableNodes(
 export function validateStoryForPublish(
   // story: StoryPublic,
   nodes: StoryNodePublic[],
-  choices: NodeChoicePublic[]
+  choices: NodeChoicePublic[],
 ): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
@@ -73,7 +73,9 @@ export function validateStoryForPublish(
   if (startNodes.length === 0) {
     errors.push("Story must have exactly one start node")
   } else if (startNodes.length > 1) {
-    errors.push(`Story has ${startNodes.length} start nodes, but must have exactly one`)
+    errors.push(
+      `Story has ${startNodes.length} start nodes, but must have exactly one`,
+    )
   }
 
   // Check 3: Must have at least one end node
@@ -87,7 +89,7 @@ export function validateStoryForPublish(
   choices.forEach((choice) => {
     if (!nodeIds.has(choice.to_node_id)) {
       errors.push(
-        `Choice "${choice.text}" points to non-existent or wrong-version node`
+        `Choice "${choice.text}" points to non-existent or wrong-version node`,
       )
     }
   })
@@ -103,14 +105,16 @@ export function validateStoryForPublish(
   const reachableNodes = findReachableNodes(startNode.id, graph)
 
   const orphanedNodes = nodes.filter(
-    (node) => !reachableNodes.has(node.id) && node.id !== startNode.id
+    (node) => !reachableNodes.has(node.id) && node.id !== startNode.id,
   )
 
   if (orphanedNodes.length > 0) {
     warnings.push(
-      `${orphanedNodes.length} orphan node(s) detected (not reachable from start): ${orphanedNodes
+      `${
+        orphanedNodes.length
+      } orphan node(s) detected (not reachable from start): ${orphanedNodes
         .map((n) => `"${n.title}"`)
-        .join(", ")}`
+        .join(", ")}`,
     )
   }
 

@@ -214,6 +214,21 @@ class ConnectionManager:
         finally:
             logger.info(f"[LISTENER] _listen_to_room exiting for room {room_id}")
 
+# Future extension design:  Extend ConnectionManager for reusability - required prior to release, after fan-out proof (load testing)
+# async def subscribe_to_channel(
+#     self,
+#     channel_id: UUID,
+#     channel_type: str = "room"  # "room" or "story"
+# ) -> None:
+#     """
+#     Subscribe to Redis pub/sub channel.
+
+#     Args:
+#         channel_id: UUID of the resource
+#         channel_type: Type of channel ("room", "story", etc.)
+#     """
+#     channel = f"{channel_type}:{channel_id}"
+#     # ... rest of implementation same, just use channel variable
 
 # Global connection manager instance per worker
 connection_manager = ConnectionManager()

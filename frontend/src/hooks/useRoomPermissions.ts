@@ -13,9 +13,9 @@
  * Phase 5 - Message Management Features
  */
 
-import { useMemo } from "react"
 import type { RoomViewModel } from "@/services/roomService"
 import type { MessageViewModel } from "@/services/roomService"
+import { useMemo } from "react"
 import useAuth from "./useAuth"
 
 export interface RoomPermissions {
@@ -58,7 +58,7 @@ export interface RoomPermissions {
  * ```
  */
 export function useRoomPermissions(
-  room: RoomViewModel | null | undefined
+  room: RoomViewModel | null | undefined,
 ): RoomPermissions {
   const { user } = useAuth()
 

@@ -128,7 +128,7 @@ Reconnection must support sequence-based replay to mitigate pub/sub message loss
 
 Each phase delivers end-to-end value and remains deployable independently.[^3][^1]
 
-### Phase 0: Infrastructure (2–3 days)
+### Phase 0: Complete.
 
 **Goal:** Introduce Redis and verify database capabilities without breaking existing TinyFoot features.[^2][^3]
 **Deliverables:** Redis in docker-compose, connection singleton, health checks, and pgvector verification.[^2][^3]
@@ -137,22 +137,22 @@ Each phase delivers end-to-end value and remains deployable independently.[^3][^
 ### Phase 1: Event sourcing + room management (4–5 days)
 
 **Goal:** Implement rooms, participants, an append-only room event log, and transactional projections.[^1][^5]
-**Deliverables:** `rooms`, `room_participants`, `room_events`, `messages` projections; RoomManager; participant APIs; and event emitter utilities.[^5][^1]
+**Deliverables:** `rooms`, `room_participants`, `room_events`, `room_messages` projections; RoomManager; participant APIs; and event emitter utilities.[^5][^1]
 **Success criteria:** Events are immutable, projections update transactionally, and room authorization is enforced on every room operation.[^4][^1][^5]
 
-### Phase 2: Multi-user agent integration (5–6 days)
+### Phase 2: Multi-user agent integration: Complete
 
 **Goal:** Make agents first-class room participants and run them with room-aware context.[^1][^5]
-**Deliverables:** StoryAdvisor agent with tools, agent registry, context provider, agent runner emitting `room_message.agent`, and support for multiple agents in one room.[^4][^5][^1]
+**Deliverables:** POC StoryAdvisor agent with tools, agent registry, context provider, agent runner emitting `room_message.agent`, and support for multiple agents in one room.[^4][^5][^1]
 **Success criteria:** Agent responses are visible to all participants, include story-aware context, and are persisted and replayable from events.[^5][^1]
 
-### Phase 3: Frontend multi-user room UI (4–5 days)
+### Phase 3: Frontend multi-user room UI (Complete)
 
 **Goal:** Provide a room-centric UI embedded in the Story Editor with participant visibility and sender attribution.[^3][^5]
 **Deliverables:** room list, room creation flow, participant list, message list with attribution, invite UI for users/agents, and OpenAPI client regeneration.[^2][^3][^5]
 **Success criteria:** UI loads quickly, supports room switching, displays all participants and their messages correctly, and persists history across reloads.[^3][^1]
 
-### Phase 4: Real-time streaming (5–6 days)
+### Phase 4: Real-time streaming (Complete)
 
 **Goal:** Stream events and agent tokens over WebSocket and keep all participants synchronized.[^3][^1]
 **Deliverables:** WebSocket endpoint, Redis pub/sub fan-out, streaming agent execution, reconnection + replay behavior, and load testing for concurrency.[^2][^3][^1]
@@ -189,9 +189,9 @@ Each phase delivers end-to-end value and remains deployable independently.[^3][^
 
 ### Risk mitigation (high-impact areas)
 
-- WebSocket complexity is deferred until the REST-driven room + agent path is correct and well-tested.[^3][^1]
-- Redis unavailability should degrade gracefully (REST polling / non-streaming operation) while preserving correctness through PostgreSQL as the system of record.[^3][^1]
-- Database growth is managed via operational practices such as partitioning the event log as volume increases.[^3][^1]
+- (mitigated, complete - websockets are implemented) WebSocket complexity is deferred until the REST-driven room + agent path is correct and well-tested.[^3][^1]
+- (mitigated, graceful degradation) Redis unavailability should degrade gracefully (REST polling / non-streaming operation) while preserving correctness through PostgreSQL as the system of record.[^3][^1]
+- (partially mitigated - operational runbooks) Database growth is managed via operational practices such as partitioning the event log as volume increases.[^3][^1]
 
 
 ### Definition of done (steel thread)

@@ -10,19 +10,25 @@
  * Phase 3 Alpha - Task 11
  */
 
-import { Box, Flex, Text, VStack } from "@chakra-ui/react";
-import AddParticipantDialog from './AddParticipantDialog';
-import { RoomActionsMenu } from '@/components/Common/RoomsActionsMenu';
-import type { RoomViewModel, ParticipantViewModel } from "@/services/roomService";
+import { RoomActionsMenu } from "@/components/Common/RoomsActionsMenu"
+import type {
+  ParticipantViewModel,
+  RoomViewModel,
+} from "@/services/roomService"
+import { Box, Flex, Text, VStack } from "@chakra-ui/react"
+import AddParticipantDialog from "./AddParticipantDialog"
 
 interface RoomHeaderProps {
-  room: RoomViewModel | null | undefined;
-  participants: ParticipantViewModel[];
-  activeAgents: ParticipantViewModel[];
-  currentUserRole: string | null;
-  onAddParticipant: (participantId: string, type: 'user' | 'agent') => Promise<void>;
-  onUpdateRoom?: (data: { title: string }) => Promise<void>;
-  onDeleteRoom?: () => Promise<void>;
+  room: RoomViewModel | null | undefined
+  participants: ParticipantViewModel[]
+  activeAgents: ParticipantViewModel[]
+  currentUserRole: string | null
+  onAddParticipant: (
+    participantId: string,
+    type: "user" | "agent",
+  ) => Promise<void>
+  onUpdateRoom?: (data: { title: string }) => Promise<void>
+  onDeleteRoom?: () => Promise<void>
 }
 
 const RoomHeader = ({
@@ -51,9 +57,12 @@ const RoomHeader = ({
 
           {/* Participant and agent counts */}
           <Text fontSize="sm">
-            {participants.length} participant{participants.length !== 1 ? "s" : ""}
+            {participants.length} participant
+            {participants.length !== 1 ? "s" : ""}
             {activeAgents.length > 0 &&
-              ` • ${activeAgents.length} agent${activeAgents.length !== 1 ? "s" : ""}`}
+              ` • ${activeAgents.length} agent${
+                activeAgents.length !== 1 ? "s" : ""
+              }`}
           </Text>
         </VStack>
 
@@ -63,7 +72,7 @@ const RoomHeader = ({
             <>
               <AddParticipantDialog
                 roomId={room.room_id}
-                currentParticipants={participants.map(p => p.participant_id)}
+                currentParticipants={participants.map((p) => p.participant_id)}
                 onAdd={onAddParticipant}
               />
               {onUpdateRoom && (
@@ -97,7 +106,7 @@ const RoomHeader = ({
         </Flex>
       </Flex>
     </Box>
-  );
-};
+  )
+}
 
-export default RoomHeader;
+export default RoomHeader

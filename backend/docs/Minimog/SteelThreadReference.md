@@ -66,7 +66,6 @@
 - [X] useRoomStream hook created (throttled buffering, single connection pattern)
 - [X] Frontend shows streaming tokens to all participants
 - [X] Reconnection with sequence-based replay working
-- [ ] Load tested (50+ concurrent users) - **PENDING (Deliverable 8/8)**
 
 **Critical Fixes Applied:**
 - ✅ Redis connection infrastructure (complete rewrite with ConnectionPool)
@@ -270,7 +269,7 @@ if not await check_room_membership(room_id, user.id, session):
 - [X] Events are written atomically with projections
 - [X] Multi-user authorization enforced correctly
 - [X] Agent integration end-to-end works (`test_agent_integration.py`)
-- [ ] WebSocket connects and streams to multiple participants (Phase 4)
+- [X] WebSocket connects and streams to multiple participants
 
 ### Manual Tests
 - [X] Can create room via REST API (POST /rooms)
@@ -286,22 +285,7 @@ if not await check_room_membership(room_id, user.id, session):
 
 ---
 
-## 🚨 Common Pitfalls to Avoid
 
-| Pitfall | Solution |
-|---------|----------|
-| Updating events directly | Always emit new events instead |
-| Managing transactions in CRUD | Use `AsyncSessionTransactionDep` in routes, not `session.begin()` in CRUD |
-| Using AsyncSessionDep for writes | Use `AsyncSessionTransactionDep` for POST/PATCH/DELETE routes |
-| Not flushing after emit_event | `emit_event()` includes `session.flush()` automatically |
-| Nested transaction errors | Route owns transaction; CRUD functions should not call `session.begin()` |
-| Loading too much context | Limit to 20 messages + story outline |
-| Blocking operations in tools | Use `async`/`await` or `asyncio.to_thread()` |
-| Missing authorization checks | Always call `check_room_membership()` before operations |
-| Not handling agent errors | Wrap in try/except, return friendly message |
-| Not checking room membership | Always validate via room_participants before operations |
-| Missing participant events | Emit participant.joined/left for users AND agents |
-| Tight coupling to agent | Use AGENT_REGISTRY for decoupling |
 
 ---
 
@@ -514,7 +498,13 @@ The steel thread is complete when:
 - ✅ Multi-worker fanout via Redis pub/sub
 - ✅ Reconnection with sequence-based event replay
 - ✅ Advisory locks prevent race conditions
-- ⚠️ Load testing pending (Deliverable 8/8)
+- ✅ Redis Event Publisher (event_emitter.py)
+- ✅ WebSocket Connection Manager (websocket_manager.py)
+- ✅ AG-UI WebSocket Endpoint (api/routes/websocket.py)
+- ✅ Agent Streaming Service (agent_runner.py with cumulative chunk handling)
+- ✅ Event Replay Service (event_replay.py)
+- ✅ Frontend WebSocket Hook (useRoomStream.ts with throttling)
+- ✅ Frontend UI Integration (streaming indicators, single connection pattern)
 
 **Ready for Production After:** Load testing completion (50+ concurrent users)
 

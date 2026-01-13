@@ -1,11 +1,22 @@
-import { HStack, IconButton, Separator } from '@chakra-ui/react'
 import {
-  FaBold, FaItalic, FaStrikethrough, FaCode,
-  FaListUl, FaListOl, FaQuoteRight,
-  FaFileCode, FaLink, FaImage
-} from 'react-icons/fa'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/tiptap-ui-primitive/tooltip/tooltip'
-import type { Editor } from '@tiptap/react'
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/tiptap-ui-primitive/tooltip/tooltip"
+import { HStack, IconButton, Separator } from "@chakra-ui/react"
+import type { Editor } from "@tiptap/react"
+import {
+  FaBold,
+  FaCode,
+  FaFileCode,
+  FaImage,
+  FaItalic,
+  FaLink,
+  FaListOl,
+  FaListUl,
+  FaQuoteRight,
+  FaStrikethrough,
+} from "react-icons/fa"
 
 interface TiptapToolbarProps {
   editor: Editor | null
@@ -28,7 +39,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('bold') ? 'solid' : 'ghost'}
+            variant={editor.isActive("bold") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleBold().run()}
             aria-label="Bold"
           >
@@ -43,7 +54,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('italic') ? 'solid' : 'ghost'}
+            variant={editor.isActive("italic") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleItalic().run()}
             aria-label="Italic"
           >
@@ -58,7 +69,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('strike') ? 'solid' : 'ghost'}
+            variant={editor.isActive("strike") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleStrike().run()}
             aria-label="Strikethrough"
           >
@@ -73,7 +84,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('code') ? 'solid' : 'ghost'}
+            variant={editor.isActive("code") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleCode().run()}
             aria-label="Code"
           >
@@ -90,8 +101,12 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('heading', { level: 1 }) ? 'solid' : 'ghost'}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            variant={
+              editor.isActive("heading", { level: 1 }) ? "solid" : "ghost"
+            }
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 1 }).run()
+            }
             aria-label="Heading 1"
           >
             H1
@@ -104,8 +119,12 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('heading', { level: 2 }) ? 'solid' : 'ghost'}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            variant={
+              editor.isActive("heading", { level: 2 }) ? "solid" : "ghost"
+            }
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
             aria-label="Heading 2"
           >
             H2
@@ -118,8 +137,12 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('heading', { level: 3 }) ? 'solid' : 'ghost'}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            variant={
+              editor.isActive("heading", { level: 3 }) ? "solid" : "ghost"
+            }
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 3 }).run()
+            }
             aria-label="Heading 3"
           >
             H3
@@ -135,7 +158,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('bulletList') ? 'solid' : 'ghost'}
+            variant={editor.isActive("bulletList") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             aria-label="Bullet List"
           >
@@ -149,7 +172,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('orderedList') ? 'solid' : 'ghost'}
+            variant={editor.isActive("orderedList") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             aria-label="Numbered List"
           >
@@ -166,7 +189,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('blockquote') ? 'solid' : 'ghost'}
+            variant={editor.isActive("blockquote") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             aria-label="Quote"
           >
@@ -181,7 +204,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('codeBlock') ? 'solid' : 'ghost'}
+            variant={editor.isActive("codeBlock") ? "solid" : "ghost"}
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             aria-label="Code Block"
           >
@@ -198,9 +221,9 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
         <TooltipTrigger asChild>
           <IconButton
             size="sm"
-            variant={editor.isActive('link') ? 'solid' : 'ghost'}
+            variant={editor.isActive("link") ? "solid" : "ghost"}
             onClick={() => {
-              const url = window.prompt('Enter URL:')
+              const url = window.prompt("Enter URL:")
               if (url) {
                 editor.chain().focus().setLink({ href: url }).run()
               }
@@ -219,7 +242,7 @@ const TiptapToolbar = ({ editor }: TiptapToolbarProps) => {
           <IconButton
             size="sm"
             onClick={() => {
-              const url = window.prompt('Enter image URL:')
+              const url = window.prompt("Enter image URL:")
               if (url) {
                 editor.chain().focus().setImage({ src: url }).run()
               }

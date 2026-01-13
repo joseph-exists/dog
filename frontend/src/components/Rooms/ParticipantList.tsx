@@ -10,20 +10,20 @@
  * Phase 3 Alpha - Task 18
  */
 
-import { Box, Flex, Spinner, Text, VStack } from "@chakra-ui/react";
+import { Box, Flex, Spinner, Text, VStack } from "@chakra-ui/react"
 
-import type { ParticipantViewModel } from "@/services/roomService";
+import type { ParticipantViewModel } from "@/services/roomService"
 
-import RemoveParticipantButton from './RemoveParticipantButton';
-import AgentToggle from './AgentToggle';
+import AgentToggle from "./AgentToggle"
+import RemoveParticipantButton from "./RemoveParticipantButton"
 
 interface ParticipantListProps {
-  activeUsers: ParticipantViewModel[];
-  activeAgents: ParticipantViewModel[];
-  isLoading?: boolean;
-  currentUserRole: 'owner' | 'member' | null;
-  onRemoveParticipant?: (participantId: string) => Promise<void>;
-  onToggleAgent?: (agentId: string, activate: boolean) => Promise<void>;
+  activeUsers: ParticipantViewModel[]
+  activeAgents: ParticipantViewModel[]
+  isLoading?: boolean
+  currentUserRole: "owner" | "member" | null
+  onRemoveParticipant?: (participantId: string) => Promise<void>
+  onToggleAgent?: (agentId: string, activate: boolean) => Promise<void>
 }
 
 const ParticipantList = ({
@@ -45,7 +45,7 @@ const ParticipantList = ({
       >
         <Spinner size="sm" />
       </Box>
-    );
+    )
   }
 
   return (
@@ -68,9 +68,14 @@ const ParticipantList = ({
               Users ({activeUsers.length})
             </Text>
             {activeUsers.map((p) => (
-              <Flex key={p.participant_id} justify="space-between" w="full" align="center">
+              <Flex
+                key={p.participant_id}
+                justify="space-between"
+                w="full"
+                align="center"
+              >
                 <Text>{p.display_name}</Text>
-                {currentUserRole === 'owner' && onRemoveParticipant && (
+                {currentUserRole === "owner" && onRemoveParticipant && (
                   <RemoveParticipantButton
                     participantId={p.participant_id}
                     participantName={p.display_name}
@@ -94,8 +99,8 @@ const ParticipantList = ({
             >
               Agents ({activeAgents.length})
             </Text>
-            {activeAgents.map((p) => (
-              currentUserRole === 'owner' && onToggleAgent ? (
+            {activeAgents.map((p) =>
+              currentUserRole === "owner" && onToggleAgent ? (
                 <AgentToggle
                   key={p.participant_id}
                   agentId={p.participant_id}
@@ -104,9 +109,11 @@ const ParticipantList = ({
                   onToggle={onToggleAgent}
                 />
               ) : (
-                <Text key={p.participant_id} fontSize="sm">🤖 {p.display_name}</Text>
-              )
-            ))}
+                <Text key={p.participant_id} fontSize="sm">
+                  🤖 {p.display_name}
+                </Text>
+              ),
+            )}
           </>
         )}
 
@@ -118,7 +125,7 @@ const ParticipantList = ({
         )}
       </VStack>
     </Box>
-  );
-};
+  )
+}
 
-export default ParticipantList;
+export default ParticipantList

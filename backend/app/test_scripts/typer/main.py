@@ -37,13 +37,14 @@ app.add_typer(wonka.app, name="demo", help="Demo commands (see wonka.py)")
 
 
 # Command modules
-from commands import stories, personas, rooms, users
+from commands import stories, personas, rooms, users, trait_conflicts
 
 app.add_typer(items.app, name="items")
 app.add_typer(stories.app, name="stories")
 app.add_typer(personas.app, name="personas")
 app.add_typer(rooms.app, name="rooms")
 app.add_typer(users.app, name="users")
+app.add_typer(trait_conflicts.app, name="conflicts", help="Trait conflict management")
 
 # TODO: Add more command modules
 # from commands import tests

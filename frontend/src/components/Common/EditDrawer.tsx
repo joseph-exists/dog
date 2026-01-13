@@ -14,20 +14,20 @@
  * Phase 5 - Message Management Features
  */
 
+import { Field } from "@/components/ui/field"
+import {
+  DrawerBackdrop,
+  DrawerBody,
+  DrawerCloseTrigger,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerRoot,
+  DrawerTitle,
+} from "@chakra-ui/react"
+import { Button, Text, Textarea, VStack } from "@chakra-ui/react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
-import {
-  DrawerRoot,
-  DrawerBackdrop,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerBody,
-  DrawerFooter,
-  DrawerCloseTrigger,
-} from "@chakra-ui/react"
-import { Button, Textarea, VStack, Text } from "@chakra-ui/react"
-import { Field } from "@/components/ui/field"
 
 interface EditDrawerProps {
   /** Whether drawer is open */

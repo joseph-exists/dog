@@ -1,7 +1,5 @@
 # Tinyfoot Frontend Development Rules
 
-Based on my analysis of the Tinyfoot frontend codebase, here's a comprehensive set of rules to follow when developing new components:
-
 ## 1. Component Organization
 
 - Organize components by feature in the `src/components` directory
@@ -22,6 +20,8 @@ Based on my analysis of the Tinyfoot frontend codebase, here's a comprehensive s
 ## 3. API Integration
 
 - Use the auto-generated API clients from `src/client` for all backend communication
+- Processing only ever happens on the backend
+- Frontend processing will cause project failure
 - Follow the pattern:
   ```typescript
   const mutation = useMutation({

@@ -1,10 +1,16 @@
+import {
+  Button,
+  DialogActionTrigger,
+  Input,
+  Text,
+  Textarea,
+  VStack,
+} from "@chakra-ui/react"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { Button, DialogActionTrigger, Input, Text, Textarea, VStack } from "@chakra-ui/react"
 import { FaPlus } from "react-icons/fa"
 
 import type { StoryCreate } from "@/client"
-import { useCreateStory } from "@/hooks/stories/useStories"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -16,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Field } from "@/components/ui/field"
+import { useCreateStory } from "@/hooks/stories/useStories"
 
 const CreateStoryModal = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -67,7 +74,8 @@ const CreateStoryModal = () => {
           </DialogHeader>
           <DialogBody>
             <Text mb={4} color="fg.muted">
-              Begin crafting your adventure! Give your story a title and description to get started.
+              Begin crafting your adventure! Give your story a title and
+              description to get started.
             </Text>
             <VStack gap={4}>
               <Field
@@ -110,7 +118,11 @@ const CreateStoryModal = () => {
 
           <DialogFooter gap={2}>
             <DialogActionTrigger asChild>
-              <Button variant="subtle" colorPalette="gray" disabled={isSubmitting}>
+              <Button
+                variant="subtle"
+                colorPalette="gray"
+                disabled={isSubmitting}
+              >
                 Cancel
               </Button>
             </DialogActionTrigger>

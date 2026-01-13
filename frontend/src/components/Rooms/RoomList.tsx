@@ -9,17 +9,17 @@
  * Phase 3 Alpha - Task 6
  */
 
-import { EmptyState, SimpleGrid, VStack } from "@chakra-ui/react";
-import { FiMessageSquare } from "react-icons/fi";
+import { EmptyState, SimpleGrid, VStack } from "@chakra-ui/react"
+import { FiMessageSquare } from "react-icons/fi"
 
-import type { RoomViewModel } from "@/services/roomService";
-import RoomCard from "./RoomCard";
+import type { RoomViewModel } from "@/services/roomService"
+import RoomCard from "./RoomCard"
 
 interface RoomListProps {
-  rooms: RoomViewModel[];
-  onRoomSelect: (roomId: string) => void;
-  isLoading?: boolean;
-  activeRoomId?: string;
+  rooms: RoomViewModel[]
+  onRoomSelect: (roomId: string) => void
+  isLoading?: boolean
+  activeRoomId?: string
 }
 
 const RoomList = ({
@@ -44,7 +44,7 @@ const RoomList = ({
           </VStack>
         </EmptyState.Content>
       </EmptyState.Root>
-    );
+    )
   }
 
   // Room grid
@@ -59,7 +59,7 @@ const RoomList = ({
         />
       ))}
     </SimpleGrid>
-  );
-};
+  )
+}
 
-export default RoomList;
+export default RoomList

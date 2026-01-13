@@ -1,13 +1,22 @@
-import { useState } from "react"
-import { Box, Button, Container, Flex, Grid, Heading, HStack, Spinner } from "@chakra-ui/react"
+import {
+  Box,
+  Button,
+  Container,
+  Flex,
+  Grid,
+  HStack,
+  Heading,
+  Spinner,
+} from "@chakra-ui/react"
 import { useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
 import { FaArrowLeft, FaEye } from "react-icons/fa"
 
 import { useStoryEditor } from "@/hooks/stories/useStoryEditor"
-import NodeTree from "./NodeTree/NodeTree"
-import NodeEditor from "./NodeEditor/NodeEditor"
-import PropertiesPanel from "./PropertiesPanel/PropertiesPanel"
 import StoryPreview from "../StoryPlayer/StoryPreview"
+import NodeEditor from "./NodeEditor/NodeEditor"
+import NodeTree from "./NodeTree/NodeTree"
+import PropertiesPanel from "./PropertiesPanel/PropertiesPanel"
 
 interface StoryEditorProps {
   storyId: string
@@ -18,20 +27,17 @@ const StoryEditor = ({ storyId }: StoryEditorProps) => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
 
-  const {
-    story,
-    nodes,
-    choices,
-    isLoading,
-    error,
-    validateForPublish,
-  } = useStoryEditor({ storyId })
+  const { story, nodes, choices, isLoading, error, validateForPublish } =
+    useStoryEditor({ storyId })
 
-  const validation = story && nodes ? validateForPublish() : {
-    isValid: false,
-    errors: [],
-    warnings: [],
-  }
+  const validation =
+    story && nodes
+      ? validateForPublish()
+      : {
+          isValid: false,
+          errors: [],
+          warnings: [],
+        }
 
   if (isLoading) {
     return (
@@ -85,9 +91,10 @@ const StoryEditor = ({ storyId }: StoryEditorProps) => {
                 <Heading size="md">{story.title}</Heading>
                 <HStack fontSize="sm" color="fg.muted" gap={2}>
                   <span>v{story.current_version}</span>
-                  {story.published_version && story.current_version > story.published_version && (
-                    <span>(Draft)</span>
-                  )}
+                  {story.published_version &&
+                    story.current_version > story.published_version && (
+                      <span>(Draft)</span>
+                    )}
                 </HStack>
               </Box>
             </HStack>

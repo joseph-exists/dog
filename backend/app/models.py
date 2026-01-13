@@ -1630,7 +1630,6 @@ UserNodeChoice.to_node = Relationship(
 
 
 # Schemas for public trait configuration display and manipulation
-# THIS IS NEXT BIG TODO
 
 
 class TraitConfigBase(SQLModel):
@@ -1663,6 +1662,114 @@ class TraitConfigPublic(TraitConfigBase):
 class TraitConfigsPublic(SQLModel):
     data: list[TraitConfigPublic]
     count: int
+
+# =============================================================================
+# TRAIT CONFLICT GROUP - The conflict relationship container
+# =============================================================================
+
+class TraitConflictGroupBase(SQLModel):
+    """Base model for TraitConflictGroup - shared properties."""
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    conflict_type: str = Field(
+        max_length=50,
+        description="Type of logical conflict: 'contradictory', 'contrary', or 'subcontrary'"
+    )
+    reason: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Explanation of why these traits conflict - aids author judgment for edge cases"
+    )
+
+
+class TraitConflictGroupCreate(TraitConflictGroupBase):
+    """Input model for creating a TraitConflictGroup."""
+    # Optionally include initial trait IDs during creation
+    trait_ids: list[uuid.UUID] | None = Field(
+        default=None,
+        description="Optional list of trait IDs to add as members during creation"
+    )
+
+
+class TraitConflictGroupUpdate(SQLModel):
+    """Update model for TraitConflictGroup - all fields optional."""
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    conflict_type: str | None = Field(default=None, max_length=50)
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class TraitConflictGroup(TraitConflictGroupBase, table=True):
+    """Database model for TraitConflictGroup."""
+    __tablename__ = "traitconflictgroup"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime | None = Field(default=None)
+
+    # Relationship to members (defined post-definition for circular ref safety)
+    # members: list["TraitConflictGroupMember"] = Relationship(back_populates="group", cascade_delete=True)
+
+
+class TraitConflictGroupPublic(TraitConflictGroupBase):
+    """Public model for TraitConflictGroup API responses."""
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime | None
+
+
+class TraitConflictGroupPublicWithMembers(TraitConflictGroupPublic):
+    """Public model with nested member traits for detailed responses."""
+    members: list["TraitConflictGroupMemberPublic"] = []
+
+
+class TraitConflictGroupsPublic(SQLModel):
+    """Collection model for paginated TraitConflictGroup responses."""
+    data: list[TraitConflictGroupPublic]
+    count: int
+
+
+# =============================================================================
+# TRAIT CONFLICT GROUP MEMBER - Link table connecting traits to conflict groups
+# =============================================================================
+
+class TraitConflictGroupMemberBase(SQLModel):
+    """Base model for TraitConflictGroupMember link."""
+    # No additional base fields beyond the FKs
+
+
+class TraitConflictGroupMemberCreate(SQLModel):
+    """Input model for adding a trait to a conflict group."""
+    trait_id: uuid.UUID = Field(description="ID of the trait to add to this conflict group")
+
+
+class TraitConflictGroupMember(SQLModel, table=True):
+    """Database model for TraitConflictGroupMember - links traits to conflict groups."""
+    __tablename__ = "traitconflictgroupmember"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    group_id: uuid.UUID = Field(foreign_key="traitconflictgroup.id", index=True)
+    trait_id: uuid.UUID = Field(foreign_key="trait.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relationships (defined post-definition for circular ref safety)
+    # group: "TraitConflictGroup" = Relationship(back_populates="members")
+    # trait: "Trait" = Relationship(back_populates="conflict_memberships")
+
+
+class TraitConflictGroupMemberPublic(SQLModel):
+    """Public model for TraitConflictGroupMember API responses."""
+    id: uuid.UUID
+    group_id: uuid.UUID
+    trait_id: uuid.UUID
+    created_at: datetime
+
+
+class TraitConflictGroupMembersPublic(SQLModel):
+    """Collection model for paginated member responses."""
+    data: list[TraitConflictGroupMemberPublic]
+    count: int
+
 
 
 # =============== user management stuff ===============
@@ -2091,8 +2198,72 @@ class RoomEventsPublic(SQLModel):
     data: list[RoomEventPublic]
     count: int
 
+class StateValueType(str, Enum):
+    BOOLEAN = "boolean"
+    NUMBER = "number"
+    STRING = "string"
+    ENUM = "enum"
+
+class StoryStateVariableBase(SQLModel):
+    key: str = Field(min_length=1, max_length=100)
+    value_type: StateValueType = Field(default=StateValueType.STRING)
+    default_value: Any | None = Field(default=None, sa_column=Column(JSON))
+    enum_values: list[str] | None = Field(default=None, sa_column=Column(JSON))
+    description: str | None = Field(default=None, max_length=500)
+    category: str | None = Field(default=None, max_length=100)
+
+class StoryStateVariableCreate(StoryStateVariableBase):
+    story_id: uuid.UUID
+    story_version: int
+
+class StoryStateVariableUpdate(SQLModel):
+    key: str | None = Field(default=None, min_length=1, max_length=100)
+    value_type: StateValueType | None = None
+    default_value: Any | None = None
+    enum_values: list[str] | None = None
+    description: str | None = Field(default=None, max_length=500)
+    category: str | None = Field(default=None, max_length=100)
+
+class StoryStateVariable(StoryStateVariableBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
+    story_version: int = Field(nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+class StoryStateVariablePublic(StoryStateVariableBase):
+    id: uuid.UUID
+    story_id: uuid.UUID
+    story_version: int
+
+class StoryStateVariablesPublic(SQLModel):
+    data: list[StoryStateVariablePublic]
+    count: int
+
+class StateSchemaValidationError(SQLModel):
+    variable_key: str
+    used_in: str  # "requires_state" or "sets_state"
+    choice_id: uuid.UUID
+    choice_text: str
+    from_node_id: uuid.UUID
+    from_node_title: str
+
+class StateSchemaValidationResult(SQLModel):
+    is_valid: bool
+    errors: list[StateSchemaValidationError]
+    defined_variables: list[str]
+    used_variables: list[str]
+    undefined_variables: list[str]
+
+Story.state_variables = Relationship(
+    back_populates="story",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+)
+StoryStateVariable.story = Relationship(back_populates="state_variables")
+
+
 # ============================================================================
-# Phase 1: Event Tree Relationships
+#  Event Tree Relationships
 # ============================================================================
 
 # UserNodeChoice tree structure relationships
@@ -2157,3 +2328,16 @@ UserNodeChoice.snapshots = Relationship(
 # sufficient for SQLModel to resolve them correctly.
 #
 # If additional complex relationships are needed in future phases, add them here.
+
+TraitConflictGroup.members = Relationship(
+    back_populates="group",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+)
+
+TraitConflictGroupMember.group = Relationship(back_populates="members")
+TraitConflictGroupMember.trait = Relationship(back_populates="conflict_memberships")
+
+# Also add to Trait model:
+Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(
+    back_populates="trait"
+)

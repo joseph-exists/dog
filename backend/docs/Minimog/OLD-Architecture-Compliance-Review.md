@@ -1,12 +1,5 @@
 # Minimog Architecture Compliance Review
-
-**Date:** December 30, 2024
-**Purpose:** Cross-reference walkthrough of Minimog.md architectural patterns vs current implementation
-**Status:** Post-Phase 4 Review (7/8 deliverables complete)
-**Last Updated:** 2025-12-30 (after Phase 4 implementation with critical fixes)
-
 ---
-
 ## Executive Summary
 
 ### Overall Compliance: 🟢 Strong (85%)
@@ -76,6 +69,7 @@ async def emit_event(
 
 ### Gaps & Concerns
 
+## TODO : UPDATE MINIMOG SPEC
 **🟡 Schema Divergence:**
 - **Minimog spec** (lines 254-267): Uses `BIGSERIAL` for `event_id`
 - **Our implementation** (line 1915): Uses `UUID` for `event_id`
@@ -239,7 +233,7 @@ async def _update_projections(
 ### Gaps & Concerns
 
 **🟡 Schema Evolution Beyond Spec:**
-
+## TODO: UPDATE SPEC
 **Minimog Spec** (lines 392-405):
 ```sql
 CREATE TABLE room_participants (
@@ -406,7 +400,6 @@ await session.flush()
 | 5. Event Replay Service | ✅ Implemented | `app/services/event_replay.py` |
 | 6. Frontend WebSocket Hook | ✅ Implemented | `frontend/src/hooks/useRoomStream.ts` (with throttling) |
 | 7. Frontend UI Integration | ✅ Implemented | Room components with streaming indicators |
-| 8. Load Testing | ⚠️ Pending | Planned in Phase 4 Deliverable 8 |
 
 **Critical Fixes Applied:**
 - ✅ Redis connection infrastructure (complete rewrite with ConnectionPool)
@@ -434,7 +427,7 @@ await session.flush()
 
 ### Current Implementation
 
-**✅ COMPLETE - Multi-Worker Ready (Phase 4)**
+**✅ COMPLETE - Multi-Worker Ready **
 
 **Date Updated:** 2025-12-30
 

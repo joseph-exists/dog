@@ -14,75 +14,78 @@
  *
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useCallback } from 'react';
-import { RoomService } from '@/services/roomService';
+import type { ApiError } from "@/client"
+import { RoomService } from "@/services/roomService"
 import type {
-  RoomViewModel,
   MessageViewModel,
   ParticipantViewModel,
-} from '@/services/roomService';
-import type { ApiError } from '@/client';
-import useAuth from './useAuth';
-import { useRoomMessages } from './useRoomMessages';
-import { handleError } from '@/utils';
+  RoomViewModel,
+} from "@/services/roomService"
+import { handleError } from "@/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
+import useAuth from "./useAuth"
+import { useRoomMessages } from "./useRoomMessages"
 
 export interface UseRoomOptions {
-  enablePolling?: boolean;
-  pollingInterval?: number;
-  autoScrollToBottom?: boolean;
-  onDeleteSuccess?: () => void; // callback when room is deleted no crash-crash
+  enablePolling?: boolean
+  pollingInterval?: number
+  autoScrollToBottom?: boolean
+  onDeleteSuccess?: () => void // callback when room is deleted no crash-crash
 }
 
 export interface UseRoomResult {
   // Room State
-  room: RoomViewModel | undefined;
-  messages: MessageViewModel[];
-  participants: ParticipantViewModel[];
+  room: RoomViewModel | undefined
+  messages: MessageViewModel[]
+  participants: ParticipantViewModel[]
 
   // Loading States
-  isLoadingRoom: boolean;
-  isLoadingMessages: boolean;
-  isLoadingParticipants: boolean;
+  isLoadingRoom: boolean
+  isLoadingMessages: boolean
+  isLoadingParticipants: boolean
 
   // Error States
-  roomError: Error | null;
-  messagesError: Error | null;
-  participantsError: Error | null;
+  roomError: Error | null
+  messagesError: Error | null
+  participantsError: Error | null
 
   // Actions
-  sendMessage: (content: string) => Promise<void>;
-  addParticipant: (participantId: string, type: 'user' | 'agent') => Promise<void>;
-  removeParticipant: (participantId: string) => Promise<void>;
-  loadMoreMessages: () => Promise<void>;
-  updateRoom: (data: { title?: string | null }) => Promise<void>;
-  deleteRoom: () => Promise<void>;
+  sendMessage: (content: string) => Promise<void>
+  addParticipant: (
+    participantId: string,
+    type: "user" | "agent",
+  ) => Promise<void>
+  removeParticipant: (participantId: string) => Promise<void>
+  loadMoreMessages: () => Promise<void>
+  updateRoom: (data: { title?: string | null }) => Promise<void>
+  deleteRoom: () => Promise<void>
 
-  isUpdatingRoom: boolean;
-  isDeletingRoom: boolean;
+  isUpdatingRoom: boolean
+  isDeletingRoom: boolean
   // Pagination
-  hasMoreMessages: boolean;
-  isLoadingMoreMessages: boolean;
+  hasMoreMessages: boolean
+  isLoadingMoreMessages: boolean
 
   // Message Sending
-  isSending: boolean;
+  isSending: boolean
 
   // Phase 5: Message Management Actions
-  editMessage: (messageId: string, content: string) => Promise<void>;
-  isEditing: boolean;
-  pinMessage: (messageId: string) => Promise<void>;
-  isPinning: boolean;
-  unpinMessage: (messageId: string) => Promise<void>;
-  isUnpinning: boolean;
-  toggleContext: (messageId: string, active: boolean) => Promise<void>;
-  isTogglingContext: boolean;
-  deleteMessage: (messageId: string) => Promise<void>;
-  isDeleting: boolean;
+  editMessage: (messageId: string, content: string) => Promise<void>
+  isEditing: boolean
+  pinMessage: (messageId: string) => Promise<void>
+  isPinning: boolean
+  unpinMessage: (messageId: string) => Promise<void>
+  isUnpinning: boolean
+  toggleContext: (messageId: string, active: boolean) => Promise<void>
+  isTogglingContext: boolean
+  deleteMessage: (messageId: string) => Promise<void>
+  isDeleting: boolean
 
   // Derived State
-  currentUserRole: 'owner' | 'member' | null;
-  activeAgents: ParticipantViewModel[];
-  activeUsers: ParticipantViewModel[];
+  currentUserRole: "owner" | "member" | null
+  activeAgents: ParticipantViewModel[]
+  activeUsers: ParticipantViewModel[]
 }
 
 /**
@@ -119,18 +122,18 @@ export interface UseRoomResult {
  */
 export function useRoom(
   roomId: string,
-  options?: UseRoomOptions
+  options?: UseRoomOptions,
 ): UseRoomResult {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   // Options with defaults
-  const enablePolling = options?.enablePolling ?? true;
-  const pollingInterval = options?.pollingInterval ?? 5000; // 5 seconds for participants
+  const enablePolling = options?.enablePolling ?? true
+  const pollingInterval = options?.pollingInterval ?? 5000 // 5 seconds for participants
 
   // Query keys
-  const roomQueryKey = ['rooms', roomId];
-  const participantsQueryKey = ['rooms', roomId, 'participants'];
+  const roomQueryKey = ["rooms", roomId]
+  const participantsQueryKey = ["rooms", roomId, "participants"]
 
   // ==========================================================================
   // Data Queries
@@ -147,7 +150,7 @@ export function useRoom(
     // Room metadata rarely changes, poll less frequently
     refetchInterval: enablePolling ? pollingInterval * 2 : false,
     refetchIntervalInBackground: false,
-  });
+  })
 
   // Fetch participants with polling
   const {
@@ -160,7 +163,7 @@ export function useRoom(
     refetchInterval: enablePolling ? pollingInterval : false,
     refetchIntervalInBackground: false,
     placeholderData: (previousData) => previousData,
-  });
+  })
 
   // Delegate message operations to useRoomMessages
   const {
@@ -186,7 +189,7 @@ export function useRoom(
   } = useRoomMessages(roomId, {
     enablePolling,
     pollingInterval: options?.pollingInterval ?? 3000, // 3 seconds for messages
-  });
+  })
 
   // ==========================================================================
   // Participant Mutations
@@ -198,100 +201,97 @@ export function useRoom(
       participantId,
       type,
     }: {
-      participantId: string;
-      type: 'user' | 'agent';
+      participantId: string
+      type: "user" | "agent"
     }) => {
       return await RoomService.addParticipant(roomId, {
         participant_id: participantId,
         participant_type: type,
-        role: 'member',
-      });
+        role: "member",
+      })
     },
     onSuccess: () => {
       // Invalidate participants to refetch
-      queryClient.invalidateQueries({ queryKey: participantsQueryKey });
+      queryClient.invalidateQueries({ queryKey: participantsQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err);
+      handleError(err)
     },
-  });
+  })
 
   // Remove participant mutation
   const removeParticipantMutation = useMutation({
     mutationFn: async (participantId: string) => {
-      return await RoomService.removeParticipant(roomId, participantId);
+      return await RoomService.removeParticipant(roomId, participantId)
     },
     onSuccess: () => {
       // Invalidate participants to refetch
-      queryClient.invalidateQueries({ queryKey: participantsQueryKey });
+      queryClient.invalidateQueries({ queryKey: participantsQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err);
+      handleError(err)
     },
-  });
+  })
 
-   // Update room mutation
-   const updateRoomMutation = useMutation({
-     mutationFn: async (data: { title?: string | null }) => {
-       return await RoomService.updateRoom(roomId, data);
-     },
-     onSuccess: () => {
-       // Invalidate room metadata to refetch
-       queryClient.invalidateQueries({ queryKey: roomQueryKey });
-     },
-     onError: (err: ApiError) => {
-       handleError(err);
-     },
-   });
-   const deleteRoomMutation = useMutation({
-     mutationFn: async () => {
-       // Call service method (will throw error if backend not ready)
-       await RoomService.deleteRoom(roomId);
-     },
-     onSuccess: () => {
-       // Invalidate queries
-       queryClient.invalidateQueries({ queryKey: ['rooms'] });
-       queryClient.invalidateQueries({ queryKey: roomQueryKey });
+  // Update room mutation
+  const updateRoomMutation = useMutation({
+    mutationFn: async (data: { title?: string | null }) => {
+      return await RoomService.updateRoom(roomId, data)
+    },
+    onSuccess: () => {
+      // Invalidate room metadata to refetch
+      queryClient.invalidateQueries({ queryKey: roomQueryKey })
+    },
+    onError: (err: ApiError) => {
+      handleError(err)
+    },
+  })
+  const deleteRoomMutation = useMutation({
+    mutationFn: async () => {
+      // Call service method (will throw error if backend not ready)
+      await RoomService.deleteRoom(roomId)
+    },
+    onSuccess: () => {
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ["rooms"] })
+      queryClient.invalidateQueries({ queryKey: roomQueryKey })
 
-       // Call optional callback (component provides navigation)
-       options?.onDeleteSuccess?.();
-     },
-     onError: (err: ApiError) => {
-       handleError(err);
-     },
-   });
+      // Call optional callback (component provides navigation)
+      options?.onDeleteSuccess?.()
+    },
+    onError: (err: ApiError) => {
+      handleError(err)
+    },
+  })
 
   // ==========================================================================
   // Action Wrappers
   // ==========================================================================
 
   const addParticipant = useCallback(
-    async (participantId: string, type: 'user' | 'agent') => {
-      await addParticipantMutation.mutateAsync({ participantId, type });
+    async (participantId: string, type: "user" | "agent") => {
+      await addParticipantMutation.mutateAsync({ participantId, type })
     },
-    [addParticipantMutation]
-  );
+    [addParticipantMutation],
+  )
 
   const removeParticipant = useCallback(
     async (participantId: string) => {
-      await removeParticipantMutation.mutateAsync(participantId);
+      await removeParticipantMutation.mutateAsync(participantId)
     },
-    [removeParticipantMutation]
-  );
+    [removeParticipantMutation],
+  )
 
-   const updateRoom = useCallback(
-     async (data: { title?: string | null }) => {
-       await updateRoomMutation.mutateAsync(data);
-     },
-     [updateRoomMutation]
-   );
+  const updateRoom = useCallback(
+    async (data: { title?: string | null }) => {
+      await updateRoomMutation.mutateAsync(data)
+    },
+    [updateRoomMutation],
+  )
 
-   const deleteRoom = useCallback(
-     async () => {
-       await deleteRoomMutation.mutateAsync();
-     },
-     [deleteRoomMutation]
-   );
+  const deleteRoom = useCallback(async () => {
+    await deleteRoomMutation.mutateAsync()
+  }, [deleteRoomMutation])
 
   // ==========================================================================
   // Derived State
@@ -299,28 +299,28 @@ export function useRoom(
 
   // Current user's role in the room
   const currentUserRole = useMemo(() => {
-    if (!user?.id || !participants.length) return null;
+    if (!user?.id || !participants.length) return null
 
     const userParticipant = participants.find(
-      (p) => p.participant_type === 'user' && p.participant_id === user.id
-    );
+      (p) => p.participant_type === "user" && p.participant_id === user.id,
+    )
 
-    return userParticipant?.role ?? null;
-  }, [user?.id, participants]);
+    return userParticipant?.role ?? null
+  }, [user?.id, participants])
 
   // Active agents in the room
   const activeAgents = useMemo(() => {
     return participants.filter(
-      (p) => p.participant_type === 'agent' && p.is_active
-    );
-  }, [participants]);
+      (p) => p.participant_type === "agent" && p.is_active,
+    )
+  }, [participants])
 
   // Active users in the room
   const activeUsers = useMemo(() => {
     return participants.filter(
-      (p) => p.participant_type === 'user' && p.is_active
-    );
-  }, [participants]);
+      (p) => p.participant_type === "user" && p.is_active,
+    )
+  }, [participants])
 
   // ==========================================================================
   // Return Value
@@ -377,5 +377,5 @@ export function useRoom(
     deleteRoom,
     isUpdatingRoom: updateRoomMutation.isPending,
     isDeletingRoom: deleteRoomMutation.isPending,
-  };
+  }
 }

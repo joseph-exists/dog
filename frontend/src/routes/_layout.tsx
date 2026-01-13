@@ -20,12 +20,12 @@ export const Route = createFileRoute("/_layout")({
 
 function Layout() {
   // const { selectionComplete } = usePersona()
-  
+
   // if (!selectionComplete && location.pathname !== '/select-persona') {
   //  return <Navigate to="/select-persona" />
- //  }
+  //  }
 
- return (
+  return (
     <Flex direction="column" h="100vh">
       <Navbar />
       <Flex flex="1" overflow="hidden">

@@ -5,28 +5,28 @@ import {
   Heading,
   Table,
   VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { FiSearch } from "react-icons/fi";
-import { z } from "zod";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { FiSearch } from "react-icons/fi"
+import { z } from "zod"
 
-import { ArchetypesService } from "../../client";
-import { ArchetypeActionsMenu } from "../../components/Common/ArchetypeActionsMenu";
-import AddArchetype from "../../components/Archetypes/AddArchetype";
-import PendingArchetypes from "../../components/Pending/PendingArchetypes";
+import { ArchetypesService } from "../../client"
+import AddArchetype from "../../components/Archetypes/AddArchetype"
+import { ArchetypeActionsMenu } from "../../components/Common/ArchetypeActionsMenu"
+import PendingArchetypes from "../../components/Pending/PendingArchetypes"
 import {
   PaginationItems,
   PaginationNextTrigger,
   PaginationPrevTrigger,
   PaginationRoot,
-} from "../../components/ui/pagination.tsx";
+} from "../../components/ui/pagination.tsx"
 
 const archetypesSearchSchema = z.object({
   page: z.number().catch(1),
-});
+})
 
-const PER_PAGE = 5;
+const PER_PAGE = 5
 
 function getArchetypesQueryOptions({ page }: { page: number }) {
   return {
@@ -36,33 +36,33 @@ function getArchetypesQueryOptions({ page }: { page: number }) {
         limit: PER_PAGE,
       }),
     queryKey: ["archetypes", { page }],
-  };
+  }
 }
 
 export const Route = createFileRoute("/_layout/archetypes")({
   component: Archetypes,
   validateSearch: (search) => archetypesSearchSchema.parse(search),
-});
+})
 
 function ArchetypesTable() {
-  const navigate = useNavigate({ from: Route.fullPath });
-  const { page } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath })
+  const { page } = Route.useSearch()
 
   const { data, isLoading, isPlaceholderData } = useQuery({
     ...getArchetypesQueryOptions({ page }),
     placeholderData: (prevData) => prevData,
-  });
+  })
 
   const setPage = (page: number) =>
     navigate({
       search: (prev: { [key: string]: string }) => ({ ...prev, page }),
-    });
+    })
 
-  const archetypes = data?.data.slice(0, PER_PAGE) ?? [];
-  const count = data?.count ?? 0;
+  const archetypes = data?.data.slice(0, PER_PAGE) ?? []
+  const count = data?.count ?? 0
 
   if (isLoading) {
-    return <PendingArchetypes />;
+    return <PendingArchetypes />
   }
 
   if (archetypes.length === 0) {
@@ -82,7 +82,7 @@ function ArchetypesTable() {
           </VStack>
         </EmptyState.Content>
       </EmptyState.Root>
-    );
+    )
   }
 
   return (
@@ -133,7 +133,7 @@ function ArchetypesTable() {
         </PaginationRoot>
       </Flex>
     </>
-  );
+  )
 }
 
 function Archetypes() {
@@ -145,5 +145,5 @@ function Archetypes() {
       <AddArchetype />
       <ArchetypesTable />
     </Container>
-  );
+  )
 }

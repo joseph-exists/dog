@@ -1,19 +1,18 @@
-import { useState, useEffect } from "react"
-import { type SubmitHandler, useForm, Controller } from "react-hook-form"
 import {
   Box,
   Button,
   DialogActionTrigger,
   Input,
-  NativeSelectRoot,
   NativeSelectField,
+  NativeSelectRoot,
   Separator,
   Text,
   VStack,
 } from "@chakra-ui/react"
+import { useEffect, useState } from "react"
+import { Controller, type SubmitHandler, useForm } from "react-hook-form"
 
 import type { NodeChoicePublic, StoryNodePublic } from "@/client"
-import { useCreateChoice, useUpdateChoice } from "@/hooks/stories/useNodeChoices"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -25,11 +24,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Field } from "@/components/ui/field"
+import {
+  useCreateChoice,
+  useUpdateChoice,
+} from "@/hooks/stories/useNodeChoices"
+import { useStateSchema } from "@/hooks/stories/useStateSchema"
 import StateConditionEditor from "../../shared/StateConditionEditor"
 
 interface ChoiceEditorProps {
   fromNodeId: string
   availableNodes: StoryNodePublic[]
+  storyId: string
+  storyVersion: number
   choice?: NodeChoicePublic // If provided, edit mode; otherwise create mode
   trigger?: React.ReactNode
   onSuccess?: () => void
@@ -46,6 +52,8 @@ interface ChoiceFormData {
 const ChoiceEditor = ({
   fromNodeId,
   availableNodes,
+  storyId,
+  storyVersion,
   choice,
   trigger,
   onSuccess,
@@ -55,6 +63,7 @@ const ChoiceEditor = ({
 
   const createMutation = useCreateChoice()
   const updateMutation = useUpdateChoice(fromNodeId)
+  const { data: schemaData } = useStateSchema(storyId, storyVersion)
 
   const {
     control,
@@ -104,7 +113,7 @@ const ChoiceEditor = ({
             setIsOpen(false)
             onSuccess?.()
           },
-        }
+        },
       )
     } else {
       createMutation.mutate(
@@ -122,7 +131,7 @@ const ChoiceEditor = ({
             setIsOpen(false)
             onSuccess?.()
           },
-        }
+        },
       )
     }
   }
@@ -143,7 +152,9 @@ const ChoiceEditor = ({
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>{isEditMode ? "Edit Choice" : "Add Choice"}</DialogTitle>
+            <DialogTitle>
+              {isEditMode ? "Edit Choice" : "Add Choice"}
+            </DialogTitle>
           </DialogHeader>
           <DialogBody>
             <VStack gap={4} align="stretch">
@@ -218,7 +229,8 @@ const ChoiceEditor = ({
                   Advanced: Conditional Logic
                 </Text>
                 <Text fontSize="xs" color="fg.muted" mb={4}>
-                  Control when this choice appears and what state changes it makes
+                  Control when this choice appears and what state changes it
+                  makes
                 </Text>
 
                 <VStack gap={4} align="stretch">
@@ -230,6 +242,8 @@ const ChoiceEditor = ({
                         label="Show this choice only if:"
                         value={field.value ?? null}
                         onChange={field.onChange}
+                        schema={schemaData?.data}
+                        mode="requires"
                       />
                     )}
                   />
@@ -242,6 +256,8 @@ const ChoiceEditor = ({
                         label="When chosen, set state:"
                         value={field.value ?? null}
                         onChange={field.onChange}
+                        schema={schemaData?.data}
+                        mode="sets"
                       />
                     )}
                   />
@@ -252,7 +268,11 @@ const ChoiceEditor = ({
 
           <DialogFooter gap={2}>
             <DialogActionTrigger asChild>
-              <Button variant="subtle" colorPalette="gray" disabled={isSubmitting}>
+              <Button
+                variant="subtle"
+                colorPalette="gray"
+                disabled={isSubmitting}
+              >
                 Cancel
               </Button>
             </DialogActionTrigger>
@@ -261,7 +281,11 @@ const ChoiceEditor = ({
               colorPalette="blue"
               type="submit"
               disabled={!isValid}
-              loading={isSubmitting || createMutation.isPending || updateMutation.isPending}
+              loading={
+                isSubmitting ||
+                createMutation.isPending ||
+                updateMutation.isPending
+              }
             >
               {isEditMode ? "Update Choice" : "Create Choice"}
             </Button>

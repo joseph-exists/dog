@@ -1,15 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  StoriesService,
-  StorynodesService,
-  type StoryPublic,
-  type StoryNodePublic,
   type NodeChoicePublic,
+  StoriesService,
+  type StoryNodePublic,
+  type StoryPublic,
+  StorynodesService,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
-import { validateStoryForPublish, type ValidationResult } from "@/components/Stories/shared/storyValidation"
+import {
+  type ValidationResult,
+  validateStoryForPublish,
+} from "@/components/Stories/shared/storyValidation"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 
 interface UsePublishWorkflowOptions {
@@ -53,7 +56,7 @@ export function usePublishWorkflow({
       return result.data.filter(
         (node) =>
           node.story_id === storyId &&
-          node.story_version === story.current_version
+          node.story_version === story.current_version,
       )
     },
     enabled: !!story,
@@ -104,7 +107,7 @@ export function usePublishWorkflow({
     mutationFn: () => StoriesService.publishStory({ id: storyId }),
     onSuccess: (updatedStory) => {
       showSuccessToast(
-        `Story published as v${updatedStory.published_version}! Now visible in catalog.`
+        `Story published as v${updatedStory.published_version}! Now visible in catalog.`,
       )
       queryClient.invalidateQueries({ queryKey: ["stories"] })
       queryClient.invalidateQueries({ queryKey: ["stories", storyId] })
@@ -118,7 +121,9 @@ export function usePublishWorkflow({
   const unpublishMutation = useMutation({
     mutationFn: () => StoriesService.unpublishStory({ id: storyId }),
     onSuccess: () => {
-      showSuccessToast("Story unpublished. It is no longer visible in the catalog.")
+      showSuccessToast(
+        "Story unpublished. It is no longer visible in the catalog.",
+      )
       queryClient.invalidateQueries({ queryKey: ["stories"] })
       queryClient.invalidateQueries({ queryKey: ["stories", storyId] })
     },

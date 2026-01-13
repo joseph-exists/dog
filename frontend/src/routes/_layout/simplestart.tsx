@@ -1,10 +1,9 @@
-import { Avatar, Button, Box, Container, Card } from "@chakra-ui/react";
+import { Avatar, Box, Button, Card, Container } from "@chakra-ui/react"
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router"
 
-export const Route = createFileRoute("/_layout/simplestart")({});
-
-<Container>
+export const Route = createFileRoute("/_layout/simplestart")({})
+;<Container>
   <Box>
     <Card.Root width="320px">
       <Card.Body gap="2">
@@ -30,4 +29,4 @@ export const Route = createFileRoute("/_layout/simplestart")({});
       </Card.Footer>
     </Card.Root>
   </Box>
-</Container>;
+</Container>

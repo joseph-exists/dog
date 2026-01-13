@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, Fragment, useMemo } from "react"
+import { Fragment, forwardRef, useMemo } from "react"
 
 // --- Tiptap UI Primitive ---
 import {
@@ -52,11 +52,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       "aria-label": ariaLabel,
       ...props
     },
-    ref
+    ref,
   ) => {
     const shortcuts = useMemo<string[]>(
       () => parseShortcutKeys({ shortcutKeys }),
-      [shortcutKeys]
+      [shortcutKeys],
     )
 
     if (!tooltip || !showTooltip) {
@@ -88,7 +88,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         </TooltipContent>
       </Tooltip>
     )
-  }
+  },
 )
 
 Button.displayName = "Button"

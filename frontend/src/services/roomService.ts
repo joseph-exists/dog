@@ -16,23 +16,23 @@
  * - OpenAPI auto-generated client (@/client)
  * - Current user context (passed as parameter)
  *
- * @see Phase3-TechnicalSpec.md §3.1
+ *
  */
 
 import {
-  UsersService,
-  RoomsService,
-  type RoomPublic,
-  type RoomsPublic,
+  type ParticipantAddRequest,
   type RoomCreate,
-  type RoomUpdate,
   type RoomMessagePublic,
-  type RoomMessagesPublic,
   type RoomMessageSend,
+  type RoomMessagesPublic,
   type RoomParticipantPublic,
   type RoomParticipantsPublic,
-  type ParticipantAddRequest,
-} from '@/client';
+  type RoomPublic,
+  type RoomUpdate,
+  type RoomsPublic,
+  RoomsService,
+  UsersService,
+} from "@/client"
 
 // ============================================================================
 // Type Definitions - ViewModels
@@ -47,16 +47,16 @@ import {
  * - Provides nullable unread_count for future enhancement
  */
 export interface RoomViewModel {
-  room_id: string;
-  title: string | null;
-  creator_id: string;
-  story_id: string | null;
-  created_at: Date;
-  last_activity: Date;
+  room_id: string
+  title: string | null
+  creator_id: string
+  story_id: string | null
+  created_at: Date
+  last_activity: Date
 
   // Computed fields (not from backend)
-  participant_count?: number;
-  unread_count?: number;
+  participant_count?: number
+  unread_count?: number
 }
 
 /**
@@ -70,26 +70,26 @@ export interface RoomViewModel {
  * - Phase 5: Includes message management fields (edited, pinned, active_for_context)
  */
 export interface MessageViewModel {
-  message_id: string;
-  room_id: string;
-  sender_type: 'user' | 'agent';
-  sender_name: string;
-  sender_id: string | null;
-  agent_name: string | null;
-  content: string;
-  button_options?: Record<string, unknown> | null;
-  created_at: Date;
+  message_id: string
+  room_id: string
+  sender_type: "user" | "agent"
+  sender_name: string
+  sender_id: string | null
+  agent_name: string | null
+  content: string
+  button_options?: Record<string, unknown> | null
+  created_at: Date
 
   // Computed fields
-  is_own_message: boolean;
+  is_own_message: boolean
 
   // Phase 5: Message management fields
-  edited_at?: string | null;
-  edited_by?: string | null;
-  is_pinned: boolean;
-  pinned_at?: string | null;
-  pinned_by?: string | null;
-  active_for_context: boolean;
+  edited_at?: string | null
+  edited_by?: string | null
+  is_pinned: boolean
+  pinned_at?: string | null
+  pinned_by?: string | null
+  active_for_context: boolean
 }
 
 /**
@@ -102,48 +102,48 @@ export interface MessageViewModel {
  * - Normalizes role to strict union type
  */
 export interface ParticipantViewModel {
-  participant_id: string;
-  participant_type: 'user' | 'agent';
-  display_name: string;
-  role: 'owner' | 'member';
-  avatar_url?: string;
-  is_active: boolean;
-  joined_at: Date;
-  left_at: Date | null;
+  participant_id: string
+  participant_type: "user" | "agent"
+  display_name: string
+  role: "owner" | "member"
+  avatar_url?: string
+  is_active: boolean
+  joined_at: Date
+  left_at: Date | null
 }
 
 /**
  * Paginated messages response
  */
 export interface PaginatedMessages {
-  messages: MessageViewModel[];
-  has_more: boolean;
-  total_count: number;
-  next_cursor?: string;
+  messages: MessageViewModel[]
+  has_more: boolean
+  total_count: number
+  next_cursor?: string
 }
 
 /**
  * Room creation input
  */
 export interface CreateRoomInput {
-  title: string;
-  story_id?: string | null;
+  title: string
+  story_id?: string | null
 }
 
 /**
  * Room update input
  */
 export interface UpdateRoomInput {
-  title?: string | null;
+  title?: string | null
 }
 
 /**
  * Participant addition input
  */
 export interface AddParticipantInput {
-  participant_id: string;
-  participant_type: 'user' | 'agent';
-  role?: 'owner' | 'member';
+  participant_id: string
+  participant_type: "user" | "agent"
+  role?: "owner" | "member"
 }
 
 // ============================================================================
@@ -164,7 +164,7 @@ function transformRoom(room: RoomPublic): RoomViewModel {
     // participant_count will be populated separately if needed
     participant_count: undefined,
     unread_count: undefined,
-  };
+  }
 }
 
 /**
@@ -175,30 +175,29 @@ function transformRoom(room: RoomPublic): RoomViewModel {
  */
 function transformMessage(
   message: RoomMessagePublic,
-  currentUserId: string | null
+  currentUserId: string | null,
 ): MessageViewModel {
   // Determine sender name
-  let sender_name: string;
-  if (message.sender_type === 'agent') {
-    sender_name = message.agent_name || 'Unknown Agent';
+  let sender_name: string
+  if (message.sender_type === "agent") {
+    sender_name = message.agent_name || "Unknown Agent"
   } else {
     // For user messages, we'll need to look up the user's name
     // For now, use a placeholder that indicates we need user data
-    sender_name = message.sender_id || 'Unknown User';
+    sender_name = message.sender_id || "Unknown User"
   }
 
   // Check if this is the current user's message
   const is_own_message =
-    message.sender_type === 'user' &&
-    message.sender_id === currentUserId;
+    message.sender_type === "user" && message.sender_id === currentUserId
 
   // Cast to any to access Phase 5 fields from backend
-  const msg = message as any;
+  const msg = message as any
 
   return {
     message_id: message.message_id,
     room_id: message.room_id,
-    sender_type: message.sender_type as 'user' | 'agent',
+    sender_type: message.sender_type as "user" | "agent",
     sender_name,
     sender_id: message.sender_id,
     agent_name: message.agent_name,
@@ -213,7 +212,7 @@ function transformMessage(
     pinned_at: msg.pinned_at ?? null,
     pinned_by: msg.pinned_by ?? null,
     active_for_context: msg.active_for_context ?? false,
-  };
+  }
 }
 
 /**
@@ -222,69 +221,68 @@ function transformMessage(
  * @param participant - Backend participant object
  */
 function transformParticipant(
-  participant: RoomParticipantPublic
+  participant: RoomParticipantPublic,
 ): ParticipantViewModel {
   // Determine display name
   // For users: participant_id is UUID, we'll need to lookup user details
   // For agents: participant_id is agent name (can be used directly)
-  let display_name: string;
-  if (participant.participant_type === 'agent') {
-    display_name = participant.participant_id; // Agent name
+  let display_name: string
+  if (participant.participant_type === "agent") {
+    display_name = participant.participant_id // Agent name
   } else {
     // For users, we'd ideally lookup from a user cache/store
     // For now, use participant_id as placeholder
-    display_name = participant.participant_id;
+    display_name = participant.participant_id
   }
 
   return {
     participant_id: participant.participant_id,
-    participant_type: participant.participant_type as 'user' | 'agent',
+    participant_type: participant.participant_type as "user" | "agent",
     display_name,
-    role: (participant.role || 'member') as 'owner' | 'member',
+    role: (participant.role || "member") as "owner" | "member",
     avatar_url: undefined, // Will be populated from user lookup in future
     is_active: participant.active,
     joined_at: new Date(participant.joined_at),
     left_at: participant.left_at ? new Date(participant.left_at) : null,
-  };
+  }
 }
 
 // ============================================================================
-   // User Lookup and Caching
-   // ============================================================================
+// User Lookup and Caching
+// ============================================================================
 
-   /**
-    * In-memory cache for user details to prevent redundant API calls
-    */
-   const userCache = new Map<string, { full_name: string | null; email: string }>();
+/**
+ * In-memory cache for user details to prevent redundant API calls
+ */
+const userCache = new Map<string, { full_name: string | null; email: string }>()
 
-   /**
-    * Fetch user details with caching
-    *
-    * @param userId - User UUID
-    * @returns User details or null if not found
-    */
-   async function getUserDetails(
-     userId: string
-   ): Promise<{ full_name: string | null; email: string } | null> {
-     // Check cache first
-     if (userCache.has(userId)) {
-       return userCache.get(userId)!;
-     }
+/**
+ * Fetch user details with caching
+ *
+ * @param userId - User UUID
+ * @returns User details or null if not found
+ */
+async function getUserDetails(
+  userId: string,
+): Promise<{ full_name: string | null; email: string } | null> {
+  // Check cache first
+  if (userCache.has(userId)) {
+    return userCache.get(userId)!
+  }
 
-     try {
-       const user = await UsersService.readUserById({ userId });
-       const details = {
-        full_name: user.full_name ?? null,
-        email: user.email
-      };
-       userCache.set(userId, details);
-       return details;
-     } catch {
-       // User not found or error - don't cache failures
-       return null;
-     }
-   }
-
+  try {
+    const user = await UsersService.readUserById({ userId })
+    const details = {
+      full_name: user.full_name ?? null,
+      email: user.email,
+    }
+    userCache.set(userId, details)
+    return details
+  } catch {
+    // User not found or error - don't cache failures
+    return null
+  }
+}
 
 // ============================================================================
 // Room Service - Public API
@@ -321,15 +319,15 @@ export const RoomService = {
    * @throws ApiError on network or server errors
    */
   async listRooms(options?: {
-    skip?: number;
-    limit?: number;
+    skip?: number
+    limit?: number
   }): Promise<RoomViewModel[]> {
     const response: RoomsPublic = await RoomsService.listUserRooms({
       skip: options?.skip,
       limit: options?.limit,
-    });
+    })
 
-    return response.data.map(transformRoom);
+    return response.data.map(transformRoom)
   },
 
   /**
@@ -340,8 +338,8 @@ export const RoomService = {
    * @throws ApiError - 404 if room not found, 403 if not a participant
    */
   async getRoom(roomId: string): Promise<RoomViewModel> {
-    const room: RoomPublic = await RoomsService.getRoom({ roomId });
-    return transformRoom(room);
+    const room: RoomPublic = await RoomsService.getRoom({ roomId })
+    return transformRoom(room)
   },
 
   /**
@@ -358,13 +356,13 @@ export const RoomService = {
     const createData: RoomCreate = {
       title: data.title,
       story_id: data.story_id,
-    };
+    }
 
     const room: RoomPublic = await RoomsService.createNewRoom({
       requestBody: createData,
-    });
+    })
 
-    return transformRoom(room);
+    return transformRoom(room)
   },
 
   /**
@@ -377,18 +375,18 @@ export const RoomService = {
    */
   async updateRoom(
     roomId: string,
-    data: UpdateRoomInput
+    data: UpdateRoomInput,
   ): Promise<RoomViewModel> {
     const updateData: RoomUpdate = {
       title: data.title,
-    };
+    }
 
     const room: RoomPublic = await RoomsService.updateRoom({
       roomId,
       requestBody: updateData,
-    });
+    })
 
-    return transformRoom(room);
+    return transformRoom(room)
   },
 
   // ==========================================================================
@@ -407,58 +405,62 @@ export const RoomService = {
    * @returns Paginated messages response
    * @throws ApiError - 403 if not a room participant, 404 if room not found
    */
-   async getMessages(
-     roomId: string,
-     options?: { limit?: number; before?: string },
-     currentUserId?: string | null
-   ): Promise<PaginatedMessages> {
-     const response: RoomMessagesPublic = await RoomsService.listMessages({
-       roomId,
-       limit: options?.limit,
-       before: options?.before,
-     });
+  async getMessages(
+    roomId: string,
+    options?: { limit?: number; before?: string },
+    currentUserId?: string | null,
+  ): Promise<PaginatedMessages> {
+    const response: RoomMessagesPublic = await RoomsService.listMessages({
+      roomId,
+      limit: options?.limit,
+      before: options?.before,
+    })
 
-     // Transform messages first (without user enrichment)
-     const messages = response.data.map((msg) =>
-       transformMessage(msg, currentUserId || null)
-     );
+    // Transform messages first (without user enrichment)
+    const messages = response.data.map((msg) =>
+      transformMessage(msg, currentUserId || null),
+    )
 
-     // Collect unique user IDs from messages
-     const userIds = new Set<string>();
-     messages.forEach((msg) => {
-       if (msg.sender_type === 'user' && msg.sender_id) {
-         userIds.add(msg.sender_id);
-       }
-     });
+    // Collect unique user IDs from messages
+    const userIds = new Set<string>()
+    messages.forEach((msg) => {
+      if (msg.sender_type === "user" && msg.sender_id) {
+        userIds.add(msg.sender_id)
+      }
+    })
 
-     // Fetch all user details in parallel
-     const userMap = new Map<string, { full_name: string | null; email: string }>();
-     await Promise.all(
-       Array.from(userIds).map(async (userId) => {
-         const details = await getUserDetails(userId);
-         if (details) {
-           userMap.set(userId, details);
-         }
-       })
-     );
+    // Fetch all user details in parallel
+    const userMap = new Map<
+      string,
+      { full_name: string | null; email: string }
+    >()
+    await Promise.all(
+      Array.from(userIds).map(async (userId) => {
+        const details = await getUserDetails(userId)
+        if (details) {
+          userMap.set(userId, details)
+        }
+      }),
+    )
 
-     // Use the existing utility function to enrich messages
-     const enrichedMessages = enrichMessagesWithUserNames(messages, userMap);
+    // Use the existing utility function to enrich messages
+    const enrichedMessages = enrichMessagesWithUserNames(messages, userMap)
 
-     // Pagination logic (unchanged)
-     const limit = options?.limit || 50;
-     const has_more = response.data.length === limit;
-     const next_cursor = has_more && enrichedMessages.length > 0
-       ? enrichedMessages[0].created_at.toISOString()
-       : undefined;
+    // Pagination logic (unchanged)
+    const limit = options?.limit || 50
+    const has_more = response.data.length === limit
+    const next_cursor =
+      has_more && enrichedMessages.length > 0
+        ? enrichedMessages[0].created_at.toISOString()
+        : undefined
 
-     return {
-       messages: enrichedMessages,
-       has_more,
-       total_count: response.count,
-       next_cursor,
-     };
-   },
+    return {
+      messages: enrichedMessages,
+      has_more,
+      total_count: response.count,
+      next_cursor,
+    }
+  },
 
   /**
    * Send a message to a room
@@ -476,18 +478,18 @@ export const RoomService = {
   async sendMessage(
     roomId: string,
     content: string,
-    currentUserId?: string | null
+    currentUserId?: string | null,
   ): Promise<MessageViewModel> {
     const messageData: RoomMessageSend = {
       content,
-    };
+    }
 
     const message: RoomMessagePublic = await RoomsService.sendMessage({
       roomId,
       requestBody: messageData,
-    });
+    })
 
-    return transformMessage(message, currentUserId || null);
+    return transformMessage(message, currentUserId || null)
   },
 
   // ==========================================================================
@@ -512,15 +514,15 @@ export const RoomService = {
     roomId: string,
     messageId: string,
     content: string,
-    currentUserId?: string | null
+    currentUserId?: string | null,
   ): Promise<MessageViewModel> {
     const message: RoomMessagePublic = await RoomsService.editMessageEndpoint({
       roomId,
       messageId,
       requestBody: { content },
-    });
+    })
 
-    return transformMessage(message, currentUserId || null);
+    return transformMessage(message, currentUserId || null)
   },
 
   /**
@@ -537,14 +539,14 @@ export const RoomService = {
   async pinMessage(
     roomId: string,
     messageId: string,
-    currentUserId?: string | null
+    currentUserId?: string | null,
   ): Promise<MessageViewModel> {
     const message: RoomMessagePublic = await RoomsService.pinMessageEndpoint({
       roomId,
       messageId,
-    });
+    })
 
-    return transformMessage(message, currentUserId || null);
+    return transformMessage(message, currentUserId || null)
   },
 
   /**
@@ -561,14 +563,14 @@ export const RoomService = {
   async unpinMessage(
     roomId: string,
     messageId: string,
-    currentUserId?: string | null
+    currentUserId?: string | null,
   ): Promise<MessageViewModel> {
     const message: RoomMessagePublic = await RoomsService.unpinMessageEndpoint({
       roomId,
       messageId,
-    });
+    })
 
-    return transformMessage(message, currentUserId || null);
+    return transformMessage(message, currentUserId || null)
   },
 
   /**
@@ -587,16 +589,16 @@ export const RoomService = {
     roomId: string,
     messageId: string,
     active: boolean,
-    currentUserId?: string | null
+    currentUserId?: string | null,
   ): Promise<MessageViewModel> {
     const message: RoomMessagePublic =
       await RoomsService.toggleMessageContextEndpoint({
         roomId,
         messageId,
         requestBody: { active_for_context: active },
-      });
+      })
 
-    return transformMessage(message, currentUserId || null);
+    return transformMessage(message, currentUserId || null)
   },
 
   /**
@@ -613,28 +615,28 @@ export const RoomService = {
   async deleteMessage(
     roomId: string,
     messageId: string,
-    _currentUserId?: string | null
+    _currentUserId?: string | null,
   ): Promise<void> {
     await RoomsService.deleteMessageEndpoint({
       roomId,
       messageId,
-    });
+    })
   },
 
-   /**
-    * Delete a room (owner-only, hard delete)
-    *
-    * @param roomId - Room UUID
-    * @returns Promise that resolves when deletion is complete
-    * @throws ApiError - 403 if not room owner, 404 if room not found
-    */
-   async deleteRoom(_roomId: string): Promise<void> {
+  /**
+   * Delete a room (owner-only, hard delete)
+   *
+   * @param roomId - Room UUID
+   * @returns Promise that resolves when deletion is complete
+   * @throws ApiError - 403 if not room owner, 404 if room not found
+   */
+  async deleteRoom(_roomId: string): Promise<void> {
     throw new Error(
-      'Room deletion not yet supported. Backend endpoint needs to be created.'
-    );
-     // uncomment once we figure out this endpoint
-     // await RoomsService.deleteRoom({ roomId: _roomId });
-   },
+      "Room deletion not yet supported. Backend endpoint needs to be created.",
+    )
+    // uncomment once we figure out this endpoint
+    // await RoomsService.deleteRoom({ roomId: _roomId });
+  },
 
   // ==========================================================================
   // Participant Operations
@@ -650,37 +652,40 @@ export const RoomService = {
    * @returns Array of ParticipantViewModel objects
    * @throws ApiError - 403 if not a room participant, 404 if room not found
    */
-   async getParticipants(roomId: string): Promise<ParticipantViewModel[]> {
-     const response: RoomParticipantsPublic =
-       await RoomsService.listRoomParticipants({ roomId });
+  async getParticipants(roomId: string): Promise<ParticipantViewModel[]> {
+    const response: RoomParticipantsPublic =
+      await RoomsService.listRoomParticipants({ roomId })
 
-     // Transform participants first
-     const participants = response.data
-       .filter((p) => p.active) // Only active participants
-       .map(transformParticipant);
+    // Transform participants first
+    const participants = response.data
+      .filter((p) => p.active) // Only active participants
+      .map(transformParticipant)
 
-     // Collect unique user IDs from participants
-     const userIds = new Set<string>();
-     participants.forEach((p) => {
-       if (p.participant_type === 'user') {
-         userIds.add(p.participant_id);
-       }
-     });
+    // Collect unique user IDs from participants
+    const userIds = new Set<string>()
+    participants.forEach((p) => {
+      if (p.participant_type === "user") {
+        userIds.add(p.participant_id)
+      }
+    })
 
-     // Fetch all user details in parallel
-     const userMap = new Map<string, { full_name: string | null; email: string }>();
-     await Promise.all(
-       Array.from(userIds).map(async (userId) => {
-         const details = await getUserDetails(userId);
-         if (details) {
-           userMap.set(userId, details);
-         }
-       })
-     );
+    // Fetch all user details in parallel
+    const userMap = new Map<
+      string,
+      { full_name: string | null; email: string }
+    >()
+    await Promise.all(
+      Array.from(userIds).map(async (userId) => {
+        const details = await getUserDetails(userId)
+        if (details) {
+          userMap.set(userId, details)
+        }
+      }),
+    )
 
-     // Use the existing utility function to enrich participants
-     return enrichParticipantsWithUserProfiles(participants, userMap);
-   },
+    // Use the existing utility function to enrich participants
+    return enrichParticipantsWithUserProfiles(participants, userMap)
+  },
 
   /**
    * Add a participant to a room (owner-only)
@@ -698,21 +703,21 @@ export const RoomService = {
    */
   async addParticipant(
     roomId: string,
-    data: AddParticipantInput
+    data: AddParticipantInput,
   ): Promise<ParticipantViewModel> {
     const participantData: ParticipantAddRequest = {
       participant_id: data.participant_id,
       participant_type: data.participant_type,
       role: data.role,
-    };
+    }
 
     const participant: RoomParticipantPublic =
       await RoomsService.addRoomParticipant({
         roomId,
         requestBody: participantData,
-      });
+      })
 
-    return transformParticipant(participant);
+    return transformParticipant(participant)
   },
 
   /**
@@ -731,12 +736,12 @@ export const RoomService = {
    */
   async removeParticipant(
     roomId: string,
-    participantId: string
+    participantId: string,
   ): Promise<void> {
     await RoomsService.removeRoomParticipant({
       roomId,
       participantId,
-    });
+    })
   },
 
   /**
@@ -751,18 +756,18 @@ export const RoomService = {
   async changeParticipantRole(
     roomId: string,
     participantId: string,
-    newRole: 'owner' | 'member'
+    newRole: "owner" | "member",
   ): Promise<ParticipantViewModel> {
     const participant: RoomParticipantPublic =
       await RoomsService.changeRoomParticipantRole({
         roomId,
         participantId,
         requestBody: { new_role: newRole },
-      });
+      })
 
-    return transformParticipant(participant);
+    return transformParticipant(participant)
   },
-};
+}
 
 // ============================================================================
 // Utility Functions (for future enhancements)
@@ -780,20 +785,20 @@ export const RoomService = {
  */
 export function enrichMessagesWithUserNames(
   messages: MessageViewModel[],
-  users: Map<string, { full_name: string | null; email: string }>
+  users: Map<string, { full_name: string | null; email: string }>,
 ): MessageViewModel[] {
   return messages.map((msg) => {
-    if (msg.sender_type === 'user' && msg.sender_id) {
-      const user = users.get(msg.sender_id);
+    if (msg.sender_type === "user" && msg.sender_id) {
+      const user = users.get(msg.sender_id)
       if (user) {
         return {
           ...msg,
           sender_name: user.full_name || user.email,
-        };
+        }
       }
     }
-    return msg;
-  });
+    return msg
+  })
 }
 
 /**
@@ -807,19 +812,52 @@ export function enrichMessagesWithUserNames(
  */
 export function enrichParticipantsWithUserProfiles(
   participants: ParticipantViewModel[],
-  users: Map<string, { full_name: string | null; email: string; avatar_url?: string }>
+  users: Map<
+    string,
+    { full_name: string | null; email: string; avatar_url?: string }
+  >,
 ): ParticipantViewModel[] {
   return participants.map((p) => {
-    if (p.participant_type === 'user') {
-      const user = users.get(p.participant_id);
+    if (p.participant_type === "user") {
+      const user = users.get(p.participant_id)
       if (user) {
         return {
           ...p,
           display_name: user.full_name || user.email,
           avatar_url: user.avatar_url,
-        };
+        }
       }
     }
-    return p;
-  });
+    return p
+  })
 }
+
+
+
+  //   /** COPIED FROM exported client sdk 
+  //    * Get Rooms For Story
+  //    * Get rooms for a story where user is creator or active participant.
+  //    * @param data The data for the request.
+  //    * @param data.storyId
+  //    * @param data.skip
+  //    * @param data.limit
+  //    * @returns RoomsPublic Successful Response
+  //    * @throws ApiError
+  //    */
+  //   public static getRoomsForStory(data: RoomsGetRoomsForStoryData): CancelablePromise<RoomsGetRoomsForStoryResponse> {
+  //     return __request(OpenAPI, {
+  //         method: 'GET',
+  //         url: '/api/v1/rooms/story/{story_id}',
+  //         path: {
+  //             story_id: data.storyId
+  //         },
+  //         query: {
+  //             skip: data.skip,
+  //             limit: data.limit
+  //         },
+  //         errors: {
+  //             422: 'Validation Error'
+  //         }
+  //     });
+  // }
+

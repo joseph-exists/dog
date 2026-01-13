@@ -12,7 +12,7 @@ Then:
 """
 import typer
 import json
-from typing_extensions import Annotated
+from typing import Annotated
 from ..auth_helper import get_authenticated_session
 
 # Create typer app for this command group

@@ -11,78 +11,82 @@
 // handles persistence across refresh more cleanly
 // appears to work more fluidly with GSAP
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+import type React from "react"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
 interface PersonaContextType {
-  selectedPersonaId: string | null;
-  selectionComplete: boolean;
-  selectPersona: (personaId: string) => void;
-  clearSelection: () => void;
+  selectedPersonaId: string | null
+  selectionComplete: boolean
+  selectPersona: (personaId: string) => void
+  clearSelection: () => void
 }
 
-const PersonaContext = createContext<PersonaContextType | undefined>(undefined);
+const PersonaContext = createContext<PersonaContextType | undefined>(undefined)
 
 interface PersonaProviderProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 export const PersonaProvider = ({ children }: PersonaProviderProps) => {
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(
     () => {
       // Initialize from localStorage
-      return localStorage.getItem("selectedPersonaId");
+      return localStorage.getItem("selectedPersonaId")
     },
-  );
+  )
 
   const [selectionComplete, setSelectionComplete] = useState<boolean>(() => {
-    return localStorage.getItem("personaSelectionComplete") === "true";
-  });
+    return localStorage.getItem("personaSelectionComplete") === "true"
+  })
 
   // Update localStorage when state changes
   useEffect(() => {
     if (selectedPersonaId) {
-      localStorage.setItem("selectedPersonaId", selectedPersonaId);
+      localStorage.setItem("selectedPersonaId", selectedPersonaId)
     } else {
-      localStorage.removeItem("selectedPersonaId");
+      localStorage.removeItem("selectedPersonaId")
     }
-  }, [selectedPersonaId]);
+  }, [selectedPersonaId])
 
   useEffect(() => {
     if (selectionComplete) {
-      localStorage.setItem("personaSelectionComplete", "true");
+      localStorage.setItem("personaSelectionComplete", "true")
     } else {
-      localStorage.removeItem("personaSelectionComplete");
+      localStorage.removeItem("personaSelectionComplete")
     }
-  }, [selectionComplete]);
+  }, [selectionComplete])
 
   const selectPersona = (personaId: string) => {
-    setSelectedPersonaId(personaId);
-    setSelectionComplete(true);
-  };
+    setSelectedPersonaId(personaId)
+    setSelectionComplete(true)
+  }
 
   const clearSelection = () => {
-    setSelectedPersonaId(null);
-    setSelectionComplete(false);
-  };
+    setSelectedPersonaId(null)
+    setSelectionComplete(false)
+  }
 
-  const contextValue = useMemo(() => ({
-    selectedPersonaId,
-    selectionComplete,
-    selectPersona,
-    clearSelection,
-  }), [selectedPersonaId, selectionComplete]);
+  const contextValue = useMemo(
+    () => ({
+      selectedPersonaId,
+      selectionComplete,
+      selectPersona,
+      clearSelection,
+    }),
+    [selectedPersonaId, selectionComplete],
+  )
 
   return (
     <PersonaContext.Provider value={contextValue}>
       {children}
     </PersonaContext.Provider>
-  );
-};
+  )
+}
 
 export const usePersona = () => {
-  const context = useContext(PersonaContext);
+  const context = useContext(PersonaContext)
   if (context === undefined) {
-    throw new Error("usePersona must be used within a PersonaProvider");
+    throw new Error("usePersona must be used within a PersonaProvider")
   }
-  return context;
-};
+  return context
+}

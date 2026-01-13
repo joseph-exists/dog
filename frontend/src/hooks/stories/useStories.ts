@@ -1,8 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { ApiError } from "@/client/core/ApiError"
 import { StoriesService, type StoryCreate } from "@/client"
+import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 // Query hook for fetching stories
 export const useStories = () => {
@@ -58,7 +58,7 @@ export const usePublishStory = () => {
       StoriesService.publishStory({ id: storyId }),
     onSuccess: (data) => {
       showSuccessToast(
-        `Story published as v${data.published_version}! Now visible in catalog.`
+        `Story published as v${data.published_version}! Now visible in catalog.`,
       )
       queryClient.invalidateQueries({ queryKey: ["stories"] })
       queryClient.invalidateQueries({ queryKey: ["stories", data.id] })
@@ -98,7 +98,7 @@ export const useCreateNewVersion = () => {
       StoriesService.createNewStoryVersion({ id: storyId }),
     onSuccess: (data) => {
       showSuccessToast(
-        `Version ${data.current_version} created! You can now edit without affecting published version.`
+        `Version ${data.current_version} created! You can now edit without affecting published version.`,
       )
       queryClient.invalidateQueries({ queryKey: ["stories"] })
       queryClient.invalidateQueries({ queryKey: ["stories", data.id] })

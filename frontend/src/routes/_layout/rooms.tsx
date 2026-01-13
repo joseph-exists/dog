@@ -14,31 +14,35 @@ import {
   Heading,
   Spinner,
   VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
-import RoomList from "@/components/Rooms/RoomList";
-import AddRoom from "@/components/Rooms/AddRoom";
-import { RoomService } from "@/services/roomService";
+import AddRoom from "@/components/Rooms/AddRoom"
+import RoomList from "@/components/Rooms/RoomList"
+import { RoomService } from "@/services/roomService"
 
 export const Route = createFileRoute("/_layout/rooms")({
   component: Rooms,
-});
+})
 
 function Rooms() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   // Fetch rooms using RoomService
-  const { data: rooms, isLoading, error } = useQuery({
+  const {
+    data: rooms,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["rooms"],
     queryFn: () => RoomService.listRooms(),
-  });
+  })
 
   // Handle room selection
   const handleRoomSelect = (roomId: string) => {
-    navigate({ to: `/room/${roomId}` });
-  };
+    navigate({ to: `/room/${roomId}` })
+  }
 
   // Loading state
   if (isLoading) {
@@ -48,7 +52,7 @@ function Rooms() {
           <Spinner size="xl" />
         </Flex>
       </Container>
-    );
+    )
   }
 
   // Error state
@@ -60,13 +64,15 @@ function Rooms() {
             <VStack textAlign="center">
               <EmptyState.Title>Error loading rooms</EmptyState.Title>
               <EmptyState.Description>
-                {error instanceof Error ? error.message : "Unknown error occurred"}
+                {error instanceof Error
+                  ? error.message
+                  : "Unknown error occurred"}
               </EmptyState.Description>
             </VStack>
           </EmptyState.Content>
         </EmptyState.Root>
       </Container>
-    );
+    )
   }
 
   // Room list display
@@ -83,5 +89,5 @@ function Rooms() {
         isLoading={isLoading}
       />
     </Container>
-  );
+  )
 }

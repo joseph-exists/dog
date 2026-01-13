@@ -133,6 +133,29 @@ python main.py stories add-choice node1-uuid node2-uuid \
   --order 0
 ```
 
+### List Rooms for Story
+
+```bash
+python main.py stories list-rooms STORY_ID --limit 10 --json
+```
+
+**Arguments:**
+- `STORY_ID` - The story UUID
+
+**Options:**
+- `--limit INTEGER` - Max rooms to list (default: 10)
+- `--offset INTEGER` - Pagination offset (default: 0)
+- `--json` - Output as JSON for scripting
+
+**Example:**
+```bash
+# Human-readable list
+python main.py stories list-rooms abc123
+
+# JSON output for scripts
+python main.py stories list-rooms abc123 --json
+```
+
 ### Create Room
 
 ```bash
@@ -149,6 +172,181 @@ python main.py stories create-room STORY_ID --title "Room Title"
 **Example:**
 ```bash
 python main.py stories create-room abc123 --title "Adventure Lobby"
+```
+
+## State Schema Commands
+
+Commands for managing story state variables (schema definition for `sets_state` and `requires_state` in choices).
+
+### List State Variables
+
+```bash
+python main.py stories list-state-vars STORY_ID --version 1 --json
+```
+
+**Arguments:**
+- `STORY_ID` - The story UUID
+
+**Options:**
+- `--version, -v INTEGER` - Story version (default: 1)
+- `--json` - Output as JSON for scripting
+
+**Example:**
+```bash
+# Human-readable list (grouped by category)
+python main.py stories list-state-vars abc123
+
+# JSON output
+python main.py stories list-state-vars abc123 --json
+```
+
+### Add State Variable
+
+```bash
+python main.py stories add-state-var STORY_ID --key KEY --type TYPE [OPTIONS]
+```
+
+**Arguments:**
+- `STORY_ID` - The story UUID
+
+**Options:**
+- `--key, -k TEXT` - Variable key/name (required)
+- `--type, -t TEXT` - Value type: `boolean`, `number`, `string`, `enum` (required)
+- `--default, -d TEXT` - Default value
+- `--enum-values, -e TEXT` - Comma-separated enum values (required for enum type)
+- `--desc TEXT` - Description
+- `--category, -c TEXT` - Category for grouping
+- `--version, -v INTEGER` - Story version (default: 1)
+- `--verbose` - Show debug output
+
+**Examples:**
+```bash
+# Boolean variable
+python main.py stories add-state-var abc123 --key has_sword --type boolean --default false
+
+# Number variable with category
+python main.py stories add-state-var abc123 --key courage --type number --default 0 --category stats
+
+# String variable
+python main.py stories add-state-var abc123 --key player_name --type string --default "Adventurer"
+
+# Enum variable
+python main.py stories add-state-var abc123 --key faction --type enum \
+  --enum-values "rebel,empire,neutral" --default neutral --category alignment
+```
+
+### Update State Variable
+
+```bash
+python main.py stories update-state-var STORY_ID VAR_ID [OPTIONS]
+```
+
+**Arguments:**
+- `STORY_ID` - The story UUID
+- `VAR_ID` - The variable UUID to update
+
+**Options:**
+- `--key, -k TEXT` - New variable key
+- `--default, -d TEXT` - New default value
+- `--enum-values, -e TEXT` - New enum values (comma-separated)
+- `--desc TEXT` - New description
+- `--category, -c TEXT` - New category
+- `--version, -v INTEGER` - Story version (default: 1)
+- `--verbose` - Show debug output
+
+**Example:**
+```bash
+# Update description
+python main.py stories update-state-var abc123 var456 --desc "Player's courage level (0-100)"
+
+# Update default and category
+python main.py stories update-state-var abc123 var456 --default 50 --category "attributes"
+
+# Add enum option
+python main.py stories update-state-var abc123 var456 --enum-values "easy,medium,hard,nightmare"
+```
+
+### Delete State Variable
+
+```bash
+python main.py stories delete-state-var STORY_ID VAR_ID
+```
+
+**Arguments:**
+- `STORY_ID` - The story UUID
+- `VAR_ID` - The variable UUID to delete
+
+**Options:**
+- `--version, -v INTEGER` - Story version (default: 1)
+- `--force, -f` - Skip confirmation prompt
+
+**Example:**
+```bash
+# With confirmation
+python main.py stories delete-state-var abc123 var456
+
+# Skip confirmation
+python main.py stories delete-state-var abc123 var456 --force
+```
+
+### Validate State Schema
+
+```bash
+python main.py stories validate-state-schema STORY_ID --version 1
+```
+
+Checks for undefined variables in choices. Use this before publishing to ensure all state variables used in `sets_state` and `requires_state` are properly defined in the schema.
+
+**Arguments:**
+- `STORY_ID` - The story UUID
+
+**Options:**
+- `--version, -v INTEGER` - Story version (default: 1)
+- `--json` - Output as JSON for scripting
+
+**Exit Codes:**
+- `0` - Valid (all variables defined)
+- `1` - Invalid (undefined variables found)
+
+**Example:**
+```bash
+# Human-readable validation report
+python main.py stories validate-state-schema abc123
+
+# JSON output for CI/CD
+python main.py stories validate-state-schema abc123 --json
+
+# Check specific version
+python main.py stories validate-state-schema abc123 --version 2
+```
+
+**Sample Output (Invalid):**
+```
+🔍 State Schema Validation (v1):
+
+  ❌ INVALID - Undefined variables found!
+
+  Defined Variables (2):
+    • has_sword
+    • courage
+
+  Used in Choices (4):
+    ✓ has_sword
+    ✓ courage
+    ✗ undefined_var
+    ✗ missing_flag
+
+  ⚠️  Undefined Variables (2):
+    • undefined_var
+    • missing_flag
+
+  Errors (2):
+    • 'undefined_var' in sets_state
+      Choice: "Take the mysterious path..."
+      Node: Forest Entrance
+    • 'missing_flag' in requires_state
+      Choice: "Enter the cave..."
+      Node: Dark Cave
 ```
 
 ## Persona & Character Commands
@@ -714,6 +912,230 @@ python main.py users summary
 python main.py users summary --json
 ```
 
+## Trait Conflict Commands
+
+Commands for managing trait conflict groups for Carroll logic implementation. Supports modeling logical contradictions (contradictory, contrary, subcontrary).
+
+### Create Conflict Group
+
+```bash
+python main.py conflicts create-group "Group Name" --type TYPE [OPTIONS]
+```
+
+**Arguments:**
+- `NAME` - Name of the conflict group
+
+**Options:**
+- `--type, -t TEXT` - Conflict type: `contradictory`, `contrary`, `subcontrary` (default: contradictory)
+- `--desc, -d TEXT` - Description
+- `--reason, -r TEXT` - Explanation of why these traits conflict
+- `--traits TEXT` - Comma-separated trait IDs to add as initial members
+- `--verbose, -v` - Show debug output
+
+**Conflict Types:**
+- `contradictory`: Exactly one must be true (e.g., Mortal/Immortal)
+- `contrary`: At most one can be true (e.g., Hot/Warm/Cold)
+- `subcontrary`: At least one must be true
+
+**Examples:**
+```bash
+# Create a contradictory group (binary)
+python main.py conflicts create-group "Mortality" --type contradictory \
+  --reason "A being cannot be both mortal and immortal"
+
+# Create a contrary group with initial members
+python main.py conflicts create-group "Temperature" --type contrary \
+  --desc "Temperature states" --traits "trait1,trait2,trait3"
+```
+
+### List Conflict Groups
+
+```bash
+python main.py conflicts list-groups [OPTIONS]
+```
+
+**Options:**
+- `--limit INTEGER` - Max groups to list (default: 20)
+- `--offset INTEGER` - Pagination offset (default: 0)
+- `--type, -t TEXT` - Filter by conflict type
+- `--json` - Output as JSON
+
+**Examples:**
+```bash
+python main.py conflicts list-groups
+python main.py conflicts list-groups --type contradictory
+python main.py conflicts list-groups --json
+```
+
+### Get Conflict Group
+
+```bash
+python main.py conflicts get-group GROUP_ID [OPTIONS]
+```
+
+**Arguments:**
+- `GROUP_ID` - The conflict group UUID
+
+**Options:**
+- `--json` - Output as JSON
+
+### Update Conflict Group
+
+```bash
+python main.py conflicts update-group GROUP_ID [OPTIONS]
+```
+
+**Arguments:**
+- `GROUP_ID` - The conflict group UUID
+
+**Options:**
+- `--name, -n TEXT` - New name
+- `--type, -t TEXT` - New conflict type
+- `--desc, -d TEXT` - New description
+- `--reason, -r TEXT` - New reason
+- `--verbose, -v` - Show debug output
+
+**Example:**
+```bash
+python main.py conflicts update-group abc123 --name "Updated Name" --reason "New reason"
+```
+
+### Delete Conflict Group
+
+```bash
+python main.py conflicts delete-group GROUP_ID [OPTIONS]
+```
+
+**Arguments:**
+- `GROUP_ID` - The conflict group UUID
+
+**Options:**
+- `--force, -f` - Skip confirmation prompt
+
+### List Group Members
+
+```bash
+python main.py conflicts list-members GROUP_ID [OPTIONS]
+```
+
+**Arguments:**
+- `GROUP_ID` - The conflict group UUID
+
+**Options:**
+- `--json` - Output as JSON
+
+### Add Member to Group
+
+```bash
+python main.py conflicts add-member GROUP_ID TRAIT_ID [OPTIONS]
+```
+
+**Arguments:**
+- `GROUP_ID` - The conflict group UUID
+- `TRAIT_ID` - The trait UUID to add
+
+**Options:**
+- `--verbose, -v` - Show debug output
+
+**Example:**
+```bash
+python main.py conflicts add-member group123 trait456
+```
+
+### Remove Member from Group
+
+```bash
+python main.py conflicts remove-member GROUP_ID TRAIT_ID [OPTIONS]
+```
+
+**Arguments:**
+- `GROUP_ID` - The conflict group UUID
+- `TRAIT_ID` - The trait UUID to remove
+
+**Options:**
+- `--force, -f` - Skip confirmation prompt
+
+### Check Persona Conflicts
+
+```bash
+python main.py conflicts check-persona PERSONA_ID --trait TRAIT_ID [OPTIONS]
+```
+
+Check if adding a trait to a persona would create a logical conflict.
+
+**Arguments:**
+- `PERSONA_ID` - The persona UUID
+
+**Options:**
+- `--trait, -t TEXT` - Trait ID to check for conflicts (required)
+- `--json` - Output as JSON
+
+**Exit Codes:**
+- `0` - No conflicts (safe to add trait)
+- `1` - Conflicts detected
+
+**Example:**
+```bash
+python main.py conflicts check-persona persona123 --trait trait456
+```
+
+### Check Archetype Conflicts
+
+```bash
+python main.py conflicts check-archetype ARCHETYPE_ID --trait TRAIT_ID [OPTIONS]
+```
+
+Check if adding a trait to an archetype would create a logical conflict.
+
+**Arguments:**
+- `ARCHETYPE_ID` - The archetype UUID
+
+**Options:**
+- `--trait, -t TEXT` - Trait ID to check for conflicts (required)
+- `--json` - Output as JSON
+
+### Find Groups by Trait
+
+```bash
+python main.py conflicts by-trait TRAIT_ID [OPTIONS]
+```
+
+Get all conflict groups containing a specific trait.
+
+**Arguments:**
+- `TRAIT_ID` - The trait UUID
+
+**Options:**
+- `--json` - Output as JSON
+
+**Example:**
+```bash
+python main.py conflicts by-trait trait123
+```
+
+### Validate Group Cardinality
+
+```bash
+python main.py conflicts validate GROUP_ID [OPTIONS]
+```
+
+Validate that a conflict group has appropriate member count for its type.
+
+**Arguments:**
+- `GROUP_ID` - The conflict group UUID
+
+**Options:**
+- `--json` - Output as JSON
+
+**Exit Codes:**
+- `0` - Valid
+- `1` - Invalid (wrong member count for type)
+
+**Example:**
+```bash
+python main.py conflicts validate abc123
+```
+
 ## Demo Commands
 
 Example commands from wonka.py for testing.
@@ -883,6 +1305,133 @@ python main.py stories publish abc123
 
 # 8. Create a room for the story
 python main.py stories create-room abc123 --title "Adventure Room"
+```
+
+### Creating a Story with State Schema
+
+```bash
+# 1. Create the story
+python main.py stories create "The Dragon's Lair" --desc "A branching adventure with state"
+# Save story ID: abc123
+
+# 2. Define state variables FIRST (schema)
+python main.py stories add-state-var abc123 --key has_sword --type boolean --default false --category inventory
+python main.py stories add-state-var abc123 --key courage --type number --default 0 --category stats
+python main.py stories add-state-var abc123 --key approach --type enum \
+  --enum-values "stealth,combat,diplomacy" --category choices
+
+# 3. Verify schema
+python main.py stories list-state-vars abc123
+
+# 4. Add nodes
+python main.py stories add-node abc123 --title "Cave Entrance" --content "You stand before the dragon's lair..." --start
+# node1
+
+python main.py stories add-node abc123 --title "Armory" --content "An old armory..."
+# node2
+
+python main.py stories add-node abc123 --title "Dragon Chamber" --content "The dragon awaits..."
+# node3
+
+python main.py stories add-node abc123 --title "Victory" --content "You have succeeded!" --end
+# node4
+
+# 5. Add choices with state (using schema-defined variables)
+python main.py stories add-choice node1 node2 --text "Search for weapons"
+# Note: In the API, you would add sets_state: {"has_sword": true, "courage": 10}
+
+python main.py stories add-choice node2 node3 --text "Enter the chamber"
+# Note: In the API, you would add requires_state: {"has_sword": true}
+
+python main.py stories add-choice node3 node4 --text "Face the dragon"
+# Note: In the API, you would add requires_state: {"courage": 10}, sets_state: {"approach": "combat"}
+
+# 6. Validate schema before publishing
+python main.py stories validate-state-schema abc123
+
+# 7. If valid, publish
+python main.py stories publish abc123
+```
+
+### CI/CD Validation Workflow
+
+```bash
+#!/bin/bash
+# pre-publish-check.sh - Run before publishing stories
+
+STORY_ID=$1
+
+# Validate state schema
+if ! python main.py stories validate-state-schema $STORY_ID --json > /dev/null 2>&1; then
+    echo "❌ State schema validation failed!"
+    python main.py stories validate-state-schema $STORY_ID
+    exit 1
+fi
+
+echo "✅ State schema valid"
+
+# Publish
+python main.py stories publish $STORY_ID
+```
+
+### Setting Up Carroll Logic Conflicts
+
+Use trait conflicts to model logical contradictions for Carroll-style syllogism stories.
+
+```bash
+# 1. Create traits that will conflict
+python main.py personas create-trait "Mortal" --desc "Subject to death"
+# Save trait ID: mortal_trait
+
+python main.py personas create-trait "Immortal" --desc "Not subject to death"
+# Save trait ID: immortal_trait
+
+# 2. Create a contradictory conflict group
+python main.py conflicts create-group "Mortality Contradiction" \
+  --type contradictory \
+  --reason "A being cannot be both mortal and immortal - these are logical contradictories"
+
+# Save group ID: mortality_group
+
+# 3. Add traits to the conflict group
+python main.py conflicts add-member $mortality_group $mortal_trait
+python main.py conflicts add-member $mortality_group $immortal_trait
+
+# 4. Validate the group has correct cardinality
+python main.py conflicts validate $mortality_group
+# Should show: VALID (contradictory with 2 members)
+
+# 5. Create an archetype with one of the traits
+python main.py personas create-archetype "Humans" --desc "Mortal beings"
+# Save archetype ID: humans_archetype
+
+# Note: When adding Mortal trait to Humans archetype via API,
+# the conflict check will prevent adding Immortal later
+
+# 6. Check before adding a conflicting trait
+python main.py conflicts check-archetype $humans_archetype --trait $immortal_trait
+# Should show: CONFLICT DETECTED!
+
+# 7. View all groups a trait participates in
+python main.py conflicts by-trait $mortal_trait
+```
+
+**Example: Celarent Syllogism Setup (No reptiles are mammals)**
+
+```bash
+# Create the conflicting traits
+python main.py personas create-trait "Cold-blooded" --desc "Ectothermic metabolism"
+python main.py personas create-trait "Warm-blooded" --desc "Endothermic metabolism"
+
+# Create the conflict group
+python main.py conflicts create-group "Thermoregulation" \
+  --type contradictory \
+  --reason "Cold-blooded and warm-blooded are mutually exclusive metabolic strategies"
+
+# Add members and validate
+python main.py conflicts add-member $group_id $cold_blooded_id
+python main.py conflicts add-member $group_id $warm_blooded_id
+python main.py conflicts validate $group_id
 ```
 
 ### JSON Output for Scripting

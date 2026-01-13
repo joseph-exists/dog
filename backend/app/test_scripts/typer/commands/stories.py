@@ -5,7 +5,7 @@ Commands for creating, managing, and testing CYOA stories in staging environment
 """
 import typer
 import json
-from typing_extensions import Annotated
+from typing import Annotated
 from auth_helper import get_authenticated_session
 
 app = typer.Typer(help="Story management commands")
@@ -343,6 +343,58 @@ def add_choice(
 # ============================================================================
 
 @app.command()
+def list_rooms(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    limit: Annotated[int, typer.Option(help="Max rooms to list")] = 10,
+    offset: Annotated[int, typer.Option(help="Pagination offset")] = 0,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False
+):
+    """
+    List rooms associated with a story.
+
+    Example:
+        python main.py stories list-rooms abc123
+        python main.py stories list-rooms abc123 --limit 5 --json
+    """
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/rooms/story/{story_id}",
+        params={"skip": offset, "limit": limit}
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        rooms = data.get("data", [])
+        total = data.get("count", 0)
+
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.echo(f"\n💬 Rooms for story ({len(rooms)} of {total}):\n")
+
+            if not rooms:
+                typer.secho("  No rooms found for this story", fg=typer.colors.YELLOW)
+            else:
+                for room in rooms:
+                    typer.echo(f"  • {room.get('title', 'Untitled')}")
+                    typer.echo(f"    Room ID: {room.get('room_id', 'N/A')}")
+                    typer.echo(f"    Created: {room.get('created_at', 'N/A')}")
+                    typer.echo(f"    Last Activity: {room.get('last_activity', 'N/A')}")
+                    typer.echo()
+    else:
+        typer.secho(f"❌ Failed to list rooms for story", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
 def create_room(
     story_id: Annotated[str, typer.Argument(help="Story ID")],
     title: Annotated[str, typer.Option("--title", "-t", help="Room title")],
@@ -388,6 +440,394 @@ def create_room(
         typer.echo(f"Story ID: {story_id}")
     else:
         typer.secho(f"❌ Failed to create room", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+# ============================================================================
+# State Schema Commands
+# ============================================================================
+
+@app.command()
+def list_state_vars(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    version: Annotated[int, typer.Option("--version", "-v", help="Story version")] = 1,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False
+):
+    """
+    List state variables defined for a story version.
+
+    Example:
+        python main.py stories list-state-vars abc123
+        python main.py stories list-state-vars abc123 --version 2 --json
+    """
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/stories/{story_id}/versions/{version}/state-schema"
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        variables = data.get("data", [])
+        total = data.get("count", 0)
+
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.echo(f"\n📋 State Variables (v{version}): {len(variables)} of {total}\n")
+
+            if not variables:
+                typer.secho("  No state variables defined", fg=typer.colors.YELLOW)
+            else:
+                # Group by category
+                categorized = {}
+                uncategorized = []
+                for var in variables:
+                    cat = var.get("category")
+                    if cat:
+                        categorized.setdefault(cat, []).append(var)
+                    else:
+                        uncategorized.append(var)
+
+                # Print categorized
+                for category, vars_list in sorted(categorized.items()):
+                    typer.secho(f"  [{category}]", fg=typer.colors.BLUE)
+                    for var in vars_list:
+                        _print_state_var(var)
+
+                # Print uncategorized
+                if uncategorized:
+                    if categorized:
+                        typer.secho("  [uncategorized]", fg=typer.colors.BLUE)
+                    for var in uncategorized:
+                        _print_state_var(var)
+    else:
+        typer.secho(f"❌ Failed to list state variables", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+def _print_state_var(var: dict):
+    """Helper to print a state variable."""
+    key = var.get("key", "unknown")
+    vtype = var.get("value_type", "unknown")
+    default = var.get("default_value")
+
+    type_info = vtype
+    if vtype == "enum":
+        enum_vals = var.get("enum_values", [])
+        type_info = f"enum[{', '.join(enum_vals[:3])}{'...' if len(enum_vals) > 3 else ''}]"
+
+    default_str = f" = {default}" if default is not None else ""
+
+    typer.echo(f"    • {key}: {type_info}{default_str}")
+    typer.echo(f"      ID: {var.get('id', 'N/A')}")
+    if var.get("description"):
+        typer.echo(f"      {var['description'][:60]}...")
+
+
+@app.command()
+def add_state_var(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    key: Annotated[str, typer.Option("--key", "-k", help="Variable key/name")],
+    value_type: Annotated[str, typer.Option("--type", "-t", help="Type: boolean, number, string, enum")],
+    default: Annotated[str, typer.Option("--default", "-d", help="Default value")] = None,
+    enum_values: Annotated[str, typer.Option("--enum-values", "-e", help="Enum values (comma-separated)")] = None,
+    description: Annotated[str, typer.Option("--desc", help="Description")] = None,
+    category: Annotated[str, typer.Option("--category", "-c", help="Category for grouping")] = None,
+    version: Annotated[int, typer.Option("--version", "-v", help="Story version")] = 1,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False
+):
+    """
+    Add a state variable to a story's schema.
+
+    Example:
+        python main.py stories add-state-var abc123 --key has_sword --type boolean --default false
+        python main.py stories add-state-var abc123 --key courage --type number --default 0 --category stats
+        python main.py stories add-state-var abc123 --key faction --type enum --enum-values "rebel,empire,neutral"
+    """
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    log(f"Adding state variable '{key}' to story {story_id}")
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    # Build payload
+    payload = {
+        "key": key,
+        "value_type": value_type,
+    }
+
+    # Parse default value based on type
+    if default is not None:
+        if value_type == "boolean":
+            payload["default_value"] = default.lower() in ("true", "1", "yes")
+        elif value_type == "number":
+            try:
+                payload["default_value"] = float(default) if "." in default else int(default)
+            except ValueError:
+                typer.secho(f"❌ Invalid number default: {default}", fg=typer.colors.RED, err=True)
+                raise typer.Exit(1)
+        else:
+            payload["default_value"] = default
+
+    # Parse enum values
+    if enum_values:
+        payload["enum_values"] = [v.strip() for v in enum_values.split(",")]
+
+    if description:
+        payload["description"] = description
+
+    if category:
+        payload["category"] = category
+
+    log(f"POST {BASE_URL}/stories/{story_id}/versions/{version}/state-schema")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.post(
+        f"{BASE_URL}/stories/{story_id}/versions/{version}/state-schema",
+        json=payload
+    )
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        var = response.json()
+        typer.secho("✅ State variable created!", fg=typer.colors.GREEN)
+        typer.echo(f"ID: {var.get('id')}")
+        typer.echo(f"Key: {var.get('key')}")
+        typer.echo(f"Type: {var.get('value_type')}")
+        if var.get("default_value") is not None:
+            typer.echo(f"Default: {var.get('default_value')}")
+        if var.get("enum_values"):
+            typer.echo(f"Enum Values: {', '.join(var.get('enum_values'))}")
+        if var.get("category"):
+            typer.echo(f"Category: {var.get('category')}")
+    else:
+        typer.secho(f"❌ Failed to create state variable", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def update_state_var(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    var_id: Annotated[str, typer.Argument(help="Variable ID to update")],
+    key: Annotated[str, typer.Option("--key", "-k", help="New variable key")] = None,
+    default: Annotated[str, typer.Option("--default", "-d", help="New default value")] = None,
+    enum_values: Annotated[str, typer.Option("--enum-values", "-e", help="New enum values (comma-separated)")] = None,
+    description: Annotated[str, typer.Option("--desc", help="New description")] = None,
+    category: Annotated[str, typer.Option("--category", "-c", help="New category")] = None,
+    version: Annotated[int, typer.Option("--version", "-v", help="Story version")] = 1,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False
+):
+    """
+    Update a state variable in a story's schema.
+
+    Example:
+        python main.py stories update-state-var abc123 var456 --desc "Updated description"
+        python main.py stories update-state-var abc123 var456 --default 100 --category "stats"
+    """
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    log(f"Updating state variable {var_id}")
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    # Build payload with only provided fields
+    payload = {}
+    if key is not None:
+        payload["key"] = key
+    if default is not None:
+        # Try to parse as appropriate type
+        if default.lower() in ("true", "false"):
+            payload["default_value"] = default.lower() == "true"
+        else:
+            try:
+                payload["default_value"] = float(default) if "." in default else int(default)
+            except ValueError:
+                payload["default_value"] = default
+    if enum_values is not None:
+        payload["enum_values"] = [v.strip() for v in enum_values.split(",")]
+    if description is not None:
+        payload["description"] = description
+    if category is not None:
+        payload["category"] = category
+
+    if not payload:
+        typer.secho("⚠️  No fields to update provided", fg=typer.colors.YELLOW)
+        raise typer.Exit(0)
+
+    log(f"PUT {BASE_URL}/stories/{story_id}/versions/{version}/state-schema/{var_id}")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.put(
+        f"{BASE_URL}/stories/{story_id}/versions/{version}/state-schema/{var_id}",
+        json=payload
+    )
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        var = response.json()
+        typer.secho("✅ State variable updated!", fg=typer.colors.GREEN)
+        typer.echo(f"Key: {var.get('key')}")
+        typer.echo(f"Type: {var.get('value_type')}")
+        if var.get("default_value") is not None:
+            typer.echo(f"Default: {var.get('default_value')}")
+        if var.get("description"):
+            typer.echo(f"Description: {var.get('description')}")
+    else:
+        typer.secho(f"❌ Failed to update state variable", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def delete_state_var(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    var_id: Annotated[str, typer.Argument(help="Variable ID to delete")],
+    version: Annotated[int, typer.Option("--version", "-v", help="Story version")] = 1,
+    force: Annotated[bool, typer.Option("--force", "-f", help="Skip confirmation")] = False
+):
+    """
+    Delete a state variable from a story's schema.
+
+    Example:
+        python main.py stories delete-state-var abc123 var456
+        python main.py stories delete-state-var abc123 var456 --force
+    """
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    if not force:
+        typer.secho(f"⚠️  This will delete state variable {var_id}", fg=typer.colors.YELLOW)
+        if not typer.confirm("Are you sure?"):
+            typer.echo("Cancelled.")
+            raise typer.Exit(0)
+
+    response = session.delete(
+        f"{BASE_URL}/stories/{story_id}/versions/{version}/state-schema/{var_id}"
+    )
+
+    if response.status_code in [200, 204]:
+        typer.secho("✅ State variable deleted!", fg=typer.colors.GREEN)
+    else:
+        typer.secho(f"❌ Failed to delete state variable", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def validate_state_schema(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    version: Annotated[int, typer.Option("--version", "-v", help="Story version")] = 1,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False
+):
+    """
+    Validate state schema against choices (check for undefined variables).
+
+    Returns list of undefined variables used in choices but not defined in schema.
+    Use this before publishing to ensure all state variables are properly defined.
+
+    Example:
+        python main.py stories validate-state-schema abc123
+        python main.py stories validate-state-schema abc123 --json
+    """
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/stories/{story_id}/versions/{version}/state-schema/validate"
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            is_valid = data.get("is_valid", False)
+            defined = data.get("defined_variables", [])
+            used = data.get("used_variables", [])
+            undefined = data.get("undefined_variables", [])
+            errors = data.get("errors", [])
+
+            typer.echo(f"\n🔍 State Schema Validation (v{version}):\n")
+
+            if is_valid:
+                typer.secho("  ✅ VALID - All variables are defined!\n", fg=typer.colors.GREEN)
+            else:
+                typer.secho("  ❌ INVALID - Undefined variables found!\n", fg=typer.colors.RED)
+
+            typer.echo(f"  Defined Variables ({len(defined)}):")
+            if defined:
+                for v in defined:
+                    typer.echo(f"    • {v}")
+            else:
+                typer.secho("    (none)", fg=typer.colors.YELLOW)
+
+            typer.echo(f"\n  Used in Choices ({len(used)}):")
+            if used:
+                for v in used:
+                    status = "✓" if v in defined else "✗"
+                    color = typer.colors.GREEN if v in defined else typer.colors.RED
+                    typer.secho(f"    {status} {v}", fg=color)
+            else:
+                typer.secho("    (none)", fg=typer.colors.YELLOW)
+
+            if undefined:
+                typer.echo(f"\n  ⚠️  Undefined Variables ({len(undefined)}):")
+                for v in undefined:
+                    typer.secho(f"    • {v}", fg=typer.colors.RED)
+
+                typer.echo(f"\n  Errors ({len(errors)}):")
+                for err in errors[:10]:  # Show first 10
+                    typer.secho(f"    • '{err.get('variable_key')}' in {err.get('used_in')}", fg=typer.colors.RED)
+                    typer.echo(f"      Choice: \"{err.get('choice_text', 'N/A')[:40]}...\"")
+                    typer.echo(f"      Node: {err.get('from_node_title', 'N/A')}")
+                if len(errors) > 10:
+                    typer.echo(f"    ... and {len(errors) - 10} more errors")
+
+            typer.echo()
+
+            if not is_valid:
+                raise typer.Exit(1)
+    else:
+        typer.secho(f"❌ Failed to validate state schema", fg=typer.colors.RED, err=True)
         typer.echo(f"Status: {response.status_code}")
         typer.echo(f"Error: {response.text}")
         raise typer.Exit(1)

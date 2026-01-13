@@ -1,10 +1,10 @@
-import { Button, DialogTitle, Text } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { FiTrash2 } from "react-icons/fi";
+import { Button, DialogTitle, Text } from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { FiTrash2 } from "react-icons/fi"
 
-import { ArchetypesService } from "@/client";
+import { ArchetypesService } from "@/client"
 import {
   DialogActionTrigger,
   DialogBody,
@@ -14,39 +14,39 @@ import {
   DialogHeader,
   DialogRoot,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import useCustomToast from "@/hooks/useCustomToast";
+} from "@/components/ui/dialog"
+import useCustomToast from "@/hooks/useCustomToast"
 
 const DeleteArchetype = ({ id }: { id: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const { showSuccessToast, showErrorToast } = useCustomToast();
+  const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
   const {
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm();
+  } = useForm()
 
   const deleteArchetype = async (id: string) => {
-    await ArchetypesService.deleteArchetype({ id: id });
-  };
+    await ArchetypesService.deleteArchetype({ id: id })
+  }
 
   const mutation = useMutation({
     mutationFn: deleteArchetype,
     onSuccess: () => {
-      showSuccessToast("The Archetype was deleted successfully");
-      setIsOpen(false);
+      showSuccessToast("The Archetype was deleted successfully")
+      setIsOpen(false)
     },
     onError: () => {
-      showErrorToast("An error occurred while deleting the Archetype");
+      showErrorToast("An error occurred while deleting the Archetype")
     },
     onSettled: () => {
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries()
     },
-  });
+  })
 
   const onSubmit = async () => {
-    mutation.mutate(id);
-  };
+    mutation.mutate(id)
+  }
 
   return (
     <DialogRoot
@@ -98,7 +98,7 @@ const DeleteArchetype = ({ id }: { id: string }) => {
         </form>
       </DialogContent>
     </DialogRoot>
-  );
-};
+  )
+}
 
-export default DeleteArchetype;
+export default DeleteArchetype

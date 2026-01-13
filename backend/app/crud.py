@@ -27,6 +27,9 @@ from app.models import (
     PersonaQualityLink,
     PersonaTraitLink,
     PersonaUpdate,
+    ProgressSnapshot,
+    ProgressSnapshotPublic,
+    ProgressSnapshotsPublic,
     Quality,
     QualityCreate,
     QualityEventTrigger,
@@ -42,6 +45,9 @@ from app.models import (
     RoomParticipant,
     RoomPublic,
     RoomsPublic,
+    StateSchemaValidationError,
+    StateSchemaValidationResult,
+    StateValueType,
     StoriesPublic,
     Story,
     StoryCreate,
@@ -53,8 +59,16 @@ from app.models import (
     StoryPublic,
     StoryRequirement,
     StoryRequirementCreate,
+    StoryStateVariable,
+    StoryStateVariableCreate,
+    StoryStateVariableUpdate,
     StoryUpdate,
     Trait,
+    TraitConflictGroup,
+    TraitConflictGroupCreate,
+    TraitConflictGroupMember,
+    TraitConflictGroupMemberCreate,
+    TraitConflictGroupUpdate,
     TraitCreate,
     User,
     UserCreate,
@@ -66,9 +80,6 @@ from app.models import (
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
     UserUpdate,
-    ProgressSnapshot,
-    ProgressSnapshotsPublic,
-    ProgressSnapshotPublic,
 )
 from app.services.event_emitter import emit_event
 
@@ -686,9 +697,680 @@ def check_story_requirements(
     # All requirements are met
     return True
 
+def check_trait_conflicts(
+    session: Session,
+    persona_id: uuid.UUID,
+    new_trait_id: uuid.UUID
+) -> list[dict]:
+    """
+    Check if adding a trait would create a logical conflict.
+
+    Returns list of conflicts found, empty if no conflicts.
+    """
+    # Get all conflict groups that include the new trait
+    conflict_groups = session.exec(
+        select(TraitConflictGroup)
+        .join(TraitConflictGroupMember)
+        .where(TraitConflictGroupMember.trait_id == new_trait_id)
+    ).all()
+
+    # Get persona's current traits
+    current_trait_ids = {
+        link.trait_id for link in
+        session.exec(
+            select(PersonaTraitLink)
+            .where(PersonaTraitLink.persona_id == persona_id)
+        ).all()
+    }
+
+    conflicts = []
+    for group in conflict_groups:
+        # Get all trait IDs in this conflict group
+        group_trait_ids = {
+            member.trait_id for member in
+            session.exec(
+                select(TraitConflictGroupMember)
+                .where(TraitConflictGroupMember.group_id == group.id)
+            ).all()
+        }
+
+        # Check for overlap with current traits (excluding the new trait)
+        conflicting_traits = current_trait_ids & group_trait_ids
+
+        if conflicting_traits:
+            conflicts.append({
+                "group_id": group.id,
+                "group_name": group.name,
+                "conflict_type": group.conflict_type,
+                "reason": group.reason,
+                "conflicting_trait_ids": list(conflicting_traits)
+            })
+
+    return conflicts
+
+def create_trait_conflict_group(
+    *,
+    session: Session,
+    group_in: TraitConflictGroupCreate
+) -> TraitConflictGroup:
+    """
+    Create a new trait conflict group, optionally with initial members.
+    """
+    # Validate conflict_type
+    valid_types = {"contradictory", "contrary", "subcontrary"}
+    if group_in.conflict_type not in valid_types:
+        raise ValueError(f"conflict_type must be one of: {valid_types}")
+
+    # Create the group (exclude trait_ids from model creation)
+    group_data = group_in.model_dump(exclude={"trait_ids"})
+    group = TraitConflictGroup.model_validate(group_data)
+    session.add(group)
+    session.commit()
+    session.refresh(group)
+
+    # Add initial members if provided
+    if group_in.trait_ids:
+        for trait_id in group_in.trait_ids:
+            add_trait_to_conflict_group(
+                session=session,
+                group_id=group.id,
+                member_in=TraitConflictGroupMemberCreate(trait_id=trait_id)
+            )
+
+    return group
+
+
+def get_trait_conflict_group(
+    *,
+    session: Session,
+    group_id: uuid.UUID
+) -> TraitConflictGroup | None:
+    """Get a trait conflict group by ID."""
+    return session.get(TraitConflictGroup, group_id)
+
+
+def get_trait_conflict_groups(
+    *,
+    session: Session,
+    skip: int = 0,
+    limit: int = 100,
+    conflict_type: str | None = None
+) -> tuple[list[TraitConflictGroup], int]:
+    """
+    Get all trait conflict groups with optional filtering.
+    Returns (groups, total_count).
+    """
+    query = select(TraitConflictGroup)
+
+    if conflict_type:
+        query = query.where(TraitConflictGroup.conflict_type == conflict_type)
+
+    # Get count
+    count_query = select(func.count()).select_from(query.subquery())
+    count = session.exec(count_query).one()
+
+    # Get paginated results
+    groups = session.exec(query.offset(skip).limit(limit)).all()
+
+    return list(groups), count
+
+
+def update_trait_conflict_group(
+    *,
+    session: Session,
+    db_group: TraitConflictGroup,
+    group_in: TraitConflictGroupUpdate
+) -> TraitConflictGroup:
+    """Update an existing trait conflict group."""
+    update_data = group_in.model_dump(exclude_unset=True)
+
+    # Validate conflict_type if being updated
+    if "conflict_type" in update_data:
+        valid_types = {"contradictory", "contrary", "subcontrary"}
+        if update_data["conflict_type"] not in valid_types:
+            raise ValueError(f"conflict_type must be one of: {valid_types}")
+
+    db_group.sqlmodel_update(update_data)
+    db_group.updated_at = datetime.utcnow()
+    session.add(db_group)
+    session.commit()
+    session.refresh(db_group)
+    return db_group
+
+
+def delete_trait_conflict_group(
+    *,
+    session: Session,
+    group_id: uuid.UUID
+) -> bool:
+    """
+    Delete a trait conflict group and all its members.
+    Returns True if deleted, False if not found.
+    """
+    group = session.get(TraitConflictGroup, group_id)
+    if not group:
+        return False
+
+    session.delete(group)
+    session.commit()
+    return True
+
+
+# =============================================================================
+# TRAIT CONFLICT GROUP MEMBER CRUD
+# =============================================================================
+
+def add_trait_to_conflict_group(
+    *,
+    session: Session,
+    group_id: uuid.UUID,
+    member_in: TraitConflictGroupMemberCreate
+) -> TraitConflictGroupMember:
+    """
+    Add a trait to a conflict group.
+    Validates that the trait exists and isn't already in the group.
+    """
+    # Verify group exists
+    group = session.get(TraitConflictGroup, group_id)
+    if not group:
+        raise ValueError(f"Conflict group {group_id} not found")
+
+    # Verify trait exists
+    trait = session.get(Trait, member_in.trait_id)
+    if not trait:
+        raise ValueError(f"Trait {member_in.trait_id} not found")
+
+    # Check if already a member
+    existing = session.exec(
+        select(TraitConflictGroupMember)
+        .where(TraitConflictGroupMember.group_id == group_id)
+        .where(TraitConflictGroupMember.trait_id == member_in.trait_id)
+    ).first()
+
+    if existing:
+        raise ValueError(f"Trait {member_in.trait_id} is already in this conflict group")
+
+    # Create the membership
+    member = TraitConflictGroupMember(
+        group_id=group_id,
+        trait_id=member_in.trait_id
+    )
+    session.add(member)
+    session.commit()
+    session.refresh(member)
+    return member
+
+
+def remove_trait_from_conflict_group(
+    *,
+    session: Session,
+    group_id: uuid.UUID,
+    trait_id: uuid.UUID
+) -> bool:
+    """
+    Remove a trait from a conflict group.
+    Returns True if removed, False if not found.
+    """
+    member = session.exec(
+        select(TraitConflictGroupMember)
+        .where(TraitConflictGroupMember.group_id == group_id)
+        .where(TraitConflictGroupMember.trait_id == trait_id)
+    ).first()
+
+    if not member:
+        return False
+
+    session.delete(member)
+    session.commit()
+    return True
+
+
+def get_conflict_group_members(
+    *,
+    session: Session,
+    group_id: uuid.UUID
+) -> list[TraitConflictGroupMember]:
+    """Get all trait members of a conflict group."""
+    return list(session.exec(
+        select(TraitConflictGroupMember)
+        .where(TraitConflictGroupMember.group_id == group_id)
+    ).all())
+
+
+def get_trait_conflict_memberships(
+    *,
+    session: Session,
+    trait_id: uuid.UUID
+) -> list[TraitConflictGroup]:
+    """Get all conflict groups that contain a specific trait."""
+    return list(session.exec(
+        select(TraitConflictGroup)
+        .join(TraitConflictGroupMember)
+        .where(TraitConflictGroupMember.trait_id == trait_id)
+    ).all())
+
+
+# =============================================================================
+# CONFLICT VALIDATION
+# =============================================================================
+
+def check_trait_conflicts(
+    *,
+    session: Session,
+    persona_id: uuid.UUID,
+    new_trait_id: uuid.UUID
+) -> list[dict]:
+    """
+    Check if adding a trait to a persona would create a logical conflict.
+    Returns list of conflicts found, empty list if no conflicts.
+    """
+    # Get all conflict groups that include the new trait
+    conflict_groups = session.exec(
+        select(TraitConflictGroup)
+        .join(TraitConflictGroupMember)
+        .where(TraitConflictGroupMember.trait_id == new_trait_id)
+    ).all()
+
+    if not conflict_groups:
+        return []
+
+    # Get persona's current trait IDs
+    current_trait_ids = {
+        link.trait_id for link in
+        session.exec(
+            select(PersonaTraitLink)
+            .where(PersonaTraitLink.persona_id == persona_id)
+        ).all()
+    }
+
+    conflicts = []
+    for group in conflict_groups:
+        # Get all trait IDs in this conflict group
+        group_trait_ids = {
+            member.trait_id for member in
+            session.exec(
+                select(TraitConflictGroupMember)
+                .where(TraitConflictGroupMember.group_id == group.id)
+            ).all()
+        }
+
+        # Check for overlap with current traits (excluding the new trait)
+        conflicting_traits = current_trait_ids & group_trait_ids
+
+        if conflicting_traits:
+            conflicts.append({
+                "group_id": str(group.id),
+                "group_name": group.name,
+                "conflict_type": group.conflict_type,
+                "reason": group.reason,
+                "conflicting_trait_ids": [str(tid) for tid in conflicting_traits]
+            })
+
+    return conflicts
+
+
+def check_archetype_trait_conflicts(
+    *,
+    session: Session,
+    archetype_id: uuid.UUID,
+    new_trait_id: uuid.UUID
+) -> list[dict]:
+    """
+    Check if adding a trait to an archetype would create a logical conflict.
+    Similar to persona check but uses ArchetypeTraitLink.
+    """
+    conflict_groups = session.exec(
+        select(TraitConflictGroup)
+        .join(TraitConflictGroupMember)
+        .where(TraitConflictGroupMember.trait_id == new_trait_id)
+    ).all()
+
+    if not conflict_groups:
+        return []
+
+    current_trait_ids = {
+        link.trait_id for link in
+        session.exec(
+            select(ArchetypeTraitLink)
+            .where(ArchetypeTraitLink.archetype_id == archetype_id)
+        ).all()
+    }
+
+    conflicts = []
+    for group in conflict_groups:
+        group_trait_ids = {
+            member.trait_id for member in
+            session.exec(
+                select(TraitConflictGroupMember)
+                .where(TraitConflictGroupMember.group_id == group.id)
+            ).all()
+        }
+
+        conflicting_traits = current_trait_ids & group_trait_ids
+
+        if conflicting_traits:
+            conflicts.append({
+                "group_id": str(group.id),
+                "group_name": group.name,
+                "conflict_type": group.conflict_type,
+                "reason": group.reason,
+                "conflicting_trait_ids": [str(tid) for tid in conflicting_traits]
+            })
+
+    return conflicts
+
+
+def validate_conflict_group_cardinality(
+    *,
+    session: Session,
+    group_id: uuid.UUID
+) -> dict:
+    """
+    Validate that a conflict group has appropriate member count for its type.
+    Returns validation result with any warnings/errors.
+    """
+    group = session.get(TraitConflictGroup, group_id)
+    if not group:
+        return {"valid": False, "error": "Group not found"}
+
+    members = get_conflict_group_members(session=session, group_id=group_id)
+    member_count = len(members)
+
+    result = {
+        "valid": True,
+        "group_id": str(group_id),
+        "conflict_type": group.conflict_type,
+        "member_count": member_count,
+        "warnings": [],
+        "errors": []
+    }
+
+    if group.conflict_type == "contradictory":
+        if member_count < 2:
+            result["errors"].append("Contradictory requires exactly 2 traits")
+            result["valid"] = False
+        elif member_count > 2:
+            result["warnings"].append(
+                f"Contradictory typically has exactly 2 traits, found {member_count}"
+            )
+    else:  # contrary or subcontrary
+        if member_count < 2:
+            result["errors"].append(f"{group.conflict_type} requires at least 2 traits")
+            result["valid"] = False
+
+    return result
+
+# ============================================================================
+# StoryStateVariable CRUD Operations
+# ============================================================================
+
+
+def get_story_state_variables(
+    *,
+    session: Session,
+    story_id: uuid.UUID,
+    story_version: int,
+    skip: int = 0,
+    limit: int = 100,
+) -> tuple[list[StoryStateVariable], int]:
+    """
+    Get all state variables for a story version.
+
+    Args:
+        session: Database session
+        story_id: UUID of the story
+        story_version: Version number of the story
+        skip: Number of records to skip (pagination)
+        limit: Maximum number of records to return
+
+    Returns:
+        Tuple of (list of StoryStateVariable, total count)
+    """
+    count_statement = (
+        select(func.count())
+        .select_from(StoryStateVariable)
+        .where(
+            StoryStateVariable.story_id == story_id,
+            StoryStateVariable.story_version == story_version,
+        )
+    )
+    count = session.exec(count_statement).one()
+
+    statement = (
+        select(StoryStateVariable)
+        .where(
+            StoryStateVariable.story_id == story_id,
+            StoryStateVariable.story_version == story_version,
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+    variables = session.exec(statement).all()
+    return list(variables), count
+
+
+def create_story_state_variable(
+    *, session: Session, variable_in: StoryStateVariableCreate
+) -> StoryStateVariable:
+    """
+    Create a new story state variable.
+
+    Validates that enum_values is provided when value_type is ENUM.
+
+    Args:
+        session: Database session
+        variable_in: StoryStateVariableCreate with variable data
+
+    Returns:
+        Created StoryStateVariable
+
+    Raises:
+        ValueError: If value_type is ENUM but enum_values is empty
+    """
+    # Validate enum_values if value_type is enum
+    if variable_in.value_type == StateValueType.ENUM:
+        if not variable_in.enum_values or len(variable_in.enum_values) == 0:
+            raise ValueError("enum_values required when value_type is 'enum'")
+
+    db_variable = StoryStateVariable.model_validate(variable_in)
+    session.add(db_variable)
+    session.commit()
+    session.refresh(db_variable)
+    return db_variable
+
+
+def update_story_state_variable(
+    *, session: Session, variable_id: uuid.UUID, variable_in: StoryStateVariableUpdate
+) -> StoryStateVariable:
+    """
+    Update a story state variable.
+
+    Args:
+        session: Database session
+        variable_id: UUID of the variable to update
+        variable_in: StoryStateVariableUpdate with fields to update
+
+    Returns:
+        Updated StoryStateVariable
+
+    Raises:
+        ValueError: If variable not found
+    """
+    variable = session.get(StoryStateVariable, variable_id)
+    if not variable:
+        raise ValueError("Variable not found")
+
+    update_data = variable_in.model_dump(exclude_unset=True)
+    variable.sqlmodel_update(update_data)
+    variable.updated_at = datetime.now()
+    session.add(variable)
+    session.commit()
+    session.refresh(variable)
+    return variable
+
+
+def delete_story_state_variable(*, session: Session, variable_id: uuid.UUID) -> None:
+    """
+    Delete a story state variable.
+
+    Args:
+        session: Database session
+        variable_id: UUID of the variable to delete
+
+    Raises:
+        ValueError: If variable not found
+    """
+    variable = session.get(StoryStateVariable, variable_id)
+    if not variable:
+        raise ValueError("Variable not found")
+    session.delete(variable)
+    session.commit()
+
+
+def get_undefined_variables_in_choices(
+    *, session: Session, story_id: uuid.UUID, story_version: int
+) -> StateSchemaValidationResult:
+    """
+    Check all choices for undefined variables (for publish validation).
+
+    This function validates that all state variables used in requires_state
+    and sets_state fields of choices are defined in the story's state schema.
+
+    Args:
+        session: Database session
+        story_id: UUID of the story
+        story_version: Version number to validate
+
+    Returns:
+        StateSchemaValidationResult with validation errors and variable lists
+    """
+    # Get all defined variable keys from schema
+    variables, _ = get_story_state_variables(
+        session=session,
+        story_id=story_id,
+        story_version=story_version,
+        limit=1000,
+    )
+    defined_keys = {v.key for v in variables}
+
+    # Get all nodes for this story version
+    nodes_stmt = select(StoryNode).where(
+        StoryNode.story_id == story_id,
+        StoryNode.story_version == story_version,
+    )
+    nodes = session.exec(nodes_stmt).all()
+    node_map = {n.id: n for n in nodes}
+    node_ids = list(node_map.keys())
+
+    # Get all choices for these nodes
+    if not node_ids:
+        return StateSchemaValidationResult(
+            is_valid=True,
+            errors=[],
+            defined_variables=list(defined_keys),
+            used_variables=[],
+            undefined_variables=[],
+        )
+
+    choices_stmt = select(NodeChoice).where(NodeChoice.from_node_id.in_(node_ids))
+    choices = session.exec(choices_stmt).all()
+
+    # Collect all used variables and errors
+    errors: list[StateSchemaValidationError] = []
+    used_keys: set[str] = set()
+    undefined_keys: set[str] = set()
+
+    # Operators that should be skipped (not variable names)
+    OPERATORS = {"$and", "$or", "$not", "$eq", "$ne", "$gt", "$gte", "$lt", "$lte",
+                 "$in", "$nin", "$exists", "$set", "$inc", "$dec", "$toggle", "$unset", "$expr"}
+
+    def extract_variable_keys(obj: dict | list | None) -> set[str]:
+        """
+        Recursively extract variable keys from a state condition/mutation object.
+        Skips operator keys (those starting with $) and descends into nested structures.
+        """
+        if obj is None:
+            return set()
+
+        keys: set[str] = set()
+
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if key.startswith("$"):
+                    # This is an operator - descend into its value
+                    if isinstance(value, list):
+                        # $and, $or contain arrays of conditions
+                        for item in value:
+                            keys.update(extract_variable_keys(item))
+                    elif isinstance(value, dict):
+                        # $not contains a nested condition
+                        keys.update(extract_variable_keys(value))
+                    # Otherwise it's an operator value like $eq: 10, skip
+                else:
+                    # This is a variable key
+                    keys.add(key)
+                    # The value might also contain operators with nested keys
+                    if isinstance(value, dict):
+                        # Check if value is operator syntax like { $gte: 10 }
+                        # In this case, no nested variable keys
+                        # But { $not: { other_var: true } } would have nested keys
+                        keys.update(extract_variable_keys(value))
+        elif isinstance(obj, list):
+            for item in obj:
+                keys.update(extract_variable_keys(item))
+
+        return keys
+
+    for choice in choices:
+        from_node = node_map.get(choice.from_node_id)
+
+        # Check requires_state
+        if choice.requires_state:
+            keys_in_requires = extract_variable_keys(choice.requires_state)
+            for key in keys_in_requires:
+                used_keys.add(key)
+                if key not in defined_keys:
+                    undefined_keys.add(key)
+                    errors.append(
+                        StateSchemaValidationError(
+                            variable_key=key,
+                            used_in="requires_state",
+                            choice_id=choice.id,
+                            choice_text=choice.text,
+                            from_node_id=choice.from_node_id,
+                            from_node_title=from_node.title if from_node else "Unknown",
+                        )
+                    )
+
+        # Check sets_state
+        if choice.sets_state:
+            keys_in_sets = extract_variable_keys(choice.sets_state)
+            for key in keys_in_sets:
+                used_keys.add(key)
+                if key not in defined_keys:
+                    undefined_keys.add(key)
+                    errors.append(
+                        StateSchemaValidationError(
+                            variable_key=key,
+                            used_in="sets_state",
+                            choice_id=choice.id,
+                            choice_text=choice.text,
+                            from_node_id=choice.from_node_id,
+                            from_node_title=from_node.title if from_node else "Unknown",
+                        )
+                    )
+
+    return StateSchemaValidationResult(
+        is_valid=len(errors) == 0,
+        errors=errors,
+        defined_variables=list(defined_keys),
+        used_variables=list(used_keys),
+        undefined_variables=list(undefined_keys),
+    )
+
 
 """
-Room CRUD Operations (Phase 1 - For Review)
+Room CRUD Operations
 
 This module contains room-related CRUD operations for Phase 1 implementation.
 These operations are designed for review before being added to the centralized
@@ -945,6 +1627,67 @@ async def create_room(
     result = await session.execute(select(Room).where(Room.room_id == room_id))
     room = result.scalar_one()
     return room
+
+async def list_rooms_for_story(
+    *,
+    user_id: UUID,
+    story_id: UUID,
+    session: AsyncSession,
+    skip: int = 0,
+    limit: int = 10,
+) -> RoomsPublic:
+    """
+    Return rooms for a story where the user is either a creator or an active participant, ordered by last_activity_desc.
+
+    This provides the user's room list for a particular story for UI display. Only shows rooms where the user has active membership.
+    
+    Notes: uses rooms_story_id_fkey index for O(log n) lookup
+
+    Args:
+        user_id: UUID of the user
+        session: Async database session
+        story_id: story to check for rooms
+        skip: Number of rooms to skip (pagination)
+        limit: Maximum number of rooms to return
+
+    Returns:
+        RoomsPublic with data and count
+
+"""
+    # Query rooms for story where user is creator or active participant
+    result = await session.execute(
+        select(Room)
+        .where(
+        Room.story_id == str(story_id),  # Filter by story_id (uses FK index)
+        )
+        .order_by(Room.last_activity.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    rooms = result.scalars().all()
+
+    # Get total count (same filter)
+    count_result = await session.execute(
+        select(func.count(Room.room_id))
+        .join(RoomParticipant)
+        .where(
+            Room.story_id == str(story_id),
+            or_(
+                Room.creator_id == str(user_id),
+                and_(
+                    RoomParticipant.participant_type == "user",
+                    RoomParticipant.participant_id == str(user_id),
+                    RoomParticipant.active == True,  # noqa: E712
+                )
+            )
+        )
+    )
+    total_count = count_result.scalar_one()
+
+    return RoomsPublic(
+        data=[RoomPublic.model_validate(room) for room in rooms],
+        count=total_count,
+    )
 
 
 async def list_rooms_for_user(

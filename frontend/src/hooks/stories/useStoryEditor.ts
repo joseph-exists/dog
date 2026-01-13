@@ -1,5 +1,10 @@
+import {
+  type NodeChoicePublic,
+  StoriesService,
+  type StoryNodePublic,
+  StorynodesService,
+} from "@/client"
 import { useQuery } from "@tanstack/react-query"
-import { StoriesService, StorynodesService, type StoryNodePublic, type NodeChoicePublic } from "@/client"
 
 interface UseStoryEditorOptions {
   storyId: string
@@ -18,11 +23,16 @@ export const useStoryEditor = ({ storyId }: UseStoryEditorOptions) => {
   const nodesQuery = useQuery({
     queryKey: ["stories", storyId, "nodes"],
     queryFn: async () => {
-      const result = await StorynodesService.readStorynodes({ skip: 0, limit: 1000 })
+      const result = await StorynodesService.readStorynodes({
+        skip: 0,
+        limit: 1000,
+      })
       // Filter for nodes belonging to this story and its current version
       if (!story) return []
       return result.data.filter(
-        (node) => node.story_id === storyId && node.story_version === story.current_version
+        (node) =>
+          node.story_id === storyId &&
+          node.story_version === story.current_version,
       )
     },
     enabled: !!story, // Only fetch nodes after story is loaded
@@ -73,7 +83,9 @@ export const useStoryEditor = ({ storyId }: UseStoryEditorOptions) => {
     if (startNodes.length === 0) {
       errors.push("Story must have exactly one start node")
     } else if (startNodes.length > 1) {
-      errors.push(`Story has ${startNodes.length} start nodes, but must have exactly one`)
+      errors.push(
+        `Story has ${startNodes.length} start nodes, but must have exactly one`,
+      )
     }
 
     // Check for at least one end node
@@ -98,7 +110,8 @@ export const useStoryEditor = ({ storyId }: UseStoryEditorOptions) => {
     story,
     nodes,
     choices,
-    isLoading: storyQuery.isLoading || nodesQuery.isLoading || choicesQuery.isLoading,
+    isLoading:
+      storyQuery.isLoading || nodesQuery.isLoading || choicesQuery.isLoading,
     error: storyQuery.error || nodesQuery.error || choicesQuery.error,
     getStartNode,
     getEndNodes,

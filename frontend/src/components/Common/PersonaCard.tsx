@@ -1,31 +1,26 @@
+import type { Persona, PersonaPublic } from "@/client/types.gen"
 // src/components/Common/PersonaCard.tsx
+import { type BoxProps, Button, Flex, Text } from "@chakra-ui/react"
+import { FiUser } from "react-icons/fi"
+import type { IconType } from "react-icons/lib"
 import {
-  Button,
-  Flex,
-  Text,
-  BoxProps,
-} from "@chakra-ui/react";
-import { IconType } from "react-icons/lib";
-import { FiUser } from "react-icons/fi";
-import { PersonaPublic, Persona } from "@/client/types.gen";
-import {
-  CardRoot,
-  CardHeader,
   CardBody,
   CardFooter,
+  CardHeader,
+  CardRoot,
   CardTitle,
   // CardDescription,
-} from "../ui/card";
+} from "../ui/card"
 
 interface PersonaCardProps extends BoxProps {
   // TODO: I should probably figure out which of these is correct and update the api
-  persona: PersonaPublic | Persona;
-  isSelectable?: boolean;
-  isSelected?: boolean;
-  onSelect?: () => void;
-  icon?: IconType;
-  buttonText?: string;
-  colorScheme?: string;
+  persona: PersonaPublic | Persona
+  isSelectable?: boolean
+  isSelected?: boolean
+  onSelect?: () => void
+  icon?: IconType
+  buttonText?: string
+  colorScheme?: string
 }
 
 export const PersonaCard = ({
@@ -38,7 +33,7 @@ export const PersonaCard = ({
   colorScheme = "blue",
   ...boxProps
 }: PersonaCardProps) => {
-  const Icon = icon;
+  const Icon = icon
 
   return (
     <CardRoot
@@ -58,8 +53,8 @@ export const PersonaCard = ({
       <CardBody flex="1">
         <Flex direction="column" h="100%">
           <Flex align="center" mb={4}>
-           <Icon size={24} />
-            <Text ml={2} fontWeight="medium" color={'black'}>
+            <Icon size={24} />
+            <Text ml={2} fontWeight="medium" color={"black"}>
               {persona.general_domain || "General Persona"}
             </Text>
           </Flex>
@@ -86,5 +81,5 @@ export const PersonaCard = ({
         )}
       </CardFooter>
     </CardRoot>
-  );
-};
+  )
+}

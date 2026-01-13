@@ -1,4 +1,3 @@
-import { useState } from "react"
 import {
   Badge,
   Box,
@@ -6,21 +5,19 @@ import {
   Card,
   EmptyState,
   Flex,
-  Heading,
   HStack,
+  Heading,
   IconButton,
   Separator,
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { FiFileText } from "react-icons/fi"
-import { FaEdit, FaPlus, FaTrash } from "react-icons/fa"
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
+import { FaEdit, FaPlus, FaTrash } from "react-icons/fa"
+import { FiFileText } from "react-icons/fi"
 
-import { StorynodesService, type StoryNodePublic } from "@/client"
-import { useChoicesForNode, useDeleteChoice } from "@/hooks/stories/useNodeChoices"
-import ChoiceEditor from "./ChoiceEditor"
-import NodeEditorForm from "./NodeEditorForm"
+import { type StoryNodePublic, StorynodesService } from "@/client"
 import {
   DialogActionTrigger,
   DialogBody,
@@ -32,6 +29,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  useChoicesForNode,
+  useDeleteChoice,
+} from "@/hooks/stories/useNodeChoices"
+import ChoiceEditor from "./ChoiceEditor"
+import NodeEditorForm from "./NodeEditorForm"
 
 interface NodeEditorProps {
   nodeId: string | null
@@ -40,7 +43,12 @@ interface NodeEditorProps {
   availableNodes: StoryNodePublic[]
 }
 
-const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
+const NodeEditor = ({
+  nodeId,
+  storyId,
+  storyVersion,
+  availableNodes,
+}: NodeEditorProps) => {
   const [deleteChoiceId, setDeleteChoiceId] = useState<string | null>(null)
 
   // Fetch the selected node
@@ -51,7 +59,8 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
   })
 
   // Fetch choices for this node
-  const { data: choicesData, isLoading: choicesLoading } = useChoicesForNode(nodeId)
+  const { data: choicesData, isLoading: choicesLoading } =
+    useChoicesForNode(nodeId)
   const choices = choicesData?.data || []
 
   const deleteMutation = useDeleteChoice(nodeId)
@@ -107,6 +116,8 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
             <ChoiceEditor
               fromNodeId={nodeId}
               availableNodes={availableNodes}
+              storyId={storyId}
+              storyVersion={storyVersion}
               trigger={
                 <Button size="sm" colorPalette="blue">
                   <FaPlus fontSize="10px" />
@@ -117,9 +128,7 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
           </Flex>
 
           {choicesLoading ? (
-            <Text fontSize="sm">
-              Loading choices...
-            </Text>
+            <Text fontSize="sm">Loading choices...</Text>
           ) : choices.length === 0 ? (
             <EmptyState.Root size="sm">
               <EmptyState.Content>
@@ -127,7 +136,9 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
                   <FiFileText />
                 </EmptyState.Indicator>
                 <VStack textAlign="center">
-                  <EmptyState.Title fontSize="sm">No Choices Yet</EmptyState.Title>
+                  <EmptyState.Title fontSize="sm">
+                    No Choices Yet
+                  </EmptyState.Title>
                   <EmptyState.Description fontSize="xs">
                     Add choices to create branching paths in your story
                   </EmptyState.Description>
@@ -139,7 +150,9 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
               {choices
                 .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                 .map((choice) => {
-                  const targetNode = availableNodes.find((n) => n.id === choice.to_node_id)
+                  const targetNode = availableNodes.find(
+                    (n) => n.id === choice.to_node_id,
+                  )
                   return (
                     <Card.Root key={choice.id} size="sm">
                       <Card.Body>
@@ -174,6 +187,8 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
                             <ChoiceEditor
                               fromNodeId={nodeId}
                               availableNodes={availableNodes}
+                              storyId={storyId}
+                              storyVersion={storyVersion}
                               choice={choice}
                               trigger={
                                 <IconButton
@@ -187,7 +202,9 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
                             />
                             <DialogRoot
                               open={deleteChoiceId === choice.id}
-                              onOpenChange={({ open }) => setDeleteChoiceId(open ? choice.id : null)}
+                              onOpenChange={({ open }) =>
+                                setDeleteChoiceId(open ? choice.id : null)
+                              }
                             >
                               <DialogTrigger asChild>
                                 <IconButton
@@ -205,13 +222,16 @@ const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
                                 </DialogHeader>
                                 <DialogBody>
                                   <Text>
-                                    Are you sure you want to delete this choice? This action cannot
-                                    be undone.
+                                    Are you sure you want to delete this choice?
+                                    This action cannot be undone.
                                   </Text>
                                 </DialogBody>
                                 <DialogFooter gap={2}>
                                   <DialogActionTrigger asChild>
-                                    <Button variant="subtle" colorPalette="gray">
+                                    <Button
+                                      variant="subtle"
+                                      colorPalette="gray"
+                                    >
                                       Cancel
                                     </Button>
                                   </DialogActionTrigger>

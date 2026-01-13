@@ -198,6 +198,25 @@ async def add_room_participant(
     )
     return participant
 
+@router.get("/story/{story_id}", response_model=RoomsPublic)
+async def get_rooms_for_story(
+    story_id: UUID,
+    session: AsyncSessionDep,
+    current_user: CurrentUser,
+    skip: int = 0,
+    limit: int = 10,
+) -> Any:
+    """Get rooms for a story where user is creator or active participant."""
+    from app.crud import list_rooms_for_story
+
+    rooms = await list_rooms_for_story(
+        story_id=story_id,
+        user_id=current_user.id,
+        session=session,
+        skip=skip,
+        limit=limit,
+    )
+    return rooms
 
 @router.get("/{room_id}/participants", response_model=RoomParticipantsPublic)
 async def list_room_participants(

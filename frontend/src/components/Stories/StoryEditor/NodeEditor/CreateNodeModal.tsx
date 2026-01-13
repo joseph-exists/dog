@@ -1,10 +1,19 @@
+import {
+  Button,
+  DialogActionTrigger,
+  Input,
+  NativeSelectField,
+  NativeSelectRoot,
+  Text,
+  Textarea,
+  VStack,
+} from "@chakra-ui/react"
 import { useState } from "react"
 import { Controller, type SubmitHandler, useForm } from "react-hook-form"
-import { Button, DialogActionTrigger, Input, Text, Textarea, VStack, NativeSelectRoot, NativeSelectField } from "@chakra-ui/react"
 import { FaPlus } from "react-icons/fa"
 
-import type { StoryNodeCreate, ContentFormat } from "@/client"
-import { useCreateNode } from "@/hooks/stories/useStoryNodes"
+import type { ContentFormat, StoryNodeCreate } from "@/client"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -16,7 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Field } from "@/components/ui/field"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useCreateNode } from "@/hooks/stories/useStoryNodes"
 
 interface CreateNodeModalProps {
   storyId: string
@@ -92,7 +101,8 @@ const CreateNodeModal = ({
           </DialogHeader>
           <DialogBody>
             <Text mb={4} fontSize="sm">
-              Add a new scene or moment in your story. This is where your adventure unfolds!
+              Add a new scene or moment in your story. This is where your
+              adventure unfolds!
             </Text>
             <VStack gap={4}>
               <Field
@@ -114,17 +124,23 @@ const CreateNodeModal = ({
                 />
               </Field>
               <Field label="Content Format">
-  <NativeSelectRoot size="sm">
-    <NativeSelectField
-      value={contentFormat}
-      onChange={(e) => setValue("content_format", e.target.value as ContentFormat, { shouldDirty: true })}
-    >
-      <option value="html">Rich Text (HTML)</option>
-      <option value="text">Plain Text</option>
-      <option value="json">JSON (Advanced)</option>
-    </NativeSelectField>
-  </NativeSelectRoot>
-</Field>
+                <NativeSelectRoot size="sm">
+                  <NativeSelectField
+                    value={contentFormat}
+                    onChange={(e) =>
+                      setValue(
+                        "content_format",
+                        e.target.value as ContentFormat,
+                        { shouldDirty: true },
+                      )
+                    }
+                  >
+                    <option value="html">Rich Text (HTML)</option>
+                    <option value="text">Plain Text</option>
+                    <option value="json">JSON (Advanced)</option>
+                  </NativeSelectField>
+                </NativeSelectRoot>
+              </Field>
               <Field
                 invalid={!!errors.content}
                 errorText={errors.content?.message}
@@ -145,13 +161,20 @@ const CreateNodeModal = ({
                     <Field disabled={field.disabled} colorPalette="teal">
                       <Checkbox
                         checked={field.value}
-                        onCheckedChange={({ checked }) => field.onChange(checked)}
+                        onCheckedChange={({ checked }) =>
+                          field.onChange(checked)
+                        }
                         disabled={existingStartNode}
                       >
                         <Text fontSize="sm">
                           Start Node
                           {existingStartNode && (
-                            <Text as="span" color="orange.600" fontSize="xs" ml={2}>
+                            <Text
+                              as="span"
+                              color="orange.600"
+                              fontSize="xs"
+                              ml={2}
+                            >
                               (A start node already exists)
                             </Text>
                           )}
@@ -168,7 +191,9 @@ const CreateNodeModal = ({
                     <Field disabled={field.disabled} colorPalette="teal">
                       <Checkbox
                         checked={field.value}
-                        onCheckedChange={({ checked }) => field.onChange(checked)}
+                        onCheckedChange={({ checked }) =>
+                          field.onChange(checked)
+                        }
                       >
                         <Text fontSize="sm">End Node</Text>
                       </Checkbox>
@@ -179,8 +204,8 @@ const CreateNodeModal = ({
 
               {isStartNode && existingStartNode && (
                 <Text fontSize="xl" color="orange.600">
-                  Warning: Creating another start node will cause validation errors. Only one start
-                  node is allowed per story version.
+                  Warning: Creating another start node will cause validation
+                  errors. Only one start node is allowed per story version.
                 </Text>
               )}
             </VStack>
@@ -188,7 +213,11 @@ const CreateNodeModal = ({
 
           <DialogFooter gap={2}>
             <DialogActionTrigger asChild>
-              <Button variant="subtle" colorPalette="gray" disabled={isSubmitting}>
+              <Button
+                variant="subtle"
+                colorPalette="gray"
+                disabled={isSubmitting}
+              >
                 Cancel
               </Button>
             </DialogActionTrigger>

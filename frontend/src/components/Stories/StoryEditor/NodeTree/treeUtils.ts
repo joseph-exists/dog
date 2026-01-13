@@ -1,4 +1,4 @@
-import type { StoryNodePublic, NodeChoicePublic } from "@/client"
+import type { NodeChoicePublic, StoryNodePublic } from "@/client"
 
 export interface TreeNode {
   node: StoryNodePublic
@@ -13,7 +13,7 @@ export interface TreeNode {
  */
 export function buildNodeTree(
   nodes: StoryNodePublic[],
-  choices: NodeChoicePublic[]
+  choices: NodeChoicePublic[],
 ): TreeNode | null {
   const startNode = nodes.find((n) => n.is_start_node)
   if (!startNode) return null
@@ -85,7 +85,7 @@ export function flattenTree(tree: TreeNode | null): TreeNode[] {
  */
 export function toggleNodeExpansion(
   tree: TreeNode | null,
-  nodeId: string
+  nodeId: string,
 ): TreeNode | null {
   if (!tree) return null
 
@@ -108,7 +108,7 @@ export function toggleNodeExpansion(
  */
 export function findPathToNode(
   tree: TreeNode | null,
-  nodeId: string
+  nodeId: string,
 ): string[] {
   if (!tree) return []
 
@@ -135,7 +135,7 @@ export function findPathToNode(
  */
 export function getOrphanedNodes(
   nodes: StoryNodePublic[],
-  tree: TreeNode | null
+  tree: TreeNode | null,
 ): StoryNodePublic[] {
   if (!tree) return nodes
 

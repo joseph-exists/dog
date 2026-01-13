@@ -9,15 +9,15 @@
  * Phase 3 Alpha - Task 5
  */
 
-import { Flex, Text } from "@chakra-ui/react";
-import { FiMessageSquare } from "react-icons/fi";
+import { Flex, Text } from "@chakra-ui/react"
+import { FiMessageSquare } from "react-icons/fi"
 
-import type { RoomViewModel } from "@/services/roomService";
+import type { RoomViewModel } from "@/services/roomService"
 
 interface RoomCardProps {
-  room: RoomViewModel;
-  onClick: () => void;
-  isActive?: boolean;
+  room: RoomViewModel
+  onClick: () => void
+  isActive?: boolean
 }
 
 /**
@@ -25,17 +25,17 @@ interface RoomCardProps {
  * Returns: "Just now", "5 minutes ago", "2 hours ago", "3 days ago"
  */
 const formatRelativeTime = (date: Date): string => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-  return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-};
+  if (diffMins < 1) return "Just now"
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`
+  return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`
+}
 
 const RoomCard = ({ room, onClick, isActive = false }: RoomCardProps) => {
   return (
@@ -72,7 +72,7 @@ const RoomCard = ({ room, onClick, isActive = false }: RoomCardProps) => {
         Last activity: {formatRelativeTime(room.last_activity)}
       </Text>
     </Flex>
-  );
-};
+  )
+}
 
-export default RoomCard;
+export default RoomCard

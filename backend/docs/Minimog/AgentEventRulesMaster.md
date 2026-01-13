@@ -1,10 +1,9 @@
-# Backend RULES.md Additions
+
 ## Agent and Event Sourcing Patterns for TinyFoot
 ### Multi-User Room Architecture
 
-**Status:** PRODUCTION READY - Aligned with MasterImplementationPlan  
-**Date:** December 12, 2025  
-**Source of Truth:** MasterImplementationPlan.md  
+**Status:** In review
+**Last Review:** December 18, 2025  
 **Architecture:** Multi-user collaborative rooms with event sourcing
 
 ---
@@ -85,6 +84,8 @@ async def example_tool(ctx: RunContext[RoomContext], param: str) -> str:
 - Don't bypass room membership validation
 
 ### Agent Registration
+
+## TODO : RETHINK THIS PATTERN. 
 
 All production agents must be registered in `app/agents/registry.py`:
 

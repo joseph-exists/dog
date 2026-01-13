@@ -1,8 +1,8 @@
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
-import Image from '@tiptap/extension-image'
-import { Box } from '@chakra-ui/react'
+import { Box } from "@chakra-ui/react"
+import Image from "@tiptap/extension-image"
+import Link from "@tiptap/extension-link"
+import { EditorContent, useEditor } from "@tiptap/react"
+import StarterKit from "@tiptap/starter-kit"
 
 interface TiptapEditorProps {
   content: string
@@ -10,21 +10,25 @@ interface TiptapEditorProps {
   editable?: boolean
 }
 
-const TiptapEditor = ({ content, onChange, editable = true }: TiptapEditorProps) => {
+const TiptapEditor = ({
+  content,
+  onChange,
+  editable = true,
+}: TiptapEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: {
           HTMLAttributes: {
-            class: 'code-block-monospace',
+            class: "code-block-monospace",
           },
         },
       }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          target: '_blank',
-          rel: 'noopener noreferrer',
+          target: "_blank",
+          rel: "noopener noreferrer",
         },
       }),
       Image.configure({

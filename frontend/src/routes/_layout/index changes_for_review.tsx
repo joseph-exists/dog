@@ -1,38 +1,38 @@
 import {
   Box,
-  Container,
-  Heading,
-  Card as ChakraCard,
-  CardHeader,
   CardBody,
   CardFooter,
+  CardHeader,
+  Card as ChakraCard,
+  Container,
+  Heading,
+  Icon,
   SimpleGrid,
   Text,
-  Icon,
-} from "@chakra-ui/react";
+} from "@chakra-ui/react"
 
 // import { FeatureCard } from "@/components/Common/FeatureCard";
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router"
 import {
+  FiActivity,
+  FiPackage,
   // FiArrowRight,
   FiUser,
-  FiPackage,
-  FiActivity,
   FiUsers,
-} from "react-icons/fi";
+} from "react-icons/fi"
 
-import { Link } from "@tanstack/react-router";
-import { LinkButton } from "@/components/ui/link-button";
+import { LinkButton } from "@/components/ui/link-button"
+import { Link } from "@tanstack/react-router"
 
-import useAuth from "@/hooks/useAuth";
+import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/index changes_for_review")({
   component: Dashboard,
-});
+})
 
 function Dashboard() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useAuth()
 
   return (
     <Container maxW="container.x1" py={8}>
@@ -131,5 +131,5 @@ function Dashboard() {
         </ChakraCard.Root>
       </SimpleGrid>
     </Container>
-  );
+  )
 }

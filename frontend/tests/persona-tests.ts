@@ -1,6 +1,6 @@
+import type { PersonaCard } from "@/components/Common/PersonaCard";
 // tests/components/PersonaCard.test.tsx
-import { render, screen, fireEvent } from "@testing-library/react";
-import { PersonaCard } from "@/components/Common/PersonaCard";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 // Mock persona data
 const mockPersona = {
@@ -50,11 +50,11 @@ describe("PersonaCard", () => {
   });
 });
 
-// tests/components/PersonaSelection.test.tsx
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PersonaSelection } from "@/components/Personas/PersonaSelection";
 import { PersonasService } from "@/client";
+import type { PersonaSelection } from "@/components/Personas/PersonaSelection";
+import { QueryClient, type QueryClientProvider } from "@tanstack/react-query";
+// tests/components/PersonaSelection.test.tsx
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 // Mock the PersonasService
 jest.mock("@/client", () => ({

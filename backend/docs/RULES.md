@@ -61,7 +61,7 @@ The backend follows this structure:
   - Public models for API responses
   - Collection response models (EntitiesPublic with data and count fields)
 
-- When adding a new model:
+- When adding a new model follow all data-model-best-practices.md.
   1. Add all required model classes to `models.py`
   2. Create any needed CRUD operations in `crud.py`
   3. Add API routes in a new or existing file in `app/api/routes/`
@@ -147,6 +147,71 @@ The backend follows this structure:
   ```python
   return Message(message="Operation completed successfully")
   ```
+
+
+
+### Redis Connection Pattern
+
+- Follow the db.py pattern for Redis connections
+- Use connection pooling for efficiency:
+  ```python
+  from app.core.redis import get_redis
+
+  redis = await get_redis()
+  await redis.publish(channel, message)
+  ```
+- Configuration via settings (REDIS_HOST, REDIS_PORT)
+- Docker service names (use "redis" not "localhost")
+
+### WebSocket Patterns
+
+- Single WebSocket connection per room at parent component
+- Pass connection props to child components (avoid duplicate hooks)
+- Throttle UI updates to prevent render spam:
+  ```typescript
+  // Buffer tokens for 50ms before updating UI
+  const tokenBufferRef = useRef<string>("")
+  const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Accumulate in buffer
+  tokenBufferRef.current += token
+
+  // Throttle UI updates
+  if (updateTimerRef.current) clearTimeout(updateTimerRef.current)
+  updateTimerRef.current = setTimeout(() => {
+    setStreamingMessage(tokenBufferRef.current)
+  }, 50)
+  ```
+
+### PydanticAI Streaming
+
+- `stream_text()` yields **cumulative chunks**, not deltas
+- Extract new content: `new_content = chunk[prev_len:]`
+- Example:
+  ```python
+  full_response = ""
+  prev_len = 0
+  async with agent.run_stream(prompt) as result:
+      async for chunk in result.stream_text():
+          # chunk is CUMULATIVE: "Hello" → "Hello world" → "Hello world!"
+          new_content = chunk[prev_len:]  # Extract only new portion
+          full_response = chunk
+          prev_len = len(chunk)
+
+          await publish_token(new_content)  # Publish delta only
+  ```
+
+## Docker Networking
+
+- NEVER MODIFY DOCKER FILES.
+- Use Docker service names in docker-compose.yml
+- Override config defaults with environment variables:
+  ```yaml
+  environment:
+    - REDIS_HOST=redis  # Service name, not localhost
+    - POSTGRES_SERVER=db  # Service name, not localhost
+  ```
+- Inside containers, `localhost` refers to the container itself
 
 ## Database Migrations
 

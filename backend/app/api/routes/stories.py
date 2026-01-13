@@ -44,6 +44,7 @@ from app.models import (
     Message,
     NodeChoice,
     Quality,
+    StateSchemaValidationResult,
     StoriesPublic,
     Story,
     StoryCreate,
@@ -54,9 +55,16 @@ from app.models import (
     StoryRequirementBase,
     StoryRequirementPublic,
     StoryRequirementsPublic,
+    StoryStateVariable,
+    StoryStateVariableBase,
+    StoryStateVariableCreate,
+    StoryStateVariablePublic,
+    StoryStateVariablesPublic,
+    StoryStateVariableUpdate,
     StoryUpdate,
     Trait,
 )
+from app import crud
 
 router = APIRouter(prefix="/stories", tags=["stories"])
 
@@ -194,7 +202,8 @@ def publish_story(
     *,
     session: SessionDep,
     current_user: CurrentUser,
-    id: uuid.UUID
+    id: uuid.UUID,
+    force: bool = False,
 ) -> Any:
     """
     Publish a story by ID.
@@ -202,12 +211,32 @@ def publish_story(
     Only the story owner or superusers can publish a story.
     This locks the current_version as published_version and sets is_published=True.
     Players will be locked to this published_version when they start the story.
+
+    State schema validation is performed before publishing. If there are undefined
+    variables in requires_state/sets_state, a 422 error is returned unless force=True.
     """
     story = session.get(Story, id)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
     if not current_user.is_superuser and (story.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Validate state schema (soft block unless force=True)
+    if not force:
+        validation = crud.get_undefined_variables_in_choices(
+            session=session, story_id=id, story_version=story.current_version
+        )
+
+        if not validation.is_valid:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Story has undefined state variables",
+                    "undefined_variables": validation.undefined_variables,
+                    "error_count": len(validation.errors),
+                    "hint": "Define these variables in the state schema or use force=true to publish anyway",
+                },
+            )
 
     # Lock current_version as published_version
     story.published_version = story.current_version
@@ -323,6 +352,23 @@ def create_new_story_version(
         )
         session.add(new_choice)
 
+    # Copy all state variables from published_version to new current_version
+    state_vars_statement = select(StoryStateVariable).where(
+        StoryStateVariable.story_id == id,
+        StoryStateVariable.story_version == story.published_version,
+    )
+    published_vars = session.exec(state_vars_statement).all()
+
+    for var in published_vars:
+        new_var = StoryStateVariable.model_validate(
+            var,
+            update={
+                "id": uuid.uuid4(),  # New UUID for the copy
+                "story_version": new_version,  # New version
+            },
+        )
+        session.add(new_var)
+
     # Commit all changes
     session.add(story)
     session.commit()
@@ -351,6 +397,7 @@ def delete_story(
     session.delete(story)
     session.commit()
     return Message(message="Story deleted successfully")
+
 
 @router.get("/{story_id}/requirements", response_model=StoryRequirementsPublic)
 def read_story_requirements(
@@ -508,3 +555,241 @@ def delete_story_requirement(
     session.commit()
 
     return Message(message="Requirement deleted successfully")
+
+
+# ============================================================================
+# State Schema Routes - Story State Variable CRUD
+# ============================================================================
+
+
+@router.get(
+    "/{story_id}/versions/{version}/state-schema",
+    response_model=StoryStateVariablesPublic,
+)
+def read_story_state_schema(
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    version: int,
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    """
+    Get all state variables for a story version.
+
+    Any authenticated user can read the state schema.
+    This enables players to understand the game mechanics.
+    """
+    # Verify story exists
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    variables, count = crud.get_story_state_variables(
+        session=session,
+        story_id=story_id,
+        story_version=version,
+        skip=skip,
+        limit=limit,
+    )
+
+    return StoryStateVariablesPublic(data=variables, count=count)
+
+
+@router.post(
+    "/{story_id}/versions/{version}/state-schema",
+    response_model=StoryStateVariablePublic,
+)
+def create_story_state_variable(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    version: int,
+    variable_in: StoryStateVariableBase,
+) -> Any:
+    """
+    Create a state variable in the schema.
+
+    Only story owner or superuser can create variables.
+    Cannot modify published_version - must create new version first.
+    """
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Check ownership
+    if not current_user.is_superuser and story.owner_id != current_user.id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Prevent editing published version
+    if version == story.published_version:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot modify state schema in published version. Create a new version first.",
+        )
+
+    # Check for duplicate key
+    existing_vars, _ = crud.get_story_state_variables(
+        session=session, story_id=story_id, story_version=version, limit=1000
+    )
+    if any(v.key == variable_in.key for v in existing_vars):
+        raise HTTPException(
+            status_code=400, detail=f"Variable '{variable_in.key}' already exists"
+        )
+
+    # Create the variable
+    create_data = StoryStateVariableCreate(
+        story_id=story_id,
+        story_version=version,
+        **variable_in.model_dump(),
+    )
+
+    try:
+        variable = crud.create_story_state_variable(
+            session=session, variable_in=create_data
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return variable
+
+
+@router.put(
+    "/{story_id}/versions/{version}/state-schema/{variable_id}",
+    response_model=StoryStateVariablePublic,
+)
+def update_story_state_variable(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    version: int,
+    variable_id: uuid.UUID,
+    variable_in: StoryStateVariableUpdate,
+) -> Any:
+    """
+    Update a state variable.
+
+    Only story owner or superuser can update variables.
+    Cannot modify published_version.
+    """
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Check ownership
+    if not current_user.is_superuser and story.owner_id != current_user.id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Prevent editing published version
+    if version == story.published_version:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot modify state schema in published version. Create a new version first.",
+        )
+
+    # Verify variable exists and belongs to this story/version
+    variable = session.get(StoryStateVariable, variable_id)
+    if not variable:
+        raise HTTPException(status_code=404, detail="Variable not found")
+    if variable.story_id != story_id or variable.story_version != version:
+        raise HTTPException(
+            status_code=400,
+            detail="Variable does not belong to this story version",
+        )
+
+    # Check for duplicate key if key is being changed
+    if variable_in.key is not None and variable_in.key != variable.key:
+        existing_vars, _ = crud.get_story_state_variables(
+            session=session, story_id=story_id, story_version=version, limit=1000
+        )
+        if any(v.key == variable_in.key and v.id != variable_id for v in existing_vars):
+            raise HTTPException(
+                status_code=400, detail=f"Variable '{variable_in.key}' already exists"
+            )
+
+    try:
+        updated = crud.update_story_state_variable(
+            session=session, variable_id=variable_id, variable_in=variable_in
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return updated
+
+
+@router.delete("/{story_id}/versions/{version}/state-schema/{variable_id}")
+def delete_story_state_variable(
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    version: int,
+    variable_id: uuid.UUID,
+) -> Message:
+    """
+    Delete a state variable from the schema.
+
+    Only story owner or superuser can delete variables.
+    Cannot modify published_version.
+    """
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Check ownership
+    if not current_user.is_superuser and story.owner_id != current_user.id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Prevent editing published version
+    if version == story.published_version:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot modify state schema in published version. Create a new version first.",
+        )
+
+    # Verify variable exists and belongs to this story/version
+    variable = session.get(StoryStateVariable, variable_id)
+    if not variable:
+        raise HTTPException(status_code=404, detail="Variable not found")
+    if variable.story_id != story_id or variable.story_version != version:
+        raise HTTPException(
+            status_code=400,
+            detail="Variable does not belong to this story version",
+        )
+
+    try:
+        crud.delete_story_state_variable(session=session, variable_id=variable_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return Message(message="Variable deleted successfully")
+
+
+@router.get(
+    "/{story_id}/versions/{version}/state-schema/validate",
+    response_model=StateSchemaValidationResult,
+)
+def validate_story_state_schema(
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    version: int,
+) -> Any:
+    """
+    Validate all choices against the state schema.
+
+    Returns undefined variables used in requires_state/sets_state.
+    Only story owner or superuser can run validation.
+    """
+    story = session.get(Story, story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Check ownership
+    if not current_user.is_superuser and story.owner_id != current_user.id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    return crud.get_undefined_variables_in_choices(
+        session=session, story_id=story_id, story_version=version
+    )
