@@ -11,10 +11,9 @@ CRITICAL INVARIANTS:
 - Projections are fully rebuildable by replaying events in sequence order
 - All writes must go through emit_event() to maintain consistency
 
-##  TODO: VALIDATE THE FOLLOWING ASAP
-- Redis pub/sub fan-out will be added to emit_event()
-- WebSocket clients will receive events in real-time
-- Sequence-based replay will handle reconnections
+- Redis pub/sub fan-out for emit_event()
+- WebSocket clients receive events in real-time
+- Sequence-based replay for reconnections
 
 Architecture Compliance:
 - Async-first I/O for multi-worker responsiveness (per MasterImplementationPlan.md)

@@ -2078,6 +2078,10 @@ class RoomMessagePublic(RoomMessageBase):
     pinned_at: datetime | None = None
     pinned_by: uuid.UUID | None = None
     active_for_context: bool = True
+    can_edit: bool = False
+    can_delete: bool = False
+    can_pin: bool = False
+    sender_display_name: str | None = None
 
     button_options: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
@@ -2254,6 +2258,75 @@ class StateSchemaValidationResult(SQLModel):
     defined_variables: list[str]
     used_variables: list[str]
     undefined_variables: list[str]
+
+
+# ============================================================================
+# Story Validation Models (Graph Structure Validation)
+# ============================================================================
+
+
+class StoryValidationError(SQLModel):
+    """Individual validation error with context."""
+    message: str
+    node_id: uuid.UUID | None = None
+    node_title: str | None = None
+    choice_id: uuid.UUID | None = None
+    choice_text: str | None = None
+
+
+class StoryValidationResult(SQLModel):
+    """Result of validating a story's graph structure for publishing."""
+    is_valid: bool
+    errors: list[str]  # Blocking errors that prevent publishing
+    warnings: list[str]  # Non-blocking warnings (orphan nodes, dead ends)
+    node_count: int
+    choice_count: int
+    start_node_count: int
+    end_node_count: int
+    orphaned_node_count: int
+    state_schema_validation: StateSchemaValidationResult | None = None
+
+
+# ============================================================================
+# Story Node Tree Models (Pre-computed Tree Structure)
+# ============================================================================
+
+
+class StoryNodeTreeNode(SQLModel):
+    """A node in the pre-computed story tree structure."""
+    id: uuid.UUID
+    title: str
+    is_start_node: bool
+    is_end_node: bool
+    level: int
+    children: list["StoryNodeTreeNode"] = []
+
+
+class StoryNodeTree(SQLModel):
+    """Pre-computed tree structure for a story version."""
+    root: StoryNodeTreeNode | None = None
+    orphaned_nodes: list[StoryNodeTreeNode] = []
+    total_nodes: int
+    reachable_nodes: int
+
+
+# ============================================================================
+# Available Agents Models
+# ============================================================================
+
+
+class AvailableAgent(SQLModel):
+    """An agent available for room participation."""
+    id: str  # Agent identifier (e.g., "StoryAdvisor")
+    name: str  # Display name (e.g., "Story Advisor")
+    description: str | None = None
+
+
+class AvailableAgentsPublic(SQLModel):
+    """List of available agents."""
+    data: list[AvailableAgent]
+    count: int
+
 
 Story.state_variables = Relationship(
     back_populates="story",

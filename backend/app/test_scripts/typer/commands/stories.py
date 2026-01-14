@@ -833,5 +833,251 @@ def validate_state_schema(
         raise typer.Exit(1)
 
 
+# ============================================================================
+# Story Validation Commands (Graph Structure)
+# ============================================================================
+
+
+@app.command()
+def validate(
+    story_id: Annotated[str, typer.Argument(help="Story ID to validate")],
+    version: Annotated[int, typer.Option("--version", "-v", help="Story version")] = None,
+    include_state_schema: Annotated[bool, typer.Option("--include-state-schema/--no-state-schema", help="Include state schema validation")] = True,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False,
+):
+    """
+    Validate story graph structure for publishing.
+
+    Checks:
+    - At least one node exists
+    - Exactly one start node
+    - At least one end node
+    - All choices point to valid nodes
+    - Reachability analysis (warnings)
+    - Dead-end detection (warnings)
+    - State schema validation (optional)
+
+    Example:
+        python main.py stories validate abc123
+        python main.py stories validate abc123 --version 2
+        python main.py stories validate abc123 --no-state-schema
+        python main.py stories validate abc123 --json
+    """
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    log(f"Validating story: {story_id}")
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    params = {"include_state_schema": include_state_schema}
+    if version is not None:
+        params["version"] = version
+
+    log(f"POST {BASE_URL}/stories/{story_id}/validate")
+    log(f"Params: {json.dumps(params, indent=2)}")
+
+    response = session.post(
+        f"{BASE_URL}/stories/{story_id}/validate",
+        params=params
+    )
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        data = response.json()
+
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            is_valid = data.get("is_valid", False)
+            errors = data.get("errors", [])
+            warnings = data.get("warnings", [])
+            node_count = data.get("node_count", 0)
+            choice_count = data.get("choice_count", 0)
+            start_count = data.get("start_node_count", 0)
+            end_count = data.get("end_node_count", 0)
+            orphan_count = data.get("orphaned_node_count", 0)
+            state_validation = data.get("state_schema_validation")
+
+            typer.echo(f"\n🔍 Story Validation Results:\n")
+
+            # Status
+            if is_valid:
+                typer.secho("  ✅ VALID - Story is ready for publishing!\n", fg=typer.colors.GREEN)
+            else:
+                typer.secho("  ❌ INVALID - Story has errors that must be fixed\n", fg=typer.colors.RED)
+
+            # Statistics
+            typer.echo("  📊 Statistics:")
+            typer.echo(f"    • Nodes: {node_count}")
+            typer.echo(f"    • Choices: {choice_count}")
+            typer.echo(f"    • Start nodes: {start_count}")
+            typer.echo(f"    • End nodes: {end_count}")
+            if orphan_count > 0:
+                typer.secho(f"    • Orphaned nodes: {orphan_count}", fg=typer.colors.YELLOW)
+
+            # Errors
+            if errors:
+                typer.echo(f"\n  ❌ Errors ({len(errors)}):")
+                for err in errors:
+                    typer.secho(f"    • {err}", fg=typer.colors.RED)
+
+            # Warnings
+            if warnings:
+                typer.echo(f"\n  ⚠️  Warnings ({len(warnings)}):")
+                for warn in warnings:
+                    typer.secho(f"    • {warn}", fg=typer.colors.YELLOW)
+
+            # State schema validation
+            if state_validation:
+                state_valid = state_validation.get("is_valid", True)
+                undefined = state_validation.get("undefined_variables", [])
+                if state_valid:
+                    typer.secho("\n  ✅ State schema: All variables defined", fg=typer.colors.GREEN)
+                else:
+                    typer.secho(f"\n  ⚠️  State schema: {len(undefined)} undefined variable(s)", fg=typer.colors.YELLOW)
+                    for v in undefined[:5]:
+                        typer.echo(f"      • {v}")
+                    if len(undefined) > 5:
+                        typer.echo(f"      ... and {len(undefined) - 5} more")
+
+            typer.echo()
+
+            if not is_valid:
+                raise typer.Exit(1)
+    else:
+        typer.secho(f"❌ Failed to validate story", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+# ============================================================================
+# Story Tree Structure Commands
+# ============================================================================
+
+
+@app.command()
+def tree(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    version: Annotated[int, typer.Option("--version", "-v", help="Story version")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    max_depth: Annotated[int, typer.Option("--max-depth", "-d", help="Max depth to display")] = 10,
+):
+    """
+    Display story node tree structure.
+
+    Shows hierarchical tree of nodes starting from start node.
+    Orphaned nodes (not reachable from start) are listed separately.
+
+    Example:
+        python main.py stories tree abc123
+        python main.py stories tree abc123 --version 2
+        python main.py stories tree abc123 --max-depth 3
+        python main.py stories tree abc123 --json
+    """
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    params = {}
+    if version is not None:
+        params["version"] = version
+
+    response = session.get(
+        f"{BASE_URL}/stories/{story_id}/tree",
+        params=params
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            root = data.get("root")
+            orphaned = data.get("orphaned_nodes", [])
+            total = data.get("total_nodes", 0)
+            reachable = data.get("reachable_nodes", 0)
+
+            typer.echo(f"\n🌳 Story Tree Structure:\n")
+            typer.echo(f"  Total nodes: {total}")
+            typer.echo(f"  Reachable: {reachable}")
+            if orphaned:
+                typer.secho(f"  Orphaned: {len(orphaned)}", fg=typer.colors.YELLOW)
+            typer.echo()
+
+            if root:
+                _print_tree_node(root, max_depth=max_depth)
+            else:
+                typer.secho("  No start node found!", fg=typer.colors.RED)
+
+            if orphaned:
+                typer.echo()
+                typer.secho("  📦 Orphaned Nodes (not reachable from start):", fg=typer.colors.YELLOW)
+                for node in orphaned:
+                    node_type = ""
+                    if node.get("is_end_node"):
+                        node_type = " [END]"
+                    typer.echo(f"    • {node.get('title', 'Untitled')}{node_type}")
+                    typer.echo(f"      ID: {node.get('id', 'N/A')}")
+
+            typer.echo()
+    else:
+        typer.secho(f"❌ Failed to get story tree", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+def _print_tree_node(node: dict, indent: str = "  ", max_depth: int = 10, current_depth: int = 0):
+    """Helper to recursively print tree nodes."""
+    if current_depth > max_depth:
+        typer.secho(f"{indent}... (max depth reached)", fg=typer.colors.YELLOW)
+        return
+
+    title = node.get("title", "Untitled")
+    is_start = node.get("is_start_node", False)
+    is_end = node.get("is_end_node", False)
+    children = node.get("children", [])
+
+    # Build node label
+    label = title
+    tags = []
+    if is_start:
+        tags.append("START")
+    if is_end:
+        tags.append("END")
+    if tags:
+        label = f"{title} [{', '.join(tags)}]"
+
+    # Color based on node type
+    if is_start:
+        typer.secho(f"{indent}🚀 {label}", fg=typer.colors.GREEN)
+    elif is_end:
+        typer.secho(f"{indent}🏁 {label}", fg=typer.colors.BLUE)
+    else:
+        typer.echo(f"{indent}📄 {label}")
+
+    # Print children
+    for i, child in enumerate(children):
+        is_last = i == len(children) - 1
+        child_indent = indent + ("    " if is_last else "│   ")
+        connector = "└── " if is_last else "├── "
+        typer.echo(f"{indent}{connector}", nl=False)
+        _print_tree_node(child, child_indent, max_depth, current_depth + 1)
+
+
 if __name__ == "__main__":
     app()

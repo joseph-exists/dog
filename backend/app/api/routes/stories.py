@@ -33,12 +33,14 @@ Note: No update endpoint - requirements are create/delete only
 
 
 """
+
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
+from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Message,
@@ -50,6 +52,8 @@ from app.models import (
     StoryCreate,
     StoryNode,
     StoryNodePublic,
+    StoryNodeTree,
+    StoryNodeTreeNode,
     StoryPublic,
     StoryRequirement,
     StoryRequirementBase,
@@ -62,9 +66,9 @@ from app.models import (
     StoryStateVariablesPublic,
     StoryStateVariableUpdate,
     StoryUpdate,
+    StoryValidationResult,
     Trait,
 )
-from app import crud
 
 router = APIRouter(prefix="/stories", tags=["stories"])
 
@@ -75,7 +79,7 @@ def read_stories(
 ) -> Any:
     """
     Retrieve stories.
-    
+
     Superusers see all stories.
     Regular users see only their own stories.
     """
@@ -106,7 +110,7 @@ def read_stories(
 def read_story(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) -> Any:
     """
     Retrieve a story by ID.
-  
+
     Users can only access their own stories unless they are superusers.
     """
     story = session.get(Story, id)
@@ -117,17 +121,356 @@ def read_story(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) ->
     return story
 
 
+# ============================================================================
+# Story Validation Endpoint (Task 2)
+# ============================================================================
+
+
+def _build_node_graph(choices: list[NodeChoice]) -> dict[uuid.UUID, list[uuid.UUID]]:
+    """Build adjacency list: node_id -> list of destination node_ids."""
+    graph: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for choice in choices:
+        if choice.from_node_id not in graph:
+            graph[choice.from_node_id] = []
+        graph[choice.from_node_id].append(choice.to_node_id)
+    return graph
+
+
+def _find_reachable_nodes(
+    start_node_id: uuid.UUID,
+    graph: dict[uuid.UUID, list[uuid.UUID]],
+) -> set[uuid.UUID]:
+    """Find all nodes reachable from start using BFS."""
+    visited: set[uuid.UUID] = set()
+    queue = [start_node_id]
+
+    while queue:
+        current = queue.pop(0)
+        if current in visited:
+            continue
+        visited.add(current)
+        for dest_id in graph.get(current, []):
+            if dest_id not in visited:
+                queue.append(dest_id)
+
+    return visited
+
+
+@router.post("/{id}/validate", response_model=StoryValidationResult)
+def validate_story(
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    version: int | None = None,
+    include_state_schema: bool = True,
+) -> Any:
+    """
+    Validate a story's graph structure for publishing.
+
+    Checks:
+    1. At least one node exists
+    2. Exactly one start node
+    3. At least one end node
+    4. All choices point to valid nodes in same version
+    5. All non-end nodes have outgoing choices (warning)
+    6. All nodes are reachable from start (warning)
+    7. State schema validation (optional, included by default)
+
+    Args:
+        id: Story UUID
+        version: Version to validate (defaults to current_version)
+        include_state_schema: Whether to include state schema validation
+
+    Returns:
+        StoryValidationResult with errors, warnings, and statistics
+    """
+    story = session.get(Story, id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if not current_user.is_superuser and (story.owner_id != current_user.id):
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Use specified version or default to current_version
+    target_version = version if version is not None else story.current_version
+
+    # Get all nodes for this version
+    nodes_statement = select(StoryNode).where(
+        StoryNode.story_id == id,
+        StoryNode.story_version == target_version,
+    )
+    nodes = list(session.exec(nodes_statement).all())
+    node_ids = {n.id for n in nodes}
+    node_map = {n.id: n for n in nodes}
+
+    # Get all choices from these nodes
+    if node_ids:
+        choices_statement = select(NodeChoice).where(
+            NodeChoice.from_node_id.in_(node_ids)
+        )
+        choices = list(session.exec(choices_statement).all())
+    else:
+        choices = []
+
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    # Check 1: Must have at least one node
+    if len(nodes) == 0:
+        errors.append("Story must have at least one node")
+        return StoryValidationResult(
+            is_valid=False,
+            errors=errors,
+            warnings=warnings,
+            node_count=0,
+            choice_count=0,
+            start_node_count=0,
+            end_node_count=0,
+            orphaned_node_count=0,
+            state_schema_validation=None,
+        )
+
+    # Check 2: Must have exactly one start node
+    start_nodes = [n for n in nodes if n.is_start_node]
+    if len(start_nodes) == 0:
+        errors.append("Story must have exactly one start node")
+    elif len(start_nodes) > 1:
+        errors.append(
+            f"Story has {len(start_nodes)} start nodes, but must have exactly one"
+        )
+
+    # Check 3: Must have at least one end node
+    end_nodes = [n for n in nodes if n.is_end_node]
+    if len(end_nodes) == 0:
+        errors.append("Story must have at least one end node")
+
+    # Check 4: All choices must point to valid nodes in same version
+    for choice in choices:
+        if choice.to_node_id not in node_ids:
+            from_node = node_map.get(choice.from_node_id)
+            from_title = from_node.title if from_node else "Unknown"
+            errors.append(
+                f'Choice "{choice.text}" from node "{from_title}" '
+                f"points to non-existent or wrong-version node"
+            )
+
+    # If we have blocking errors, calculate stats and return early
+    if errors:
+        state_validation = None
+        if include_state_schema:
+            state_validation = crud.get_undefined_variables_in_choices(
+                session=session, story_id=id, story_version=target_version
+            )
+        return StoryValidationResult(
+            is_valid=False,
+            errors=errors,
+            warnings=warnings,
+            node_count=len(nodes),
+            choice_count=len(choices),
+            start_node_count=len(start_nodes),
+            end_node_count=len(end_nodes),
+            orphaned_node_count=0,
+            state_schema_validation=state_validation,
+        )
+
+    # Check 5 & 6: Reachability analysis (warnings only)
+    start_node = start_nodes[0]
+    graph = _build_node_graph(choices)
+    reachable_nodes = _find_reachable_nodes(start_node.id, graph)
+
+    # Find orphaned nodes
+    orphaned_nodes = [n for n in nodes if n.id not in reachable_nodes]
+    if orphaned_nodes:
+        orphan_titles = ", ".join(f'"{n.title}"' for n in orphaned_nodes[:5])
+        if len(orphaned_nodes) > 5:
+            orphan_titles += f" and {len(orphaned_nodes) - 5} more"
+        warnings.append(
+            f"{len(orphaned_nodes)} orphan node(s) not reachable from start: {orphan_titles}"
+        )
+
+    # Check for dead-end nodes (non-end nodes with no outgoing choices)
+    non_end_nodes = [n for n in nodes if not n.is_end_node]
+    for node in non_end_nodes:
+        outgoing = [c for c in choices if c.from_node_id == node.id]
+        if not outgoing:
+            warnings.append(f'Node "{node.title}" has no outgoing choices (dead end)')
+
+    # State schema validation (optional)
+    state_validation = None
+    if include_state_schema:
+        state_validation = crud.get_undefined_variables_in_choices(
+            session=session, story_id=id, story_version=target_version
+        )
+
+    return StoryValidationResult(
+        is_valid=len(errors) == 0,
+        errors=errors,
+        warnings=warnings,
+        node_count=len(nodes),
+        choice_count=len(choices),
+        start_node_count=len(start_nodes),
+        end_node_count=len(end_nodes),
+        orphaned_node_count=len(orphaned_nodes),
+        state_schema_validation=state_validation,
+    )
+
+
+# ============================================================================
+# Story Tree Structure Endpoint (Task 6)
+# ============================================================================
+
+
+def _build_story_tree(
+    nodes: list[StoryNode],
+    choices: list[NodeChoice],
+) -> StoryNodeTree:
+    """Build a hierarchical tree structure from nodes and choices."""
+    if not nodes:
+        return StoryNodeTree(
+            root=None,
+            orphaned_nodes=[],
+            total_nodes=0,
+            reachable_nodes=0,
+        )
+
+    # Find start node
+    start_node = next((n for n in nodes if n.is_start_node), None)
+    if not start_node:
+        # No start node - all nodes are orphaned
+        orphaned = [
+            StoryNodeTreeNode(
+                id=n.id,
+                title=n.title,
+                is_start_node=n.is_start_node,
+                is_end_node=n.is_end_node,
+                level=0,
+                children=[],
+            )
+            for n in nodes
+        ]
+        return StoryNodeTree(
+            root=None,
+            orphaned_nodes=orphaned,
+            total_nodes=len(nodes),
+            reachable_nodes=0,
+        )
+
+    # Build adjacency map: node_id -> choices sorted by order
+    adjacency_map: dict[uuid.UUID, list[NodeChoice]] = {}
+    for choice in choices:
+        if choice.from_node_id not in adjacency_map:
+            adjacency_map[choice.from_node_id] = []
+        adjacency_map[choice.from_node_id].append(choice)
+
+    # Sort choices by order
+    for choice_list in adjacency_map.values():
+        choice_list.sort(key=lambda c: c.order if c.order is not None else 0)
+
+    node_map = {n.id: n for n in nodes}
+    visited: set[uuid.UUID] = set()
+
+    def build_subtree(node: StoryNode, level: int) -> StoryNodeTreeNode:
+        visited.add(node.id)
+        children: list[StoryNodeTreeNode] = []
+
+        for choice in adjacency_map.get(node.id, []):
+            if choice.to_node_id not in visited:
+                child_node = node_map.get(choice.to_node_id)
+                if child_node:
+                    children.append(build_subtree(child_node, level + 1))
+
+        return StoryNodeTreeNode(
+            id=node.id,
+            title=node.title,
+            is_start_node=node.is_start_node,
+            is_end_node=node.is_end_node,
+            level=level,
+            children=children,
+        )
+
+    root = build_subtree(start_node, 0)
+
+    # Find orphaned nodes (not visited during tree building)
+    orphaned = [
+        StoryNodeTreeNode(
+            id=n.id,
+            title=n.title,
+            is_start_node=n.is_start_node,
+            is_end_node=n.is_end_node,
+            level=0,
+            children=[],
+        )
+        for n in nodes
+        if n.id not in visited
+    ]
+
+    return StoryNodeTree(
+        root=root,
+        orphaned_nodes=orphaned,
+        total_nodes=len(nodes),
+        reachable_nodes=len(visited),
+    )
+
+
+@router.get("/{id}/tree", response_model=StoryNodeTree)
+def get_story_tree(
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    version: int | None = None,
+) -> Any:
+    """
+    Get the pre-computed tree structure for a story version.
+
+    Returns a hierarchical tree starting from the start node, with
+    orphaned nodes listed separately.
+
+    Args:
+        id: Story UUID
+        version: Version to get tree for (defaults to current_version)
+
+    Returns:
+        StoryNodeTree with root node and orphaned nodes
+    """
+    story = session.get(Story, id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if not current_user.is_superuser and (story.owner_id != current_user.id):
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    # Use specified version or default to current_version
+    target_version = version if version is not None else story.current_version
+
+    # Get all nodes for this version
+    nodes_statement = select(StoryNode).where(
+        StoryNode.story_id == id,
+        StoryNode.story_version == target_version,
+    )
+    nodes = list(session.exec(nodes_statement).all())
+    node_ids = {n.id for n in nodes}
+
+    # Get all choices from these nodes
+    if node_ids:
+        choices_statement = select(NodeChoice).where(
+            NodeChoice.from_node_id.in_(node_ids)
+        )
+        choices = list(session.exec(choices_statement).all())
+    else:
+        choices = []
+
+    return _build_story_tree(nodes, choices)
+
+
 @router.get("/{id}/start-node", response_model=StoryNodePublic)
 def get_story_start_node(
     session: SessionDep, current_user: CurrentUser, id: uuid.UUID
 ) -> Any:
     """
     Get the starting node for a story.
-    
+
     Returns the node marked as is_start_node=True for the story's current_version.
     This is a helper endpoint to make it easier for clients to initialize
     story progress without querying all nodes.
-    
+
     Users can only access their own stories unless they are superusers.
     """
     story = session.get(Story, id)
@@ -140,16 +483,16 @@ def get_story_start_node(
     statement = select(StoryNode).where(
         StoryNode.story_id == id,
         StoryNode.story_version == story.current_version,
-        StoryNode.is_start_node is True
+        StoryNode.is_start_node is True,
     )
     start_node = session.exec(statement).first()
-    
+
     if not start_node:
         raise HTTPException(
             status_code=404,
-            detail=f"No start node found for story version {story.current_version}"
+            detail=f"No start node found for story version {story.current_version}",
         )
-    
+
     return start_node
 
 
@@ -159,7 +502,7 @@ def create_story(
 ) -> Any:
     """
     Create a new story.
-    
+
     New stories start at version 1 and are unpublished by default.
     The story is automatically associated with the current user as owner.
     """
@@ -176,11 +519,11 @@ def update_story(
     session: SessionDep,
     current_user: CurrentUser,
     id: uuid.UUID,
-    story_in: StoryUpdate
+    story_in: StoryUpdate,
 ) -> Any:
     """
     Update a story by ID.
-    
+
     Only the story owner or superusers can update a story.
     This updates the story metadata but not its version.
     """
@@ -189,13 +532,14 @@ def update_story(
         raise HTTPException(status_code=404, detail="Story not found")
     if not current_user.is_superuser and (story.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
-    
+
     update_dict = story_in.model_dump(exclude_unset=True)
     story.sqlmodel_update(update_dict)
     session.add(story)
     session.commit()
     session.refresh(story)
     return story
+
 
 @router.put("/{id}/publish", response_model=StoryPublic)
 def publish_story(
@@ -249,10 +593,7 @@ def publish_story(
 
 @router.put("/{id}/unpublish", response_model=StoryPublic)
 def unpublish_story(
-    *,
-    session: SessionDep,
-    current_user: CurrentUser,
-    id: uuid.UUID
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
 ) -> Any:
     """
     Unpublish a story by ID.
@@ -266,19 +607,17 @@ def unpublish_story(
         raise HTTPException(status_code=404, detail="Story not found")
     if not current_user.is_superuser and (story.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
-    
+
     story.is_published = False
     session.add(story)
     session.commit()
     session.refresh(story)
     return story
 
+
 @router.post("/{id}/new-version", response_model=StoryPublic)
 def create_new_story_version(
-    *,
-    session: SessionDep,
-    current_user: CurrentUser,
-    id: uuid.UUID
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
 ) -> Any:
     """
     Create a new version of a story by incrementing current_version.
@@ -299,7 +638,7 @@ def create_new_story_version(
     if story.published_version is None:
         raise HTTPException(
             status_code=400,
-            detail="Cannot create new version - story has never been published"
+            detail="Cannot create new version - story has never been published",
         )
 
     # Increment current_version
@@ -309,8 +648,7 @@ def create_new_story_version(
     # Copy all nodes from published_version to new current_version
     # Get all nodes from published version
     published_nodes_statement = select(StoryNode).where(
-        StoryNode.story_id == id,
-        StoryNode.story_version == story.published_version
+        StoryNode.story_id == id, StoryNode.story_version == story.published_version
     )
     published_nodes = session.exec(published_nodes_statement).all()
 
@@ -327,7 +665,7 @@ def create_new_story_version(
             update={
                 "id": new_node_id,  # New UUID for the copy
                 "story_version": new_version,  # New version
-            }
+            },
         )
         session.add(new_node)
 
@@ -348,7 +686,7 @@ def create_new_story_version(
                 "id": uuid.uuid4(),  # New UUID for the copy
                 "from_node_id": node_id_mapping[choice.from_node_id],  # Map to new node
                 "to_node_id": node_id_mapping[choice.to_node_id],  # Map to new node
-            }
+            },
         )
         session.add(new_choice)
 
@@ -382,7 +720,7 @@ def delete_story(
 ) -> Message:
     """
     Delete a story by ID.
-    
+
     Only superusers can delete a story.  Authors cannot delete stories yet.
     This will be changed in the future to allow authors to delete their own unpublished stories.
     Problem is with stories that are in play or associated with other data.
@@ -393,7 +731,7 @@ def delete_story(
         raise HTTPException(status_code=404, detail="Story not found")
     if not current_user.is_superuser and (story.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
-    
+
     session.delete(story)
     session.commit()
     return Message(message="Story deleted successfully")
@@ -405,7 +743,7 @@ def read_story_requirements(
     current_user: CurrentUser,
     story_id: uuid.UUID,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
 ) -> Any:
     """
     Retrieve story requirements.
@@ -419,19 +757,25 @@ def read_story_requirements(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Count total
-    count_query = select(func.count()).select_from(StoryRequirement).where(
-        StoryRequirement.story_id == story_id
+    count_query = (
+        select(func.count())
+        .select_from(StoryRequirement)
+        .where(StoryRequirement.story_id == story_id)
     )
     count = session.exec(count_query).one()
 
     # Get requirements
-    query = select(StoryRequirement).where(
-        StoryRequirement.story_id == story_id
-    ).offset(skip).limit(limit)
+    query = (
+        select(StoryRequirement)
+        .where(StoryRequirement.story_id == story_id)
+        .offset(skip)
+        .limit(limit)
+    )
 
     requirements = session.exec(query).all()
 
     return StoryRequirementsPublic(data=requirements, count=count)
+
 
 @router.post("/{story_id}/requirements", response_model=StoryRequirementPublic)
 def create_story_requirement(
@@ -439,7 +783,7 @@ def create_story_requirement(
     session: SessionDep,
     current_user: CurrentUser,
     story_id: uuid.UUID,
-    requirement_in: StoryRequirementBase  # Uses base, not create (no story_id)
+    requirement_in: StoryRequirementBase,  # Uses base, not create (no story_id)
 ) -> Any:
     """
     Create story requirement.
@@ -465,7 +809,7 @@ def create_story_requirement(
     if requirement_in.requirement_type not in valid_types:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid requirement_type. Must be one of: {valid_types}"
+            detail=f"Invalid requirement_type. Must be one of: {valid_types}",
         )
 
     # Check for duplicate
@@ -473,14 +817,13 @@ def create_story_requirement(
         select(StoryRequirement).where(
             StoryRequirement.story_id == story_id,
             StoryRequirement.requirement_type == requirement_in.requirement_type,
-            StoryRequirement.target_id == requirement_in.target_id
+            StoryRequirement.target_id == requirement_in.target_id,
         )
     ).first()
 
     if existing:
         raise HTTPException(
-            status_code=400,
-            detail="Requirement already exists for this story"
+            status_code=400, detail="Requirement already exists for this story"
         )
 
     # Soft validation: warn if target doesn't exist (don't fail)
@@ -488,6 +831,7 @@ def create_story_requirement(
         target = session.get(Quality, requirement_in.target_id)
         if not target:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(
                 f"Creating requirement for non-existent quality: {requirement_in.target_id}"
@@ -496,6 +840,7 @@ def create_story_requirement(
         target = session.get(Trait, requirement_in.target_id)
         if not target:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(
                 f"Creating requirement for non-existent trait: {requirement_in.target_id}"
@@ -506,7 +851,7 @@ def create_story_requirement(
         story_id=story_id,
         requirement_type=requirement_in.requirement_type,
         target_id=requirement_in.target_id,
-        description=requirement_in.description
+        description=requirement_in.description,
     )
 
     session.add(requirement)
@@ -515,12 +860,13 @@ def create_story_requirement(
 
     return requirement
 
+
 @router.delete("/{story_id}/requirements/{requirement_id}")
 def delete_story_requirement(
     session: SessionDep,
     current_user: CurrentUser,
     story_id: uuid.UUID,
-    requirement_id: uuid.UUID
+    requirement_id: uuid.UUID,
 ) -> Message:
     """
     Delete story requirement.
@@ -538,8 +884,7 @@ def delete_story_requirement(
     # Verify belongs to story
     if requirement.story_id != story_id:
         raise HTTPException(
-            status_code=400,
-            detail="Requirement does not belong to this story"
+            status_code=400, detail="Requirement does not belong to this story"
         )
 
     # Get story for ownership check
