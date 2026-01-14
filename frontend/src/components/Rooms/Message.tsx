@@ -9,23 +9,18 @@
  * - Streaming indicator for real-time agent responses
  * - Status badges (edited, pinned, active/inactive)
  * - Action menu (edit, pin, delete, toggle context)
- *
  */
 
 import { MessageBadge } from "@/components/ui/message-badge"
-import { Box, HStack, Text } from "@chakra-ui/react"
+import { cn } from "@/lib/utils"
+import type { MessageViewModel } from "@/services/roomService"
 import MessageActionMenu from "./MessageActionMenu"
-
-import type { MessageViewModel, RoomViewModel } from "@/services/roomService"
 
 interface MessageProps {
   message: MessageViewModel
   isStreaming?: boolean
-  // Phase 5: Message management props
-  room?: RoomViewModel
-  isPinned?: boolean
-  isActiveForContext?: boolean
-  editedAt?: string | null
+  /** Whether current user is the room owner (grants full permissions) */
+  isRoomOwner?: boolean
   onEdit?: () => void
   onPin?: () => void
   onUnpin?: () => void
@@ -35,7 +30,6 @@ interface MessageProps {
 
 /**
  * Format timestamp as relative time
- * Returns: "Just now", "2 minutes ago", "5 hours ago"
  */
 const formatTimestamp = (date: Date): string => {
   const now = new Date()
@@ -50,102 +44,91 @@ const formatTimestamp = (date: Date): string => {
   return `${diffDays}d ago`
 }
 
-const Message = ({
+export default function Message({
   message,
   isStreaming = false,
-  room,
-  isPinned = false,
-  isActiveForContext = false,
-  editedAt = null,
+  isRoomOwner = false,
   onEdit,
   onPin,
   onUnpin,
   onToggleContext,
   onDelete,
-}: MessageProps) => {
+}: MessageProps) {
+  const isAgent = message.sender_type === "agent"
+  const isOwnMessage = message.is_own_message
+
+  // Use message's built-in properties (from backend)
+  const { is_pinned, active_for_context, edited_at } = message
+
+  // Room owners have full permissions on all messages
+  // Otherwise, use backend-provided permission flags
+  const can_edit = isRoomOwner || message.can_edit
+  const can_delete = isRoomOwner || message.can_delete
+  const can_pin = isRoomOwner || message.can_pin
+
+  // Show menu if user has any management permissions OR if toggle context is available
+  // (toggle context is available to all participants, even without edit/pin/delete permissions)
+  const hasAnyPermission = can_edit || can_delete || can_pin
+  const hasAnyAction = hasAnyPermission || onToggleContext
+
   return (
-    <Box
-      position="relative"
-      alignSelf={message.sender_type === "user" ? "flex-end" : "flex-start"}
-      maxW="70%"
-      p={3}
-      borderRadius="md"
-      bg={
-        message.is_own_message
-          ? "blue.600"
-          : message.sender_type === "agent"
-            ? "gray.200"
-            : "blue.500"
-      }
-      color={message.sender_type === "agent" ? "black" : "white"}
-      _dark={{
-        bg: message.is_own_message
-          ? "blue.700"
-          : message.sender_type === "agent"
-            ? "gray.700"
-            : "blue.600",
-        color: message.sender_type === "agent" ? "white" : "white",
-      }}
-      wordBreak="break-word"
-      // Phase 4: Add border animation for streaming messages
-      borderWidth={isStreaming ? 2 : 0}
-      borderColor={isStreaming ? "blue.400" : "transparent"}
-      animation={
-        isStreaming
-          ? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
-          : undefined
-      }
+    <div
+      className={cn(
+        // Base layout
+        "relative max-w-[70%] p-3 rounded-md break-words",
+        // Alignment based on sender
+        isAgent ? "self-start" : "self-end",
+        // Background and text colors
+        isOwnMessage
+          ? "bg-primary text-primary-foreground"
+          : isAgent
+            ? "bg-muted text-foreground"
+            : "bg-primary/90 text-primary-foreground",
+        // Streaming animation
+        isStreaming && "border-2 border-primary/50 animate-pulse",
+      )}
     >
-      {/* Phase 5: Action menu - top right corner */}
-      {room && onEdit && !isStreaming && (
-        <Box position="absolute" top={2} right={2}>
+      {/* Action menu - top right corner (if user has any actions available) */}
+      {hasAnyAction && !isStreaming && (
+        <div className="absolute top-2 right-2">
           <MessageActionMenu
             message={message}
-            room={room}
-            onEdit={onEdit}
+            canEdit={can_edit}
+            canDelete={can_delete}
+            canPin={can_pin}
+            onEdit={onEdit || (() => {})}
             onPin={onPin || (() => {})}
             onUnpin={onUnpin || (() => {})}
             onToggleContext={onToggleContext || (() => {})}
             onDelete={onDelete || (() => {})}
-            isPinned={isPinned}
-            isActiveForContext={isActiveForContext}
           />
-        </Box>
+        </div>
       )}
 
       {/* Sender name */}
-      <Text fontSize="xs" opacity={0.8} mb={1} fontWeight="medium">
+      <p className="text-xs opacity-80 mb-1 font-medium">
         {message.sender_name}
         {isStreaming && (
-          <Text as="span" ml={2} fontSize="xs" opacity={0.6}>
-            typing...
-          </Text>
+          <span className="ml-2 text-xs opacity-60">typing...</span>
         )}
-      </Text>
+      </p>
 
-      {/* Phase 5: Status badges */}
-      {!isStreaming &&
-        (editedAt || isPinned || isActiveForContext !== undefined) && (
-          <HStack gap={2} mb={2} flexWrap="wrap">
-            {editedAt && <MessageBadge variant="edited" timestamp={editedAt} />}
-            {isPinned && <MessageBadge variant="pinned" />}
-            {isActiveForContext !== undefined && (
-              <MessageBadge
-                variant={isActiveForContext ? "active" : "inactive"}
-              />
-            )}
-          </HStack>
-        )}
+      {/* Status badges */}
+      {!isStreaming && (edited_at || is_pinned) && (
+        <div className="flex gap-2 mb-2 flex-wrap">
+          {edited_at && <MessageBadge variant="edited" timestamp={edited_at} />}
+          {is_pinned && <MessageBadge variant="pinned" />}
+          <MessageBadge variant={active_for_context ? "active" : "inactive"} />
+        </div>
+      )}
 
       {/* Message content */}
-      <Text whiteSpace="pre-wrap">{message.content}</Text>
+      <p className="whitespace-pre-wrap">{message.content}</p>
 
       {/* Timestamp */}
-      <Text fontSize="xs" opacity={0.6} mt={1}>
+      <p className="text-xs opacity-60 mt-1">
         {isStreaming ? "streaming..." : formatTimestamp(message.created_at)}
-      </Text>
-    </Box>
+      </p>
+    </div>
   )
 }
-
-export default Message

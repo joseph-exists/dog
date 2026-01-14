@@ -1,71 +1,92 @@
-import { Box, Card as ChakraCard } from "@chakra-ui/react"
-
 import * as React from "react"
-import { CloseButton, type CloseButtonProps } from "./close-button"
 
-export const CardContent = React.forwardRef<HTMLDivElement>(
-  function CardContent(props, ref) {
-    const { ...rest } = props
-    return <Box p={4} {...rest} ref={ref} />
-  },
-)
+import { cn } from "@/lib/utils"
 
-export const CardCloseTrigger = React.forwardRef<
-  HTMLButtonElement,
-  CloseButtonProps
->(function CardCloseTrigger(props, ref) {
+function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <CloseButton position="absolute" top="2" insetEnd="2" {...props} asChild>
-      <CloseButton size="sm" ref={ref} />
-    </CloseButton>
+    <div
+      data-slot="card"
+      className={cn(
+        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        className
+      )}
+      {...props}
+    />
   )
-})
-
-// Add new enhanced components or props
-export interface CardRootProps extends ChakraCard.RootProps {
-  isSelectable?: boolean
-  isSelected?: boolean
-  onSelect?: () => void
 }
 
-export const CardRoot = React.forwardRef<HTMLDivElement, CardRootProps>(
-  function CardRoot(
-    { isSelectable, isSelected, onSelect, children, ...props },
-    ref,
-  ) {
-    // const selectedBg =  //need to set this effect
-    // const selectedBorder = // need to set this effect
-    //  const hoverBg = // need to set this effect
+function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-header"
+      className={cn(
+        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+        className
+      )}
+      {...props}
+    />
+  )
+}
 
-    return (
-      <ChakraCard.Root
-        ref={ref}
-        cursor={isSelectable ? "pointer" : "default"}
-        onClick={isSelectable ? onSelect : undefined}
-        // bg={isSelected ? selectedBg : undefined}
-        // borderColor={isSelected ? selectedBorder : undefined}
-        // borderWidth={isSelected ? "2px" : "1px"}
-        transition="all 0.2s"
-        _hover={
-          isSelectable
-            ? {
-                //  bg: isSelected ? selectedBg : hoverBg,
-                transform: "translateY(-2px)",
-                boxShadow: "md",
-              }
-            : undefined
-        }
-        {...props}
-      >
-        {children}
-      </ChakraCard.Root>
-    )
-  },
-)
+function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-title"
+      className={cn("leading-none font-semibold", className)}
+      {...props}
+    />
+  )
+}
 
-// Existing exports
-export const CardBody = ChakraCard.Body
-export const CardFooter = ChakraCard.Footer
-export const CardHeader = ChakraCard.Header
-export const CardDescription = ChakraCard.Description
-export const CardTitle = ChakraCard.Title
+function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-description"
+      className={cn("text-muted-foreground text-sm", className)}
+      {...props}
+    />
+  )
+}
+
+function CardAction({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-action"
+      className={cn(
+        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-content"
+      className={cn("px-6", className)}
+      {...props}
+    />
+  )
+}
+
+function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-footer"
+      className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardAction,
+  CardDescription,
+  CardContent,
+}

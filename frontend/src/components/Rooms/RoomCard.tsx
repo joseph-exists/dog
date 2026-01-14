@@ -5,13 +5,10 @@
  * - Room title
  * - Last activity timestamp (relative)
  * - Hover and click interactions
- *
- * Phase 3 Alpha - Task 5
  */
 
-import { Flex, Text } from "@chakra-ui/react"
-import { FiMessageSquare } from "react-icons/fi"
-
+import { MessageSquare } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { RoomViewModel } from "@/services/roomService"
 
 interface RoomCardProps {
@@ -20,10 +17,6 @@ interface RoomCardProps {
   isActive?: boolean
 }
 
-/**
- * Format a date as relative time
- * Returns: "Just now", "5 minutes ago", "2 hours ago", "3 days ago"
- */
 const formatRelativeTime = (date: Date): string => {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -37,42 +30,31 @@ const formatRelativeTime = (date: Date): string => {
   return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`
 }
 
-const RoomCard = ({ room, onClick, isActive = false }: RoomCardProps) => {
+export default function RoomCard({
+  room,
+  onClick,
+  isActive = false,
+}: RoomCardProps) {
   return (
-    <Flex
-      direction="column"
-      p={4}
-      borderWidth={1}
-      borderRadius="md"
-      cursor="pointer"
+    <div
       onClick={onClick}
-      borderColor={isActive ? "blue.500" : "gray.200"}
-      bg={isActive ? "blue.50" : "transparent"}
-      _hover={{
-        bg: isActive ? "blue.50" : "gray.50",
-        borderColor: "blue.500",
-        _dark: {
-          bg: isActive ? "blue.900" : "gray.800",
-        },
-      }}
-      _dark={{
-        borderColor: isActive ? "blue.500" : "gray.700",
-        bg: isActive ? "blue.900" : "transparent",
-      }}
-      transition="all 0.2s"
+      className={cn(
+        "flex flex-col p-4 border rounded-md cursor-pointer transition-all duration-200",
+        isActive
+          ? "border-primary bg-primary/10"
+          : "border-border bg-transparent hover:bg-accent hover:border-primary",
+      )}
     >
-      <Flex align="center" gap={2} mb={2}>
-        <FiMessageSquare />
-        <Text fontWeight="bold" fontSize="lg">
+      <div className="flex items-center gap-2 mb-2">
+        <MessageSquare className="h-4 w-4" />
+        <span className="font-bold text-lg">
           {room.title || "Untitled Room"}
-        </Text>
-      </Flex>
+        </span>
+      </div>
 
-      <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.400" }}>
+      <span className="text-sm text-muted-foreground">
         Last activity: {formatRelativeTime(room.last_activity)}
-      </Text>
-    </Flex>
+      </span>
+    </div>
   )
 }
-
-export default RoomCard

@@ -6,16 +6,17 @@
  * - Participant count
  * - Agent count
  * - User role badge
- *
- * Phase 3 Alpha - Task 11
+ * - Debug panel toggle
  */
 
-import { RoomActionsMenu } from "@/components/Common/RoomsActionsMenu"
+import { Bug } from "lucide-react"
+import { RoomActionsMenu } from "@/components/Rooms/RoomsActionsMenu"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import type {
   ParticipantViewModel,
   RoomViewModel,
 } from "@/services/roomService"
-import { Box, Flex, Text, VStack } from "@chakra-ui/react"
 import AddParticipantDialog from "./AddParticipantDialog"
 
 interface RoomHeaderProps {
@@ -29,9 +30,13 @@ interface RoomHeaderProps {
   ) => Promise<void>
   onUpdateRoom?: (data: { title: string }) => Promise<void>
   onDeleteRoom?: () => Promise<void>
+  /** Whether debug panel is visible */
+  showDebugPanel?: boolean
+  /** Callback to toggle debug panel */
+  onToggleDebugPanel?: () => void
 }
 
-const RoomHeader = ({
+export default function RoomHeader({
   room,
   participants,
   activeAgents,
@@ -39,34 +44,30 @@ const RoomHeader = ({
   onAddParticipant,
   onUpdateRoom,
   onDeleteRoom,
-}: RoomHeaderProps) => {
+  showDebugPanel,
+  onToggleDebugPanel,
+}: RoomHeaderProps) {
   return (
-    <Box
-      p={4}
-      borderBottomWidth={1}
-      borderColor="gray.200"
-      bg="white"
-      _dark={{ borderColor: "gray.700", bg: "gray.900" }}
-    >
-      <Flex justify="space-between" align="center">
-        <VStack align="start" gap={1}>
+    <div className="p-4 border-b border-border bg-background">
+      <div className="flex justify-between items-center">
+        <div className="flex flex-col items-start gap-1">
           {/* Room title */}
-          <Text fontSize="lg" fontWeight="bold">
+          <span className="text-lg font-bold">
             {room?.title || "Untitled Room"}
-          </Text>
+          </span>
 
           {/* Participant and agent counts */}
-          <Text fontSize="sm">
+          <span className="text-sm text-muted-foreground">
             {participants.length} participant
             {participants.length !== 1 ? "s" : ""}
             {activeAgents.length > 0 &&
               ` • ${activeAgents.length} agent${
                 activeAgents.length !== 1 ? "s" : ""
               }`}
-          </Text>
-        </VStack>
+          </span>
+        </div>
 
-        <Flex align="center" gap={2}>
+        <div className="flex items-center gap-2">
           {/* Owner actions */}
           {currentUserRole === "owner" && room && (
             <>
@@ -85,28 +86,33 @@ const RoomHeader = ({
             </>
           )}
 
+          {/* Debug panel toggle */}
+          {onToggleDebugPanel && (
+            <Button
+              size="sm"
+              variant={showDebugPanel ? "default" : "outline"}
+              onClick={onToggleDebugPanel}
+              title="Toggle Debug Panel"
+            >
+              <Bug className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* User role badge */}
           {currentUserRole && (
-            <Text
-              fontSize="xs"
-              px={2}
-              py={1}
-              borderRadius="md"
-              bg={currentUserRole === "owner" ? "blue.100" : "gray.100"}
-              color={currentUserRole === "owner" ? "blue.800" : "gray.800"}
-              _dark={{
-                bg: currentUserRole === "owner" ? "blue.900" : "gray.800",
-                color: currentUserRole === "owner" ? "blue.100" : "gray.100",
-              }}
-              fontWeight="medium"
+            <span
+              className={cn(
+                "text-xs px-2 py-1 rounded-md font-medium",
+                currentUserRole === "owner"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted text-muted-foreground",
+              )}
             >
               {currentUserRole.toUpperCase()}
-            </Text>
+            </span>
           )}
-        </Flex>
-      </Flex>
-    </Box>
+        </div>
+      </div>
+    </div>
   )
 }
-
-export default RoomHeader

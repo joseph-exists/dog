@@ -7,164 +7,108 @@
  * - Toggle Context (any participant)
  * - Delete (owner only)
  *
- * Displays only actions the current user is permitted to perform.
- *
- * Phase 5 - Message Management Features
+ * Permissions are provided by the backend on each message (can_edit, can_delete, can_pin).
+ * This eliminates client-side permission computation and ensures single source of truth.
  */
 
-import { useRoomPermissions } from "@/hooks/useRoomPermissions"
-import type { MessageViewModel, RoomViewModel } from "@/services/roomService"
-import {
-  MenuContent,
-  MenuItem,
-  MenuRoot,
-  MenuSeparator,
-  MenuTrigger,
-} from "@chakra-ui/react"
-import { IconButton } from "@chakra-ui/react"
+import { Eye, EyeOff, MoreVertical, Pencil, Pin, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
-  FaEdit,
-  FaEllipsisV,
-  FaEye,
-  FaEyeSlash,
-  FaThumbtack,
-  FaTrash,
-} from "react-icons/fa"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import type { MessageViewModel } from "@/services/roomService"
 
 interface MessageActionMenuProps {
   message: MessageViewModel
-  room: RoomViewModel
+  /** Override permission flags (e.g., for room owners) */
+  canEdit?: boolean
+  canDelete?: boolean
+  canPin?: boolean
   onEdit: () => void
   onPin: () => void
   onUnpin: () => void
   onToggleContext: (active: boolean) => void
   onDelete: () => void
-  isPinned: boolean
-  isActiveForContext: boolean
 }
 
-/**
- * MessageActionMenu - Context menu for message operations
- *
- * Shows only permitted actions based on user permissions.
- * Uses IconButton trigger with vertical ellipsis icon.
- *
- * @param message - Message to perform actions on
- * @param room - Current room (for permission checks)
- * @param onEdit - Callback when edit is clicked
- * @param onPin - Callback when pin is clicked
- * @param onUnpin - Callback when unpin is clicked
- * @param onToggleContext - Callback when toggle context is clicked
- * @param onDelete - Callback when delete is clicked
- * @param isPinned - Whether message is currently pinned
- * @param isActiveForContext - Whether message is active for context
- *
- * @example
- * ```tsx
- * <MessageActionMenu
- *   message={message}
- *   room={room}
- *   onEdit={() => setEditingMessage(message)}
- *   onPin={() => pinMutation.mutate(message.message_id)}
- *   onUnpin={() => unpinMutation.mutate(message.message_id)}
- *   onToggleContext={(active) => toggleMutation.mutate({ messageId: message.message_id, active })}
- *   onDelete={() => deleteMutation.mutate(message.message_id)}
- *   isPinned={message.is_pinned}
- *   isActiveForContext={message.active_for_context}
- * />
- * ```
- */
-const MessageActionMenu = ({
+export default function MessageActionMenu({
   message,
-  room,
+  canEdit,
+  canDelete,
+  canPin,
   onEdit,
   onPin,
   onUnpin,
   onToggleContext,
   onDelete,
-  isPinned,
-  isActiveForContext,
-}: MessageActionMenuProps) => {
-  const permissions = useRoomPermissions(room)
+}: MessageActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  // Don't render if user has no permissions
-  if (
-    !permissions.canEditMessage(message) &&
-    !permissions.canPinMessage() &&
-    !permissions.canToggleContext() &&
-    !permissions.canDeleteMessage()
-  ) {
-    return null
-  }
+  // Use override props if provided, otherwise fall back to message's permission flags
+  const can_edit = canEdit ?? message.can_edit
+  const can_delete = canDelete ?? message.can_delete
+  const can_pin = canPin ?? message.can_pin
+  const { is_pinned, active_for_context } = message
+
+  // Toggle context is always available to participants, so don't early return
+  // The menu will always show at least the toggle context option
 
   return (
-    <MenuRoot open={isOpen} onOpenChange={(e) => setIsOpen(e.open)}>
-      <MenuTrigger asChild>
-        <IconButton
-          aria-label="Message actions"
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
           variant="ghost"
-          size="xl"
-          opacity={0.6}
-          _hover={{ opacity: 1 }}
+          size="icon-sm"
+          className="opacity-60 hover:opacity-100"
+          aria-label="Message actions"
         >
-          <FaEllipsisV />
-        </IconButton>
-      </MenuTrigger>
-      <MenuContent>
-        {/* Edit action - author or owner for user messages, owner for agent */}
-        {permissions.canEditMessage(message) && (
-          <MenuItem value="edit" onClick={onEdit}>
-            <FaEdit />
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {/* Edit action - backend determines permission */}
+        {can_edit && (
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
             Edit
-          </MenuItem>
+          </DropdownMenuItem>
         )}
 
-        {/* Pin/Unpin - owner only */}
-        {permissions.canPinMessage() && (
-          <MenuItem
-            value={isPinned ? "unpin" : "pin"}
-            onClick={isPinned ? onUnpin : onPin}
-          >
-            <FaThumbtack />
-            {isPinned ? "Unpin" : "Pin"}
-          </MenuItem>
+        {/* Pin/Unpin - backend determines permission */}
+        {can_pin && (
+          <DropdownMenuItem onClick={is_pinned ? onUnpin : onPin}>
+            <Pin className="h-4 w-4" />
+            {is_pinned ? "Unpin" : "Pin"}
+          </DropdownMenuItem>
         )}
 
-        {/* Toggle context - any participant */}
-        {permissions.canToggleContext() && (
+        {/* Toggle context - any participant can toggle (backend validates membership) */}
+        {(can_edit || can_pin) && <DropdownMenuSeparator />}
+        <DropdownMenuItem onClick={() => onToggleContext(!active_for_context)}>
+          {active_for_context ? (
+            <EyeOff className="h-4 w-4" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
+          {active_for_context ? "Remove from Context" : "Add to Context"}
+        </DropdownMenuItem>
+
+        {/* Delete - backend determines permission */}
+        {can_delete && (
           <>
-            {(permissions.canEditMessage(message) ||
-              permissions.canPinMessage()) && <MenuSeparator />}
-            <MenuItem
-              value="toggle-context"
-              onClick={() => onToggleContext(!isActiveForContext)}
-            >
-              {isActiveForContext ? <FaEyeSlash /> : <FaEye />}
-              {isActiveForContext ? "Remove from Context" : "Add to Context"}
-            </MenuItem>
-          </>
-        )}
-
-        {/* Delete - owner only */}
-        {permissions.canDeleteMessage() && (
-          <>
-            <MenuSeparator />
-            <MenuItem
-              value="delete"
-              onClick={onDelete}
-              color="red.600"
-              _hover={{ bg: "red.50" }}
-            >
-              <FaTrash />
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onDelete} variant="destructive">
+              <Trash2 className="h-4 w-4" />
               Delete
-            </MenuItem>
+            </DropdownMenuItem>
           </>
         )}
-      </MenuContent>
-    </MenuRoot>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
-
-export default MessageActionMenu

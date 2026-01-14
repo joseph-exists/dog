@@ -1,8 +1,8 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { StoriesService, type StoryCreate } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 // Query hook for fetching stories
 export const useStories = () => {
@@ -11,6 +11,8 @@ export const useStories = () => {
     queryFn: () => StoriesService.readStories({ skip: 0, limit: 100 }),
   })
 }
+
+const { showErrorToast } = useCustomToast()
 
 // Mutation hook for creating a story
 export const useCreateStory = () => {
@@ -25,7 +27,7 @@ export const useCreateStory = () => {
       queryClient.invalidateQueries({ queryKey: ["stories"] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -43,7 +45,7 @@ export const useDeleteStory = () => {
       queryClient.invalidateQueries({ queryKey: ["stories"] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -64,7 +66,7 @@ export const usePublishStory = () => {
       queryClient.invalidateQueries({ queryKey: ["stories", data.id] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -83,7 +85,7 @@ export const useUnpublishStory = () => {
       queryClient.invalidateQueries({ queryKey: ["stories", data.id] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -105,7 +107,38 @@ export const useCreateNewVersion = () => {
       queryClient.invalidateQueries({ queryKey: ["stories", data.id, "nodes"] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
+    },
+  })
+}
+
+// Mutation hook for cloning a story (creates new story with same metadata)
+export const useCloneStory = () => {
+  const queryClient = useQueryClient()
+  const { showSuccessToast } = useCustomToast()
+
+  return useMutation({
+    mutationFn: async (sourceStory: {
+      title: string
+      description?: string | null
+    }) => {
+      // Create a new story with copied metadata
+      const clonedStory = await StoriesService.createStory({
+        requestBody: {
+          title: `${sourceStory.title} (Copy)`,
+          description: sourceStory.description || undefined,
+        },
+      })
+      return clonedStory
+    },
+    onSuccess: (data) => {
+      showSuccessToast(
+        `Story cloned! "${data.title}" created as a new draft.`,
+      )
+      queryClient.invalidateQueries({ queryKey: ["stories"] })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }

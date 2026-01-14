@@ -7,49 +7,46 @@
  * - Clear input after send
  * - Loading state while sending
  * - Validation (no empty messages)
- * - Phase 4: WebSocket streaming support with REST API fallback
- *
+ * - WebSocket streaming support with REST API fallback
  */
 
-import { Box, Flex, IconButton, Input } from "@chakra-ui/react"
+import { Loader2, Send } from "lucide-react"
 import { useState } from "react"
-import { FiSend } from "react-icons/fi"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface MessageInputProps {
   roomId: string
   onSendMessage: (content: string) => Promise<void>
   isSending: boolean
   disabled?: boolean
-  // Phase 4: WebSocket props (passed from parent to avoid multiple connections)
   isConnected: boolean
   sendViaWebSocket: (content: string) => void
 }
 
-const MessageInput = ({
-  // roomId,
+export default function MessageInput({
   onSendMessage,
   isSending,
   disabled = false,
   isConnected,
   sendViaWebSocket,
-}: MessageInputProps) => {
+}: MessageInputProps) {
   const [content, setContent] = useState("")
 
   const handleSend = async () => {
     if (!content.trim() || isSending || disabled) return
 
     try {
-      // Phase 4: Prefer WebSocket if connected, fallback to REST API
+      // Prefer WebSocket if connected, fallback to REST API
       if (isConnected) {
         sendViaWebSocket(content.trim())
         setContent("") // Clear immediately for WebSocket (optimistic)
       } else {
-        // Fallback to REST API (Phase 1-3 behavior)
         await onSendMessage(content.trim())
         setContent("") // Clear on success
       }
     } catch (error) {
-      // Error handling is done by the parent component
       console.error("Failed to send message:", error)
     }
   }
@@ -61,15 +58,11 @@ const MessageInput = ({
     }
   }
 
+  const isDisabled = !content.trim() || isSending || disabled
+
   return (
-    <Box
-      p={4}
-      borderTopWidth={1}
-      borderColor="gray.200"
-      bg="white"
-      _dark={{ borderColor: "gray.700", bg: "gray.900" }}
-    >
-      <Flex gap={2}>
+    <div className="p-4 border-t border-border bg-background">
+      <div className="flex gap-2">
         <Input
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -80,20 +73,20 @@ const MessageInput = ({
               : "Type a message... (isConnected: offline bug?)"
           }
           disabled={disabled || isSending}
-          flex={1}
+          className="flex-1"
         />
-        <IconButton
-          aria-label="Send message"
+        <Button
           onClick={handleSend}
-          disabled={!content.trim() || isSending || disabled}
-          loading={isSending}
-          colorPalette="blue"
+          disabled={isDisabled}
+          aria-label="Send message"
         >
-          <FiSend />
-        </IconButton>
-      </Flex>
-    </Box>
+          {isSending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
   )
 }
-
-export default MessageInput

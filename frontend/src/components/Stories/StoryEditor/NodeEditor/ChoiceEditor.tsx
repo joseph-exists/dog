@@ -1,299 +1,342 @@
-import {
-  Box,
-  Button,
-  DialogActionTrigger,
-  Input,
-  NativeSelectField,
-  NativeSelectRoot,
-  Separator,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
-import { useEffect, useState } from "react"
-import { Controller, type SubmitHandler, useForm } from "react-hook-form"
+/**
+ * ChoiceEditor - Dialog for creating/editing story node choices
+ *
+ * Features:
+ * - Choice text input
+ * - Target node selector
+ * - Requires state conditions (using StateConditionEditor)
+ * - Sets state modifications (using StateConditionEditor)
+ * - Delete choice
+ */
 
-import type { NodeChoicePublic, StoryNodePublic } from "@/client"
-import {
-  DialogBody,
-  DialogCloseTrigger,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogRoot,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Field } from "@/components/ui/field"
+import { useState, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { Trash2 } from "lucide-react"
+import type { NodeChoicePublic, StoryNodePublic, StoryStateVariablePublic } from "@/client"
 import {
   useCreateChoice,
   useUpdateChoice,
+  useDeleteChoice,
 } from "@/hooks/stories/useNodeChoices"
-import { useStateSchema } from "@/hooks/stories/useStateSchema"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import StateConditionEditor from "../../shared/StateConditionEditor"
 
+const choiceSchema = z.object({
+  text: z.string().min(1, "Choice text is required"),
+  to_node_id: z.string().min(1, "Target node is required"),
+})
+
+type ChoiceFormData = z.infer<typeof choiceSchema>
+
 interface ChoiceEditorProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   fromNodeId: string
+  choiceId?: string
+  choice?: NodeChoicePublic
   availableNodes: StoryNodePublic[]
   storyId: string
-  storyVersion: number
-  choice?: NodeChoicePublic // If provided, edit mode; otherwise create mode
-  trigger?: React.ReactNode
-  onSuccess?: () => void
-}
-
-interface ChoiceFormData {
-  text: string
-  to_node_id: string
-  order?: number
-  requires_state: Record<string, unknown> | null
-  sets_state: Record<string, unknown> | null
+  schema?: StoryStateVariablePublic[]
 }
 
 const ChoiceEditor = ({
+  open,
+  onOpenChange,
   fromNodeId,
-  availableNodes,
-  storyId,
-  storyVersion,
+  choiceId,
   choice,
-  trigger,
-  onSuccess,
+  availableNodes,
+  schema,
 }: ChoiceEditorProps) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const isEditMode = !!choice
+  const isEditing = !!choiceId && !!choice
 
-  const createMutation = useCreateChoice()
-  const updateMutation = useUpdateChoice(fromNodeId)
-  const { data: schemaData } = useStateSchema(storyId, storyVersion)
+  // State condition management
+  const [requiresState, setRequiresState] = useState<Record<string, unknown> | null>(null)
+  const [setsState, setSetsState] = useState<Record<string, unknown> | null>(null)
+  const [showRequiresState, setShowRequiresState] = useState(false)
+  const [showSetsState, setShowSetsState] = useState(false)
+
+  // Mutations
+  const createChoice = useCreateChoice()
+  const updateChoice = useUpdateChoice(fromNodeId)
+  const deleteChoice = useDeleteChoice(fromNodeId)
 
   const {
-    control,
     register,
     handleSubmit,
     reset,
-    formState: { errors, isValid, isSubmitting },
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
   } = useForm<ChoiceFormData>({
-    mode: "onBlur",
+    resolver: zodResolver(choiceSchema),
     defaultValues: {
-      text: choice?.text || "",
-      to_node_id: choice?.to_node_id || "",
-      order: choice?.order || 0,
-      requires_state: choice?.requires_state || null,
-      sets_state: choice?.sets_state || null,
+      text: "",
+      to_node_id: "",
     },
   })
 
-  // Reset form when choice changes (edit mode)
+  const selectedTargetId = watch("to_node_id")
+
+  // Initialize form when editing
   useEffect(() => {
-    if (choice) {
+    if (isEditing && choice) {
       reset({
         text: choice.text,
         to_node_id: choice.to_node_id,
-        order: choice.order,
-        requires_state: choice.requires_state,
-        sets_state: choice.sets_state,
+      })
+
+      // Initialize requires_state
+      if (choice.requires_state && Object.keys(choice.requires_state).length > 0) {
+        setRequiresState(choice.requires_state as Record<string, unknown>)
+        setShowRequiresState(true)
+      } else {
+        setRequiresState(null)
+        setShowRequiresState(false)
+      }
+
+      // Initialize sets_state
+      if (choice.sets_state && Object.keys(choice.sets_state).length > 0) {
+        setSetsState(choice.sets_state as Record<string, unknown>)
+        setShowSetsState(true)
+      } else {
+        setSetsState(null)
+        setShowSetsState(false)
+      }
+    }
+  }, [isEditing, choice, reset])
+
+  const onSubmit = async (data: ChoiceFormData) => {
+    if (isEditing) {
+      await updateChoice.mutateAsync({
+        choiceId: choiceId,
+        data: {
+          text: data.text,
+          to_node_id: data.to_node_id,
+          requires_state: requiresState,
+          sets_state: setsState,
+        },
+      })
+    } else {
+      await createChoice.mutateAsync({
+        text: data.text,
+        from_node_id: fromNodeId,
+        to_node_id: data.to_node_id,
+        requires_state: requiresState,
+        sets_state: setsState,
       })
     }
-  }, [choice, reset])
 
-  const onSubmit: SubmitHandler<ChoiceFormData> = (data) => {
-    if (isEditMode) {
-      updateMutation.mutate(
-        {
-          choiceId: choice.id,
-          data: {
-            text: data.text,
-            to_node_id: data.to_node_id,
-            order: data.order,
-            requires_state: data.requires_state,
-            sets_state: data.sets_state,
-          },
-        },
-        {
-          onSuccess: () => {
-            setIsOpen(false)
-            onSuccess?.()
-          },
-        },
-      )
-    } else {
-      createMutation.mutate(
-        {
-          text: data.text,
-          from_node_id: fromNodeId,
-          to_node_id: data.to_node_id,
-          order: data.order || 0,
-          requires_state: data.requires_state,
-          sets_state: data.sets_state,
-        },
-        {
-          onSuccess: () => {
-            reset()
-            setIsOpen(false)
-            onSuccess?.()
-          },
-        },
-      )
+    handleClose()
+  }
+
+  const handleDelete = async () => {
+    if (choiceId) {
+      await deleteChoice.mutateAsync(choiceId)
+      handleClose()
     }
   }
 
+  const handleClose = () => {
+    reset({ text: "", to_node_id: "" })
+    setRequiresState(null)
+    setSetsState(null)
+    setShowRequiresState(false)
+    setShowSetsState(false)
+    onOpenChange(false)
+  }
+
+  // Filter out the current node from targets
+  const targetNodes = availableNodes.filter((n) => n.id !== fromNodeId)
+
+  // Count conditions for display
+  const requiresStateCount = requiresState ? Object.keys(requiresState).length : 0
+  const setsStateCount = setsState ? Object.keys(setsState).length : 0
+
   return (
-    <DialogRoot
-      size={{ base: "sm", md: "lg" }}
-      placement="center"
-      open={isOpen}
-      onOpenChange={({ open }) => {
-        setIsOpen(open)
-        if (!open && !isEditMode) reset()
-      }}
-    >
-      <DialogTrigger asChild>
-        {trigger || <Button size="sm">Add Choice</Button>}
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>
-              {isEditMode ? "Edit Choice" : "Add Choice"}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <VStack gap={4} align="stretch">
-              <Text fontSize="sm" color="fg.muted">
-                {isEditMode
-                  ? "Modify the choice and its conditions"
-                  : "Create a branching path for your story"}
-              </Text>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? "Edit Choice" : "Create Choice"}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Modify the choice text and target node"
+              : "Add a new choice that leads to another node"}
+          </DialogDescription>
+        </DialogHeader>
 
-              <Field
-                required
-                invalid={!!errors.text}
-                errorText={errors.text?.message}
-                label="Choice Text"
-              >
-                <Input
-                  {...register("text", {
-                    required: "Choice text is required",
-                    maxLength: {
-                      value: 200,
-                      message: "Choice text must be 200 characters or less",
-                    },
-                  })}
-                  placeholder="Enter the dark forest"
-                  type="text"
-                />
-              </Field>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Choice Text */}
+          <div className="space-y-2">
+            <Label htmlFor="text">Choice Text</Label>
+            <Input
+              id="text"
+              placeholder="What the player sees..."
+              {...register("text")}
+            />
+            {errors.text && (
+              <p className="text-destructive text-sm">{errors.text.message}</p>
+            )}
+          </div>
 
-              <Field
-                required
-                invalid={!!errors.to_node_id}
-                errorText={errors.to_node_id?.message}
-                label="Destination Node"
-              >
-                <NativeSelectRoot>
-                  <NativeSelectField
-                    {...register("to_node_id", {
-                      required: "Destination node is required",
-                    })}
-                    placeholder="Select destination node"
-                  >
-                    <option value="">Select destination node</option>
-                    {availableNodes.map((node) => (
-                      <option key={node.id} value={node.id}>
-                        {node.title}
-                        {node.is_end_node && " (End)"}
-                      </option>
-                    ))}
-                  </NativeSelectField>
-                </NativeSelectRoot>
-              </Field>
-
-              <Field
-                invalid={!!errors.order}
-                errorText={errors.order?.message}
-                label="Display Order"
-                helperText="Lower numbers appear first"
-              >
-                <Input
-                  {...register("order", {
-                    valueAsNumber: true,
-                  })}
-                  type="number"
-                  placeholder="0"
-                />
-              </Field>
-
-              <Separator />
-
-              <Box>
-                <Text fontSize="sm" fontWeight="bold" mb={2}>
-                  Advanced: Conditional Logic
-                </Text>
-                <Text fontSize="xs" color="fg.muted" mb={4}>
-                  Control when this choice appears and what state changes it
-                  makes
-                </Text>
-
-                <VStack gap={4} align="stretch">
-                  <Controller
-                    control={control}
-                    name="requires_state"
-                    render={({ field }) => (
-                      <StateConditionEditor
-                        label="Show this choice only if:"
-                        value={field.value ?? null}
-                        onChange={field.onChange}
-                        schema={schemaData?.data}
-                        mode="requires"
-                      />
-                    )}
-                  />
-
-                  <Controller
-                    control={control}
-                    name="sets_state"
-                    render={({ field }) => (
-                      <StateConditionEditor
-                        label="When chosen, set state:"
-                        value={field.value ?? null}
-                        onChange={field.onChange}
-                        schema={schemaData?.data}
-                        mode="sets"
-                      />
-                    )}
-                  />
-                </VStack>
-              </Box>
-            </VStack>
-          </DialogBody>
-
-          <DialogFooter gap={2}>
-            <DialogActionTrigger asChild>
-              <Button
-                variant="subtle"
-                colorPalette="gray"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-            </DialogActionTrigger>
-            <Button
-              variant="solid"
-              colorPalette="blue"
-              type="submit"
-              disabled={!isValid}
-              loading={
-                isSubmitting ||
-                createMutation.isPending ||
-                updateMutation.isPending
-              }
+          {/* Target Node */}
+          <div className="space-y-2">
+            <Label htmlFor="to_node_id">Target Node</Label>
+            <Select
+              value={selectedTargetId}
+              onValueChange={(val) => setValue("to_node_id", val)}
             >
-              {isEditMode ? "Update Choice" : "Create Choice"}
+              <SelectTrigger>
+                <SelectValue placeholder="Select target node" />
+              </SelectTrigger>
+              <SelectContent>
+                {targetNodes.map((node) => (
+                  <SelectItem key={node.id} value={node.id}>
+                    {node.title || "Untitled"}
+                    {node.is_end_node && " (End)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.to_node_id && (
+              <p className="text-destructive text-sm">
+                {errors.to_node_id.message}
+              </p>
+            )}
+          </div>
+
+          {/* Requires State Section */}
+          <Collapsible open={showRequiresState} onOpenChange={setShowRequiresState}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full justify-between"
+              >
+                Requires State ({requiresStateCount})
+                <span className="text-xs text-muted-foreground">
+                  {showRequiresState ? "Hide" : "Show"}
+                </span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <div className="p-3 bg-muted/50 rounded-md">
+                <StateConditionEditor
+                  value={requiresState}
+                  onChange={setRequiresState}
+                  label="Conditions for this choice to appear"
+                  mode="requires"
+                  schema={schema}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Sets State Section */}
+          <Collapsible open={showSetsState} onOpenChange={setShowSetsState}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full justify-between"
+              >
+                Sets State ({setsStateCount})
+                <span className="text-xs text-muted-foreground">
+                  {showSetsState ? "Hide" : "Show"}
+                </span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <div className="p-3 bg-muted/50 rounded-md">
+                <StateConditionEditor
+                  value={setsState}
+                  onChange={setSetsState}
+                  label="State changes when this choice is selected"
+                  mode="sets"
+                  schema={schema}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <DialogFooter className="gap-2">
+            {isEditing && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Choice</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this choice? This action
+                      cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <div className="flex-1" />
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? "Saving..."
+                : isEditing
+                  ? "Save Changes"
+                  : "Create Choice"}
             </Button>
           </DialogFooter>
         </form>
-        <DialogCloseTrigger />
       </DialogContent>
-    </DialogRoot>
+    </Dialog>
   )
 }
 

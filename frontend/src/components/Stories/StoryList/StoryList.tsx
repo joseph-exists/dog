@@ -1,13 +1,14 @@
-import {
-  Container,
-  EmptyState,
-  Flex,
-  Grid,
-  Heading,
-  Spinner,
-  VStack,
-} from "@chakra-ui/react"
-import { FiBook } from "react-icons/fi"
+/**
+ * StoryList - Main container for displaying user's stories
+ *
+ * Features:
+ * - Responsive grid layout (1-3 columns based on viewport)
+ * - Empty state when no stories exist
+ * - Loading and error states
+ * - "Create Story" button in header
+ */
+
+import { Loader2, BookOpen, AlertCircle } from "lucide-react"
 
 import { useStories } from "@/hooks/stories/useStories"
 import CreateStoryModal from "./CreateStoryModal"
@@ -18,80 +19,69 @@ const StoryList = () => {
 
   const stories = data?.data ?? []
 
+  // Loading state
   if (isLoading) {
     return (
-      <Container maxW="container.xl" py={8}>
-        <Flex justify="center" align="center" minH="400px">
-          <Spinner size="xl" colorPalette="blue" />
-        </Flex>
-      </Container>
+      <div className="container mx-auto max-w-7xl py-8">
+        <div className="flex min-h-[400px] items-center justify-center">
+          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        </div>
+      </div>
     )
   }
 
+  // Error state
   if (error) {
     return (
-      <Container maxW="container.xl" py={8}>
-        <EmptyState.Root>
-          <EmptyState.Content>
-            <EmptyState.Indicator>
-              <FiBook />
-            </EmptyState.Indicator>
-            <VStack textAlign="center">
-              <EmptyState.Title>Error Loading Stories</EmptyState.Title>
-              <EmptyState.Description>
-                {error.message || "Something went wrong. Please try again."}
-              </EmptyState.Description>
-            </VStack>
-          </EmptyState.Content>
-        </EmptyState.Root>
-      </Container>
+      <div className="container mx-auto max-w-7xl py-8">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="bg-destructive/10 mb-4 rounded-full p-4">
+            <AlertCircle className="text-destructive h-8 w-8" />
+          </div>
+          <h3 className="text-lg font-semibold">Error Loading Stories</h3>
+          <p className="text-muted-foreground">
+            {error.message || "Something went wrong. Please try again."}
+          </p>
+        </div>
+      </div>
     )
   }
 
+  // Empty state
   if (stories.length === 0) {
     return (
-      <Container maxW="container.xl" py={8}>
-        <Flex justify="space-between" align="center" mb={6}>
-          <Heading size="lg">My Stories</Heading>
+      <div className="container mx-auto max-w-7xl py-8">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">My Stories</h1>
           <CreateStoryModal />
-        </Flex>
-        <EmptyState.Root>
-          <EmptyState.Content>
-            <EmptyState.Indicator>
-              <FiBook />
-            </EmptyState.Indicator>
-            <VStack textAlign="center">
-              <EmptyState.Title>No Stories Yet</EmptyState.Title>
-              <EmptyState.Description>
-                Create your first interactive story and start crafting branching
-                adventures!
-              </EmptyState.Description>
-            </VStack>
-          </EmptyState.Content>
-        </EmptyState.Root>
-      </Container>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="bg-muted mb-4 rounded-full p-4">
+            <BookOpen className="text-muted-foreground h-8 w-8" />
+          </div>
+          <h3 className="text-lg font-semibold">No Stories Yet</h3>
+          <p className="text-muted-foreground max-w-md">
+            Create your first interactive story and start crafting branching
+            adventures!
+          </p>
+        </div>
+      </div>
     )
   }
 
+  // Stories grid
   return (
-    <Container maxW="container.xl" py={8}>
-      <Flex justify="space-between" align="center" mb={6}>
-        <Heading size="lg">My Stories</Heading>
+    <div className="container mx-auto max-w-7xl py-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">My Stories</h1>
         <CreateStoryModal />
-      </Flex>
-      <Grid
-        templateColumns={{
-          base: "1fr",
-          md: "repeat(2, 1fr)",
-          lg: "repeat(3, 1fr)",
-        }}
-        gap={6}
-      >
+      </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {stories.map((story) => (
           <StoryCard key={story.id} story={story} />
         ))}
-      </Grid>
-    </Container>
+      </div>
+    </div>
   )
 }
 

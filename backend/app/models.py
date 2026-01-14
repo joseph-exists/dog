@@ -2327,6 +2327,69 @@ class AvailableAgentsPublic(SQLModel):
     data: list[AvailableAgent]
     count: int
 
+ # ═══════════════════════════════════════════════════════════════════════════════
+ # Agent Configuration Models
+ # ═══════════════════════════════════════════════════════════════════════════════
+
+class AgentConfigBase(SQLModel):
+     """Base properties shared by all agent config representations."""
+     name: str = Field(max_length=100, description="Display name")
+     slug: str = Field(max_length=50, description="Unique identifier/registry key")
+     description: str | None = Field(default=None, max_length=500)
+     model_name: str = Field(default="openai:gpt-4o-mini")
+     system_prompt: str | None = None
+
+     # JSON configuration fields
+     tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
+     deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
+     agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
+
+     # Behavior flags
+     is_enabled: bool = Field(default=True)
+     scope: str = Field(default="personal")  # "personal" | "system"
+     participation_mode: str = Field(default="on_mention")  # "always" | "on_mention" | "manual"
+
+
+class AgentConfigCreate(AgentConfigBase):
+     pass
+
+
+class AgentConfigUpdate(SQLModel):
+     name: str | None = None
+     description: str | None = None
+     model_name: str | None = None
+     system_prompt: str | None = None
+     tool_config: dict | None = None
+     deps_config: dict | None = None
+     agent_metadata: dict | None = None
+     is_enabled: bool | None = None
+     participation_mode: str | None = None
+
+
+class AgentConfig(AgentConfigBase, table=True):
+     __tablename__ = "agent_configs"
+
+     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+     owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+     created_at: datetime = Field(default_factory=datetime.now)
+     updated_at: datetime | None = Field(default=None, sa_column_kwargs={"onupdate": datetime.now})
+     version: int = Field(default=1)
+
+     # Relationships
+     # owner: "User" = Relationship(back_populates="agent_configs")
+
+
+class AgentConfigPublic(AgentConfigBase):
+     id: uuid.UUID
+     owner_id: uuid.UUID | None
+     created_at: datetime
+     updated_at: datetime | None
+     version: int
+
+
+class AgentConfigsPublic(SQLModel):
+     data: list[AgentConfigPublic]
+     count: int
 
 Story.state_variables = Relationship(
     back_populates="story",
@@ -2413,4 +2476,10 @@ TraitConflictGroupMember.trait = Relationship(back_populates="conflict_membershi
 # Also add to Trait model:
 Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(
     back_populates="trait"
+)
+
+ # User → AgentConfig relationship
+User.agent_configs = Relationship(
+     back_populates="owner",
+     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
 )

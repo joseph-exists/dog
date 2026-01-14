@@ -2,21 +2,12 @@
  * Room List Route
  *
  * Displays all rooms accessible to the current user.
- * Allows navigation to individual room views.
- *
- * Phase 3 Alpha - Tasks 2, 7
+ * Uses RoomList component with RoomCard grid layout.
  */
 
-import {
-  Container,
-  EmptyState,
-  Flex,
-  Heading,
-  Spinner,
-  VStack,
-} from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { AlertCircle, Loader2 } from "lucide-react"
 
 import AddRoom from "@/components/Rooms/AddRoom"
 import RoomList from "@/components/Rooms/RoomList"
@@ -29,7 +20,7 @@ export const Route = createFileRoute("/_layout/rooms")({
 function Rooms() {
   const navigate = useNavigate()
 
-  // Fetch rooms using RoomService
+  // Fetch rooms using RoomService (returns RoomViewModel[] directly)
   const {
     data: rooms,
     isLoading,
@@ -39,55 +30,54 @@ function Rooms() {
     queryFn: () => RoomService.listRooms(),
   })
 
-  // Handle room selection
+  // Handle room selection - navigate to room detail view
   const handleRoomSelect = (roomId: string) => {
-    navigate({ to: `/room/${roomId}` })
+    navigate({ to: "/room/$roomId", params: { roomId } })
   }
 
   // Loading state
   if (isLoading) {
     return (
-      <Container maxW="full">
-        <Flex justify="center" align="center" minH="50vh">
-          <Spinner size="xl" />
-        </Flex>
-      </Container>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
   // Error state
   if (error) {
     return (
-      <Container maxW="full">
-        <EmptyState.Root>
-          <EmptyState.Content>
-            <VStack textAlign="center">
-              <EmptyState.Title>Error loading rooms</EmptyState.Title>
-              <EmptyState.Description>
-                {error instanceof Error
-                  ? error.message
-                  : "Unknown error occurred"}
-              </EmptyState.Description>
-            </VStack>
-          </EmptyState.Content>
-        </EmptyState.Root>
-      </Container>
+      <div className="flex flex-col items-center justify-center text-center py-12">
+        <div className="rounded-full bg-destructive/10 p-4 mb-4">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        <h3 className="text-lg font-semibold">Error loading rooms</h3>
+        <p className="text-muted-foreground">
+          {error instanceof Error ? error.message : "Unknown error occurred"}
+        </p>
+      </div>
     )
   }
 
-  // Room list display
   return (
-    <Container maxW="full">
-      <Flex justify="space-between" align="center" mb={6}>
-        <Heading size="lg">Rooms</Heading>
+    <div className="flex flex-col gap-6">
+      {/* Header with title and add button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Rooms</h1>
+          <p className="text-muted-foreground">
+            Collaborative spaces for conversations
+          </p>
+        </div>
         <AddRoom />
-      </Flex>
+      </div>
 
+      {/* Room list with card grid */}
       <RoomList
         rooms={rooms || []}
         onRoomSelect={handleRoomSelect}
         isLoading={isLoading}
       />
-    </Container>
+    </div>
   )
 }

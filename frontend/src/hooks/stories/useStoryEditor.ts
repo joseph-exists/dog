@@ -1,10 +1,10 @@
+import { useQuery } from "@tanstack/react-query"
 import {
   type NodeChoicePublic,
   StoriesService,
   type StoryNodePublic,
   StorynodesService,
 } from "@/client"
-import { useQuery } from "@tanstack/react-query"
 
 interface UseStoryEditorOptions {
   storyId: string

@@ -120,7 +120,6 @@ docker compose exec backend bash  # Access backend container
 - Component organization by feature in `components/` directory
 - Custom hooks for API interactions in `hooks/`
 - TanStack Router for client-side routing
-- Chakra UI theming in `theme.tsx`
 
 ## Testing
 

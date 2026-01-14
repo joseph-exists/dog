@@ -1,38 +1,32 @@
+/**
+ * AddParticipantDialog Component
+ *
+ * Dialog for adding an agent to the room.
+ * Fetches available agents from the agent registry API.
+ */
+
+import { useQuery } from "@tanstack/react-query"
+import { Loader2, Plus } from "lucide-react"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { FaPlus } from "react-icons/fa"
 
+import { AgentsService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
+import { Button } from "@/components/ui/button"
 import {
-  Button,
-  DialogActionTrigger,
-  DialogTitle,
-  NativeSelectField,
-  NativeSelectRoot,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
-import {
-  DialogBody,
-  DialogCloseTrigger,
+  Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogRoot,
+  DialogTitle,
   DialogTrigger,
-} from "../ui/dialog"
-import { Field } from "../ui/field"
-
-// Available agents from backend
-const AVAILABLE_AGENTS = [
-  { value: "StoryAdvisor", label: "Story Advisor" },
-  { value: "SymbolWeaver", label: "Symbol Weaver" },
-  { value: "CharacterForge", label: "Character Forge" },
-  { value: "PlotTwistArchitect", label: "Plot Twist Architect" },
-  { value: "DialogueCoach", label: "Dialogue Coach" },
-]
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import useCustomToast from "@/hooks/useCustomToast"
+import { cn } from "@/lib/utils"
+import { handleError } from "@/utils"
 
 interface AddParticipantForm {
   participant_type: "agent" | "user"
@@ -41,16 +35,28 @@ interface AddParticipantForm {
 
 interface AddParticipantDialogProps {
   roomId: string
-  currentParticipants: string[] // Array of participant IDs already in room
+  currentParticipants: string[]
   onAdd: (participantId: string, type: "user" | "agent") => Promise<void>
 }
 
-const AddParticipantDialog = ({
+export default function AddParticipantDialog({
   currentParticipants,
   onAdd,
-}: AddParticipantDialogProps) => {
+}: AddParticipantDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { showSuccessToast } = useCustomToast()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  // Fetch available agents from the registry API
+  const {
+    data: agentsData,
+    isLoading: isLoadingAgents,
+    error: agentsError,
+  } = useQuery({
+    queryKey: ["agents", "available"],
+    queryFn: () => AgentsService.getAvailableAgents(),
+    // Only fetch when dialog is open to avoid unnecessary requests
+    enabled: isOpen,
+  })
 
   const {
     register,
@@ -65,10 +71,14 @@ const AddParticipantDialog = ({
     },
   })
 
-  // Filter out agents already in the room
-  const availableAgents = AVAILABLE_AGENTS.filter(
-    (agent) => !currentParticipants.includes(agent.value),
-  )
+  // Transform API response to match component needs and filter out already-added agents
+  const availableAgents = (agentsData?.data ?? [])
+    .filter((agent) => !currentParticipants.includes(agent.id))
+    .map((agent) => ({
+      value: agent.id,
+      label: agent.name,
+      description: agent.description,
+    }))
 
   const onSubmit: SubmitHandler<AddParticipantForm> = async (data) => {
     try {
@@ -77,20 +87,15 @@ const AddParticipantDialog = ({
       reset()
       setIsOpen(false)
     } catch (err) {
-      handleError(err as ApiError)
+      handleError.call(showErrorToast, err as ApiError)
     }
   }
 
   return (
-    <DialogRoot
-      size={{ base: "xs", md: "md" }}
-      placement="center"
-      open={isOpen}
-      onOpenChange={({ open }) => setIsOpen(open)}
-    >
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
-          <FaPlus fontSize="12px" />
+          <Plus className="h-4 w-4" />
           Add Participant
         </Button>
       </DialogTrigger>
@@ -98,69 +103,92 @@ const AddParticipantDialog = ({
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>Add Participant to Room</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <Text mb={4}>
+            <DialogDescription>
               Select an agent to add to this collaborative room.
-            </Text>
-            <VStack gap={4}>
-              <Field
-                required
-                invalid={!!errors.participant_id}
-                errorText={errors.participant_id?.message}
-                label="Agent"
-              >
-                <NativeSelectRoot>
-                  <NativeSelectField
-                    {...register("participant_id", {
-                      required: "Please select an agent",
-                    })}
-                    placeholder="Select an agent"
-                  >
-                    <option value="" disabled>
-                      Select an agent
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-4">
+            {/* Loading state */}
+            {isLoadingAgents && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">
+                  Loading agents...
+                </span>
+              </div>
+            )}
+
+            {/* Error state */}
+            {agentsError && (
+              <p className="text-sm text-destructive">
+                Failed to load available agents. Please try again.
+              </p>
+            )}
+
+            {/* Agent selection */}
+            {!isLoadingAgents && !agentsError && (
+              <div className="space-y-2">
+                <Label htmlFor="participant_id">
+                  Agent <span className="text-destructive">*</span>
+                </Label>
+                <select
+                  id="participant_id"
+                  {...register("participant_id", {
+                    required: "Please select an agent",
+                  })}
+                  className={cn(
+                    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    errors.participant_id && "border-destructive",
+                  )}
+                >
+                  <option value="" disabled>
+                    Select an agent
+                  </option>
+                  {availableAgents.map((agent) => (
+                    <option key={agent.value} value={agent.value}>
+                      {agent.label}
                     </option>
-                    {availableAgents.map((agent) => (
-                      <option key={agent.value} value={agent.value}>
-                        {agent.label}
-                      </option>
-                    ))}
-                  </NativeSelectField>
-                </NativeSelectRoot>
-              </Field>
+                  ))}
+                </select>
+                {errors.participant_id && (
+                  <p className="text-sm text-destructive">
+                    {errors.participant_id.message}
+                  </p>
+                )}
+              </div>
+            )}
 
-              {availableAgents.length === 0 && (
-                <Text fontSize="sm" color="gray.500">
-                  All available agents are already in this room.
-                </Text>
-              )}
-            </VStack>
-          </DialogBody>
+            {/* No agents available message */}
+            {!isLoadingAgents && !agentsError && availableAgents.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                All available agents are already in this room.
+              </p>
+            )}
+          </div>
 
-          <DialogFooter gap={2}>
-            <DialogActionTrigger asChild>
-              <Button
-                variant="subtle"
-                colorPalette="gray"
-                disabled={isSubmitting}
-              >
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isSubmitting}>
                 Cancel
               </Button>
-            </DialogActionTrigger>
+            </DialogClose>
             <Button
-              variant="solid"
               type="submit"
-              disabled={!isValid || availableAgents.length === 0}
-              loading={isSubmitting}
+              disabled={
+                !isValid ||
+                availableAgents.length === 0 ||
+                isSubmitting ||
+                isLoadingAgents ||
+                !!agentsError
+              }
             >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Add Agent
             </Button>
           </DialogFooter>
         </form>
-        <DialogCloseTrigger />
       </DialogContent>
-    </DialogRoot>
+    </Dialog>
   )
 }
-
-export default AddParticipantDialog

@@ -1,3 +1,3 @@
-export { default as StateSchemaDrawer } from "./StateSchemaDrawer"
 export { default as StateSchemaEditor } from "./StateSchemaEditor"
-export { default as StateVariableModal } from "./StateVariableModal"
+export { default as StateVariableDialog } from "./StateVariableDialog"
+export { default as StateSchemaSheet } from "./StateSchemaSheet"

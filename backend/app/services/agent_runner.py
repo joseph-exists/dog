@@ -20,21 +20,36 @@ import logging
 import uuid
 from typing import Any
 
+from pydantic_ai import Agent
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.agent_registry import get_agent, is_agent_registered
-from app.agents.story_advisor import run_story_advisor
+from app.agents.agent_registry import get_agent as legacy_get_agent
+from app.agents.agent_registry import is_agent_registered
+from app.agents.character_forge import run_character_forge
 from app.agents.dialogue_coach import run_dialogue_coach
 from app.agents.plot_twist_architect import run_plot_twist_architect
-from app.agents.character_forge import run_character_forge
+from app.agents.story_advisor import run_story_advisor
 from app.agents.symbol_weaver import run_symbol_weaver
 from app.models import RoomParticipant
+from app.services.agent_registry_service import agent_registry_service
 from app.services.context_provider import build_room_context
 from app.services.event_emitter import emit_event, publish_agent_token
 
 logger = logging.getLogger(__name__)
 
+async def get_agent_instance(session: AsyncSession, slug: str) -> Agent[Any, Any] | None:
+     """Get agent instance, with fallback to legacy registry during transition."""
+     # Try new registry first
+     agent = agent_registry_service.get_agent(session, slug)
+     if agent:
+         return agent
+
+     # Fallback to legacy registry
+     try:
+         return legacy_get_agent(slug)
+     except KeyError:
+         return None
 
 async def run_agent_for_room(
     *,
@@ -118,7 +133,7 @@ async def run_agent_for_room(
         else:
             # Fallback for any unhandled agent
             logger.warning(f"Agent {agent_name} has no specific run function, using generic path")
-            agent = get_agent(agent_name)
+            agent = get_agent_instance(agent_name)
             result = await agent.run(trigger_message)
             response_content = result.output
 
@@ -298,7 +313,7 @@ async def run_agent_for_room_streaming(
         else:
             # Generic agent streaming
             # NOTE: stream_text() yields CUMULATIVE text (full message so far), not deltas
-            agent = get_agent(agent_name)
+            agent = get_agent_instance(agent_name)
             prev_len = 0
             async with agent.run_stream(trigger_message) as result:
                 async for chunk in result.stream_text():

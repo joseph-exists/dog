@@ -1,29 +1,41 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Container,
-  Flex,
-  HStack,
-  Heading,
-  Separator,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
-import DOMPurify from "dompurify"
-import { useMemo, useState } from "react"
-import { FaArrowLeft, FaArrowRight, FaUndo } from "react-icons/fa"
+/**
+ * StoryPreview - Interactive story player for testing
+ *
+ * Features:
+ * - State management (currentNodeId, playerState, history)
+ * - Content rendering (HTML sanitized, Text plain, JSON formatted)
+ * - Choice display filtered by requires_state conditions
+ * - State mutations via sets_state on choice selection
+ * - Navigation controls (undo with state restoration, restart)
+ * - Collapsible debug panel (state, history, available choices)
+ *
+ * @see STORIES_MIGRATION_TASKS.md Phase 9
+ */
 
-import type {
-  ContentFormat,
-  NodeChoicePublic,
-  StoryNodePublic,
-  StoryPublic,
-} from "@/client"
+import { useState, useMemo } from "react"
+import DOMPurify from "dompurify"
 import {
-  applySetsState,
+  ArrowLeft,
+  Play,
+  RotateCcw,
+  ChevronRight,
+  Bug,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react"
+import type { NodeChoicePublic, StoryNodePublic, StoryPublic } from "@/client"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
   evaluateRequiresState,
+  applySetsState,
   type StateConditions,
   type StateMutations,
 } from "@/utils/stateConditions"
@@ -41,63 +53,19 @@ interface HistoryEntry {
   choiceText?: string
 }
 
-// Helper function to render content based on format
-const renderContent = (node: StoryNodePublic) => {
-  const format: ContentFormat = (node.content_format || "text") as ContentFormat
+/**
+ * Renders node content based on format with appropriate styling
+ */
+function renderContent(node: StoryNodePublic) {
+  const format = node.content_format || "text"
   const content = node.content || ""
 
   switch (format) {
     case "html":
       return (
-        <Box
-          className="story-content"
+        <div
+          className="prose prose-lg dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
-          fontSize="lg"
-          lineHeight="tall"
-          css={{
-            // Apply same styling as CSS for consistency
-            "& p": { margin: "0.5em 0" },
-            "& h1": {
-              fontSize: "2em",
-              fontWeight: "bold",
-              margin: "0.75em 0 0.5em",
-            },
-            "& h2": {
-              fontSize: "1.5em",
-              fontWeight: "bold",
-              margin: "0.75em 0 0.5em",
-            },
-            "& h3": {
-              fontSize: "1.25em",
-              fontWeight: "bold",
-              margin: "0.75em 0 0.5em",
-            },
-            "& ul, & ol": { paddingLeft: "1.5em", margin: "0.5em 0" },
-            "& code": {
-              backgroundColor: "rgba(128, 128, 128, 0.1)",
-              borderRadius: "3px",
-              padding: "0.2em 0.4em",
-              fontFamily: "monospace",
-            },
-            "& pre": {
-              backgroundColor: "rgba(128, 128, 128, 0.1)",
-              borderRadius: "5px",
-              padding: "1em",
-              overflow: "auto",
-            },
-            "& blockquote": {
-              borderLeft: "3px solid",
-              borderLeftColor: "var(--chakra-colors-border)",
-              paddingLeft: "1em",
-              fontStyle: "italic",
-              color: "var(--chakra-colors-fg-muted)",
-            },
-            "& a": {
-              color: "var(--chakra-colors-blue-500)",
-              textDecoration: "underline",
-            },
-            "& img": { maxWidth: "100%", borderRadius: "5px" },
-          }}
         />
       )
 
@@ -105,69 +73,86 @@ const renderContent = (node: StoryNodePublic) => {
       try {
         const parsed = JSON.parse(content)
         return (
-          <Box fontSize="lg" lineHeight="tall">
-            <Text fontStyle="italic" color="fg.muted" fontSize="sm" mb={2}>
-              [JSON Content - Rendering not yet implemented]
-            </Text>
-            <Text whiteSpace="pre-wrap" fontFamily="monospace" fontSize="sm">
+          <div>
+            <p className="text-sm text-muted-foreground italic mb-2">
+              [JSON Content]
+            </p>
+            <pre className="bg-muted p-4 rounded-md overflow-auto text-sm font-mono">
               {JSON.stringify(parsed, null, 2)}
-            </Text>
-          </Box>
+            </pre>
+          </div>
         )
       } catch {
         return (
-          <Text
-            whiteSpace="pre-wrap"
-            fontSize="lg"
-            lineHeight="tall"
-            color="red.500"
-          >
+          <p className="text-destructive whitespace-pre-wrap">
             [Invalid JSON content]
-          </Text>
+          </p>
         )
       }
+
     default:
       return (
-        <Text whiteSpace="pre-wrap" fontSize="lg" lineHeight="tall">
-          {content}
-        </Text>
+        <p className="text-lg leading-relaxed whitespace-pre-wrap">
+          {content || "(No content)"}
+        </p>
       )
   }
 }
 
-const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
+const StoryPreview = ({
+  story,
+  nodes,
+  choices,
+  onExit,
+}: StoryPreviewProps) => {
   // Find the start node
-  const startNode = nodes.find((n) => n.is_start_node)
+  const startNode = useMemo(
+    () => nodes.find((n) => n.is_start_node),
+    [nodes]
+  )
 
-  // Initialize state
+  // Core state
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(
-    startNode?.id || null,
+    startNode?.id ?? null
   )
   const [playerState, setPlayerState] = useState<Record<string, unknown>>({})
   const [history, setHistory] = useState<HistoryEntry[]>([])
 
+  // Debug panel visibility
+  const [showDebugPanel, setShowDebugPanel] = useState(true)
+  const [expandedSections, setExpandedSections] = useState({
+    state: true,
+    history: true,
+    choices: true,
+  })
+
   // Get current node
-  const currentNode = nodes.find((n) => n.id === currentNodeId)
+  const currentNode = useMemo(
+    () => nodes.find((n) => n.id === currentNodeId),
+    [nodes, currentNodeId]
+  )
 
-  // Get available choices for current node
+  // Get all choices for current node
+  const allChoicesForNode = useMemo(
+    () => choices.filter((c) => c.from_node_id === currentNodeId),
+    [choices, currentNodeId]
+  )
+
+  // Filter choices by requires_state conditions
   const availableChoices = useMemo(() => {
-    if (!currentNodeId) return []
-
-    const nodeChoices = choices.filter((c) => c.from_node_id === currentNodeId)
-
-    // Filter by requires_state using the evaluator
-    return nodeChoices.filter((choice) => {
-      return evaluateRequiresState(
+    return allChoicesForNode.filter((choice) =>
+      evaluateRequiresState(
         choice.requires_state as StateConditions | null,
-        playerState,
+        playerState
       )
-    })
-  }, [currentNodeId, choices, playerState])
+    )
+  }, [allChoicesForNode, playerState])
 
-  const handleChoiceClick = (choice: NodeChoicePublic) => {
-    if (!currentNode) return
+  // Handle choice selection
+  const handleChoice = (choice: NodeChoicePublic) => {
+    if (!currentNode || !choice.to_node_id) return
 
-    // Save to history
+    // Save current state to history before transitioning
     setHistory((prev) => [
       ...prev,
       {
@@ -177,10 +162,10 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
       },
     ])
 
-    // Apply state changes using the evaluator
+    // Apply state mutations if any
     if (choice.sets_state) {
       setPlayerState((prev) =>
-        applySetsState(choice.sets_state as StateMutations, prev),
+        applySetsState(choice.sets_state as StateMutations, prev)
       )
     }
 
@@ -188,6 +173,7 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
     setCurrentNodeId(choice.to_node_id)
   }
 
+  // Handle undo - restores both node AND state
   const handleUndo = () => {
     if (history.length === 0) return
 
@@ -197,136 +183,128 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
     setHistory((prev) => prev.slice(0, -1))
   }
 
+  // Handle restart - resets everything
   const handleRestart = () => {
-    setCurrentNodeId(startNode?.id || null)
-    setPlayerState({})
     setHistory([])
+    setPlayerState({})
+    setCurrentNodeId(startNode?.id ?? null)
   }
 
-  if (!startNode) {
-    return (
-      <Container maxW="container.md" py={8}>
-        <Card.Root>
-          <Card.Body>
-            <VStack gap={4}>
-              <Text color="red.500">
-                No start node found. Please set a start node to preview.
-              </Text>
-              <Button onClick={onExit}>
-                <FaArrowLeft />
-                Back to Editor
-              </Button>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
-      </Container>
-    )
+  // Toggle debug section
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }))
   }
 
-  if (!currentNode) {
-    return (
-      <Container maxW="container.md" py={8}>
-        <Card.Root>
-          <Card.Body>
-            <VStack gap={4}>
-              <Text color="red.500">Node not found.</Text>
-              <Button onClick={handleRestart}>Restart</Button>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
-      </Container>
-    )
-  }
-
-  const isEndNode = currentNode.is_end_node || availableChoices.length === 0
+  // Determine if at end
+  const isEndNode = currentNode?.is_end_node || availableChoices.length === 0
 
   return (
-    <Box minH="100vh" bg="bg.subtle">
+    <div className="flex h-screen flex-col bg-muted/30">
       {/* Header */}
-      <Box borderBottomWidth="1px" borderColor="border" bg="bg">
-        <Container maxW="container.xl" py={4}>
-          <Flex justify="space-between" align="center">
-            <HStack gap={4}>
-              <Badge colorPalette="blue">Preview Mode</Badge>
-              <Heading size="md">{story.title}</Heading>
-            </HStack>
-            <HStack gap={2}>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleUndo}
-                disabled={history.length === 0}
-              >
-                <FaUndo />
-                Undo
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleRestart}>
-                Restart
-              </Button>
-              <Button size="sm" onClick={onExit}>
-                <FaArrowLeft />
-                Exit Preview
-              </Button>
-            </HStack>
-          </Flex>
-        </Container>
-      </Box>
+      <header className="border-border bg-background flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center gap-4">
+          <Button size="sm" variant="ghost" onClick={onExit}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Exit Preview
+          </Button>
+          <div>
+            <h1 className="text-lg font-semibold">{story.title}</h1>
+            <Badge variant="secondary" className="text-xs">
+              Preview Mode
+            </Badge>
+          </div>
+        </div>
 
-      <Container maxW="container.xl" py={8}>
-        <Flex gap={6} direction={{ base: "column", lg: "row" }}>
-          {/* Main Story Panel */}
-          <Box flex="1">
-            <Card.Root>
-              <Card.Header>
-                <Flex justify="space-between" align="center">
-                  <Heading size="lg">{currentNode.title}</Heading>
-                  {isEndNode && (
-                    <Badge colorPalette="green" size="lg">
-                      The End
-                    </Badge>
-                  )}
-                </Flex>
-              </Card.Header>
-              <Card.Body>
-                <VStack align="stretch" gap={6}>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleUndo}
+            disabled={history.length === 0}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Undo
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleRestart}>
+            <Play className="mr-2 h-4 w-4" />
+            Restart
+          </Button>
+          <Button
+            size="sm"
+            variant={showDebugPanel ? "default" : "outline"}
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+          >
+            <Bug className="h-4 w-4" />
+          </Button>
+        </div>
+      </header>
+
+      {/* Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main Story Content */}
+        <main className="flex-1 overflow-y-auto p-8">
+          <div className="mx-auto max-w-2xl">
+            {!startNode ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <p className="text-destructive font-medium">
+                    No start node found
+                  </p>
+                  <p className="text-muted-foreground mt-2 text-sm">
+                    Add a node marked as "Start" to begin the story
+                  </p>
+                </CardContent>
+              </Card>
+            ) : !currentNode ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <p className="text-destructive font-medium">Node not found</p>
+                  <Button className="mt-4" onClick={handleRestart}>
+                    Restart
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-2xl">{currentNode.title}</CardTitle>
+                    {isEndNode && (
+                      <Badge className="bg-green-600">The End</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
                   {/* Node Content */}
                   {renderContent(currentNode)}
 
-                  {/* Choices */}
+                  {/* Choices Section */}
                   {!isEndNode && availableChoices.length > 0 && (
                     <>
                       <Separator />
-                      <Box>
-                        <Text
-                          fontSize="sm"
-                          fontWeight="bold"
-                          color="fg.muted"
-                          mb={3}
-                        >
+                      <div>
+                        <h3 className="text-muted-foreground text-sm font-medium uppercase mb-3">
                           What do you do?
-                        </Text>
-                        <VStack align="stretch" gap={3}>
+                        </h3>
+                        <div className="space-y-3">
                           {availableChoices
                             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                             .map((choice) => (
-                              <Button
+                              <button
                                 key={choice.id}
-                                onClick={() => handleChoiceClick(choice)}
-                                size="lg"
-                                variant="outline"
-                                justifyContent="space-between"
-                                h="auto"
-                                py={4}
-                                px={6}
+                                type="button"
+                                onClick={() => handleChoice(choice)}
+                                className="hover:bg-muted border-border bg-background flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors"
                               >
-                                <Text textAlign="left" flex="1">
-                                  {choice.text}
-                                </Text>
-                                <FaArrowRight />
-                              </Button>
+                                <span>{choice.text}</span>
+                                <ChevronRight className="text-muted-foreground h-5 w-5 shrink-0" />
+                              </button>
                             ))}
-                        </VStack>
-                      </Box>
+                        </div>
+                      </div>
                     </>
                   )}
 
@@ -334,109 +312,178 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
                   {isEndNode && (
                     <>
                       <Separator />
-                      <VStack gap={3}>
-                        <Text fontSize="lg" fontWeight="bold" color="fg.muted">
+                      <div className="text-center space-y-3">
+                        <p className="text-lg font-medium text-muted-foreground">
                           You've reached an ending!
-                        </Text>
-                        <Button onClick={handleRestart} colorPalette="blue">
+                        </p>
+                        <Button onClick={handleRestart}>
+                          <Play className="mr-2 h-4 w-4" />
                           Play Again
                         </Button>
-                      </VStack>
+                      </div>
                     </>
                   )}
-                </VStack>
-              </Card.Body>
-            </Card.Root>
-          </Box>
 
-          {/* Debug Panel */}
-          <Box width={{ base: "full", lg: "300px" }}>
-            <VStack align="stretch" gap={4}>
-              {/* Player State */}
-              <Card.Root size="sm">
-                <Card.Header>
-                  <Heading size="sm">Player State</Heading>
-                </Card.Header>
-                <Card.Body>
+                  {/* Dead End Warning */}
+                  {!currentNode.is_end_node && availableChoices.length === 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
+                      <p className="text-amber-700 dark:text-amber-400 text-sm">
+                        No choices available from this node (dead end or conditions not met)
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </main>
+
+        {/* Debug Panel */}
+        {showDebugPanel && (
+          <aside className="bg-background border-border w-80 overflow-y-auto border-l p-4 space-y-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Bug className="h-4 w-4" />
+              Debug Panel
+            </h3>
+
+            {/* Player State */}
+            <Collapsible
+              open={expandedSections.state}
+              onOpenChange={() => toggleSection("state")}
+            >
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between">
+                  <span>Player State ({Object.keys(playerState).length})</span>
+                  {expandedSections.state ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="bg-muted rounded-md p-3 mt-2 text-xs">
                   {Object.keys(playerState).length === 0 ? (
-                    <Text fontSize="xs" color="fg.muted">
-                      No state set yet
-                    </Text>
+                    <span className="text-muted-foreground">No state set yet</span>
                   ) : (
-                    <VStack align="stretch" gap={2}>
+                    <div className="space-y-2">
                       {Object.entries(playerState).map(([key, value]) => (
-                        <Box key={key}>
-                          <Text fontSize="xs" fontWeight="bold">
-                            {key}:
-                          </Text>
-                          <Text fontSize="xs" color="fg.muted">
+                        <div key={key}>
+                          <span className="font-semibold">{key}:</span>{" "}
+                          <span className="text-muted-foreground">
                             {JSON.stringify(value)}
-                          </Text>
-                        </Box>
+                          </span>
+                        </div>
                       ))}
-                    </VStack>
+                    </div>
                   )}
-                </Card.Body>
-              </Card.Root>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
-              {/* Choice History */}
-              <Card.Root size="sm">
-                <Card.Header>
-                  <Heading size="sm">Choice History</Heading>
-                </Card.Header>
-                <Card.Body>
-                  {history.length === 0 ? (
-                    <Text fontSize="xs" color="fg.muted">
-                      No choices made yet
-                    </Text>
+            {/* Choice History */}
+            <Collapsible
+              open={expandedSections.history}
+              onOpenChange={() => toggleSection("history")}
+            >
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between">
+                  <span>Choice History ({history.length})</span>
+                  {expandedSections.history ? (
+                    <ChevronUp className="h-4 w-4" />
                   ) : (
-                    <VStack align="stretch" gap={2}>
-                      {history.map((entry, index) => (
-                        <Box key={index}>
-                          <Text fontSize="xs" fontWeight="bold">
-                            {index + 1}. {entry.choiceText}
-                          </Text>
-                        </Box>
-                      ))}
-                    </VStack>
+                    <ChevronDown className="h-4 w-4" />
                   )}
-                </Card.Body>
-              </Card.Root>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="bg-muted rounded-md p-3 mt-2 text-xs max-h-40 overflow-y-auto">
+                  {history.length === 0 ? (
+                    <span className="text-muted-foreground">No choices made yet</span>
+                  ) : (
+                    <div className="space-y-1">
+                      {history.map((entry, index) => (
+                        <div key={index} className="truncate">
+                          <span className="text-muted-foreground">{index + 1}.</span>{" "}
+                          {entry.choiceText}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
-              {/* Available Choices Debug */}
-              <Card.Root size="sm">
-                <Card.Header>
-                  <Heading size="sm">Available Choices</Heading>
-                </Card.Header>
-                <Card.Body>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="xs" color="fg.muted">
-                      {availableChoices.length} choice
-                      {availableChoices.length !== 1 ? "s" : ""} available
-                    </Text>
-                    {availableChoices.map((choice) => (
-                      <Box key={choice.id}>
-                        <Text fontSize="xs">{choice.text}</Text>
-                        {choice.requires_state && (
-                          <Text fontSize="2xs" color="orange.500">
-                            Requires: {JSON.stringify(choice.requires_state)}
-                          </Text>
-                        )}
-                        {choice.sets_state && (
-                          <Text fontSize="2xs" color="blue.500">
-                            Sets: {JSON.stringify(choice.sets_state)}
-                          </Text>
-                        )}
-                      </Box>
-                    ))}
-                  </VStack>
-                </Card.Body>
-              </Card.Root>
-            </VStack>
-          </Box>
-        </Flex>
-      </Container>
-    </Box>
+            {/* Available Choices */}
+            <Collapsible
+              open={expandedSections.choices}
+              onOpenChange={() => toggleSection("choices")}
+            >
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between">
+                  <span>
+                    Choices ({availableChoices.length}/{allChoicesForNode.length})
+                  </span>
+                  {expandedSections.choices ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="bg-muted rounded-md p-3 mt-2 text-xs max-h-60 overflow-y-auto space-y-3">
+                  {allChoicesForNode.length === 0 ? (
+                    <span className="text-muted-foreground">No choices from this node</span>
+                  ) : (
+                    allChoicesForNode.map((choice) => {
+                      const isAvailable = availableChoices.includes(choice)
+                      return (
+                        <div
+                          key={choice.id}
+                          className={`space-y-1 ${!isAvailable ? "opacity-50" : ""}`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className={isAvailable ? "" : "line-through"}>
+                              {choice.text}
+                            </span>
+                            {!isAvailable && (
+                              <Badge variant="outline" className="text-[10px] shrink-0">
+                                Blocked
+                              </Badge>
+                            )}
+                          </div>
+                          {choice.requires_state && (
+                            <div className="text-amber-600 dark:text-amber-400 break-all">
+                              <span className="font-semibold">Requires:</span>{" "}
+                              {JSON.stringify(choice.requires_state)}
+                            </div>
+                          )}
+                          {choice.sets_state && (
+                            <div className="text-blue-600 dark:text-blue-400 break-all">
+                              <span className="font-semibold">Sets:</span>{" "}
+                              {JSON.stringify(choice.sets_state)}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Current Node Info */}
+            <div className="border-t pt-4">
+              <p className="text-xs text-muted-foreground mb-1">Current Node:</p>
+              <code className="text-xs bg-muted px-2 py-1 rounded block truncate">
+                {currentNode?.title || "None"}
+              </code>
+            </div>
+          </aside>
+        )}
+      </div>
+    </div>
   )
 }
 

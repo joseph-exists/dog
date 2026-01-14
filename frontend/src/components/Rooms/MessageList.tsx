@@ -6,16 +6,15 @@
  * - Auto-scroll to bottom on new messages
  * - "Load More" button for pagination
  * - Empty state handling
- * - Phase 4: Real-time streaming message display
- * - Phase 5: Message filtering (active/inactive, pinned, sender type)
- * - Phase 5: Pinned messages section at top
- *
- * Phase 3 Alpha - Task 10 | Phase 5 - Message Management
+ * - Real-time streaming message display
+ * - Message filtering (active/inactive, pinned, sender type)
+ * - Pinned messages section at top
  */
 
-import type { MessageViewModel, RoomViewModel } from "@/services/roomService"
-import { Box, Button, EmptyState, Spinner, VStack } from "@chakra-ui/react"
+import { Loader2, MessageSquare } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
+import type { MessageViewModel } from "@/services/roomService"
 import Message from "./Message"
 import MessageFilters, {
   type MessageFilters as FilterState,
@@ -29,10 +28,9 @@ interface MessageListProps {
   onLoadMore: () => Promise<void>
   isLoadingMore: boolean
   isLoading?: boolean
-  // Phase 4: WebSocket streaming message (passed from parent to avoid multiple connections)
   streamingMessage: { agent_name: string; content: string } | null
-  // Phase 5: Message management callbacks
-  room?: RoomViewModel
+  /** Whether current user is the room owner (grants full message permissions) */
+  isRoomOwner?: boolean
   onEditMessage?: (message: MessageViewModel) => void
   onPinMessage?: (messageId: string) => void
   onUnpinMessage?: (messageId: string) => void
@@ -40,7 +38,7 @@ interface MessageListProps {
   onDeleteMessage?: (messageId: string) => void
 }
 
-const MessageList = ({
+export default function MessageList({
   roomId,
   messages,
   hasMore,
@@ -48,23 +46,22 @@ const MessageList = ({
   isLoadingMore,
   isLoading = false,
   streamingMessage,
-  room,
+  isRoomOwner = false,
   onEditMessage,
   onPinMessage,
   onUnpinMessage,
   onToggleContext,
   onDeleteMessage,
-}: MessageListProps) => {
+}: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Phase 5: Filter state
+  // Filter state
   const [filters, setFilters] = useState<FilterState>({
     activeForContext: null,
     isPinned: null,
     senderType: "all",
   })
 
-  // Phase 5: Filter update handler
   const updateFilter = useCallback(
     <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
       setFilters((prev) => ({ ...prev, [key]: value }))
@@ -72,7 +69,6 @@ const MessageList = ({
     [],
   )
 
-  // Phase 5: Clear filters handler
   const clearFilters = useCallback(() => {
     setFilters({
       activeForContext: null,
@@ -81,24 +77,19 @@ const MessageList = ({
     })
   }, [])
 
-  // Phase 5: Apply filters to messages (client-side)
+  // Apply filters to messages (client-side)
   const filteredMessages = useCallback(() => {
     return messages.filter((msg) => {
-      // Note: These properties will come from backend once types are updated
-      // For now, we'll use any type assertions where needed
-
       // Filter by active/inactive status
       if (filters.activeForContext !== null) {
-        const msgActive = (msg as any).active_for_context ?? false
-        if (msgActive !== filters.activeForContext) {
+        if (msg.active_for_context !== filters.activeForContext) {
           return false
         }
       }
 
       // Filter by pinned status
       if (filters.isPinned !== null) {
-        const msgPinned = (msg as any).is_pinned ?? false
-        if (msgPinned !== filters.isPinned) {
+        if (msg.is_pinned !== filters.isPinned) {
           return false
         }
       }
@@ -114,71 +105,66 @@ const MessageList = ({
     })
   }, [messages, filters])
 
-  // Phase 5: Get pinned messages for top section
+  // Get pinned messages for top section
   const pinnedMessages = useCallback(() => {
-    return filteredMessages().filter((msg) => (msg as any).is_pinned === true)
+    return filteredMessages().filter((msg) => msg.is_pinned)
   }, [filteredMessages])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages.length, streamingMessage])
+  }, [])
 
   // Loading state
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" h="full">
-        <Spinner size="lg" />
-      </Box>
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
-  // Get filtered and pinned messages
   const displayMessages = filteredMessages()
   const pinned = pinnedMessages()
 
   // Empty state (no messages at all)
   if (messages.length === 0 && !streamingMessage) {
     return (
-      <EmptyState.Root>
-        <EmptyState.Content>
-          <VStack textAlign="center">
-            <EmptyState.Title>No messages yet</EmptyState.Title>
-            <EmptyState.Description>
-              Start the conversation by sending a message below.
-            </EmptyState.Description>
-          </VStack>
-        </EmptyState.Content>
-      </EmptyState.Root>
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium">No messages yet</h3>
+        <p className="text-sm text-muted-foreground">
+          Start the conversation by sending a message below.
+        </p>
+      </div>
     )
   }
 
-  // Message list with filters and pinned section
   return (
-    <VStack align="stretch" gap={3} w="full">
-      {/* Phase 5: Filter controls */}
+    <div className="flex flex-col gap-3 w-full">
+      {/* Filter controls */}
       <MessageFilters
         filters={filters}
         onFilterChange={updateFilter}
         onClearFilters={clearFilters}
       />
 
-      {/* Phase 5: Pinned messages section */}
+      {/* Pinned messages section */}
       {pinned.length > 0 && <PinnedMessagesSection messages={pinned} />}
 
       {/* Load More button at top */}
       {hasMore && (
-        <Box textAlign="center">
+        <div className="text-center">
           <Button
             size="sm"
             variant="outline"
             onClick={onLoadMore}
-            loading={isLoadingMore}
-            loadingText="Loading..."
+            disabled={isLoadingMore}
           >
-            Load More
+            {isLoadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isLoadingMore ? "Loading..." : "Load More"}
           </Button>
-        </Box>
+        </div>
       )}
 
       {/* Messages - reversed to show oldest first, newest last */}
@@ -186,50 +172,41 @@ const MessageList = ({
         displayMessages
           .slice()
           .reverse()
-          .map((message) => {
-            // Cast to any to access Phase 5 properties (will be properly typed after Task 4.2)
-            const msg = message as any
-            return (
-              <Message
-                key={message.message_id}
-                message={message}
-                room={room}
-                isPinned={msg.is_pinned ?? false}
-                isActiveForContext={msg.active_for_context ?? false}
-                editedAt={msg.edited_at ?? null}
-                onEdit={
-                  onEditMessage ? () => onEditMessage(message) : undefined
-                }
-                onPin={
-                  onPinMessage
-                    ? () => onPinMessage(message.message_id)
-                    : undefined
-                }
-                onUnpin={
-                  onUnpinMessage
-                    ? () => onUnpinMessage(message.message_id)
-                    : undefined
-                }
-                onToggleContext={
-                  onToggleContext
-                    ? (active) => onToggleContext(message.message_id, active)
-                    : undefined
-                }
-                onDelete={
-                  onDeleteMessage
-                    ? () => onDeleteMessage(message.message_id)
-                    : undefined
-                }
-              />
-            )
-          })
+          .map((message) => (
+            <Message
+              key={message.message_id}
+              message={message}
+              isRoomOwner={isRoomOwner}
+              onEdit={onEditMessage ? () => onEditMessage(message) : undefined}
+              onPin={
+                onPinMessage
+                  ? () => onPinMessage(message.message_id)
+                  : undefined
+              }
+              onUnpin={
+                onUnpinMessage
+                  ? () => onUnpinMessage(message.message_id)
+                  : undefined
+              }
+              onToggleContext={
+                onToggleContext
+                  ? (active) => onToggleContext(message.message_id, active)
+                  : undefined
+              }
+              onDelete={
+                onDeleteMessage
+                  ? () => onDeleteMessage(message.message_id)
+                  : undefined
+              }
+            />
+          ))
       ) : (
-        <Box textAlign="center" p={4} color="gray.500">
+        <div className="text-center p-4 text-muted-foreground">
           No messages match the current filters
-        </Box>
+        </div>
       )}
 
-      {/* Phase 4: Streaming message (optimistic UI) */}
+      {/* Streaming message (optimistic UI) */}
       {streamingMessage && (
         <Message
           key="streaming"
@@ -244,9 +221,11 @@ const MessageList = ({
             button_options: null,
             created_at: new Date(),
             is_own_message: false,
-            // Phase 5 fields
             is_pinned: false,
             active_for_context: false,
+            can_edit: false,
+            can_delete: false,
+            can_pin: false,
           }}
           isStreaming={true}
         />
@@ -254,8 +233,6 @@ const MessageList = ({
 
       {/* Auto-scroll anchor */}
       <div ref={messagesEndRef} />
-    </VStack>
+    </div>
   )
 }
-
-export default MessageList

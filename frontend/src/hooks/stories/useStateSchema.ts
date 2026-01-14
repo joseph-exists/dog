@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   StoriesService,
   type StoryStateVariableBase,
@@ -6,7 +7,6 @@ import {
 import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 // Query hook for fetching state schema variables
 export const useStateSchema = (storyId: string, version: number) => {
@@ -33,10 +33,11 @@ export const useValidateStateSchema = (storyId: string, version: number) => {
   })
 }
 
+const { showSuccessToast, showErrorToast } = useCustomToast()
+
 // Mutation hook for creating a state variable
 export const useCreateStateVariable = (storyId: string, version: number) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (data: StoryStateVariableBase) =>
@@ -52,7 +53,7 @@ export const useCreateStateVariable = (storyId: string, version: number) => {
       })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -83,7 +84,7 @@ export const useUpdateStateVariable = (storyId: string, version: number) => {
       })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -107,7 +108,7 @@ export const useDeleteStateVariable = (storyId: string, version: number) => {
       })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }

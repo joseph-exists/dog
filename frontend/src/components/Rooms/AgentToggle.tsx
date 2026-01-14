@@ -1,9 +1,14 @@
+/**
+ * AgentToggle Component
+ *
+ * Toggle switch for activating/deactivating agents in a room.
+ */
+
+import { useState } from "react"
 import type { ApiError } from "@/client/core/ApiError"
+import { Switch } from "@/components/ui/switch"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { Flex, Text } from "@chakra-ui/react"
-import { useState } from "react"
-import { Switch } from "../ui/switch"
 
 interface AgentToggleProps {
   agentId: string
@@ -13,15 +18,15 @@ interface AgentToggleProps {
   disabled?: boolean
 }
 
-const AgentToggle = ({
+export default function AgentToggle({
   agentId,
   agentName,
   isActive,
   onToggle,
   disabled = false,
-}: AgentToggleProps) => {
+}: AgentToggleProps) {
   const [isToggling, setIsToggling] = useState(false)
-  const { showSuccessToast } = useCustomToast()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleToggle = async (checked: boolean) => {
     setIsToggling(true)
@@ -29,23 +34,20 @@ const AgentToggle = ({
       await onToggle(agentId, checked)
       showSuccessToast(`${agentName} ${checked ? "activated" : "deactivated"}.`)
     } catch (err) {
-      handleError(err as ApiError)
+      handleError.call(showErrorToast, err as ApiError)
     } finally {
       setIsToggling(false)
     }
   }
 
   return (
-    <Flex align="center" justify="space-between" w="full">
-      <Text fontSize="sm">🤖 {agentName}</Text>
+    <div className="flex items-center justify-between w-full">
+      <span className="text-sm">🤖 {agentName}</span>
       <Switch
         checked={isActive}
-        onCheckedChange={(e: { checked: boolean }) => handleToggle(e.checked)}
+        onCheckedChange={handleToggle}
         disabled={disabled || isToggling}
-        size="sm"
       />
-    </Flex>
+    </div>
   )
 }
-
-export default AgentToggle

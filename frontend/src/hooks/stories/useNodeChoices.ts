@@ -1,14 +1,14 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   type NodeChoiceBase,
   type NodeChoiceCreate,
-  type NodeChoiceUpdate,
   NodeChoicesService,
+  type NodeChoiceUpdate,
   StorynodesService,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 // Query hook for fetching choices from a node
 export const useChoicesForNode = (nodeId: string | null) => {
@@ -24,6 +24,8 @@ export const useChoicesForNode = (nodeId: string | null) => {
   })
 }
 
+const { showErrorToast } = useCustomToast()
+
 // Mutation hook for creating a choice from a node (simpler API)
 export const useCreateChoiceFromNode = (nodeId: string) => {
   const queryClient = useQueryClient()
@@ -37,7 +39,7 @@ export const useCreateChoiceFromNode = (nodeId: string) => {
       queryClient.invalidateQueries({ queryKey: ["nodes", nodeId, "choices"] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -57,7 +59,7 @@ export const useCreateChoice = () => {
       })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -71,8 +73,10 @@ export const useUpdateChoice = (fromNodeId: string) => {
     mutationFn: ({
       choiceId,
       data,
-    }: { choiceId: string; data: NodeChoiceUpdate }) =>
-      NodeChoicesService.updateNodeChoice({ choiceId, requestBody: data }),
+    }: {
+      choiceId: string
+      data: NodeChoiceUpdate
+    }) => NodeChoicesService.updateNodeChoice({ choiceId, requestBody: data }),
     onSuccess: () => {
       showSuccessToast("Choice updated successfully!")
       queryClient.invalidateQueries({
@@ -80,7 +84,7 @@ export const useUpdateChoice = (fromNodeId: string) => {
       })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -102,7 +106,7 @@ export const useDeleteChoice = (fromNodeId: string | null) => {
       }
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }

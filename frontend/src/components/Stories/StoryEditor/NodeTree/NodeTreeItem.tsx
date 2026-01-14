@@ -1,100 +1,77 @@
-import { Box, HStack, Icon, Text } from "@chakra-ui/react"
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { FaFileAlt, FaFlag, FaGripVertical, FaTrophy } from "react-icons/fa"
+/**
+ * NodeTreeItem - Individual node in the tree view
+ *
+ * Features:
+ * - Indentation based on tree level
+ * - Expand/collapse toggle for nodes with children
+ * - Icons based on node type (start/end/regular)
+ * - Selection highlighting
+ */
 
+import { ChevronRight, ChevronDown, Flag, Trophy, FileText } from "lucide-react"
 import type { StoryNodePublic } from "@/client"
+import { cn } from "@/lib/utils"
+import type { TreeNode } from "./treeUtils"
 
 interface NodeTreeItemProps {
-  node: StoryNodePublic
+  treeNode: TreeNode
   isSelected: boolean
-  onClick: () => void
-  level: number
+  onSelect: (nodeId: string) => void
+  onToggle: (nodeId: string) => void
 }
 
 const NodeTreeItem = ({
-  node,
+  treeNode,
   isSelected,
-  onClick,
-  level,
+  onSelect,
+  onToggle,
 }: NodeTreeItemProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: node.id,
-  })
+  const { node, children, level, isExpanded } = treeNode
+  const hasChildren = children.length > 0
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  // Determine icon based on node type
-  const getIcon = () => {
-    if (node.is_start_node) return FaFlag
-    if (node.is_end_node) return FaTrophy
-    return FaFileAlt
-  }
-
-  // Determine icon color
-  const getIconColor = () => {
-    if (node.is_start_node) return "green.500"
-    if (node.is_end_node) return "red.500"
-    return "fg.muted"
+  const getNodeIcon = (n: StoryNodePublic) => {
+    if (n.is_start_node) return <Flag className="h-4 w-4 text-green-500" />
+    if (n.is_end_node) return <Trophy className="h-4 w-4 text-blue-500" />
+    return <FileText className="text-muted-foreground h-4 w-4" />
   }
 
   return (
-    <Box ref={setNodeRef} style={style}>
-      <Box
-        p={2}
-        borderRadius="md"
-        bg={isSelected ? "blue.subtle" : "transparent"}
-        _hover={{ bg: isSelected ? "blue.subtle" : "bg.muted" }}
-        cursor="pointer"
-        onClick={onClick}
-        transition="all 0.2s"
-        borderWidth="1px"
-        borderColor={isSelected ? "blue.solid" : "border"}
-        opacity={level > 0 ? 0.95 : 1}
-      >
-        <HStack gap={2} align="center">
-          {/* Drag Handle */}
-          <Icon
-            as={FaGripVertical}
-            color="fg.subtle"
-            boxSize={3}
-            cursor="grab"
-            _active={{ cursor: "grabbing" }}
-            {...attributes}
-            {...listeners}
-          />
+    <div
+      className={cn(
+        "flex items-center gap-1 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer",
+        isSelected
+          ? "bg-primary text-primary-foreground"
+          : "hover:bg-muted"
+      )}
+      style={{ paddingLeft: `${8 + level * 16}px` }}
+      onClick={() => onSelect(node.id)}
+    >
+      {/* Expand/Collapse Button */}
+      {hasChildren ? (
+        <button
+          type="button"
+          className="flex h-4 w-4 items-center justify-center rounded hover:bg-muted-foreground/20"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle(node.id)
+          }}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+        </button>
+      ) : (
+        <div className="w-4" /> // Spacer for alignment
+      )}
 
-          {/* Node Icon */}
-          <Icon
-            as={getIcon()}
-            color={getIconColor()}
-            boxSize={4}
-            flexShrink={0}
-          />
+      {/* Node Icon */}
+      {getNodeIcon(node)}
 
-          {/* Node Title */}
-          <Text
-            fontWeight={isSelected ? "bold" : "normal"}
-            fontSize="sm"
-            flex={1}
-            truncate
-          >
-            {node.title}
-          </Text>
-        </HStack>
-      </Box>
-    </Box>
+      {/* Node Title */}
+      <span className="truncate flex-1">{node.title || "Untitled"}</span>
+    </div>
   )
 }
 

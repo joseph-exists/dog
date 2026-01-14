@@ -80,6 +80,9 @@ from app.models import (
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
     UserUpdate,
+    AgentConfig,
+    AgentConfigUpdate,
+    AgentConfigCreate
 )
 from app.services.event_emitter import emit_event
 
@@ -2923,3 +2926,70 @@ def get_nearest_snapshot(
     )
 
     return session.exec(statement).first()
+
+def create_agent_config(
+     *,
+     session: Session,
+     agent_in: AgentConfigCreate,
+     owner_id: uuid.UUID | None = None,
+ ) -> AgentConfig:
+     """Create a new agent configuration."""
+     db_obj = AgentConfig.model_validate(agent_in, update={"owner_id": owner_id})
+     session.add(db_obj)
+     session.commit()
+     session.refresh(db_obj)
+     return db_obj
+
+
+def get_agent_config(*, session: Session, agent_id: uuid.UUID) -> AgentConfig | None:
+     return session.get(AgentConfig, agent_id)
+
+
+def get_agent_config_by_slug(*, session: Session, slug: str) -> AgentConfig | None:
+     statement = select(AgentConfig).where(AgentConfig.slug == slug)
+     return session.exec(statement).first()
+
+
+def get_agent_configs(
+     *,
+     session: Session,
+     skip: int = 0,
+     limit: int = 100,
+     enabled_only: bool = True,
+     scope: str | None = None,
+     owner_id: uuid.UUID | None = None,
+ ) -> tuple[list[AgentConfig], int]:
+     """Get paginated agent configs with filtering."""
+     filters = []
+     if enabled_only:
+         filters.append(AgentConfig.is_enabled == True)
+     if scope:
+         filters.append(AgentConfig.scope == scope)
+     if owner_id:
+         filters.append(AgentConfig.owner_id == owner_id)
+
+     count_stmt = select(func.count()).select_from(AgentConfig).where(*filters)
+     count = session.exec(count_stmt).one()
+
+     stmt = select(AgentConfig).where(*filters).offset(skip).limit(limit)
+     configs = session.exec(stmt).all()
+     return list(configs), count
+
+
+def update_agent_config(
+     *,
+     session: Session,
+     db_agent: AgentConfig,
+     agent_in: AgentConfigUpdate,
+ ) -> AgentConfig:
+     update_data = agent_in.model_dump(exclude_unset=True)
+     db_agent.sqlmodel_update(update_data)
+     db_agent.version += 1
+     session.add(db_agent)
+     session.commit()
+     session.refresh(db_agent)
+     return db_agent
+
+def delete_agent_config(*, session: Session, db_agent: AgentConfig) -> None:
+    session.delete(db_agent)
+    session.commit()

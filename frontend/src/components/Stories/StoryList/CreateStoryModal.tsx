@@ -1,28 +1,48 @@
-import {
-  Button,
-  DialogActionTrigger,
-  Input,
-  Text,
-  Textarea,
-  VStack,
-} from "@chakra-ui/react"
+/**
+ * CreateStoryModal - Dialog for creating new stories
+ *
+ * Uses react-hook-form for validation and the useCreateStory mutation.
+ * Opens as a Dialog with title and description fields.
+ */
+
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { FaPlus } from "react-icons/fa"
+import { Plus } from "lucide-react"
 
 import type { StoryCreate } from "@/client"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
-  DialogBody,
-  DialogCloseTrigger,
+  Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogRoot,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Field } from "@/components/ui/field"
 import { useCreateStory } from "@/hooks/stories/useStories"
+import { cn } from "@/lib/utils"
+
+/** Textarea with consistent styling */
+function Textarea({
+  className,
+  ...props
+}: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      className={cn(
+        "placeholder:text-muted-foreground border-input w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        "resize-none",
+        className
+      )}
+      {...props}
+    />
+  )
+}
 
 const CreateStoryModal = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -51,95 +71,92 @@ const CreateStoryModal = () => {
     })
   }
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (!open) reset()
+  }
+
   return (
-    <DialogRoot
-      size={{ base: "xs", md: "md" }}
-      placement="center"
-      open={isOpen}
-      onOpenChange={({ open }) => {
-        setIsOpen(open)
-        if (!open) reset()
-      }}
-    >
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button colorPalette="blue" my={4}>
-          <FaPlus fontSize="16px" />
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
           New Story
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>Create New Story</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <Text mb={4} color="fg.muted">
+            <DialogDescription>
               Begin crafting your adventure! Give your story a title and
               description to get started.
-            </Text>
-            <VStack gap={4}>
-              <Field
-                required
-                invalid={!!errors.title}
-                errorText={errors.title?.message}
-                label="Story Title"
-              >
-                <Input
-                  {...register("title", {
-                    required: "Story title is required",
-                    maxLength: {
-                      value: 100,
-                      message: "Title must be 100 characters or less",
-                    },
-                  })}
-                  placeholder="The Dark Forest Adventure"
-                  type="text"
-                />
-              </Field>
+            </DialogDescription>
+          </DialogHeader>
 
-              <Field
-                invalid={!!errors.description}
-                errorText={errors.description?.message}
-                label="Description (optional)"
-              >
-                <Textarea
-                  {...register("description", {
-                    maxLength: {
-                      value: 500,
-                      message: "Description must be 500 characters or less",
-                    },
-                  })}
-                  placeholder="A spooky journey through an enchanted forest filled with mysteries and choices..."
-                  rows={4}
-                />
-              </Field>
-            </VStack>
-          </DialogBody>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="title">
+                Story Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="title"
+                placeholder="The Dark Forest Adventure"
+                {...register("title", {
+                  required: "Story title is required",
+                  maxLength: {
+                    value: 100,
+                    message: "Title must be 100 characters or less",
+                  },
+                })}
+              />
+              {errors.title && (
+                <p className="text-destructive text-sm">
+                  {errors.title.message}
+                </p>
+              )}
+            </div>
 
-          <DialogFooter gap={2}>
-            <DialogActionTrigger asChild>
-              <Button
-                variant="subtle"
-                colorPalette="gray"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-            </DialogActionTrigger>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                rows={4}
+                placeholder="A spooky journey through an enchanted forest filled with mysteries and choices..."
+                {...register("description", {
+                  maxLength: {
+                    value: 500,
+                    message: "Description must be 500 characters or less",
+                  },
+                })}
+              />
+              {errors.description && (
+                <p className="text-destructive text-sm">
+                  {errors.description.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
             <Button
-              variant="solid"
-              colorPalette="blue"
-              type="submit"
-              disabled={!isValid}
-              loading={isSubmitting}
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              disabled={isSubmitting}
             >
-              Create Story
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!isValid || isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create Story"}
             </Button>
           </DialogFooter>
         </form>
-        <DialogCloseTrigger />
       </DialogContent>
-    </DialogRoot>
+    </Dialog>
   )
 }
 

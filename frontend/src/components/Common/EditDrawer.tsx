@@ -10,22 +10,20 @@
  * - Loading state during save
  * - Auto-reset on open
  * - Accessible (keyboard navigation, focus management)
- *
- * Phase 5 - Message Management Features
  */
 
-import { Field } from "@/components/ui/field"
 import {
-  DrawerBackdrop,
-  DrawerBody,
-  DrawerCloseTrigger,
+  Drawer,
+  DrawerClose,
   DrawerContent,
+  DrawerDescription,
   DrawerFooter,
   DrawerHeader,
-  DrawerRoot,
   DrawerTitle,
-} from "@chakra-ui/react"
-import { Button, Text, Textarea, VStack } from "@chakra-ui/react"
+} from "@/components/ui/drawer"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 
@@ -48,6 +46,29 @@ interface EditDrawerProps {
 
 interface EditForm {
   content: string
+}
+
+/**
+ * Textarea component with consistent styling
+ * Following the same pattern as shadcn Input component
+ */
+function Textarea({
+  className,
+  ...props
+}: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      data-slot="textarea"
+      className={cn(
+        "placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        "resize-none",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
 /**
@@ -111,83 +132,83 @@ const EditDrawer = ({
     try {
       await onSave(data.content)
       onClose()
-    } catch (error) {
+    } catch {
       // Error handling via mutation error handler
       // Don't close drawer on error
     }
   }
 
+  // Handle drawer open state change
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose()
+    }
+  }
+
   return (
-    <DrawerRoot
-      open={isOpen}
-      onOpenChange={(e) => !e.open && onClose()}
-      size="md"
-      placement="end"
-    >
-      <DrawerBackdrop />
-      <DrawerContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
+    <Drawer direction="right" open={isOpen} onOpenChange={handleOpenChange}>
+      <DrawerContent className="h-full w-full max-w-md">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
+            {description && (
+              <DrawerDescription>{description}</DrawerDescription>
+            )}
           </DrawerHeader>
-          <DrawerCloseTrigger />
 
-          <DrawerBody>
-            <VStack gap={4} align="stretch">
-              {description && (
-                <Text fontSize="sm" color="gray.600">
-                  {description}
-                </Text>
+          <div className="flex flex-1 flex-col gap-4 overflow-auto px-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="content">
+                Message Content <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="content"
+                rows={10}
+                placeholder="Edit message content..."
+                aria-invalid={!!errors.content}
+                {...register("content", {
+                  required: "Message content is required",
+                  minLength: {
+                    value: 1,
+                    message: "Message cannot be empty",
+                  },
+                  validate: (value) => {
+                    if (!value.trim()) {
+                      return "Message cannot be only whitespace"
+                    }
+                    return true
+                  },
+                })}
+              />
+              {errors.content && (
+                <p className="text-destructive text-sm">
+                  {errors.content.message}
+                </p>
               )}
+            </div>
 
-              <Field
-                label="Message Content"
-                required
-                invalid={!!errors.content}
-                errorText={errors.content?.message}
-              >
-                <Textarea
-                  {...register("content", {
-                    required: "Message content is required",
-                    minLength: {
-                      value: 1,
-                      message: "Message cannot be empty",
-                    },
-                    validate: (value) => {
-                      if (!value.trim()) {
-                        return "Message cannot be only whitespace"
-                      }
-                      return true
-                    },
-                  })}
-                  rows={10}
-                  placeholder="Edit message content..."
-                />
-              </Field>
+            <p className="text-muted-foreground text-xs">
+              Note: Editing does not change whether this message is included
+              in agent context.
+            </p>
+          </div>
 
-              <Text fontSize="xs" color="gray.500">
-                Note: Editing does not change whether this message is included
-                in agent context.
-              </Text>
-            </VStack>
-          </DrawerBody>
-
-          <DrawerFooter gap={2}>
-            <Button variant="outline" onClick={onClose} disabled={isSaving}>
-              Cancel
-            </Button>
+          <DrawerFooter className="flex-row justify-end gap-2">
+            <DrawerClose asChild>
+              <Button variant="outline" disabled={isSaving}>
+                Cancel
+              </Button>
+            </DrawerClose>
             <Button
               type="submit"
-              colorPalette="blue"
-              loading={isSaving}
-              disabled={!isDirty || !isValid}
+              disabled={!isDirty || !isValid || isSaving}
             >
-              Save Changes
+              {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DrawerFooter>
         </form>
       </DrawerContent>
-    </DrawerRoot>
+    </Drawer>
   )
 }
 

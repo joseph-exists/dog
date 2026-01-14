@@ -6,14 +6,10 @@
  * - Agents section with count
  * - Visual distinction (agent icon)
  * - Loading state handling
- *
- * Phase 3 Alpha - Task 18
  */
 
-import { Box, Flex, Spinner, Text, VStack } from "@chakra-ui/react"
-
+import { Loader2 } from "lucide-react"
 import type { ParticipantViewModel } from "@/services/roomService"
-
 import AgentToggle from "./AgentToggle"
 import RemoveParticipantButton from "./RemoveParticipantButton"
 
@@ -26,55 +22,39 @@ interface ParticipantListProps {
   onToggleAgent?: (agentId: string, activate: boolean) => Promise<void>
 }
 
-const ParticipantList = ({
+export default function ParticipantList({
   activeUsers,
   activeAgents,
   isLoading = false,
   currentUserRole,
   onRemoveParticipant,
   onToggleAgent,
-}: ParticipantListProps) => {
-  // Loading state
+}: ParticipantListProps) {
   if (isLoading) {
     return (
-      <Box
-        p={4}
-        borderTopWidth={1}
-        borderColor="gray.200"
-        _dark={{ borderColor: "gray.700" }}
-      >
-        <Spinner size="sm" />
-      </Box>
+      <div className="p-4 border-t border-border">
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </div>
     )
   }
 
   return (
-    <Box
-      p={4}
-      borderTopWidth={1}
-      borderColor="gray.200"
-      bg="white"
-      _dark={{ borderColor: "gray.700", bg: "gray.900" }}
-    >
-      <Text fontSize="sm" fontWeight="bold" mb={2}>
-        Participants
-      </Text>
+    <div className="p-4 border-t border-border bg-background">
+      <span className="text-sm font-bold mb-2 block">Participants</span>
 
-      <VStack align="start" gap={2} fontSize="sm">
+      <div className="flex flex-col items-start gap-2 text-sm">
         {/* Users section */}
         {activeUsers.length > 0 && (
           <>
-            <Text fontSize="xs" color="gray.600" _dark={{ color: "gray.400" }}>
+            <span className="text-xs text-muted-foreground">
               Users ({activeUsers.length})
-            </Text>
+            </span>
             {activeUsers.map((p) => (
-              <Flex
+              <div
                 key={p.participant_id}
-                justify="space-between"
-                w="full"
-                align="center"
+                className="flex justify-between w-full items-center"
               >
-                <Text>{p.display_name}</Text>
+                <span>{p.display_name}</span>
                 {currentUserRole === "owner" && onRemoveParticipant && (
                   <RemoveParticipantButton
                     participantId={p.participant_id}
@@ -83,7 +63,7 @@ const ParticipantList = ({
                     onRemove={onRemoveParticipant}
                   />
                 )}
-              </Flex>
+              </div>
             ))}
           </>
         )}
@@ -91,14 +71,9 @@ const ParticipantList = ({
         {/* Agents section */}
         {activeAgents.length > 0 && (
           <>
-            <Text
-              fontSize="xs"
-              color="gray.600"
-              _dark={{ color: "gray.400" }}
-              mt={2}
-            >
+            <span className="text-xs text-muted-foreground mt-2">
               Agents ({activeAgents.length})
-            </Text>
+            </span>
             {activeAgents.map((p) =>
               currentUserRole === "owner" && onToggleAgent ? (
                 <AgentToggle
@@ -109,9 +84,9 @@ const ParticipantList = ({
                   onToggle={onToggleAgent}
                 />
               ) : (
-                <Text key={p.participant_id} fontSize="sm">
+                <span key={p.participant_id} className="text-sm">
                   🤖 {p.display_name}
-                </Text>
+                </span>
               ),
             )}
           </>
@@ -119,13 +94,11 @@ const ParticipantList = ({
 
         {/* Empty state */}
         {activeUsers.length === 0 && activeAgents.length === 0 && (
-          <Text fontSize="xs" color="gray.500" _dark={{ color: "gray.500" }}>
+          <span className="text-xs text-muted-foreground">
             No active participants
-          </Text>
+          </span>
         )}
-      </VStack>
-    </Box>
+      </div>
+    </div>
   )
 }
-
-export default ParticipantList

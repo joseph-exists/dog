@@ -1,26 +1,30 @@
-import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
-import type { RoomViewModel } from "@/services/roomService"
-import { handleError } from "@/utils"
-import {
-  Button,
-  DialogActionTrigger,
-  DialogTitle,
-  Input,
-  VStack,
-} from "@chakra-ui/react"
+/**
+ * EditRoomDialog Component
+ *
+ * Dialog for editing room details, triggered from a dropdown menu.
+ */
+
+import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
+
+import type { ApiError } from "@/client/core/ApiError"
+import { Button } from "@/components/ui/button"
 import {
-  DialogBody,
-  DialogCloseTrigger,
+  Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogRoot,
-} from "../ui/dialog"
-import { Field } from "../ui/field"
-import { MenuItem } from "../ui/menu"
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import useCustomToast from "@/hooks/useCustomToast"
+import { cn } from "@/lib/utils"
+import type { RoomViewModel } from "@/services/roomService"
+import { handleError } from "@/utils"
 
 interface EditRoomForm {
   title: string
@@ -31,9 +35,12 @@ interface EditRoomDialogProps {
   onUpdate: (data: { title: string }) => Promise<void>
 }
 
-const EditRoomDialog = ({ room, onUpdate }: EditRoomDialogProps) => {
+export default function EditRoomDialog({
+  room,
+  onUpdate,
+}: EditRoomDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { showSuccessToast } = useCustomToast()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const {
     register,
@@ -53,85 +60,77 @@ const EditRoomDialog = ({ room, onUpdate }: EditRoomDialogProps) => {
       showSuccessToast("Room updated successfully.")
       setIsOpen(false)
     } catch (err) {
-      handleError(err as ApiError)
+      handleError.call(showErrorToast, err as ApiError)
     }
   }
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (!open) reset()
+  }
+
   return (
-    <DialogRoot
-      size={{ base: "xl", md: "md" }}
-      placement="center"
-      open={isOpen}
-      onOpenChange={({ open }) => {
-        setIsOpen(open)
-        if (!open) reset() // Reset form when closing
-      }}
-    >
-      {/* Trigger as MenuItem for ActionsMenu */}
-      <MenuItem
-        value="edit"
-        onClick={(e) => {
-          e.stopPropagation()
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      {/* Trigger as DropdownMenuItem for ActionsMenu */}
+      <DropdownMenuItem
+        onSelect={(e) => {
+          e.preventDefault()
           // Use setTimeout to allow menu to close before opening dialog
-          setTimeout(() => {
-            setIsOpen(true)
-          }, 0)
+          setTimeout(() => setIsOpen(true), 0)
         }}
       >
         Edit Room
-      </MenuItem>
+      </DropdownMenuItem>
 
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>Edit Room</DialogTitle>
           </DialogHeader>
-          <DialogBody>
-            <VStack gap={4}>
-              <Field
-                required
-                invalid={!!errors.title}
-                errorText={errors.title?.message}
-                label="Room Title"
-              >
-                <Input
-                  id="title"
-                  {...register("title", {
-                    required: "Room title is required",
-                    minLength: {
-                      value: 3,
-                      message: "Title must be at least 3 characters",
-                    },
-                    maxLength: {
-                      value: 100,
-                      message: "Title must be less than 100 characters",
-                    },
-                  })}
-                  placeholder="Room title"
-                  type="text"
-                />
-              </Field>
-            </VStack>
-          </DialogBody>
 
-          <DialogFooter gap={2}>
-            <DialogActionTrigger asChild>
-              <Button disabled={isSubmitting}>Cancel</Button>
-            </DialogActionTrigger>
-            <Button
-              variant="solid"
-              type="submit"
-              disabled={!isValid}
-              loading={isSubmitting}
-            >
+          <div className="flex flex-col gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">
+                Room Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="edit-title"
+                {...register("title", {
+                  required: "Room title is required",
+                  minLength: {
+                    value: 3,
+                    message: "Title must be at least 3 characters",
+                  },
+                  maxLength: {
+                    value: 100,
+                    message: "Title must be less than 100 characters",
+                  },
+                })}
+                placeholder="Room title"
+                type="text"
+                className={cn(errors.title && "border-destructive")}
+              />
+              {errors.title && (
+                <p className="text-sm text-destructive">
+                  {errors.title.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isSubmitting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>
         </form>
-        <DialogCloseTrigger />
       </DialogContent>
-    </DialogRoot>
+    </Dialog>
   )
 }
-
-export default EditRoomDialog

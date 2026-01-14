@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   type StoryNodeCreate,
   type StoryNodeUpdate,
@@ -6,7 +7,8 @@ import {
 import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+
+const { showErrorToast } = useCustomToast()
 
 // Mutation hook for creating a node
 export const useCreateNode = (storyId: string) => {
@@ -21,7 +23,7 @@ export const useCreateNode = (storyId: string) => {
       queryClient.invalidateQueries({ queryKey: ["stories", storyId, "nodes"] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -40,7 +42,7 @@ export const useUpdateNode = (storyId: string, nodeId: string) => {
       queryClient.invalidateQueries({ queryKey: ["nodes", nodeId] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }
@@ -58,7 +60,7 @@ export const useDeleteNode = (storyId: string) => {
       queryClient.invalidateQueries({ queryKey: ["stories", storyId, "nodes"] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 }

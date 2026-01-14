@@ -1,19 +1,25 @@
-import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
-import { Button } from "@chakra-ui/react"
+/**
+ * RemoveParticipantButton Component
+ *
+ * Confirmation dialog for removing a participant from the room.
+ */
+
+import { Loader2, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { FaTrash } from "react-icons/fa"
+
+import type { ApiError } from "@/client/core/ApiError"
+import { Button } from "@/components/ui/button"
 import {
-  DialogActionTrigger,
-  DialogBody,
-  DialogCloseTrigger,
+  Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogRoot,
   DialogTitle,
-} from "../ui/dialog"
+} from "@/components/ui/dialog"
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 
 interface RemoveParticipantButtonProps {
   participantId: string
@@ -22,15 +28,15 @@ interface RemoveParticipantButtonProps {
   onRemove: (participantId: string) => Promise<void>
 }
 
-const RemoveParticipantButton = ({
+export default function RemoveParticipantButton({
   participantId,
   participantName,
   participantType,
   onRemove,
-}: RemoveParticipantButtonProps) => {
+}: RemoveParticipantButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
-  const { showSuccessToast } = useCustomToast()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleRemove = async () => {
     setIsRemoving(true)
@@ -39,55 +45,47 @@ const RemoveParticipantButton = ({
       showSuccessToast(`${participantName} removed from room.`)
       setIsOpen(false)
     } catch (err) {
-      handleError(err as ApiError)
+      handleError.call(showErrorToast, err as ApiError)
     } finally {
       setIsRemoving(false)
     }
   }
 
   return (
-    <DialogRoot
-      size="sm"
-      open={isOpen}
-      onOpenChange={({ open }) => setIsOpen(open)}
-    >
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <Button
-        size="xs"
+        size="icon-sm"
         variant="ghost"
-        colorPalette="red"
+        className="text-destructive hover:text-destructive hover:bg-destructive/10"
         onClick={() => setIsOpen(true)}
       >
-        <FaTrash />
+        <Trash2 className="h-3 w-3" />
       </Button>
 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Remove Participant?</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to remove <strong>{participantName}</strong>{" "}
+            from this room?{" "}
+            {participantType === "agent" &&
+              "The agent will no longer respond to messages."}
+          </DialogDescription>
         </DialogHeader>
-        <DialogBody>
-          Are you sure you want to remove <strong>{participantName}</strong>{" "}
-          from this room?{" "}
-          {participantType === "agent" &&
-            "The agent will no longer respond to messages."}
-        </DialogBody>
-        <DialogFooter gap={2}>
-          <DialogActionTrigger asChild>
-            <Button variant="subtle" colorPalette="gray">
-              Cancel
-            </Button>
-          </DialogActionTrigger>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
           <Button
-            colorPalette="red"
+            variant="destructive"
             onClick={handleRemove}
-            loading={isRemoving}
+            disabled={isRemoving}
           >
+            {isRemoving && <Loader2 className="h-4 w-4 animate-spin" />}
             Remove
           </Button>
         </DialogFooter>
-        <DialogCloseTrigger />
       </DialogContent>
-    </DialogRoot>
+    </Dialog>
   )
 }
-
-export default RemoveParticipantButton

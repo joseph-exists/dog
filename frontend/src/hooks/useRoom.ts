@@ -22,6 +22,7 @@ import type {
   RoomViewModel,
 } from "@/services/roomService"
 import { handleError } from "@/utils"
+import useCustomToast from "@/hooks/useCustomToast"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import useAuth from "./useAuth"
@@ -33,6 +34,8 @@ export interface UseRoomOptions {
   autoScrollToBottom?: boolean
   onDeleteSuccess?: () => void // callback when room is deleted no crash-crash
 }
+
+const {showErrorToast } = useCustomToast()
 
 export interface UseRoomResult {
   // Room State
@@ -215,7 +218,7 @@ export function useRoom(
       queryClient.invalidateQueries({ queryKey: participantsQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -229,7 +232,7 @@ export function useRoom(
       queryClient.invalidateQueries({ queryKey: participantsQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -243,7 +246,7 @@ export function useRoom(
       queryClient.invalidateQueries({ queryKey: roomQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
   const deleteRoomMutation = useMutation({
@@ -260,7 +263,7 @@ export function useRoom(
       options?.onDeleteSuccess?.()
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 

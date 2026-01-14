@@ -1,32 +1,37 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMemo } from "react"
 import {
   type NodeChoicePublic,
   StoriesService,
   type StoryNodePublic,
-  type StoryPublic,
   StorynodesService,
+  type StoryPublic,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 import {
   type ValidationResult,
   validateStoryForPublish,
-} from "@/components/Stories/shared/storyValidation"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useMemo } from "react"
+} from "./storyValidation"
 
 interface UsePublishWorkflowOptions {
   storyId: string
 }
 
+const { showErrorToast } = useCustomToast()
+
 interface PublishWorkflowReturn {
   story: StoryPublic | undefined
   nodes: StoryNodePublic[]
   choices: NodeChoicePublic[]
+  // ValidationResult and validateStoryForPublish were imported from legacy hook on frontend.
+  // validation should use the correct API validation - we can use a hook to call it but not process on the frontend
   validation: ValidationResult
   isReady: boolean
   isLoading: boolean
   publish: () => void
+  publishAsync: () => Promise<StoryPublic>
   unpublish: () => void
   isPublishing: boolean
   isUnpublishing: boolean
@@ -113,7 +118,7 @@ export function usePublishWorkflow({
       queryClient.invalidateQueries({ queryKey: ["stories", storyId] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -128,7 +133,7 @@ export function usePublishWorkflow({
       queryClient.invalidateQueries({ queryKey: ["stories", storyId] })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -140,6 +145,7 @@ export function usePublishWorkflow({
     isReady,
     isLoading,
     publish: () => publishMutation.mutate(),
+    publishAsync: () => publishMutation.mutateAsync(),
     unpublish: () => unpublishMutation.mutate(),
     isPublishing: publishMutation.isPending,
     isUnpublishing: unpublishMutation.isPending,

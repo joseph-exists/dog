@@ -762,6 +762,190 @@ python main.py rooms list-messages abc123 --limit 10
 python main.py rooms list-messages abc123 --before "2024-01-01T12:00:00"
 ```
 
+## Agent Commands
+
+Manage agent configurations in the agent registry system. Supports full CRUD operations with tiered access control (personal vs system scope).
+
+### List Agents
+
+```bash
+python main.py agents list --scope system --limit 20
+```
+
+List all agent configurations. Users see system agents + their own personal agents. Admins see all.
+
+**Options:**
+- `--scope, -s TEXT` - Filter by scope: `system` or `personal`
+- `--limit INTEGER` - Max agents to list (default: 20)
+- `--skip INTEGER` - Pagination offset (default: 0)
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py agents list
+python main.py agents list --scope system
+python main.py agents list --scope personal --json
+```
+
+### List Available Agents
+
+```bash
+python main.py agents list-available
+```
+
+List agents available for room participation (enabled system agents only).
+
+**Options:**
+- `--json` - Output as JSON
+
+**Examples:**
+```bash
+python main.py agents list-available
+python main.py agents list-available --json
+```
+
+### Get Agent
+
+```bash
+python main.py agents get AGENT_ID
+```
+
+Get detailed agent configuration by UUID.
+
+**Arguments:**
+- `AGENT_ID` - The agent UUID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Example:**
+```bash
+python main.py agents get 550e8400-e29b-41d4-a716-446655440000
+```
+
+### Create Agent
+
+```bash
+python main.py agents create "Agent Name" agent-slug [OPTIONS]
+```
+
+Create a new agent configuration. Users can create personal agents. Only admins can create system agents.
+
+**Arguments:**
+- `NAME` - Display name for the agent
+- `SLUG` - Unique identifier/slug
+
+**Options:**
+- `--desc, -d TEXT` - Agent description
+- `--model, -m TEXT` - Model name (default: `openai:gpt-4o-mini`)
+- `--prompt, -p TEXT` - System prompt
+- `--scope, -s TEXT` - Scope: `personal` or `system` (default: personal)
+- `--mode TEXT` - Participation mode: `always`, `on_mention`, `manual` (default: on_mention)
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+# Create a personal agent
+python main.py agents create "My Helper" my-helper --desc "A helpful assistant"
+
+# Create with custom model and prompt
+python main.py agents create "Story Bot" story-bot \
+  --model openai:gpt-4o \
+  --prompt "You are a creative storytelling assistant..."
+
+# Create system agent (admin only)
+python main.py agents create "Global Advisor" global-advisor --scope system
+```
+
+### Update Agent
+
+```bash
+python main.py agents update AGENT_ID [OPTIONS]
+```
+
+Update an agent configuration. Only provide fields you want to change.
+
+**Arguments:**
+- `AGENT_ID` - The agent UUID to update
+
+**Options:**
+- `--name, -n TEXT` - New display name
+- `--desc, -d TEXT` - New description
+- `--model, -m TEXT` - New model name
+- `--prompt, -p TEXT` - New system prompt
+- `--mode TEXT` - New participation mode
+- `--enabled/--disabled` - Enable or disable the agent
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+# Update name and description
+python main.py agents update abc123 --name "Updated Name" --desc "New description"
+
+# Disable an agent
+python main.py agents update abc123 --disabled
+
+# Change model and prompt
+python main.py agents update abc123 --model openai:gpt-4o --prompt "New system prompt..."
+```
+
+### Delete Agent
+
+```bash
+python main.py agents delete AGENT_ID
+```
+
+Delete an agent configuration (with confirmation).
+
+**Arguments:**
+- `AGENT_ID` - The agent UUID to delete
+
+**Options:**
+- `--force, -f` - Skip confirmation prompt
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py agents delete abc123
+python main.py agents delete abc123 --force
+```
+
+### Enable Agent
+
+```bash
+python main.py agents enable AGENT_ID
+```
+
+Enable an agent (shortcut for `update --enabled`).
+
+**Arguments:**
+- `AGENT_ID` - The agent UUID
+
+**Example:**
+```bash
+python main.py agents enable abc123
+```
+
+### Disable Agent
+
+```bash
+python main.py agents disable AGENT_ID
+```
+
+Disable an agent (shortcut for `update --disabled`).
+
+**Arguments:**
+- `AGENT_ID` - The agent UUID
+
+**Example:**
+```bash
+python main.py agents disable abc123
+```
+
 ## User Commands
 
 Get information about the current user and their associated data.

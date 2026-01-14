@@ -34,7 +34,7 @@ import requests
 
 # Add auth_helper to path
 sys.path.append(str(Path(__file__).parent))
-from auth_helper import get_authenticated_session, AuthenticationError
+from auth_helper import AuthenticationError, get_authenticated_session
 
 # Configuration
 BASE_URL = "http://localhost:8000/api/v1"

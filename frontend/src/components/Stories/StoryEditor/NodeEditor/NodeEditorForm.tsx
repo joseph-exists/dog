@@ -1,258 +1,183 @@
-import type { ContentFormat, StoryNodePublic, StoryNodeUpdate } from "@/client"
-import RichTextEditor from "@/components/Stories/shared/RichTextEditor"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Field } from "@/components/ui/field"
+/**
+ * NodeEditorForm - Form for editing story node properties
+ *
+ * Features:
+ * - Title input with auto-save on blur
+ * - Content format selector
+ * - Content editor (RichTextEditor for HTML, textarea for others)
+ * - Start/End node checkboxes
+ */
+
+import { useState, useEffect } from "react"
+import type { ContentFormat, StoryNodePublic } from "@/client"
 import { useUpdateNode } from "@/hooks/stories/useStoryNodes"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
-  Box,
-  Button,
-  HStack,
-  Heading,
-  NativeSelectField,
-  NativeSelectRoot,
-  Separator,
-  Textarea,
-  VStack,
-} from "@chakra-ui/react"
-import { useEffect } from "react"
-import { Controller, useForm } from "react-hook-form"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import RichTextEditor from "../../shared/RichTextEditor"
 
 interface NodeEditorFormProps {
   node: StoryNodePublic
   storyId: string
 }
 
-interface NodeFormData {
-  title: string
-  content: string
-  content_format: ContentFormat
-  is_start_node: boolean
-  is_end_node: boolean
-}
-
 const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
-  const updateMutation = useUpdateNode(storyId, node.id)
+  const updateNode = useUpdateNode(storyId, node.id)
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    setValue,
-    control,
-    formState: { errors, isDirty, isSubmitting },
-  } = useForm<NodeFormData>({
-    mode: "onBlur",
-    defaultValues: {
-      title: node.title,
-      content: node.content || "",
-      content_format: node.content_format || "html",
-      is_start_node: node.is_start_node || false,
-      is_end_node: node.is_end_node || false,
-    },
-  })
-
-  const isStartNode = watch("is_start_node")
-  const isEndNode = watch("is_end_node")
-  const contentFormat = watch("content_format")
-  const currentContent = watch("content")
+  // Local state for form values
+  const [title, setTitle] = useState(node.title)
+  const [content, setContent] = useState(node.content || "")
+  const [contentFormat, setContentFormat] = useState<ContentFormat>(
+    node.content_format || "text"
+  )
+  const [isStartNode, setIsStartNode] = useState(node.is_start_node || false)
+  const [isEndNode, setIsEndNode] = useState(node.is_end_node || false)
 
   // Reset form when node changes
   useEffect(() => {
-    reset({
-      title: node.title,
-      content: node.content || "",
-      content_format: node.content_format || "html",
-      is_start_node: node.is_start_node || false,
-      is_end_node: node.is_end_node || false,
-    })
-  }, [
-    node.id,
-    node.title,
-    node.content,
-    node.content_format,
-    node.is_start_node,
-    node.is_end_node,
-    reset,
-  ])
+    setTitle(node.title)
+    setContent(node.content || "")
+    setContentFormat(node.content_format || "text")
+    setIsStartNode(node.is_start_node || false)
+    setIsEndNode(node.is_end_node || false)
+  }, [node])
 
-  const onSubmit = (data: NodeFormData) => {
-    const updateData: StoryNodeUpdate = {
-      title: data.title,
-      content: data.content,
-      content_format: data.content_format,
-      is_start_node: data.is_start_node,
-      is_end_node: data.is_end_node,
+  // Auto-save handlers
+  const handleTitleBlur = () => {
+    if (title !== node.title) {
+      updateNode.mutate({ title })
     }
+  }
 
-    updateMutation.mutate(updateData, {
-      onSuccess: () => {
-        reset(data) // Reset dirty state
-      },
+  const handleContentBlur = () => {
+    if (content !== node.content) {
+      updateNode.mutate({ content })
+    }
+  }
+
+  const handleContentFormatChange = (format: ContentFormat) => {
+    setContentFormat(format)
+    updateNode.mutate({ content_format: format })
+  }
+
+  const handleStartNodeChange = (checked: boolean) => {
+    setIsStartNode(checked)
+    if (checked) setIsEndNode(false)
+    updateNode.mutate({
+      is_start_node: checked,
+      is_end_node: checked ? false : isEndNode,
     })
   }
 
-  const handleFormatChange = (newFormat: ContentFormat) => {
-    if (currentContent && currentContent.length > 0) {
-      const confirmed = window.confirm(
-        "Changing format may affect how your content is displayed. Continue?",
-      )
-      if (!confirmed) return
-    }
-    setValue("content_format", newFormat, { shouldDirty: true })
+  const handleEndNodeChange = (checked: boolean) => {
+    setIsEndNode(checked)
+    if (checked) setIsStartNode(false)
+    updateNode.mutate({
+      is_end_node: checked,
+      is_start_node: checked ? false : isStartNode,
+    })
   }
 
   return (
-    <Box as="form" onSubmit={handleSubmit(onSubmit)}>
-      <VStack align="stretch" gap={6}>
-        {/* Title Field */}
-        <Field
-          label="Node Title"
-          required
-          invalid={!!errors.title}
-          errorText={errors.title?.message}
-        >
+    <div className="space-y-6">
+      {/* Title */}
+      <div className="space-y-2">
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={handleTitleBlur}
+          placeholder="Node title"
+        />
+      </div>
+
+      {/* Content Format */}
+      <div className="space-y-2">
+        <Label htmlFor="content_format">Content Format</Label>
+        <Select value={contentFormat} onValueChange={handleContentFormatChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select format" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="html">HTML (Rich Text)</SelectItem>
+            <SelectItem value="text">Plain Text</SelectItem>
+            <SelectItem value="markdown">Markdown</SelectItem>
+            <SelectItem value="json">JSON</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Content Editor */}
+      <div className="space-y-2">
+        <Label>Content</Label>
+        {contentFormat === "html" ? (
+          <RichTextEditor
+            content={content}
+            onChange={(html) => {
+              setContent(html)
+            }}
+          />
+        ) : (
           <Textarea
-            {...register("title", {
-              required: "Title is required",
-              maxLength: {
-                value: 200,
-                message: "Title must be 200 characters or less",
-              },
-            })}
-            placeholder="Enter node title..."
-            size="md"
-            rows={1}
-            resize="none"
-            fontSize="lg"
-            fontWeight="bold"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onBlur={handleContentBlur}
+            placeholder={
+              contentFormat === "json"
+                ? '{"key": "value"}'
+                : "Enter content..."
+            }
+            className="min-h-[300px] font-mono"
           />
-        </Field>
-
-        {/* Content Format Selector */}
-        <Field
-          label="Content Format"
-          helperText="Choose how content is stored and edited"
-        >
-          <Controller
-            name="content_format"
-            control={control}
-            render={({ field }) => (
-              <NativeSelectRoot size="md">
-                <NativeSelectField
-                  value={field.value}
-                  onChange={(e) =>
-                    handleFormatChange(e.target.value as ContentFormat)
-                  }
-                >
-                  <option value="html">Rich Text (HTML)</option>
-                  <option value="text">Plain Text</option>
-                  <option value="json">JSON (Advanced)</option>
-                </NativeSelectField>
-              </NativeSelectRoot>
-            )}
-          />
-        </Field>
-
-        {/* Node Type Flags */}
-        <Box>
-          <Heading size="sm" mb={3}>
-            Node Properties
-          </Heading>
-          <VStack align="stretch" gap={2}>
-            <Checkbox
-              checked={isStartNode}
-              onCheckedChange={(e) =>
-                setValue("is_start_node", !!e.checked, { shouldDirty: true })
-              }
+        )}
+        {contentFormat === "html" && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleContentBlur}
+              className="text-sm text-muted-foreground hover:text-foreground"
             >
-              Mark as Start Node (story entry point)
-            </Checkbox>
-            <Checkbox
-              checked={isEndNode}
-              onCheckedChange={(e) =>
-                setValue("is_end_node", !!e.checked, { shouldDirty: true })
-              }
-            >
-              Mark as End Node (story conclusion)
-            </Checkbox>
-          </VStack>
-        </Box>
+              {updateNode.isPending ? "Saving..." : "Save content"}
+            </button>
+          </div>
+        )}
+      </div>
 
-        <Separator />
-
-        {/* Content Field */}
-        <Field
-          label="Node Content"
-          required
-          invalid={!!errors.content}
-          errorText={errors.content?.message}
-          helperText={
-            contentFormat === "html"
-              ? "Use the toolbar to format your story text"
-              : contentFormat === "json"
-                ? "Enter valid JSON structure for programmatic content"
-                : "Plain text content for simple nodes"
-          }
-        >
-          <Controller
-            name="content"
-            control={control}
-            rules={{
-              required: "Content is required",
-              maxLength: {
-                value: 10000,
-                message: "Content must be 10000 characters or less",
-              },
-            }}
-            render={({ field }) => {
-              if (contentFormat === "html") {
-                return (
-                  <RichTextEditor
-                    content={field.value}
-                    onChange={field.onChange}
-                  />
-                )
-              }
-              if (contentFormat === "json") {
-                return (
-                  <Textarea
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder='{"type": "doc", "content": [...]}'
-                    minH="300px"
-                    resize="vertical"
-                    fontFamily="monospace"
-                    fontSize="sm"
-                  />
-                )
-              }
-              // TEXT format
-              return (
-                <Textarea
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Enter the story content for this node..."
-                  minH="300px"
-                  resize="vertical"
-                />
-              )
-            }}
+      {/* Node Type Checkboxes */}
+      <div className="space-y-3 pt-4 border-t border-border">
+        <Label className="text-sm font-medium">Node Type</Label>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="is_start_node"
+            checked={isStartNode}
+            onCheckedChange={handleStartNodeChange}
           />
-        </Field>
-        {/* Save Button */}
-        <HStack justify="flex-end">
-          <Button
-            type="submit"
-            colorPalette="blue"
-            disabled={!isDirty}
-            loading={isSubmitting || updateMutation.isPending}
-          >
-            Save Changes
-          </Button>
-        </HStack>
-      </VStack>
-    </Box>
+          <Label htmlFor="is_start_node" className="font-normal">
+            Start Node (entry point for the story)
+          </Label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="is_end_node"
+            checked={isEndNode}
+            onCheckedChange={handleEndNodeChange}
+          />
+          <Label htmlFor="is_end_node" className="font-normal">
+            End Node (story ending)
+          </Label>
+        </div>
+      </div>
+    </div>
   )
 }
 

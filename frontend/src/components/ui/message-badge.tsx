@@ -6,83 +6,65 @@
  * - pinned: Shows message is pinned
  * - active: Shows message is active for context
  * - inactive: Shows message is not in context
- *
- * Design System Component - Phase 5
  */
 
-import { Badge, type BadgeProps, Icon } from "@chakra-ui/react"
-import { FaCheckCircle, FaCircle, FaEdit, FaThumbtack } from "react-icons/fa"
+import { Pencil, Pin, CheckCircle, Circle } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export type MessageBadgeVariant = "edited" | "pinned" | "active" | "inactive"
 
-export interface MessageBadgeProps extends Omit<BadgeProps, "variant"> {
+export interface MessageBadgeProps {
   variant: MessageBadgeVariant
   timestamp?: string
+  className?: string
 }
 
 const badgeConfig: Record<
   MessageBadgeVariant,
-  { icon: any; colorScheme: string; label: string }
+  { icon: typeof Pencil; colorClass: string; label: string }
 > = {
   edited: {
-    icon: FaEdit,
-    colorScheme: "gray",
+    icon: Pencil,
+    colorClass: "bg-muted text-muted-foreground",
     label: "Edited",
   },
   pinned: {
-    icon: FaThumbtack,
-    colorScheme: "yellow",
+    icon: Pin,
+    colorClass: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     label: "Pinned",
   },
   active: {
-    icon: FaCheckCircle,
-    colorScheme: "green",
+    icon: CheckCircle,
+    colorClass: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     label: "Active for Context",
   },
   inactive: {
-    icon: FaCircle,
-    colorScheme: "gray",
+    icon: Circle,
+    colorClass: "bg-muted text-muted-foreground",
     label: "Inactive",
   },
 }
 
-/**
- * MessageBadge - Status indicator for messages
- *
- * @param variant - Badge type (edited, pinned, active, inactive)
- * @param timestamp - Optional timestamp to show in tooltip
- * @param props - Additional Badge props from Chakra UI
- *
- * @example
- * ```tsx
- * <MessageBadge variant="edited" timestamp={message.edited_at} />
- * <MessageBadge variant="pinned" />
- * ```
- */
-export const MessageBadge = ({
+export function MessageBadge({
   variant,
   timestamp,
-  ...props
-}: MessageBadgeProps) => {
+  className,
+}: MessageBadgeProps) {
   const config = badgeConfig[variant]
+  const Icon = config.icon
   const title = timestamp ? `${config.label} - ${timestamp}` : config.label
 
   return (
-    <Badge
-      colorPalette={config.colorScheme}
-      variant="subtle"
-      display="inline-flex"
-      alignItems="center"
-      gap={1}
-      fontSize="xs"
-      px={2}
-      py={0.5}
-      borderRadius="full"
+    <span
       title={title}
-      {...props}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+        config.colorClass,
+        className
+      )}
     >
-      <Icon as={config.icon} boxSize={3} />
+      <Icon className="h-3 w-3" />
       {config.label}
-    </Badge>
+    </span>
   )
 }

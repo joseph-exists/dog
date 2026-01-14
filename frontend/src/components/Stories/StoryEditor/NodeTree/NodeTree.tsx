@@ -1,39 +1,26 @@
-import {
-  Box,
-  EmptyState,
-  Flex,
-  Heading,
-  IconButton,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
-import {
-  DndContext,
-  type DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core"
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { useMemo, useState } from "react"
-import { FiChevronDown, FiChevronRight, FiFileText } from "react-icons/fi"
+/**
+ * NodeTree - Hierarchical tree view of story nodes
+ *
+ * Features:
+ * - Tree structure built from nodes/choices using adjacency map
+ * - Expandable/collapsible nodes
+ * - "Orphaned Nodes" section for unreachable nodes
+ * - "Create Node" button
+ * - Selection highlighting
+ */
 
+import { useState, useMemo } from "react"
+import { Plus, FileText, AlertTriangle } from "lucide-react"
 import type { NodeChoicePublic, StoryNodePublic } from "@/client"
-import CreateNodeModal from "../NodeEditor/CreateNodeModal"
+import { Button } from "@/components/ui/button"
 import NodeTreeItem from "./NodeTreeItem"
+import CreateNodeModal from "../NodeEditor/CreateNodeModal"
 import {
-  type TreeNode,
   buildNodeTree,
   flattenTree,
-  getOrphanedNodes,
   toggleNodeExpansion,
+  getOrphanedNodes,
+  type TreeNode,
 } from "./treeUtils"
 
 interface NodeTreeProps {
@@ -53,193 +40,109 @@ const NodeTree = ({
   storyId,
   storyVersion,
 }: NodeTreeProps) => {
-  const [tree, setTree] = useState<TreeNode | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // Build the tree structure whenever nodes or choices change
+  // Build initial tree from nodes and choices
+  const initialTree = useMemo(
+    () => buildNodeTree(nodes, choices),
+    [nodes, choices]
+  )
+
+  // Manage tree state for expand/collapse
+  const [tree, setTree] = useState<TreeNode | null>(initialTree)
+
+  // Update tree when nodes/choices change
   useMemo(() => {
-    const newTree = buildNodeTree(nodes, choices)
-    setTree(newTree)
+    setTree(buildNodeTree(nodes, choices))
   }, [nodes, choices])
 
-  // Get the flattened tree for rendering
+  // Flatten tree for rendering
   const flatNodes = useMemo(() => flattenTree(tree), [tree])
 
-  // Get orphaned nodes (not connected to start node)
+  // Find orphaned nodes
   const orphanedNodes = useMemo(
     () => getOrphanedNodes(nodes, tree),
-    [nodes, tree],
+    [nodes, tree]
   )
 
-  const hasStartNode = nodes.some((n) => n.is_start_node)
-
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  )
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (over && active.id !== over.id) {
-      const oldIndex = flatNodes.findIndex((n) => n.node.id === active.id)
-      const newIndex = flatNodes.findIndex((n) => n.node.id === over.id)
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        // For now, just reorder in the flat list
-        // In the future, you could update the backend with new order
-        const reordered = arrayMove(flatNodes, oldIndex, newIndex)
-        console.log(
-          "Reordered nodes:",
-          reordered.map((n) => n.node.title),
-        )
-      }
-    }
-  }
-
-  const handleToggleExpand = (nodeId: string) => {
-    setTree(toggleNodeExpansion(tree, nodeId))
-  }
-
-  if (nodes.length === 0) {
-    return (
-      <Box p={4}>
-        <EmptyState.Root size="sm">
-          <EmptyState.Content>
-            <EmptyState.Indicator>
-              <FiFileText />
-            </EmptyState.Indicator>
-            <VStack textAlign="center">
-              <EmptyState.Title fontSize="md">No Nodes Yet</EmptyState.Title>
-              <EmptyState.Description fontSize="sm">
-                Create your first node to start building your story
-              </EmptyState.Description>
-            </VStack>
-          </EmptyState.Content>
-        </EmptyState.Root>
-        <Box mt={4}>
-          <CreateNodeModal
-            storyId={storyId}
-            storyVersion={storyVersion}
-            onSuccess={onSelectNode}
-            existingStartNode={hasStartNode}
-          />
-        </Box>
-      </Box>
-    )
+  const handleToggle = (nodeId: string) => {
+    setTree((prev) => toggleNodeExpansion(prev, nodeId))
   }
 
   return (
-    <Box p={4}>
-      <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="sm">Story Flow</Heading>
-        <CreateNodeModal
-          storyId={storyId}
-          storyVersion={storyVersion}
-          onSuccess={onSelectNode}
-          existingStartNode={hasStartNode}
-        />
-      </Flex>
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="border-border flex items-center justify-between border-b p-3">
+        <h2 className="text-sm font-semibold">Nodes</h2>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0"
+          onClick={() => setShowCreateModal(true)}
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <VStack align="stretch" gap={1}>
-          {/* Hierarchical Tree */}
-          {tree && (
-            <>
-              <Text fontSize="xs" fontWeight="bold" color="fg.muted" mb={2}>
-                Story Tree
-              </Text>
-              <SortableContext
-                items={flatNodes.map((n) => n.node.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {flatNodes.map((treeNode) => (
-                  <Box key={treeNode.node.id}>
-                    <Flex align="center" gap={0}>
-                      {/* Indentation */}
-                      <Box width={`${treeNode.level * 20}px`} flexShrink={0}>
-                        {treeNode.level > 0 && (
-                          <Box
-                            ml={`${(treeNode.level - 1) * 20 + 10}px`}
-                            width="10px"
-                            height="20px"
-                            borderLeft="1px solid"
-                            borderBottom="1px solid"
-                            borderColor="border"
-                          />
-                        )}
-                      </Box>
+      {/* Node List */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {nodes.length === 0 ? (
+          <div className="text-muted-foreground py-8 text-center text-sm">
+            <FileText className="mx-auto mb-2 h-8 w-8 opacity-50" />
+            <p>No nodes yet</p>
+            <p className="text-xs">Create your first node to begin</p>
+          </div>
+        ) : (
+          <div className="space-y-0.5">
+            {/* Tree Nodes */}
+            {flatNodes.map((treeNode) => (
+              <NodeTreeItem
+                key={treeNode.node.id}
+                treeNode={treeNode}
+                isSelected={selectedNodeId === treeNode.node.id}
+                onSelect={onSelectNode}
+                onToggle={handleToggle}
+              />
+            ))}
 
-                      {/* Expand/Collapse Button */}
-                      {treeNode.children.length > 0 ? (
-                        <IconButton
-                          aria-label="Toggle expand"
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => handleToggleExpand(treeNode.node.id)}
-                          mr={1}
-                        >
-                          {treeNode.isExpanded ? (
-                            <FiChevronDown />
-                          ) : (
-                            <FiChevronRight />
-                          )}
-                        </IconButton>
-                      ) : (
-                        <Box width="24px" flexShrink={0} />
-                      )}
-
-                      {/* Node Item */}
-                      <Box flex={1}>
-                        <NodeTreeItem
-                          node={treeNode.node}
-                          isSelected={selectedNodeId === treeNode.node.id}
-                          onClick={() => onSelectNode(treeNode.node.id)}
-                          level={treeNode.level}
-                        />
-                      </Box>
-                    </Flex>
-                  </Box>
+            {/* Orphaned Nodes Section */}
+            {orphanedNodes.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>Orphaned Nodes ({orphanedNodes.length})</span>
+                </div>
+                {orphanedNodes.map((node) => (
+                  <button
+                    type="button"
+                    key={node.id}
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                      selectedNodeId === node.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-muted-foreground"
+                    }`}
+                    onClick={() => onSelectNode(node.id)}
+                  >
+                    <div className="w-4" />
+                    <FileText className="h-4 w-4 opacity-50" />
+                    <span className="truncate">{node.title || "Untitled"}</span>
+                  </button>
                 ))}
-              </SortableContext>
-            </>
-          )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-          {/* Orphaned Nodes Section */}
-          {orphanedNodes.length > 0 && (
-            <>
-              <Text
-                fontSize="xs"
-                fontWeight="bold"
-                color="orange.500"
-                mt={4}
-                mb={2}
-              >
-                Orphaned Nodes ({orphanedNodes.length})
-              </Text>
-              <Text fontSize="2xs" color="fg.muted" mb={2}>
-                These nodes are not connected to the story flow
-              </Text>
-              {orphanedNodes.map((node) => (
-                <NodeTreeItem
-                  key={node.id}
-                  node={node}
-                  isSelected={selectedNodeId === node.id}
-                  onClick={() => onSelectNode(node.id)}
-                  level={0}
-                />
-              ))}
-            </>
-          )}
-        </VStack>
-      </DndContext>
-    </Box>
+      {/* Create Node Modal */}
+      <CreateNodeModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        storyId={storyId}
+        storyVersion={storyVersion}
+        hasStartNode={nodes.some((n) => n.is_start_node)}
+      />
+    </div>
   )
 }
 

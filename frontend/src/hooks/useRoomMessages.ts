@@ -19,9 +19,13 @@ import type { ApiError } from "@/client"
 import { RoomService } from "@/services/roomService"
 import type { MessageViewModel } from "@/services/roomService"
 import { handleError } from "@/utils"
+import useCustomToast from "@/hooks/useCustomToast"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
 import useAuth from "./useAuth"
+// import { Flashlight } from "lucide-react"
+
+const { showErrorToast } = useCustomToast()
 
 export interface UseRoomMessagesOptions {
   enablePolling?: boolean
@@ -163,6 +167,9 @@ export function useRoomMessages(
           // Phase 5 fields
           is_pinned: false,
           active_for_context: false,
+          can_delete: false,
+          can_edit: false,
+          can_pin: false,
         }
 
         return {
@@ -178,7 +185,7 @@ export function useRoomMessages(
       if (context?.previousMessages) {
         queryClient.setQueryData(messagesQueryKey, context.previousMessages)
       }
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
     onSuccess: () => {
       // Refetch to get the real message + any agent responses
@@ -198,7 +205,7 @@ export function useRoomMessages(
       queryClient.invalidateQueries({ queryKey: messagesQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -211,7 +218,7 @@ export function useRoomMessages(
       queryClient.invalidateQueries({ queryKey: messagesQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -224,7 +231,7 @@ export function useRoomMessages(
       queryClient.invalidateQueries({ queryKey: messagesQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -245,7 +252,7 @@ export function useRoomMessages(
       queryClient.invalidateQueries({ queryKey: messagesQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -258,7 +265,7 @@ export function useRoomMessages(
       queryClient.invalidateQueries({ queryKey: messagesQueryKey })
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError.call(showErrorToast, err as ApiError)
     },
   })
 
@@ -291,7 +298,7 @@ export function useRoomMessages(
 
       setHasMore(result.has_more)
     } catch (err) {
-      handleError(err as ApiError)
+      handleError.call(showErrorToast, err as ApiError)
     } finally {
       setIsLoadingMore(false)
     }

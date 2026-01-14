@@ -1,240 +1,192 @@
-import {
-  Button,
-  DialogActionTrigger,
-  Input,
-  NativeSelectField,
-  NativeSelectRoot,
-  Text,
-  Textarea,
-  VStack,
-} from "@chakra-ui/react"
-import { useState } from "react"
-import { Controller, type SubmitHandler, useForm } from "react-hook-form"
-import { FaPlus } from "react-icons/fa"
+/**
+ * CreateNodeModal - Dialog for creating a new story node
+ *
+ * Features:
+ * - Title input
+ * - Content format selector
+ * - Start/End node toggles (start disabled if one exists)
+ */
 
-import type { ContentFormat, StoryNodeCreate } from "@/client"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import type { ContentFormat } from "@/client"
+import { useCreateNode } from "@/hooks/stories/useStoryNodes"
+import { Button } from "@/components/ui/button"
 import {
-  DialogBody,
-  DialogCloseTrigger,
+  Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogRoot,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import { Field } from "@/components/ui/field"
-import { useCreateNode } from "@/hooks/stories/useStoryNodes"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+
+const createNodeSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  content_format: z.enum(["text", "html", "markdown", "json"]),
+  is_start_node: z.boolean(),
+  is_end_node: z.boolean(),
+})
+
+type CreateNodeFormData = z.infer<typeof createNodeSchema>
 
 interface CreateNodeModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   storyId: string
   storyVersion: number
-  onSuccess?: (nodeId: string) => void
-  existingStartNode?: boolean
+  hasStartNode: boolean
 }
 
 const CreateNodeModal = ({
+  open,
+  onOpenChange,
   storyId,
   storyVersion,
-  onSuccess,
-  existingStartNode = false,
+  hasStartNode,
 }: CreateNodeModalProps) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const mutation = useCreateNode(storyId)
+  const createNode = useCreateNode(storyId)
 
   const {
-    control,
     register,
     handleSubmit,
     reset,
-    watch,
     setValue,
-    formState: { errors, isValid, isSubmitting },
-  } = useForm<StoryNodeCreate>({
-    mode: "onBlur",
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<CreateNodeFormData>({
+    resolver: zodResolver(createNodeSchema),
     defaultValues: {
       title: "",
-      content: "",
-      content_format: "html" as ContentFormat,
-      node_type: "text",
+      content_format: "html",
       is_start_node: false,
       is_end_node: false,
-      story_id: storyId,
-      story_version: storyVersion,
     },
   })
 
-  const isStartNode = watch("is_start_node")
   const contentFormat = watch("content_format")
+  const isStartNode = watch("is_start_node")
+  const isEndNode = watch("is_end_node")
 
-  const onSubmit: SubmitHandler<StoryNodeCreate> = (data) => {
-    mutation.mutate(data, {
-      onSuccess: (result) => {
-        reset()
-        setIsOpen(false)
-        onSuccess?.(result.id)
-      },
+  const onSubmit = async (data: CreateNodeFormData) => {
+    await createNode.mutateAsync({
+      title: data.title,
+      content_format: data.content_format as ContentFormat,
+      is_start_node: data.is_start_node,
+      is_end_node: data.is_end_node,
+      story_id: storyId,
+      story_version: storyVersion,
     })
+    reset()
+    onOpenChange(false)
+  }
+
+  const handleClose = () => {
+    reset()
+    onOpenChange(false)
   }
 
   return (
-    <DialogRoot
-      size={{ base: "xs", md: "lg" }}
-      placement="center"
-      open={isOpen}
-      onOpenChange={({ open }) => {
-        setIsOpen(open)
-        if (!open) reset()
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button colorPalette="blue" size="sm">
-          <FaPlus fontSize="12px" />
-          New Node
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Create New Node</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <Text mb={4} fontSize="sm">
-              Add a new scene or moment in your story. This is where your
-              adventure unfolds!
-            </Text>
-            <VStack gap={4}>
-              <Field
-                required
-                invalid={!!errors.title}
-                errorText={errors.title?.message}
-                label="Node Title"
-              >
-                <Input
-                  {...register("title", {
-                    required: "Node title is required",
-                    maxLength: {
-                      value: 100,
-                      message: "Title must be 100 characters or less",
-                    },
-                  })}
-                  placeholder="Forest Entrance"
-                  type="text"
-                />
-              </Field>
-              <Field label="Content Format">
-                <NativeSelectRoot size="sm">
-                  <NativeSelectField
-                    value={contentFormat}
-                    onChange={(e) =>
-                      setValue(
-                        "content_format",
-                        e.target.value as ContentFormat,
-                        { shouldDirty: true },
-                      )
-                    }
-                  >
-                    <option value="html">Rich Text (HTML)</option>
-                    <option value="text">Plain Text</option>
-                    <option value="json">JSON (Advanced)</option>
-                  </NativeSelectField>
-                </NativeSelectRoot>
-              </Field>
-              <Field
-                invalid={!!errors.content}
-                errorText={errors.content?.message}
-                label="Content"
-              >
-                <Textarea
-                  {...register("content")}
-                  placeholder="You stand before a dark forest. The trees loom overhead, their branches creating a canopy that blocks out most of the sunlight..."
-                  rows={6}
-                />
-              </Field>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create Node</DialogTitle>
+          <DialogDescription>
+            Add a new node to your story
+          </DialogDescription>
+        </DialogHeader>
 
-              <VStack align="stretch" gap={3} w="full">
-                <Controller
-                  control={control}
-                  name="is_start_node"
-                  render={({ field }) => (
-                    <Field disabled={field.disabled} colorPalette="teal">
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={({ checked }) =>
-                          field.onChange(checked)
-                        }
-                        disabled={existingStartNode}
-                      >
-                        <Text fontSize="sm">
-                          Start Node
-                          {existingStartNode && (
-                            <Text
-                              as="span"
-                              color="orange.600"
-                              fontSize="xs"
-                              ml={2}
-                            >
-                              (A start node already exists)
-                            </Text>
-                          )}
-                        </Text>
-                      </Checkbox>
-                    </Field>
-                  )}
-                />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              placeholder="Node title"
+              {...register("title")}
+            />
+            {errors.title && (
+              <p className="text-destructive text-sm">{errors.title.message}</p>
+            )}
+          </div>
 
-                <Controller
-                  control={control}
-                  name="is_end_node"
-                  render={({ field }) => (
-                    <Field disabled={field.disabled} colorPalette="teal">
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={({ checked }) =>
-                          field.onChange(checked)
-                        }
-                      >
-                        <Text fontSize="sm">End Node</Text>
-                      </Checkbox>
-                    </Field>
-                  )}
-                />
-              </VStack>
-
-              {isStartNode && existingStartNode && (
-                <Text fontSize="xl" color="orange.600">
-                  Warning: Creating another start node will cause validation
-                  errors. Only one start node is allowed per story version.
-                </Text>
-              )}
-            </VStack>
-          </DialogBody>
-
-          <DialogFooter gap={2}>
-            <DialogActionTrigger asChild>
-              <Button
-                variant="subtle"
-                colorPalette="gray"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-            </DialogActionTrigger>
-            <Button
-              variant="solid"
-              colorPalette="blue"
-              type="submit"
-              disabled={!isValid || (isStartNode && existingStartNode)}
-              loading={isSubmitting}
+          {/* Content Format */}
+          <div className="space-y-2">
+            <Label htmlFor="content_format">Content Format</Label>
+            <Select
+              value={contentFormat}
+              onValueChange={(val) =>
+                setValue("content_format", val as ContentFormat)
+              }
             >
-              Create Node
+              <SelectTrigger>
+                <SelectValue placeholder="Select format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="html">HTML (Rich Text)</SelectItem>
+                <SelectItem value="text">Plain Text</SelectItem>
+                <SelectItem value="markdown">Markdown</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Node Type Checkboxes */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is_start_node"
+                checked={isStartNode}
+                disabled={hasStartNode}
+                onCheckedChange={(checked) => {
+                  setValue("is_start_node", !!checked)
+                  if (checked) setValue("is_end_node", false)
+                }}
+              />
+              <Label
+                htmlFor="is_start_node"
+                className={hasStartNode ? "text-muted-foreground" : ""}
+              >
+                Start Node
+                {hasStartNode && " (already exists)"}
+              </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is_end_node"
+                checked={isEndNode}
+                onCheckedChange={(checked) => {
+                  setValue("is_end_node", !!checked)
+                  if (checked) setValue("is_start_node", false)
+                }}
+              />
+              <Label htmlFor="is_end_node">End Node</Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Node"}
             </Button>
           </DialogFooter>
         </form>
-        <DialogCloseTrigger />
       </DialogContent>
-    </DialogRoot>
+    </Dialog>
   )
 }
 

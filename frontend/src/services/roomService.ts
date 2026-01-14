@@ -28,9 +28,9 @@ import {
   type RoomParticipantPublic,
   type RoomParticipantsPublic,
   type RoomPublic,
-  type RoomUpdate,
   type RoomsPublic,
   RoomsService,
+  type RoomUpdate,
   UsersService,
 } from "@/client"
 
@@ -90,6 +90,11 @@ export interface MessageViewModel {
   pinned_at?: string | null
   pinned_by?: string | null
   active_for_context: boolean
+
+  // Backend-provided permission flags (eliminates client-side computation)
+  can_edit: boolean
+  can_delete: boolean
+  can_pin: boolean
 }
 
 /**
@@ -212,6 +217,11 @@ function transformMessage(
     pinned_at: msg.pinned_at ?? null,
     pinned_by: msg.pinned_by ?? null,
     active_for_context: msg.active_for_context ?? false,
+
+    // Backend-provided permission flags
+    can_edit: msg.can_edit ?? false,
+    can_delete: msg.can_delete ?? false,
+    can_pin: msg.can_pin ?? false,
   }
 }
 
@@ -832,32 +842,29 @@ export function enrichParticipantsWithUserProfiles(
   })
 }
 
-
-
-  //   /** COPIED FROM exported client sdk 
-  //    * Get Rooms For Story
-  //    * Get rooms for a story where user is creator or active participant.
-  //    * @param data The data for the request.
-  //    * @param data.storyId
-  //    * @param data.skip
-  //    * @param data.limit
-  //    * @returns RoomsPublic Successful Response
-  //    * @throws ApiError
-  //    */
-  //   public static getRoomsForStory(data: RoomsGetRoomsForStoryData): CancelablePromise<RoomsGetRoomsForStoryResponse> {
-  //     return __request(OpenAPI, {
-  //         method: 'GET',
-  //         url: '/api/v1/rooms/story/{story_id}',
-  //         path: {
-  //             story_id: data.storyId
-  //         },
-  //         query: {
-  //             skip: data.skip,
-  //             limit: data.limit
-  //         },
-  //         errors: {
-  //             422: 'Validation Error'
-  //         }
-  //     });
-  // }
-
+//   /** COPIED FROM exported client sdk
+//    * Get Rooms For Story
+//    * Get rooms for a story where user is creator or active participant.
+//    * @param data The data for the request.
+//    * @param data.storyId
+//    * @param data.skip
+//    * @param data.limit
+//    * @returns RoomsPublic Successful Response
+//    * @throws ApiError
+//    */
+//   public static getRoomsForStory(data: RoomsGetRoomsForStoryData): CancelablePromise<RoomsGetRoomsForStoryResponse> {
+//     return __request(OpenAPI, {
+//         method: 'GET',
+//         url: '/api/v1/rooms/story/{story_id}',
+//         path: {
+//             story_id: data.storyId
+//         },
+//         query: {
+//             skip: data.skip,
+//             limit: data.limit
+//         },
+//         errors: {
+//             422: 'Validation Error'
+//         }
+//     });
+// }
