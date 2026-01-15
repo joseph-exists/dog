@@ -8,13 +8,9 @@
  * - Delete node functionality
  */
 
+import { ChevronRight, Edit, FileText, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { FileText, Trash2, Plus, Edit, ChevronRight } from "lucide-react"
 import type { StoryNodePublic } from "@/client"
-import { useChoicesForNode } from "@/hooks/stories/useNodeChoices"
-import { useDeleteNode } from "@/hooks/stories/useStoryNodes"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +22,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import NodeEditorForm from "./NodeEditorForm"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { useChoicesForNode } from "@/hooks/stories/useNodeChoices"
+import { useDeleteNode } from "@/hooks/stories/useStoryNodes"
 import ChoiceEditor from "./ChoiceEditor"
+import NodeEditorForm from "./NodeEditorForm"
 
 interface NodeEditorProps {
   nodeId: string | null
@@ -36,11 +36,7 @@ interface NodeEditorProps {
   availableNodes: StoryNodePublic[]
 }
 
-const NodeEditor = ({
-  nodeId,
-  storyId,
-  availableNodes,
-}: NodeEditorProps) => {
+const NodeEditor = ({ nodeId, storyId, availableNodes }: NodeEditorProps) => {
   const [editingChoiceId, setEditingChoiceId] = useState<string | null>(null)
   const [showCreateChoice, setShowCreateChoice] = useState(false)
 
@@ -109,9 +105,9 @@ const NodeEditor = ({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Node</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{selectedNode.title}"?
-                This will also delete all choices connected to this node.
-                This action cannot be undone.
+                Are you sure you want to delete "{selectedNode.title}"? This
+                will also delete all choices connected to this node. This action
+                cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -156,7 +152,7 @@ const NodeEditor = ({
               <div className="space-y-2">
                 {choices.map((choice) => {
                   const targetNode = availableNodes.find(
-                    (n) => n.id === choice.to_node_id
+                    (n) => n.id === choice.to_node_id,
                   )
                   return (
                     <div

@@ -9,18 +9,18 @@
  * - Selection highlighting
  */
 
-import { useState, useMemo } from "react"
-import { Plus, FileText, AlertTriangle } from "lucide-react"
+import { AlertTriangle, FileText, Plus } from "lucide-react"
+import { useMemo, useState } from "react"
 import type { NodeChoicePublic, StoryNodePublic } from "@/client"
 import { Button } from "@/components/ui/button"
-import NodeTreeItem from "./NodeTreeItem"
 import CreateNodeModal from "../NodeEditor/CreateNodeModal"
+import NodeTreeItem from "./NodeTreeItem"
 import {
   buildNodeTree,
   flattenTree,
-  toggleNodeExpansion,
   getOrphanedNodes,
   type TreeNode,
+  toggleNodeExpansion,
 } from "./treeUtils"
 
 interface NodeTreeProps {
@@ -45,7 +45,7 @@ const NodeTree = ({
   // Build initial tree from nodes and choices
   const initialTree = useMemo(
     () => buildNodeTree(nodes, choices),
-    [nodes, choices]
+    [nodes, choices],
   )
 
   // Manage tree state for expand/collapse
@@ -62,7 +62,7 @@ const NodeTree = ({
   // Find orphaned nodes
   const orphanedNodes = useMemo(
     () => getOrphanedNodes(nodes, tree),
-    [nodes, tree]
+    [nodes, tree],
   )
 
   const handleToggle = (nodeId: string) => {

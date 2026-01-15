@@ -14,17 +14,17 @@
  *
  */
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
 import type { ApiError } from "@/client"
-import { RoomService } from "@/services/roomService"
+import useCustomToast from "@/hooks/useCustomToast"
 import type {
   MessageViewModel,
   ParticipantViewModel,
   RoomViewModel,
 } from "@/services/roomService"
+import { RoomService } from "@/services/roomService"
 import { handleError } from "@/utils"
-import useCustomToast from "@/hooks/useCustomToast"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useMemo } from "react"
 import useAuth from "./useAuth"
 import { useRoomMessages } from "./useRoomMessages"
 
@@ -35,7 +35,7 @@ export interface UseRoomOptions {
   onDeleteSuccess?: () => void // callback when room is deleted no crash-crash
 }
 
-const {showErrorToast } = useCustomToast()
+const { showErrorToast } = useCustomToast()
 
 export interface UseRoomResult {
   // Room State

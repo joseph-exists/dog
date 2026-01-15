@@ -89,7 +89,7 @@ export function evaluateCondition(
   if (ops.$ne !== undefined) return stateValue !== ops.$ne
 
   const numValue = Number(stateValue)
-  const isNumeric = typeof stateValue === "number" || !isNaN(numValue)
+  const isNumeric = typeof stateValue === "number" || !Number.isNaN(numValue)
 
   if (ops.$gt !== undefined) return isNumeric && numValue > ops.$gt
   if (ops.$gte !== undefined) return isNumeric && numValue >= ops.$gte
@@ -113,22 +113,26 @@ export function evaluateRequiresState(
   for (const [key, condition] of Object.entries(requires)) {
     if (key === "$and") {
       const andConditions = condition as StateConditions[]
-      if (!andConditions.every((c) => evaluateRequiresState(c, state))) return false
+      if (!andConditions.every((c) => evaluateRequiresState(c, state)))
+        return false
       continue
     }
     if (key === "$or") {
       const orConditions = condition as StateConditions[]
-      if (!orConditions.some((c) => evaluateRequiresState(c, state))) return false
+      if (!orConditions.some((c) => evaluateRequiresState(c, state)))
+        return false
       continue
     }
     if (key === "$not") {
-      if (evaluateRequiresState(condition as StateConditions, state)) return false
+      if (evaluateRequiresState(condition as StateConditions, state))
+        return false
       continue
     }
     if (key.startsWith("$")) continue
 
     const stateValue = state[key]
-    if (!evaluateCondition(condition as ConditionValue, stateValue)) return false
+    if (!evaluateCondition(condition as ConditionValue, stateValue))
+      return false
   }
 
   return true

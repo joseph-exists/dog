@@ -10,28 +10,31 @@
  * @see StoryPreview.tsx for design pattern reference
  */
 
-import { useState, useMemo } from "react"
 import {
+  Bot,
   Bug,
+  Check,
   ChevronDown,
   ChevronUp,
-  Wifi,
-  WifiOff,
-  MessageSquare,
-  Bot,
-  Eye,
   Code,
   Copy,
-  Check,
+  Eye,
+  MessageSquare,
+  Wifi,
+  WifiOff,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import type { MessageViewModel, ParticipantViewModel } from "@/services/roomService"
+import type {
+  MessageViewModel,
+  ParticipantViewModel,
+} from "@/services/roomService"
 
 interface RoomDebugPanelProps {
   messages: MessageViewModel[]
@@ -173,7 +176,8 @@ export default function RoomDebugPanel({
             </pre>
             {contextMessages.length === 0 && (
               <p className="text-amber-600 dark:text-amber-400 text-[10px] mt-2">
-                ⚠️ No messages in context - agent will receive empty message array
+                ⚠️ No messages in context - agent will receive empty message
+                array
               </p>
             )}
           </div>
@@ -396,10 +400,7 @@ export default function RoomDebugPanel({
       <div className="border-t pt-4 text-xs text-muted-foreground space-y-1">
         <p>Total Messages: {messages.length}</p>
         <p>In Context: {contextMessages.length}</p>
-        <p>
-          Pinned:{" "}
-          {messages.filter((m) => m.is_pinned).length}
-        </p>
+        <p>Pinned: {messages.filter((m) => m.is_pinned).length}</p>
       </div>
     </aside>
   )

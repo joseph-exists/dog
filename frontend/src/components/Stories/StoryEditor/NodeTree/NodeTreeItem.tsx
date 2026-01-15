@@ -8,7 +8,7 @@
  * - Selection highlighting
  */
 
-import { ChevronRight, ChevronDown, Flag, Trophy, FileText } from "lucide-react"
+import { ChevronDown, ChevronRight, FileText, Flag, Trophy } from "lucide-react"
 import type { StoryNodePublic } from "@/client"
 import { cn } from "@/lib/utils"
 import type { TreeNode } from "./treeUtils"
@@ -39,9 +39,7 @@ const NodeTreeItem = ({
     <div
       className={cn(
         "flex items-center gap-1 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer",
-        isSelected
-          ? "bg-primary text-primary-foreground"
-          : "hover:bg-muted"
+        isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted",
       )}
       style={{ paddingLeft: `${8 + level * 16}px` }}
       onClick={() => onSelect(node.id)}

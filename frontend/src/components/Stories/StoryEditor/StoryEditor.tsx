@@ -10,27 +10,32 @@
  * @see STORIES_MIGRATION_TASKS.md Phase 2
  */
 
-import { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, Eye, CheckCircle, AlertTriangle, Loader2, Copy } from "lucide-react"
-
-import { useStoryEditor } from "@/hooks/stories/useStoryEditor"
-import { usePublishWorkflow } from "@/hooks/stories/usePublishWorkflow"
-import { useCloneStory } from "@/hooks/stories/useStories"
-import { Button } from "@/components/ui/button"
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle,
+  Copy,
+  Eye,
+  Loader2,
+} from "lucide-react"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-
+import { usePublishWorkflow } from "@/hooks/stories/usePublishWorkflow"
+import { useCloneStory } from "@/hooks/stories/useStories"
+import { useStoryEditor } from "@/hooks/stories/useStoryEditor"
+import { PublishModal } from "../PublishWorkflow"
+import StoryPreview from "../StoryPlayer/StoryPreview"
+import NodeEditor from "./NodeEditor/NodeEditor"
 // Story components
 import NodeTree from "./NodeTree/NodeTree"
-import NodeEditor from "./NodeEditor/NodeEditor"
-import StoryPreview from "../StoryPlayer/StoryPreview"
-import { PublishModal } from "../PublishWorkflow"
 import { StateSchemaSheet } from "./StateSchema"
 
 interface StoryEditorProps {
@@ -59,7 +64,10 @@ const StoryEditor = ({ storyId }: StoryEditorProps) => {
       description: story.description,
     })
     // Navigate to the cloned story's editor
-    navigate({ to: "/stories/$storyId/edit", params: { storyId: clonedStory.id } })
+    navigate({
+      to: "/stories/$storyId/edit",
+      params: { storyId: clonedStory.id },
+    })
   }
 
   // Run validation when story and nodes are loaded
@@ -225,10 +233,7 @@ const StoryEditor = ({ storyId }: StoryEditorProps) => {
             {/* Publish/Unpublish Button */}
             {needsPublish ? (
               <>
-                <Button
-                  size="sm"
-                  onClick={() => setShowPublishDialog(true)}
-                >
+                <Button size="sm" onClick={() => setShowPublishDialog(true)}>
                   Publish
                 </Button>
                 <PublishModal

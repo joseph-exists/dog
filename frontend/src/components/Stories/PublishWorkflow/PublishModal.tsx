@@ -9,9 +9,8 @@
  * - Displays version being published
  */
 
-import { useState, useMemo } from "react"
 import { Loader2 } from "lucide-react"
-import { usePublishWorkflow } from "@/hooks/stories/usePublishWorkflow"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -22,8 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { usePublishWorkflow } from "@/hooks/stories/usePublishWorkflow"
 import ValidationSummary from "./ValidationSummary"
 
 interface PublishModalProps {
@@ -35,13 +35,23 @@ interface PublishModalProps {
 const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
   const [confirmChecked, setConfirmChecked] = useState(false)
   const [warningsAcknowledged, setWarningsAcknowledged] = useState(false)
-  const { story, nodes, choices, validation, isReady, isLoading, publishAsync, isPublishing } =
-    usePublishWorkflow({ storyId })
+  const {
+    story,
+    nodes,
+    choices,
+    validation,
+    isReady,
+    isLoading,
+    publishAsync,
+    isPublishing,
+  } = usePublishWorkflow({ storyId })
 
   // Calculate stats from nodes and choices
   const stats = useMemo(() => {
     // Calculate orphaned nodes count from validation warnings
-    const orphanWarning = validation.warnings.find(w => w.includes("orphan node"))
+    const orphanWarning = validation.warnings.find((w) =>
+      w.includes("orphan node"),
+    )
     const orphanedMatch = orphanWarning?.match(/(\d+) orphan/)
     const orphanedCount = orphanedMatch ? parseInt(orphanedMatch[1], 10) : 0
 
@@ -54,7 +64,8 @@ const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
 
   // Determine if warnings need acknowledgment
   const hasWarnings = validation.warnings.length > 0
-  const canPublish = isReady && confirmChecked && (!hasWarnings || warningsAcknowledged)
+  const canPublish =
+    isReady && confirmChecked && (!hasWarnings || warningsAcknowledged)
 
   const handlePublish = async () => {
     try {
@@ -124,7 +135,9 @@ const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
                     <Checkbox
                       id="acknowledge-warnings"
                       checked={warningsAcknowledged}
-                      onCheckedChange={(checked) => setWarningsAcknowledged(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setWarningsAcknowledged(checked === true)
+                      }
                     />
                     <Label
                       htmlFor="acknowledge-warnings"
@@ -142,7 +155,9 @@ const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
                 <Checkbox
                   id="confirm-publish"
                   checked={confirmChecked}
-                  onCheckedChange={(checked) => setConfirmChecked(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setConfirmChecked(checked === true)
+                  }
                   disabled={!isReady}
                 />
                 <Label
@@ -165,10 +180,7 @@ const PublishModal = ({ storyId, isOpen, onClose }: PublishModalProps) => {
           >
             Cancel
           </Button>
-          <Button
-            onClick={handlePublish}
-            disabled={!canPublish || isLoading}
-          >
+          <Button onClick={handlePublish} disabled={!canPublish || isLoading}>
             {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Publish v{story?.current_version || "?"}
           </Button>

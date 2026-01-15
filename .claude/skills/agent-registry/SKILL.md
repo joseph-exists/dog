@@ -141,4 +141,4 @@ The agent_runner queries active agent participants, then uses registry service t
 
 ## Reference
 
-See `backend/agent-registry-plan.md` for full implementation details and architecture diagrams.
+See `./references/agent-registry-plan.md` for full implementation details and architecture diagrams.

@@ -160,11 +160,13 @@ export default function AddParticipantDialog({
             )}
 
             {/* No agents available message */}
-            {!isLoadingAgents && !agentsError && availableAgents.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                All available agents are already in this room.
-              </p>
-            )}
+            {!isLoadingAgents &&
+              !agentsError &&
+              availableAgents.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  All available agents are already in this room.
+                </p>
+              )}
           </div>
 
           <DialogFooter>

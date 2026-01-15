@@ -9,38 +9,38 @@
  * - Relative timestamp formatting
  */
 
-import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
-import { Edit, Trash2, MessageSquare, Plus } from "lucide-react"
+import { Edit, MessageSquare, Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
 
 import { RoomsService, type StoryPublic } from "@/client"
+import AddRoom from "@/components/Rooms/AddRoom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog"
 import {
   useDeleteStory,
   usePublishStory,
   useUnpublishStory,
 } from "@/hooks/stories/useStories"
-import AddRoom from "@/components/Rooms/AddRoom"
 
 interface StoryCardProps {
   story: StoryPublic
@@ -64,23 +64,13 @@ const StoryCard = ({ story }: StoryCardProps) => {
   const getStatusBadge = () => {
     if (story.is_published && story.published_version !== null) {
       return (
-        <Badge variant="default">
-          Published v{story.published_version}
-        </Badge>
+        <Badge variant="default">Published v{story.published_version}</Badge>
       )
     }
     if (!story.is_published && story.published_version !== null) {
-      return (
-        <Badge variant="secondary">
-          Unpublished
-        </Badge>
-      )
+      return <Badge variant="secondary">Unpublished</Badge>
     }
-    return (
-      <Badge variant="outline">
-        Draft v{story.current_version}
-      </Badge>
-    )
+    return <Badge variant="outline">Draft v{story.current_version}</Badge>
   }
 
   // Show editing badge if current version > published version
@@ -90,7 +80,10 @@ const StoryCard = ({ story }: StoryCardProps) => {
       story.current_version > story.published_version
     ) {
       return (
-        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+        <Badge
+          variant="secondary"
+          className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        >
           Draft v{story.current_version}
         </Badge>
       )
@@ -119,7 +112,7 @@ const StoryCard = ({ story }: StoryCardProps) => {
     const date = new Date(dateString)
     const now = new Date()
     const diffInDays = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
     )
 
     if (diffInDays === 0) return "Today"
@@ -224,7 +217,11 @@ const StoryCard = ({ story }: StoryCardProps) => {
         {/* Delete Button with Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogTrigger asChild>
-            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </DialogTrigger>

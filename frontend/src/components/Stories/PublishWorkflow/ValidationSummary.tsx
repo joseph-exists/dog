@@ -9,7 +9,14 @@
  * - Stats: node count, choice count, orphaned count
  */
 
-import { CheckCircle, XCircle, AlertTriangle, FileText, GitBranch, AlertOctagon } from "lucide-react"
+import {
+  AlertOctagon,
+  AlertTriangle,
+  CheckCircle,
+  FileText,
+  GitBranch,
+  XCircle,
+} from "lucide-react"
 import type { ValidationResult } from "@/hooks/stories/storyValidation"
 
 interface ValidationSummaryProps {

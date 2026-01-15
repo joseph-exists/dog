@@ -15,14 +15,15 @@
  * @see Phase3-TechnicalSpec.md §3.2
  */
 
-import type { ApiError } from "@/client"
-import { RoomService } from "@/services/roomService"
-import type { MessageViewModel } from "@/services/roomService"
-import { handleError } from "@/utils"
-import useCustomToast from "@/hooks/useCustomToast"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
+import type { ApiError } from "@/client"
+import useCustomToast from "@/hooks/useCustomToast"
+import type { MessageViewModel } from "@/services/roomService"
+import { RoomService } from "@/services/roomService"
+import { handleError } from "@/utils"
 import useAuth from "./useAuth"
+
 // import { Flashlight } from "lucide-react"
 
 const { showErrorToast } = useCustomToast()
@@ -198,7 +199,10 @@ export function useRoomMessages(
     mutationFn: async ({
       messageId,
       content,
-    }: { messageId: string; content: string }) => {
+    }: {
+      messageId: string
+      content: string
+    }) => {
       return await RoomService.editMessage(roomId, messageId, content, user?.id)
     },
     onSuccess: () => {
@@ -240,7 +244,10 @@ export function useRoomMessages(
     mutationFn: async ({
       messageId,
       active,
-    }: { messageId: string; active: boolean }) => {
+    }: {
+      messageId: string
+      active: boolean
+    }) => {
       return await RoomService.toggleMessageContext(
         roomId,
         messageId,

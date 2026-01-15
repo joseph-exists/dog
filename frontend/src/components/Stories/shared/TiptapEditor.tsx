@@ -10,11 +10,11 @@
  * Use RichTextEditor if you need the formatting toolbar.
  */
 
-import { useRef, useEffect, useCallback } from "react"
+import Image from "@tiptap/extension-image"
+import Link from "@tiptap/extension-link"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import Link from "@tiptap/extension-link"
-import Image from "@tiptap/extension-image"
+import { useCallback, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 
 interface TiptapEditorProps {
@@ -51,7 +51,7 @@ const TiptapEditor = ({
         onChange(html)
       }
     },
-    [onChange, debounceMs]
+    [onChange, debounceMs],
   )
 
   // Cleanup timer on unmount
@@ -107,7 +107,7 @@ const TiptapEditor = ({
     <div
       className={cn(
         "tiptap-editor-content border border-border rounded-md bg-background p-4",
-        className
+        className,
       )}
       style={{ minHeight }}
     >

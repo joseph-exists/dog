@@ -5,14 +5,12 @@
  * Opens as a Dialog with title and description fields.
  */
 
+import { Plus } from "lucide-react"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { Plus } from "lucide-react"
 
 import type { StoryCreate } from "@/client"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -22,14 +20,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useCreateStory } from "@/hooks/stories/useStories"
 import { cn } from "@/lib/utils"
 
 /** Textarea with consistent styling */
-function Textarea({
-  className,
-  ...props
-}: React.ComponentProps<"textarea">) {
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
       className={cn(
@@ -37,7 +34,7 @@ function Textarea({
         "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "resize-none",
-        className
+        className,
       )}
       {...props}
     />
@@ -147,10 +144,7 @@ const CreateStoryModal = () => {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={!isValid || isSubmitting}
-            >
+            <Button type="submit" disabled={!isValid || isSubmitting}>
               {isSubmitting ? "Creating..." : "Create Story"}
             </Button>
           </DialogFooter>

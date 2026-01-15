@@ -12,6 +12,9 @@
  * - Accessible (keyboard navigation, focus management)
  */
 
+import { useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { Button } from "@/components/ui/button"
 import {
   Drawer,
   DrawerClose,
@@ -21,11 +24,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
-import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
-import { useEffect } from "react"
-import { useForm } from "react-hook-form"
 
 interface EditDrawerProps {
   /** Whether drawer is open */
@@ -52,10 +52,7 @@ interface EditForm {
  * Textarea component with consistent styling
  * Following the same pattern as shadcn Input component
  */
-function Textarea({
-  className,
-  ...props
-}: React.ComponentProps<"textarea">) {
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
       data-slot="textarea"
@@ -64,7 +61,7 @@ function Textarea({
         "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
         "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
         "resize-none",
-        className
+        className,
       )}
       {...props}
     />
@@ -148,7 +145,10 @@ const EditDrawer = ({
   return (
     <Drawer direction="right" open={isOpen} onOpenChange={handleOpenChange}>
       <DrawerContent className="h-full w-full max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex h-full flex-col"
+        >
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
             {description && (
@@ -188,8 +188,8 @@ const EditDrawer = ({
             </div>
 
             <p className="text-muted-foreground text-xs">
-              Note: Editing does not change whether this message is included
-              in agent context.
+              Note: Editing does not change whether this message is included in
+              agent context.
             </p>
           </div>
 
@@ -199,10 +199,7 @@ const EditDrawer = ({
                 Cancel
               </Button>
             </DrawerClose>
-            <Button
-              type="submit"
-              disabled={!isDirty || !isValid || isSaving}
-            >
+            <Button type="submit" disabled={!isDirty || !isValid || isSaving}>
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DrawerFooter>

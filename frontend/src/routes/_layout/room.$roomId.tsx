@@ -10,15 +10,14 @@
  */
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { AlertCircle, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Loader2, AlertCircle } from "lucide-react"
-
+import EditDrawer from "@/components/Common/EditDrawer"
 import MessageInput from "@/components/Rooms/MessageInput"
 import MessageList from "@/components/Rooms/MessageList"
 import ParticipantList from "@/components/Rooms/ParticipantList"
 import RoomDebugPanel from "@/components/Rooms/RoomDebugPanel"
 import RoomHeader from "@/components/Rooms/RoomHeader"
-import EditDrawer from "@/components/Common/EditDrawer"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomStream } from "@/hooks/useRoomStream"
@@ -36,7 +35,7 @@ function RoomView() {
   // Edit drawer state
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
   const [editingMessage, setEditingMessage] = useState<MessageViewModel | null>(
-    null
+    null,
   )
 
   // Debug panel state

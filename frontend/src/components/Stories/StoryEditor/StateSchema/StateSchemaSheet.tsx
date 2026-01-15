@@ -7,7 +7,8 @@
  * - Version info display
  */
 
-import { Variable, Lock } from "lucide-react"
+import { Lock, Variable } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -17,7 +18,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Badge } from "@/components/ui/badge"
 import StateSchemaEditor from "./StateSchemaEditor"
 
 interface StateSchemaSheetProps {
@@ -48,7 +48,10 @@ const StateSchemaSheet = ({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:w-[540px] sm:max-w-full overflow-y-auto">
+      <SheetContent
+        side="right"
+        className="w-full sm:w-[540px] sm:max-w-full overflow-y-auto"
+      >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Variable className="h-5 w-5" />
@@ -66,7 +69,8 @@ const StateSchemaSheet = ({
           <SheetDescription>
             {isReadOnly ? (
               <>
-                This version is published. Create a new version to modify the state schema.
+                This version is published. Create a new version to modify the
+                state schema.
               </>
             ) : (
               <>
@@ -90,13 +94,16 @@ const StateSchemaSheet = ({
           <h4 className="font-medium mb-2">Using State Variables</h4>
           <ul className="space-y-1 text-muted-foreground">
             <li>
-              <strong>In Choices:</strong> Use "Requires State" to show/hide choices based on conditions
+              <strong>In Choices:</strong> Use "Requires State" to show/hide
+              choices based on conditions
             </li>
             <li>
-              <strong>State Mutations:</strong> Use "Sets State" to modify variables when a choice is selected
+              <strong>State Mutations:</strong> Use "Sets State" to modify
+              variables when a choice is selected
             </li>
             <li>
-              <strong>Categories:</strong> Group related variables for better organization
+              <strong>Categories:</strong> Group related variables for better
+              organization
             </li>
           </ul>
         </div>

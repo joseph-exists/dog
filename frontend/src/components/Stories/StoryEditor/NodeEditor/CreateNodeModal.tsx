@@ -7,12 +7,12 @@
  * - Start/End node toggles (start disabled if one exists)
  */
 
-import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { ContentFormat } from "@/client"
-import { useCreateNode } from "@/hooks/stories/useStoryNodes"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useCreateNode } from "@/hooks/stories/useStoryNodes"
 
 const createNodeSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -102,20 +102,14 @@ const CreateNodeModal = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create Node</DialogTitle>
-          <DialogDescription>
-            Add a new node to your story
-          </DialogDescription>
+          <DialogDescription>Add a new node to your story</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="Node title"
-              {...register("title")}
-            />
+            <Input id="title" placeholder="Node title" {...register("title")} />
             {errors.title && (
               <p className="text-destructive text-sm">{errors.title.message}</p>
             )}

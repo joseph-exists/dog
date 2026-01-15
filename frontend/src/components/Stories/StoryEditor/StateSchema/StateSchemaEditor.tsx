@@ -8,25 +8,16 @@
  * - Read-only mode for published stories
  */
 
+import {
+  ChevronDown,
+  ChevronRight,
+  Pencil,
+  Plus,
+  Trash2,
+  Variable,
+} from "lucide-react"
 import { useMemo, useState } from "react"
-import { Plus, Pencil, Trash2, Variable, ChevronDown, ChevronRight } from "lucide-react"
-import type { StoryStateVariablePublic, StateValueType } from "@/client"
-import {
-  useStateSchema,
-  useCreateStateVariable,
-  useUpdateStateVariable,
-  useDeleteStateVariable,
-} from "@/hooks/stories/useStateSchema"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import type { StateValueType, StoryStateVariablePublic } from "@/client"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,17 +28,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  useCreateStateVariable,
+  useDeleteStateVariable,
+  useStateSchema,
+  useUpdateStateVariable,
+} from "@/hooks/stories/useStateSchema"
 import StateVariableDialog from "./StateVariableDialog"
 
 const TYPE_COLORS: Record<StateValueType, string> = {
   string: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
   number: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-  boolean: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+  boolean:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
   enum: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
 }
 
@@ -63,9 +71,14 @@ const StateSchemaEditor = ({
   readOnly = false,
 }: StateSchemaEditorProps) => {
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingVariable, setEditingVariable] = useState<StoryStateVariablePublic | undefined>()
-  const [deleteVariable, setDeleteVariable] = useState<StoryStateVariablePublic | null>(null)
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["uncategorized"]))
+  const [editingVariable, setEditingVariable] = useState<
+    StoryStateVariablePublic | undefined
+  >()
+  const [deleteVariable, setDeleteVariable] =
+    useState<StoryStateVariablePublic | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(["uncategorized"]),
+  )
 
   // Fetch state schema
   const { data: schemaData, isLoading } = useStateSchema(storyId, version)
@@ -172,7 +185,10 @@ const StateSchemaEditor = ({
 
   // Format default value for display
   const formatDefaultValue = (variable: StoryStateVariablePublic) => {
-    if (variable.default_value === null || variable.default_value === undefined) {
+    if (
+      variable.default_value === null ||
+      variable.default_value === undefined
+    ) {
       return <span className="text-muted-foreground italic">null</span>
     }
     if (variable.value_type === "boolean") {
@@ -260,7 +276,9 @@ const StateSchemaEditor = ({
                         <TableHead className="w-[150px]">Default</TableHead>
                         <TableHead>Description</TableHead>
                         {!readOnly && (
-                          <TableHead className="w-[100px] text-right">Actions</TableHead>
+                          <TableHead className="w-[100px] text-right">
+                            Actions
+                          </TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
@@ -273,15 +291,18 @@ const StateSchemaEditor = ({
                           <TableCell>
                             <Badge
                               variant="secondary"
-                              className={TYPE_COLORS[variable.value_type || "string"]}
+                              className={
+                                TYPE_COLORS[variable.value_type || "string"]
+                              }
                             >
                               {variable.value_type || "string"}
                             </Badge>
-                            {variable.value_type === "enum" && variable.enum_values && (
-                              <span className="text-xs text-muted-foreground ml-2">
-                                ({variable.enum_values.length} values)
-                              </span>
-                            )}
+                            {variable.value_type === "enum" &&
+                              variable.enum_values && (
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  ({variable.enum_values.length} values)
+                                </span>
+                              )}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
                             {formatDefaultValue(variable)}
@@ -326,7 +347,11 @@ const StateSchemaEditor = ({
         onOpenChange={setDialogOpen}
         variable={editingVariable}
         onSave={handleSave}
-        existingKeys={editingVariable ? existingKeys.filter((k) => k !== editingVariable.key) : existingKeys}
+        existingKeys={
+          editingVariable
+            ? existingKeys.filter((k) => k !== editingVariable.key)
+            : existingKeys
+        }
       />
 
       {/* Delete Confirmation */}
@@ -338,7 +363,8 @@ const StateSchemaEditor = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete State Variable</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the variable "{deleteVariable?.key}"?
+              Are you sure you want to delete the variable "
+              {deleteVariable?.key}"?
               <br />
               <span className="text-amber-600">
                 This may break choices that reference this variable.

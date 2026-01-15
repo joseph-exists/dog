@@ -9,18 +9,33 @@
  * - Delete choice
  */
 
-import { useState, useEffect } from "react"
-import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 import { Trash2 } from "lucide-react"
-import type { NodeChoicePublic, StoryNodePublic, StoryStateVariablePublic } from "@/client"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import type {
+  NodeChoicePublic,
+  StoryNodePublic,
+  StoryStateVariablePublic,
+} from "@/client"
 import {
-  useCreateChoice,
-  useUpdateChoice,
-  useDeleteChoice,
-} from "@/hooks/stories/useNodeChoices"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Dialog,
   DialogContent,
@@ -39,21 +54,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+  useCreateChoice,
+  useDeleteChoice,
+  useUpdateChoice,
+} from "@/hooks/stories/useNodeChoices"
 import StateConditionEditor from "../../shared/StateConditionEditor"
 
 const choiceSchema = z.object({
@@ -86,8 +90,13 @@ const ChoiceEditor = ({
   const isEditing = !!choiceId && !!choice
 
   // State condition management
-  const [requiresState, setRequiresState] = useState<Record<string, unknown> | null>(null)
-  const [setsState, setSetsState] = useState<Record<string, unknown> | null>(null)
+  const [requiresState, setRequiresState] = useState<Record<
+    string,
+    unknown
+  > | null>(null)
+  const [setsState, setSetsState] = useState<Record<string, unknown> | null>(
+    null,
+  )
   const [showRequiresState, setShowRequiresState] = useState(false)
   const [showSetsState, setShowSetsState] = useState(false)
 
@@ -122,7 +131,10 @@ const ChoiceEditor = ({
       })
 
       // Initialize requires_state
-      if (choice.requires_state && Object.keys(choice.requires_state).length > 0) {
+      if (
+        choice.requires_state &&
+        Object.keys(choice.requires_state).length > 0
+      ) {
         setRequiresState(choice.requires_state as Record<string, unknown>)
         setShowRequiresState(true)
       } else {
@@ -185,14 +197,18 @@ const ChoiceEditor = ({
   const targetNodes = availableNodes.filter((n) => n.id !== fromNodeId)
 
   // Count conditions for display
-  const requiresStateCount = requiresState ? Object.keys(requiresState).length : 0
+  const requiresStateCount = requiresState
+    ? Object.keys(requiresState).length
+    : 0
   const setsStateCount = setsState ? Object.keys(setsState).length : 0
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Choice" : "Create Choice"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit Choice" : "Create Choice"}
+          </DialogTitle>
           <DialogDescription>
             {isEditing
               ? "Modify the choice text and target node"
@@ -241,7 +257,10 @@ const ChoiceEditor = ({
           </div>
 
           {/* Requires State Section */}
-          <Collapsible open={showRequiresState} onOpenChange={setShowRequiresState}>
+          <Collapsible
+            open={showRequiresState}
+            onOpenChange={setShowRequiresState}
+          >
             <CollapsibleTrigger asChild>
               <Button
                 type="button"

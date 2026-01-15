@@ -10,11 +10,12 @@
  * - JSON preview mode
  */
 
+import { AlertTriangle, Code, Layers, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { Plus, Trash2, Code, AlertTriangle, Layers } from "lucide-react"
 import type { StoryStateVariablePublic } from "@/client"
-import type { ComparisonOperator, MutationOperator, StateConditions } from "@/utils/stateConditions"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -24,9 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import type {
+  ComparisonOperator,
+  MutationOperator,
+  StateConditions,
+} from "@/utils/stateConditions"
 
 interface StateConditionEditorProps {
   value: Record<string, unknown> | null
@@ -45,14 +49,26 @@ const COMPARISON_OPERATORS: {
   label: string
   types: ValueType[]
 }[] = [
-  { value: "eq", label: "equals", types: ["boolean", "string", "number", "enum"] },
-  { value: "$ne", label: "not equals", types: ["boolean", "string", "number", "enum"] },
+  {
+    value: "eq",
+    label: "equals",
+    types: ["boolean", "string", "number", "enum"],
+  },
+  {
+    value: "$ne",
+    label: "not equals",
+    types: ["boolean", "string", "number", "enum"],
+  },
   { value: "$gt", label: ">", types: ["number"] },
   { value: "$gte", label: ">=", types: ["number"] },
   { value: "$lt", label: "<", types: ["number"] },
   { value: "$lte", label: "<=", types: ["number"] },
   { value: "$in", label: "in list", types: ["string", "number", "enum"] },
-  { value: "$exists", label: "exists", types: ["boolean", "string", "number", "enum"] },
+  {
+    value: "$exists",
+    label: "exists",
+    types: ["boolean", "string", "number", "enum"],
+  },
 ]
 
 // Mutation operators for sets_state
@@ -61,11 +77,19 @@ const MUTATION_OPERATORS: {
   label: string
   types: ValueType[]
 }[] = [
-  { value: "set", label: "set to", types: ["boolean", "string", "number", "enum"] },
+  {
+    value: "set",
+    label: "set to",
+    types: ["boolean", "string", "number", "enum"],
+  },
   { value: "$inc", label: "increment", types: ["number"] },
   { value: "$dec", label: "decrement", types: ["number"] },
   { value: "$toggle", label: "toggle", types: ["boolean"] },
-  { value: "$unset", label: "unset", types: ["boolean", "string", "number", "enum"] },
+  {
+    value: "$unset",
+    label: "unset",
+    types: ["boolean", "string", "number", "enum"],
+  },
 ]
 
 interface StateEntry {
@@ -82,7 +106,10 @@ interface ConditionGroup {
 }
 
 // Parse condition value into operator and value
-function parseConditionValue(condValue: unknown): { operator: string; value: unknown } {
+function parseConditionValue(condValue: unknown): {
+  operator: string
+  value: unknown
+} {
   if (typeof condValue === "object" && condValue !== null) {
     const obj = condValue as Record<string, unknown>
     const keys = Object.keys(obj)
@@ -96,7 +123,8 @@ function parseConditionValue(condValue: unknown): { operator: string; value: unk
 // Build condition value from operator and value
 function buildConditionValue(operator: string, value: unknown): unknown {
   if (operator === "eq" || operator === "set") return value
-  if (["$toggle", "$unset", "$exists"].includes(operator)) return { [operator]: true }
+  if (["$toggle", "$unset", "$exists"].includes(operator))
+    return { [operator]: true }
   return { [operator]: value }
 }
 
@@ -229,7 +257,7 @@ const ConditionRow = ({
           className={cn(
             "h-8",
             isDuplicate && "border-red-500",
-            isUndefined && !isDuplicate && "border-orange-500"
+            isUndefined && !isDuplicate && "border-orange-500",
           )}
         />
         {isDuplicate && (
@@ -244,7 +272,10 @@ const ConditionRow = ({
       </div>
 
       {/* Operator selector */}
-      <Select value={entry.operator} onValueChange={(val) => onOperatorChange(index, val)}>
+      <Select
+        value={entry.operator}
+        onValueChange={(val) => onOperatorChange(index, val)}
+      >
         <SelectTrigger className="w-[90px] h-8">
           <SelectValue />
         </SelectTrigger>
@@ -259,7 +290,10 @@ const ConditionRow = ({
 
       {/* Type selector (only if no schema) */}
       {!schemaVar && (
-        <Select value={entry.type} onValueChange={(val) => onTypeChange(index, val as ValueType)}>
+        <Select
+          value={entry.type}
+          onValueChange={(val) => onTypeChange(index, val as ValueType)}
+        >
           <SelectTrigger className="w-[70px] h-8">
             <SelectValue />
           </SelectTrigger>
@@ -280,7 +314,7 @@ const ConditionRow = ({
             entry.type === "boolean" && "border-purple-500 text-purple-500",
             entry.type === "number" && "border-blue-500 text-blue-500",
             entry.type === "enum" && "border-orange-500 text-orange-500",
-            entry.type === "string" && "border-green-500 text-green-500"
+            entry.type === "string" && "border-green-500 text-green-500",
           )}
         >
           {entry.type}
@@ -288,55 +322,52 @@ const ConditionRow = ({
       )}
 
       {/* Value input */}
-      {!isNoValueOp && (
-        <>
-          {entry.operator === "$in" ? (
-            <Input
-              value={Array.isArray(entry.value) ? entry.value.join(", ") : ""}
-              onChange={(e) => onArrayValueChange(index, e.target.value)}
-              placeholder="val1, val2"
-              className="flex-1 min-w-[80px] h-8"
-            />
-          ) : entry.type === "enum" && entry.enumValues ? (
-            <Select
-              value={String(entry.value)}
-              onValueChange={(val) => onValueChange(index, val)}
-            >
-              <SelectTrigger className="flex-1 min-w-[80px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {entry.enumValues.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : entry.type === "boolean" ? (
-            <Select
-              value={entry.value ? "true" : "false"}
-              onValueChange={(val) => onValueChange(index, val === "true")}
-            >
-              <SelectTrigger className="flex-1 min-w-[70px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="true">true</SelectItem>
-                <SelectItem value="false">false</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input
-              type={entry.type === "number" ? "number" : "text"}
-              value={String(entry.value ?? "")}
-              onChange={(e) => onValueChange(index, e.target.value)}
-              placeholder="value"
-              className="flex-1 min-w-[70px] h-8"
-            />
-          )}
-        </>
-      )}
+      {!isNoValueOp &&
+        (entry.operator === "$in" ? (
+          <Input
+            value={Array.isArray(entry.value) ? entry.value.join(", ") : ""}
+            onChange={(e) => onArrayValueChange(index, e.target.value)}
+            placeholder="val1, val2"
+            className="flex-1 min-w-[80px] h-8"
+          />
+        ) : entry.type === "enum" && entry.enumValues ? (
+          <Select
+            value={String(entry.value)}
+            onValueChange={(val) => onValueChange(index, val)}
+          >
+            <SelectTrigger className="flex-1 min-w-[80px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {entry.enumValues.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : entry.type === "boolean" ? (
+          <Select
+            value={entry.value ? "true" : "false"}
+            onValueChange={(val) => onValueChange(index, val === "true")}
+          >
+            <SelectTrigger className="flex-1 min-w-[70px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">true</SelectItem>
+              <SelectItem value="false">false</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            type={entry.type === "number" ? "number" : "text"}
+            value={String(entry.value ?? "")}
+            onChange={(e) => onValueChange(index, e.target.value)}
+            placeholder="value"
+            className="flex-1 min-w-[70px] h-8"
+          />
+        ))}
 
       {/* No value indicator */}
       {isNoValueOp && (
@@ -370,7 +401,8 @@ const StateConditionEditor = ({
 }: StateConditionEditorProps) => {
   const [showJsonPreview, setShowJsonPreview] = useState(false)
 
-  const operators = mode === "requires" ? COMPARISON_OPERATORS : MUTATION_OPERATORS
+  const operators =
+    mode === "requires" ? COMPARISON_OPERATORS : MUTATION_OPERATORS
   const schemaMap = new Map(schema?.map((v) => [v.key, v]) || [])
   const schemaKeys = schema?.map((v) => v.key) || []
 
@@ -387,7 +419,11 @@ const StateConditionEditor = ({
     return "string"
   }
 
-  const { entries, groups } = parseConditions(value, getSchemaVariable, getTypeForKey)
+  const { entries, groups } = parseConditions(
+    value,
+    getSchemaVariable,
+    getTypeForKey,
+  )
 
   const update = (newEntries: StateEntry[], newGroups: ConditionGroup[]) => {
     onChange(buildConditionsObject(newEntries, newGroups))
@@ -396,11 +432,17 @@ const StateConditionEditor = ({
   // Entry handlers
   const handleAddEntry = () => {
     const defaultOp = mode === "requires" ? "eq" : "set"
-    update([...entries, { key: "", operator: defaultOp, value: "", type: "string" }], groups)
+    update(
+      [...entries, { key: "", operator: defaultOp, value: "", type: "string" }],
+      groups,
+    )
   }
 
   const handleRemoveEntry = (index: number) => {
-    update(entries.filter((_, i) => i !== index), groups)
+    update(
+      entries.filter((_, i) => i !== index),
+      groups,
+    )
   }
 
   const handleKeyChange = (index: number, newKey: string) => {
@@ -416,8 +458,10 @@ const StateConditionEditor = ({
       if (schemaVar.value_type === "enum") {
         newType = "enum"
         enumValues = schemaVar.enum_values || []
-        if (!enumValues.includes(String(newValue))) newValue = enumValues[0] || ""
-        if (!["eq", "$ne", "$in", "set"].includes(newOp)) newOp = mode === "requires" ? "eq" : "set"
+        if (!enumValues.includes(String(newValue)))
+          newValue = enumValues[0] || ""
+        if (!["eq", "$ne", "$in", "set"].includes(newOp))
+          newOp = mode === "requires" ? "eq" : "set"
       } else if (schemaVar.value_type === "boolean") {
         newValue = Boolean(newValue)
         if (!["eq", "$ne", "$exists", "set", "$toggle"].includes(newOp)) {
@@ -429,7 +473,13 @@ const StateConditionEditor = ({
         newValue = String(newValue || "")
       }
 
-      newEntries[index] = { key: newKey, operator: newOp, value: newValue, type: newType, enumValues }
+      newEntries[index] = {
+        key: newKey,
+        operator: newOp,
+        value: newValue,
+        type: newType,
+        enumValues,
+      }
     } else {
       newEntries[index] = { ...newEntries[index], key: newKey }
     }
@@ -489,7 +539,10 @@ const StateConditionEditor = ({
 
   const handleArrayValueChange = (index: number, inputValue: string) => {
     const newEntries = [...entries]
-    const values = inputValue.split(",").map((v) => v.trim()).filter(Boolean)
+    const values = inputValue
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean)
     newEntries[index] = { ...newEntries[index], value: values }
     update(newEntries, groups)
   }
@@ -498,12 +551,18 @@ const StateConditionEditor = ({
   const handleAddGroup = () => {
     update(entries, [
       ...groups,
-      { type: "$or", conditions: [{ key: "", operator: "eq", value: "", type: "string" }] },
+      {
+        type: "$or",
+        conditions: [{ key: "", operator: "eq", value: "", type: "string" }],
+      },
     ])
   }
 
   const handleRemoveGroup = (groupIndex: number) => {
-    update(entries, groups.filter((_, i) => i !== groupIndex))
+    update(
+      entries,
+      groups.filter((_, i) => i !== groupIndex),
+    )
   }
 
   const handleGroupTypeChange = (groupIndex: number, newType: GroupType) => {
@@ -518,7 +577,12 @@ const StateConditionEditor = ({
       ...newGroups[groupIndex],
       conditions: [
         ...newGroups[groupIndex].conditions,
-        { key: "", operator: mode === "requires" ? "eq" : "set", value: "", type: "string" },
+        {
+          key: "",
+          operator: mode === "requires" ? "eq" : "set",
+          value: "",
+          type: "string",
+        },
       ],
     }
     update(entries, newGroups)
@@ -528,7 +592,9 @@ const StateConditionEditor = ({
     const newGroups = [...groups]
     newGroups[groupIndex] = {
       ...newGroups[groupIndex],
-      conditions: newGroups[groupIndex].conditions.filter((_, i) => i !== entryIndex),
+      conditions: newGroups[groupIndex].conditions.filter(
+        (_, i) => i !== entryIndex,
+      ),
     }
     if (newGroups[groupIndex].conditions.length === 0) {
       newGroups.splice(groupIndex, 1)
@@ -541,7 +607,7 @@ const StateConditionEditor = ({
     groupIndex: number,
     entryIndex: number,
     field: "key" | "operator" | "type" | "value" | "arrayValue",
-    newValue: unknown
+    newValue: unknown,
   ) => {
     const newGroups = [...groups]
     const entry = newGroups[groupIndex].conditions[entryIndex]
@@ -571,7 +637,10 @@ const StateConditionEditor = ({
           enumValues,
         }
       } else {
-        newGroups[groupIndex].conditions[entryIndex] = { ...entry, key: newValue as string }
+        newGroups[groupIndex].conditions[entryIndex] = {
+          ...entry,
+          key: newValue as string,
+        }
       }
     } else if (field === "operator") {
       let value = entry.value
@@ -580,7 +649,11 @@ const StateConditionEditor = ({
       } else if (newValue === "$in") {
         value = Array.isArray(entry.value) ? entry.value : [entry.value]
       }
-      newGroups[groupIndex].conditions[entryIndex] = { ...entry, operator: newValue as string, value }
+      newGroups[groupIndex].conditions[entryIndex] = {
+        ...entry,
+        operator: newValue as string,
+        value,
+      }
     } else if (field === "type") {
       let value: unknown = ""
       if (newValue === "boolean") value = false
@@ -593,11 +666,18 @@ const StateConditionEditor = ({
       }
     } else if (field === "value") {
       let converted: unknown = newValue
-      if (entry.type === "boolean") converted = newValue === "true" || newValue === true
+      if (entry.type === "boolean")
+        converted = newValue === "true" || newValue === true
       else if (entry.type === "number") converted = Number(newValue)
-      newGroups[groupIndex].conditions[entryIndex] = { ...entry, value: converted }
+      newGroups[groupIndex].conditions[entryIndex] = {
+        ...entry,
+        value: converted,
+      }
     } else if (field === "arrayValue") {
-      const values = (newValue as string).split(",").map((v) => v.trim()).filter(Boolean)
+      const values = (newValue as string)
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
       newGroups[groupIndex].conditions[entryIndex] = { ...entry, value: values }
     }
 
@@ -615,7 +695,9 @@ const StateConditionEditor = ({
 
   const getDuplicateKeys = (): string[] => {
     const keys = getAllKeys()
-    return [...new Set(keys.filter((key, index) => keys.indexOf(key) !== index))]
+    return [
+      ...new Set(keys.filter((key, index) => keys.indexOf(key) !== index)),
+    ]
   }
 
   const getUndefinedKeys = (): string[] => {
@@ -689,7 +771,9 @@ const StateConditionEditor = ({
                       <Layers className="h-3 w-3" />
                       <Select
                         value={group.type}
-                        onValueChange={(val) => handleGroupTypeChange(groupIndex, val as GroupType)}
+                        onValueChange={(val) =>
+                          handleGroupTypeChange(groupIndex, val as GroupType)
+                        }
                       >
                         <SelectTrigger className="w-[80px] h-7">
                           <SelectValue />
@@ -724,21 +808,48 @@ const StateConditionEditor = ({
                       isDuplicate={duplicateKeys.includes(entry.key)}
                       isUndefined={undefinedKeys.includes(entry.key)}
                       onKeyChange={(_, key) =>
-                        handleGroupEntryChange(groupIndex, entryIndex, "key", key)
+                        handleGroupEntryChange(
+                          groupIndex,
+                          entryIndex,
+                          "key",
+                          key,
+                        )
                       }
                       onOperatorChange={(_, op) =>
-                        handleGroupEntryChange(groupIndex, entryIndex, "operator", op)
+                        handleGroupEntryChange(
+                          groupIndex,
+                          entryIndex,
+                          "operator",
+                          op,
+                        )
                       }
                       onTypeChange={(_, type) =>
-                        handleGroupEntryChange(groupIndex, entryIndex, "type", type)
+                        handleGroupEntryChange(
+                          groupIndex,
+                          entryIndex,
+                          "type",
+                          type,
+                        )
                       }
                       onValueChange={(_, val) =>
-                        handleGroupEntryChange(groupIndex, entryIndex, "value", val)
+                        handleGroupEntryChange(
+                          groupIndex,
+                          entryIndex,
+                          "value",
+                          val,
+                        )
                       }
                       onArrayValueChange={(_, val) =>
-                        handleGroupEntryChange(groupIndex, entryIndex, "arrayValue", val)
+                        handleGroupEntryChange(
+                          groupIndex,
+                          entryIndex,
+                          "arrayValue",
+                          val,
+                        )
                       }
-                      onRemove={() => handleGroupRemoveEntry(groupIndex, entryIndex)}
+                      onRemove={() =>
+                        handleGroupRemoveEntry(groupIndex, entryIndex)
+                      }
                       availableOps={operators}
                     />
                   ))}
@@ -759,7 +870,12 @@ const StateConditionEditor = ({
 
           {/* Action buttons */}
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={handleAddEntry}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleAddEntry}
+            >
               <Plus className="h-3 w-3 mr-1" />
               Add {mode === "requires" ? "Condition" : "Change"}
             </Button>

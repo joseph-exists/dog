@@ -8,12 +8,11 @@
  * - Start/End node checkboxes
  */
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import type { ContentFormat, StoryNodePublic } from "@/client"
-import { useUpdateNode } from "@/hooks/stories/useStoryNodes"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -21,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea"
+import { useUpdateNode } from "@/hooks/stories/useStoryNodes"
 import RichTextEditor from "../../shared/RichTextEditor"
 
 interface NodeEditorFormProps {
@@ -36,7 +36,7 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
   const [title, setTitle] = useState(node.title)
   const [content, setContent] = useState(node.content || "")
   const [contentFormat, setContentFormat] = useState<ContentFormat>(
-    node.content_format || "text"
+    node.content_format || "text",
   )
   const [isStartNode, setIsStartNode] = useState(node.is_start_node || false)
   const [isEndNode, setIsEndNode] = useState(node.is_end_node || false)
@@ -132,9 +132,7 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
             onChange={(e) => setContent(e.target.value)}
             onBlur={handleContentBlur}
             placeholder={
-              contentFormat === "json"
-                ? '{"key": "value"}'
-                : "Enter content..."
+              contentFormat === "json" ? '{"key": "value"}' : "Enter content..."
             }
             className="min-h-[300px] font-mono"
           />

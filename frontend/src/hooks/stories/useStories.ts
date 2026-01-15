@@ -132,9 +132,7 @@ export const useCloneStory = () => {
       return clonedStory
     },
     onSuccess: (data) => {
-      showSuccessToast(
-        `Story cloned! "${data.title}" created as a new draft.`,
-      )
+      showSuccessToast(`Story cloned! "${data.title}" created as a new draft.`)
       queryClient.invalidateQueries({ queryKey: ["stories"] })
     },
     onError: (err: ApiError) => {

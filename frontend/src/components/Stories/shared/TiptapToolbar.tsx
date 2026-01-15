@@ -12,18 +12,18 @@
 import type { Editor } from "@tiptap/react"
 import {
   Bold,
-  Italic,
-  Strikethrough,
   Code,
+  FileCode,
   Heading1,
   Heading2,
   Heading3,
+  ImageIcon,
+  Italic,
+  Link,
   List,
   ListOrdered,
   Quote,
-  FileCode,
-  Link,
-  ImageIcon,
+  Strikethrough,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"

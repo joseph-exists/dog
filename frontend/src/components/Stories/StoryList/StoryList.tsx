@@ -8,7 +8,7 @@
  * - "Create Story" button in header
  */
 
-import { Loader2, BookOpen, AlertCircle } from "lucide-react"
+import { AlertCircle, BookOpen, Loader2 } from "lucide-react"
 
 import { useStories } from "@/hooks/stories/useStories"
 import CreateStoryModal from "./CreateStoryModal"

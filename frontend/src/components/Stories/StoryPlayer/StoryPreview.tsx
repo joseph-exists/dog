@@ -12,30 +12,30 @@
  * @see STORIES_MIGRATION_TASKS.md Phase 9
  */
 
-import { useState, useMemo } from "react"
 import DOMPurify from "dompurify"
 import {
   ArrowLeft,
-  Play,
-  RotateCcw,
-  ChevronRight,
   Bug,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
+  Play,
+  RotateCcw,
 } from "lucide-react"
+import { useMemo, useState } from "react"
 import type { NodeChoicePublic, StoryNodePublic, StoryPublic } from "@/client"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import { Separator } from "@/components/ui/separator"
 import {
-  evaluateRequiresState,
   applySetsState,
+  evaluateRequiresState,
   type StateConditions,
   type StateMutations,
 } from "@/utils/stateConditions"
@@ -99,21 +99,13 @@ function renderContent(node: StoryNodePublic) {
   }
 }
 
-const StoryPreview = ({
-  story,
-  nodes,
-  choices,
-  onExit,
-}: StoryPreviewProps) => {
+const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
   // Find the start node
-  const startNode = useMemo(
-    () => nodes.find((n) => n.is_start_node),
-    [nodes]
-  )
+  const startNode = useMemo(() => nodes.find((n) => n.is_start_node), [nodes])
 
   // Core state
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(
-    startNode?.id ?? null
+    startNode?.id ?? null,
   )
   const [playerState, setPlayerState] = useState<Record<string, unknown>>({})
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -129,13 +121,13 @@ const StoryPreview = ({
   // Get current node
   const currentNode = useMemo(
     () => nodes.find((n) => n.id === currentNodeId),
-    [nodes, currentNodeId]
+    [nodes, currentNodeId],
   )
 
   // Get all choices for current node
   const allChoicesForNode = useMemo(
     () => choices.filter((c) => c.from_node_id === currentNodeId),
-    [choices, currentNodeId]
+    [choices, currentNodeId],
   )
 
   // Filter choices by requires_state conditions
@@ -143,8 +135,8 @@ const StoryPreview = ({
     return allChoicesForNode.filter((choice) =>
       evaluateRequiresState(
         choice.requires_state as StateConditions | null,
-        playerState
-      )
+        playerState,
+      ),
     )
   }, [allChoicesForNode, playerState])
 
@@ -165,7 +157,7 @@ const StoryPreview = ({
     // Apply state mutations if any
     if (choice.sets_state) {
       setPlayerState((prev) =>
-        applySetsState(choice.sets_state as StateMutations, prev)
+        applySetsState(choice.sets_state as StateMutations, prev),
       )
     }
 
@@ -271,7 +263,9 @@ const StoryPreview = ({
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-2xl">{currentNode.title}</CardTitle>
+                    <CardTitle className="text-2xl">
+                      {currentNode.title}
+                    </CardTitle>
                     {isEndNode && (
                       <Badge className="bg-green-600">The End</Badge>
                     )}
@@ -325,13 +319,15 @@ const StoryPreview = ({
                   )}
 
                   {/* Dead End Warning */}
-                  {!currentNode.is_end_node && availableChoices.length === 0 && (
-                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
-                      <p className="text-amber-700 dark:text-amber-400 text-sm">
-                        No choices available from this node (dead end or conditions not met)
-                      </p>
-                    </div>
-                  )}
+                  {!currentNode.is_end_node &&
+                    availableChoices.length === 0 && (
+                      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
+                        <p className="text-amber-700 dark:text-amber-400 text-sm">
+                          No choices available from this node (dead end or
+                          conditions not met)
+                        </p>
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             )}
@@ -352,7 +348,11 @@ const StoryPreview = ({
               onOpenChange={() => toggleSection("state")}
             >
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between"
+                >
                   <span>Player State ({Object.keys(playerState).length})</span>
                   {expandedSections.state ? (
                     <ChevronUp className="h-4 w-4" />
@@ -364,7 +364,9 @@ const StoryPreview = ({
               <CollapsibleContent>
                 <div className="bg-muted rounded-md p-3 mt-2 text-xs">
                   {Object.keys(playerState).length === 0 ? (
-                    <span className="text-muted-foreground">No state set yet</span>
+                    <span className="text-muted-foreground">
+                      No state set yet
+                    </span>
                   ) : (
                     <div className="space-y-2">
                       {Object.entries(playerState).map(([key, value]) => (
@@ -387,7 +389,11 @@ const StoryPreview = ({
               onOpenChange={() => toggleSection("history")}
             >
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between"
+                >
                   <span>Choice History ({history.length})</span>
                   {expandedSections.history ? (
                     <ChevronUp className="h-4 w-4" />
@@ -399,12 +405,16 @@ const StoryPreview = ({
               <CollapsibleContent>
                 <div className="bg-muted rounded-md p-3 mt-2 text-xs max-h-40 overflow-y-auto">
                   {history.length === 0 ? (
-                    <span className="text-muted-foreground">No choices made yet</span>
+                    <span className="text-muted-foreground">
+                      No choices made yet
+                    </span>
                   ) : (
                     <div className="space-y-1">
                       {history.map((entry, index) => (
                         <div key={index} className="truncate">
-                          <span className="text-muted-foreground">{index + 1}.</span>{" "}
+                          <span className="text-muted-foreground">
+                            {index + 1}.
+                          </span>{" "}
                           {entry.choiceText}
                         </div>
                       ))}
@@ -420,9 +430,14 @@ const StoryPreview = ({
               onOpenChange={() => toggleSection("choices")}
             >
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between"
+                >
                   <span>
-                    Choices ({availableChoices.length}/{allChoicesForNode.length})
+                    Choices ({availableChoices.length}/
+                    {allChoicesForNode.length})
                   </span>
                   {expandedSections.choices ? (
                     <ChevronUp className="h-4 w-4" />
@@ -434,7 +449,9 @@ const StoryPreview = ({
               <CollapsibleContent>
                 <div className="bg-muted rounded-md p-3 mt-2 text-xs max-h-60 overflow-y-auto space-y-3">
                   {allChoicesForNode.length === 0 ? (
-                    <span className="text-muted-foreground">No choices from this node</span>
+                    <span className="text-muted-foreground">
+                      No choices from this node
+                    </span>
                   ) : (
                     allChoicesForNode.map((choice) => {
                       const isAvailable = availableChoices.includes(choice)
@@ -448,7 +465,10 @@ const StoryPreview = ({
                               {choice.text}
                             </span>
                             {!isAvailable && (
-                              <Badge variant="outline" className="text-[10px] shrink-0">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] shrink-0"
+                              >
                                 Blocked
                               </Badge>
                             )}
@@ -475,7 +495,9 @@ const StoryPreview = ({
 
             {/* Current Node Info */}
             <div className="border-t pt-4">
-              <p className="text-xs text-muted-foreground mb-1">Current Node:</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                Current Node:
+              </p>
               <code className="text-xs bg-muted px-2 py-1 rounded block truncate">
                 {currentNode?.title || "None"}
               </code>

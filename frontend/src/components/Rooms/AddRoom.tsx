@@ -41,7 +41,11 @@ interface AddRoomProps {
   onOpenChange?: (open: boolean) => void
 }
 
-export default function AddRoom({ defaultStoryId, trigger, onOpenChange }: AddRoomProps = {}) {
+export default function AddRoom({
+  defaultStoryId,
+  trigger,
+  onOpenChange,
+}: AddRoomProps = {}) {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
