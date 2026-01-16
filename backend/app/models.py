@@ -126,6 +126,14 @@ class ContentFormat(str, Enum):
     JSON = "json"
 
 
+class LLMProviderType(str, Enum):
+    """Supported LLM provider types."""
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    GOOGLE = "google"
+    OPENAI_COMPATIBLE = "openai_compatible"  # For Ollama, vLLM, Azure, proxies
+
+
 # ============ Base Models ++++++++
 
 
@@ -933,6 +941,85 @@ class Item(ItemBase, table=True):
     )
     owner: User | None = Relationship(back_populates="items")
 
+
+# =============================================================================
+# User LLM Provider Models
+# =============================================================================
+# Allows users to configure their own API keys and custom endpoints
+# for various LLM providers. API keys are encrypted at rest.
+
+
+class UserLLMProviderBase(SQLModel):
+    """Base model for user LLM provider configurations."""
+    provider_type: LLMProviderType = Field(description="Type of LLM provider")
+    name: str = Field(max_length=100, description="User-friendly name like 'My OpenAI' or 'Work Azure'")
+    is_enabled: bool = Field(default=True, description="Whether this provider is active")
+    is_default: bool = Field(default=False, description="Default provider for this type")
+    base_url: str | None = Field(default=None, max_length=500, description="Custom endpoint URL for Azure, Ollama, etc.")
+    description: str | None = Field(default=None, max_length=500)
+
+
+class UserLLMProviderCreate(UserLLMProviderBase):
+    """Input model for creating provider - accepts plain API key."""
+    api_key: str = Field(min_length=1, description="Plain text API key (will be encrypted)")
+
+
+class UserLLMProviderUpdate(SQLModel):
+    """Update model - all fields optional."""
+    name: str | None = Field(default=None, max_length=100)
+    is_enabled: bool | None = None
+    is_default: bool | None = None
+    base_url: str | None = Field(default=None, max_length=500)
+    description: str | None = Field(default=None, max_length=500)
+    api_key: str | None = Field(default=None, description="New API key to encrypt, if changing")
+
+
+class UserLLMProvider(UserLLMProviderBase, table=True):
+    """
+    Database model for user LLM provider configurations.
+
+    Stores encrypted API keys per-user. Each user can have multiple
+    providers of the same type (e.g., personal and work OpenAI keys).
+    """
+    __tablename__ = "userllmprovider"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True,
+    )
+
+    # Encrypted API key (never store plain text)
+    api_key_encrypted: str = Field(max_length=1000, description="Fernet-encrypted API key")
+
+    # Audit timestamps
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Connection test tracking
+    last_tested_at: datetime | None = Field(default=None)
+    last_test_success: bool | None = Field(default=None)
+
+    # Relationship defined in post-definition section at end of file
+
+
+class UserLLMProviderPublic(UserLLMProviderBase):
+    """Public API response - NEVER includes API key."""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    last_tested_at: datetime | None
+    last_test_success: bool | None
+    # Note: api_key_encrypted is intentionally excluded for security
+
+
+class UserLLMProvidersPublic(SQLModel):
+    """Collection response for UserLLMProviders."""
+    data: list[UserLLMProviderPublic]
+    count: int
 
 
 class Event(EventBase, table=True):
@@ -2755,8 +2842,15 @@ Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(
     back_populates="trait"
 )
 
- # User → AgentConfig relationship
+# User → AgentConfig relationship
 User.agent_configs = Relationship(
-     back_populates="owner",
-     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    back_populates="owner",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"}
 )
+
+# User <-> UserLLMProvider relationship (both sides must be defined together)
+User.llm_providers = Relationship(
+    back_populates="owner",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+)
+UserLLMProvider.owner = Relationship(back_populates="llm_providers")

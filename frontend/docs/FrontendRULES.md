@@ -38,15 +38,6 @@
 - Handle authentication consistently using the `useAuth` hook
 - Always handle API errors using the `handleError` utility
 
-## 4. UI & Styling
-
-- Use Chakra UI components for consistent styling
-- Follow the component hierarchy in dialogs, forms, and layouts as seen in existing components
-- Use the design system tokens for colors, spacing, and typography
-- Implement responsive designs using Chakra's responsive syntax (e.g., `display={{ base: "flex", md: "none" }}`)
-- Use Flex and Box components for layout
-- Use semantic HTML elements where appropriate
-
 ## 5. Routing & Navigation
 
 - Use TanStack Router for all routing needs

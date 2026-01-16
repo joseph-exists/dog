@@ -210,6 +210,11 @@ export type JumpRequest = {
     expected_head_version: number;
 };
 
+/**
+ * Supported LLM provider types.
+ */
+export type LLMProviderType = 'openai' | 'anthropic' | 'google' | 'openai_compatible';
+
 export type Message = {
     message: string;
 };
@@ -999,6 +1004,93 @@ export type UserCreate = {
     password: string;
 };
 
+/**
+ * Input model for creating provider - accepts plain API key.
+ */
+export type UserLLMProviderCreate = {
+    /**
+     * Type of LLM provider
+     */
+    provider_type: LLMProviderType;
+    /**
+     * User-friendly name like 'My OpenAI' or 'Work Azure'
+     */
+    name: string;
+    /**
+     * Whether this provider is active
+     */
+    is_enabled?: boolean;
+    /**
+     * Default provider for this type
+     */
+    is_default?: boolean;
+    /**
+     * Custom endpoint URL for Azure, Ollama, etc.
+     */
+    base_url?: (string | null);
+    description?: (string | null);
+    /**
+     * Plain text API key (will be encrypted)
+     */
+    api_key: string;
+};
+
+/**
+ * Public API response - NEVER includes API key.
+ */
+export type UserLLMProviderPublic = {
+    /**
+     * Type of LLM provider
+     */
+    provider_type: LLMProviderType;
+    /**
+     * User-friendly name like 'My OpenAI' or 'Work Azure'
+     */
+    name: string;
+    /**
+     * Whether this provider is active
+     */
+    is_enabled?: boolean;
+    /**
+     * Default provider for this type
+     */
+    is_default?: boolean;
+    /**
+     * Custom endpoint URL for Azure, Ollama, etc.
+     */
+    base_url?: (string | null);
+    description?: (string | null);
+    id: string;
+    user_id: string;
+    created_at: string;
+    updated_at: string;
+    last_tested_at: (string | null);
+    last_test_success: (boolean | null);
+};
+
+/**
+ * Collection response for UserLLMProviders.
+ */
+export type UserLLMProvidersPublic = {
+    data: Array<UserLLMProviderPublic>;
+    count: number;
+};
+
+/**
+ * Update model - all fields optional.
+ */
+export type UserLLMProviderUpdate = {
+    name?: (string | null);
+    is_enabled?: (boolean | null);
+    is_default?: (boolean | null);
+    base_url?: (string | null);
+    description?: (string | null);
+    /**
+     * New API key to encrypt, if changing
+     */
+    api_key?: (string | null);
+};
+
 export type UserPersonaCreate = {
     nickname?: (string | null);
     is_active?: boolean;
@@ -1277,6 +1369,44 @@ export type ItemsDeleteItemData = {
 };
 
 export type ItemsDeleteItemResponse = (Message);
+
+export type LlmProvidersListProvidersData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type LlmProvidersListProvidersResponse = (UserLLMProvidersPublic);
+
+export type LlmProvidersCreateProviderData = {
+    requestBody: UserLLMProviderCreate;
+};
+
+export type LlmProvidersCreateProviderResponse = (UserLLMProviderPublic);
+
+export type LlmProvidersGetProviderData = {
+    providerId: string;
+};
+
+export type LlmProvidersGetProviderResponse = (UserLLMProviderPublic);
+
+export type LlmProvidersUpdateProviderData = {
+    providerId: string;
+    requestBody: UserLLMProviderUpdate;
+};
+
+export type LlmProvidersUpdateProviderResponse = (UserLLMProviderPublic);
+
+export type LlmProvidersDeleteProviderData = {
+    providerId: string;
+};
+
+export type LlmProvidersDeleteProviderResponse = (Message);
+
+export type LlmProvidersTestProviderData = {
+    providerId: string;
+};
+
+export type LlmProvidersTestProviderResponse = (Message);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;

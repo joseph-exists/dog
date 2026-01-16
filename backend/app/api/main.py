@@ -6,7 +6,9 @@ from app.api.routes import (
     catalog,
     events,
     items,
+    llm_providers,
     login,
+    node_choices,
     persona_events,
     persona_qualities,
     personas,
@@ -16,11 +18,10 @@ from app.api.routes import (
     rooms,
     stories,
     storynodes,
-    traits,
     trait_conflicts,
+    traits,
     user_personas,
     user_story_progress,
-    node_choices,
     users,
     utils,
     websocket,
@@ -46,6 +47,7 @@ api_router.include_router(catalog.router)
 api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
 api_router.include_router(agent_routes.router)
+api_router.include_router(llm_providers.router)
 api_router.include_router(rooms.router)
 api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)

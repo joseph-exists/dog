@@ -6,7 +6,7 @@ Vite as the build tool
 React with TypeScript
 TanStack Query for data fetching and cache management
 TanStack Router for routing
-Chakra UI for component styling and theming
+shadcn & tailwindcss for component styling and theming
 
 API Communication
 
@@ -26,7 +26,7 @@ React's built-in state for UI state
 Custom hooks for shared functionality (useAuth, useCustomToast)
 
 
-UI Components: Mix of Chakra UI components and custom components
+UI Components: shadcn
 
 Authentication and Authorization
 

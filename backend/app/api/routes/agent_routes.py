@@ -1,15 +1,18 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
-from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+import logging
+import uuid
+from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
 from app.models import (
-    AgentConfig, AgentConfigCreate, AgentConfigUpdate, AgentConfigPublic, AgentConfigsPublic,
+    AgentConfig,
+    AgentConfigCreate,
+    AgentConfigPublic,
+    AgentConfigsPublic,
+    AgentConfigUpdate,
     Message,
 )
-
-from typing import Any
-import uuid
-import logging
-
 from app.services.agent_registry_service import agent_registry_service
 from app.services.shadow_service import shadow_service
 
@@ -20,7 +23,7 @@ from app import crud
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from starlette.responses import Response
 
-from app.agents.quixote import agent
+
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -221,6 +224,6 @@ def delete_agent(
     return Message(message="Agent deleted successfully")
 
 
-@router.post("/pydantic-agent")
-async def run_agent(request: Request) -> Response:
-    return await AGUIAdapter.dispatch_request(request, agent=agent)
+# @router.post("/pydantic-agent")
+# async def run_agent(request: Request) -> Response:
+#     return await AGUIAdapter.dispatch_request(request, agent=agent)

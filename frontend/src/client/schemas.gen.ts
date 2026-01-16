@@ -872,6 +872,13 @@ export const JumpRequestSchema = {
 Used by jump endpoint to specify target and optimistic concurrency check.`
 } as const;
 
+export const LLMProviderTypeSchema = {
+    type: 'string',
+    enum: ['openai', 'anthropic', 'google', 'openai_compatible'],
+    title: 'LLMProviderType',
+    description: 'Supported LLM provider types.'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
@@ -3788,6 +3795,265 @@ export const UserCreateSchema = {
     type: 'object',
     required: ['email', 'password'],
     title: 'UserCreate'
+} as const;
+
+export const UserLLMProviderCreateSchema = {
+    properties: {
+        provider_type: {
+            '$ref': '#/components/schemas/LLMProviderType',
+            description: 'Type of LLM provider'
+        },
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: "User-friendly name like 'My OpenAI' or 'Work Azure'"
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether this provider is active',
+            default: true
+        },
+        is_default: {
+            type: 'boolean',
+            title: 'Is Default',
+            description: 'Default provider for this type',
+            default: false
+        },
+        base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Url',
+            description: 'Custom endpoint URL for Azure, Ollama, etc.'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        api_key: {
+            type: 'string',
+            minLength: 1,
+            title: 'Api Key',
+            description: 'Plain text API key (will be encrypted)'
+        }
+    },
+    type: 'object',
+    required: ['provider_type', 'name', 'api_key'],
+    title: 'UserLLMProviderCreate',
+    description: 'Input model for creating provider - accepts plain API key.'
+} as const;
+
+export const UserLLMProviderPublicSchema = {
+    properties: {
+        provider_type: {
+            '$ref': '#/components/schemas/LLMProviderType',
+            description: 'Type of LLM provider'
+        },
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: "User-friendly name like 'My OpenAI' or 'Work Azure'"
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether this provider is active',
+            default: true
+        },
+        is_default: {
+            type: 'boolean',
+            title: 'Is Default',
+            description: 'Default provider for this type',
+            default: false
+        },
+        base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Url',
+            description: 'Custom endpoint URL for Azure, Ollama, etc.'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        last_tested_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Tested At'
+        },
+        last_test_success: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Test Success'
+        }
+    },
+    type: 'object',
+    required: ['provider_type', 'name', 'id', 'user_id', 'created_at', 'updated_at', 'last_tested_at', 'last_test_success'],
+    title: 'UserLLMProviderPublic',
+    description: 'Public API response - NEVER includes API key.'
+} as const;
+
+export const UserLLMProviderUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        is_enabled: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Enabled'
+        },
+        is_default: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Default'
+        },
+        base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Url'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        api_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Api Key',
+            description: 'New API key to encrypt, if changing'
+        }
+    },
+    type: 'object',
+    title: 'UserLLMProviderUpdate',
+    description: 'Update model - all fields optional.'
+} as const;
+
+export const UserLLMProvidersPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/UserLLMProviderPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'UserLLMProvidersPublic',
+    description: 'Collection response for UserLLMProviders.'
 } as const;
 
 export const UserPersonaCreateSchema = {
