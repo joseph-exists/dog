@@ -67,3 +67,10 @@ export { default as EditAgentDialog } from "./EditAgentDialog"
 
 // Clone Button
 export { default as AgentCloneButton } from "./AgentCloneButton"
+
+// ============================================================================
+// Provider Configuration Components (Sprint 4)
+// ============================================================================
+
+// Provider Selector - allows users to select their LLM provider for an agent
+export { default as AgentProviderSelector } from "./AgentProviderSelector"

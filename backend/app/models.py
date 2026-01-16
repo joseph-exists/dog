@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Literal
 from pydantic import EmailStr
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -1019,6 +1019,88 @@ class UserLLMProviderPublic(UserLLMProviderBase):
 class UserLLMProvidersPublic(SQLModel):
     """Collection response for UserLLMProviders."""
     data: list[UserLLMProviderPublic]
+    count: int
+
+
+# ==================== UserAgentSettings Models ====================
+# Per-user settings for agents - allows users to associate their LLM providers
+# with any agent (system or personal) without modifying the agent config itself.
+
+
+class UserAgentSettingsBase(SQLModel):
+    """Per-user settings for an agent (system or personal)."""
+    provider_id: uuid.UUID | None = Field(
+        default=None,
+        description="User's chosen LLM provider for this agent"
+    )
+    custom_system_prompt: str | None = Field(
+        default=None,
+        description="Optional user override for system prompt"
+    )
+    is_favorite: bool = Field(default=False)
+
+
+class UserAgentSettingsCreate(UserAgentSettingsBase):
+    """Input model for creating user agent settings."""
+    agent_config_id: uuid.UUID
+
+
+class UserAgentSettingsUpdate(SQLModel):
+    """Update model for user agent settings - all fields optional."""
+    provider_id: uuid.UUID | None = None
+    custom_system_prompt: str | None = None
+    is_favorite: bool | None = None
+
+
+class UserAgentSettings(UserAgentSettingsBase, table=True):
+    """
+    User-specific settings for agents.
+
+    Allows users to associate their LLM providers with any agent without
+    modifying the agent config itself. Key behaviors:
+    - User A can configure System Agent "StoryAdvisor" to use their OpenAI key
+    - This only affects User A; User B sees the same agent with default provider
+    - Cloning an agent doesn't copy another user's settings
+    """
+    __tablename__ = "user_agent_settings"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True
+    )
+    agent_config_id: uuid.UUID = Field(
+        foreign_key="agent_configs.id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True
+    )
+    # provider_id FK defined in base model description, actual FK constraint added here
+    # Note: provider_id can be null (use default), but when set it references userllmprovider
+
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Composite unique constraint: one settings row per user per agent
+    __table_args__ = (
+        UniqueConstraint("user_id", "agent_config_id", name="uq_user_agent_settings"),
+    )
+
+
+class UserAgentSettingsPublic(UserAgentSettingsBase):
+    """Public API response for user agent settings."""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    agent_config_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserAgentSettingsListPublic(SQLModel):
+    """Collection response for user agent settings."""
+    data: list[UserAgentSettingsPublic]
     count: int
 
 

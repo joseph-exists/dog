@@ -996,6 +996,35 @@ export type UpdatePassword = {
     new_password: string;
 };
 
+/**
+ * Public API response for user agent settings.
+ */
+export type UserAgentSettingsPublic = {
+    /**
+     * User's chosen LLM provider for this agent
+     */
+    provider_id?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    is_favorite?: boolean;
+    id: string;
+    user_id: string;
+    agent_config_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Update model for user agent settings - all fields optional.
+ */
+export type UserAgentSettingsUpdate = {
+    provider_id?: (string | null);
+    custom_system_prompt?: (string | null);
+    is_favorite?: (boolean | null);
+};
+
 export type UserCreate = {
     email: string;
     is_active?: boolean;
@@ -1245,7 +1274,24 @@ export type AgentsDeleteAgentData = {
 
 export type AgentsDeleteAgentResponse = (Message);
 
-export type AgentsRunAgentResponse = (unknown);
+export type AgentsGetMyAgentSettingsData = {
+    agentId: string;
+};
+
+export type AgentsGetMyAgentSettingsResponse = ((UserAgentSettingsPublic | null));
+
+export type AgentsUpdateMyAgentSettingsData = {
+    agentId: string;
+    requestBody: UserAgentSettingsUpdate;
+};
+
+export type AgentsUpdateMyAgentSettingsResponse = (UserAgentSettingsPublic);
+
+export type AgentsDeleteMyAgentSettingsData = {
+    agentId: string;
+};
+
+export type AgentsDeleteMyAgentSettingsResponse = (Message);
 
 export type ArchetypesReadArchetypesData = {
     limit?: number;

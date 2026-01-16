@@ -23,6 +23,7 @@ import {
   AgentAvatar,
   AgentCloneButton,
   AgentModeBadge,
+  AgentProviderSelector,
   AgentScopeBadge,
   AgentStatusBadge,
   EditAgentDialog,
@@ -183,10 +184,14 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
             Overview
           </TabsTrigger>
           <TabsTrigger value="prompt">System Prompt</TabsTrigger>
+          <TabsTrigger value="my-settings">
+            <SettingsIcon className="size-4" />
+            My Settings
+          </TabsTrigger>
           {isPersonal && (
             <TabsTrigger value="settings">
               <SettingsIcon className="size-4" />
-              Settings
+              Agent Settings
             </TabsTrigger>
           )}
         </TabsList>
@@ -264,6 +269,35 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               ) : (
                 <p className="text-muted-foreground italic">
                   No system prompt configured
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* My Settings Tab (User's provider preferences for this agent) */}
+        <TabsContent value="my-settings" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-muted-foreground">
+                Configure your personal settings for this agent. These settings only
+                affect how the agent works for you.
+              </p>
+
+              {agent.model_name && (
+                <AgentProviderSelector
+                  agentId={agent.id}
+                  modelName={agent.model_name}
+                />
+              )}
+
+              {!agent.model_name && (
+                <p className="text-sm text-muted-foreground italic">
+                  This agent doesn't have a model configured, so provider selection
+                  is not available.
                 </p>
               )}
             </CardContent>

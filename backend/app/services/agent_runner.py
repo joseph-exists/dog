@@ -3,10 +3,16 @@ Agent Runner Service: Execute agents in room context.
 
 This service:
 1. Loads room context via ContextProvider
-2. Looks up agent via AgentRegistry
-3. Runs the agent with context
-4. Emits room_message.agent event with response
-5. Handles errors gracefully
+2. Looks up agent via database AgentConfig
+3. Checks participation mode before responding
+4. Runs the agent with context
+5. Emits room_message.agent event with response
+6. Handles errors gracefully
+
+Participation Modes:
+- "always": Agent responds to every message in the room
+- "on_mention": Agent responds only when @mentioned (default)
+- "manual": Agent only responds when explicitly invoked via API
 
 Transaction Management:
 - Agent runner receives session from caller
@@ -17,6 +23,7 @@ Transaction Management:
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from typing import Any
 
@@ -24,41 +31,102 @@ from pydantic_ai import Agent
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.agent_registry import get_agent as legacy_get_agent
-from app.agents.agent_registry import is_agent_registered
-from app.agents.character_forge import run_character_forge
-from app.agents.dialogue_coach import run_dialogue_coach
-from app.agents.plot_twist_architect import run_plot_twist_architect
-from app.agents.story_advisor import run_story_advisor
-from app.agents.symbol_weaver import run_symbol_weaver
-from app.models import RoomParticipant
+from app.models import AgentConfig, RoomParticipant
 from app.services.context_provider import build_room_context
 from app.services.event_emitter import emit_event, publish_agent_token
 
 logger = logging.getLogger(__name__)
 
-async def get_agent_instance(session: AsyncSession, slug: str) -> Agent[Any, Any] | None:
+
+# =============================================================================
+# Mention Detection
+# =============================================================================
+
+def detect_mentions(message: str) -> set[str]:
     """
-    Get agent instance, with fallback to legacy registry during transition.
+    Extract @mentions from a message.
 
-    Supports both:
-    - Database-registered agents (loaded from AgentConfig)
-    - Legacy in-memory agents (from AGENT_REGISTRY)
+    Supports formats:
+    - @AgentName (display name with spaces requires quotes or camelCase)
+    - @agent-slug (slug format)
+    - @"Agent Name" (quoted for names with spaces)
+
+    Returns:
+        Set of mentioned names/slugs (lowercase for case-insensitive matching)
     """
-    # First, try legacy registry (these are pre-configured agents)
-    if is_agent_registered(slug):
-        try:
-            return legacy_get_agent(slug)
-        except KeyError:
-            pass
+    mentions = set()
 
-    # Try database registry - load config and instantiate agent
-    from app.models import AgentConfig
+    # Pattern 1: @"Quoted Name" - names with spaces
+    quoted_pattern = r'@"([^"]+)"'
+    for match in re.finditer(quoted_pattern, message):
+        mentions.add(match.group(1).lower())
 
+    # Pattern 2: @word - simple mentions (alphanumeric, hyphens, underscores)
+    # Must not be inside quotes
+    simple_pattern = r'@(\w[\w-]*)'
+    for match in re.finditer(simple_pattern, message):
+        mentions.add(match.group(1).lower())
+
+    return mentions
+
+
+def is_agent_mentioned(
+    message: str,
+    agent_slug: str,
+    agent_name: str,
+) -> bool:
+    """
+    Check if an agent is mentioned in a message.
+
+    Matches against:
+    - Agent slug (e.g., "StoryAdvisor", "story-advisor")
+    - Agent display name (e.g., "Story Advisor")
+
+    Case-insensitive matching.
+    """
+    mentions = detect_mentions(message)
+
+    if not mentions:
+        return False
+
+    # Check slug match
+    if agent_slug.lower() in mentions:
+        return True
+
+    # Check display name match (with and without spaces)
+    if agent_name.lower() in mentions:
+        return True
+
+    # Check display name without spaces (camelCase mention)
+    name_no_spaces = agent_name.replace(" ", "").lower()
+    if name_no_spaces in mentions:
+        return True
+
+    return False
+
+
+# =============================================================================
+# Agent Resolution and Instantiation
+# =============================================================================
+
+async def get_agent_config(session: AsyncSession, slug: str) -> AgentConfig | None:
+    """
+    Get agent configuration from database by slug.
+    """
     result = await session.execute(
         select(AgentConfig).where(AgentConfig.slug == slug)
     )
-    config = result.scalar_one_or_none()
+    return result.scalar_one_or_none()
+
+
+async def get_agent_instance(session: AsyncSession, slug: str) -> Agent[Any, Any] | None:
+    """
+    Get agent instance from database AgentConfig.
+
+    Instantiates a PydanticAI Agent using the configuration stored in the database.
+    Uses the model_name and system_prompt from AgentConfig.
+    """
+    config = await get_agent_config(session, slug)
 
     if config and config.is_enabled:
         # Instantiate PydanticAI Agent from database config
@@ -73,51 +141,41 @@ async def get_agent_instance(session: AsyncSession, slug: str) -> Agent[Any, Any
 async def resolve_agent_identifier(
     session: AsyncSession,
     participant_id: str,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, AgentConfig | None]:
     """
-    Resolve a participant_id to an agent slug and display name.
+    Resolve a participant_id to an agent slug, display name, and config.
 
-    During the transition from legacy to database-backed agents, participant_id
-    can be either:
-    - A UUID string (database agent ID)
-    - An agent slug/name (legacy agent)
+    participant_id can be either:
+    - A UUID string (database agent ID - the standard case)
+    - An agent slug (for direct lookups)
 
     Args:
         session: Async database session
         participant_id: The participant_id from RoomParticipant
 
     Returns:
-        Tuple of (agent_slug, display_name) or (None, None) if not found.
+        Tuple of (agent_slug, display_name, config) or (None, None, None) if not found.
         - agent_slug: Used for registry lookups and running the agent
         - display_name: Used for message attribution (agent's name field)
+        - config: Full AgentConfig for participation mode checks
     """
     # First, try to parse as UUID (database-registered agent)
     try:
         agent_uuid = uuid.UUID(participant_id)
-        # Look up agent config by ID using async session
-        from app.models import AgentConfig
-
         agent_config = await session.get(AgentConfig, agent_uuid)
 
         if agent_config and agent_config.is_enabled:
             logger.debug(f"Resolved UUID {participant_id} to agent slug: {agent_config.slug}")
-            return agent_config.slug, agent_config.name
+            return agent_config.slug, agent_config.name, agent_config
 
         logger.warning(f"Agent UUID {participant_id} not found or disabled in database")
-        return None, None
+        return None, None, None
 
     except ValueError:
-        # Not a valid UUID, treat as legacy agent name/slug
+        # Not a valid UUID, treat as agent slug
         pass
 
-    # Check legacy registry
-    if is_agent_registered(participant_id):
-        logger.debug(f"Found legacy agent: {participant_id}")
-        return participant_id, participant_id
-
-    # Check database registry by slug (in case slug was passed directly)
-    from app.models import AgentConfig
-
+    # Check database registry by slug
     result = await session.execute(
         select(AgentConfig).where(AgentConfig.slug == participant_id)
     )
@@ -125,15 +183,15 @@ async def resolve_agent_identifier(
 
     if agent_config and agent_config.is_enabled:
         logger.debug(f"Found database agent by slug: {participant_id}")
-        return agent_config.slug, agent_config.name
+        return agent_config.slug, agent_config.name, agent_config
 
-    logger.warning(f"Agent '{participant_id}' not found in any registry")
-    return None, None
+    logger.warning(f"Agent '{participant_id}' not found in database")
+    return None, None, None
 
 
 async def is_agent_available(session: AsyncSession, participant_id: str) -> bool:
     """
-    Check if an agent is available (either in database or legacy registry).
+    Check if an agent is available in the database.
 
     Args:
         session: Async database session
@@ -142,9 +200,88 @@ async def is_agent_available(session: AsyncSession, participant_id: str) -> bool
     Returns:
         True if agent can be run, False otherwise
     """
-    slug, _ = await resolve_agent_identifier(session, participant_id)
+    slug, _, _ = await resolve_agent_identifier(session, participant_id)
     return slug is not None
 
+
+# =============================================================================
+# Participation Mode Logic
+# =============================================================================
+
+def should_agent_respond_to_message(
+    config: AgentConfig,
+    trigger_message: str,
+) -> tuple[bool, str]:
+    """
+    Determine if an agent should respond based on participation mode.
+
+    Args:
+        config: Agent configuration with participation_mode
+        trigger_message: The message that triggered the check
+
+    Returns:
+        Tuple of (should_respond, reason)
+    """
+    mode = config.participation_mode or "on_mention"
+
+    if mode == "always":
+        return True, "mode=always"
+
+    if mode == "manual":
+        # Manual agents never auto-respond; they must be explicitly invoked
+        return False, "mode=manual (requires explicit invocation)"
+
+    if mode == "on_mention":
+        # Check for @mention
+        if is_agent_mentioned(trigger_message, config.slug, config.name):
+            return True, "mentioned in message"
+        return False, "not mentioned (mode=on_mention)"
+
+    # Unknown mode - default to not responding
+    logger.warning(f"Unknown participation mode '{mode}' for agent {config.slug}")
+    return False, f"unknown mode '{mode}'"
+
+
+# =============================================================================
+# Prompt Building
+# =============================================================================
+
+def build_agent_prompt(trigger_message: str, context: Any) -> str:
+    """
+    Build the full prompt for an agent including room context.
+
+    Args:
+        trigger_message: The user's message that triggered the agent
+        context: RoomContext from context_provider
+
+    Returns:
+        Full prompt string with context prepended
+    """
+    conversation_context = ""
+
+    # Add story context if available
+    if context.story_data:
+        conversation_context += f"\nStory: {context.story_data.get('title', 'Untitled')}\n"
+        if context.story_data.get('description'):
+            conversation_context += f"Description: {context.story_data.get('description')}\n"
+
+    # Add recent messages for conversation continuity
+    if context.recent_messages:
+        recent = context.recent_messages[-5:]
+        conversation_context += "\nRecent conversation:\n"
+        for msg in recent:
+            sender = msg.get("agent_name") or "User"
+            conversation_context += f"{sender}: {msg.get('content', '')}\n"
+
+    # Combine context with user message
+    if conversation_context:
+        return f"{conversation_context}\nUser message: {trigger_message}"
+    return trigger_message
+
+
+# =============================================================================
+# Agent Execution
+# =============================================================================
 
 async def run_agent_for_room(
     *,
@@ -156,7 +293,7 @@ async def run_agent_for_room(
     """
     Run an agent in a room context and emit its response as an event.
 
-    This is the main entry point for agent execution. It:
+    This is the main entry point for agent execution (non-streaming). It:
     1. Validates the agent exists
     2. Builds room context
     3. Runs the agent
@@ -181,7 +318,7 @@ async def run_agent_for_room(
         This function does NOT manage transactions. The caller (route handler)
         must use AsyncSessionTransactionDep to ensure atomic operations.
     """
-    # Validate agent exists (checks both legacy and database registries)
+    # Validate agent exists
     if not await is_agent_available(session, agent_name):
         logger.warning(f"Attempted to run unregistered agent: {agent_name}")
         return {
@@ -199,38 +336,22 @@ async def run_agent_for_room(
             message_limit=20,
         )
 
-        # Run agent based on name with proper context
-        if agent_name == "StoryAdvisor":
-            response_content = await run_story_advisor(
-                user_message=trigger_message,
-                context=context,
-            )
-        elif agent_name == "DialogueCoach":
-            response_content = await run_dialogue_coach(
-                user_message=trigger_message,
-                context=context,
-            )
-        elif agent_name == "PlotTwistArchitect":
-            response_content = await run_plot_twist_architect(
-                user_message=trigger_message,
-                context=context,
-            )
-        elif agent_name == "CharacterForge":
-            response_content = await run_character_forge(
-                user_message=trigger_message,
-                context=context,
-            )
-        elif agent_name == "SymbolWeaver":
-            response_content = await run_symbol_weaver(
-                user_message=trigger_message,
-                context=context,
-            )
-        else:
-            # Fallback for any unhandled agent
-            logger.warning(f"Agent {agent_name} has no specific run function, using generic path")
-            agent = await get_agent_instance(session, agent_name)
-            result = await agent.run(trigger_message)
-            response_content = result.output
+        # Get agent instance
+        agent = await get_agent_instance(session, agent_name)
+        if not agent:
+            return {
+                "agent_name": agent_name,
+                "content": "",
+                "success": False,
+                "error": f"Failed to instantiate agent '{agent_name}'",
+            }
+
+        # Build prompt with context
+        full_prompt = build_agent_prompt(trigger_message, context)
+
+        # Run agent
+        result = await agent.run(full_prompt)
+        response_content = result.output
 
         # Emit agent message event
         await emit_event(
@@ -291,10 +412,7 @@ async def should_agent_respond(
     Check if an agent should respond to a message.
 
     Currently checks if the agent is an active participant in the room.
-    Future enhancements could add:
-    - Rate limiting
-    - @mention detection
-    - Cooldown periods
+    For participation mode checks, use should_agent_respond_to_message().
 
     Args:
         room_id: UUID of the room
@@ -316,6 +434,7 @@ async def should_agent_respond(
 
     return participant is not None
 
+
 async def run_agent_for_room_streaming(
     *,
     room_id: uuid.UUID,
@@ -325,8 +444,6 @@ async def run_agent_for_room_streaming(
 ) -> dict[str, Any]:
     """
     Run an agent with token-by-token streaming.
-
-    This is the Phase 4 enhancement of run_agent_for_room().
 
     Differences from non-streaming version:
     1. Uses agent.run_stream() instead of agent.run()
@@ -347,7 +464,7 @@ async def run_agent_for_room_streaming(
     Returns:
         Dict with agent response details
     """
-    # Check both legacy registry and database registry
+    # Check agent availability
     if not await is_agent_available(session, agent_name):
         logger.warning(f"Attempted to run unregistered agent: {agent_name}")
         return {
@@ -365,66 +482,38 @@ async def run_agent_for_room_streaming(
             message_limit=20,
         )
 
+        # Get agent instance
+        agent = await get_agent_instance(session, agent_name)
+        if not agent:
+            return {
+                "agent_name": agent_name,
+                "content": "",
+                "success": False,
+                "error": f"Failed to instantiate agent '{agent_name}'",
+            }
+
+        # Build prompt with context
+        full_prompt = build_agent_prompt(trigger_message, context)
+
         # Run agent with streaming
+        # NOTE: stream_text() yields CUMULATIVE text (full message so far), not deltas
         full_response = ""
+        prev_len = 0
 
-        if agent_name == "StoryAdvisor":
-            # StoryAdvisor with streaming
-            from app.agents.story_advisor import StoryAdvisorDeps, story_advisor
+        async with agent.run_stream(full_prompt) as result:
+            async for chunk in result.stream_text():
+                # Extract only the new content since last iteration
+                new_content = chunk[prev_len:]
+                full_response = chunk  # Update to latest full response
+                prev_len = len(chunk)
 
-            deps = StoryAdvisorDeps(context=context)
-
-            # Build prompt with context
-            conversation_context = ""
-            if context.story_data:
-                conversation_context += f"\nStory: {context.story_data.get('title', 'Untitled')}\n"
-
-            if context.recent_messages:
-                recent = context.recent_messages[-5:]
-                conversation_context += "\nRecent messages:\n"
-                for msg in recent:
-                    sender = msg.get("agent_name") or "User"
-                    conversation_context += f"{sender}: {msg.get('content', '')}\n"
-
-            full_prompt = f"{conversation_context}\nUser message: {trigger_message}"
-
-            # Stream response
-            # NOTE: stream_text() yields CUMULATIVE text (full message so far), not deltas
-            prev_len = 0
-            async with story_advisor.run_stream(full_prompt, deps=deps) as result:
-                async for chunk in result.stream_text():
-                    # Extract only the new content since last iteration
-                    new_content = chunk[prev_len:]
-                    full_response = chunk  # Update to latest full response
-                    prev_len = len(chunk)
-
-                    # Publish only the new content to Redis
-                    if new_content:
-                        await publish_agent_token(
-                            room_id=room_id,
-                            agent_name=agent_name,
-                            token=new_content,
-                        )
-
-        else:
-            # Generic agent streaming
-            # NOTE: stream_text() yields CUMULATIVE text (full message so far), not deltas
-            agent = await get_agent_instance(session, agent_name)
-            prev_len = 0
-            async with agent.run_stream(trigger_message) as result:
-                async for chunk in result.stream_text():
-                    # Extract only the new content since last iteration
-                    new_content = chunk[prev_len:]
-                    full_response = chunk  # Update to latest full response
-                    prev_len = len(chunk)
-
-                    # Publish only the new content to Redis
-                    if new_content:
-                        await publish_agent_token(
-                            room_id=room_id,
-                            agent_name=agent_name,
-                            token=new_content,
-                        )
+                # Publish only the new content to Redis
+                if new_content:
+                    await publish_agent_token(
+                        room_id=room_id,
+                        agent_name=agent_name,
+                        token=new_content,
+                    )
 
         # Emit final complete message event
         await emit_event(
@@ -471,6 +560,11 @@ async def run_agent_for_room_streaming(
             "error": str(e),
         }
 
+
+# =============================================================================
+# High-Level Entry Point
+# =============================================================================
+
 async def run_agents_for_message(
     *,
     room_id: uuid.UUID,
@@ -478,14 +572,13 @@ async def run_agents_for_message(
     session: AsyncSession,
 ) -> list[dict[str, Any]]:
     """
-    Run all active agents in a room (with streaming support) that should respond to a message.
+    Run agents in a room that should respond to a message based on participation mode.
 
     This is the high-level function called from route handlers.
-    It checks which agents are active in the room and runs each one.
-
-    Supports both:
-    - Database-registered agents (participant_id is UUID)
-    - Legacy agents (participant_id is agent name/slug)
+    It checks which agents are active in the room and respects their participation modes:
+    - "always": Agent responds to every message
+    - "on_mention": Agent responds only when @mentioned
+    - "manual": Agent does not auto-respond (must be explicitly invoked)
 
     Args:
         room_id: UUID of the room
@@ -509,25 +602,105 @@ async def run_agents_for_message(
     for participant in agent_participants:
         participant_id = participant.participant_id
 
-        # Resolve participant_id to agent slug (handles both UUID and legacy names)
-        agent_slug, display_name = await resolve_agent_identifier(session, participant_id)
+        # Resolve participant_id to agent slug and config
+        agent_slug, display_name, config = await resolve_agent_identifier(
+            session, participant_id
+        )
 
-        if agent_slug:
-            logger.info(
-                f"Running agent '{display_name}' (slug: {agent_slug}) "
-                f"in room {room_id}"
-            )
-            response = await run_agent_for_room_streaming(
-                room_id=room_id,
-                agent_name=agent_slug,
-                trigger_message=trigger_message,
-                session=session,
-            )
-            responses.append(response)
-        else:
+        if not agent_slug or not config:
             logger.warning(
                 f"Agent participant '{participant_id}' in room {room_id} "
                 f"could not be resolved to a registered agent"
             )
+            continue
+
+        # Check participation mode
+        should_respond, reason = should_agent_respond_to_message(config, trigger_message)
+
+        if not should_respond:
+            logger.debug(
+                f"Agent '{display_name}' skipped in room {room_id}: {reason}"
+            )
+            continue
+
+        logger.info(
+            f"Running agent '{display_name}' (slug: {agent_slug}) "
+            f"in room {room_id} ({reason})"
+        )
+
+        response = await run_agent_for_room_streaming(
+            room_id=room_id,
+            agent_name=agent_slug,
+            trigger_message=trigger_message,
+            session=session,
+        )
+        responses.append(response)
 
     return responses
+
+
+async def invoke_agent_manually(
+    *,
+    room_id: uuid.UUID,
+    agent_slug: str,
+    trigger_message: str,
+    session: AsyncSession,
+) -> dict[str, Any]:
+    """
+    Explicitly invoke an agent regardless of participation mode.
+
+    Use this for:
+    - Manual mode agents that need explicit invocation
+    - Testing/debugging agents
+    - Admin-triggered agent responses
+
+    Args:
+        room_id: UUID of the room
+        agent_slug: Slug of the agent to invoke
+        trigger_message: The message/prompt for the agent
+        session: Async database session
+
+    Returns:
+        Agent response dict
+    """
+    # Verify agent exists and is in the room
+    slug, display_name, config = await resolve_agent_identifier(session, agent_slug)
+
+    if not slug or not config:
+        return {
+            "agent_name": agent_slug,
+            "content": "",
+            "success": False,
+            "error": f"Agent '{agent_slug}' not found",
+        }
+
+    # Check if agent is participant in room
+    result = await session.execute(
+        select(RoomParticipant).where(
+            RoomParticipant.room_id == room_id,
+            RoomParticipant.participant_type == "agent",
+            RoomParticipant.participant_id.in_([agent_slug, str(config.id)]),
+            RoomParticipant.active == True,  # noqa: E712
+        )
+    )
+    participant = result.scalar_one_or_none()
+
+    if not participant:
+        return {
+            "agent_name": agent_slug,
+            "content": "",
+            "success": False,
+            "error": f"Agent '{display_name}' is not a participant in this room",
+        }
+
+    logger.info(
+        f"Manually invoking agent '{display_name}' (slug: {slug}) "
+        f"in room {room_id}"
+    )
+
+    return await run_agent_for_room_streaming(
+        room_id=room_id,
+        agent_name=slug,
+        trigger_message=trigger_message,
+        session=session,
+    )

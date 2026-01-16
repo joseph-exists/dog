@@ -4,6 +4,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from datetime import datetime
+
+from sqlmodel import select
+
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
 from app.models import (
     AgentConfig,
@@ -12,6 +16,11 @@ from app.models import (
     AgentConfigsPublic,
     AgentConfigUpdate,
     Message,
+    UserAgentSettings,
+    UserAgentSettingsCreate,
+    UserAgentSettingsPublic,
+    UserAgentSettingsUpdate,
+    UserLLMProvider,
 )
 from app.services.agent_registry_service import agent_registry_service
 from app.services.shadow_service import shadow_service
@@ -227,3 +236,116 @@ def delete_agent(
 # @router.post("/pydantic-agent")
 # async def run_agent(request: Request) -> Response:
 #     return await AGUIAdapter.dispatch_request(request, agent=agent)
+
+
+# ============================================================================
+# User Agent Settings (per-user provider associations)
+# ============================================================================
+
+
+@router.get("/{agent_id}/my-settings", response_model=UserAgentSettingsPublic | None)
+def get_my_agent_settings(
+    session: SessionDep,
+    current_user: CurrentUser,
+    agent_id: uuid.UUID,
+) -> Any:
+    """Get user's personal settings for an agent (provider, etc.).
+
+    Returns the user's settings for this agent, or null if none configured.
+    Settings include chosen LLM provider and optional custom system prompt.
+    """
+    # Verify agent exists and user has access
+    config = crud.get_agent_config(session=session, agent_id=agent_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    if config.scope == "personal" and config.owner_id != current_user.id:
+        if not current_user.is_superuser:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    # Get user's settings for this agent
+    statement = select(UserAgentSettings).where(
+        UserAgentSettings.user_id == current_user.id,
+        UserAgentSettings.agent_config_id == agent_id,
+    )
+    settings = session.exec(statement).first()
+    return settings
+
+
+@router.put("/{agent_id}/my-settings", response_model=UserAgentSettingsPublic)
+def update_my_agent_settings(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    agent_id: uuid.UUID,
+    settings_in: UserAgentSettingsUpdate,
+) -> Any:
+    """Create or update user's personal settings for an agent.
+
+    Allows user to associate their LLM provider with any agent:
+    - For personal agents: customize your own agent
+    - For system agents: use your own API key without affecting others
+    """
+    # Verify agent exists and user has access
+    config = crud.get_agent_config(session=session, agent_id=agent_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    if config.scope == "personal" and config.owner_id != current_user.id:
+        if not current_user.is_superuser:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    # Validate provider_id if provided
+    if settings_in.provider_id:
+        provider = session.get(UserLLMProvider, settings_in.provider_id)
+        if not provider or provider.user_id != current_user.id:
+            raise HTTPException(status_code=400, detail="Invalid provider ID")
+
+    # Get or create settings
+    statement = select(UserAgentSettings).where(
+        UserAgentSettings.user_id == current_user.id,
+        UserAgentSettings.agent_config_id == agent_id,
+    )
+    settings = session.exec(statement).first()
+
+    if settings:
+        # Update existing
+        update_data = settings_in.model_dump(exclude_unset=True)
+        settings.sqlmodel_update(update_data)
+        settings.updated_at = datetime.now()
+    else:
+        # Create new
+        settings = UserAgentSettings(
+            user_id=current_user.id,
+            agent_config_id=agent_id,
+            **settings_in.model_dump(exclude_unset=True),
+        )
+        session.add(settings)
+
+    session.commit()
+    session.refresh(settings)
+    return settings
+
+
+@router.delete("/{agent_id}/my-settings")
+def delete_my_agent_settings(
+    session: SessionDep,
+    current_user: CurrentUser,
+    agent_id: uuid.UUID,
+) -> Message:
+    """Remove user's personal settings for an agent.
+
+    After deletion, agent will use system defaults.
+    """
+    statement = select(UserAgentSettings).where(
+        UserAgentSettings.user_id == current_user.id,
+        UserAgentSettings.agent_config_id == agent_id,
+    )
+    settings = session.exec(statement).first()
+
+    if not settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+
+    session.delete(settings)
+    session.commit()
+    return Message(message="Settings removed")

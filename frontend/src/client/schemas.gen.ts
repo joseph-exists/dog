@@ -3755,6 +3755,112 @@ export const UpdatePasswordSchema = {
     title: 'UpdatePassword'
 } as const;
 
+export const UserAgentSettingsPublicSchema = {
+    properties: {
+        provider_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Id',
+            description: "User's chosen LLM provider for this agent"
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        is_favorite: {
+            type: 'boolean',
+            title: 'Is Favorite',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        agent_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Agent Config Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'user_id', 'agent_config_id', 'created_at', 'updated_at'],
+    title: 'UserAgentSettingsPublic',
+    description: 'Public API response for user agent settings.'
+} as const;
+
+export const UserAgentSettingsUpdateSchema = {
+    properties: {
+        provider_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Id'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt'
+        },
+        is_favorite: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Favorite'
+        }
+    },
+    type: 'object',
+    title: 'UserAgentSettingsUpdate',
+    description: 'Update model for user agent settings - all fields optional.'
+} as const;
+
 export const UserCreateSchema = {
     properties: {
         email: {

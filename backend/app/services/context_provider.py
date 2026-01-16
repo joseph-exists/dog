@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Room, RoomMessage, RoomParticipant, Story
+from app.models import AgentConfig, Room, RoomMessage, RoomParticipant, Story
 
 
 @dataclass

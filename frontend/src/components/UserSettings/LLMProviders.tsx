@@ -97,9 +97,9 @@ const LLMProviders = () => {
 
   const providers = providersData?.data ?? []
 
-  // Form setup
+  // Form setup - cast resolver to fix type inference issue with zodResolver + react-hook-form
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as Resolver<FormData>,
     mode: "onSubmit",
     defaultValues: {
       name: "",
