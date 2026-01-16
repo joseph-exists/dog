@@ -2391,6 +2391,267 @@ class AgentConfigsPublic(SQLModel):
      data: list[AgentConfigPublic]
      count: int
 
+# ==================== ShadowUser Models ====================
+
+class ShadowUserBase(SQLModel):
+    """
+    Base model for Shadow Forgejo user mappings.
+    
+    Maps application users to their Forgejo counterparts,
+    enabling git-based versioning of their entities.
+    """
+    forgejo_username: str = Field(max_length=255)
+    forgejo_user_id: int
+
+
+class ShadowUserCreate(ShadowUserBase):
+    """Input model for creating ShadowUser mapping"""
+    user_id: uuid.UUID
+    forgejo_token_encrypted: str  # Encrypted API token
+
+
+class ShadowUserUpdate(SQLModel):
+    """Update model for ShadowUser (token rotation)"""
+    forgejo_token_encrypted: str | None = None
+
+
+class ShadowUser(ShadowUserBase, table=True):
+    """
+    Database model for application-to-Forgejo user mapping.
+    
+    Each application user gets ONE shadow user that owns all
+    their versioned repositories. Token stored encrypted for
+    API calls to Forgejo.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        unique=True,
+        nullable=False,
+        ondelete="CASCADE"
+    )
+    forgejo_token_encrypted: str = Field(max_length=500)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class ShadowUserPublic(ShadowUserBase):
+    """Public API response model for ShadowUser (excludes token)"""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    created_at: datetime
+
+
+class ShadowUsersPublic(SQLModel):
+    """Collection response for ShadowUsers"""
+    data: list[ShadowUserPublic]
+    count: int
+
+# ==================== ShadowRepo Models ====================
+
+class ShadowRepoBase(SQLModel):
+    """
+    Base model for entity-to-repository mappings.
+    
+    Each versioned entity (agent, story, etc.) gets its own
+    Forgejo repository following repo-per-entity pattern.
+    """
+    entity_type: str = Field(max_length=50)  # 'agent', 'story', 'chat'
+    entity_id: uuid.UUID
+    forgejo_repo_name: str = Field(max_length=255)
+    forgejo_repo_id: int
+
+
+class ShadowRepoCreate(ShadowRepoBase):
+    """Input model for creating ShadowRepo"""
+    shadow_user_id: uuid.UUID
+    forked_from_id: uuid.UUID | None = None
+
+
+class ShadowRepoUpdate(SQLModel):
+    """Update model for ShadowRepo (rarely used)"""
+    forked_from_id: uuid.UUID | None = None
+
+
+class ShadowRepo(ShadowRepoBase, table=True):
+    """
+    Database model for entity-to-repo mapping.
+    
+    Repo naming convention: {entity_type}/{entity_id}
+    e.g., agents/550e8400-e29b-41d4-a716-446655440000
+    
+    forked_from_id enables clone/fork tracking for branching.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    shadow_user_id: uuid.UUID = Field(
+        foreign_key="shadowuser.id",
+        nullable=False,
+        ondelete="CASCADE"
+    )
+    forked_from_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="shadowrepo.id",
+        description="Source repo if this is a fork/clone"
+    )
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class ShadowRepoPublic(ShadowRepoBase):
+    """Public API response model for ShadowRepo"""
+    id: uuid.UUID
+    shadow_user_id: uuid.UUID
+    forked_from_id: uuid.UUID | None
+    created_at: datetime
+
+
+class ShadowReposPublic(SQLModel):
+    """Collection response for ShadowRepos"""
+    data: list[ShadowRepoPublic]
+    count: int
+
+# ==================== ShadowVersion Models ====================
+
+class ShadowVersionBase(SQLModel):
+    """
+    Base model for version/commit records.
+    
+    Each save operation creates a new version with full
+    JSON snapshot of entity state.
+    """
+    commit_sha: str = Field(max_length=40)
+    version_number: int
+    message: str = Field(max_length=500)
+
+
+class ShadowVersionCreate(ShadowVersionBase):
+    """Input model for creating ShadowVersion"""
+    shadow_repo_id: uuid.UUID
+    snapshot_json: dict[str, Any]  # Full entity state
+    created_by_id: uuid.UUID
+
+
+class ShadowVersionUpdate(SQLModel):
+    """Update model for ShadowVersion (immutable - not used)"""
+    pass  # Versions are immutable
+
+
+class ShadowVersion(ShadowVersionBase, table=True):
+    """
+    Database model for version records.
+    
+    Stores complete JSON snapshot of entity at each save.
+    Pretty-printed JSON for git diff readability.
+    Immutable once created - never updated.
+    """
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    shadow_repo_id: uuid.UUID = Field(
+        foreign_key="shadowrepo.id",
+        nullable=False,
+        ondelete="CASCADE"
+    )
+    snapshot_json: dict[str, Any] = Field(
+        sa_column=Column(JSON),
+        description="Full entity state at this version"
+    )
+    created_by_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        description="User who created this version"
+    )
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class ShadowVersionPublic(ShadowVersionBase):
+    """Public API response model for ShadowVersion"""
+    id: uuid.UUID
+    shadow_repo_id: uuid.UUID
+    created_by_id: uuid.UUID
+    created_at: datetime
+    # Note: snapshot_json excluded by default (large), use detail endpoint
+
+
+class ShadowVersionDetail(ShadowVersionPublic):
+    """Detailed response including full snapshot"""
+    snapshot_json: dict[str, Any]
+
+
+class ShadowVersionsPublic(SQLModel):
+    """Collection response for ShadowVersions"""
+    data: list[ShadowVersionPublic]
+    count: int
+
+# ============================================================================
+# Shadow Forgejo Relationships
+# ============================================================================
+
+# ShadowUser → User (many-to-one)
+ShadowUser.user = Relationship(
+    back_populates="shadow_user",
+    sa_relationship_kwargs={"lazy": "joined"}
+)
+
+# User → ShadowUser (one-to-one, reverse)
+User.shadow_user = Relationship(
+    back_populates="user",
+    sa_relationship_kwargs={
+        "uselist": False,  # One-to-one
+        "lazy": "select"
+    }
+)
+
+# ShadowRepo → ShadowUser (many-to-one)
+ShadowRepo.owner = Relationship(
+    back_populates="repos",
+    sa_relationship_kwargs={"lazy": "joined"}
+)
+
+# ShadowUser → ShadowRepo (one-to-many)
+ShadowUser.repos = Relationship(
+    back_populates="owner",
+    sa_relationship_kwargs={
+        "cascade": "all, delete-orphan",
+        "lazy": "select"
+    }
+)
+
+# ShadowRepo self-referential (forked_from)
+ShadowRepo.forked_from = Relationship(
+    sa_relationship_kwargs={
+        "foreign_keys": "[ShadowRepo.forked_from_id]",
+        "remote_side": "[ShadowRepo.id]"
+    }
+)
+
+ShadowRepo.forks = Relationship(
+    back_populates="forked_from",
+    sa_relationship_kwargs={
+        "foreign_keys": "[ShadowRepo.forked_from_id]"
+    }
+)
+
+# ShadowVersion → ShadowRepo (many-to-one)
+ShadowVersion.repo = Relationship(
+    back_populates="versions",
+    sa_relationship_kwargs={"lazy": "joined"}
+)
+
+# ShadowRepo → ShadowVersion (one-to-many)
+ShadowRepo.versions = Relationship(
+    back_populates="repo",
+    sa_relationship_kwargs={
+        "cascade": "all, delete-orphan",
+        "lazy": "select",
+        "order_by": "ShadowVersion.version_number.desc()"
+    }
+)
+
+# ShadowVersion → User (many-to-one, created_by)
+ShadowVersion.created_by = Relationship(
+    sa_relationship_kwargs={
+        "foreign_keys": "[ShadowVersion.created_by_id]",
+        "lazy": "joined"
+    }
+)
+
 Story.state_variables = Relationship(
     back_populates="story",
     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
