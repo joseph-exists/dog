@@ -2395,33 +2395,36 @@ class AgentConfigsPublic(SQLModel):
 
 class ShadowUserBase(SQLModel):
     """
-    Base model for Shadow Forgejo user mappings.
-    
-    Maps application users to their Forgejo counterparts,
-    enabling git-based versioning of their entities.
+    Base model for Shadow Forgejo user profile mappings.
+
+    Maps application users to their shadow profile repository.
+    This is system-managed and invisible to end users - they never
+    interact with Forgejo directly. Acts like a CMS for user profiles.
     """
-    forgejo_username: str = Field(max_length=255)
-    forgejo_user_id: int
+    forgejo_repo_name: str = Field(max_length=255)
+    forgejo_repo_id: int | None = Field(default=None)
 
 
 class ShadowUserCreate(ShadowUserBase):
-    """Input model for creating ShadowUser mapping"""
+    """Input model for creating ShadowUser mapping (system use only)"""
     user_id: uuid.UUID
-    forgejo_token_encrypted: str  # Encrypted API token
 
 
 class ShadowUserUpdate(SQLModel):
-    """Update model for ShadowUser (token rotation)"""
-    forgejo_token_encrypted: str | None = None
+    """Update model for ShadowUser"""
+    forgejo_repo_id: int | None = None
 
 
 class ShadowUser(ShadowUserBase, table=True):
     """
-    Database model for application-to-Forgejo user mapping.
-    
-    Each application user gets ONE shadow user that owns all
-    their versioned repositories. Token stored encrypted for
-    API calls to Forgejo.
+    Database model for user profile shadow tracking.
+
+    System-managed mapping between application User and their
+    shadow profile repository. Users don't see or control this -
+    all operations happen automatically via service accounts.
+
+    The shadow-users service account owns all user profile repos.
+    Repo naming: user-{uuid}
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
@@ -2430,12 +2433,11 @@ class ShadowUser(ShadowUserBase, table=True):
         nullable=False,
         ondelete="CASCADE"
     )
-    forgejo_token_encrypted: str = Field(max_length=500)
     created_at: datetime = Field(default_factory=datetime.now)
 
 
 class ShadowUserPublic(ShadowUserBase):
-    """Public API response model for ShadowUser (excludes token)"""
+    """Public API response model for ShadowUser (admin use only)"""
     id: uuid.UUID
     user_id: uuid.UUID
     created_at: datetime
@@ -2451,41 +2453,51 @@ class ShadowUsersPublic(SQLModel):
 class ShadowRepoBase(SQLModel):
     """
     Base model for entity-to-repository mappings.
-    
+
     Each versioned entity (agent, story, etc.) gets its own
     Forgejo repository following repo-per-entity pattern.
+
+    Repos are owned by service accounts (shadow-agents, shadow-stories)
+    not by individual users. This is invisible to end users.
     """
-    entity_type: str = Field(max_length=50)  # 'agent', 'story', 'chat'
+    entity_type: str = Field(max_length=50)  # 'agent', 'story', 'user'
     entity_id: uuid.UUID
     forgejo_repo_name: str = Field(max_length=255)
-    forgejo_repo_id: int
+    forgejo_repo_id: int | None = Field(default=None)
 
 
 class ShadowRepoCreate(ShadowRepoBase):
-    """Input model for creating ShadowRepo"""
-    shadow_user_id: uuid.UUID
+    """Input model for creating ShadowRepo (system use only)"""
+    owner_id: uuid.UUID  # User who owns this entity
     forked_from_id: uuid.UUID | None = None
 
 
 class ShadowRepoUpdate(SQLModel):
-    """Update model for ShadowRepo (rarely used)"""
+    """Update model for ShadowRepo"""
+    forgejo_repo_id: int | None = None
     forked_from_id: uuid.UUID | None = None
 
 
 class ShadowRepo(ShadowRepoBase, table=True):
     """
     Database model for entity-to-repo mapping.
-    
-    Repo naming convention: {entity_type}/{entity_id}
-    e.g., agents/550e8400-e29b-41d4-a716-446655440000
-    
+
+    Repo naming convention: {entity_type}-{entity_id_short}
+    e.g., agent-550e8400
+
+    Service account ownership by entity_type:
+    - 'agent' → shadow-agents service account
+    - 'story' → shadow-stories service account
+    - 'user'  → shadow-users service account
+
     forked_from_id enables clone/fork tracking for branching.
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    shadow_user_id: uuid.UUID = Field(
-        foreign_key="shadowuser.id",
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id",
         nullable=False,
-        ondelete="CASCADE"
+        ondelete="CASCADE",
+        description="Application user who owns this entity"
     )
     forked_from_id: uuid.UUID | None = Field(
         default=None,
@@ -2496,9 +2508,9 @@ class ShadowRepo(ShadowRepoBase, table=True):
 
 
 class ShadowRepoPublic(ShadowRepoBase):
-    """Public API response model for ShadowRepo"""
+    """Public API response model for ShadowRepo (admin use only)"""
     id: uuid.UUID
-    shadow_user_id: uuid.UUID
+    owner_id: uuid.UUID
     forked_from_id: uuid.UUID | None
     created_at: datetime
 
@@ -2598,16 +2610,20 @@ User.shadow_user = Relationship(
     }
 )
 
-# ShadowRepo → ShadowUser (many-to-one)
+# ShadowRepo → User (many-to-one, entity owner)
 ShadowRepo.owner = Relationship(
-    back_populates="repos",
-    sa_relationship_kwargs={"lazy": "joined"}
+    back_populates="shadow_repos",
+    sa_relationship_kwargs={
+        "foreign_keys": "[ShadowRepo.owner_id]",
+        "lazy": "joined"
+    }
 )
 
-# ShadowUser → ShadowRepo (one-to-many)
-ShadowUser.repos = Relationship(
+# User → ShadowRepo (one-to-many, entities owned by user)
+User.shadow_repos = Relationship(
     back_populates="owner",
     sa_relationship_kwargs={
+        "foreign_keys": "[ShadowRepo.owner_id]",
         "cascade": "all, delete-orphan",
         "lazy": "select"
     }

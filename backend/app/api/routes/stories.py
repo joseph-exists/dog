@@ -35,6 +35,7 @@ Note: No update endpoint - requirements are create/delete only
 """
 
 import uuid
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -42,6 +43,9 @@ from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_service import shadow_service
+
+logger = logging.getLogger(__name__)
 from app.models import (
     Message,
     NodeChoice,
@@ -510,6 +514,22 @@ def create_story(
     session.add(story)
     session.commit()
     session.refresh(story)
+
+    # Shadow versioning (non-blocking - skips if user not set up)
+    try:
+        version = shadow_service.create_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="story",
+            entity_id=story.id,
+            entity_data=story.model_dump(mode="json"),
+            message=f"Create story: {story.title}",
+        )
+        if version:
+            logger.info(f"Shadow version {version.version_number} created for story {story.title}")
+    except Exception as e:
+        logger.warning(f"Shadow versioning failed for story {story.title}: {e}")
+
     return story
 
 
@@ -538,6 +558,22 @@ def update_story(
     session.add(story)
     session.commit()
     session.refresh(story)
+
+    # Shadow versioning (non-blocking - skips if user not set up)
+    try:
+        version = shadow_service.create_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="story",
+            entity_id=story.id,
+            entity_data=story.model_dump(mode="json"),
+            message=f"Update story: {story.title}",
+        )
+        if version:
+            logger.info(f"Shadow version {version.version_number} created for story {story.title}")
+    except Exception as e:
+        logger.warning(f"Shadow versioning failed for story {story.title}: {e}")
+
     return story
 
 

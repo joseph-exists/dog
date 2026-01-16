@@ -5,6 +5,7 @@
  """
 
 from __future__ import annotations
+
 import logging
 import uuid
 from typing import Any
@@ -12,8 +13,8 @@ from typing import Any
 from pydantic_ai import Agent
 from sqlmodel import Session
 
-from app.models import AgentConfig, AgentConfigCreate, AgentConfigUpdate
 from app import crud
+from app.models import AgentConfig, AgentConfigCreate, AgentConfigUpdate
 
 logger = logging.getLogger(__name__)
 

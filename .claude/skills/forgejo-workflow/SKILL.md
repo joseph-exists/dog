@@ -12,6 +12,16 @@ description: |
 
 Claude collaborates with Josep using Forgejo as the project management backend. All operations use the typer-forge CLI located at `backend/app/test_scripts/forge-admin/typer-forge/`.
 
+## Setup
+
+typer-forge requires the backend venv (for SDK dependencies) plus typer:
+
+```bash
+# One-time setup
+source /home/josep/dog/backend/.venv/bin/activate
+uv pip install typer
+```
+
 ## Quick Reference
 
 ```bash
@@ -99,6 +109,19 @@ Keep opus for: design decisions, complex debugging, architectural proposals.
 Current token stored in `forge_client.py`. Switch between:
 - Claude token: `4b0f449a6dcf184b0ee94a1fcb0c8b768ca8b779`
 - Admin token: `63d42c1df2b231be68209d45739f14732f06eaba`
+
+## Shadow Forgejo Integration
+
+The backend has a ShadowService (`app/services/shadow_service.py`) that automatically versions entities to Forgejo:
+
+- **Agents** and **Stories** are versioned on create/update
+- Each entity gets its own repo with JSON snapshots
+- Requires user to have a ShadowUser mapping with Forgejo token
+
+Key files:
+- `app/models.py`: ShadowUser, ShadowRepo, ShadowVersion models
+- `app/services/shadow_service.py`: Versioning service
+- `app/api/routes/agent_routes.py`, `stories.py`: Integration hooks
 
 ## Command Reference
 

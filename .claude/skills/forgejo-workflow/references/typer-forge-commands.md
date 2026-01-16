@@ -1,5 +1,16 @@
 # Typer-Forge Command Reference
 
+## Setup
+
+One-time setup (typer not in backend deps):
+
+```bash
+source /home/josep/dog/backend/.venv/bin/activate
+uv pip install typer
+```
+
+## Running Commands
+
 All commands require venv activation and running from the typer-forge directory:
 
 ```bash

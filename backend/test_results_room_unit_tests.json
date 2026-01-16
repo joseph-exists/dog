@@ -1,0 +1,82 @@
+{
+  "test_name": "Room System Unit Tests",
+  "start_time": "2026-01-16T06:27:41.969509",
+  "end_time": "2026-01-16T06:28:09.660569",
+  "duration_seconds": 27.69106,
+  "total_tests": 10,
+  "passed": 10,
+  "failed": 0,
+  "success_rate": "100.0%",
+  "tests": [
+    {
+      "name": "create_room",
+      "passed": true,
+      "message": "Room created: Test Room - Basic Creation (ID: f46b5830...)",
+      "details": null,
+      "timestamp": "2026-01-16T06:27:42.214699"
+    },
+    {
+      "name": "creator_is_owner",
+      "passed": true,
+      "message": "Creator has role='owner' and active=True",
+      "details": null,
+      "timestamp": "2026-01-16T06:27:42.224660"
+    },
+    {
+      "name": "add_agent_participant",
+      "passed": true,
+      "message": "Agent 'StoryAdvisor' added as member (ID: 0d21b77e...)",
+      "details": null,
+      "timestamp": "2026-01-16T06:27:42.242138"
+    },
+    {
+      "name": "send_user_message",
+      "passed": true,
+      "message": "Message sent successfully (ID: b41619de...)",
+      "details": null,
+      "timestamp": "2026-01-16T06:27:48.024703"
+    },
+    {
+      "name": "list_messages",
+      "passed": true,
+      "message": "Listed 6 messages (total in room: 6)",
+      "details": null,
+      "timestamp": "2026-01-16T06:27:54.515632"
+    },
+    {
+      "name": "message_pagination",
+      "passed": true,
+      "message": "Pagination works: Page 1 (3 msgs), Page 2 (2 msgs)",
+      "details": null,
+      "timestamp": "2026-01-16T06:28:09.585861"
+    },
+    {
+      "name": "change_participant_role",
+      "passed": true,
+      "message": "Role changed: member \u2192 owner",
+      "details": null,
+      "timestamp": "2026-01-16T06:28:09.608549"
+    },
+    {
+      "name": "remove_participant",
+      "passed": true,
+      "message": "Participant removed from active list",
+      "details": null,
+      "timestamp": "2026-01-16T06:28:09.632992"
+    },
+    {
+      "name": "room_update",
+      "passed": true,
+      "message": "Title updated: 'Test Room - Basic Creation' \u2192 'Updated Test Room Title'",
+      "details": null,
+      "timestamp": "2026-01-16T06:28:09.648741"
+    },
+    {
+      "name": "list_user_rooms",
+      "passed": true,
+      "message": "Listed 21 rooms (total: 21)",
+      "details": null,
+      "timestamp": "2026-01-16T06:28:09.660421"
+    }
+  ]
+}

@@ -479,54 +479,6 @@ export const ArchetypesPublicSchema = {
     description: 'Collection model for Archetype API responses.'
 } as const;
 
-export const AvailableAgentSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            title: 'Id'
-        },
-        name: {
-            type: 'string',
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        }
-    },
-    type: 'object',
-    required: ['id', 'name'],
-    title: 'AvailableAgent',
-    description: 'An agent available for room participation.'
-} as const;
-
-export const AvailableAgentsPublicSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/AvailableAgent'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count'],
-    title: 'AvailableAgentsPublic',
-    description: 'List of available agents.'
-} as const;
-
 export const Body_login_login_access_tokenSchema = {
     properties: {
         grant_type: {

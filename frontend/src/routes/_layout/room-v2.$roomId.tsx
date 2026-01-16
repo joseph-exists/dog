@@ -15,7 +15,7 @@ import { AlertCircle, Loader2, UsersIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { AgentsService } from "@/client/sdk.gen"
-import type { AvailableAgent } from "@/client/types.gen"
+import type { AgentConfigPublic } from "@/client/types.gen"
 import {
   AgentPartyPicker,
   AgentQuickAdd,
@@ -53,14 +53,14 @@ function participantToAgentData(p: ParticipantViewModel): AgentData {
 }
 
 /**
- * Convert AvailableAgent to AgentData
- * Note: AvailableAgent is a simplified type with only id, name, description
+ * Convert AgentConfigPublic to AgentData
+ * Maps agent configuration from the registry to the component's expected format
  */
-function availableAgentToAgentData(a: AvailableAgent): AgentData {
+function availableAgentToAgentData(a: AgentConfigPublic): AgentData {
   return {
     id: a.id,
     name: a.name,
-    description: a.description,
+    description: a.description ?? null,
   }
 }
 
@@ -192,7 +192,7 @@ function RoomViewV2() {
   // Fetch available agents
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery({
     queryKey: ["agents", "available"],
-    queryFn: () => AgentsService.getAvailableAgents(),
+    queryFn: () => AgentsService.listAvailableAgents(),
   })
 
   // Use the aggregate room hook

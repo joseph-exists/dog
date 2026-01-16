@@ -108,23 +108,6 @@ export type ArchetypeUpdate = {
     description?: (string | null);
 };
 
-/**
- * An agent available for room participation.
- */
-export type AvailableAgent = {
-    id: string;
-    name: string;
-    description?: (string | null);
-};
-
-/**
- * List of available agents.
- */
-export type AvailableAgentsPublic = {
-    data: Array<AvailableAgent>;
-    count: number;
-};
-
 export type Body_login_login_access_token = {
     grant_type?: (string | null);
     username: string;
@@ -1143,7 +1126,13 @@ export type AgentsCreateAgentData = {
 
 export type AgentsCreateAgentResponse = (AgentConfigPublic);
 
-export type AgentsGetAvailableAgentsResponse = (AvailableAgentsPublic);
+export type AgentsListAvailableAgentsData = {
+    limit?: number;
+    scope?: (string | null);
+    skip?: number;
+};
+
+export type AgentsListAvailableAgentsResponse = (AgentConfigsPublic);
 
 export type AgentsGetAgentData = {
     agentId: string;

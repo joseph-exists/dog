@@ -11,6 +11,9 @@ from sqlmodel import Session, and_, func, or_, select, true
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
+    AgentConfig,
+    AgentConfigCreate,
+    AgentConfigUpdate,
     Archetype,
     ArchetypeCreate,
     ArchetypePersonaLink,
@@ -80,9 +83,6 @@ from app.models import (
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
     UserUpdate,
-    AgentConfig,
-    AgentConfigUpdate,
-    AgentConfigCreate
 )
 from app.services.event_emitter import emit_event
 
