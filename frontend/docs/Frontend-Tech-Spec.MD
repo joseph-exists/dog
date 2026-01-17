@@ -1,7 +1,6 @@
 Tinyfoot Frontend Structure Analysis
 Tech Stack
 
-
 Vite as the build tool
 (npm run build, npm run dev)
 React with TypeScript
