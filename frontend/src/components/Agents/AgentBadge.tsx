@@ -22,20 +22,30 @@ interface ScopeBadgeProps {
  * Badge showing agent scope (system vs personal)
  */
 export function AgentScopeBadge({ scope, className }: ScopeBadgeProps) {
-  const config = {
+  const config: Record<string, { label: string; icon: string; variant: "secondary" | "outline" }> = {
     system: {
       label: "System",
       icon: "🌐",
-      variant: "secondary" as const,
+      variant: "secondary",
     },
     personal: {
       label: "Personal",
       icon: "👤",
-      variant: "outline" as const,
+      variant: "outline",
     },
   }
 
-  const { label, icon, variant } = config[scope]
+  const scopeConfig = config[scope]
+  if (!scopeConfig) {
+    // Unknown scope - show raw value
+    return (
+      <Badge variant="outline" className={cn("gap-1", className)}>
+        <span>{scope}</span>
+      </Badge>
+    )
+  }
+
+  const { label, icon, variant } = scopeConfig
 
   return (
     <Badge variant={variant} className={cn("gap-1", className)}>
@@ -54,7 +64,7 @@ interface ModeBadgeProps {
  * Badge showing participation mode
  */
 export function AgentModeBadge({ mode, className }: ModeBadgeProps) {
-  const config = {
+  const config: Record<string, { label: string; icon: string; title: string }> = {
     always: {
       label: "Always Active",
       icon: "⚡",
@@ -72,7 +82,17 @@ export function AgentModeBadge({ mode, className }: ModeBadgeProps) {
     },
   }
 
-  const { label, icon, title } = config[mode]
+  const modeConfig = config[mode]
+  if (!modeConfig) {
+    // Unknown mode - show raw value
+    return (
+      <Badge variant="outline" className={cn("gap-1", className)}>
+        <span>{mode}</span>
+      </Badge>
+    )
+  }
+
+  const { label, icon, title } = modeConfig
 
   return (
     <Badge variant="outline" className={cn("gap-1", className)} title={title}>

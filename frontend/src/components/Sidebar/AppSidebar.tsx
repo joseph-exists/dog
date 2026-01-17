@@ -1,4 +1,11 @@
-import { BookOpen, Bot, Briefcase, Home, MessageSquare, Users } from "lucide-react"
+import {
+  BookOpen,
+  Bot,
+  Briefcase,
+  Home,
+  MessageSquare,
+  Users,
+} from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"

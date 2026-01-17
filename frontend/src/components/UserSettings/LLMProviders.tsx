@@ -13,7 +13,10 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { LlmProvidersService } from "@/client"
-import type { UserLLMProviderCreate, UserLLMProviderPublic } from "@/client/types.gen"
+import type {
+  UserLLMProviderCreate,
+  UserLLMProviderPublic,
+} from "@/client/types.gen"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -59,7 +62,11 @@ import { handleError } from "@/utils"
 const providerTypes = [
   { value: "openai", label: "OpenAI", description: "GPT-4, GPT-3.5, etc." },
   { value: "anthropic", label: "Anthropic", description: "Claude models" },
-  { value: "google", label: "Google (Gemini)", description: "Gemini Pro, etc." },
+  {
+    value: "google",
+    label: "Google (Gemini)",
+    description: "Gemini Pro, etc.",
+  },
   {
     value: "openai_compatible",
     label: "OpenAI Compatible",
@@ -71,11 +78,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   provider_type: z.enum(["openai", "anthropic", "google", "openai_compatible"]),
   api_key: z.string().min(1, "API key is required"),
-  base_url: z
-    .string()
-    .url("Must be a valid URL")
-    .optional()
-    .or(z.literal("")),
+  base_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   description: z.string().max(500).optional(),
   is_default: z.boolean(),
   is_enabled: z.boolean(),
@@ -87,7 +90,9 @@ const LLMProviders = () => {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [testingProviderId, setTestingProviderId] = useState<string | null>(null)
+  const [testingProviderId, setTestingProviderId] = useState<string | null>(
+    null,
+  )
 
   // Fetch existing providers
   const { data: providersData, isLoading } = useQuery({
@@ -381,10 +386,7 @@ const LLMProviders = () => {
             <p className="text-muted-foreground mb-4">
               No AI providers configured yet
             </p>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add your first provider
             </Button>

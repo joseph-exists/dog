@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Any, Literal
-from pydantic import EmailStr
+from pydantic import EmailStr, field_validator
 from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -132,6 +132,34 @@ class LLMProviderType(str, Enum):
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
     OPENAI_COMPATIBLE = "openai_compatible"  # For Ollama, vLLM, Azure, proxies
+
+
+# Supported models organized by provider
+# Format: "provider:model" as used by PydanticAI
+SUPPORTED_MODELS: dict[str, list[dict[str, str]]] = {
+    "openai": [
+        {"value": "openai:gpt-4o", "label": "GPT-4o", "description": "Latest multimodal flagship"},
+        {"value": "openai:gpt-4o-mini", "label": "GPT-4o Mini", "description": "Fast and affordable"},
+        {"value": "openai:gpt-4-turbo", "label": "GPT-4 Turbo", "description": "Previous generation flagship"},
+        {"value": "openai:gpt-3.5-turbo", "label": "GPT-3.5 Turbo", "description": "Fast, economical"},
+        {"value": "openai:o1", "label": "o1", "description": "Advanced reasoning"},
+        {"value": "openai:o1-mini", "label": "o1 Mini", "description": "Faster reasoning"},
+    ],
+    "anthropic": [
+        {"value": "anthropic:claude-sonnet-4-20250514", "label": "Claude Sonnet 4", "description": "Latest balanced model"},
+        {"value": "anthropic:claude-3-5-sonnet-latest", "label": "Claude 3.5 Sonnet", "description": "Previous Sonnet"},
+        {"value": "anthropic:claude-3-5-haiku-latest", "label": "Claude 3.5 Haiku", "description": "Fast and affordable"},
+        {"value": "anthropic:claude-3-opus-latest", "label": "Claude 3 Opus", "description": "Most capable"},
+    ],
+    "google": [
+        {"value": "google:gemini-2.0-flash", "label": "Gemini 2.0 Flash", "description": "Latest fast model"},
+        {"value": "google:gemini-1.5-pro", "label": "Gemini 1.5 Pro", "description": "Long context flagship"},
+        {"value": "google:gemini-1.5-flash", "label": "Gemini 1.5 Flash", "description": "Fast and capable"},
+    ],
+    "openai_compatible": [
+        {"value": "openai:custom", "label": "Custom Model", "description": "Enter model name manually"},
+    ],
+}
 
 
 # ============ Base Models ++++++++
@@ -1029,9 +1057,14 @@ class UserLLMProvidersPublic(SQLModel):
 
 class UserAgentSettingsBase(SQLModel):
     """Per-user settings for an agent (system or personal)."""
+    model_name_override: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Override the agent's default model (e.g., 'openai:gpt-4o' or 'anthropic:claude-3-5-sonnet')"
+    )
     provider_id: uuid.UUID | None = Field(
         default=None,
-        description="User's chosen LLM provider for this agent"
+        description="User's chosen LLM provider for this agent (must match model's provider type)"
     )
     custom_system_prompt: str | None = Field(
         default=None,
@@ -1047,6 +1080,7 @@ class UserAgentSettingsCreate(UserAgentSettingsBase):
 
 class UserAgentSettingsUpdate(SQLModel):
     """Update model for user agent settings - all fields optional."""
+    model_name_override: str | None = None
     provider_id: uuid.UUID | None = None
     custom_system_prompt: str | None = None
     is_favorite: bool | None = None
@@ -2518,6 +2552,20 @@ class AgentConfigBase(SQLModel):
      scope: str = Field(default="personal")  # "personal" | "system"
      participation_mode: str = Field(default="on_mention")  # "always" | "on_mention" | "manual"
 
+     # Coordinator mode: if True, this agent processes messages FIRST
+     # before other agents, acting as an orchestrator that routes to specialists
+     is_coordinator: bool = Field(default=False)
+
+     # Agent capabilities for discovery and A2A coordination
+     # e.g., ["story-structure", "dialogue", "character-development", "plot-twists"]
+     capabilities: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+     @field_validator("capabilities", mode="before")
+     @classmethod
+     def capabilities_none_to_list(cls, v: list[str] | None) -> list[str]:
+        """Convert NULL from database to empty list."""
+        return v if v is not None else []
+
 
 class AgentConfigCreate(AgentConfigBase):
      pass
@@ -2533,6 +2581,8 @@ class AgentConfigUpdate(SQLModel):
      agent_metadata: dict | None = None
      is_enabled: bool | None = None
      participation_mode: str | None = None
+     is_coordinator: bool | None = None
+     capabilities: list[str] | None = None
 
 
 class AgentConfig(AgentConfigBase, table=True):

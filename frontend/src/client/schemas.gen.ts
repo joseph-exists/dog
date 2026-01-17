@@ -92,6 +92,18 @@ export const AgentConfigCreateSchema = {
             type: 'string',
             title: 'Participation Mode',
             default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
         }
     },
     type: 'object',
@@ -191,6 +203,18 @@ export const AgentConfigPublicSchema = {
             type: 'string',
             title: 'Participation Mode',
             default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
         },
         id: {
             type: 'string',
@@ -339,6 +363,31 @@ export const AgentConfigUpdateSchema = {
                 }
             ],
             title: 'Participation Mode'
+        },
+        is_coordinator: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Coordinator'
+        },
+        capabilities: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Capabilities'
         }
     },
     type: 'object',
@@ -3757,6 +3806,19 @@ export const UpdatePasswordSchema = {
 
 export const UserAgentSettingsPublicSchema = {
     properties: {
+        model_name_override: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name Override',
+            description: "Override the agent's default model (e.g., 'openai:gpt-4o' or 'anthropic:claude-3-5-sonnet')"
+        },
         provider_id: {
             anyOf: [
                 {
@@ -3768,7 +3830,7 @@ export const UserAgentSettingsPublicSchema = {
                 }
             ],
             title: 'Provider Id',
-            description: "User's chosen LLM provider for this agent"
+            description: "User's chosen LLM provider for this agent (must match model's provider type)"
         },
         custom_system_prompt: {
             anyOf: [
@@ -3821,6 +3883,17 @@ export const UserAgentSettingsPublicSchema = {
 
 export const UserAgentSettingsUpdateSchema = {
     properties: {
+        model_name_override: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name Override'
+        },
         provider_id: {
             anyOf: [
                 {

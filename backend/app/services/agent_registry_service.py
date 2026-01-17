@@ -92,25 +92,38 @@ class AgentRegistryService:
          slug: str,
          user_id: uuid.UUID,
      ) -> Agent[Any, Any] | None:
-         """Get agent with user-specific provider configuration.
+         """Get agent with user-specific model and provider configuration.
 
-         Resolves LLM provider with fallback chain:
-         1. User's explicit provider_id in UserAgentSettings
-         2. User's default provider for the model's provider type
-         3. System environment variables (no ProviderConfig)
+         Resolution order:
+         1. Model: User's model_name_override in UserAgentSettings, else config.model_name
+         2. Provider: User's explicit provider_id, else default for model type, else system env
 
          Note: User-specific agents are NOT cached as they may have
-         different provider configurations per user.
+         different model/provider configurations per user.
          """
          config = self._get_config(session, slug)
          if not config or not config.is_enabled:
              return None
 
-         # Resolve user's provider configuration
-         provider_config = self._resolve_user_provider(session, user_id, config)
+         # Get user settings to check for model override
+         settings = self._get_user_settings(session, user_id, config.id)
+
+         # Determine effective model name
+         effective_model_name = config.model_name
+         if settings and settings.model_name_override:
+             effective_model_name = settings.model_name_override
+             logger.debug(
+                 f"Using model override '{effective_model_name}' for agent {slug} "
+                 f"(default: {config.model_name})"
+             )
+
+         # Resolve user's provider configuration based on effective model
+         provider_config = self._resolve_user_provider(
+             session, user_id, config, settings, effective_model_name
+         )
 
          # Always instantiate fresh for user-specific configs
-         return self._instantiate_agent(config, provider_config)
+         return self._instantiate_agent(config, provider_config, effective_model_name)
 
      def get_config(self, session: Session, slug: str) -> AgentConfig | None:
          return self._get_config(session, slug)
@@ -200,46 +213,56 @@ class AgentRegistryService:
              self._config_cache[slug] = config
          return config
 
+     def _get_user_settings(
+         self,
+         session: Session,
+         user_id: uuid.UUID,
+         agent_config_id: uuid.UUID,
+     ) -> UserAgentSettings | None:
+         """Get user's settings for a specific agent."""
+         stmt = select(UserAgentSettings).where(
+             UserAgentSettings.user_id == user_id,
+             UserAgentSettings.agent_config_id == agent_config_id,
+         )
+         return session.exec(stmt).first()
+
      def _instantiate_agent(
          self,
          config: AgentConfig,
          provider_config: ProviderConfig | None = None,
+         model_name: str | None = None,
      ) -> Agent[Any, Any]:
          """Create PydanticAI Agent from config with optional user provider.
 
          Args:
              config: Agent configuration from database
              provider_config: Optional user-specific provider settings (API key, base URL)
+             model_name: Optional model override (defaults to config.model_name)
 
          When provider_config is provided, PydanticAI will use the custom API key
          and base URL instead of environment variables.
          """
+         effective_model = model_name or config.model_name
          system_prompt = config.system_prompt or f"You are {config.name}. {config.description}"
 
          if provider_config:
              # Create agent with user's custom provider settings
-             # PydanticAI model settings are passed directly to the model constructor
              # The model_name format is "provider:model" e.g., "openai:gpt-4o-mini"
              agent = Agent(
-                 config.model_name,
+                 effective_model,
                  system_prompt=system_prompt,
-                 # PydanticAI accepts model_settings dict for provider-specific config
-                 # This is passed to the underlying model client
              )
              # Note: PydanticAI's Agent doesn't directly accept api_key in constructor.
-             # For custom providers, we need to use environment variables or
-             # provider-specific client initialization. This is a placeholder for
-             # future PydanticAI integration when model_settings support is added.
              # TODO: Implement proper provider config injection when PydanticAI supports it
              logger.debug(
-                 f"Instantiated agent {config.slug} with user provider "
-                 f"(type={provider_config.provider_type.value}, "
+                 f"Instantiated agent {config.slug} with model={effective_model}, "
+                 f"provider=(type={provider_config.provider_type.value}, "
                  f"base_url={provider_config.base_url or 'default'})"
              )
          else:
              # Use system defaults (environment variables)
-             agent = Agent(config.model_name, system_prompt=system_prompt)
-             logger.debug(f"Instantiated agent: {config.slug}")
+             agent = Agent(effective_model, system_prompt=system_prompt)
+             logger.debug(f"Instantiated agent {config.slug} with model={effective_model}")
 
          return agent
 
@@ -248,32 +271,32 @@ class AgentRegistryService:
          session: Session,
          user_id: uuid.UUID,
          config: AgentConfig,
+         settings: UserAgentSettings | None,
+         effective_model_name: str,
      ) -> ProviderConfig | None:
          """Resolve user's provider for an agent with fallback chain.
 
          Fallback order:
          1. User's explicit provider_id in UserAgentSettings for this agent
-         2. User's default provider for the agent's model type
+         2. User's default provider for the effective model's provider type
          3. None (use system environment variables)
+
+         Args:
+             settings: Pre-fetched user settings (to avoid duplicate query)
+             effective_model_name: The model that will be used (may be overridden)
          """
-         # Extract provider type from model_name (e.g., "openai:gpt-4o-mini" -> "openai")
-         provider_type_str = config.model_name.split(":")[0] if ":" in config.model_name else "openai"
+         # Extract provider type from effective model_name (e.g., "openai:gpt-4o-mini" -> "openai")
+         provider_type_str = effective_model_name.split(":")[0] if ":" in effective_model_name else "openai"
          try:
              provider_type = LLMProviderType(provider_type_str)
          except ValueError:
              # Unknown provider type, fall back to system defaults
-             logger.warning(f"Unknown provider type '{provider_type_str}' in model_name '{config.model_name}'")
+             logger.warning(f"Unknown provider type '{provider_type_str}' in model_name '{effective_model_name}'")
              return None
-
-         # 1. Check UserAgentSettings for explicit provider_id
-         settings_stmt = select(UserAgentSettings).where(
-             UserAgentSettings.user_id == user_id,
-             UserAgentSettings.agent_config_id == config.id,
-         )
-         settings = session.exec(settings_stmt).first()
 
          provider: UserLLMProvider | None = None
 
+         # 1. Check UserAgentSettings for explicit provider_id
          if settings and settings.provider_id:
              # User has explicitly set a provider for this agent
              provider = session.get(UserLLMProvider, settings.provider_id)

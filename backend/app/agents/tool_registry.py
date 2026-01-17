@@ -49,5 +49,25 @@ def get_tools_for_agent(agent_slug: str) -> list[ToolDefinition]:
 
 
 def list_tools() -> list[str]:
-     """List all registered tool names."""
-     return list(TOOL_REGISTRY.keys())
+    """List all registered tool names."""
+    return list(TOOL_REGISTRY.keys())
+
+
+# =============================================================================
+# Built-in A2A Tools
+# =============================================================================
+
+# Note: The request_agent_assistance tool is defined in agent_runner.py
+# and attached directly to agents via get_agent_instance_with_tools().
+# This is because it requires access to AgentDeps which includes session
+# and room context that aren't available through the simple registry pattern.
+#
+# For custom tools that don't need session/room context, use the registry:
+#
+# from app.agents.tool_registry import register_tool, ToolDefinition
+#
+# register_tool("my_tool", ToolDefinition(
+#     name="my_tool",
+#     description="Does something useful",
+#     implementation=my_tool_fn,
+# ))

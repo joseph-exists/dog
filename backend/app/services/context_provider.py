@@ -18,6 +18,22 @@ from app.models import AgentConfig, Room, RoomMessage, RoomParticipant, Story
 
 
 @dataclass
+class AgentInfo:
+    """
+    Agent information for agent-aware prompts.
+
+    Agents can see other agents in the room and reference them via @mentions.
+    Capabilities enable agent discovery for A2A coordination.
+    """
+
+    slug: str
+    name: str
+    description: str
+    participation_mode: str
+    capabilities: list[str]
+
+
+@dataclass
 class RoomContext:
     """
     Context object passed to agents for room-aware responses.
@@ -29,6 +45,7 @@ class RoomContext:
         recent_messages: Last N messages for conversation context
         participants: List of active participants (users and agents)
         room_metadata: Room title, creator, timestamps
+        active_agents: List of agents in the room with their details
     """
 
     room_id: uuid.UUID
@@ -37,6 +54,7 @@ class RoomContext:
     recent_messages: list[dict[str, Any]]
     participants: list[dict[str, Any]]
     room_metadata: dict[str, Any]
+    active_agents: list[AgentInfo]
 
 
 async def build_room_context(
@@ -126,6 +144,41 @@ async def build_room_context(
         for p in participants_list
     ]
 
+    # Fetch agent details for agent participants
+    active_agents: list[AgentInfo] = []
+    for p in participants_list:
+        if p.participant_type == "agent":
+            # participant_id is the agent's UUID (stored as string)
+            try:
+                agent_uuid = uuid.UUID(p.participant_id)
+                agent_config = await session.get(AgentConfig, agent_uuid)
+                if agent_config and agent_config.is_enabled:
+                    active_agents.append(
+                        AgentInfo(
+                            slug=agent_config.slug,
+                            name=agent_config.name,
+                            description=agent_config.description or "",
+                            participation_mode=agent_config.participation_mode or "on_mention",
+                            capabilities=agent_config.capabilities or [],
+                        )
+                    )
+            except ValueError:
+                # participant_id might be a slug instead of UUID (legacy)
+                agent_result = await session.execute(
+                    select(AgentConfig).where(AgentConfig.slug == p.participant_id)
+                )
+                agent_config = agent_result.scalar_one_or_none()
+                if agent_config and agent_config.is_enabled:
+                    active_agents.append(
+                        AgentInfo(
+                            slug=agent_config.slug,
+                            name=agent_config.name,
+                            description=agent_config.description or "",
+                            participation_mode=agent_config.participation_mode or "on_mention",
+                            capabilities=agent_config.capabilities or [],
+                        )
+                    )
+
     room_metadata = {
         "room_id": str(room.room_id),
         "title": room.title,
@@ -141,4 +194,5 @@ async def build_room_context(
         recent_messages=recent_messages,
         participants=participants,
         room_metadata=room_metadata,
+        active_agents=active_agents,
     )

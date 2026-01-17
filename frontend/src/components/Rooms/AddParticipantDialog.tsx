@@ -11,8 +11,8 @@ import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
 
 import { AgentsService } from "@/client"
-import type { AgentConfigPublic } from "@/client/types.gen"
 import type { ApiError } from "@/client/core/ApiError"
+import type { AgentConfigPublic } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -74,7 +74,9 @@ export default function AddParticipantDialog({
 
   // Transform API response to match component needs and filter out already-added agents
   const availableAgents = (agentsData?.data ?? [])
-    .filter((agent: AgentConfigPublic) => !currentParticipants.includes(agent.id))
+    .filter(
+      (agent: AgentConfigPublic) => !currentParticipants.includes(agent.id),
+    )
     .map((agent: AgentConfigPublic) => ({
       value: agent.id,
       label: agent.name,

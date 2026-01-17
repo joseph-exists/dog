@@ -12,6 +12,7 @@
 
 import { ChevronDownIcon } from "lucide-react"
 import { useEffect, useState } from "react"
+import type { AgentConfigPublic } from "@/client"
 import {
   Collapsible,
   CollapsibleContent,
@@ -19,7 +20,6 @@ import {
 } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -27,24 +27,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import type { AgentConfigPublic } from "@/client"
 
 // Available models for the dropdown
 const AVAILABLE_MODELS = [
-  { value: "openai:gpt-4o-mini", label: "GPT-4o Mini", description: "Fast & affordable" },
+  {
+    value: "openai:gpt-4o-mini",
+    label: "GPT-4o Mini",
+    description: "Fast & affordable",
+  },
   { value: "openai:gpt-4o", label: "GPT-4o", description: "Most capable" },
-  { value: "openai:gpt-4-turbo", label: "GPT-4 Turbo", description: "High performance" },
-  { value: "anthropic:claude-3-haiku", label: "Claude 3 Haiku", description: "Fast & efficient" },
-  { value: "anthropic:claude-3-sonnet", label: "Claude 3 Sonnet", description: "Balanced" },
-  { value: "anthropic:claude-3-opus", label: "Claude 3 Opus", description: "Most capable" },
+  {
+    value: "openai:gpt-4-turbo",
+    label: "GPT-4 Turbo",
+    description: "High performance",
+  },
+  {
+    value: "anthropic:claude-3-haiku",
+    label: "Claude 3 Haiku",
+    description: "Fast & efficient",
+  },
+  {
+    value: "anthropic:claude-3-sonnet",
+    label: "Claude 3 Sonnet",
+    description: "Balanced",
+  },
+  {
+    value: "anthropic:claude-3-opus",
+    label: "Claude 3 Opus",
+    description: "Most capable",
+  },
 ] as const
 
 // Participation modes
 const PARTICIPATION_MODES = [
-  { value: "on_mention", label: "On Mention", description: "Responds when @mentioned" },
-  { value: "always", label: "Always Active", description: "Responds to all messages" },
-  { value: "manual", label: "Manual", description: "Only responds when explicitly triggered" },
+  {
+    value: "on_mention",
+    label: "On Mention",
+    description: "Responds when @mentioned",
+  },
+  {
+    value: "always",
+    label: "Always Active",
+    description: "Responds to all messages",
+  },
+  {
+    value: "manual",
+    label: "Manual",
+    description: "Only responds when explicitly triggered",
+  },
 ] as const
 
 export interface AgentFormData {
@@ -91,10 +123,14 @@ export default function AgentForm({
   const [slug, setSlug] = useState(initialData?.slug || "")
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [description, setDescription] = useState(initialData?.description || "")
-  const [modelName, setModelName] = useState(initialData?.model_name || "openai:gpt-4o-mini")
-  const [systemPrompt, setSystemPrompt] = useState(initialData?.system_prompt || "")
+  const [modelName, setModelName] = useState(
+    initialData?.model_name || "openai:gpt-4o-mini",
+  )
+  const [systemPrompt, setSystemPrompt] = useState(
+    initialData?.system_prompt || "",
+  )
   const [participationMode, setParticipationMode] = useState(
-    initialData?.participation_mode || "on_mention"
+    initialData?.participation_mode || "on_mention",
   )
 
   // Auto-generate slug from name (only in create mode and if not manually edited)
@@ -114,7 +150,15 @@ export default function AgentForm({
       system_prompt: systemPrompt,
       participation_mode: participationMode,
     })
-  }, [name, slug, description, modelName, systemPrompt, participationMode, onChange])
+  }, [
+    name,
+    slug,
+    description,
+    modelName,
+    systemPrompt,
+    participationMode,
+    onChange,
+  ])
 
   const handleSlugChange = (value: string) => {
     setSlugManuallyEdited(true)

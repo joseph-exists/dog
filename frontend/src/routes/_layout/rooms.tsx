@@ -32,7 +32,7 @@ function Rooms() {
 
   // Handle room selection - navigate to room detail view
   const handleRoomSelect = (roomId: string) => {
-    navigate({ to: "/room/$roomId", params: { roomId } })
+    navigate({ to: "/room-v2/$roomId", params: { roomId } })
   }
 
   // Loading state

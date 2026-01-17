@@ -139,6 +139,12 @@ if not agent:
 Agents join rooms via `RoomParticipant` with `participant_type="agent"` and `participant_id=slug`.
 The agent_runner queries active agent participants, then uses registry service to get Agent instances.
 
-## Reference
+## References
 
-See `./references/agent-registry-plan.md` for full implementation details and architecture diagrams.
+| Document | Purpose |
+|----------|---------|
+| [Agent User Guide](./references/agent-user-guide.md) | End-user reference for working with agents |
+| [Agent Developer Reference](./references/agent-developer-reference.md) | Technical reference for implementation |
+| [A2A & AG-UI Roadmap](./references/a2a-ag-ui-roadmap.md) | Agent-to-Agent and UI component system |
+| [Agent Registry Plan](./references/agent-registry-plan.md) | Original architecture and design |
+| [Agent Provider Integration](./references/agent-provider-integration.md) | LLM provider configuration |

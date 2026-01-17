@@ -5,7 +5,11 @@
  * Users can create, edit, and delete their agents.
  */
 
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { BotIcon, ExternalLinkIcon, Loader2Icon, TrashIcon } from "lucide-react"
 import { Suspense, useState } from "react"
@@ -14,6 +18,7 @@ import type { ApiError } from "@/client/core/ApiError"
 import { AgentsService } from "@/client/sdk.gen"
 import type { AgentConfigPublic } from "@/client/types.gen"
 import AgentAvatar from "@/components/Agents/AgentAvatar"
+import type { ParticipationMode } from "@/components/Agents/AgentBadge"
 import { AgentModeBadge, AgentScopeBadge } from "@/components/Agents/AgentBadge"
 import CreateAgentDialog from "@/components/Agents/CreateAgentDialog"
 import EditAgentDialog from "@/components/Agents/EditAgentDialog"
@@ -30,10 +35,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
-import type { ParticipationMode } from "@/components/Agents/AgentBadge"
 
 function getAgentsQueryOptions() {
   return {
@@ -148,7 +158,11 @@ function AgentCard({ agent }: { agent: AgentConfigPublic }) {
     <Card className="flex flex-col group">
       <CardHeader className="flex flex-row items-start gap-4 pb-2">
         <Link to="/agent/$agentId" params={{ agentId: agent.id }}>
-          <AgentAvatar name={agent.name} size="lg" className="transition-transform group-hover:scale-105" />
+          <AgentAvatar
+            name={agent.name}
+            size="lg"
+            className="transition-transform group-hover:scale-105"
+          />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

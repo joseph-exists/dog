@@ -89,13 +89,13 @@ export default function AgentProviderSelector({
 
   // Filter providers to only show compatible ones
   const compatibleProviders = (providersData?.data ?? []).filter(
-    (p) => p.provider_type === requiredProviderType
+    (p) => p.provider_type === requiredProviderType,
   )
 
   const selectedProviderId = currentSettings?.provider_id ?? "system-default"
 
   const selectedProvider = compatibleProviders.find(
-    (p) => p.id === currentSettings?.provider_id
+    (p) => p.id === currentSettings?.provider_id,
   )
 
   const isLoading = isLoadingProviders || isLoadingSettings
@@ -122,6 +122,11 @@ export default function AgentProviderSelector({
         <Badge variant="outline" className="text-xs">
           {getProviderTypeLabel(requiredProviderType)}
         </Badge>
+        {compatibleProviders.length > 0 && (
+          <span className="text-xs text-muted-foreground">
+            ({compatibleProviders.length} available)
+          </span>
+        )}
       </div>
 
       <Select
@@ -142,9 +147,7 @@ export default function AgentProviderSelector({
         <SelectContent>
           <SelectGroup>
             <SelectLabel>Your Providers</SelectLabel>
-            <SelectItem value="system-default">
-              Use system default
-            </SelectItem>
+            <SelectItem value="system-default">Use system default</SelectItem>
             {compatibleProviders.map((provider) => (
               <SelectItem key={provider.id} value={provider.id}>
                 <span className="flex items-center gap-2">
@@ -164,10 +167,36 @@ export default function AgentProviderSelector({
       </p>
 
       {compatibleProviders.length === 0 && (
-        <p className="text-xs text-amber-600">
-          No {getProviderTypeLabel(requiredProviderType)} providers configured.
-          Add one in Settings → AI Providers.
-        </p>
+        <div className="text-xs text-amber-600 space-y-1">
+          <p>
+            No {getProviderTypeLabel(requiredProviderType)} providers found.
+          </p>
+          <p>
+            Add one in Settings → AI Providers with type "{getProviderTypeLabel(requiredProviderType)}".
+          </p>
+          {(providersData?.data?.length ?? 0) > 0 && (
+            <div className="text-muted-foreground space-y-1 mt-2 border-t pt-2">
+              <p>Your providers by type:</p>
+              <ul className="list-disc list-inside">
+                {Object.entries(
+                  (providersData?.data ?? []).reduce(
+                    (acc, p) => {
+                      const type = p.provider_type
+                      acc[type] = (acc[type] || 0) + 1
+                      return acc
+                    },
+                    {} as Record<string, number>,
+                  ),
+                ).map(([type, count]) => (
+                  <li key={type}>
+                    {getProviderTypeLabel(type)}: {count}
+                    {type === requiredProviderType && " ← needed"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
@@ -176,7 +205,11 @@ export default function AgentProviderSelector({
 /**
  * Small status indicator for provider verification status
  */
-function ProviderStatusBadge({ provider }: { provider: UserLLMProviderPublic }) {
+function ProviderStatusBadge({
+  provider,
+}: {
+  provider: UserLLMProviderPublic
+}) {
   if (provider.last_test_success === true) {
     return <span className="text-xs text-green-600">✓</span>
   }

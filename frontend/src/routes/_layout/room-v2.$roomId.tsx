@@ -17,11 +17,11 @@ import { useEffect, useState } from "react"
 import { AgentsService } from "@/client/sdk.gen"
 import type { AgentConfigPublic } from "@/client/types.gen"
 import {
+  type AgentData,
   AgentPartyPicker,
   AgentQuickAdd,
-  RoomAgentList,
-  type AgentData,
   type ParticipationMode,
+  RoomAgentList,
 } from "@/components/Agents"
 import EditDrawer from "@/components/Common/EditDrawer"
 import MessageInput from "@/components/Rooms/MessageInput"
@@ -33,7 +33,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomStream } from "@/hooks/useRoomStream"
-import type { MessageViewModel, ParticipantViewModel } from "@/services/roomService"
+import type {
+  MessageViewModel,
+  ParticipantViewModel,
+} from "@/services/roomService"
 
 export const Route = createFileRoute("/_layout/room-v2/$roomId")({
   component: RoomViewV2,
@@ -170,7 +173,9 @@ function UserSidebarPanel({
           <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
             {user.display_name.charAt(0).toUpperCase()}
           </div>
-          <span className="text-sm font-medium truncate">{user.display_name}</span>
+          <span className="text-sm font-medium truncate">
+            {user.display_name}
+          </span>
         </div>
       ))}
     </div>
@@ -184,16 +189,20 @@ function RoomViewV2() {
 
   // Edit drawer state
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
-  const [editingMessage, setEditingMessage] = useState<MessageViewModel | null>(null)
+  const [editingMessage, setEditingMessage] = useState<MessageViewModel | null>(
+    null,
+  )
 
   // Debug panel state
   const [showDebugPanel, setShowDebugPanel] = useState(false)
 
   // Fetch available agents
-  const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery({
-    queryKey: ["agents", "available"],
-    queryFn: () => AgentsService.listAvailableAgents(),
-  })
+  const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
+    {
+      queryKey: ["agents", "available"],
+      queryFn: () => AgentsService.listAvailableAgents(),
+    },
+  )
 
   // Use the aggregate room hook
   const {
@@ -244,10 +253,12 @@ function RoomViewV2() {
   }, [roomError, navigate])
 
   // Convert data for Sprint 2 components
-  const roomAgentsAsAgentData: AgentData[] = activeAgents.map(participantToAgentData)
-  const availableAgentsAsAgentData: AgentData[] = (availableAgentsData?.data || []).map(
-    availableAgentToAgentData
+  const roomAgentsAsAgentData: AgentData[] = activeAgents.map(
+    participantToAgentData,
   )
+  const availableAgentsAsAgentData: AgentData[] = (
+    availableAgentsData?.data || []
+  ).map(availableAgentToAgentData)
   const existingAgentIds = activeAgents.map((a) => a.participant_id)
 
   // Agent management handlers

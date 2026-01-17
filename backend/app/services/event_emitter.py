@@ -22,9 +22,7 @@ Architecture Compliance:
 """
 
 from __future__ import annotations
-from app.services.realtime_publisher import publish_event_to_redis, publish_ephemeral_message
 
-import json
 import logging
 import uuid
 from datetime import datetime
@@ -34,13 +32,15 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func
 
-from app.core.redis import get_redis
-
 from app.models import (
-    RoomMessage,
     Room,
     RoomEvent,
+    RoomMessage,
     RoomParticipant,
+)
+from app.services.realtime_publisher import (
+    publish_ephemeral_message,
+    publish_event_to_redis,
 )
 
 logger = logging.getLogger(__name__)
@@ -114,10 +114,11 @@ async def emit_event(
         - participant.role_changed: Participant role updated
         - room_message.user: User sent message
         - room_message.agent: Agent sent message
-    
+        - room_message.agent_internal: Agent-to-agent internal message (A2A)
+
     Publishes event to Redis after transaction flush
     for real-time delivery to WebSocket clients.
-    
+
     Enrichment metadata example:
         enrichment_metadata = {
             "trace_id": request_context.trace_id,
@@ -271,6 +272,55 @@ async def publish_agent_token(
             "content": token,
         },
     )
+
+
+async def emit_agent_internal_message(
+    session: AsyncSession,
+    room_id: uuid.UUID,
+    from_agent: str,
+    content: str,
+    to_agent: str | None = None,
+    visible_to_users: bool = False,
+) -> RoomEvent:
+    """
+    Emit an internal agent-to-agent message.
+
+    Convenience wrapper around emit_event() for A2A communication.
+    Internal messages are persisted but marked for frontend filtering.
+
+    Args:
+        session: Async database session
+        room_id: UUID of the room
+        from_agent: Slug of the sending agent
+        content: Message content
+        to_agent: Optional target agent slug (None = broadcast to all)
+        visible_to_users: Hint for frontend (default False = hidden)
+
+    Returns:
+        The created RoomEvent
+
+    Example:
+        # Agent notifying another agent
+        await emit_agent_internal_message(
+            session, room_id,
+            from_agent="StoryAdvisor",
+            to_agent="DialogueCoach",
+            content="Please review the dialogue in scene 3",
+        )
+    """
+    return await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room_message.agent_internal",
+        payload={
+            "from_agent": from_agent,
+            "to_agent": to_agent,
+            "content": content,
+            "visible_to_users": visible_to_users,
+        },
+    )
+
+
 # ============================================================================
 # Sequence Generation
 # ============================================================================
@@ -303,7 +353,7 @@ async def _get_next_room_sequence(
 
     Lock key is hash of room_id to ensure per-room locking granularity.
     """
-    
+
     # Advisory lock for this room (transaction-scoped)
     lock_key = hash(room_id) % (2**31)  # Postgres bigint range
     await session.execute(
@@ -351,6 +401,7 @@ async def _update_projections(
         "participant.role_changed": _handle_participant_role_changed,
         "room_message.user": _handle_room_message_user,
         "room_message.agent": _handle_room_message_agent,
+        "room_message.agent_internal": _handle_room_message_agent_internal,
         "message.edited": _handle_message_edited,
         "message.pinned": _handle_message_pinned,
         "message.unpinned": _handle_message_unpinned,
@@ -591,6 +642,39 @@ async def _handle_room_message_agent(
         sender_type="agent",
         sender_id=None,
         agent_name=payload["agent_name"],
+        content=payload["content"],
+        created_at=event.created_at,
+    )
+
+    session.add(room_message)
+
+
+async def _handle_room_message_agent_internal(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    Handle room_message.agent_internal event (A2A communication).
+
+    Internal messages are agent-to-agent communications that are:
+    - Persisted for audit/debugging
+    - Marked with sender_type="agent_internal" for frontend filtering
+    - Visible to developers but hidden from normal user view
+
+    Payload:
+        - from_agent: str (required) - Agent that initiated the message
+        - to_agent: str | None (optional) - Target agent (None = broadcast)
+        - content: str (required) - Message content
+        - visible_to_users: bool (optional, default False) - Frontend hint
+    """
+    payload = event.payload
+
+    room_message = RoomMessage(
+        message_id=uuid.uuid4(),
+        room_id=event.room_id,
+        sender_type="agent_internal",
+        sender_id=None,
+        agent_name=payload["from_agent"],
         content=payload["content"],
         created_at=event.created_at,
     )

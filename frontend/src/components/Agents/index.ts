@@ -50,27 +50,26 @@ export { default as RoomAgentList } from "./RoomAgentList"
 // Agent Management Components (Sprint 3)
 // ============================================================================
 
+// Clone Button
+export { default as AgentCloneButton } from "./AgentCloneButton"
 // Shared Form
 export type { AgentFormData } from "./AgentForm"
 export {
-  default as AgentForm,
   AVAILABLE_MODELS,
-  PARTICIPATION_MODES,
+  default as AgentForm,
   generateSlug,
+  PARTICIPATION_MODES,
 } from "./AgentForm"
-
 // Create Dialog
 export { default as CreateAgentDialog } from "./CreateAgentDialog"
-
 // Edit Dialog
 export { default as EditAgentDialog } from "./EditAgentDialog"
-
-// Clone Button
-export { default as AgentCloneButton } from "./AgentCloneButton"
 
 // ============================================================================
 // Provider Configuration Components (Sprint 4)
 // ============================================================================
 
-// Provider Selector - allows users to select their LLM provider for an agent
+// Model Settings - allows users to customize model and provider for an agent
+export { default as AgentModelSettings } from "./AgentModelSettings"
+// Provider Selector (legacy - use AgentModelSettings instead for full functionality)
 export { default as AgentProviderSelector } from "./AgentProviderSelector"

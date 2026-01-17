@@ -5,8 +5,9 @@
 2. [Room Events](#room-events)
 3. [Participant Events](#participant-events)
 4. [Message Events](#message-events)
-5. [Message Management Events](#message-management-events)
-6. [Ephemeral Messages](#ephemeral-messages)
+5. [Internal Agent Messages (A2A)](#room_messageagent_internal)
+6. [Message Management Events](#message-management-events)
+7. [Ephemeral Messages](#ephemeral-messages)
 
 ---
 
@@ -222,19 +223,43 @@ await emit_event(
 
 ### room_message.agent
 
-Agent sends a message.
+Agent sends a message, optionally with structured UI components (AG-UI).
 
 **Payload:**
 ```python
 {
-    "agent_name": str,  # Agent identifier (required)
-    "content": str      # Message content (required)
+    "agent_name": str,                    # Agent identifier (required)
+    "content": str,                       # Message content (required)
+    "ui_components": list[dict] | None    # AG-UI components (optional)
 }
 ```
 
 **Projection:** Creates `RoomMessage` with `sender_type="agent"`.
 
-**Example:**
+**AG-UI Component Structure:**
+```python
+{
+    "type": str,              # Component type (card, list, table, etc.)
+    "data": dict,             # Component-specific data
+    "id": str | None,         # Optional unique ID
+    "fallback_text": str | None  # Fallback if component not supported
+}
+```
+
+**Available Component Types:**
+- `card` - Highlighted information card
+- `list` - Bulleted or numbered list
+- `table` - Data table with columns
+- `progress` - Progress bars/metrics
+- `action_buttons` - Clickable actions
+- `code` - Code blocks with highlighting
+- `quote` - Blockquotes/dialogue
+- `alert` - Info/warning/error notices
+- `collapsible` - Expandable sections
+- `tabs` - Tabbed content
+- `divider` - Visual separator
+
+**Example (basic):**
 ```python
 await emit_event(
     session, room_id, "room_message.agent",
@@ -247,6 +272,98 @@ await emit_event(
         "latency_ms": 1234,
     }
 )
+```
+
+**Example (with AG-UI):**
+```python
+await emit_event(
+    session, room_id, "room_message.agent",
+    {
+        "agent_name": "StoryAdvisor",
+        "content": "Here's your character analysis:",
+        "ui_components": [
+            {
+                "type": "card",
+                "data": {
+                    "title": "Character: Elena",
+                    "subtitle": "Protagonist",
+                    "body": "A determined scientist...",
+                    "variant": "highlight",
+                },
+            },
+            {
+                "type": "action_buttons",
+                "data": {
+                    "buttons": [
+                        {"label": "Expand", "action": "expand_character"},
+                        {"label": "Generate Dialogue", "action": "gen_dialogue"},
+                    ],
+                },
+            },
+        ],
+    }
+)
+```
+
+**Frontend Handling:**
+```typescript
+// Render text content
+<MessageContent content={message.content} />
+
+// Render UI components if present
+{message.ui_components?.map((component) => (
+  <AgentUIRenderer key={component.id} component={component} />
+))}
+```
+
+---
+
+### room_message.agent_internal
+
+Agent-to-agent internal message (A2A communication).
+
+Internal messages are persisted for audit/debugging but marked for frontend filtering.
+Users typically don't see these unless explicitly enabled.
+
+**Payload:**
+```python
+{
+    "from_agent": str,           # Sending agent slug (required)
+    "to_agent": str | None,      # Target agent slug (optional, None = broadcast)
+    "content": str,              # Message content (required)
+    "visible_to_users": bool     # Frontend hint (optional, default False)
+}
+```
+
+**Projection:** Creates `RoomMessage` with `sender_type="agent_internal"`.
+
+**Example:**
+```python
+await emit_event(
+    session, room_id, "room_message.agent_internal",
+    {
+        "from_agent": "StoryAdvisor",
+        "to_agent": "DialogueCoach",
+        "content": "Please review the dialogue in scene 3",
+        "visible_to_users": False,
+    }
+)
+
+# Or use the convenience helper:
+from app.services.event_emitter import emit_agent_internal_message
+
+await emit_agent_internal_message(
+    session, room_id,
+    from_agent="StoryAdvisor",
+    to_agent="DialogueCoach",
+    content="Please review the dialogue in scene 3",
+)
+```
+
+**Frontend Filtering:**
+```typescript
+// Filter out internal messages for normal users
+const visibleMessages = messages.filter(m => m.sender_type !== "agent_internal")
 ```
 
 ---

@@ -24,6 +24,8 @@ export type AgentConfigCreate = {
     is_enabled?: boolean;
     scope?: string;
     participation_mode?: string;
+    is_coordinator?: boolean;
+    capabilities?: Array<(string)>;
 };
 
 export type AgentConfigPublic = {
@@ -50,6 +52,8 @@ export type AgentConfigPublic = {
     is_enabled?: boolean;
     scope?: string;
     participation_mode?: string;
+    is_coordinator?: boolean;
+    capabilities?: Array<(string)>;
     id: string;
     owner_id: (string | null);
     created_at: string;
@@ -78,6 +82,8 @@ export type AgentConfigUpdate = {
 } | null);
     is_enabled?: (boolean | null);
     participation_mode?: (string | null);
+    is_coordinator?: (boolean | null);
+    capabilities?: (Array<(string)> | null);
 };
 
 export type ArchetypeCreate = {
@@ -1001,7 +1007,11 @@ export type UpdatePassword = {
  */
 export type UserAgentSettingsPublic = {
     /**
-     * User's chosen LLM provider for this agent
+     * Override the agent's default model (e.g., 'openai:gpt-4o' or 'anthropic:claude-3-5-sonnet')
+     */
+    model_name_override?: (string | null);
+    /**
+     * User's chosen LLM provider for this agent (must match model's provider type)
      */
     provider_id?: (string | null);
     /**
@@ -1020,6 +1030,7 @@ export type UserAgentSettingsPublic = {
  * Update model for user agent settings - all fields optional.
  */
 export type UserAgentSettingsUpdate = {
+    model_name_override?: (string | null);
     provider_id?: (string | null);
     custom_system_prompt?: (string | null);
     is_favorite?: (boolean | null);

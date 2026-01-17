@@ -1,6 +1,6 @@
 # A2A & AG-UI Roadmap
 
-**Status:** Planning
+**Status:** ✅ All Phases Complete
 **Last Updated:** January 2026
 
 ## Overview
@@ -25,10 +25,18 @@ This document outlines the path from current agent functionality toward:
 | Token streaming via Redis | ✅ |
 | Event sourcing for messages | ✅ |
 | Party picker UI | ✅ |
+| **Phase 1.1** Agent context enhancement (active_agents in RoomContext) | ✅ |
+| **Phase 1.2** Agent capability tags | ✅ |
+| **Phase 1.3** Agent-aware prompts | ✅ |
+| **Phase 2.1** Agent @mention in responses (A2A triggering) | ✅ |
+| **Phase 2.2** Internal agent messages (A2A audit trail) | ✅ |
+| **Phase 3** Tool-based agent invocation (request_agent_assistance) | ✅ |
+| **Phase 4** AG-UI structured UI components (emit_ui_component) | ✅ |
+| **Phase 5** Coordinator Pattern (is_coordinator, priority execution) | ✅ |
 
 ---
 
-## Phase 1: Agent Coordination Foundation
+## Phase 1: Agent Coordination Foundation ✅ COMPLETE
 
 **Goal:** Enable basic agent-to-agent awareness
 
@@ -88,7 +96,7 @@ You can reference other agents with @mentions if their expertise is needed.
 
 **Goal:** Agents can trigger other agents
 
-### 2.1 Agent @Mention in Responses
+### 2.1 Agent @Mention in Responses ✅ COMPLETE
 
 When an agent's response contains `@OtherAgent`, trigger that agent:
 
@@ -113,7 +121,7 @@ async def process_agent_response(response: str, room_id: UUID, session: AsyncSes
 
 **Files:** `agent_runner.py`
 
-### 2.2 Internal Agent Messages (Optional)
+### 2.2 Internal Agent Messages ✅ COMPLETE
 
 New event type for agent-internal communication:
 
@@ -121,7 +129,7 @@ New event type for agent-internal communication:
 await emit_event(
     session=session,
     room_id=room_id,
-    event_type="room_message.agent_internal",  # NEW
+    event_type="room_message.agent_internal",
     payload={
         "from_agent": "StoryAdvisor",
         "to_agent": "DialogueCoach",
@@ -129,110 +137,174 @@ await emit_event(
         "visible_to_users": False,  # Hidden from UI
     },
 )
+
+# Or use the convenience helper:
+await emit_agent_internal_message(
+    session, room_id,
+    from_agent="StoryAdvisor",
+    to_agent="DialogueCoach",
+    content="Please review the dialogue in scene 3",
+)
 ```
 
-**Files:** `event_emitter.py`, `event_types.md`
+**Implementation Details:**
+- Event type: `room_message.agent_internal`
+- Creates `RoomMessage` with `sender_type="agent_internal"`
+- Optional `emit_internal_messages` flag in `process_agent_response()` enables A2A audit trail
+- Frontend can filter internal messages: `messages.filter(m => m.sender_type !== "agent_internal")`
+
+**Files:** `event_emitter.py`, `event_types.md`, `agent_runner.py`
 
 ---
 
-## Phase 3: Tool-Based Agent Invocation
+## Phase 3: Tool-Based Agent Invocation ✅ COMPLETE
 
 **Goal:** Structured agent-to-agent calls via PydanticAI tools
 
-### 3.1 Agent Invocation Tool
+### 3.1 Agent Invocation Tool ✅
 
-Define a tool that agents can use to invoke other agents:
+`AgentDeps` dataclass provides context to tools:
 
 ```python
-from pydantic_ai import RunContext
+@dataclass
+class AgentDeps:
+    session: AsyncSession
+    room_id: uuid.UUID
+    current_agent_slug: str
+    a2a_depth: int = 0
+```
 
+The `request_agent_assistance` tool enables structured A2A calls:
+
+```python
 async def request_agent_assistance(
     ctx: RunContext[AgentDeps],
     target_agent: str,
     request: str,
 ) -> str:
     """Request another agent's expertise on a specific topic."""
-    response = await invoke_agent_manually(
-        room_id=ctx.deps.room_id,
-        agent_slug=target_agent,
-        trigger_message=request,
-        session=ctx.deps.session,
-    )
-    return response["content"]
+    # Checks depth limit, validates target is in room
+    # Invokes target agent non-streaming
+    # Returns response directly to calling agent
 ```
 
-### 3.2 Tool Registration
+### 3.2 Tool Registration ✅
 
-Register the tool with capable agents:
+Agents are instantiated with tools via `get_agent_instance_with_tools()`:
 
 ```python
+agent = await get_agent_instance_with_tools(session, slug, enable_a2a_tool=True)
+
+# Creates:
 agent = Agent(
     model_name,
     system_prompt=system_prompt,
-    tools=[request_agent_assistance],  # A2A tool
+    tools=[request_agent_assistance],
+    deps_type=AgentDeps,
 )
 ```
 
-**Files:** `agent_runner.py`, `tool_registry.py`
+**Implementation Details:**
+- `AgentDeps` passed via `deps=` parameter on `run_stream()`
+- Tool calls are non-streaming (response returned in-turn)
+- Target agents don't get tools (prevents infinite recursion)
+- Respects `MAX_A2A_DEPTH` limit
+
+**Files:** `agent_runner.py` (primary), `tool_registry.py` (documentation)
 
 ---
 
-## Phase 4: AG-UI (Structured UI Responses)
+## Phase 4: AG-UI (Structured UI Responses) ✅ COMPLETE
 
 **Goal:** Agents can emit structured UI components
 
-### 4.1 UI Component Schema
+### 4.1 UI Component Schema ✅
 
-Define structured response types:
+Backend schemas in `app/schemas/ag_ui.py`:
 
 ```python
-class AgentUIComponent(BaseModel):
-    type: Literal["card", "list", "table", "chart", "action_buttons"]
+class UIComponent(BaseModel):
+    type: UIComponentType  # card, list, table, progress, etc.
     data: dict[str, Any]
+    id: str | None = None
+    fallback_text: str | None = None
 
-class AgentResponse(BaseModel):
+class AgentUIResponse(BaseModel):
     content: str  # Markdown text
-    ui_components: list[AgentUIComponent] = []
+    ui_components: list[UIComponent] = []
 ```
 
-### 4.2 Event Payload Extension
+**11 Component Types Implemented:**
+- `card` - Highlighted information cards
+- `list` - Bulleted/numbered lists
+- `table` - Data tables
+- `progress` - Progress bars/metrics
+- `action_buttons` - Clickable actions
+- `code` - Syntax-highlighted code
+- `quote` - Blockquotes/dialogue
+- `alert` - Info/warning/error notices
+- `collapsible` - Expandable sections
+- `tabs` - Tabbed content
+- `divider` - Visual separators
 
-Extend `room_message.agent` payload:
+### 4.2 Agent Tool ✅
+
+Agents use `emit_ui_component` tool during response generation:
+
+```python
+def emit_ui_component(
+    ctx: RunContext[AgentDeps],
+    component_type: UIComponentType,
+    data: dict[str, Any],
+    fallback_text: str | None = None,
+) -> str:
+    """Emit a structured UI component alongside text response."""
+    component = UIComponent(type=component_type, data=data, fallback_text=fallback_text)
+    ctx.deps.add_ui_component(component)
+    return "[UI Component Added]"
+```
+
+### 4.3 Event Payload Extension ✅
+
+`room_message.agent` payload now supports optional `ui_components`:
 
 ```python
 payload = {
     "agent_name": agent_name,
-    "content": response.content,
-    "ui_components": [c.model_dump() for c in response.ui_components],
+    "content": response_text,
+    "ui_components": [c.model_dump() for c in deps.ui_components],  # Optional
 }
 ```
 
-### 4.3 Frontend Rendering
+### 4.4 Frontend Rendering ✅
 
-Create `AgentUIRenderer` component:
+React component in `frontend/src/components/AgentUI/`:
 
 ```typescript
-function AgentUIRenderer({ components }: { components: AgentUIComponent[] }) {
-  return components.map((c) => {
-    switch (c.type) {
-      case "card": return <AgentCard data={c.data} />
-      case "list": return <AgentList data={c.data} />
-      case "action_buttons": return <AgentActions data={c.data} />
-      // ...
-    }
-  })
-}
+import { AgentUIRenderer } from "@/components/AgentUI"
+
+// In message display:
+{message.ui_components?.map((component, idx) => (
+  <AgentUIRenderer
+    key={component.id || idx}
+    component={component}
+    onAction={(action) => handleAgentAction(action)}
+  />
+))}
 ```
 
-**Files:** Frontend components, `event_emitter.py`
+**Files:**
+- Backend: `app/schemas/ag_ui.py`, `app/services/agent_runner.py`
+- Frontend: `src/components/AgentUI/AgentUIRenderer.tsx`, `types.ts`
+- Docs: `event-types.md`
 
 ---
 
-## Phase 5: Coordinator Pattern (Advanced A2A)
+## Phase 5: Coordinator Pattern (Advanced A2A) ✅ COMPLETE
 
 **Goal:** Orchestrator agent routes to specialists
 
-### 5.1 Coordinator Agent
+### 5.1 Coordinator Agent ✅
 
 A special agent that:
 1. Receives all user messages first
@@ -254,7 +326,7 @@ Available specialists:
 """
 ```
 
-### 5.2 Coordinator Mode
+### 5.2 Coordinator Mode ✅
 
 Add `is_coordinator` flag to AgentConfig:
 
@@ -265,6 +337,19 @@ class AgentConfigBase(SQLModel):
 ```
 
 Coordinators process messages first, before participation mode checks.
+
+**Implementation Details:**
+- `is_coordinator` boolean field added to `AgentConfig` model
+- `run_agents_for_message()` in `agent_runner.py` separates coordinators from regular agents
+- Coordinators run in Phase 1 (bypass participation mode)
+- Regular agents run in Phase 2 (respect participation mode)
+- Coordinators can @mention specialists to trigger them
+- A2A depth limits still apply to prevent infinite loops
+
+**Files:**
+- Model: `app/models.py` (AgentConfigBase.is_coordinator)
+- Runner: `app/services/agent_runner.py` (run_agents_for_message)
+- Migration: `alembic/versions/d0ecb69789de_add_is_coordinator_field_to_agent_.py`
 
 ---
 
@@ -282,22 +367,28 @@ Coordinators process messages first, before participation mode checks.
 
 ---
 
-## Quick Wins (Recommended Next Steps)
+## Future Enhancements
 
-1. **Phase 1.3 - Agent-Aware Prompts**
-   - ~30 lines in `agent_runner.py`
-   - Immediate improvement in multi-agent coherence
-   - No schema changes required
+All core A2A and AG-UI phases are complete. Potential future work:
 
-2. **Phase 1.2 - Capability Tags**
-   - Add `capabilities` field to AgentConfig
-   - Migration + frontend form update
-   - Enables future agent discovery
+1. **Coordinator UI**
+   - Frontend toggle for is_coordinator in agent settings
+   - Visual indicator for coordinator agents in room
 
-3. **Phase 2.1 - Agent @Mention Chains**
-   - Detect @mentions in agent responses
-   - Trigger mentioned agents
-   - Add recursion guard
+2. **Advanced Orchestration**
+   - Multi-coordinator support with priority ordering
+   - Coordinator synthesis of specialist responses
+   - Conditional routing based on message content analysis
+
+3. **AG-UI Extensions**
+   - Additional component types (charts, forms, media)
+   - Interactive component state persistence
+   - Component theming and customization
+
+4. **A2A Analytics**
+   - Dashboard for agent interaction patterns
+   - Token usage tracking across A2A chains
+   - Performance monitoring for agent latency
 
 ---
 
