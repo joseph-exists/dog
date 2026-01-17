@@ -12,7 +12,6 @@
 
 import { ChevronDownIcon } from "lucide-react"
 import { useEffect, useState } from "react"
-import type { AgentConfigPublic } from "@/client"
 import {
   Collapsible,
   CollapsibleContent,
@@ -23,42 +22,25 @@ import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import type { AgentViewModel, ParticipationMode } from "@/services/agentService"
+import {
+  type LLMProviderType,
+  PROVIDER_TYPE_LABELS,
+  SUPPORTED_MODELS,
+} from "@/services/llmProviderService"
 
-// Available models for the dropdown
-const AVAILABLE_MODELS = [
-  {
-    value: "openai:gpt-4o-mini",
-    label: "GPT-4o Mini",
-    description: "Fast & affordable",
-  },
-  { value: "openai:gpt-4o", label: "GPT-4o", description: "Most capable" },
-  {
-    value: "openai:gpt-4-turbo",
-    label: "GPT-4 Turbo",
-    description: "High performance",
-  },
-  {
-    value: "anthropic:claude-3-haiku",
-    label: "Claude 3 Haiku",
-    description: "Fast & efficient",
-  },
-  {
-    value: "anthropic:claude-3-sonnet",
-    label: "Claude 3 Sonnet",
-    description: "Balanced",
-  },
-  {
-    value: "anthropic:claude-3-opus",
-    label: "Claude 3 Opus",
-    description: "Most capable",
-  },
-] as const
+// Available models - now sourced from llmProviderService
+const AVAILABLE_MODELS = Object.entries(SUPPORTED_MODELS).flatMap(
+  ([, models]) => models,
+)
 
 // Participation modes
 const PARTICIPATION_MODES = [
@@ -85,12 +67,12 @@ export interface AgentFormData {
   description: string
   model_name: string
   system_prompt: string
-  participation_mode: string
+  participation_mode: ParticipationMode
 }
 
 interface AgentFormProps {
   /** Initial values (for edit mode) */
-  initialData?: Partial<AgentConfigPublic>
+  initialData?: Partial<AgentViewModel>
   /** Called when form data changes */
   onChange: (data: AgentFormData) => void
   /** Whether this is edit mode (affects slug editability) */
@@ -129,7 +111,7 @@ export default function AgentForm({
   const [systemPrompt, setSystemPrompt] = useState(
     initialData?.system_prompt || "",
   )
-  const [participationMode, setParticipationMode] = useState(
+  const [participationMode, setParticipationMode] = useState<ParticipationMode>(
     initialData?.participation_mode || "on_mention",
   )
 
@@ -230,15 +212,25 @@ export default function AgentForm({
             <SelectValue placeholder="Select a model" />
           </SelectTrigger>
           <SelectContent>
-            {AVAILABLE_MODELS.map((model) => (
-              <SelectItem key={model.value} value={model.value}>
-                <div className="flex flex-col">
-                  <span>{model.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {model.description}
-                  </span>
-                </div>
-              </SelectItem>
+            {(
+              Object.entries(SUPPORTED_MODELS) as [
+                LLMProviderType,
+                typeof AVAILABLE_MODELS,
+              ][]
+            ).map(([providerType, models]) => (
+              <SelectGroup key={providerType}>
+                <SelectLabel>{PROVIDER_TYPE_LABELS[providerType]}</SelectLabel>
+                {models.map((model) => (
+                  <SelectItem key={model.value} value={model.value}>
+                    <div className="flex flex-col">
+                      <span>{model.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {model.description}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>
@@ -278,7 +270,10 @@ export default function AgentForm({
       {/* Participation Mode */}
       <div className="space-y-2">
         <Label htmlFor="agent-mode">Participation Mode</Label>
-        <Select value={participationMode} onValueChange={setParticipationMode}>
+        <Select
+          value={participationMode}
+          onValueChange={(v) => setParticipationMode(v as ParticipationMode)}
+        >
           <SelectTrigger id="agent-mode" className="w-full">
             <SelectValue placeholder="Select mode" />
           </SelectTrigger>

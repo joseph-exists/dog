@@ -97,7 +97,9 @@ export default function AgentUIRenderer({
     case "alert":
       return <AlertComponent data={data as unknown as UIAlertData} />
     case "collapsible":
-      return <CollapsibleComponent data={data as unknown as UICollapsibleData} />
+      return (
+        <CollapsibleComponent data={data as unknown as UICollapsibleData} />
+      )
     case "tabs":
       return <TabsComponent data={data as unknown as UITabsData} />
     case "divider":

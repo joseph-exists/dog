@@ -22,7 +22,10 @@ interface ScopeBadgeProps {
  * Badge showing agent scope (system vs personal)
  */
 export function AgentScopeBadge({ scope, className }: ScopeBadgeProps) {
-  const config: Record<string, { label: string; icon: string; variant: "secondary" | "outline" }> = {
+  const config: Record<
+    string,
+    { label: string; icon: string; variant: "secondary" | "outline" }
+  > = {
     system: {
       label: "System",
       icon: "🌐",
@@ -64,23 +67,24 @@ interface ModeBadgeProps {
  * Badge showing participation mode
  */
 export function AgentModeBadge({ mode, className }: ModeBadgeProps) {
-  const config: Record<string, { label: string; icon: string; title: string }> = {
-    always: {
-      label: "Always Active",
-      icon: "⚡",
-      title: "Responds to all messages",
-    },
-    on_mention: {
-      label: "On Mention",
-      icon: "@",
-      title: "Responds when mentioned",
-    },
-    manual: {
-      label: "Manual",
-      icon: "🎯",
-      title: "Must be explicitly invoked",
-    },
-  }
+  const config: Record<string, { label: string; icon: string; title: string }> =
+    {
+      always: {
+        label: "Always Active",
+        icon: "⚡",
+        title: "Responds to all messages",
+      },
+      on_mention: {
+        label: "On Mention",
+        icon: "@",
+        title: "Responds when mentioned",
+      },
+      manual: {
+        label: "Manual",
+        icon: "🎯",
+        title: "Must be explicitly invoked",
+      },
+    }
 
   const modeConfig = config[mode]
   if (!modeConfig) {

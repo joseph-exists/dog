@@ -60,7 +60,6 @@ Implement a rich text editor for StoryNode content using Tiptap, supporting mult
 - [ ] Includes Link extension
 - [ ] Includes Image extension
 - [ ] Renders EditorContent with proper styling
-- [ ] Styled to match Chakra UI theme (dark mode compatible)
 - [ ] Returns HTML via `editor.getHTML()` on change
 - [ ] Handles SSR with `immediatelyRender: false`
 - [ ] Properly typed with TypeScript
@@ -73,7 +72,7 @@ Implement a rich text editor for StoryNode content using Tiptap, supporting mult
 - **Image:** Supports inline images and base64 (for paste/drag-drop)
 
 **Styling Notes:**
-- Use Chakra semantic tokens for theming
+
 - Add custom CSS for editor content in `src/index.css`
 
 ---
@@ -358,7 +357,7 @@ describe('RichTextEditor', () => {
 **Solution:** Check CORS, ensure URL is valid, test with base64
 
 ### Issue 5: Dark mode styling broken
-**Solution:** Use CSS variables (`var(--chakra-colors-*)`) instead of hardcoded colors
+**Solution:** Use CSS variables instead of hardcoded colors
 
 ### Issue 6: Code blocks not monospace
 **Solution:** Verify CSS is applied: `.tiptap-code-block` class, `font-family: monospace`
