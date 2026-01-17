@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+
 import AgentAvatar from "./AgentAvatar"
 import type { AgentScope, ParticipationMode } from "./AgentBadge"
 import { AgentModeBadge, AgentScopeBadge, AgentStatusBadge } from "./AgentBadge"

@@ -8,9 +8,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2Icon, PencilIcon } from "lucide-react"
 import { useCallback, useState } from "react"
+
 import type { ApiError } from "@/client/core/ApiError"
-import { AgentsService } from "@/client/sdk.gen"
-import type { AgentConfigPublic, AgentConfigUpdate } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,18 +21,23 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  AgentService,
+  type AgentViewModel,
+  type UpdateAgentInput,
+} from "@/services/agentService"
 import AgentAvatar from "./AgentAvatar"
 import AgentForm, { type AgentFormData } from "./AgentForm"
 
 interface EditAgentDialogProps {
   /** The agent to edit */
-  agent: AgentConfigPublic
+  agent: AgentViewModel
   /** Custom trigger element (defaults to "Edit" button) */
   trigger?: React.ReactNode
   /** Callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void
   /** Callback when agent is updated successfully */
-  onSuccess?: (agent: AgentConfigPublic) => void
+  onSuccess?: (agent: AgentViewModel) => void
   /** Additional classes for the trigger */
   className?: string
 }
@@ -59,8 +63,8 @@ export default function EditAgentDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: AgentConfigUpdate) =>
-      AgentsService.updateAgent({ agentId: agent.id, requestBody: data }),
+    mutationFn: (data: UpdateAgentInput) =>
+      AgentService.updateAgent(agent.id, data),
     onSuccess: (updatedAgent) => {
       showSuccessToast(`Agent "${updatedAgent.name}" updated successfully.`)
       handleOpenChange(false)
@@ -91,7 +95,7 @@ export default function EditAgentDialog({
     }
 
     // Only send fields that changed
-    const payload: AgentConfigUpdate = {}
+    const payload: UpdateAgentInput = {}
 
     if (formData.name.trim() !== agent.name) {
       payload.name = formData.name.trim()

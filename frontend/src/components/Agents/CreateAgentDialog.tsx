@@ -8,9 +8,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { BotIcon, Loader2Icon, PlusIcon } from "lucide-react"
 import { useCallback, useState } from "react"
+
 import type { ApiError } from "@/client/core/ApiError"
-import { AgentsService } from "@/client/sdk.gen"
-import type { AgentConfigCreate } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,6 +21,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  AgentService,
+  type AgentViewModel,
+  type CreateAgentInput,
+} from "@/services/agentService"
 import AgentForm, { type AgentFormData } from "./AgentForm"
 
 interface CreateAgentDialogProps {
@@ -30,7 +34,7 @@ interface CreateAgentDialogProps {
   /** Callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void
   /** Callback when agent is created successfully */
-  onSuccess?: (agent: { id: string; name: string }) => void
+  onSuccess?: (agent: AgentViewModel) => void
   /** Additional classes for the trigger */
   className?: string
 }
@@ -56,12 +60,11 @@ export default function CreateAgentDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: AgentConfigCreate) =>
-      AgentsService.createAgent({ requestBody: data }),
-    onSuccess: (agent) => {
-      showSuccessToast(`Agent "${agent.name}" created successfully.`)
+    mutationFn: (data: CreateAgentInput) => AgentService.createAgent(data),
+    onSuccess: (createdAgent) => {
+      showSuccessToast(`Agent "${createdAgent.name}" created successfully.`)
       handleOpenChange(false)
-      onSuccess?.({ id: agent.id, name: agent.name })
+      onSuccess?.(createdAgent)
     },
     onError: (err: ApiError) => {
       const message =
@@ -90,7 +93,7 @@ export default function CreateAgentDialog({
       return
     }
 
-    const payload: AgentConfigCreate = {
+    const payload: CreateAgentInput = {
       name: formData.name.trim(),
       slug: formData.slug.trim(),
       description: formData.description.trim() || null,

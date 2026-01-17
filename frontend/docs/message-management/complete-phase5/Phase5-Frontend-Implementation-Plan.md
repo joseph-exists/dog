@@ -106,91 +106,15 @@ frontend/src/
 **Requirements from FrontendRULES.md:**
 - Use kebab-case filename ✓
 - Export component (not default) ✓
-- Extend Chakra UI components ✓
+- Extend UI components ✓
 - Type-safe props ✓
 
-**Implementation:**
-
-```tsx
-// frontend/src/components/ui/message-badge.tsx
-import { Badge, Icon, type BadgeProps } from "@chakra-ui/react"
-import { FaEdit, FaThumbtack, FaCheckCircle, FaCircle } from "react-icons/fa"
-import { Tooltip } from "@/components/ui/tooltip"
-
-export type MessageBadgeVariant =
-  | "edited"
-  | "pinned"
-  | "active"
-  | "inactive"
-
-export interface MessageBadgeProps extends Omit<BadgeProps, "variant"> {
-  variant: MessageBadgeVariant
-  timestamp?: string
-}
-
-const badgeConfig: Record<
-  MessageBadgeVariant,
-  { icon: any; colorScheme: string; label: string }
-> = {
-  edited: {
-    icon: FaEdit,
-    colorScheme: "gray",
-    label: "Edited"
-  },
-  pinned: {
-    icon: FaThumbtack,
-    colorScheme: "yellow",
-    label: "Pinned"
-  },
-  active: {
-    icon: FaCheckCircle,
-    colorScheme: "green",
-    label: "Active for Context"
-  },
-  inactive: {
-    icon: FaCircle,
-    colorScheme: "gray",
-    label: "Inactive"
-  },
-}
-
-export const MessageBadge = ({
-  variant,
-  timestamp,
-  ...props
-}: MessageBadgeProps) => {
-  const config = badgeConfig[variant]
-  const tooltipLabel = timestamp
-    ? `${config.label} - ${timestamp}`
-    : config.label
-
-  return (
-    <Tooltip content={tooltipLabel}>
-      <Badge
-        colorScheme={config.colorScheme}
-        variant="subtle"
-        display="inline-flex"
-        alignItems="center"
-        gap={1}
-        fontSize="xs"
-        px={2}
-        py={0.5}
-        borderRadius="full"
-        {...props}
-      >
-        <Icon as={config.icon} boxSize={3} />
-        {config.label}
-      </Badge>
-    </Tooltip>
-  )
-}
-```
+** legacy implementation removed **
 
 **Acceptance Criteria:**
 - [ ] Component follows kebab-case naming
 - [ ] Exports as named export (not default)
 - [ ] Uses TypeScript with strict types
-- [ ] Extends Chakra Badge component
 - [ ] Supports 4 variants: edited, pinned, active, inactive
 - [ ] Shows tooltips with timestamps
 - [ ] Accessible (aria labels via tooltip)
@@ -210,12 +134,9 @@ export const MessageBadge = ({
 
 **Implementation:**
 
-```tsx
+```typescript - majority of legacy implementation removed
 // frontend/src/hooks/useRoomPermissions.ts
-import { useMemo } from "react"
-import type { RoomViewModel } from "@/services/roomService"
-import type { MessageViewModel } from "@/services/roomService"
-import useAuth from "./useAuth"
+
 
 export interface RoomPermissions {
   isOwner: boolean
@@ -286,28 +207,15 @@ export function useRoomPermissions(
 - Feature-specific component in `Rooms/` ✓
 - PascalCase filename ✓
 - Default export ✓
-- Use Chakra UI components ✓
+
 
 **Implementation:**
 
 ```tsx
 // frontend/src/components/Rooms/MessageActionMenu.tsx
 import { useState } from "react"
-import {
-  MenuRoot,
-  MenuTrigger,
-  MenuContent,
-  MenuItem,
-  IconButton,
-} from "@chakra-ui/react"
-import {
-  FaEdit,
-  FaThumbtack,
-  FaTrash,
-  FaEye,
-  FaEyeSlash,
-  FaEllipsisV
-} from "react-icons/fa"
+// legacy imports removed
+
 import type { MessageViewModel } from "@/services/roomService"
 import { useRoomPermissions } from "@/hooks/useRoomPermissions"
 import type { RoomViewModel } from "@/services/roomService"
@@ -408,7 +316,6 @@ export default MessageActionMenu
 - [ ] Default export
 - [ ] Shows only permitted actions
 - [ ] Uses permission hook for authorization
-- [ ] Chakra UI Menu components
 - [ ] Icon for each action
 - [ ] Delete action styled in red
 
@@ -432,21 +339,7 @@ export default MessageActionMenu
 // frontend/src/components/Common/EditDrawer.tsx
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
-import {
-  DrawerRoot,
-  DrawerBackdrop,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerBody,
-  DrawerFooter,
-  DrawerCloseTrigger,
-  Button,
-  Textarea,
-  VStack,
-  Text,
-} from "@chakra-ui/react"
-import { Field } from "@/components/ui/field"
+// legacy imports removed
 
 interface EditDrawerProps {
   isOpen: boolean
@@ -580,13 +473,7 @@ export default EditDrawer
 
 ```tsx
 // frontend/src/components/Rooms/MessageFilters.tsx
-import {
-  HStack,
-  Select,
-  IconButton,
-  Text,
-} from "@chakra-ui/react"
-import { FaTimes } from "react-icons/fa"
+// legacy imports removed
 
 interface MessageFilters {
   activeForContext: boolean | null  // null = all, true = active, false = inactive
@@ -689,7 +576,6 @@ export default MessageFilters
 - [ ] Three filter controls (active, pinned, sender type)
 - [ ] Clear filters button
 - [ ] Responsive layout with flexWrap
-- [ ] Chakra UI Select components
 - [ ] Type-safe filter interface
 
 ---
@@ -704,8 +590,7 @@ export default MessageFilters
 
 ```tsx
 // frontend/src/components/Rooms/PinnedMessagesSection.tsx
-import { Box, HStack, Icon, Text, VStack } from "@chakra-ui/react"
-import { FaThumbtack } from "react-icons/fa"
+// legacy imports removed
 import Message from "./Message"
 import type { MessageViewModel } from "@/services/roomService"
 
@@ -771,8 +656,7 @@ export default PinnedMessagesSection
 ```tsx
 // frontend/src/components/Rooms/Message.tsx
 // Add new imports:
-import { HStack } from "@chakra-ui/react"
-import { MessageBadge } from "@/components/ui/message-badge"
+// legacy imports removed
 import MessageActionMenu from "./MessageActionMenu"
 import type { RoomViewModel } from "@/services/roomService"
 
@@ -1026,7 +910,6 @@ Phase 5 frontend is considered complete when:
 1. ✅ All 8 components implemented and tested
 2. ✅ All components follow FrontendRULES.md patterns
 3. ✅ TypeScript with strict types (no `any`)
-4. ✅ Chakra UI components used consistently
 5. ✅ React Query for mutations
 6. ✅ Error handling with useCustomToast
 7. ✅ Permission checks via useRoomPermissions

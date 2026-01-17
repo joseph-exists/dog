@@ -680,7 +680,7 @@ src/components/Common/SidebarItems.tsx  # Add Rooms link
 ## Dependencies
 
 ### Existing (Already Available)
-- ✅ Chakra UI components
+- ✅ UI components
 - ✅ TanStack Query
 - ✅ TanStack Router
 - ✅ React Hook Form (for forms if needed)

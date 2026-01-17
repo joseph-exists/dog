@@ -18,7 +18,6 @@ import {
 } from "lucide-react"
 import { Suspense } from "react"
 
-import { AgentsService } from "@/client/sdk.gen"
 import {
   AgentAvatar,
   AgentCloneButton,
@@ -27,7 +26,6 @@ import {
   AgentScopeBadge,
   AgentStatusBadge,
   EditAgentDialog,
-  type ParticipationMode,
 } from "@/components/Agents"
 import {
   Breadcrumb,
@@ -41,6 +39,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AgentService } from "@/services/agentService"
 
 export const Route = createFileRoute("/_layout/agent/$agentId")({
   component: AgentDetailPage,
@@ -80,7 +79,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
     error,
   } = useQuery({
     queryKey: ["agent", agentId],
-    queryFn: () => AgentsService.getAgent({ agentId }),
+    queryFn: () => AgentService.getAgent(agentId),
   })
 
   if (isLoading) {
@@ -132,10 +131,8 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight">{agent.name}</h1>
-            {agent.scope && (
-              <AgentScopeBadge scope={agent.scope as "system" | "personal"} />
-            )}
-            <AgentStatusBadge isEnabled={agent.is_enabled ?? true} />
+            <AgentScopeBadge scope={agent.scope} />
+            <AgentStatusBadge isEnabled={agent.is_enabled} />
           </div>
 
           <p className="text-muted-foreground font-mono text-sm mt-1">
@@ -149,16 +146,10 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
           )}
 
           <div className="flex items-center gap-2 mt-4 flex-wrap">
-            {agent.participation_mode && (
-              <AgentModeBadge
-                mode={agent.participation_mode as ParticipationMode}
-              />
-            )}
-            {agent.model_name && (
-              <span className="text-xs px-2 py-1 rounded-md bg-muted font-mono">
-                {agent.model_name}
-              </span>
-            )}
+            <AgentModeBadge mode={agent.participation_mode} />
+            <span className="text-xs px-2 py-1 rounded-md bg-muted font-mono">
+              {agent.display_model}
+            </span>
           </div>
         </div>
 
@@ -210,7 +201,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-semibold">
-                  {new Date(agent.created_at).toLocaleDateString()}
+                  {agent.created_at.toLocaleDateString()}
                 </p>
               </CardContent>
             </Card>
@@ -223,9 +214,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-semibold">
-                  {agent.updated_at
-                    ? new Date(agent.updated_at).toLocaleDateString()
-                    : "Never"}
+                  {agent.updated_at?.toLocaleDateString() ?? "Never"}
                 </p>
               </CardContent>
             </Card>
@@ -280,31 +269,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
 
         {/* My Settings Tab (User's provider preferences for this agent) */}
         <TabsContent value="my-settings" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-muted-foreground">
-                Configure your personal settings for this agent. These settings
-                only affect how the agent works for you.
-              </p>
-
-              {agent.model_name && (
-                <AgentModelSettings
-                  agentId={agent.id}
-                  defaultModelName={agent.model_name}
-                />
-              )}
-
-              {!agent.model_name && (
-                <p className="text-sm text-muted-foreground italic">
-                  This agent doesn't have a model configured, so model/provider
-                  customization is not available.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <AgentModelSettings agent={agent} />
         </TabsContent>
 
         {/* Settings Tab (Personal agents only) */}
@@ -324,13 +289,13 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
                     <p className="text-sm font-medium text-muted-foreground">
                       Model
                     </p>
-                    <p className="font-mono">{agent.model_name || "Default"}</p>
+                    <p className="font-mono">{agent.display_model}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
                       Participation Mode
                     </p>
-                    <p>{agent.participation_mode || "on_mention"}</p>
+                    <p>{agent.participation_mode}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">

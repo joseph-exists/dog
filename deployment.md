@@ -1,4 +1,4 @@
-# FastAPI Project - Deployment
+# Tinyfoot Project - Deployment
 
 You can deploy the project using Docker Compose to a remote server.
 

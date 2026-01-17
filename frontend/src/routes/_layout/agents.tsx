@@ -15,10 +15,7 @@ import { BotIcon, ExternalLinkIcon, Loader2Icon, TrashIcon } from "lucide-react"
 import { Suspense, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
-import { AgentsService } from "@/client/sdk.gen"
-import type { AgentConfigPublic } from "@/client/types.gen"
 import AgentAvatar from "@/components/Agents/AgentAvatar"
-import type { ParticipationMode } from "@/components/Agents/AgentBadge"
 import { AgentModeBadge, AgentScopeBadge } from "@/components/Agents/AgentBadge"
 import CreateAgentDialog from "@/components/Agents/CreateAgentDialog"
 import EditAgentDialog from "@/components/Agents/EditAgentDialog"
@@ -44,10 +41,11 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
+import { AgentService, type AgentViewModel } from "@/services/agentService"
 
 function getAgentsQueryOptions() {
   return {
-    queryFn: () => AgentsService.listAgents({ skip: 0, limit: 100 }),
+    queryFn: () => AgentService.listAgents(),
     queryKey: ["agents"],
   }
 }
@@ -57,7 +55,7 @@ export const Route = createFileRoute("/_layout/agents")({
   head: () => ({
     meta: [
       {
-        title: "My Agents - TinyFoot",
+        title: "My Agents",
       },
     ],
   }),
@@ -91,13 +89,13 @@ function PendingAgents() {
   )
 }
 
-function DeleteAgentButton({ agent }: { agent: AgentConfigPublic }) {
+function DeleteAgentButton({ agent }: { agent: AgentViewModel }) {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const mutation = useMutation({
-    mutationFn: () => AgentsService.deleteAgent({ agentId: agent.id }),
+    mutationFn: () => AgentService.deleteAgent(agent.id),
     onSuccess: () => {
       showSuccessToast(`Agent "${agent.name}" deleted successfully.`)
       setIsOpen(false)
@@ -151,7 +149,7 @@ function DeleteAgentButton({ agent }: { agent: AgentConfigPublic }) {
   )
 }
 
-function AgentCard({ agent }: { agent: AgentConfigPublic }) {
+function AgentCard({ agent }: { agent: AgentViewModel }) {
   const isPersonal = agent.scope === "personal"
 
   return (
@@ -173,12 +171,7 @@ function AgentCard({ agent }: { agent: AgentConfigPublic }) {
             >
               <CardTitle className="text-lg truncate">{agent.name}</CardTitle>
             </Link>
-            {agent.scope && (
-              <AgentScopeBadge
-                scope={agent.scope as "system" | "personal"}
-                className="shrink-0"
-              />
-            )}
+            <AgentScopeBadge scope={agent.scope} className="shrink-0" />
           </div>
           <CardDescription className="font-mono text-xs">
             @{agent.slug}
@@ -203,16 +196,10 @@ function AgentCard({ agent }: { agent: AgentConfigPublic }) {
         )}
 
         <div className="flex flex-wrap gap-2 mt-auto">
-          {agent.participation_mode && (
-            <AgentModeBadge
-              mode={agent.participation_mode as ParticipationMode}
-            />
-          )}
-          {agent.model_name && (
-            <Badge variant="outline" className="font-mono text-xs">
-              {agent.model_name.split(":").pop()}
-            </Badge>
-          )}
+          <AgentModeBadge mode={agent.participation_mode} />
+          <Badge variant="outline" className="font-mono text-xs">
+            {agent.display_model}
+          </Badge>
           {!agent.is_enabled && (
             <Badge variant="secondary" className="text-muted-foreground">
               Disabled
@@ -233,13 +220,11 @@ function AgentCard({ agent }: { agent: AgentConfigPublic }) {
 }
 
 function AgentsListContent() {
-  const { data: agents } = useSuspenseQuery(getAgentsQueryOptions())
+  const { data } = useSuspenseQuery(getAgentsQueryOptions())
+  const { personal: personalAgents, system: systemAgents } =
+    AgentService.groupByScope(data.agents)
 
-  // Separate personal and system agents
-  const personalAgents = agents.data.filter((a) => a.scope === "personal")
-  const systemAgents = agents.data.filter((a) => a.scope === "system")
-
-  if (agents.data.length === 0) {
+  if (data.agents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-12">
         <div className="rounded-full bg-muted p-4 mb-4">

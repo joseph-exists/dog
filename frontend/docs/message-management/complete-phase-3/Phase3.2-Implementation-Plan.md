@@ -280,24 +280,7 @@ The `useRoom` hook needs `updateRoom` and `deleteRoom` mutations to support edit
    import type { ApiError } from "@/client/core/ApiError";
    import useCustomToast from "@/hooks/useCustomToast";
    import { handleError } from "@/utils";
-   import {
-     Button,
-     DialogActionTrigger,
-     DialogTitle,
-     Input,
-     Text,
-     VStack,
-   } from "@chakra-ui/react";
-   import {
-     DialogBody,
-     DialogCloseTrigger,
-     DialogContent,
-     DialogFooter,
-     DialogHeader,
-     DialogRoot,
-     DialogTrigger,
-   } from "../ui/dialog";
-   import { Field } from "../ui/field";
+   // legacy imports removed { } ;
 
    const AddRoom = () => {
      const [isOpen, setIsOpen] = useState(false);
@@ -712,7 +695,7 @@ the backend DELETE endpoint is created.
 2. **Implement delete confirmation**
    ```typescript
    import { useState } from "react";
-   import { Button, Text, VStack } from "@chakra-ui/react";
+  // legacy imports removed
    import {
      DialogRoot,
      DialogContent,

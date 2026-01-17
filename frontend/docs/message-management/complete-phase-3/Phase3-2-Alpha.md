@@ -47,7 +47,7 @@
 
   - Component placement: Dialogs and room-specific components go in src/components/Rooms/, reusable action menu goes in src/components/Common/
   - State management: All mutations use TanStack Query via useRoom hook, following existing patterns
-  - Forms: React Hook Form with Chakra UI Field components and validation
+  - Forms: React Hook Form with ShadCN components and validation
   - API integration: Use existing RoomService adapter (already scaffolded per technical spec)
   - Error handling: useCustomToast for notifications, handleError for API errors
   - Authorization: Check currentUserRole from useRoom hook before rendering owner-only actions

@@ -13,9 +13,6 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2, UsersIcon } from "lucide-react"
 import { useEffect, useState } from "react"
-
-import { AgentsService } from "@/client/sdk.gen"
-import type { AgentConfigPublic } from "@/client/types.gen"
 import {
   type AgentData,
   AgentPartyPicker,
@@ -33,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomStream } from "@/hooks/useRoomStream"
+import { AgentService, type AgentViewModel } from "@/services/agentService"
 import type {
   MessageViewModel,
   ParticipantViewModel,
@@ -56,14 +54,14 @@ function participantToAgentData(p: ParticipantViewModel): AgentData {
 }
 
 /**
- * Convert AgentConfigPublic to AgentData
+ * Convert AgentViewModel to AgentData
  * Maps agent configuration from the registry to the component's expected format
  */
-function availableAgentToAgentData(a: AgentConfigPublic): AgentData {
+function availableAgentToAgentData(a: AgentViewModel): AgentData {
   return {
     id: a.id,
     name: a.name,
-    description: a.description ?? null,
+    description: a.description,
   }
 }
 
@@ -200,7 +198,7 @@ function RoomViewV2() {
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
     {
       queryKey: ["agents", "available"],
-      queryFn: () => AgentsService.listAvailableAgents(),
+      queryFn: () => AgentService.listAvailableAgents(),
     },
   )
 
@@ -257,7 +255,7 @@ function RoomViewV2() {
     participantToAgentData,
   )
   const availableAgentsAsAgentData: AgentData[] = (
-    availableAgentsData?.data || []
+    availableAgentsData?.agents || []
   ).map(availableAgentToAgentData)
   const existingAgentIds = activeAgents.map((a) => a.participant_id)
 

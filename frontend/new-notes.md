@@ -5,8 +5,6 @@ ie : typer find issue relative to X or typer find issue open etc
 
 does a cli driven defect or task management system exist?
 
-llm backend - what agents are bestest?
-
 can generated agents from the agent registry be instantiated with tools on the fly?
 
 take an agent

@@ -1,227 +1,228 @@
 /**
  * Agent Provider Selector
  *
- * Allows users to select which of their LLM providers to use for a specific agent.
- * Supports system agents (use your own key) and personal agents (customize provider).
+ * Lightweight provider-only selector for inline use (e.g., room settings).
+ * Shows current provider/model status without full settings UI.
+ *
+ * For full settings functionality, use AgentModelSettings instead.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Key, Loader2 } from "lucide-react"
 
-import { AgentsService, LlmProvidersService } from "@/client"
-import type { UserLLMProviderPublic } from "@/client/types.gen"
-import { Badge } from "@/components/ui/badge"
+import { Cloud, Key, Loader2, Settings } from "lucide-react"
+import { useEffect, useState } from "react"
+
+import { Button } from "@/components/ui/button"
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import useCustomToast from "@/hooks/useCustomToast"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { useAgentSettings } from "@/hooks/useAgentSettings"
 import { cn } from "@/lib/utils"
+import type { AgentViewModel } from "@/services/agentService"
+import type { UserAgentSettingsViewModel } from "@/services/llmProviderService"
+import { ProviderModelSelector } from "./providers"
+import { ProviderStatusBadge } from "./providers/ProviderStatusBadge"
 
 interface AgentProviderSelectorProps {
-  agentId: string
-  modelName: string
+  /** The agent to configure */
+  agent: AgentViewModel
+  /** Callback when settings are saved */
+  onSettingsSaved?: () => void
+  /** Additional className */
   className?: string
+  /** Trigger variant */
+  variant?: "button" | "inline"
 }
 
 /**
- * Extract provider type from model name (e.g., "openai:gpt-4o-mini" -> "openai")
+ * Inline display showing current provider/model
  */
-function getProviderTypeFromModel(modelName: string): string {
-  return modelName.split(":")[0] || "openai"
-}
-
-/**
- * Get display label for provider type
- */
-function getProviderTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    openai: "OpenAI",
-    anthropic: "Anthropic",
-    google: "Google",
-    openai_compatible: "OpenAI Compatible",
-  }
-  return labels[type] || type
-}
-
-export default function AgentProviderSelector({
-  agentId,
-  modelName,
+function InlineDisplay({
+  agent,
   className,
-}: AgentProviderSelectorProps) {
-  const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-
-  const requiredProviderType = getProviderTypeFromModel(modelName)
-
-  // Fetch user's LLM providers
-  const { data: providersData, isLoading: isLoadingProviders } = useQuery({
-    queryKey: ["llm-providers"],
-    queryFn: () => LlmProvidersService.listProviders(),
-  })
-
-  // Fetch current agent settings
-  const { data: currentSettings, isLoading: isLoadingSettings } = useQuery({
-    queryKey: ["agent-settings", agentId],
-    queryFn: () => AgentsService.getMyAgentSettings({ agentId }),
-    enabled: !!agentId,
-  })
-
-  // Update settings mutation
-  const updateMutation = useMutation({
-    mutationFn: (providerId: string | null) =>
-      AgentsService.updateMyAgentSettings({
-        agentId,
-        requestBody: { provider_id: providerId },
-      }),
-    onSuccess: () => {
-      showSuccessToast("Provider updated")
-      queryClient.invalidateQueries({ queryKey: ["agent-settings", agentId] })
-    },
-    onError: () => {
-      showErrorToast("Failed to update provider")
-    },
-  })
-
-  // Filter providers to only show compatible ones
-  const compatibleProviders = (providersData?.data ?? []).filter(
-    (p) => p.provider_type === requiredProviderType,
-  )
-
-  const selectedProviderId = currentSettings?.provider_id ?? "system-default"
-
-  const selectedProvider = compatibleProviders.find(
-    (p) => p.id === currentSettings?.provider_id,
-  )
-
-  const isLoading = isLoadingProviders || isLoadingSettings
-
-  const handleValueChange = (value: string) => {
-    const providerId = value === "system-default" ? null : value
-    updateMutation.mutate(providerId)
-  }
+}: {
+  agent: AgentViewModel
+  className?: string
+}) {
+  const { isUsingSystemDefault, effectiveModelDisplay, provider, isLoading } =
+    useAgentSettings({ agent })
 
   if (isLoading) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Loading...</span>
+      <div className={cn("flex items-center gap-2 text-sm", className)}>
+        <span className="text-muted-foreground">Loading...</span>
       </div>
     )
   }
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex items-center gap-2">
-        <Key className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">LLM Provider</span>
-        <Badge variant="outline" className="text-xs">
-          {getProviderTypeLabel(requiredProviderType)}
-        </Badge>
-        {compatibleProviders.length > 0 && (
-          <span className="text-xs text-muted-foreground">
-            ({compatibleProviders.length} available)
-          </span>
-        )}
-      </div>
-
-      <Select
-        value={selectedProviderId}
-        onValueChange={handleValueChange}
-        disabled={updateMutation.isPending}
-      >
-        <SelectTrigger className="w-full">
-          {updateMutation.isPending ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Updating...</span>
-            </div>
-          ) : (
-            <SelectValue placeholder="Select a provider" />
+    <div className={cn("flex items-center gap-2 text-sm", className)}>
+      {isUsingSystemDefault ? (
+        <>
+          <Cloud className="size-4 text-blue-500" />
+          <span className="text-muted-foreground">System</span>
+        </>
+      ) : (
+        <>
+          <Key className="size-4 text-green-500" />
+          <span className="font-medium">{provider?.name || "Custom"}</span>
+          {provider && (
+            <ProviderStatusBadge status={provider.status} size="sm" />
           )}
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel>Your Providers</SelectLabel>
-            <SelectItem value="system-default">Use system default</SelectItem>
-            {compatibleProviders.map((provider) => (
-              <SelectItem key={provider.id} value={provider.id}>
-                <span className="flex items-center gap-2">
-                  {provider.name}
-                  <ProviderStatusBadge provider={provider} />
-                </span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <p className="text-xs text-muted-foreground">
-        {selectedProvider
-          ? `Using your "${selectedProvider.name}" API key for this agent`
-          : "This agent uses system environment variables"}
-      </p>
-
-      {compatibleProviders.length === 0 && (
-        <div className="text-xs text-amber-600 space-y-1">
-          <p>
-            No {getProviderTypeLabel(requiredProviderType)} providers found.
-          </p>
-          <p>
-            Add one in Settings → AI Providers with type "{getProviderTypeLabel(requiredProviderType)}".
-          </p>
-          {(providersData?.data?.length ?? 0) > 0 && (
-            <div className="text-muted-foreground space-y-1 mt-2 border-t pt-2">
-              <p>Your providers by type:</p>
-              <ul className="list-disc list-inside">
-                {Object.entries(
-                  (providersData?.data ?? []).reduce(
-                    (acc, p) => {
-                      const type = p.provider_type
-                      acc[type] = (acc[type] || 0) + 1
-                      return acc
-                    },
-                    {} as Record<string, number>,
-                  ),
-                ).map(([type, count]) => (
-                  <li key={type}>
-                    {getProviderTypeLabel(type)}: {count}
-                    {type === requiredProviderType && " ← needed"}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        </>
       )}
+      <span className="text-muted-foreground">·</span>
+      <span>{effectiveModelDisplay}</span>
     </div>
   )
 }
 
-/**
- * Small status indicator for provider verification status
- */
-function ProviderStatusBadge({
-  provider,
-}: {
-  provider: UserLLMProviderPublic
-}) {
-  if (provider.last_test_success === true) {
-    return <span className="text-xs text-green-600">✓</span>
+export function AgentProviderSelector({
+  agent,
+  onSettingsSaved,
+  className,
+  variant = "button",
+}: AgentProviderSelectorProps) {
+  const {
+    settings,
+    isUsingSystemDefault,
+    effectiveModelDisplay,
+    provider,
+    updateSettings,
+    isUpdating,
+  } = useAgentSettings({ agent })
+
+  // Handle save from popover
+  const handleSave = async (
+    providerId: string | null,
+    modelName: string | null,
+  ) => {
+    await updateSettings({
+      provider_id: providerId,
+      model_name_override: modelName,
+    })
+    onSettingsSaved?.()
   }
-  if (provider.last_test_success === false) {
-    return <span className="text-xs text-red-600">✗</span>
-  }
-  if (provider.is_default) {
+
+  if (variant === "inline") {
     return (
-      <Badge variant="secondary" className="text-xs">
-        Default
-      </Badge>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-1 hover:underline cursor-pointer",
+              className,
+            )}
+          >
+            <InlineDisplay agent={agent} />
+            <Settings className="size-3 text-muted-foreground" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-4" align="start">
+          <ProviderModelSelectorWithSave
+            agent={agent}
+            settings={settings}
+            onSave={handleSave}
+            isSaving={isUpdating}
+          />
+        </PopoverContent>
+      </Popover>
     )
   }
-  return null
+
+  // Button variant
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={cn("gap-2", className)}>
+          {isUsingSystemDefault ? (
+            <Cloud className="size-4 text-blue-500" />
+          ) : (
+            <Key className="size-4 text-green-500" />
+          )}
+          <span>{effectiveModelDisplay}</span>
+          {provider && (
+            <ProviderStatusBadge status={provider.status} size="sm" />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-4" align="start">
+        <ProviderModelSelectorWithSave
+          agent={agent}
+          settings={settings}
+          onSave={handleSave}
+          isSaving={isUpdating}
+        />
+      </PopoverContent>
+    </Popover>
+  )
 }
+
+/**
+ * Internal component that wraps ProviderModelSelector with save functionality
+ */
+function ProviderModelSelectorWithSave({
+  agent,
+  settings,
+  onSave,
+  isSaving,
+}: {
+  agent: AgentViewModel
+  settings: UserAgentSettingsViewModel | null
+  onSave: (providerId: string | null, modelName: string | null) => Promise<void>
+  isSaving: boolean
+}) {
+  const [providerId, setProviderId] = useState<string | null>(
+    settings?.provider_id ?? null,
+  )
+  const [modelName, setModelName] = useState<string | null>(
+    settings?.model_name_override ?? null,
+  )
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Sync with settings
+  useEffect(() => {
+    setProviderId(settings?.provider_id ?? null)
+    setModelName(settings?.model_name_override ?? null)
+    setHasChanges(false)
+  }, [settings])
+
+  // Track changes
+  useEffect(() => {
+    const currentProviderId = settings?.provider_id ?? null
+    const currentModelName = settings?.model_name_override ?? null
+    setHasChanges(
+      providerId !== currentProviderId || modelName !== currentModelName,
+    )
+  }, [providerId, modelName, settings])
+
+  const handleSave = () => {
+    onSave(providerId, modelName)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm font-medium">Provider Settings</div>
+      <ProviderModelSelector
+        providerId={providerId}
+        modelName={modelName}
+        agentDefaultModel={agent.model_name}
+        onProviderChange={setProviderId}
+        onModelChange={setModelName}
+        size="compact"
+      />
+      <Button
+        onClick={handleSave}
+        disabled={isSaving || !hasChanges}
+        size="sm"
+        className="w-full gap-1"
+      >
+        {isSaving && <Loader2 className="size-4 animate-spin" />}
+        {hasChanges ? "Save Changes" : "No Changes"}
+      </Button>
+    </div>
+  )
+}
+
+export default AgentProviderSelector

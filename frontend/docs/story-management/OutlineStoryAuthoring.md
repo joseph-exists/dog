@@ -22,7 +22,7 @@ Story lifecycle states (derived from fields) drive UI badges and available actio
 State logic mental model: player (and test) state is a JSON dictionary that grows via choice **setsstate** (shallow merge), and choice visibility uses **requiresstate** with AND semantics (all conditions must match). Keys are freeform (no enforced schema), so UX should make author intent clear (e.g., JSON preview + typed key/value editor for booleans/strings/numbers).[3][1][2]
 
 ## Frontend architecture and team patterns
-Use the Tinyfoot standard stack: React + TypeScript (Vite), TanStack Query for server state, TanStack Router for routing, Chakra UI for styling, React Hook Form for forms, and the OpenAPI-generated SDK client for API calls. Authentication uses JWT stored in localStorage, with consistent auth handling and role-based UI (e.g., delete story may be superuser-only per API behavior), so routes should be protected appropriately.[4][1][2]
+Use the Tinyfoot standard stack: React + TypeScript (Vite), TanStack Query for server state, TanStack Router for routing, ShadCN for components and TailwindCSS for styling, React Hook Form for forms, and the OpenAPI-generated SDK client for API calls. Authentication uses JWT stored in localStorage, with consistent auth handling and role-based UI (e.g., delete story may be superuser-only per API behavior), so routes should be protected appropriately.[4][1][2]
 
 **Feature-first layout (Stories feature) and file placement** should follow the guides’ directory structure so the authoring UI fits existing conventions.[5][1][2]
 - `src/components/Stories/StoryList/` → `StoryList.tsx`, `StoryCard.tsx`, `CreateStoryModal.tsx`.[1][2]
@@ -73,7 +73,7 @@ Testing strategy should match Tinyfoot practices: unit test critical components 
 
 ## Overview and Purpose
 
-Authors create branching CYOA stories via a three-panel editor supporting node/choice management, state conditions, versioning, and publishing with validation. The UI uses React/TypeScript, TanStack Query/Router, Chakra UI, React Hook Form, and auto-generated SDKs per the tech stack. Stories enable conditional choices (requiresstate AND logic) and state tracking (setsstate shallow merge), with safe edits via currentversion (editable draft) vs publishedversion (immutable).
+Authors create branching CYOA stories via a three-panel editor supporting node/choice management, state conditions, versioning, and publishing with validation. The UI uses React/TypeScript, TanStack Query/Router, ShadCN,TailwindCSS, React Hook Form, and auto-generated SDKs per the tech stack. Stories enable conditional choices (requiresstate AND logic) and state tracking (setsstate shallow merge), with safe edits via currentversion (editable draft) vs publishedversion (immutable).
 
 ## Domain Concepts
 
@@ -107,7 +107,7 @@ Forms use React Hook Form (mode: 'onBlur', defaultValues, Field wrapper, disable
 
 ## Implementation Patterns
 
-Mutations: `useMutation({ mutationFn: data => service.method(data), onSuccess: () => { toast.success(); queryClient.invalidateQueries({ queryKey: [...] }); }, onError: handleError })`. Custom hooks extract logic (e.g., useStoryNodes for CRUD/filtering by version); local state for selectedNodeId/modals. Errors: form errors.field?.message, useCustomToast/handleError for API. Responsive Chakra layouts (Flex/Box).[^5][^2]
+Mutations: `useMutation({ mutationFn: data => service.method(data), onSuccess: () => { toast.success(); queryClient.invalidateQueries({ queryKey: [...] }); }, onError: handleError })`. Custom hooks extract logic (e.g., useStoryNodes for CRUD/filtering by version); local state for selectedNodeId/modals. Errors: form errors.field?.message, useCustomToast/handleError for API. Responsive Component layouts [^5][^2]
 
 **Phased Checklist**:
 

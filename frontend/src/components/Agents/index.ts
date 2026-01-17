@@ -71,5 +71,10 @@ export { default as EditAgentDialog } from "./EditAgentDialog"
 
 // Model Settings - allows users to customize model and provider for an agent
 export { default as AgentModelSettings } from "./AgentModelSettings"
-// Provider Selector (legacy - use AgentModelSettings instead for full functionality)
+// Provider Selector - lightweight inline selector
 export { default as AgentProviderSelector } from "./AgentProviderSelector"
+// Provider components (reusable building blocks)
+export {
+  ProviderModelSelector,
+  ProviderStatusBadge,
+} from "./providers"

@@ -8,9 +8,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CopyIcon, Loader2Icon } from "lucide-react"
 import { useState } from "react"
+
 import type { ApiError } from "@/client/core/ApiError"
-import { AgentsService } from "@/client/sdk.gen"
-import type { AgentConfigPublic } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -24,13 +23,18 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  AgentService,
+  type AgentViewModel,
+  type CreateAgentInput,
+} from "@/services/agentService"
 import { generateSlug } from "./AgentForm"
 
 interface AgentCloneButtonProps {
   /** The agent to clone */
-  agent: AgentConfigPublic
+  agent: AgentViewModel
   /** Callback when clone succeeds */
-  onSuccess?: (newAgent: AgentConfigPublic) => void
+  onSuccess?: (newAgent: AgentViewModel) => void
   /** Button variant */
   variant?: "default" | "outline" | "ghost"
   /** Button size */
@@ -80,23 +84,23 @@ export default function AgentCloneButton({
   }
 
   const mutation = useMutation({
-    mutationFn: () =>
-      AgentsService.createAgent({
-        requestBody: {
-          name: newName.trim(),
-          slug: newSlug.trim(),
-          description: agent.description,
-          model_name: agent.model_name,
-          system_prompt: agent.system_prompt,
-          participation_mode: agent.participation_mode,
-          scope: "personal",
-          is_enabled: true,
-        },
-      }),
-    onSuccess: (newAgent) => {
-      showSuccessToast(`Cloned as "${newAgent.name}"`)
+    mutationFn: () => {
+      const payload: CreateAgentInput = {
+        name: newName.trim(),
+        slug: newSlug.trim(),
+        description: agent.description,
+        model_name: agent.model_name,
+        system_prompt: agent.system_prompt,
+        participation_mode: agent.participation_mode,
+        scope: "personal",
+        is_enabled: true,
+      }
+      return AgentService.createAgent(payload)
+    },
+    onSuccess: (clonedAgent) => {
+      showSuccessToast(`Cloned as "${clonedAgent.name}"`)
       setIsOpen(false)
-      onSuccess?.(newAgent)
+      onSuccess?.(clonedAgent)
     },
     onError: (err: ApiError) => {
       const message =

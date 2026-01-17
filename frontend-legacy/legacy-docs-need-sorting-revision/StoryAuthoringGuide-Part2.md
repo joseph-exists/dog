@@ -42,7 +42,6 @@ Per the Frontend Tech Spec, all components must use:
 - **React with TypeScript** for component development
 - **TanStack Query** for server state management
 - **TanStack Router** for routing
-- **Chakra UI** for styling and theming
 - **React Hook Form** for form handling
 - **Auto-generated SDK** from `@/client` for API communication
 

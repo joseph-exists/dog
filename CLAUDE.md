@@ -27,7 +27,7 @@ This application has the following structure:
 
 - **Location**: `frontend/`
 - **Framework**: React with TypeScript, Vite build tool
-- **UI Library**: Chakra UI
+- **UI Library**: ShadCN with TailwindCSS
 - **State Management**: TanStack Query + TanStack Router
 - **Key directories**:
   - `frontend/src/components/` - React components organized by feature
