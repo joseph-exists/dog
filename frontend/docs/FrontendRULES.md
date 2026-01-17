@@ -3,19 +3,25 @@
 ## 1. Component Organization
 
 - Organize components by feature in the `src/components` directory
-- Place reusable UI components in `src/components/ui`
+- reusable UI components in `src/components/ui`
+- shadcn mcp server is available
+- install shadcn components into src/components/ui as needed
 - Follow a modular approach with single-responsibility components
 - Use descriptive, PascalCase names for component files (e.g., `AddUser.tsx`)
 - Export components as default exports for easier imports
 
 ## 2. State Management
+# TODO: this needs review now that we've migrated - I'm not sure this is still valid.
+# TODO: we need to review this with our Rooms implementation and our event-emit strategy - this is unknown.  I'm also not sure what, if any, complex state logic we're going to use on the FE.  
 
-- Use React Query for server state management
+The following was legacy - I don't want us to write a new one, but it needs approval from all team 
+
+<!-- - Use React Query for server state management
   - Create query keys following the pattern: `[entity]` or `[entity, id]`
   - Invalidate queries after mutations using `queryClient.invalidateQueries`
 - Use local React state (`useState`) for UI state
-- Extract complex state logic into custom hooks in the `src/hooks` directory
-- Use controlled components with React Hook Form for form handling
+- Extract complex state logic into custom hooks in the `src/hooks` directory -->
+
 
 ## 3. API Integration
 
@@ -23,7 +29,11 @@
 - Processing only ever happens on the backend
 - Frontend processing will cause project failure
 - Follow the pattern:
-  ```typescript
+## TODO: IS THIS THE PATTERN WE WANT TO USE? 
+
+## TODO : fix pattern <3
+
+  <!-- ```typescript
   const mutation = useMutation({
     mutationFn: (data: SomeType) => SomeService.someMethod({ requestBody: data }),
     onSuccess: () => {
@@ -34,20 +44,23 @@
       handleError(err)
     }
   })
-  ```
+  ``` -->
 - Handle authentication consistently using the `useAuth` hook
-- Always handle API errors using the `handleError` utility
+
 
 ## 5. Routing & Navigation
 
-- Use TanStack Router for all routing needs
+- Use TanStack Router for routing needs *** see caveats and exceptions for agents and rooms ***
 - Place route definitions in the `src/routes` directory following TanStack Router's file-based routing conventions
 - Add authentication guards with `beforeLoad` for protected routes
 - Use `useNavigate` for programmatic navigation
 
 ## 6. Form Handling
 
-- Use React Hook Form for all form implementations
+I don't think I care about this as much as I did.  let's walk through it.
+frontend/src/components/Admin/AddUser.tsx has the right format.
+
+<!-- - Use React Hook Form for all form implementations
 - Implement validation using:
   - Required fields with appropriate error messages
   - Pattern validation for special formats (e.g., email)
@@ -61,14 +74,16 @@
     {/* More fields */}
     <Button type="submit" disabled={!isValid} loading={isSubmitting}>Submit</Button>
   </form>
-  ```
+  ``` -->
 
 ## 7. Error Handling
 
-- Use the `useCustomToast` hook for displaying notifications
+this is old and bad.  we should not be doing this, in fact, most of this is going to have to be refactored again in new frontend :(
+
+<!-- - Use the `useCustomToast` hook for displaying notifications
 - Handle API errors with the `handleError` utility function
 - Show appropriate error messages in form fields
-- Implement error boundaries for component-level error handling
+- Implement error boundaries for component-level error handling -->
 
 ## 8. Performance Considerations
 

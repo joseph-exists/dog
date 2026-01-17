@@ -1,8 +1,9 @@
 Tinyfoot Frontend Structure Analysis
 Tech Stack
-The frontend is built with a modern React stack including:
+
 
 Vite as the build tool
+(npm run build, npm run dev)
 React with TypeScript
 TanStack Query for data fetching and cache management
 TanStack Router for routing
@@ -17,7 +18,7 @@ Authentication is handled via JWT tokens stored in localStorage
 
 Application Architecture
 
-Component Structure: Well-organized by feature (Admin, Archetypes, Items, Personas)
+Component Structure: feature organized
 Routing: File-based routing with TanStack Router
 State Management:
 
@@ -39,7 +40,6 @@ Data Flow
 
 API clients make requests to the backend
 TanStack Query handles caching, loading states, and error states
-Components use React Hook Form for form handling
 Mutations update server state and invalidate relevant queries
 
 Project Structure Highlights
