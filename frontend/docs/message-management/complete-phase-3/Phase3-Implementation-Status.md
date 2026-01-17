@@ -242,7 +242,7 @@ Before component implementation can begin, finalize design decisions from **Phas
 Once design decisions are documented, implement components following:
 - **ComponentDevelopmentWalkthrough.md** for patterns
 - **FrontendRULES.md** for coding standards
-- Chakra UI component library
+- ShadCN UI component library
 - TanStack Router for routing
 
 **Estimated Component Tree:**
