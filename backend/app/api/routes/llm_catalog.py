@@ -2,7 +2,8 @@
 LLM Catalog routes.
 
 Public API for browsing available LLM providers and models.
-No authentication required - this is a read-only system catalog.
+Most endpoints are public (no auth required).
+Custom model endpoints require authentication.
 """
 
 import uuid
@@ -11,8 +12,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 
 from app import crud
-from app.api.deps import SessionDep
+from app.api.deps import CurrentUser, OptionalUser, SessionDep
 from app.models import (
+    LLMModelCreate,
     LLMModelPublic,
     LLMModelsGrouped,
     LLMModelsPublic,
@@ -160,6 +162,77 @@ def list_provider_models(
 
 
 # =============================================================================
+# Custom Model Endpoints (Authenticated)
+# =============================================================================
+
+
+@router.post("/models/custom", response_model=LLMModelPublic)
+def create_custom_model(
+    session: SessionDep,
+    current_user: CurrentUser,
+    model_in: LLMModelCreate,
+) -> Any:
+    """
+    Create a custom model for the current user.
+
+    Requires authentication. The model will be associated with the user
+    and marked as non-system (is_system=False).
+
+    If display_name is not provided, it will be auto-generated from model_id.
+    """
+    # Verify provider exists
+    provider = crud.get_llm_provider(session=session, provider_id=model_in.provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    model = crud.create_user_model(
+        session=session,
+        user_id=current_user.id,
+        model_in=model_in,
+    )
+
+    return LLMModelPublic(
+        **model.model_dump(),
+        provider_type=provider.provider_type,
+        provider_name=provider.name,
+    )
+
+
+@router.get("/models/custom", response_model=LLMModelsPublic)
+def list_custom_models(
+    session: SessionDep,
+    current_user: CurrentUser,
+    provider_type: LLMProviderType | None = Query(
+        default=None, description="Filter by provider type"
+    ),
+) -> Any:
+    """
+    List the current user's custom models.
+
+    Requires authentication. Returns only models created by the authenticated user.
+    """
+    models = crud.get_user_models(
+        session=session,
+        user_id=current_user.id,
+        provider_type=provider_type,
+    )
+
+    # Enrich with provider info
+    data = []
+    for model in models:
+        provider = crud.get_llm_provider(session=session, provider_id=model.provider_id)
+        data.append(
+            LLMModelPublic(
+                **model.model_dump(),
+                provider_type=provider.provider_type if provider else None,
+                provider_name=provider.name if provider else None,
+            )
+        )
+
+    return LLMModelsPublic(data=data, count=len(data))
+
+
+# =============================================================================
 # Model Endpoints
 # =============================================================================
 
@@ -167,6 +240,7 @@ def list_provider_models(
 @router.get("/models", response_model=LLMModelsPublic)
 def list_models(
     session: SessionDep,
+    current_user: OptionalUser,
     skip: int = 0,
     limit: int = 100,
     provider_id: uuid.UUID | None = Query(
@@ -203,10 +277,12 @@ def list_models(
     """
     List all LLM models in the catalog (flat list).
 
-    No authentication required. Supports rich filtering by capabilities.
+    Supports rich filtering by capabilities.
+    If authenticated, includes the user's custom models alongside system models.
     """
     results, count = crud.get_llm_models(
         session=session,
+        user_id=current_user.id if current_user else None,
         skip=skip,
         limit=limit,
         provider_id=provider_id,
@@ -236,6 +312,7 @@ def list_models(
 @router.get("/models/grouped", response_model=LLMModelsGrouped)
 def list_models_grouped(
     session: SessionDep,
+    current_user: OptionalUser,
     provider_type: LLMProviderType | None = Query(
         default=None, description="Filter by provider type"
     ),
@@ -248,10 +325,11 @@ def list_models_grouped(
     List all models grouped by provider.
 
     Useful for UI dropdowns showing models organized by provider.
-    No authentication required.
+    If authenticated, includes the user's custom models alongside system models.
     """
     grouped = crud.get_llm_models_grouped(
         session=session,
+        user_id=current_user.id if current_user else None,
         provider_type=provider_type,
         is_enabled=is_enabled,
         include_deleted=include_deleted,

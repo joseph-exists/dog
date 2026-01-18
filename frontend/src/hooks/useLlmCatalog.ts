@@ -6,9 +6,13 @@
  *
  * This hook returns model options in the format expected by existing
  * components (ModelOption with "provider:model_id" value format).
+ *
+ * Also provides:
+ * - Custom model creation mutation
+ * - Utility functions for identifying custom vs catalog models
  */
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
   CATALOG_QUERY_OPTIONS,
@@ -21,6 +25,20 @@ import {
   type ModelOption,
   PROVIDER_TYPE_LABELS,
 } from "@/services/llmCatalogService"
+
+/**
+ * Input for creating a custom model
+ */
+export interface CreateCustomModelInput {
+  /** Model ID as expected by the provider (e.g., "llama3.2:70b") */
+  modelId: string
+  /** Human-readable display name (e.g., "Llama 3.2 70B") */
+  displayName: string
+  /** Provider type this model belongs to */
+  providerType: LLMProviderType
+  /** Optional description */
+  description?: string
+}
 
 export interface UseLlmCatalogReturn {
   /** Model options grouped by provider type (for dropdowns) */
@@ -47,6 +65,14 @@ export interface UseLlmCatalogReturn {
   findModel: (value: string) => ModelOption | undefined
   /** Format model name for display */
   formatModelName: (value: string | null | undefined) => string
+  /** Check if a model value is in the catalog */
+  isInCatalog: (value: string) => boolean
+  /** Check if a model value is a custom (non-catalog) model */
+  isCustomModel: (value: string) => boolean
+  /** Create a custom model (mutation) */
+  createCustomModel: (input: CreateCustomModelInput) => Promise<ModelOption>
+  /** Whether custom model creation is in progress */
+  isCreatingCustomModel: boolean
 }
 
 /**
@@ -56,6 +82,8 @@ export interface UseLlmCatalogReturn {
  * Data is fetched once and cached for the session.
  */
 export function useLlmCatalog(): UseLlmCatalogReturn {
+  const queryClient = useQueryClient()
+
   // Fetch grouped data (providers with models) - single API call
   const {
     data: grouped,
@@ -65,6 +93,28 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
     queryKey: LLM_CATALOG_QUERY_KEYS.modelsGrouped,
     queryFn: () => LlmCatalogService.listModelsGrouped({ isEnabled: true }),
     ...CATALOG_QUERY_OPTIONS,
+  })
+
+  // Custom model creation mutation
+  // TODO: Connect to actual backend endpoint when available
+  const createMutation = useMutation({
+    mutationFn: async (input: CreateCustomModelInput): Promise<ModelOption> => {
+      // For now, create a local ModelOption
+      // When backend is ready, this will call:
+      // await LlmCatalogService.createCustomModel(input)
+      const modelValue = `${input.providerType}:${input.modelId}`
+      return {
+        value: modelValue,
+        label: input.displayName,
+        description: input.description || "",
+        provider: input.providerType,
+        isDefault: false,
+      }
+    },
+    onSuccess: () => {
+      // Invalidate catalog cache to include new custom model
+      queryClient.invalidateQueries({ queryKey: LLM_CATALOG_QUERY_KEYS.all })
+    },
   })
 
   // Transform grouped data to provider-keyed ModelOption map
@@ -91,6 +141,11 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
   // Flatten all models
   const allModels = Object.values(modelsByProvider).flat()
 
+  // Utility function to check if a model is in catalog
+  const isInCatalog = (value: string): boolean => {
+    return allModels.some((m) => m.value === value)
+  }
+
   return {
     modelsByProvider,
     allModels,
@@ -113,6 +168,15 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
     findModel: (value: string) => allModels.find((m) => m.value === value),
 
     formatModelName: LlmCatalogService.formatModelName,
+
+    isInCatalog,
+
+    isCustomModel: (value: string) => !isInCatalog(value),
+
+    createCustomModel: (input: CreateCustomModelInput) =>
+      createMutation.mutateAsync(input),
+
+    isCreatingCustomModel: createMutation.isPending,
   }
 }
 

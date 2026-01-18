@@ -2,13 +2,25 @@
  * AgentToggle Component
  *
  * Toggle switch for activating/deactivating agents in a room.
+ * Supports different display modes for agent information.
  */
 
 import { useState } from "react"
+
 import type { ApiError } from "@/client/core/ApiError"
 import { Switch } from "@/components/ui/switch"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+
+/** Display modes for participants */
+type DisplayMode = "names" | "ids" | "avatars" | "all"
+
+/**
+ * Format UUID for display (first 8 characters)
+ */
+function formatUuid(uuid: string): string {
+  return uuid.slice(0, 8)
+}
 
 interface AgentToggleProps {
   agentId: string
@@ -16,6 +28,7 @@ interface AgentToggleProps {
   isActive: boolean
   onToggle: (agentId: string, activate: boolean) => Promise<void>
   disabled?: boolean
+  displayMode?: DisplayMode
 }
 
 export default function AgentToggle({
@@ -24,6 +37,7 @@ export default function AgentToggle({
   isActive,
   onToggle,
   disabled = false,
+  displayMode = "names",
 }: AgentToggleProps) {
   const [isToggling, setIsToggling] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -40,9 +54,32 @@ export default function AgentToggle({
     }
   }
 
+  const renderAgentInfo = () => {
+    switch (displayMode) {
+      case "ids":
+        return (
+          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+            {formatUuid(agentId)}
+          </code>
+        )
+      case "all":
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm">🤖 {agentName}</span>
+            <code className="text-[10px] text-muted-foreground font-mono">
+              {formatUuid(agentId)}
+            </code>
+          </div>
+        )
+      case "names":
+      default:
+        return <span className="text-sm">🤖 {agentName}</span>
+    }
+  }
+
   return (
     <div className="flex items-center justify-between w-full">
-      <span className="text-sm">🤖 {agentName}</span>
+      {renderAgentInfo()}
       <Switch
         checked={isActive}
         onCheckedChange={handleToggle}

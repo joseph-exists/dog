@@ -25,8 +25,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
 interface AddParticipantForm {
@@ -45,6 +51,7 @@ export default function AddParticipantDialog({
   onAdd,
 }: AddParticipantDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("")
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   // Fetch available agents from the registry API
@@ -60,10 +67,10 @@ export default function AddParticipantDialog({
   })
 
   const {
-    register,
     handleSubmit,
     reset,
-    formState: { errors, isValid, isSubmitting },
+    setValue,
+    formState: { isSubmitting },
   } = useForm<AddParticipantForm>({
     mode: "onChange",
     defaultValues: {
@@ -71,6 +78,21 @@ export default function AddParticipantDialog({
       participant_id: "",
     },
   })
+
+  // Sync selected agent with form
+  const handleAgentSelect = (value: string) => {
+    setSelectedAgentId(value)
+    setValue("participant_id", value)
+  }
+
+  // Reset state when dialog closes
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (!open) {
+      setSelectedAgentId("")
+      reset()
+    }
+  }
 
   // Transform API response to match component needs and filter out already-added agents
   const availableAgents = (agentsData?.data ?? [])
@@ -87,6 +109,7 @@ export default function AddParticipantDialog({
     try {
       await onAdd(data.participant_id, data.participant_type)
       showSuccessToast("Participant added successfully.")
+      setSelectedAgentId("")
       reset()
       setIsOpen(false)
     } catch (err) {
@@ -95,7 +118,7 @@ export default function AddParticipantDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <Plus className="h-4 w-4" />
@@ -130,35 +153,33 @@ export default function AddParticipantDialog({
             )}
 
             {/* Agent selection */}
-            {!isLoadingAgents && !agentsError && (
+            {!isLoadingAgents && !agentsError && availableAgents.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="participant_id">
                   Agent <span className="text-destructive">*</span>
                 </Label>
-                <select
-                  id="participant_id"
-                  {...register("participant_id", {
-                    required: "Please select an agent",
-                  })}
-                  className={cn(
-                    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                    errors.participant_id && "border-destructive",
-                  )}
+                <Select
+                  value={selectedAgentId}
+                  onValueChange={handleAgentSelect}
                 >
-                  <option value="" disabled>
-                    Select an agent
-                  </option>
-                  {availableAgents.map((agent) => (
-                    <option key={agent.value} value={agent.value}>
-                      {agent.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.participant_id && (
-                  <p className="text-sm text-destructive">
-                    {errors.participant_id.message}
-                  </p>
-                )}
+                  <SelectTrigger id="participant_id">
+                    <SelectValue placeholder="Select an agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableAgents.map((agent) => (
+                      <SelectItem key={agent.value} value={agent.value}>
+                        <div className="flex flex-col">
+                          <span>{agent.label}</span>
+                          {agent.description && (
+                            <span className="text-xs text-muted-foreground">
+                              {agent.description}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -181,7 +202,7 @@ export default function AddParticipantDialog({
             <Button
               type="submit"
               disabled={
-                !isValid ||
+                !selectedAgentId ||
                 availableAgents.length === 0 ||
                 isSubmitting ||
                 isLoadingAgents ||

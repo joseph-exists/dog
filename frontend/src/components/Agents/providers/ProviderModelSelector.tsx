@@ -5,11 +5,11 @@
  * Features:
  * - "System Default" option always available
  * - User's providers grouped by type with verification badges
- * - Model dropdown filtered by selected provider's type (from catalog)
+ * - Model combobox with search and custom model creation
  * - Clear visual distinction between system default and user provider
  */
 
-import { Cloud, Key, Loader2 } from "lucide-react"
+import { Cloud, Key } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
@@ -32,6 +32,7 @@ import {
   PROVIDER_TYPE_LABELS,
   type ProviderViewModel,
 } from "@/services/llmProviderService"
+import ModelCombobox from "./ModelCombobox"
 import { ProviderStatusBadge } from "./ProviderStatusBadge"
 
 interface ProviderModelSelectorProps {
@@ -118,7 +119,6 @@ export function ProviderModelSelector({
     isLoading: providersLoading,
   } = useLlmProviders()
   const {
-    allModels,
     isLoading: catalogLoading,
     getModelsForType,
     formatModelName,
@@ -130,19 +130,14 @@ export function ProviderModelSelector({
   // Get effective model (override or agent default)
   const effectiveModel = modelName || agentDefaultModel
 
-  // Get provider type from effective model
-  const effectiveProviderType =
-    LlmProviderService.extractProviderType(effectiveModel)
-
-  // Get models for current provider type from catalog
-  const availableModels = effectiveProviderType
-    ? getModelsForType(effectiveProviderType)
-    : allModels
-
-  // Find selected provider
+  // Get provider type from effective model or selected provider
   const selectedProvider = providerId
     ? providers.find((p) => p.id === providerId)
     : null
+
+  const effectiveProviderType =
+    selectedProvider?.provider_type ||
+    LlmProviderService.extractProviderType(effectiveModel)
 
   // Handle provider change - may need to reset model if type changes
   const handleProviderChange = (value: string) => {
@@ -162,13 +157,9 @@ export function ProviderModelSelector({
     }
   }
 
-  // Handle model change
+  // Handle model change from combobox
   const handleModelChange = (value: string) => {
-    if (value === "default") {
-      onModelChange(null)
-    } else {
-      onModelChange(value)
-    }
+    onModelChange(value)
   }
 
   const isCompact = size === "compact"
@@ -254,55 +245,17 @@ export function ProviderModelSelector({
       {/* Model Selection */}
       {showModelOverride && (
         <div className={cn("space-y-2", isCompact && "space-y-1")}>
-          <Label htmlFor="model-select" className={isCompact ? "text-xs" : ""}>
-            Model
-          </Label>
-          <Select
-            value={modelName || "default"}
-            onValueChange={handleModelChange}
-            disabled={disabled || catalogLoading}
-          >
-            <SelectTrigger
-              id="model-select"
-              className={cn("w-full", isCompact && "h-8 text-sm")}
-            >
-              {catalogLoading ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin" />
-                  <span>Loading models...</span>
-                </div>
-              ) : (
-                <SelectValue placeholder="Select model" />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              {/* Default Option */}
-              <SelectItem value="default">
-                <div className="flex flex-col">
-                  <span>Agent Default</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatModelName(agentDefaultModel)}
-                  </span>
-                </div>
-              </SelectItem>
-
-              <SelectSeparator />
-
-              {/* Available Models */}
-              {availableModels.map((model) => (
-                <SelectItem key={model.value} value={model.value}>
-                  <div className="flex flex-col">
-                    <span>{model.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {model.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className={isCompact ? "text-xs" : ""}>Model</Label>
+          <ModelCombobox
+            value={modelName || agentDefaultModel}
+            onChange={handleModelChange}
+            providerType={effectiveProviderType || undefined}
+            placeholder={`Select model (default: ${formatModelName(agentDefaultModel)})`}
+            disabled={disabled}
+            className={isCompact ? "h-8 text-sm" : ""}
+          />
           <p className="text-xs text-muted-foreground">
-            Override the agent's default model
+            Override the agent's default model or add a custom model
           </p>
         </div>
       )}

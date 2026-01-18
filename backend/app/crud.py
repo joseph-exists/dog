@@ -24,6 +24,7 @@ from app.models import (
     Item,
     ItemCreate,
     LLMModel,
+    LLMModelCreate,
     LLMProvider,
     LLMProviderType,
     Message,
@@ -3004,11 +3005,79 @@ def delete_agent_config(*, session: Session, db_agent: AgentConfig) -> None:
 # =============================================================================
 
 
-  def create_user_model(*, session, user_id, model_in: UserLLMModelCreate) -> LLMModel
-  
-  def get_user_models(*, session, user_id, provider_type?) -> list[LLMModel]
-  
-  def delete_user_model(*, session, user_id, model_id) -> bool  # ownership check
+def _generate_display_name(model_id: str) -> str:
+    """Simple display name from model_id: 'llama3:70b' -> 'Llama3 70B'"""
+    name = model_id.replace(":", " ").replace("-", " ").replace("_", " ")
+    return name.title()
+
+
+def create_user_model(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    model_in: LLMModelCreate,
+) -> LLMModel:
+    """Create a user-owned custom model."""
+    data = model_in.model_dump(exclude={"provider_id"})
+
+    # Auto-generate display_name if not provided
+    if not data.get("display_name"):
+        data["display_name"] = _generate_display_name(model_in.model_id)
+
+    model = LLMModel(
+        **data,
+        provider_id=model_in.provider_id,
+        created_by_user_id=user_id,
+        is_system=False,
+    )
+    session.add(model)
+    session.commit()
+    session.refresh(model)
+    return model
+
+
+def get_user_models(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    provider_type: LLMProviderType | None = None,
+) -> list[LLMModel]:
+    """Get all custom models for a user."""
+    filters = [
+        LLMModel.created_by_user_id == user_id,
+        LLMModel.is_deleted == False,
+    ]
+
+    stmt = select(LLMModel).where(*filters).order_by(LLMModel.display_name)
+
+    # Filter by provider_type requires join to LLMProvider
+    if provider_type is not None:
+        stmt = (
+            select(LLMModel)
+            .join(LLMProvider)
+            .where(*filters, LLMProvider.provider_type == provider_type)
+            .order_by(LLMModel.display_name)
+        )
+
+    return list(session.exec(stmt).all())
+
+
+def delete_user_model(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    model_id: uuid.UUID,
+) -> bool:
+    """Soft-delete a user's custom model. Returns True if deleted."""
+    model = session.get(LLMModel, model_id)
+    if not model or model.created_by_user_id != user_id:
+        return False
+
+    model.is_deleted = True
+    model.deleted_at = datetime.now()
+    session.add(model)
+    session.commit()
+    return True
 
 
 # =============================================================================
@@ -3083,6 +3152,7 @@ def get_llm_provider_model_count(
 def get_llm_models(
     *,
     session: Session,
+    user_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 100,
     provider_id: uuid.UUID | None = None,
@@ -3096,11 +3166,28 @@ def get_llm_models(
     has_json_mode: bool | None = None,
     include_deleted: bool = False,
 ) -> tuple[list[tuple[LLMModel, LLMProvider]], int]:
-    """Get paginated LLM models with filtering. Returns tuples of (model, provider)."""
+    """
+    Get paginated LLM models with filtering. Returns tuples of (model, provider).
+
+    If user_id is provided, includes the user's custom models alongside system models.
+    """
     filters = []
     if not include_deleted:
         filters.append(LLMModel.is_deleted == False)
         filters.append(LLMProvider.is_deleted == False)
+
+    # Ownership filter: system models OR user's custom models
+    if user_id is not None:
+        filters.append(
+            or_(
+                LLMModel.is_system == True,
+                LLMModel.created_by_user_id == user_id,
+            )
+        )
+    else:
+        # No user - only system models
+        filters.append(LLMModel.is_system == True)
+
     if provider_id is not None:
         filters.append(LLMModel.provider_id == provider_id)
     if provider_type is not None:
@@ -3165,11 +3252,16 @@ def get_llm_model(
 def get_llm_models_grouped(
     *,
     session: Session,
+    user_id: uuid.UUID | None = None,
     provider_type: LLMProviderType | None = None,
     is_enabled: bool | None = None,
     include_deleted: bool = False,
 ) -> list[tuple[LLMProvider, list[LLMModel]]]:
-    """Get models grouped by provider for UI display."""
+    """
+    Get models grouped by provider for UI display.
+
+    If user_id is provided, includes the user's custom models alongside system models.
+    """
     # Get providers
     provider_filters = []
     if not include_deleted:
@@ -3194,6 +3286,17 @@ def get_llm_models_grouped(
             model_filters.append(LLMModel.is_deleted == False)
         if is_enabled is not None:
             model_filters.append(LLMModel.is_enabled == is_enabled)
+
+        # Ownership filter: system models OR user's custom models
+        if user_id is not None:
+            model_filters.append(
+                or_(
+                    LLMModel.is_system == True,
+                    LLMModel.created_by_user_id == user_id,
+                )
+            )
+        else:
+            model_filters.append(LLMModel.is_system == True)
 
         model_stmt = (
             select(LLMModel)

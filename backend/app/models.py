@@ -246,6 +246,7 @@ class LLMModelBase(SQLModel):
     display_name: str = Field(max_length=100, description="Human-friendly name (e.g., 'GPT-4o')")
     description: str | None = Field(default=None, max_length=500)
     context_window: int | None = Field(default=None, description="Max tokens in context window")
+    is_system: bool = Field(default=False, description="system model")
     is_default: bool = Field(default=False, description="Default/cheapest model for this provider")
     is_enabled: bool = Field(default=True, description="Whether model is available for use")
     is_deprecated: bool = Field(default=False, description="Model is deprecated (still works)")
@@ -264,9 +265,13 @@ class LLMModelBase(SQLModel):
     )
 
 
+
+
 class LLMModelCreate(LLMModelBase):
     """Input model for creating a model catalog entry."""
     provider_id: uuid.UUID
+    # Override to make optional for user-created models (auto-generated from model_id)
+    display_name: str | None = Field(default=None, max_length=100)
 
 
 class LLMModelUpdate(SQLModel):
@@ -297,11 +302,11 @@ class LLMModel(LLMModelBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     provider_id: uuid.UUID = Field(
         foreign_key="llmprovider.id",
-        nullable=False,
+        nullable=True,
         index=True,
         description="Parent provider"
     )
-
+    is_system: bool = Field(default=False, index=True)
     # Deprecation tracking
     deprecated_at: datetime | None = Field(default=None, description="When model was deprecated")
     sunset_at: datetime | None = Field(default=None, description="When model will stop working")
@@ -327,7 +332,7 @@ class LLMModel(LLMModelBase, table=True):
     )
     # Unique constraint: one model_id per provider
     __table_args__ = (
-        UniqueConstraint("provider_id", "model_id", name="uq_provider_model"),
+        UniqueConstraint("provider_id", "model_id", "created_by_user_id", name="uq_provider_model"),
     )
 
 
@@ -338,6 +343,7 @@ class LLMModelPublic(LLMModelBase):
     deprecated_at: datetime | None
     sunset_at: datetime | None
     is_deleted: bool
+    is_system: bool
     created_at: datetime
     updated_at: datetime
     # Denormalized provider info for convenience
