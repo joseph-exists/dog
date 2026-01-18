@@ -315,6 +315,12 @@ class LLMModel(LLMModelBase, table=True):
         description="Additional capability flags as JSONB",
         sa_column=Column(JSONB),
     )
+
+    created_by_user_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        nullable=True,
+    )
     # Unique constraint: one model_id per provider
     __table_args__ = (
         UniqueConstraint("provider_id", "model_id", name="uq_provider_model"),
