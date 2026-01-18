@@ -1,0 +1,314 @@
+"""
+LLM Catalog routes.
+
+Public API for browsing available LLM providers and models.
+No authentication required - this is a read-only system catalog.
+"""
+
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Query
+
+from app import crud
+from app.api.deps import SessionDep
+from app.models import (
+    LLMModelPublic,
+    LLMModelsGrouped,
+    LLMModelsPublic,
+    LLMProviderPublic,
+    LLMProvidersPublic,
+    LLMProviderType,
+    LLMProviderWithModels,
+)
+
+router = APIRouter(prefix="/llm-catalog", tags=["llm-catalog"])
+
+
+# =============================================================================
+# Provider Endpoints
+# =============================================================================
+
+
+@router.get("/providers", response_model=LLMProvidersPublic)
+def list_providers(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+    provider_type: LLMProviderType | None = None,
+    is_enabled: bool | None = Query(
+        default=None, description="Filter by enabled status"
+    ),
+    is_system: bool | None = Query(
+        default=None, description="Filter by system vs user-created"
+    ),
+    include_deleted: bool = Query(
+        default=False, description="Include soft-deleted providers"
+    ),
+) -> Any:
+    """
+    List all LLM providers in the catalog.
+
+    No authentication required. Returns providers with their model counts.
+    """
+    providers, count = crud.get_llm_providers(
+        session=session,
+        skip=skip,
+        limit=limit,
+        provider_type=provider_type,
+        is_enabled=is_enabled,
+        is_system=is_system,
+        include_deleted=include_deleted,
+    )
+
+    # Enrich with model counts
+    data = []
+    for provider in providers:
+        model_count = crud.get_llm_provider_model_count(
+            session=session,
+            provider_id=provider.id,
+            include_deleted=include_deleted,
+        )
+        data.append(
+            LLMProviderPublic(
+                **provider.model_dump(),
+                model_count=model_count,
+            )
+        )
+
+    return LLMProvidersPublic(data=data, count=count)
+
+
+@router.get("/providers/{provider_id}", response_model=LLMProviderPublic)
+def get_provider(
+    provider_id: uuid.UUID,
+    session: SessionDep,
+    include_deleted: bool = Query(default=False, description="Include if soft-deleted"),
+) -> Any:
+    """
+    Get a single LLM provider by ID.
+
+    No authentication required.
+    """
+    provider = crud.get_llm_provider(
+        session=session,
+        provider_id=provider_id,
+        include_deleted=include_deleted,
+    )
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    model_count = crud.get_llm_provider_model_count(
+        session=session,
+        provider_id=provider.id,
+        include_deleted=include_deleted,
+    )
+
+    return LLMProviderPublic(**provider.model_dump(), model_count=model_count)
+
+
+@router.get("/providers/{provider_id}/models", response_model=LLMModelsPublic)
+def list_provider_models(
+    provider_id: uuid.UUID,
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+    is_enabled: bool | None = Query(
+        default=None, description="Filter by enabled status"
+    ),
+    is_deprecated: bool | None = Query(
+        default=None, description="Filter by deprecation status"
+    ),
+    include_deleted: bool = Query(
+        default=False, description="Include soft-deleted models"
+    ),
+) -> Any:
+    """
+    List all models for a specific provider.
+
+    No authentication required.
+    """
+    # Verify provider exists
+    provider = crud.get_llm_provider(
+        session=session,
+        provider_id=provider_id,
+        include_deleted=include_deleted,
+    )
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    results, count = crud.get_llm_models(
+        session=session,
+        skip=skip,
+        limit=limit,
+        provider_id=provider_id,
+        is_enabled=is_enabled,
+        is_deprecated=is_deprecated,
+        include_deleted=include_deleted,
+    )
+
+    data = [
+        LLMModelPublic(
+            **model.model_dump(),
+            provider_type=prov.provider_type,
+            provider_name=prov.name,
+        )
+        for model, prov in results
+    ]
+
+    return LLMModelsPublic(data=data, count=count)
+
+
+# =============================================================================
+# Model Endpoints
+# =============================================================================
+
+
+@router.get("/models", response_model=LLMModelsPublic)
+def list_models(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+    provider_id: uuid.UUID | None = Query(
+        default=None, description="Filter by provider ID"
+    ),
+    provider_type: LLMProviderType | None = Query(
+        default=None, description="Filter by provider type"
+    ),
+    is_enabled: bool | None = Query(
+        default=None, description="Filter by enabled status"
+    ),
+    is_deprecated: bool | None = Query(
+        default=None, description="Filter by deprecation status"
+    ),
+    is_default: bool | None = Query(
+        default=None, description="Filter by default model flag"
+    ),
+    has_vision: bool | None = Query(
+        default=None, description="Filter by vision capability"
+    ),
+    has_function_calling: bool | None = Query(
+        default=None, description="Filter by function calling"
+    ),
+    has_streaming: bool | None = Query(
+        default=None, description="Filter by streaming support"
+    ),
+    has_json_mode: bool | None = Query(
+        default=None, description="Filter by JSON mode support"
+    ),
+    include_deleted: bool = Query(
+        default=False, description="Include soft-deleted models"
+    ),
+) -> Any:
+    """
+    List all LLM models in the catalog (flat list).
+
+    No authentication required. Supports rich filtering by capabilities.
+    """
+    results, count = crud.get_llm_models(
+        session=session,
+        skip=skip,
+        limit=limit,
+        provider_id=provider_id,
+        provider_type=provider_type,
+        is_enabled=is_enabled,
+        is_deprecated=is_deprecated,
+        is_default=is_default,
+        has_vision=has_vision,
+        has_function_calling=has_function_calling,
+        has_streaming=has_streaming,
+        has_json_mode=has_json_mode,
+        include_deleted=include_deleted,
+    )
+
+    data = [
+        LLMModelPublic(
+            **model.model_dump(),
+            provider_type=provider.provider_type,
+            provider_name=provider.name,
+        )
+        for model, provider in results
+    ]
+
+    return LLMModelsPublic(data=data, count=count)
+
+
+@router.get("/models/grouped", response_model=LLMModelsGrouped)
+def list_models_grouped(
+    session: SessionDep,
+    provider_type: LLMProviderType | None = Query(
+        default=None, description="Filter by provider type"
+    ),
+    is_enabled: bool | None = Query(
+        default=None, description="Filter by enabled status"
+    ),
+    include_deleted: bool = Query(default=False, description="Include soft-deleted"),
+) -> Any:
+    """
+    List all models grouped by provider.
+
+    Useful for UI dropdowns showing models organized by provider.
+    No authentication required.
+    """
+    grouped = crud.get_llm_models_grouped(
+        session=session,
+        provider_type=provider_type,
+        is_enabled=is_enabled,
+        include_deleted=include_deleted,
+    )
+
+    providers_with_models = []
+    total_models = 0
+
+    for provider, models in grouped:
+        model_count = len(models)
+        total_models += model_count
+
+        model_public_list = [
+            LLMModelPublic(
+                **m.model_dump(),
+                provider_type=provider.provider_type,
+                provider_name=provider.name,
+            )
+            for m in models
+        ]
+
+        providers_with_models.append(
+            LLMProviderWithModels(
+                **provider.model_dump(),
+                model_count=model_count,
+                models=model_public_list,
+            )
+        )
+
+    return LLMModelsGrouped(
+        providers=providers_with_models,
+        total_models=total_models,
+    )
+
+
+@router.get("/models/{model_id}", response_model=LLMModelPublic)
+def get_model(
+    model_id: uuid.UUID,
+    session: SessionDep,
+    include_deleted: bool = Query(default=False, description="Include if soft-deleted"),
+) -> Any:
+    """
+    Get a single LLM model by ID.
+
+    No authentication required.
+    """
+    result = crud.get_llm_model(
+        session=session,
+        model_id=model_id,
+        include_deleted=include_deleted,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    model, provider = result
+    return LLMModelPublic(
+        **model.model_dump(),
+        provider_type=provider.provider_type,
+        provider_name=provider.name,
+    )

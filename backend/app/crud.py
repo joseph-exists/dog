@@ -23,6 +23,9 @@ from app.models import (
     EventCreate,
     Item,
     ItemCreate,
+    LLMModel,
+    LLMProvider,
+    LLMProviderType,
     Message,
     NodeChoice,
     Persona,
@@ -2993,3 +2996,199 @@ def update_agent_config(
 def delete_agent_config(*, session: Session, db_agent: AgentConfig) -> None:
     session.delete(db_agent)
     session.commit()
+
+
+# =============================================================================
+# LLM Catalog CRUD Operations
+# =============================================================================
+
+
+def get_llm_providers(
+    *,
+    session: Session,
+    skip: int = 0,
+    limit: int = 100,
+    provider_type: LLMProviderType | None = None,
+    is_enabled: bool | None = None,
+    is_system: bool | None = None,
+    include_deleted: bool = False,
+) -> tuple[list[LLMProvider], int]:
+    """Get paginated LLM providers with filtering."""
+    filters = []
+    if not include_deleted:
+        filters.append(LLMProvider.is_deleted == False)
+    if provider_type is not None:
+        filters.append(LLMProvider.provider_type == provider_type)
+    if is_enabled is not None:
+        filters.append(LLMProvider.is_enabled == is_enabled)
+    if is_system is not None:
+        filters.append(LLMProvider.is_system == is_system)
+
+    count_stmt = select(func.count()).select_from(LLMProvider).where(*filters)
+    count = session.exec(count_stmt).one()
+
+    stmt = (
+        select(LLMProvider)
+        .where(*filters)
+        .order_by(LLMProvider.name)
+        .offset(skip)
+        .limit(limit)
+    )
+    providers = session.exec(stmt).all()
+    return list(providers), count
+
+
+def get_llm_provider(
+    *,
+    session: Session,
+    provider_id: uuid.UUID,
+    include_deleted: bool = False,
+) -> LLMProvider | None:
+    """Get a single LLM provider by ID."""
+    provider = session.get(LLMProvider, provider_id)
+    if provider and not include_deleted and provider.is_deleted:
+        return None
+    return provider
+
+
+def get_llm_provider_model_count(
+    *,
+    session: Session,
+    provider_id: uuid.UUID,
+    include_deleted: bool = False,
+) -> int:
+    """Get count of active models for a provider."""
+    filters = [LLMModel.provider_id == provider_id]
+    if not include_deleted:
+        filters.append(LLMModel.is_deleted == False)
+        filters.append(LLMModel.is_enabled == True)
+
+    stmt = select(func.count()).select_from(LLMModel).where(*filters)
+    return session.exec(stmt).one()
+
+
+def get_llm_models(
+    *,
+    session: Session,
+    skip: int = 0,
+    limit: int = 100,
+    provider_id: uuid.UUID | None = None,
+    provider_type: LLMProviderType | None = None,
+    is_enabled: bool | None = None,
+    is_deprecated: bool | None = None,
+    is_default: bool | None = None,
+    has_vision: bool | None = None,
+    has_function_calling: bool | None = None,
+    has_streaming: bool | None = None,
+    has_json_mode: bool | None = None,
+    include_deleted: bool = False,
+) -> tuple[list[tuple[LLMModel, LLMProvider]], int]:
+    """Get paginated LLM models with filtering. Returns tuples of (model, provider)."""
+    filters = []
+    if not include_deleted:
+        filters.append(LLMModel.is_deleted == False)
+        filters.append(LLMProvider.is_deleted == False)
+    if provider_id is not None:
+        filters.append(LLMModel.provider_id == provider_id)
+    if provider_type is not None:
+        filters.append(LLMProvider.provider_type == provider_type)
+    if is_enabled is not None:
+        filters.append(LLMModel.is_enabled == is_enabled)
+    if is_deprecated is not None:
+        filters.append(LLMModel.is_deprecated == is_deprecated)
+    if is_default is not None:
+        filters.append(LLMModel.is_default == is_default)
+    if has_vision is not None:
+        filters.append(LLMModel.has_vision == has_vision)
+    if has_function_calling is not None:
+        filters.append(LLMModel.has_function_calling == has_function_calling)
+    if has_streaming is not None:
+        filters.append(LLMModel.has_streaming == has_streaming)
+    if has_json_mode is not None:
+        filters.append(LLMModel.has_json_mode == has_json_mode)
+
+    count_stmt = (
+        select(func.count())
+        .select_from(LLMModel)
+        .join(LLMProvider)
+        .where(*filters)
+    )
+    count = session.exec(count_stmt).one()
+
+    stmt = (
+        select(LLMModel, LLMProvider)
+        .join(LLMProvider)
+        .where(*filters)
+        .order_by(LLMProvider.name, LLMModel.sort_order, LLMModel.display_name)
+        .offset(skip)
+        .limit(limit)
+    )
+    results = session.exec(stmt).all()
+    return list(results), count
+
+
+def get_llm_model(
+    *,
+    session: Session,
+    model_id: uuid.UUID,
+    include_deleted: bool = False,
+) -> tuple[LLMModel, LLMProvider] | None:
+    """Get a single LLM model by ID with its provider."""
+    model = session.get(LLMModel, model_id)
+    if not model:
+        return None
+    if not include_deleted and model.is_deleted:
+        return None
+
+    provider = session.get(LLMProvider, model.provider_id)
+    if not provider:
+        return None
+    if not include_deleted and provider.is_deleted:
+        return None
+
+    return model, provider
+
+
+def get_llm_models_grouped(
+    *,
+    session: Session,
+    provider_type: LLMProviderType | None = None,
+    is_enabled: bool | None = None,
+    include_deleted: bool = False,
+) -> list[tuple[LLMProvider, list[LLMModel]]]:
+    """Get models grouped by provider for UI display."""
+    # Get providers
+    provider_filters = []
+    if not include_deleted:
+        provider_filters.append(LLMProvider.is_deleted == False)
+    if provider_type is not None:
+        provider_filters.append(LLMProvider.provider_type == provider_type)
+    if is_enabled is not None:
+        provider_filters.append(LLMProvider.is_enabled == is_enabled)
+
+    provider_stmt = (
+        select(LLMProvider)
+        .where(*provider_filters)
+        .order_by(LLMProvider.name)
+    )
+    providers = session.exec(provider_stmt).all()
+
+    # Get models for each provider
+    result = []
+    for provider in providers:
+        model_filters = [LLMModel.provider_id == provider.id]
+        if not include_deleted:
+            model_filters.append(LLMModel.is_deleted == False)
+        if is_enabled is not None:
+            model_filters.append(LLMModel.is_enabled == is_enabled)
+
+        model_stmt = (
+            select(LLMModel)
+            .where(*model_filters)
+            .order_by(LLMModel.sort_order, LLMModel.display_name)
+        )
+        models = list(session.exec(model_stmt).all())
+        if models:  # Only include providers with models
+            result.append((provider, models))
+
+    return result

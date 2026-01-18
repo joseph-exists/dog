@@ -6,6 +6,7 @@ from app.api.routes import (
     catalog,
     events,
     items,
+    llm_catalog,
     llm_providers,
     login,
     node_choices,
@@ -48,6 +49,7 @@ api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
 api_router.include_router(agent_routes.router)
 api_router.include_router(llm_providers.router)
+api_router.include_router(llm_catalog.router)
 api_router.include_router(rooms.router)
 api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)

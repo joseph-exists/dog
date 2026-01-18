@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import Enum as PyEnum
 from typing import Any, Literal
-from pydantic import EmailStr, field_validator
-from sqlalchemy import Column, JSON, UniqueConstraint
-from sqlmodel import SQLModel, Field, Relationship
+from pydantic import EmailStr, field_validator, BaseModel
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Enum as SAEnum, JSON, UniqueConstraint
+from sqlmodel import SQLModel, Field, Relationship, Column, Enum as SMEnum
 
 
 # ===== Model Overview for Relational References Ordering
@@ -108,26 +109,27 @@ class Token(SQLModel):
 # ========= enum and constant classes here =================
 
 
-class QualityState(str, Enum):
+class QualityState(str, PyEnum):
     ENABLED = "enabled"
     DISABLED = "disabled"
     REMOVED = "removed"
 
 
-class QualitySourceType(str, Enum):
+class QualitySourceType(str, PyEnum):
     TRAIT_DEPENDENT = "trait_dependent"
     DEFAULT = "default"
     MANUALLY_ADDED = "manually_added"
 
-class ContentFormat(str, Enum):
+class ContentFormat(str, PyEnum):
     TEXT = "text"
     HTML = "html"
     MARKDOWN = "markdown"
     JSON = "json"
 
 
-class LLMProviderType(str, Enum):
+class LLMProviderType(str, PyEnum):
     """Supported LLM provider types."""
+    EMPTY = "empty"  # Placeholder/no provider
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
@@ -160,6 +162,217 @@ SUPPORTED_MODELS: dict[str, list[dict[str, str]]] = {
         {"value": "openai:custom", "label": "Custom Model", "description": "Enter model name manually"},
     ],
 }
+
+
+# =============================================================================
+# LLM Catalog Models (System-level provider and model registry)
+# =============================================================================
+# These models define the catalog of available LLM providers and models.
+# Unlike UserLLMProvider (user's API keys), these are system-level entries
+# that define what providers/models exist and their capabilities.
+
+
+class LLMProviderBase(SQLModel):
+    """Base model for system LLM provider catalog entries."""
+    name: str = Field(max_length=100, description="Display name like 'OpenAI', 'Anthropic'")
+    provider_type: LLMProviderType = Field(default=LLMProviderType.EMPTY, description="Provider type enum value")
+    base_url: str | None = Field(default=None, max_length=500, description="Default base URL (for openai_compatible)")
+    description: str | None = Field(default=None, max_length=500)
+    is_enabled: bool = Field(default=True, description="Whether this provider is available")
+    is_system: bool = Field(default=True, description="True for built-in, False for user-created (future)")
+
+
+class LLMProviderCreate(LLMProviderBase):
+    """Input model for creating a provider catalog entry."""
+    pass
+
+
+class LLMProviderUpdate(SQLModel):
+    """Update model for provider catalog entries - all fields optional."""
+    name: str | None = Field(default=None, max_length=100)
+    base_url: str | None = Field(default=None, max_length=500)
+    description: str | None = Field(default=None, max_length=500)
+    is_enabled: bool | None = None
+
+
+class LLMProvider(LLMProviderBase, table=True):
+    """
+    Database model for system LLM provider catalog.
+
+    Stores available providers (OpenAI, Anthropic, etc.) and their
+    configurations. This is system-level data, not user-specific.
+    """
+    __tablename__ = "llmprovider"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+    # Override provider_type to reuse existing enum (don't recreate it)
+    # old - provider_type: LLMProviderType = Field(sa_column=Column(PyEnum(LLMProviderType),))
+    provider_type: LLMProviderType | None = Field(default=LLMProviderType.EMPTY)
+    
+    # Soft delete support
+    is_deleted: bool = Field(default=False, index=True)
+    deleted_at: datetime | None = Field(default=None)
+
+    # Audit timestamps
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationship to models defined in post-definition section
+
+
+class LLMProviderPublic(LLMProviderBase):
+    """Public API response for a provider catalog entry."""
+    id: uuid.UUID
+    is_deleted: bool
+    created_at: datetime
+    updated_at: datetime
+    model_count: int = Field(default=0, description="Number of active models for this provider")
+
+
+class LLMProvidersPublic(SQLModel):
+    """Collection response for LLMProviders."""
+    data: list[LLMProviderPublic]
+    count: int
+
+
+class LLMModelBase(SQLModel):
+    """Base model for LLM model catalog entries."""
+    model_id: str = Field(max_length=100, description="Model identifier (e.g., 'gpt-4o', no provider prefix)")
+    display_name: str = Field(max_length=100, description="Human-friendly name (e.g., 'GPT-4o')")
+    description: str | None = Field(default=None, max_length=500)
+    context_window: int | None = Field(default=None, description="Max tokens in context window")
+    is_default: bool = Field(default=False, description="Default/cheapest model for this provider")
+    is_enabled: bool = Field(default=True, description="Whether model is available for use")
+    is_deprecated: bool = Field(default=False, description="Model is deprecated (still works)")
+    sort_order: int = Field(default=0, description="Display ordering within provider")
+
+    # Known capabilities (nullable = unknown)
+    has_vision: bool | None = Field(default=None, description="Supports image input")
+    has_function_calling: bool | None = Field(default=None, description="Supports function/tool calling")
+    has_streaming: bool | None = Field(default=None, description="Supports streaming responses")
+    has_json_mode: bool | None = Field(default=None, description="Supports JSON output mode")
+
+    # Additional capabilities as JSON for extensibility
+    secondary_capabilities: dict[str, Any] | None = Field(
+        default=None,
+        description="Additional capability flags as JSON"
+    )
+
+
+class LLMModelCreate(LLMModelBase):
+    """Input model for creating a model catalog entry."""
+    provider_id: uuid.UUID
+
+
+class LLMModelUpdate(SQLModel):
+    """Update model for model catalog entries - all fields optional."""
+    display_name: str | None = Field(default=None, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    context_window: int | None = None
+    is_default: bool | None = None
+    is_enabled: bool | None = None
+    is_deprecated: bool | None = None
+    sort_order: int | None = None
+    has_vision: bool | None = None
+    has_function_calling: bool | None = None
+    has_streaming: bool | None = None
+    has_json_mode: bool | None = None
+    secondary_capabilities: dict[str, Any] | None = None
+
+
+class LLMModel(LLMModelBase, table=True):
+    """
+    Database model for LLM model catalog.
+
+    Stores available models per provider with their capabilities.
+    model_id is the normalized name without provider prefix (e.g., 'gpt-4o').
+    """
+    __tablename__ = "llmmodel"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    provider_id: uuid.UUID = Field(
+        foreign_key="llmprovider.id",
+        nullable=False,
+        index=True,
+        description="Parent provider"
+    )
+
+    # Deprecation tracking
+    deprecated_at: datetime | None = Field(default=None, description="When model was deprecated")
+    sunset_at: datetime | None = Field(default=None, description="When model will stop working")
+
+    # Soft delete support
+    is_deleted: bool = Field(default=False, index=True)
+    deleted_at: datetime | None = Field(default=None)
+
+    # Audit timestamps
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    secondary_capabilities: dict[str, Any] | None = Field(
+        default=None,
+        description="Additional capability flags as JSONB",
+        sa_column=Column(JSONB),
+    )
+    # Unique constraint: one model_id per provider
+    __table_args__ = (
+        UniqueConstraint("provider_id", "model_id", name="uq_provider_model"),
+    )
+
+
+class LLMModelPublic(LLMModelBase):
+    """Public API response for a model catalog entry."""
+    id: uuid.UUID
+    provider_id: uuid.UUID
+    deprecated_at: datetime | None
+    sunset_at: datetime | None
+    is_deleted: bool
+    created_at: datetime
+    updated_at: datetime
+    # Denormalized provider info for convenience
+    provider_type: LLMProviderType | None = None
+    provider_name: str | None = None
+
+
+class LLMModelsPublic(SQLModel):
+    """Collection response for LLMModels."""
+    data: list[LLMModelPublic]
+    count: int
+
+
+class LLMProviderWithModels(LLMProviderPublic):
+    """Provider with nested list of its models."""
+    models: list[LLMModelPublic] = []
+
+
+class LLMModelsGrouped(BaseModel):
+    """Models grouped by provider for UI display."""
+    providers: list[LLMProviderWithModels]
+    total_models: int
+
+
+# Query models (Pydantic, not SQLModel table) for API filtering
+class LLMProviderQuery(BaseModel):
+    """Query parameters for filtering providers."""
+    provider_type: LLMProviderType | None = None
+    is_enabled: bool | None = None
+    is_system: bool | None = None
+    include_deleted: bool = False
+
+
+class LLMModelQuery(BaseModel):
+    """Query parameters for filtering models."""
+    provider_id: uuid.UUID | None = None
+    provider_type: LLMProviderType | None = None
+    is_enabled: bool | None = None
+    is_deprecated: bool | None = None
+    is_default: bool | None = None
+    has_vision: bool | None = None
+    has_function_calling: bool | None = None
+    has_streaming: bool | None = None
+    has_json_mode: bool | None = None
+    include_deleted: bool = False
 
 
 # ============ Base Models ++++++++
@@ -979,7 +1192,8 @@ class Item(ItemBase, table=True):
 
 class UserLLMProviderBase(SQLModel):
     """Base model for user LLM provider configurations."""
-    provider_type: LLMProviderType = Field(description="Type of LLM provider")
+    provider_type: LLMProviderType | None = Field(default=LLMProviderType.EMPTY)
+    # provider_type: LLMProviderType = Field(description="Type of LLM provider")
     name: str = Field(max_length=100, description="User-friendly name like 'My OpenAI' or 'Work Azure'")
     is_enabled: bool = Field(default=True, description="Whether this provider is active")
     is_default: bool = Field(default=False, description="Default provider for this type")
@@ -2405,7 +2619,7 @@ class RoomEventsPublic(SQLModel):
     data: list[RoomEventPublic]
     count: int
 
-class StateValueType(str, Enum):
+class StateValueType(str, PyEnum):
     BOOLEAN = "boolean"
     NUMBER = "number"
     STRING = "string"
@@ -2986,3 +3200,10 @@ User.llm_providers = Relationship(
     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
 )
 UserLLMProvider.owner = Relationship(back_populates="llm_providers")
+
+# LLMProvider <-> LLMModel relationship (catalog models)
+LLMProvider.models = Relationship(
+    back_populates="provider",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
+)
+LLMModel.provider = Relationship(back_populates="models")
