@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AgentsListAgentsData, AgentsListAgentsResponse, AgentsCreateAgentData, AgentsCreateAgentResponse, AgentsListAvailableAgentsData, AgentsListAvailableAgentsResponse, AgentsGetAgentData, AgentsGetAgentResponse, AgentsUpdateAgentData, AgentsUpdateAgentResponse, AgentsDeleteAgentData, AgentsDeleteAgentResponse, AgentsGetMyAgentSettingsData, AgentsGetMyAgentSettingsResponse, AgentsUpdateMyAgentSettingsData, AgentsUpdateMyAgentSettingsResponse, AgentsDeleteMyAgentSettingsData, AgentsDeleteMyAgentSettingsResponse, ArchetypesReadArchetypesData, ArchetypesReadArchetypesResponse, ArchetypesCreateArchetypeData, ArchetypesCreateArchetypeResponse, ArchetypesReadArchetypeData, ArchetypesReadArchetypeResponse, ArchetypesUpdateArchetypeData, ArchetypesUpdateArchetypeResponse, ArchetypesDeleteArchetypeData, ArchetypesDeleteArchetypeResponse, CatalogReadCatalogData, CatalogReadCatalogResponse, CatalogReadCatalogStoryData, CatalogReadCatalogStoryResponse, CatalogReadCatalogStoryNodesData, CatalogReadCatalogStoryNodesResponse, CatalogReadCatalogStoryRequirementsData, CatalogReadCatalogStoryRequirementsResponse, EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LlmProvidersListProvidersData, LlmProvidersListProvidersResponse, LlmProvidersCreateProviderData, LlmProvidersCreateProviderResponse, LlmProvidersGetProviderData, LlmProvidersGetProviderResponse, LlmProvidersUpdateProviderData, LlmProvidersUpdateProviderResponse, LlmProvidersDeleteProviderData, LlmProvidersDeleteProviderResponse, LlmProvidersTestProviderData, LlmProvidersTestProviderResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NodeChoicesReadNodeChoicesData, NodeChoicesReadNodeChoicesResponse, NodeChoicesCreateNodeChoiceData, NodeChoicesCreateNodeChoiceResponse, NodeChoicesReadNodeChoiceData, NodeChoicesReadNodeChoiceResponse, NodeChoicesUpdateNodeChoiceData, NodeChoicesUpdateNodeChoiceResponse, NodeChoicesDeleteNodeChoiceData, NodeChoicesDeleteNodeChoiceResponse, PersonaEventsProcessPersonaEventData, PersonaEventsProcessPersonaEventResponse, PersonaQualitiesReadPersonaQualitiesData, PersonaQualitiesReadPersonaQualitiesResponse, PersonaQualitiesAddQualityToPersonaData, PersonaQualitiesAddQualityToPersonaResponse, PersonaQualitiesRemoveQualityFromPersonaData, PersonaQualitiesRemoveQualityFromPersonaResponse, PersonasReadPersonasData, PersonasReadPersonasResponse, PersonasCreatePersonaData, PersonasCreatePersonaResponse, PersonasReadPersonaData, PersonasReadPersonaResponse, PersonasUpdatePersonaData, PersonasUpdatePersonaResponse, PersonasDeletePersonaData, PersonasDeletePersonaResponse, PersonasCreatePersonaFromArchetypeData, PersonasCreatePersonaFromArchetypeResponse, PrivateCreateUserData, PrivateCreateUserResponse, QualitiesReadQualitiesData, QualitiesReadQualitiesResponse, QualitiesCreateQualityData, QualitiesCreateQualityResponse, QualitiesReadQualityData, QualitiesReadQualityResponse, QualitiesUpdateQualityData, QualitiesUpdateQualityResponse, QualitiesDeleteQualityData, QualitiesDeleteQualityResponse, QualityTraitLinksReadQualityTraitsData, QualityTraitLinksReadQualityTraitsResponse, QualityTraitLinksReadTraitQualitiesData, QualityTraitLinksReadTraitQualitiesResponse, QualityTraitLinksCreateQualityTraitLinkData, QualityTraitLinksCreateQualityTraitLinkResponse, QualityTraitLinksDeleteQualityTraitLinkData, QualityTraitLinksDeleteQualityTraitLinkResponse, RoomsCreateNewRoomData, RoomsCreateNewRoomResponse, RoomsListUserRoomsData, RoomsListUserRoomsResponse, RoomsGetRoomData, RoomsGetRoomResponse, RoomsUpdateRoomData, RoomsUpdateRoomResponse, RoomsAddRoomParticipantData, RoomsAddRoomParticipantResponse, RoomsListRoomParticipantsData, RoomsListRoomParticipantsResponse, RoomsGetRoomsForStoryData, RoomsGetRoomsForStoryResponse, RoomsRemoveRoomParticipantData, RoomsRemoveRoomParticipantResponse, RoomsChangeRoomParticipantRoleData, RoomsChangeRoomParticipantRoleResponse, RoomsSendMessageData, RoomsSendMessageResponse, RoomsListMessagesData, RoomsListMessagesResponse, RoomsEditMessageEndpointData, RoomsEditMessageEndpointResponse, RoomsDeleteMessageEndpointData, RoomsDeleteMessageEndpointResponse, RoomsPinMessageEndpointData, RoomsPinMessageEndpointResponse, RoomsUnpinMessageEndpointData, RoomsUnpinMessageEndpointResponse, RoomsToggleMessageContextEndpointData, RoomsToggleMessageContextEndpointResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, StoriesCreateStoryData, StoriesCreateStoryResponse, StoriesReadStoryData, StoriesReadStoryResponse, StoriesUpdateStoryData, StoriesUpdateStoryResponse, StoriesDeleteStoryData, StoriesDeleteStoryResponse, StoriesValidateStoryData, StoriesValidateStoryResponse, StoriesGetStoryTreeData, StoriesGetStoryTreeResponse, StoriesGetStoryStartNodeData, StoriesGetStoryStartNodeResponse, StoriesPublishStoryData, StoriesPublishStoryResponse, StoriesUnpublishStoryData, StoriesUnpublishStoryResponse, StoriesCreateNewStoryVersionData, StoriesCreateNewStoryVersionResponse, StoriesReadStoryRequirementsData, StoriesReadStoryRequirementsResponse, StoriesCreateStoryRequirementData, StoriesCreateStoryRequirementResponse, StoriesDeleteStoryRequirementData, StoriesDeleteStoryRequirementResponse, StoriesReadStoryStateSchemaData, StoriesReadStoryStateSchemaResponse, StoriesCreateStoryStateVariableData, StoriesCreateStoryStateVariableResponse, StoriesUpdateStoryStateVariableData, StoriesUpdateStoryStateVariableResponse, StoriesDeleteStoryStateVariableData, StoriesDeleteStoryStateVariableResponse, StoriesValidateStoryStateSchemaData, StoriesValidateStoryStateSchemaResponse, StorynodesReadStorynodesData, StorynodesReadStorynodesResponse, StorynodesCreateStorynodeData, StorynodesCreateStorynodeResponse, StorynodesReadStorynodeData, StorynodesReadStorynodeResponse, StorynodesUpdateStorynodeData, StorynodesUpdateStorynodeResponse, StorynodesDeleteStorynodeData, StorynodesDeleteStorynodeResponse, StorynodesReadNodeChoicesData, StorynodesReadNodeChoicesResponse, StorynodesCreateNodeChoiceFromNodeData, StorynodesCreateNodeChoiceFromNodeResponse, TraitConflictsReadTraitConflictGroupsData, TraitConflictsReadTraitConflictGroupsResponse, TraitConflictsCreateTraitConflictGroupData, TraitConflictsCreateTraitConflictGroupResponse, TraitConflictsReadTraitConflictGroupData, TraitConflictsReadTraitConflictGroupResponse, TraitConflictsUpdateTraitConflictGroupData, TraitConflictsUpdateTraitConflictGroupResponse, TraitConflictsDeleteTraitConflictGroupData, TraitConflictsDeleteTraitConflictGroupResponse, TraitConflictsReadConflictGroupMembersData, TraitConflictsReadConflictGroupMembersResponse, TraitConflictsAddTraitToConflictGroupData, TraitConflictsAddTraitToConflictGroupResponse, TraitConflictsRemoveTraitFromConflictGroupData, TraitConflictsRemoveTraitFromConflictGroupResponse, TraitConflictsCheckPersonaTraitConflictsData, TraitConflictsCheckPersonaTraitConflictsResponse, TraitConflictsCheckArchetypeTraitConflictsData, TraitConflictsCheckArchetypeTraitConflictsResponse, TraitConflictsGetConflictGroupsByTraitData, TraitConflictsGetConflictGroupsByTraitResponse, TraitConflictsValidateConflictGroupData, TraitConflictsValidateConflictGroupResponse, TraitsReadTraitsData, TraitsReadTraitsResponse, TraitsCreateTraitData, TraitsCreateTraitResponse, TraitsReadTraitData, TraitsReadTraitResponse, TraitsUpdateTraitData, TraitsUpdateTraitResponse, TraitsDeleteTraitData, TraitsDeleteTraitResponse, UserPersonasReadUserPersonasData, UserPersonasReadUserPersonasResponse, UserPersonasCreateUserPersonaData, UserPersonasCreateUserPersonaResponse, UserPersonasReadUserPersonaData, UserPersonasReadUserPersonaResponse, UserPersonasUpdateUserPersonaData, UserPersonasUpdateUserPersonaResponse, UserPersonasDeleteUserPersonaData, UserPersonasDeleteUserPersonaResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UserStoryProgressReadUserStoryProgressesData, UserStoryProgressReadUserStoryProgressesResponse, UserStoryProgressReadUserStoryProgressData, UserStoryProgressReadUserStoryProgressResponse, UserStoryProgressCreateUserStoryProgressData, UserStoryProgressCreateUserStoryProgressResponse, UserStoryProgressUpdateUserStoryProgressData, UserStoryProgressUpdateUserStoryProgressResponse, UserStoryProgressGetCurrentNodeData, UserStoryProgressGetCurrentNodeResponse, UserStoryProgressMakeStoryChoiceData, UserStoryProgressMakeStoryChoiceResponse, UserStoryProgressValidateStoryStateData, UserStoryProgressValidateStoryStateResponse, UserStoryProgressUndoStoryChoiceData, UserStoryProgressUndoStoryChoiceResponse, UserStoryProgressJumpStoryHeadData, UserStoryProgressJumpStoryHeadResponse, UserStoryProgressReadStoryTimelineData, UserStoryProgressReadStoryTimelineResponse, UserStoryProgressReadStorySnapshotsData, UserStoryProgressReadStorySnapshotsResponse, UserStoryProgressCreateStorySnapshotData, UserStoryProgressCreateStorySnapshotResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AgentsListAgentsData, AgentsListAgentsResponse, AgentsCreateAgentData, AgentsCreateAgentResponse, AgentsListAvailableAgentsData, AgentsListAvailableAgentsResponse, AgentsGetAgentData, AgentsGetAgentResponse, AgentsUpdateAgentData, AgentsUpdateAgentResponse, AgentsDeleteAgentData, AgentsDeleteAgentResponse, AgentsGetMyAgentSettingsData, AgentsGetMyAgentSettingsResponse, AgentsUpdateMyAgentSettingsData, AgentsUpdateMyAgentSettingsResponse, AgentsDeleteMyAgentSettingsData, AgentsDeleteMyAgentSettingsResponse, ArchetypesReadArchetypesData, ArchetypesReadArchetypesResponse, ArchetypesCreateArchetypeData, ArchetypesCreateArchetypeResponse, ArchetypesReadArchetypeData, ArchetypesReadArchetypeResponse, ArchetypesUpdateArchetypeData, ArchetypesUpdateArchetypeResponse, ArchetypesDeleteArchetypeData, ArchetypesDeleteArchetypeResponse, CatalogReadCatalogData, CatalogReadCatalogResponse, CatalogReadCatalogStoryData, CatalogReadCatalogStoryResponse, CatalogReadCatalogStoryNodesData, CatalogReadCatalogStoryNodesResponse, CatalogReadCatalogStoryRequirementsData, CatalogReadCatalogStoryRequirementsResponse, EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LlmCatalogListProvidersData, LlmCatalogListProvidersResponse, LlmCatalogGetProviderData, LlmCatalogGetProviderResponse, LlmCatalogListProviderModelsData, LlmCatalogListProviderModelsResponse, LlmCatalogListModelsData, LlmCatalogListModelsResponse, LlmCatalogListModelsGroupedData, LlmCatalogListModelsGroupedResponse, LlmCatalogGetModelData, LlmCatalogGetModelResponse, LlmProvidersListProvidersData, LlmProvidersListProvidersResponse, LlmProvidersCreateProviderData, LlmProvidersCreateProviderResponse, LlmProvidersGetProviderData, LlmProvidersGetProviderResponse, LlmProvidersUpdateProviderData, LlmProvidersUpdateProviderResponse, LlmProvidersDeleteProviderData, LlmProvidersDeleteProviderResponse, LlmProvidersTestProviderData, LlmProvidersTestProviderResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NodeChoicesReadNodeChoicesData, NodeChoicesReadNodeChoicesResponse, NodeChoicesCreateNodeChoiceData, NodeChoicesCreateNodeChoiceResponse, NodeChoicesReadNodeChoiceData, NodeChoicesReadNodeChoiceResponse, NodeChoicesUpdateNodeChoiceData, NodeChoicesUpdateNodeChoiceResponse, NodeChoicesDeleteNodeChoiceData, NodeChoicesDeleteNodeChoiceResponse, PersonaEventsProcessPersonaEventData, PersonaEventsProcessPersonaEventResponse, PersonaQualitiesReadPersonaQualitiesData, PersonaQualitiesReadPersonaQualitiesResponse, PersonaQualitiesAddQualityToPersonaData, PersonaQualitiesAddQualityToPersonaResponse, PersonaQualitiesRemoveQualityFromPersonaData, PersonaQualitiesRemoveQualityFromPersonaResponse, PersonasReadPersonasData, PersonasReadPersonasResponse, PersonasCreatePersonaData, PersonasCreatePersonaResponse, PersonasReadPersonaData, PersonasReadPersonaResponse, PersonasUpdatePersonaData, PersonasUpdatePersonaResponse, PersonasDeletePersonaData, PersonasDeletePersonaResponse, PersonasCreatePersonaFromArchetypeData, PersonasCreatePersonaFromArchetypeResponse, PrivateCreateUserData, PrivateCreateUserResponse, QualitiesReadQualitiesData, QualitiesReadQualitiesResponse, QualitiesCreateQualityData, QualitiesCreateQualityResponse, QualitiesReadQualityData, QualitiesReadQualityResponse, QualitiesUpdateQualityData, QualitiesUpdateQualityResponse, QualitiesDeleteQualityData, QualitiesDeleteQualityResponse, QualityTraitLinksReadQualityTraitsData, QualityTraitLinksReadQualityTraitsResponse, QualityTraitLinksReadTraitQualitiesData, QualityTraitLinksReadTraitQualitiesResponse, QualityTraitLinksCreateQualityTraitLinkData, QualityTraitLinksCreateQualityTraitLinkResponse, QualityTraitLinksDeleteQualityTraitLinkData, QualityTraitLinksDeleteQualityTraitLinkResponse, RoomsCreateNewRoomData, RoomsCreateNewRoomResponse, RoomsListUserRoomsData, RoomsListUserRoomsResponse, RoomsGetRoomData, RoomsGetRoomResponse, RoomsUpdateRoomData, RoomsUpdateRoomResponse, RoomsAddRoomParticipantData, RoomsAddRoomParticipantResponse, RoomsListRoomParticipantsData, RoomsListRoomParticipantsResponse, RoomsGetRoomsForStoryData, RoomsGetRoomsForStoryResponse, RoomsRemoveRoomParticipantData, RoomsRemoveRoomParticipantResponse, RoomsChangeRoomParticipantRoleData, RoomsChangeRoomParticipantRoleResponse, RoomsSendMessageData, RoomsSendMessageResponse, RoomsListMessagesData, RoomsListMessagesResponse, RoomsEditMessageEndpointData, RoomsEditMessageEndpointResponse, RoomsDeleteMessageEndpointData, RoomsDeleteMessageEndpointResponse, RoomsPinMessageEndpointData, RoomsPinMessageEndpointResponse, RoomsUnpinMessageEndpointData, RoomsUnpinMessageEndpointResponse, RoomsToggleMessageContextEndpointData, RoomsToggleMessageContextEndpointResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, StoriesCreateStoryData, StoriesCreateStoryResponse, StoriesReadStoryData, StoriesReadStoryResponse, StoriesUpdateStoryData, StoriesUpdateStoryResponse, StoriesDeleteStoryData, StoriesDeleteStoryResponse, StoriesValidateStoryData, StoriesValidateStoryResponse, StoriesGetStoryTreeData, StoriesGetStoryTreeResponse, StoriesGetStoryStartNodeData, StoriesGetStoryStartNodeResponse, StoriesPublishStoryData, StoriesPublishStoryResponse, StoriesUnpublishStoryData, StoriesUnpublishStoryResponse, StoriesCreateNewStoryVersionData, StoriesCreateNewStoryVersionResponse, StoriesReadStoryRequirementsData, StoriesReadStoryRequirementsResponse, StoriesCreateStoryRequirementData, StoriesCreateStoryRequirementResponse, StoriesDeleteStoryRequirementData, StoriesDeleteStoryRequirementResponse, StoriesReadStoryStateSchemaData, StoriesReadStoryStateSchemaResponse, StoriesCreateStoryStateVariableData, StoriesCreateStoryStateVariableResponse, StoriesUpdateStoryStateVariableData, StoriesUpdateStoryStateVariableResponse, StoriesDeleteStoryStateVariableData, StoriesDeleteStoryStateVariableResponse, StoriesValidateStoryStateSchemaData, StoriesValidateStoryStateSchemaResponse, StorynodesReadStorynodesData, StorynodesReadStorynodesResponse, StorynodesCreateStorynodeData, StorynodesCreateStorynodeResponse, StorynodesReadStorynodeData, StorynodesReadStorynodeResponse, StorynodesUpdateStorynodeData, StorynodesUpdateStorynodeResponse, StorynodesDeleteStorynodeData, StorynodesDeleteStorynodeResponse, StorynodesReadNodeChoicesData, StorynodesReadNodeChoicesResponse, StorynodesCreateNodeChoiceFromNodeData, StorynodesCreateNodeChoiceFromNodeResponse, TraitConflictsReadTraitConflictGroupsData, TraitConflictsReadTraitConflictGroupsResponse, TraitConflictsCreateTraitConflictGroupData, TraitConflictsCreateTraitConflictGroupResponse, TraitConflictsReadTraitConflictGroupData, TraitConflictsReadTraitConflictGroupResponse, TraitConflictsUpdateTraitConflictGroupData, TraitConflictsUpdateTraitConflictGroupResponse, TraitConflictsDeleteTraitConflictGroupData, TraitConflictsDeleteTraitConflictGroupResponse, TraitConflictsReadConflictGroupMembersData, TraitConflictsReadConflictGroupMembersResponse, TraitConflictsAddTraitToConflictGroupData, TraitConflictsAddTraitToConflictGroupResponse, TraitConflictsRemoveTraitFromConflictGroupData, TraitConflictsRemoveTraitFromConflictGroupResponse, TraitConflictsCheckPersonaTraitConflictsData, TraitConflictsCheckPersonaTraitConflictsResponse, TraitConflictsCheckArchetypeTraitConflictsData, TraitConflictsCheckArchetypeTraitConflictsResponse, TraitConflictsGetConflictGroupsByTraitData, TraitConflictsGetConflictGroupsByTraitResponse, TraitConflictsValidateConflictGroupData, TraitConflictsValidateConflictGroupResponse, TraitsReadTraitsData, TraitsReadTraitsResponse, TraitsCreateTraitData, TraitsCreateTraitResponse, TraitsReadTraitData, TraitsReadTraitResponse, TraitsUpdateTraitData, TraitsUpdateTraitResponse, TraitsDeleteTraitData, TraitsDeleteTraitResponse, UserPersonasReadUserPersonasData, UserPersonasReadUserPersonasResponse, UserPersonasCreateUserPersonaData, UserPersonasCreateUserPersonaResponse, UserPersonasReadUserPersonaData, UserPersonasReadUserPersonaResponse, UserPersonasUpdateUserPersonaData, UserPersonasUpdateUserPersonaResponse, UserPersonasDeleteUserPersonaData, UserPersonasDeleteUserPersonaResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UserStoryProgressReadUserStoryProgressesData, UserStoryProgressReadUserStoryProgressesResponse, UserStoryProgressReadUserStoryProgressData, UserStoryProgressReadUserStoryProgressResponse, UserStoryProgressCreateUserStoryProgressData, UserStoryProgressCreateUserStoryProgressResponse, UserStoryProgressUpdateUserStoryProgressData, UserStoryProgressUpdateUserStoryProgressResponse, UserStoryProgressGetCurrentNodeData, UserStoryProgressGetCurrentNodeResponse, UserStoryProgressMakeStoryChoiceData, UserStoryProgressMakeStoryChoiceResponse, UserStoryProgressValidateStoryStateData, UserStoryProgressValidateStoryStateResponse, UserStoryProgressUndoStoryChoiceData, UserStoryProgressUndoStoryChoiceResponse, UserStoryProgressJumpStoryHeadData, UserStoryProgressJumpStoryHeadResponse, UserStoryProgressReadStoryTimelineData, UserStoryProgressReadStoryTimelineResponse, UserStoryProgressReadStorySnapshotsData, UserStoryProgressReadStorySnapshotsResponse, UserStoryProgressCreateStorySnapshotData, UserStoryProgressCreateStorySnapshotResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AgentsService {
     /**
@@ -651,6 +651,203 @@ export class ItemsService {
             url: '/api/v1/items/{id}',
             path: {
                 id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class LlmCatalogService {
+    /**
+     * List Providers
+     * List all LLM providers in the catalog.
+     *
+     * No authentication required. Returns providers with their model counts.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @param data.providerType
+     * @param data.isEnabled Filter by enabled status
+     * @param data.isSystem Filter by system vs user-created
+     * @param data.includeDeleted Include soft-deleted providers
+     * @returns LLMProvidersPublic Successful Response
+     * @throws ApiError
+     */
+    public static listProviders(data: LlmCatalogListProvidersData = {}): CancelablePromise<LlmCatalogListProvidersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/llm-catalog/providers',
+            query: {
+                skip: data.skip,
+                limit: data.limit,
+                provider_type: data.providerType,
+                is_enabled: data.isEnabled,
+                is_system: data.isSystem,
+                include_deleted: data.includeDeleted
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Provider
+     * Get a single LLM provider by ID.
+     *
+     * No authentication required.
+     * @param data The data for the request.
+     * @param data.providerId
+     * @param data.includeDeleted Include if soft-deleted
+     * @returns LLMProviderPublic Successful Response
+     * @throws ApiError
+     */
+    public static getProvider(data: LlmCatalogGetProviderData): CancelablePromise<LlmCatalogGetProviderResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/llm-catalog/providers/{provider_id}',
+            path: {
+                provider_id: data.providerId
+            },
+            query: {
+                include_deleted: data.includeDeleted
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Provider Models
+     * List all models for a specific provider.
+     *
+     * No authentication required.
+     * @param data The data for the request.
+     * @param data.providerId
+     * @param data.skip
+     * @param data.limit
+     * @param data.isEnabled Filter by enabled status
+     * @param data.isDeprecated Filter by deprecation status
+     * @param data.includeDeleted Include soft-deleted models
+     * @returns LLMModelsPublic Successful Response
+     * @throws ApiError
+     */
+    public static listProviderModels(data: LlmCatalogListProviderModelsData): CancelablePromise<LlmCatalogListProviderModelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/llm-catalog/providers/{provider_id}/models',
+            path: {
+                provider_id: data.providerId
+            },
+            query: {
+                skip: data.skip,
+                limit: data.limit,
+                is_enabled: data.isEnabled,
+                is_deprecated: data.isDeprecated,
+                include_deleted: data.includeDeleted
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Models
+     * List all LLM models in the catalog (flat list).
+     *
+     * No authentication required. Supports rich filtering by capabilities.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @param data.providerId Filter by provider ID
+     * @param data.providerType Filter by provider type
+     * @param data.isEnabled Filter by enabled status
+     * @param data.isDeprecated Filter by deprecation status
+     * @param data.isDefault Filter by default model flag
+     * @param data.hasVision Filter by vision capability
+     * @param data.hasFunctionCalling Filter by function calling
+     * @param data.hasStreaming Filter by streaming support
+     * @param data.hasJsonMode Filter by JSON mode support
+     * @param data.includeDeleted Include soft-deleted models
+     * @returns LLMModelsPublic Successful Response
+     * @throws ApiError
+     */
+    public static listModels(data: LlmCatalogListModelsData = {}): CancelablePromise<LlmCatalogListModelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/llm-catalog/models',
+            query: {
+                skip: data.skip,
+                limit: data.limit,
+                provider_id: data.providerId,
+                provider_type: data.providerType,
+                is_enabled: data.isEnabled,
+                is_deprecated: data.isDeprecated,
+                is_default: data.isDefault,
+                has_vision: data.hasVision,
+                has_function_calling: data.hasFunctionCalling,
+                has_streaming: data.hasStreaming,
+                has_json_mode: data.hasJsonMode,
+                include_deleted: data.includeDeleted
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Models Grouped
+     * List all models grouped by provider.
+     *
+     * Useful for UI dropdowns showing models organized by provider.
+     * No authentication required.
+     * @param data The data for the request.
+     * @param data.providerType Filter by provider type
+     * @param data.isEnabled Filter by enabled status
+     * @param data.includeDeleted Include soft-deleted
+     * @returns LLMModelsGrouped Successful Response
+     * @throws ApiError
+     */
+    public static listModelsGrouped(data: LlmCatalogListModelsGroupedData = {}): CancelablePromise<LlmCatalogListModelsGroupedResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/llm-catalog/models/grouped',
+            query: {
+                provider_type: data.providerType,
+                is_enabled: data.isEnabled,
+                include_deleted: data.includeDeleted
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Model
+     * Get a single LLM model by ID.
+     *
+     * No authentication required.
+     * @param data The data for the request.
+     * @param data.modelId
+     * @param data.includeDeleted Include if soft-deleted
+     * @returns LLMModelPublic Successful Response
+     * @throws ApiError
+     */
+    public static getModel(data: LlmCatalogGetModelData): CancelablePromise<LlmCatalogGetModelResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/llm-catalog/models/{model_id}',
+            path: {
+                model_id: data.modelId
+            },
+            query: {
+                include_deleted: data.includeDeleted
             },
             errors: {
                 422: 'Validation Error'

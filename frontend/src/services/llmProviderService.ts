@@ -1,15 +1,15 @@
 /**
- * LLM Provider Service - Data Integration Layer
+ * LLM Provider Service - User Provider Configuration Layer
  *
- * Purpose: Provide a clean, type-safe abstraction over the OpenAPI client
- * for LLM provider and agent settings operations. Transforms backend response
- * models to frontend ViewModels optimized for UI consumption.
+ * Purpose: Manage user's LLM provider configurations (API keys, custom endpoints).
+ * This service handles UserLLMProvider entities - the user's configured providers.
+ *
+ * For the system-wide model catalog (available models, capabilities), use llmCatalogService.
  *
  * Architecture:
- * - Wraps OpenAPI client methods
+ * - Wraps OpenAPI client methods for /llm-providers endpoints
  * - Transforms backend types to ViewModels
- * - Computes derived fields (status, display_type, etc.)
- * - Centralizes model list management
+ * - Computes derived fields (status, display_type, is_usable)
  * - Provides filtering and resolution utilities
  */
 
@@ -25,25 +25,25 @@ import {
   type UserLLMProviderUpdate,
 } from "@/client"
 import type { AgentViewModel } from "@/services/agentService"
+import { getProviderTypeLabel } from "@/services/llmCatalogService"
+
+// ============================================================================
+// Re-exports from Catalog Service
+// ============================================================================
+
+/**
+ * Re-export types and utilities from catalog service for convenience
+ */
+export type { LLMProviderType } from "@/client"
+export type { ModelOption } from "@/services/llmCatalogService"
+export {
+  getProviderTypeLabel,
+  PROVIDER_TYPE_LABELS,
+} from "@/services/llmCatalogService"
 
 // ============================================================================
 // Type Definitions - ViewModels
 // ============================================================================
-
-/**
- * Re-export LLMProviderType for convenience
- */
-export type { LLMProviderType } from "@/client"
-
-/**
- * Model option for dropdowns
- */
-export interface ModelOption {
-  value: string // "openai:gpt-4o"
-  label: string // "GPT-4o"
-  description: string // "Latest multimodal flagship"
-  provider: LLMProviderType
-}
 
 /**
  * Provider verification status
@@ -51,14 +51,13 @@ export interface ModelOption {
 export type ProviderStatus = "verified" | "failed" | "unknown"
 
 /**
- * ProviderViewModel - Optimized for UI display
+ * ProviderViewModel - User's configured provider optimized for UI display
  *
  * Transformations from backend UserLLMProviderPublic:
  * - Parses ISO timestamps to Date objects
  * - Computes display_type from provider_type
  * - Computes status from last_test_success
  * - Computes is_usable from is_enabled and status
- * - Includes compatible_models for the provider type
  */
 export interface ProviderViewModel {
   id: string
@@ -76,7 +75,6 @@ export interface ProviderViewModel {
   // Computed fields
   display_type: string // "OpenAI", "Anthropic", etc.
   status: ProviderStatus
-  compatible_models: ModelOption[]
   is_usable: boolean // is_enabled && status !== "failed"
 }
 
@@ -141,135 +139,8 @@ export interface TestResult {
 }
 
 // ============================================================================
-// Static Data - Supported Models
-// ============================================================================
-
-/**
- * Supported models by provider type
- * Mirrors backend/app/models.py SUPPORTED_MODELS
- *
- * Future: Replace with backend endpoint GET /api/v1/llm-providers/supported-models
- */
-export const SUPPORTED_MODELS: Record<LLMProviderType, ModelOption[]> = {
-  openai: [
-    {
-      value: "openai:gpt-4o",
-      label: "GPT-4o",
-      description: "Latest multimodal flagship",
-      provider: "openai",
-    },
-    {
-      value: "openai:gpt-4o-mini",
-      label: "GPT-4o Mini",
-      description: "Fast and affordable",
-      provider: "openai",
-    },
-    {
-      value: "openai:gpt-4-turbo",
-      label: "GPT-4 Turbo",
-      description: "Previous generation flagship",
-      provider: "openai",
-    },
-    {
-      value: "openai:gpt-3.5-turbo",
-      label: "GPT-3.5 Turbo",
-      description: "Fast, economical",
-      provider: "openai",
-    },
-    {
-      value: "openai:o1",
-      label: "o1",
-      description: "Advanced reasoning",
-      provider: "openai",
-    },
-    {
-      value: "openai:o1-mini",
-      label: "o1 Mini",
-      description: "Faster reasoning",
-      provider: "openai",
-    },
-  ],
-  anthropic: [
-    {
-      value: "anthropic:claude-sonnet-4-20250514",
-      label: "Claude Sonnet 4",
-      description: "Latest balanced model",
-      provider: "anthropic",
-    },
-    {
-      value: "anthropic:claude-3-5-sonnet-latest",
-      label: "Claude 3.5 Sonnet",
-      description: "Previous Sonnet",
-      provider: "anthropic",
-    },
-    {
-      value: "anthropic:claude-3-5-haiku-latest",
-      label: "Claude 3.5 Haiku",
-      description: "Fast and affordable",
-      provider: "anthropic",
-    },
-    {
-      value: "anthropic:claude-3-opus-latest",
-      label: "Claude 3 Opus",
-      description: "Most capable",
-      provider: "anthropic",
-    },
-  ],
-  google: [
-    {
-      value: "google:gemini-2.0-flash",
-      label: "Gemini 2.0 Flash",
-      description: "Latest fast model",
-      provider: "google",
-    },
-    {
-      value: "google:gemini-1.5-pro",
-      label: "Gemini 1.5 Pro",
-      description: "Long context flagship",
-      provider: "google",
-    },
-    {
-      value: "google:gemini-1.5-flash",
-      label: "Gemini 1.5 Flash",
-      description: "Fast and capable",
-      provider: "google",
-    },
-  ],
-  openai_compatible: [
-    {
-      value: "openai:custom",
-      label: "Custom Model",
-      description: "Enter model name manually",
-      provider: "openai_compatible",
-    },
-  ],
-}
-
-/**
- * All models flattened into a single array
- */
-export const ALL_MODELS: ModelOption[] = Object.values(SUPPORTED_MODELS).flat()
-
-/**
- * Display labels for provider types
- */
-export const PROVIDER_TYPE_LABELS: Record<LLMProviderType, string> = {
-  openai: "OpenAI",
-  anthropic: "Anthropic",
-  google: "Google",
-  openai_compatible: "OpenAI Compatible",
-}
-
-// ============================================================================
 // Transformation Functions
 // ============================================================================
-
-/**
- * Get display label for provider type
- */
-export function getProviderTypeLabel(type: LLMProviderType): string {
-  return PROVIDER_TYPE_LABELS[type] || type
-}
 
 /**
  * Extract provider type from model name
@@ -278,24 +149,28 @@ export function getProviderTypeLabel(type: LLMProviderType): string {
  */
 export function extractProviderType(modelName: string): LLMProviderType | null {
   const prefix = modelName.split(":")[0]
-  if (prefix === "openai" || prefix === "anthropic" || prefix === "google") {
+  if (
+    prefix === "openai" ||
+    prefix === "anthropic" ||
+    prefix === "google" ||
+    prefix === "openai_compatible"
+  ) {
     return prefix as LLMProviderType
   }
   return null
 }
 
 /**
- * Format model name for display
+ * Format model name for display (fallback when catalog not available)
  * "openai:gpt-4o-mini" -> "GPT 4o Mini"
+ *
+ * For richer formatting with catalog data, use LlmCatalogService.formatModelName
+ * or the useLlmCatalog hook's formatModelName method.
  */
 export function formatModelName(modelName: string | null | undefined): string {
   if (!modelName) return "Default"
 
-  // Try to find in SUPPORTED_MODELS first
-  const model = ALL_MODELS.find((m) => m.value === modelName)
-  if (model) return model.label
-
-  // Fallback: extract model part after provider prefix
+  // Extract model part after provider prefix
   const modelPart = modelName.split(":").pop() || modelName
 
   // Convert kebab-case to Title Case
@@ -324,10 +199,13 @@ function transformProvider(provider: UserLLMProviderPublic): ProviderViewModel {
     provider.last_tested_at ?? null,
   )
 
+  // Default to openai_compatible if provider_type is missing
+  const providerType = provider.provider_type ?? "openai_compatible"
+
   return {
     id: provider.id,
     name: provider.name,
-    provider_type: provider.provider_type,
+    provider_type: providerType,
     base_url: provider.base_url ?? null,
     is_enabled: provider.is_enabled ?? true,
     is_default: provider.is_default ?? false,
@@ -340,9 +218,8 @@ function transformProvider(provider: UserLLMProviderPublic): ProviderViewModel {
     last_test_success: provider.last_test_success ?? null,
 
     // Computed fields
-    display_type: getProviderTypeLabel(provider.provider_type),
+    display_type: getProviderTypeLabel(providerType),
     status,
-    compatible_models: SUPPORTED_MODELS[provider.provider_type] || [],
     is_usable: (provider.is_enabled ?? true) && status !== "failed",
   }
 }
@@ -446,48 +323,6 @@ export const LlmProviderService = {
       message: result.message,
     }
   },
-
-  // ==========================================================================
-  // Model Operations
-  // ==========================================================================
-
-  /**
-   * Get supported models map (static until backend endpoint exists)
-   */
-  getSupportedModels(): Record<LLMProviderType, ModelOption[]> {
-    return SUPPORTED_MODELS
-  },
-
-  /**
-   * Get all models as a flat list
-   */
-  getAllModels(): ModelOption[] {
-    return ALL_MODELS
-  },
-
-  /**
-   * Get models for a specific provider type
-   */
-  getModelsForProvider(providerType: LLMProviderType): ModelOption[] {
-    return SUPPORTED_MODELS[providerType] || []
-  },
-
-  /**
-   * Find a model by its value
-   */
-  findModel(modelValue: string): ModelOption | undefined {
-    return ALL_MODELS.find((m) => m.value === modelValue)
-  },
-
-  /**
-   * Extract provider type from model name
-   */
-  extractProviderType,
-
-  /**
-   * Format model name for display
-   */
-  formatModelName,
 
   // ==========================================================================
   // User Agent Settings
@@ -635,6 +470,7 @@ export const LlmProviderService = {
     providers: ProviderViewModel[],
   ): Record<LLMProviderType, ProviderViewModel[]> {
     const result: Record<LLMProviderType, ProviderViewModel[]> = {
+      empty: [],
       openai: [],
       anthropic: [],
       google: [],
@@ -647,6 +483,14 @@ export const LlmProviderService = {
 
     return result
   },
+
+  // ==========================================================================
+  // Utility Functions (Re-exported)
+  // ==========================================================================
+
+  extractProviderType,
+  formatModelName,
+  getProviderTypeLabel,
 }
 
 // ============================================================================
@@ -656,6 +500,5 @@ export const LlmProviderService = {
 export const LLM_PROVIDER_QUERY_KEYS = {
   providers: ["llm-providers"] as const,
   provider: (id: string) => ["llm-providers", id] as const,
-  supportedModels: ["llm-supported-models"] as const,
   agentSettings: (agentId: string) => ["agent-settings", agentId] as const,
 }

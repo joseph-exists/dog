@@ -921,11 +921,442 @@ export const JumpRequestSchema = {
 Used by jump endpoint to specify target and optimistic concurrency check.`
 } as const;
 
+export const LLMModelPublicSchema = {
+    properties: {
+        model_id: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Model Id',
+            description: "Model identifier (e.g., 'gpt-4o', no provider prefix)"
+        },
+        display_name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Display Name',
+            description: "Human-friendly name (e.g., 'GPT-4o')"
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        context_window: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Window',
+            description: 'Max tokens in context window'
+        },
+        is_default: {
+            type: 'boolean',
+            title: 'Is Default',
+            description: 'Default/cheapest model for this provider',
+            default: false
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether model is available for use',
+            default: true
+        },
+        is_deprecated: {
+            type: 'boolean',
+            title: 'Is Deprecated',
+            description: 'Model is deprecated (still works)',
+            default: false
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Display ordering within provider',
+            default: 0
+        },
+        has_vision: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Vision',
+            description: 'Supports image input'
+        },
+        has_function_calling: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Function Calling',
+            description: 'Supports function/tool calling'
+        },
+        has_streaming: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Streaming',
+            description: 'Supports streaming responses'
+        },
+        has_json_mode: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Json Mode',
+            description: 'Supports JSON output mode'
+        },
+        secondary_capabilities: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Secondary Capabilities',
+            description: 'Additional capability flags as JSON'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        provider_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Provider Id'
+        },
+        deprecated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deprecated At'
+        },
+        sunset_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sunset At'
+        },
+        is_deleted: {
+            type: 'boolean',
+            title: 'Is Deleted'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        provider_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/LLMProviderType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        provider_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Name'
+        }
+    },
+    type: 'object',
+    required: ['model_id', 'display_name', 'id', 'provider_id', 'deprecated_at', 'sunset_at', 'is_deleted', 'created_at', 'updated_at'],
+    title: 'LLMModelPublic',
+    description: 'Public API response for a model catalog entry.'
+} as const;
+
+export const LLMModelsGroupedSchema = {
+    properties: {
+        providers: {
+            items: {
+                '$ref': '#/components/schemas/LLMProviderWithModels'
+            },
+            type: 'array',
+            title: 'Providers'
+        },
+        total_models: {
+            type: 'integer',
+            title: 'Total Models'
+        }
+    },
+    type: 'object',
+    required: ['providers', 'total_models'],
+    title: 'LLMModelsGrouped',
+    description: 'Models grouped by provider for UI display.'
+} as const;
+
+export const LLMModelsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/LLMModelPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'LLMModelsPublic',
+    description: 'Collection response for LLMModels.'
+} as const;
+
+export const LLMProviderPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: "Display name like 'OpenAI', 'Anthropic'"
+        },
+        provider_type: {
+            '$ref': '#/components/schemas/LLMProviderType',
+            description: 'Provider type enum value',
+            default: 'empty'
+        },
+        base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Url',
+            description: 'Default base URL (for openai_compatible)'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether this provider is available',
+            default: true
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System',
+            description: 'True for built-in, False for user-created (future)',
+            default: true
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        is_deleted: {
+            type: 'boolean',
+            title: 'Is Deleted'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        model_count: {
+            type: 'integer',
+            title: 'Model Count',
+            description: 'Number of active models for this provider',
+            default: 0
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'is_deleted', 'created_at', 'updated_at'],
+    title: 'LLMProviderPublic',
+    description: 'Public API response for a provider catalog entry.'
+} as const;
+
 export const LLMProviderTypeSchema = {
     type: 'string',
-    enum: ['openai', 'anthropic', 'google', 'openai_compatible'],
+    enum: ['empty', 'openai', 'anthropic', 'google', 'openai_compatible'],
     title: 'LLMProviderType',
     description: 'Supported LLM provider types.'
+} as const;
+
+export const LLMProviderWithModelsSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: "Display name like 'OpenAI', 'Anthropic'"
+        },
+        provider_type: {
+            '$ref': '#/components/schemas/LLMProviderType',
+            description: 'Provider type enum value',
+            default: 'empty'
+        },
+        base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Url',
+            description: 'Default base URL (for openai_compatible)'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether this provider is available',
+            default: true
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System',
+            description: 'True for built-in, False for user-created (future)',
+            default: true
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        is_deleted: {
+            type: 'boolean',
+            title: 'Is Deleted'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        model_count: {
+            type: 'integer',
+            title: 'Model Count',
+            description: 'Number of active models for this provider',
+            default: 0
+        },
+        models: {
+            items: {
+                '$ref': '#/components/schemas/LLMModelPublic'
+            },
+            type: 'array',
+            title: 'Models',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'is_deleted', 'created_at', 'updated_at'],
+    title: 'LLMProviderWithModels',
+    description: 'Provider with nested list of its models.'
+} as const;
+
+export const LLMProvidersPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/LLMProviderPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'LLMProvidersPublic',
+    description: 'Collection response for LLMProviders.'
 } as const;
 
 export const MessageSchema = {
@@ -3979,8 +4410,15 @@ export const UserCreateSchema = {
 export const UserLLMProviderCreateSchema = {
     properties: {
         provider_type: {
-            '$ref': '#/components/schemas/LLMProviderType',
-            description: 'Type of LLM provider'
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/LLMProviderType'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            default: 'empty'
         },
         name: {
             type: 'string',
@@ -4033,7 +4471,7 @@ export const UserLLMProviderCreateSchema = {
         }
     },
     type: 'object',
-    required: ['provider_type', 'name', 'api_key'],
+    required: ['name', 'api_key'],
     title: 'UserLLMProviderCreate',
     description: 'Input model for creating provider - accepts plain API key.'
 } as const;
@@ -4041,8 +4479,15 @@ export const UserLLMProviderCreateSchema = {
 export const UserLLMProviderPublicSchema = {
     properties: {
         provider_type: {
-            '$ref': '#/components/schemas/LLMProviderType',
-            description: 'Type of LLM provider'
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/LLMProviderType'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            default: 'empty'
         },
         name: {
             type: 'string',
@@ -4132,7 +4577,7 @@ export const UserLLMProviderPublicSchema = {
         }
     },
     type: 'object',
-    required: ['provider_type', 'name', 'id', 'user_id', 'created_at', 'updated_at', 'last_tested_at', 'last_test_success'],
+    required: ['name', 'id', 'user_id', 'created_at', 'updated_at', 'last_tested_at', 'last_test_success'],
     title: 'UserLLMProviderPublic',
     description: 'Public API response - NEVER includes API key.'
 } as const;

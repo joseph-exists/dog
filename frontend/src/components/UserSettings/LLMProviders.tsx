@@ -415,7 +415,9 @@ const LLMProviders = () => {
                     )}
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    {getProviderLabel(provider.provider_type)}
+                    {getProviderLabel(
+                      provider.provider_type ?? "openai_compatible",
+                    )}
                     {provider.base_url && (
                       <span className="ml-2 text-xs font-mono">
                         ({provider.base_url})

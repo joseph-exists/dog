@@ -217,9 +217,170 @@ export type JumpRequest = {
 };
 
 /**
+ * Public API response for a model catalog entry.
+ */
+export type LLMModelPublic = {
+    /**
+     * Model identifier (e.g., 'gpt-4o', no provider prefix)
+     */
+    model_id: string;
+    /**
+     * Human-friendly name (e.g., 'GPT-4o')
+     */
+    display_name: string;
+    description?: (string | null);
+    /**
+     * Max tokens in context window
+     */
+    context_window?: (number | null);
+    /**
+     * Default/cheapest model for this provider
+     */
+    is_default?: boolean;
+    /**
+     * Whether model is available for use
+     */
+    is_enabled?: boolean;
+    /**
+     * Model is deprecated (still works)
+     */
+    is_deprecated?: boolean;
+    /**
+     * Display ordering within provider
+     */
+    sort_order?: number;
+    /**
+     * Supports image input
+     */
+    has_vision?: (boolean | null);
+    /**
+     * Supports function/tool calling
+     */
+    has_function_calling?: (boolean | null);
+    /**
+     * Supports streaming responses
+     */
+    has_streaming?: (boolean | null);
+    /**
+     * Supports JSON output mode
+     */
+    has_json_mode?: (boolean | null);
+    /**
+     * Additional capability flags as JSON
+     */
+    secondary_capabilities?: ({
+    [key: string]: unknown;
+} | null);
+    id: string;
+    provider_id: string;
+    deprecated_at: (string | null);
+    sunset_at: (string | null);
+    is_deleted: boolean;
+    created_at: string;
+    updated_at: string;
+    provider_type?: (LLMProviderType | null);
+    provider_name?: (string | null);
+};
+
+/**
+ * Models grouped by provider for UI display.
+ */
+export type LLMModelsGrouped = {
+    providers: Array<LLMProviderWithModels>;
+    total_models: number;
+};
+
+/**
+ * Collection response for LLMModels.
+ */
+export type LLMModelsPublic = {
+    data: Array<LLMModelPublic>;
+    count: number;
+};
+
+/**
+ * Public API response for a provider catalog entry.
+ */
+export type LLMProviderPublic = {
+    /**
+     * Display name like 'OpenAI', 'Anthropic'
+     */
+    name: string;
+    /**
+     * Provider type enum value
+     */
+    provider_type?: LLMProviderType;
+    /**
+     * Default base URL (for openai_compatible)
+     */
+    base_url?: (string | null);
+    description?: (string | null);
+    /**
+     * Whether this provider is available
+     */
+    is_enabled?: boolean;
+    /**
+     * True for built-in, False for user-created (future)
+     */
+    is_system?: boolean;
+    id: string;
+    is_deleted: boolean;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Number of active models for this provider
+     */
+    model_count?: number;
+};
+
+/**
+ * Collection response for LLMProviders.
+ */
+export type LLMProvidersPublic = {
+    data: Array<LLMProviderPublic>;
+    count: number;
+};
+
+/**
  * Supported LLM provider types.
  */
-export type LLMProviderType = 'openai' | 'anthropic' | 'google' | 'openai_compatible';
+export type LLMProviderType = 'empty' | 'openai' | 'anthropic' | 'google' | 'openai_compatible';
+
+/**
+ * Provider with nested list of its models.
+ */
+export type LLMProviderWithModels = {
+    /**
+     * Display name like 'OpenAI', 'Anthropic'
+     */
+    name: string;
+    /**
+     * Provider type enum value
+     */
+    provider_type?: LLMProviderType;
+    /**
+     * Default base URL (for openai_compatible)
+     */
+    base_url?: (string | null);
+    description?: (string | null);
+    /**
+     * Whether this provider is available
+     */
+    is_enabled?: boolean;
+    /**
+     * True for built-in, False for user-created (future)
+     */
+    is_system?: boolean;
+    id: string;
+    is_deleted: boolean;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Number of active models for this provider
+     */
+    model_count?: number;
+    models?: Array<LLMModelPublic>;
+};
 
 export type Message = {
     message: string;
@@ -1048,10 +1209,7 @@ export type UserCreate = {
  * Input model for creating provider - accepts plain API key.
  */
 export type UserLLMProviderCreate = {
-    /**
-     * Type of LLM provider
-     */
-    provider_type: LLMProviderType;
+    provider_type?: (LLMProviderType | null);
     /**
      * User-friendly name like 'My OpenAI' or 'Work Azure'
      */
@@ -1079,10 +1237,7 @@ export type UserLLMProviderCreate = {
  * Public API response - NEVER includes API key.
  */
 export type UserLLMProviderPublic = {
-    /**
-     * Type of LLM provider
-     */
-    provider_type: LLMProviderType;
+    provider_type?: (LLMProviderType | null);
     /**
      * User-friendly name like 'My OpenAI' or 'Work Azure'
      */
@@ -1426,6 +1581,130 @@ export type ItemsDeleteItemData = {
 };
 
 export type ItemsDeleteItemResponse = (Message);
+
+export type LlmCatalogListProvidersData = {
+    /**
+     * Include soft-deleted providers
+     */
+    includeDeleted?: boolean;
+    /**
+     * Filter by enabled status
+     */
+    isEnabled?: (boolean | null);
+    /**
+     * Filter by system vs user-created
+     */
+    isSystem?: (boolean | null);
+    limit?: number;
+    providerType?: (LLMProviderType | null);
+    skip?: number;
+};
+
+export type LlmCatalogListProvidersResponse = (LLMProvidersPublic);
+
+export type LlmCatalogGetProviderData = {
+    /**
+     * Include if soft-deleted
+     */
+    includeDeleted?: boolean;
+    providerId: string;
+};
+
+export type LlmCatalogGetProviderResponse = (LLMProviderPublic);
+
+export type LlmCatalogListProviderModelsData = {
+    /**
+     * Include soft-deleted models
+     */
+    includeDeleted?: boolean;
+    /**
+     * Filter by deprecation status
+     */
+    isDeprecated?: (boolean | null);
+    /**
+     * Filter by enabled status
+     */
+    isEnabled?: (boolean | null);
+    limit?: number;
+    providerId: string;
+    skip?: number;
+};
+
+export type LlmCatalogListProviderModelsResponse = (LLMModelsPublic);
+
+export type LlmCatalogListModelsData = {
+    /**
+     * Filter by function calling
+     */
+    hasFunctionCalling?: (boolean | null);
+    /**
+     * Filter by JSON mode support
+     */
+    hasJsonMode?: (boolean | null);
+    /**
+     * Filter by streaming support
+     */
+    hasStreaming?: (boolean | null);
+    /**
+     * Filter by vision capability
+     */
+    hasVision?: (boolean | null);
+    /**
+     * Include soft-deleted models
+     */
+    includeDeleted?: boolean;
+    /**
+     * Filter by default model flag
+     */
+    isDefault?: (boolean | null);
+    /**
+     * Filter by deprecation status
+     */
+    isDeprecated?: (boolean | null);
+    /**
+     * Filter by enabled status
+     */
+    isEnabled?: (boolean | null);
+    limit?: number;
+    /**
+     * Filter by provider ID
+     */
+    providerId?: (string | null);
+    /**
+     * Filter by provider type
+     */
+    providerType?: (LLMProviderType | null);
+    skip?: number;
+};
+
+export type LlmCatalogListModelsResponse = (LLMModelsPublic);
+
+export type LlmCatalogListModelsGroupedData = {
+    /**
+     * Include soft-deleted
+     */
+    includeDeleted?: boolean;
+    /**
+     * Filter by enabled status
+     */
+    isEnabled?: (boolean | null);
+    /**
+     * Filter by provider type
+     */
+    providerType?: (LLMProviderType | null);
+};
+
+export type LlmCatalogListModelsGroupedResponse = (LLMModelsGrouped);
+
+export type LlmCatalogGetModelData = {
+    /**
+     * Include if soft-deleted
+     */
+    includeDeleted?: boolean;
+    modelId: string;
+};
+
+export type LlmCatalogGetModelResponse = (LLMModelPublic);
 
 export type LlmProvidersListProvidersData = {
     limit?: number;

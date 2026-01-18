@@ -136,6 +136,7 @@ export function useLlmProviders(): UseLlmProvidersReturn {
   const providersByType = LlmProviderService.groupByType(providers)
 
   const defaultByType: Record<LLMProviderType, ProviderViewModel | null> = {
+    empty: null,
     openai: LlmProviderService.getDefaultForType(providers, "openai"),
     anthropic: LlmProviderService.getDefaultForType(providers, "anthropic"),
     google: LlmProviderService.getDefaultForType(providers, "google"),

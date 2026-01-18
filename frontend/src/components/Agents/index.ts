@@ -55,7 +55,6 @@ export { default as AgentCloneButton } from "./AgentCloneButton"
 // Shared Form
 export type { AgentFormData } from "./AgentForm"
 export {
-  AVAILABLE_MODELS,
   default as AgentForm,
   generateSlug,
   PARTICIPATION_MODES,

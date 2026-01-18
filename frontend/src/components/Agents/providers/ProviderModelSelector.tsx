@@ -5,11 +5,11 @@
  * Features:
  * - "System Default" option always available
  * - User's providers grouped by type with verification badges
- * - Model dropdown filtered by selected provider's type
+ * - Model dropdown filtered by selected provider's type (from catalog)
  * - Clear visual distinction between system default and user provider
  */
 
-import { Cloud, Key } from "lucide-react"
+import { Cloud, Key, Loader2 } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
@@ -23,15 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import useLlmCatalog from "@/hooks/useLlmCatalog"
 import { useLlmProviders } from "@/hooks/useLlmProviders"
 import { cn } from "@/lib/utils"
+import type { LLMProviderType } from "@/services/llmCatalogService"
 import {
-  type LLMProviderType,
   LlmProviderService,
-  type ModelOption,
   PROVIDER_TYPE_LABELS,
   type ProviderViewModel,
-  SUPPORTED_MODELS,
 } from "@/services/llmProviderService"
 import { ProviderStatusBadge } from "./ProviderStatusBadge"
 
@@ -113,7 +112,17 @@ export function ProviderModelSelector({
   size = "default",
   className,
 }: ProviderModelSelectorProps) {
-  const { providers, hasAnyProvider, isLoading } = useLlmProviders()
+  const {
+    providers,
+    hasAnyProvider,
+    isLoading: providersLoading,
+  } = useLlmProviders()
+  const {
+    allModels,
+    isLoading: catalogLoading,
+    getModelsForType,
+    formatModelName,
+  } = useLlmCatalog()
 
   // Group providers by type
   const providersByType = LlmProviderService.groupByType(providers)
@@ -125,10 +134,10 @@ export function ProviderModelSelector({
   const effectiveProviderType =
     LlmProviderService.extractProviderType(effectiveModel)
 
-  // Get models for current provider type
-  const availableModels: ModelOption[] = effectiveProviderType
-    ? SUPPORTED_MODELS[effectiveProviderType] || []
-    : LlmProviderService.getAllModels()
+  // Get models for current provider type from catalog
+  const availableModels = effectiveProviderType
+    ? getModelsForType(effectiveProviderType)
+    : allModels
 
   // Find selected provider
   const selectedProvider = providerId
@@ -145,7 +154,7 @@ export function ProviderModelSelector({
 
       // If provider type changed, reset model to first available for new type
       if (newProvider && effectiveProviderType !== newProvider.provider_type) {
-        const newModels = SUPPORTED_MODELS[newProvider.provider_type]
+        const newModels = getModelsForType(newProvider.provider_type)
         if (newModels && newModels.length > 0) {
           onModelChange(newModels[0].value)
         }
@@ -163,6 +172,7 @@ export function ProviderModelSelector({
   }
 
   const isCompact = size === "compact"
+  const isLoading = providersLoading || catalogLoading
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -250,13 +260,20 @@ export function ProviderModelSelector({
           <Select
             value={modelName || "default"}
             onValueChange={handleModelChange}
-            disabled={disabled}
+            disabled={disabled || catalogLoading}
           >
             <SelectTrigger
               id="model-select"
               className={cn("w-full", isCompact && "h-8 text-sm")}
             >
-              <SelectValue placeholder="Select model" />
+              {catalogLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Loading models...</span>
+                </div>
+              ) : (
+                <SelectValue placeholder="Select model" />
+              )}
             </SelectTrigger>
             <SelectContent>
               {/* Default Option */}
@@ -264,7 +281,7 @@ export function ProviderModelSelector({
                 <div className="flex flex-col">
                   <span>Agent Default</span>
                   <span className="text-xs text-muted-foreground">
-                    {LlmProviderService.formatModelName(agentDefaultModel)}
+                    {formatModelName(agentDefaultModel)}
                   </span>
                 </div>
               </SelectItem>

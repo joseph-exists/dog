@@ -5,13 +5,14 @@
  * Features:
  * - Name and slug inputs (slug auto-generated from name if empty)
  * - Description textarea
- * - Model selector dropdown
+ * - Model selector dropdown (populated from LLM catalog)
  * - System prompt textarea with character count
  * - Participation mode selector
  */
 
-import { ChevronDownIcon } from "lucide-react"
+import { ChevronDownIcon, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -29,18 +30,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import useLlmCatalog from "@/hooks/useLlmCatalog"
 import { cn } from "@/lib/utils"
 import type { AgentViewModel, ParticipationMode } from "@/services/agentService"
-import {
-  type LLMProviderType,
-  PROVIDER_TYPE_LABELS,
-  SUPPORTED_MODELS,
-} from "@/services/llmProviderService"
-
-// Available models - now sourced from llmProviderService
-const AVAILABLE_MODELS = Object.entries(SUPPORTED_MODELS).flatMap(
-  ([, models]) => models,
-)
+import type { LLMProviderType } from "@/services/llmCatalogService"
 
 // Participation modes
 const PARTICIPATION_MODES = [
@@ -101,6 +94,14 @@ export default function AgentForm({
   isEditMode = false,
   className,
 }: AgentFormProps) {
+  // LLM Catalog data
+  const {
+    modelsByProvider,
+    allModels,
+    isLoading: catalogLoading,
+    getProviderLabel,
+  } = useLlmCatalog()
+
   const [name, setName] = useState(initialData?.name || "")
   const [slug, setSlug] = useState(initialData?.slug || "")
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
@@ -207,31 +208,45 @@ export default function AgentForm({
       {/* Model Selector */}
       <div className="space-y-2">
         <Label htmlFor="agent-model">Model</Label>
-        <Select value={modelName} onValueChange={setModelName}>
+        <Select
+          value={modelName}
+          onValueChange={setModelName}
+          disabled={catalogLoading}
+        >
           <SelectTrigger id="agent-model" className="w-full">
-            <SelectValue placeholder="Select a model" />
+            {catalogLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                <span>Loading models...</span>
+              </div>
+            ) : (
+              <SelectValue placeholder="Select a model" />
+            )}
           </SelectTrigger>
           <SelectContent>
             {(
-              Object.entries(SUPPORTED_MODELS) as [
+              Object.entries(modelsByProvider) as [
                 LLMProviderType,
-                typeof AVAILABLE_MODELS,
+                typeof allModels,
               ][]
-            ).map(([providerType, models]) => (
-              <SelectGroup key={providerType}>
-                <SelectLabel>{PROVIDER_TYPE_LABELS[providerType]}</SelectLabel>
-                {models.map((model) => (
-                  <SelectItem key={model.value} value={model.value}>
-                    <div className="flex flex-col">
-                      <span>{model.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {model.description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
+            ).map(
+              ([providerType, models]) =>
+                models.length > 0 && (
+                  <SelectGroup key={providerType}>
+                    <SelectLabel>{getProviderLabel(providerType)}</SelectLabel>
+                    {models.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        <div className="flex flex-col">
+                          <span>{model.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {model.description}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ),
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -296,4 +311,4 @@ export default function AgentForm({
 }
 
 // Export constants for reuse
-export { AVAILABLE_MODELS, PARTICIPATION_MODES, generateSlug }
+export { PARTICIPATION_MODES, generateSlug }
