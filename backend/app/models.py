@@ -210,6 +210,10 @@ class LLMProvider(LLMProviderBase, table=True):
     # old - provider_type: LLMProviderType = Field(sa_column=Column(PyEnum(LLMProviderType),))
     provider_type: LLMProviderType | None = Field(default=LLMProviderType.EMPTY)
     
+    created_by_user_id: uuid.UUID | None = Field(
+          default=None, foreign_key="user.id", nullable=True
+      )
+
     # Soft delete support
     is_deleted: bool = Field(default=False, index=True)
     deleted_at: datetime | None = Field(default=None)

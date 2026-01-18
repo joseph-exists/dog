@@ -2998,6 +2998,19 @@ def delete_agent_config(*, session: Session, db_agent: AgentConfig) -> None:
     session.commit()
 
 
+
+# =============================================================================
+# LLM User Model CRUD Operations
+# =============================================================================
+
+
+  def create_user_model(*, session, user_id, model_in: UserLLMModelCreate) -> LLMModel
+  
+  def get_user_models(*, session, user_id, provider_type?) -> list[LLMModel]
+  
+  def delete_user_model(*, session, user_id, model_id) -> bool  # ownership check
+
+
 # =============================================================================
 # LLM Catalog CRUD Operations
 # =============================================================================
