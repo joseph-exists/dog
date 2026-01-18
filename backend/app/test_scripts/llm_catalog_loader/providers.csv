@@ -1,0 +1,5 @@
+name,provider_type,description,base_url,is_enabled,is_system
+OpenAI,openai,OpenAI GPT models,,true,true
+Anthropic,anthropic,Anthropic Claude models,,true,true
+Google,google,Google Gemini models,,true,true
+OpenAI Compatible,openai_compatible,OpenAI-compatible endpoints (Ollama, vLLM, Azure, proxies),,true,true

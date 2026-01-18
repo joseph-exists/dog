@@ -946,6 +946,153 @@ Disable an agent (shortcut for `update --disabled`).
 python main.py agents disable abc123
 ```
 
+## LLM Catalog Commands
+
+Browse and query the LLM provider and model catalog. These commands don't require authentication (public catalog).
+
+### List Providers
+
+```bash
+python main.py catalog providers [OPTIONS]
+```
+
+List all LLM providers in the catalog.
+
+**Options:**
+- `--type, -t TEXT` - Filter by type: `openai`, `anthropic`, `google`, `openai_compatible`
+- `--enabled, -e` - Show only enabled providers
+- `--deleted` - Include soft-deleted providers
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog providers
+python main.py catalog providers --type anthropic
+python main.py catalog providers --enabled --json
+```
+
+### Get Provider Details
+
+```bash
+python main.py catalog provider PROVIDER_ID [OPTIONS]
+```
+
+Get details for a specific provider.
+
+**Arguments:**
+- `PROVIDER_ID` - The provider UUID
+
+**Options:**
+- `--models, -m` - Include provider's models in output
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog provider abc123
+python main.py catalog provider abc123 --models
+```
+
+### List Models
+
+```bash
+python main.py catalog models [OPTIONS]
+```
+
+List all LLM models (flat list with filtering).
+
+**Options:**
+- `--type, -t TEXT` - Filter by provider type
+- `--provider, -p TEXT` - Filter by provider UUID
+- `--enabled, -e` - Show only enabled models
+- `--defaults, -d` - Show only default models
+- `--vision` - Filter by vision capability
+- `--tools` - Filter by function calling capability
+- `--limit INTEGER` - Max items to list (default: 50)
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog models
+python main.py catalog models --type anthropic
+python main.py catalog models --vision --tools
+python main.py catalog models --defaults
+```
+
+### List Models Grouped by Provider
+
+```bash
+python main.py catalog models-grouped [OPTIONS]
+```
+
+List models organized by provider (useful for UI dropdowns).
+
+**Options:**
+- `--type, -t TEXT` - Filter by provider type
+- `--enabled, -e` - Show only enabled
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog models-grouped
+python main.py catalog models-grouped --type openai
+```
+
+### Get Model Details
+
+```bash
+python main.py catalog model MODEL_ID [OPTIONS]
+```
+
+Get detailed information about a specific model.
+
+**Arguments:**
+- `MODEL_ID` - The model UUID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Example:**
+```bash
+python main.py catalog model abc123
+```
+
+### List Default Models
+
+```bash
+python main.py catalog defaults [OPTIONS]
+```
+
+Quick list of default (cheapest) models per provider.
+
+**Options:**
+- `--json` - Output as JSON
+
+**Example:**
+```bash
+python main.py catalog defaults
+```
+
+### List Vision Models
+
+```bash
+python main.py catalog vision [OPTIONS]
+```
+
+Quick list of models with vision capability.
+
+**Options:**
+- `--json` - Output as JSON
+
+**Example:**
+```bash
+python main.py catalog vision
+```
+
 ## User Commands
 
 Get information about the current user and their associated data.

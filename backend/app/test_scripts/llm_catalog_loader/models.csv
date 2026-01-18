@@ -1,0 +1,15 @@
+provider_name,model_id,display_name,description,context_window,is_default,is_enabled,sort_order,has_vision,has_function_calling,has_streaming,has_json_mode
+OpenAI,gpt-4o,GPT-4o,Latest multimodal flagship,128000,false,true,0,true,true,true,true
+OpenAI,gpt-4o-mini,GPT-4o Mini,Fast and affordable,128000,true,true,1,true,true,true,true
+OpenAI,gpt-4-turbo,GPT-4 Turbo,Previous generation flagship,128000,false,true,2,true,true,true,true
+OpenAI,gpt-3.5-turbo,GPT-3.5 Turbo,Fast and economical,16385,false,true,3,false,true,true,true
+OpenAI,o1,o1,Advanced reasoning,200000,false,true,4,true,false,true,false
+OpenAI,o1-mini,o1 Mini,Faster reasoning,128000,false,true,5,false,false,true,false
+Anthropic,claude-sonnet-4-20250514,Claude Sonnet 4,Latest balanced model,200000,false,true,0,true,true,true,true
+Anthropic,claude-3-5-sonnet-latest,Claude 3.5 Sonnet,Previous Sonnet,200000,false,true,1,true,true,true,true
+Anthropic,claude-3-5-haiku-latest,Claude 3.5 Haiku,Fast and affordable,200000,true,true,2,true,true,true,true
+Anthropic,claude-3-opus-latest,Claude 3 Opus,Most capable,200000,false,true,3,true,true,true,true
+Google,gemini-2.0-flash,Gemini 2.0 Flash,Latest fast model,1048576,false,true,0,true,true,true,true
+Google,gemini-1.5-pro,Gemini 1.5 Pro,Long context flagship,2097152,false,true,1,true,true,true,true
+Google,gemini-1.5-flash,Gemini 1.5 Flash,Fast and capable,1048576,true,true,2,true,true,true,true
+OpenAI Compatible,custom,Custom Model,Enter model name manually,,true,true,0,,,true,
