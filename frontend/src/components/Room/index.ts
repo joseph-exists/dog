@@ -5,20 +5,17 @@
  * See: docs/plans/2026-01-19-rooms-ui-design.md
  */
 
-// Primitives
-export * from "./primitives"
-
-// Panels
-export * from "./panels"
-
 // Cards
 export * from "./cards"
 
-// Layout
-export { RoomLayout, type PanelConfig } from "./RoomLayout"
-
+// Panels
+export * from "./panels"
+// Primitives
+export * from "./primitives"
 // Header
 export { RoomHeader, type RoomType } from "./RoomHeader"
+// Layout
+export { type PanelConfig, RoomLayout } from "./RoomLayout"
 
 // Shell
 export { RoomShell } from "./RoomShell"

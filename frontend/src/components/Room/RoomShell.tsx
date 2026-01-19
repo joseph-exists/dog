@@ -7,9 +7,9 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { RoomHeader, type RoomType } from "./RoomHeader"
-import { RoomLayout, type PanelConfig } from "./RoomLayout"
 import type { Participant } from "./primitives/ParticipantStack"
+import { RoomHeader, type RoomType } from "./RoomHeader"
+import { type PanelConfig, RoomLayout } from "./RoomLayout"
 
 interface RoomShellProps {
   /** Room title */
@@ -49,7 +49,9 @@ export function RoomShell({
   onParticipantClick,
   className,
 }: RoomShellProps) {
-  const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">("panels")
+  const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
+    "panels",
+  )
 
   return (
     <div className={cn("flex flex-col h-full", className)}>

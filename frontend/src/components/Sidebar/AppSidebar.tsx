@@ -36,7 +36,11 @@ export function AppSidebar() {
   const { user: currentUser } = useAuth()
 
   const items = currentUser?.is_superuser
-    ? [...baseItems, ...devItems, { icon: Users, title: "Admin", path: "/admin" }]
+    ? [
+        ...baseItems,
+        ...devItems,
+        { icon: Users, title: "Admin", path: "/admin" },
+      ]
     : [...baseItems, ...devItems]
 
   return (

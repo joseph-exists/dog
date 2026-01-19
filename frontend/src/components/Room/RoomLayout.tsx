@@ -43,7 +43,10 @@ export function RoomLayout({ panels, mode, className }: RoomLayoutProps) {
 
   if (effectiveMode === "tabs") {
     return (
-      <Tabs defaultValue={panels[0]?.id} className={cn("flex flex-col h-full", className)}>
+      <Tabs
+        defaultValue={panels[0]?.id}
+        className={cn("flex flex-col h-full", className)}
+      >
         <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-auto p-0">
           {panels.map((panel) => (
             <TabsTrigger
@@ -78,10 +81,7 @@ export function RoomLayout({ panels, mode, className }: RoomLayoutProps) {
       {primaryPanels.map((panel, index) => (
         <React.Fragment key={panel.id}>
           {index > 0 && <ResizableHandle withHandle />}
-          <ResizablePanel
-            defaultSize={100 / primaryPanels.length}
-            minSize={20}
-          >
+          <ResizablePanel defaultSize={100 / primaryPanels.length} minSize={20}>
             {panel.render()}
           </ResizablePanel>
         </React.Fragment>

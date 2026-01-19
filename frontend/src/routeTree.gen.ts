@@ -23,6 +23,7 @@ import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutStoriesIndexRouteImport } from './routes/_layout/stories/index'
 import { Route as LayoutRoomRoomIdRouteImport } from './routes/_layout/room.$roomId'
 import { Route as LayoutRoomV2RoomIdRouteImport } from './routes/_layout/room-v2.$roomId'
+import { Route as LayoutRRoomIdRouteImport } from './routes/_layout/r.$roomId'
 import { Route as LayoutAgentAgentIdRouteImport } from './routes/_layout/agent.$agentId'
 import { Route as LayoutStoriesStoryIdEditRouteImport } from './routes/_layout/stories/$storyId/edit'
 
@@ -95,6 +96,11 @@ const LayoutRoomV2RoomIdRoute = LayoutRoomV2RoomIdRouteImport.update({
   path: '/room-v2/$roomId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutRRoomIdRoute = LayoutRRoomIdRouteImport.update({
+  id: '/r/$roomId',
+  path: '/r/$roomId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAgentAgentIdRoute = LayoutAgentAgentIdRouteImport.update({
   id: '/agent/$agentId',
   path: '/agent/$agentId',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
+  '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/stories': typeof LayoutStoriesIndexRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
+  '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/stories': typeof LayoutStoriesIndexRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/agent/$agentId': typeof LayoutAgentAgentIdRoute
+  '/_layout/r/$roomId': typeof LayoutRRoomIdRoute
   '/_layout/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/_layout/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/_layout/stories/': typeof LayoutStoriesIndexRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/'
     | '/agent/$agentId'
+    | '/r/$roomId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
     | '/stories'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/'
     | '/agent/$agentId'
+    | '/r/$roomId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
     | '/stories'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_layout/'
     | '/_layout/agent/$agentId'
+    | '/_layout/r/$roomId'
     | '/_layout/room-v2/$roomId'
     | '/_layout/room/$roomId'
     | '/_layout/stories/'
@@ -323,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutRoomV2RoomIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/r/$roomId': {
+      id: '/_layout/r/$roomId'
+      path: '/r/$roomId'
+      fullPath: '/r/$roomId'
+      preLoaderRoute: typeof LayoutRRoomIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/agent/$agentId': {
       id: '/_layout/agent/$agentId'
       path: '/agent/$agentId'
@@ -348,6 +367,7 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAgentAgentIdRoute: typeof LayoutAgentAgentIdRoute
+  LayoutRRoomIdRoute: typeof LayoutRRoomIdRoute
   LayoutRoomV2RoomIdRoute: typeof LayoutRoomV2RoomIdRoute
   LayoutRoomRoomIdRoute: typeof LayoutRoomRoomIdRoute
   LayoutStoriesIndexRoute: typeof LayoutStoriesIndexRoute
@@ -362,6 +382,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAgentAgentIdRoute: LayoutAgentAgentIdRoute,
+  LayoutRRoomIdRoute: LayoutRRoomIdRoute,
   LayoutRoomV2RoomIdRoute: LayoutRoomV2RoomIdRoute,
   LayoutRoomRoomIdRoute: LayoutRoomRoomIdRoute,
   LayoutStoriesIndexRoute: LayoutStoriesIndexRoute,

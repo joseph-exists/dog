@@ -1,2 +1,2 @@
-export { ChatPanel } from "./ChatPanel"
 export { AgentPanel } from "./AgentPanel"
+export { ChatPanel } from "./ChatPanel"

@@ -5,7 +5,7 @@
  * Provides consistent header/content/footer structure.
  */
 
-import * as React from "react"
+import type * as React from "react"
 import { cn } from "@/lib/utils"
 
 interface PanelContainerProps {
@@ -46,12 +46,7 @@ export function PanelContainer({
       )}
 
       {/* Content */}
-      <div
-        className={cn(
-          "flex-1 min-h-0",
-          scrollable && "overflow-y-auto"
-        )}
-      >
+      <div className={cn("flex-1 min-h-0", scrollable && "overflow-y-auto")}>
         {children}
       </div>
 

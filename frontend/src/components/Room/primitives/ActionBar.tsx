@@ -4,14 +4,14 @@
  * Horizontal row of icon buttons for panel headers and footers.
  */
 
-import { cn } from "@/lib/utils"
+import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { LucideIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export interface ActionItem {
   /** Unique identifier */
@@ -37,11 +37,7 @@ interface ActionBarProps {
   className?: string
 }
 
-export function ActionBar({
-  actions,
-  size = "sm",
-  className,
-}: ActionBarProps) {
+export function ActionBar({ actions, size = "sm", className }: ActionBarProps) {
   return (
     <div className={cn("flex items-center gap-1", className)}>
       {actions.map((action) => (
@@ -54,10 +50,13 @@ export function ActionBar({
               disabled={action.disabled}
               className={cn(
                 size === "sm" && "h-8 w-8",
-                action.variant === "destructive" && "text-destructive hover:text-destructive"
+                action.variant === "destructive" &&
+                  "text-destructive hover:text-destructive",
               )}
             >
-              <action.icon className={cn(size === "sm" ? "h-4 w-4" : "h-5 w-5")} />
+              <action.icon
+                className={cn(size === "sm" ? "h-4 w-4" : "h-5 w-5")}
+              />
               <span className="sr-only">{action.label}</span>
             </Button>
           </TooltipTrigger>

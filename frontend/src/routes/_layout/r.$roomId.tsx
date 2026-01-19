@@ -9,20 +9,22 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
-
+import EditDrawer from "@/components/Common/EditDrawer"
 import {
-  RoomShell,
-  ChatPanel,
   AgentPanel,
+  ChatPanel,
   type PanelConfig,
+  RoomShell,
 } from "@/components/Room"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
-import EditDrawer from "@/components/Common/EditDrawer"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomStream } from "@/hooks/useRoomStream"
 import { AgentService, type AgentViewModel } from "@/services/agentService"
-import type { MessageViewModel, ParticipantViewModel } from "@/services/roomService"
+import type {
+  MessageViewModel,
+  ParticipantViewModel,
+} from "@/services/roomService"
 
 export const Route = createFileRoute("/_layout/r/$roomId")({
   component: RoomView,
@@ -59,13 +61,17 @@ function RoomView() {
 
   // Edit drawer state
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
-  const [editingMessage, setEditingMessage] = useState<MessageViewModel | null>(null)
+  const [editingMessage, setEditingMessage] = useState<MessageViewModel | null>(
+    null,
+  )
 
   // Fetch available agents
-  const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery({
-    queryKey: ["agents", "available"],
-    queryFn: () => AgentService.listAvailableAgents(),
-  })
+  const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
+    {
+      queryKey: ["agents", "available"],
+      queryFn: () => AgentService.listAvailableAgents(),
+    },
+  )
 
   // Use the aggregate room hook
   const {
@@ -108,7 +114,11 @@ function RoomView() {
 
   // Handle authorization errors
   useEffect(() => {
-    if (roomError && "status" in roomError && (roomError as { status: number }).status === 403) {
+    if (
+      roomError &&
+      "status" in roomError &&
+      (roomError as { status: number }).status === 403
+    ) {
       navigate({ to: "/rooms" })
     }
   }, [roomError, navigate])
@@ -122,7 +132,9 @@ function RoomView() {
     participationMode: "on_mention" as const,
     isEnabled: p.is_active,
   }))
-  const availableAgentsAsAgentData = (availableAgentsData?.agents || []).map(toAgentData)
+  const availableAgentsAsAgentData = (availableAgentsData?.agents || []).map(
+    toAgentData,
+  )
   const existingAgentIds = activeAgents.map((a) => a.participant_id)
 
   // Handlers
@@ -131,7 +143,9 @@ function RoomView() {
     showSuccessToast(`Added ${agent.name} to the room`)
   }
 
-  const handleAddMultipleAgents = async (agents: { id: string; name: string }[]) => {
+  const handleAddMultipleAgents = async (
+    agents: { id: string; name: string }[],
+  ) => {
     for (const agent of agents) {
       await addParticipant(agent.id, "agent")
     }

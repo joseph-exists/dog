@@ -5,20 +5,19 @@
  * Consistent across all room types.
  */
 
-import * as React from "react"
 import {
+  BookOpen,
+  Grid3X3,
   LayoutGrid,
   LayoutList,
+  Link,
+  MessageSquare,
   MoreVertical,
   Plus,
   Settings,
-  Link,
   Trash2,
-  MessageSquare,
-  BookOpen,
-  Grid3X3,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import type * as React from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -28,7 +27,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { ParticipantStack, type Participant } from "./primitives/ParticipantStack"
+import { cn } from "@/lib/utils"
+import {
+  type Participant,
+  ParticipantStack,
+} from "./primitives/ParticipantStack"
 
 export type RoomType = "chat" | "story" | "workspace"
 
@@ -85,7 +88,7 @@ export function RoomHeader({
     <header
       className={cn(
         "flex items-center justify-between px-4 py-3 border-b border-border bg-background shrink-0",
-        className
+        className,
       )}
     >
       {/* Left: Room identity */}
@@ -108,7 +111,9 @@ export function RoomHeader({
         <ToggleGroup
           type="single"
           value={layoutMode}
-          onValueChange={(value) => value && onLayoutModeChange(value as "panels" | "tabs")}
+          onValueChange={(value) =>
+            value && onLayoutModeChange(value as "panels" | "tabs")
+          }
           className="hidden md:flex"
         >
           <ToggleGroupItem value="panels" aria-label="Panel layout">

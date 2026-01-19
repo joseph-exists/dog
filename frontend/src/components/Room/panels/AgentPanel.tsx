@@ -5,15 +5,15 @@
  * Adapts existing agent management components.
  */
 
-import { Users, Loader2 } from "lucide-react"
-import { PanelContainer } from "../primitives/PanelContainer"
+import { Loader2, Users } from "lucide-react"
 import {
   type AgentData,
-  AgentQuickAdd,
   AgentPartyPicker,
+  AgentQuickAdd,
   RoomAgentList,
 } from "@/components/Agents"
 import { Button } from "@/components/ui/button"
+import { PanelContainer } from "../primitives/PanelContainer"
 
 interface AgentPanelProps {
   /** Agents currently in the room */

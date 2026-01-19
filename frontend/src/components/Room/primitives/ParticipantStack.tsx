@@ -6,14 +6,14 @@
  */
 
 import { Bot } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { getInitials } from "@/utils"
 
 export interface Participant {
@@ -63,7 +63,7 @@ export function ParticipantStack({
                     "text-xs",
                     participant.type === "agent"
                       ? "bg-primary/20 text-primary"
-                      : "bg-muted text-muted-foreground"
+                      : "bg-muted text-muted-foreground",
                   )}
                 >
                   {participant.type === "agent" ? (
@@ -100,7 +100,7 @@ export function ParticipantStack({
                   className={cn(
                     participant.type === "agent"
                       ? "bg-primary/20 text-primary"
-                      : "bg-muted text-muted-foreground"
+                      : "bg-muted text-muted-foreground",
                   )}
                 >
                   {participant.type === "agent" ? (
@@ -111,7 +111,9 @@ export function ParticipantStack({
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{participant.name}</p>
+                <p className="text-sm font-medium truncate">
+                  {participant.name}
+                </p>
                 {participant.badges && participant.badges.length > 0 && (
                   <p className="text-xs text-muted-foreground">
                     {participant.badges.join(" ")}

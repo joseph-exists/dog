@@ -5,14 +5,14 @@
  * Wraps existing MessageList and MessageInput components.
  */
 
+import { Copy, Download, Search } from "lucide-react"
 import * as React from "react"
-import { Search, Download, Copy } from "lucide-react"
-import { PanelContainer } from "../primitives/PanelContainer"
-import { ActionBar, type ActionItem } from "../primitives/ActionBar"
-import MessageList from "@/components/Rooms/MessageList"
 import MessageInput from "@/components/Rooms/MessageInput"
+import MessageList from "@/components/Rooms/MessageList"
 import { Input } from "@/components/ui/input"
 import type { MessageViewModel } from "@/services/roomService"
+import { ActionBar, type ActionItem } from "../primitives/ActionBar"
+import { PanelContainer } from "../primitives/PanelContainer"
 
 interface ChatPanelProps {
   /** Room ID */
@@ -85,7 +85,9 @@ export function ChatPanel({
       icon: Copy,
       label: "Copy conversation",
       onClick: () => {
-        const text = messages.map((m) => `${m.sender_name}: ${m.content}`).join("\n")
+        const text = messages
+          .map((m) => `${m.sender_name}: ${m.content}`)
+          .join("\n")
         navigator.clipboard.writeText(text)
       },
     },
@@ -105,7 +107,7 @@ export function ChatPanel({
     ? messages.filter(
         (m) =>
           m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          m.sender_name.toLowerCase().includes(searchQuery.toLowerCase())
+          m.sender_name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : messages
 
