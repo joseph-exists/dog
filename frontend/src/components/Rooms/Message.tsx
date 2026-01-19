@@ -90,7 +90,7 @@ export default function Message({
     >
       {/* Action menu - top right corner (if user has any actions available) */}
       {hasAnyAction && !isStreaming && (
-        <div className="absolute top-2 right-2">
+        <div className="absolute -top-1 -right-1 z-10">
           <MessageActionMenu
             message={message}
             canEdit={can_edit}

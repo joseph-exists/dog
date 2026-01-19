@@ -62,12 +62,12 @@ export default function MessageActionMenu({
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon-sm"
-          className="opacity-60 hover:opacity-100"
+          className="h-6 w-6 bg-background/80 backdrop-blur-sm border-border/50 hover:bg-background hover:border-border"
           aria-label="Message actions"
         >
-          <MoreVertical className="h-4 w-4" />
+          <MoreVertical className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

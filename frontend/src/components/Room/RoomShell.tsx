@@ -36,6 +36,10 @@ interface RoomShellProps {
   onSwitchView?: () => void
   /** Label for switch view button */
   switchViewLabel?: string
+  /** Whether debug panel is shown */
+  showDebugPanel?: boolean
+  /** Toggle debug panel callback */
+  onToggleDebugPanel?: () => void
   /** Additional className */
   className?: string
 }
@@ -53,6 +57,8 @@ export function RoomShell({
   onParticipantClick,
   onSwitchView,
   switchViewLabel,
+  showDebugPanel,
+  onToggleDebugPanel,
   className,
 }: RoomShellProps) {
   const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
@@ -75,6 +81,8 @@ export function RoomShell({
         onParticipantClick={onParticipantClick}
         onSwitchView={onSwitchView}
         switchViewLabel={switchViewLabel}
+        showDebugPanel={showDebugPanel}
+        onToggleDebugPanel={onToggleDebugPanel}
       />
       <div className="flex-1 min-h-0">
         <RoomLayout panels={panels} mode={layoutMode} />
