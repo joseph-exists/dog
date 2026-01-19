@@ -14,7 +14,9 @@ export * from "./panels"
 // Cards
 export * from "./cards"
 
+// Layout
+export { RoomLayout, type PanelConfig } from "./RoomLayout"
+
 // Main components (added in later tasks)
 // export { RoomShell } from "./RoomShell"
 // export { RoomHeader } from "./RoomHeader"
-// export { RoomLayout } from "./RoomLayout"
