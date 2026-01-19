@@ -5,7 +5,7 @@ This document turns the Shadow goals in `backend/docs/shadow/shadow-overview.md`
 - One active persona per participant per room (users and agents)
 - Agent identity stability (UUID/slug stable through config changes)
 - Agent cloning across users (new owner must specify config/credentials; provenance preserved)
-- Different participants using different model/provider combos at the same time
+- Different participants using different model/provider combos at the same time  (ie Sam and Aneeta are both in a room together with several of their agents - Sam's agent Munk is using GPT5.2 with OpenAI API, and his agent Jarnowitz is using Hermes from Nous. Aneeta's agent Gilda is using Anthropic, but she switches halfway through to Ollama. )
 - Reading *from* Shadow repos into the context provider (not just writing)
 
 ## Decisions recap
@@ -28,7 +28,7 @@ This plan crosses multiple domains (Rooms, Agents, Personas, Models/Providers, S
   - **Active persona**: the single persona currently selected for a specific participant in a specific room (stored in `room_participant_bindings`).
 - **Model vs provider vs credentials**:
   - **Model**: “what model do we call” (string id like `openai:gpt-4o-mini`, or a catalog record).
-  - **Provider config**: “where/how to call it” (base URL + API key + settings). In this codebase, user-owned provider configs are `UserLLMProvider` (`/llm-providers`), and API keys must never be shadowed in plaintext.
+  - **Provider config**: “where/how to call it” (base URL + API key + settings). In this codebase, user-owned provider configs are `UserLLMProvider` (`/llm-providers`), and API keys must never be shadowed in plaintext.  **TODO** link to system providers here somewhere.
 - **Shadow snapshot**: a JSON artifact committed to Forgejo representing *one coherent state* of an entity (or aggregate), used for provenance and potentially as a context provider source.
 
 ## Minimal tables + constraints (for Milestone 1)
@@ -111,14 +111,15 @@ Implementation note for juniors: the “close old row then insert new row” mus
 **1) Schema + APIs for persona/model binding**
 
 - Add the two new tables above (`agent_personas`, `room_participant_bindings`) with constraints.
+(REQUIREMENT: FOLLOW ALL DATA_MODEL_RULES.md - tests must validate data model rules are followed, tests must validate and document alembic upgrade pattern.  don't bork the db with haste or lazy.)
 - Add API/service methods:
   - Set active persona for a room participant (closes previous active binding row; inserts new row).
   - Set active runtime model/provider for a room participant (same pattern; can be combined into one “binding update” call).
 - Decide addressing rules:
   - `participant_id` for users should be UUID string.
-  - `participant_id` for agents should be their stable `AgentConfig.slug` (preferred) or UUID string (legacy); choose one and normalize.
+  - `participant_id` for agents should be their stable `AgentConfig.slug` (preferred) or UUID string (legacy): UUID will be deprecated for slug in near future.
 
-Cross-domain note: this “binding update” touches *Room* (membership), *Persona* (selection), and *Models/Providers* (runtime config). Treat it as a single cohesive concept: “how this participant is configured to speak/act in this room right now”.
+Cross-domain note: this “binding update” touches *Room* (membership), *Persona* (selection), and *Models/Providers* (runtime config). Treat it as a single cohesive concept: “how this participant is configured to speak/act in this room right now - this is a collective representation of state, and if any aspect changes, that's a new state that requires a new update.”.
 
 **2) Snapshot exporters (write-side)**
 
@@ -137,10 +138,10 @@ Redaction rule (non-negotiable): never commit plaintext secrets (API keys, token
 
 **3) ShadowService configuration expansion**
 
-- Add entity types + service tokens for: `room`, `persona`, `llm_model`, `user_llm_provider` (names can be adjusted).
-- Keep consistent repo naming and file layout so reads are predictable later.
+- Add entity types + service tokens for: `room`, `persona`, `llm_model`, `user_llm_provider` (names can be adjusted). ensure extensibility for entitytypes, or you'll be very sorry during code review and refactor.
+- Keep consistent repo naming and file layout so reads are predictable later.  
 
-Junior-friendly naming guidance: pick and document the exact `entity_type` strings once (e.g., `room`, `story`, `agent`, `persona`, `llm_model`, `user_llm_provider`) and treat them as API/DB/Forgejo contract. Avoid inventing new spellings in different modules.
+Junior-friendly naming guidance: pick and document the exact `entity_type` strings once (e.g., `room`, `story`, `agent`, `persona`, `llm_model`, `user_llm_provider`) and treat them as API/DB/Forgejo contract. Avoid inventing new spellings in different modules.  Ensure that the contract is documented explicitly. see rules for guidance.
 
 **4) Wire Shadow versioning to real mutation points**
 
@@ -199,6 +200,8 @@ Cross-domain pitfall: “agent_slug” is not the same thing as `room_participan
 
 ### Milestone 3 — Provenance + async processing (align with the Shadow overview)
 
+THIS MILESTONE NEEDS FURTHER REVIEW PRIOR TO IMPLEMENTATION.  ONLY PROCEED ONCE MILESTONE 1 and 2 ARE FULLY VALIDATED.
+
 **1) Asyncify Forgejo IO**
 
 - Replace in-request Forgejo commits with an outbox/job queue + worker.
@@ -216,7 +219,7 @@ Cross-domain pitfall: “agent_slug” is not the same thing as `room_participan
 - Backfill shadow repos for existing Rooms, Personas, Agents, Models, Stories.
 - Add a repair job to detect missing repos/commits and replay exports idempotently.
 
-## “Definition of done” checkpoints (for juniors)
+## “Definition of done” checkpoint requirements
 
 Milestone 1 is done when:
 
@@ -225,10 +228,15 @@ Milestone 1 is done when:
 - Story graph edits (nodes/choices) result in a new **story** Shadow version that contains the whole story graph.
 - Provider snapshots never contain secrets.
 
+- typer and typer-forge have both been completely extended with coverage from both sides.  this is non-negotiable.
+
+- documentation is complete, synthesized, and holistic.
+
 Milestone 2 is done when:
 
 - `build_room_context(..., agent_slug=...)` reliably includes Shadow-derived context items for the current room and agent.
 - A2A tool calls include the correct agent-scoped Shadow context (not the caller’s).
+
 
 Milestone 3 is done when:
 
