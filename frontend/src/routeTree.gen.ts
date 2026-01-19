@@ -21,6 +21,8 @@ import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutStoriesIndexRouteImport } from './routes/_layout/stories/index'
+import { Route as LayoutUSlugRouteImport } from './routes/_layout/u.$slug'
+import { Route as LayoutTeamSlugRouteImport } from './routes/_layout/team.$slug'
 import { Route as LayoutRoomRoomIdRouteImport } from './routes/_layout/room.$roomId'
 import { Route as LayoutRoomV2RoomIdRouteImport } from './routes/_layout/room-v2.$roomId'
 import { Route as LayoutRRoomIdRouteImport } from './routes/_layout/r.$roomId'
@@ -86,6 +88,16 @@ const LayoutStoriesIndexRoute = LayoutStoriesIndexRouteImport.update({
   path: '/stories/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutUSlugRoute = LayoutUSlugRouteImport.update({
+  id: '/u/$slug',
+  path: '/u/$slug',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTeamSlugRoute = LayoutTeamSlugRouteImport.update({
+  id: '/team/$slug',
+  path: '/team/$slug',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutRoomRoomIdRoute = LayoutRoomRoomIdRouteImport.update({
   id: '/room/$roomId',
   path: '/room/$roomId',
@@ -128,6 +140,8 @@ export interface FileRoutesByFullPath {
   '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/team/$slug': typeof LayoutTeamSlugRoute
+  '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
 }
@@ -146,6 +160,8 @@ export interface FileRoutesByTo {
   '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/team/$slug': typeof LayoutTeamSlugRoute
+  '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
 }
@@ -166,6 +182,8 @@ export interface FileRoutesById {
   '/_layout/r/$roomId': typeof LayoutRRoomIdRoute
   '/_layout/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/_layout/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/_layout/team/$slug': typeof LayoutTeamSlugRoute
+  '/_layout/u/$slug': typeof LayoutUSlugRoute
   '/_layout/stories/': typeof LayoutStoriesIndexRoute
   '/_layout/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
 }
@@ -186,6 +204,8 @@ export interface FileRouteTypes {
     | '/r/$roomId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
+    | '/team/$slug'
+    | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
   fileRoutesByTo: FileRoutesByTo
@@ -204,6 +224,8 @@ export interface FileRouteTypes {
     | '/r/$roomId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
+    | '/team/$slug'
+    | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
   id:
@@ -223,6 +245,8 @@ export interface FileRouteTypes {
     | '/_layout/r/$roomId'
     | '/_layout/room-v2/$roomId'
     | '/_layout/room/$roomId'
+    | '/_layout/team/$slug'
+    | '/_layout/u/$slug'
     | '/_layout/stories/'
     | '/_layout/stories/$storyId/edit'
   fileRoutesById: FileRoutesById
@@ -321,6 +345,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutStoriesIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/u/$slug': {
+      id: '/_layout/u/$slug'
+      path: '/u/$slug'
+      fullPath: '/u/$slug'
+      preLoaderRoute: typeof LayoutUSlugRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/team/$slug': {
+      id: '/_layout/team/$slug'
+      path: '/team/$slug'
+      fullPath: '/team/$slug'
+      preLoaderRoute: typeof LayoutTeamSlugRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/room/$roomId': {
       id: '/_layout/room/$roomId'
       path: '/room/$roomId'
@@ -370,6 +408,8 @@ interface LayoutRouteChildren {
   LayoutRRoomIdRoute: typeof LayoutRRoomIdRoute
   LayoutRoomV2RoomIdRoute: typeof LayoutRoomV2RoomIdRoute
   LayoutRoomRoomIdRoute: typeof LayoutRoomRoomIdRoute
+  LayoutTeamSlugRoute: typeof LayoutTeamSlugRoute
+  LayoutUSlugRoute: typeof LayoutUSlugRoute
   LayoutStoriesIndexRoute: typeof LayoutStoriesIndexRoute
   LayoutStoriesStoryIdEditRoute: typeof LayoutStoriesStoryIdEditRoute
 }
@@ -385,6 +425,8 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutRRoomIdRoute: LayoutRRoomIdRoute,
   LayoutRoomV2RoomIdRoute: LayoutRoomV2RoomIdRoute,
   LayoutRoomRoomIdRoute: LayoutRoomRoomIdRoute,
+  LayoutTeamSlugRoute: LayoutTeamSlugRoute,
+  LayoutUSlugRoute: LayoutUSlugRoute,
   LayoutStoriesIndexRoute: LayoutStoriesIndexRoute,
   LayoutStoriesStoryIdEditRoute: LayoutStoriesStoryIdEditRoute,
 }
