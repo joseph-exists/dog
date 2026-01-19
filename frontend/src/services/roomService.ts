@@ -19,7 +19,6 @@
  *
  */
 
-import { AgentService } from "./agentService"
 import {
   type ParticipantAddRequest,
   type RoomCreate,
@@ -34,6 +33,7 @@ import {
   type RoomUpdate,
   UsersService,
 } from "@/client"
+import { AgentService } from "./agentService"
 
 // ============================================================================
 // Type Definitions - ViewModels
