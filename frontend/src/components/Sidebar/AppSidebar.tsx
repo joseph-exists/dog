@@ -27,12 +27,21 @@ const baseItems: Item[] = [
   { icon: Briefcase, title: "Items", path: "/items" },
 ]
 
+// Temporary dev items for testing old vs new room implementations
+const devItems: Item[] = [
+  { icon: MessageSquare, title: "Rooms (Old)", path: "/room-v2" },
+]
+
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
 
   const items = currentUser?.is_superuser
-    ? [...baseItems, { icon: Users, title: "Admin", path: "/admin" }]
-    : baseItems
+    ? [
+        ...baseItems,
+        ...devItems,
+        { icon: Users, title: "Admin", path: "/admin" },
+      ]
+    : [...baseItems, ...devItems]
 
   return (
     <Sidebar collapsible="icon">
