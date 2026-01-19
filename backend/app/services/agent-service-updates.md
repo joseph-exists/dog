@@ -86,7 +86,7 @@
       - `agent.run_stream(...)`
       - `publish_agent_token` (per chunk)
       - `emit_event` (final message)
-      - `process_agent_response` (A2A)
+      - `A2AOrchestrator.process_mentions` (A2A)
         - `detect_mentions`
         - `is_agent_in_room`
           - `resolve_agent_identifier`
@@ -109,7 +109,7 @@
   - `emit_ui_component` is a tool used within agent runs; it appends to `AgentDeps.ui_components` for later inclusion in emitted event.
 
   Control flow notes to flag for refactor
-  - A2A recursion uses `MAX_A2A_DEPTH` in `process_agent_response` and `request_agent_assistance`, but `run_agent_for_room_streaming` is still the recursion entry (depth passed via parameter).
+  - A2A recursion uses a configured depth limit in `A2AOrchestrator.process_mentions` and `request_agent_assistance`, but `run_agent_for_room_streaming` is still the recursion entry (depth passed via parameter).
   - `build_room_context` is invoked in every run (streaming + non-streaming + A2A tool), so it’s a hot path.
   - Coordinator bypasses participation checks; regular agents use `should_agent_respond_to_message`.
 
@@ -152,7 +152,7 @@
       RARS --> BAP[build_agent_prompt]
       RARS --> ARS[agent.run_stream]
       RARS --> EEVT[emit_event]
-      RARS --> PAR[process_agent_response]
+      RARS --> PAR[A2AOrchestrator.process_mentions]
       PAR --> DMA[detect_mentions]
       PAR --> IAR[is_agent_in_room]
       PAR --> RARS

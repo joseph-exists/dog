@@ -1,0 +1,113 @@
+from __future__ import annotations
+
+import logging
+from typing import Any, Awaitable, Callable
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.services.agent_context import RoomContextService
+from app.services.agent_events import AgentEventPublisher
+from app.services.agent_runner_types import AgentRunRequest, AgentRunResult
+
+logger = logging.getLogger(__name__)
+
+
+class NonStreamingAgentRunner:
+    """Run agents without token streaming."""
+
+    def __init__(
+        self,
+        *,
+        context_service: RoomContextService,
+        event_publisher: AgentEventPublisher,
+        is_agent_available: Callable[[AsyncSession, str], Awaitable[bool]],
+        get_agent_instance: Callable[[AsyncSession, str], Awaitable[Any]],
+        build_agent_prompt: Callable[[str, Any, str | None], str],
+    ) -> None:
+        self._context_service = context_service
+        self._event_publisher = event_publisher
+        self._is_agent_available = is_agent_available
+        self._get_agent_instance = get_agent_instance
+        self._build_agent_prompt = build_agent_prompt
+
+    async def run(
+        self,
+        *,
+        req: AgentRunRequest,
+        session: AsyncSession,
+    ) -> AgentRunResult:
+        room_id = req.room_id
+        agent_name = req.agent_slug
+        trigger_message = req.trigger_message
+
+        if not await self._is_agent_available(session, agent_name):
+            logger.warning(f"Attempted to run unregistered agent: {agent_name}")
+            return AgentRunResult(
+                agent_name=agent_name,
+                content="",
+                success=False,
+                error=f"Agent '{agent_name}' not found",
+            )
+
+        try:
+            context = await self._context_service.build(
+                room_id=room_id,
+                session=session,
+                message_limit=20,
+            )
+
+            agent = await self._get_agent_instance(session, agent_name)
+            if not agent:
+                return AgentRunResult(
+                    agent_name=agent_name,
+                    content="",
+                    success=False,
+                    error=f"Failed to instantiate agent '{agent_name}'",
+                )
+
+            full_prompt = self._build_agent_prompt(
+                trigger_message, context, current_agent_slug=agent_name
+            )
+
+            result = await agent.run(full_prompt)
+            response_content = result.output
+
+            await self._event_publisher.emit_message(
+                session=session,
+                room_id=room_id,
+                agent_name=agent_name,
+                content=response_content,
+            )
+
+            logger.info(f"Agent {agent_name} responded in room {room_id}")
+
+            return AgentRunResult(
+                agent_name=agent_name,
+                content=response_content,
+                success=True,
+                error=None,
+            )
+
+        except Exception as exc:
+            logger.error(f"Agent {agent_name} error in room {room_id}: {exc}")
+
+            error_content = (
+                "I encountered an error while processing your request. Please try again."
+            )
+
+            try:
+                await self._event_publisher.emit_message(
+                    session=session,
+                    room_id=room_id,
+                    agent_name=agent_name,
+                    content=error_content,
+                )
+            except Exception as emit_error:
+                logger.error(f"Failed to emit error message: {emit_error}")
+
+            return AgentRunResult(
+                agent_name=agent_name,
+                content=error_content,
+                success=False,
+                error=str(exc),
+            )
