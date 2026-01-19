@@ -1,13 +1,13 @@
 import * as React from "react"
 import { GripVerticalIcon } from "lucide-react"
-import {
-  Group,
-  Panel,
-  Separator,
-} from "react-resizable-panels"
+import { Group, Panel, Separator } from "react-resizable-panels"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * ResizablePanelGroup wraps react-resizable-panels v4 Group component.
+ * Maps `direction` prop to `orientation` for backwards compatibility.
+ */
 function ResizablePanelGroup({
   className,
   direction,
@@ -18,6 +18,7 @@ function ResizablePanelGroup({
   return (
     <Group
       data-slot="resizable-panel-group"
+      data-panel-group-direction={direction}
       orientation={direction}
       className={cn(
         "flex h-full w-full data-[panel-group-direction=vertical]:flex-col",
@@ -28,12 +29,26 @@ function ResizablePanelGroup({
   )
 }
 
+/**
+ * ResizablePanel wraps react-resizable-panels v4 Panel component.
+ */
 function ResizablePanel({
+  className,
   ...props
 }: React.ComponentProps<typeof Panel>) {
-  return <Panel data-slot="resizable-panel" {...props} />
+  return (
+    <Panel
+      data-slot="resizable-panel"
+      className={className}
+      {...props}
+    />
+  )
 }
 
+/**
+ * ResizableHandle wraps react-resizable-panels v4 Separator component.
+ * Provides optional drag handle indicator.
+ */
 function ResizableHandle({
   withHandle,
   className,
