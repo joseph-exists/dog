@@ -205,12 +205,17 @@ async def should_agent_respond(
     Returns:
         True if agent should respond, False otherwise
     """
+    # NOTE: SQLModel annotates columns (e.g., `RoomParticipant.active`) as plain
+    # Python types like `bool`, which can confuse static type checkers (pyright)
+    # into thinking we're passing a `bool` into `where(...)`. Using table columns
+    # avoids that and also makes the generated SQL explicit.
+    rp = RoomParticipant.__table__.c
     result = await session.execute(
         select(RoomParticipant).where(
-            RoomParticipant.room_id == room_id,
-            RoomParticipant.participant_type == "agent",
-            RoomParticipant.participant_id == agent_name,
-            RoomParticipant.active == True,  # noqa: E712
+            rp.room_id == room_id,
+            rp.participant_type == "agent",
+            rp.participant_id == agent_name,
+            rp.active.is_(True),
         )
     )
     participant = result.scalar_one_or_none()
@@ -401,12 +406,13 @@ async def invoke_agent_manually(
         }
 
     # Check if agent is participant in room
+    rp = RoomParticipant.__table__.c
     result = await session.execute(
         select(RoomParticipant).where(
-            RoomParticipant.room_id == room_id,
-            RoomParticipant.participant_type == "agent",
-            RoomParticipant.participant_id.in_([agent_slug, str(config.id)]),
-            RoomParticipant.active == True,  # noqa: E712
+            rp.room_id == room_id,
+            rp.participant_type == "agent",
+            rp.participant_id.in_([agent_slug, str(config.id)]),
+            rp.active.is_(True),
         )
     )
     participant = result.scalar_one_or_none()

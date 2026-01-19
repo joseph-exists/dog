@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: |
-  Frontend development for React + TypeScript + shadcn/ui codebase. Use when working with:
+  Frontend development for React + TypeScript + shadcn/ui + Tailwind/CSS codebase. Use when working with:
   - Components in frontend/src/components/
   - Routes in frontend/src/routes/
   - Hooks in frontend/src/hooks/
@@ -16,9 +16,9 @@ description: |
 
 ## Critical Rules
 
-1. **No frontend processing** - All data processing happens on backend. Frontend processing causes project failure.
-2. **ViewModels are mandatory** - Never use raw API types in components. Always use services with ViewModels.
-3. **No new hooks/utilities without approval** - Requires explicit human authorization.
+1. **Always be processing on the backend** - All data processing happens on backend. Frontend processing causes project failure.
+2. **Always be Using a ViewModel for great honor.** - Using raw API types in components is for engineers who don't respect themselves or their code. Always use services with ViewModels.
+3. **New hooks/utilities require approval and need to be sufficiently justified and validated** - Requires explicit human authorization, and will burn down budget without cause if it was otherwise available in the code base.  When wondering, ask your friends what they think, they might know something neat.
 4. **No throwaway code** - All code must be production-ready with JSDoc documentation.
 
 ## Tech Stack
@@ -100,19 +100,47 @@ const mutation = useMutation({
 ["rooms", roomId, "participants"]
 ```
 
-## DO NOT
+## Attention paid, we must prove
 
-- Use raw API types in components (use ViewModels)
-- Create inline API calls (use services)
-- Skip TypeScript types or use `any`
-- Create new hooks without approval
-- Edit `src/client/` (auto-generated)
-- Edit `src/components/ui/` without shadcn CLI
-- Use `refetchInterval` for new features (WebSocket migration planned)
-- Create components over 300 lines
-- Skip JSDoc documentation
+- We always use ViewModels- if you see raw API types in components, flag it with a note for a reward.
+- We always use services - if you see an inline API calls, flag it for a reward.
+- we always always always use TypeScript types and `any` is very bad cricket - we will get in trouble, so flag it to help your friends out!
+- We always get approval before we create a hook - the approval needs to be on the ticket before the code is worked on.
+- we always respect `src/client/` and always leave it alone. (auto-generated)
+- we respect the sanctity of  `src/components/ui/` only with shadcn CLI *(and use the MCP server!)
+- we always use WebSockets, unless we're using SSE and we have documentation and validation. if we see `refetchInterval` in any code, we flag it, finish our immediate task, and write a pri 1 ticket.
+- We always keep our components under 300 lines unless we make an inline apology to the team with validation and engineering reasons why it was the right thing to do (this apology and validation don't count towards the total overage)
+- we always respect ourselves and each other and write great inline // JSDoc documentation
 
 ## References
+
+
+# Frontend Implementation (shadcn + Tailwind)
+
+## Key Project Files
+
+| File | Purpose |
+|------|---------|
+| `frontend-test/components.json` | shadcn configuration (style: new-york, icons: lucide) |
+| `frontend-test/src/lib/utils.ts` | `cn()` helper for class merging |
+| `frontend-test/src/index.css` | Tailwind theme with CSS variables |
+| `frontend-test/src/components/ui/` | shadcn primitives |
+
+
+## Project Structure
+
+```
+frontend-test/src/
+├── client/           # OpenAPI client (DO NOT EDIT)
+├── components/
+│   ├── ui/           # shadcn primitives
+│   ├── Rooms/        # Room feature components
+│   └── Stories/      # Story feature components
+├── hooks/            # TanStack Query hooks
+├── services/         # API service layers (ViewModels)
+├── routes/           # TanStack Router pages
+└── lib/utils.ts      # cn() helper
+```
 
 For complete patterns, conventions, and decisions, see:
 - [references/frontend-patterns.md](references/frontend-patterns.md) - Full documentation including file organization, naming conventions, forms, testing, and integration workflows
