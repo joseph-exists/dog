@@ -1,6 +1,7 @@
 // src/components/Page/blocks/ContactBlock.tsx
-import { useState } from "react"
+
 import { Check, Copy, Mail, Phone } from "lucide-react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { BlockContainer } from "../primitives"

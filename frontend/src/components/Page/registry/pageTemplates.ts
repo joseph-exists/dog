@@ -29,15 +29,36 @@ export const pageTemplates: PageTemplate[] = [
   {
     id: "standard",
     label: "Standard Profile",
-    description: "A complete profile layout with primary content and auxiliary sidebar",
+    description:
+      "A complete profile layout with primary content and auxiliary sidebar",
     forEntityTypes: ["user", "agent", "team"],
     defaultBlocks: [
-      { type: "profileImage", column: "primary", order: 1, config: { shape: "circle", size: "lg" } },
-      { type: "identity", column: "primary", order: 2, config: { showTagline: true } },
+      {
+        type: "profileImage",
+        column: "primary",
+        order: 1,
+        config: { shape: "circle", size: "lg" },
+      },
+      {
+        type: "identity",
+        column: "primary",
+        order: 2,
+        config: { showTagline: true },
+      },
       { type: "bio", column: "primary", order: 3, config: {} },
-      { type: "relationships", column: "primary", order: 4, config: { groupByType: true } },
+      {
+        type: "relationships",
+        column: "primary",
+        order: 4,
+        config: { groupByType: true },
+      },
       { type: "contact", column: "auxiliary", order: 1, config: {} },
-      { type: "links", column: "auxiliary", order: 2, config: { layout: "list" } },
+      {
+        type: "links",
+        column: "auxiliary",
+        order: 2,
+        config: { layout: "list" },
+      },
     ],
   },
   {
@@ -46,10 +67,25 @@ export const pageTemplates: PageTemplate[] = [
     description: "A simple single-column profile layout",
     forEntityTypes: ["user", "agent", "team"],
     defaultBlocks: [
-      { type: "profileImage", column: "primary", order: 1, config: { shape: "circle", size: "md" } },
-      { type: "identity", column: "primary", order: 2, config: { showTagline: true } },
+      {
+        type: "profileImage",
+        column: "primary",
+        order: 1,
+        config: { shape: "circle", size: "md" },
+      },
+      {
+        type: "identity",
+        column: "primary",
+        order: 2,
+        config: { showTagline: true },
+      },
       { type: "bio", column: "primary", order: 3, config: {} },
-      { type: "links", column: "primary", order: 4, config: { layout: "grid" } },
+      {
+        type: "links",
+        column: "primary",
+        order: 4,
+        config: { layout: "grid" },
+      },
     ],
   },
   {
@@ -58,8 +94,18 @@ export const pageTemplates: PageTemplate[] = [
     description: "A visual-focused layout with gallery display",
     forEntityTypes: ["user", "team"],
     defaultBlocks: [
-      { type: "profileImage", column: "primary", order: 1, config: { shape: "square", size: "lg" } },
-      { type: "identity", column: "primary", order: 2, config: { showTagline: true } },
+      {
+        type: "profileImage",
+        column: "primary",
+        order: 1,
+        config: { shape: "square", size: "lg" },
+      },
+      {
+        type: "identity",
+        column: "primary",
+        order: 2,
+        config: { showTagline: true },
+      },
       { type: "gallery", column: "primary", order: 3, config: { columns: 3 } },
       { type: "bio", column: "auxiliary", order: 1, config: {} },
       { type: "links", column: "auxiliary", order: 2, config: {} },
@@ -71,11 +117,36 @@ export const pageTemplates: PageTemplate[] = [
     description: "A specialized layout for AI agents with activity tracking",
     forEntityTypes: ["agent"],
     defaultBlocks: [
-      { type: "profileImage", column: "primary", order: 1, config: { shape: "square", size: "lg" } },
-      { type: "identity", column: "primary", order: 2, config: { showTagline: true } },
-      { type: "bio", column: "primary", order: 3, config: { allowRichText: true } },
-      { type: "relationships", column: "primary", order: 4, config: { groupByType: true } },
-      { type: "activityFeed", column: "auxiliary", order: 1, config: { maxItems: 5 } },
+      {
+        type: "profileImage",
+        column: "primary",
+        order: 1,
+        config: { shape: "square", size: "lg" },
+      },
+      {
+        type: "identity",
+        column: "primary",
+        order: 2,
+        config: { showTagline: true },
+      },
+      {
+        type: "bio",
+        column: "primary",
+        order: 3,
+        config: { allowRichText: true },
+      },
+      {
+        type: "relationships",
+        column: "primary",
+        order: 4,
+        config: { groupByType: true },
+      },
+      {
+        type: "activityFeed",
+        column: "auxiliary",
+        order: 1,
+        config: { maxItems: 5 },
+      },
     ],
   },
 ]
@@ -90,7 +161,9 @@ export function getPageTemplate(id: string): PageTemplate | undefined {
 /**
  * Get all templates available for a specific entity type.
  */
-export function getTemplatesForEntityType(entityTypeId: string): PageTemplate[] {
+export function getTemplatesForEntityType(
+  entityTypeId: string,
+): PageTemplate[] {
   return pageTemplates.filter((t) => t.forEntityTypes.includes(entityTypeId))
 }
 
@@ -101,7 +174,7 @@ export function getTemplatesForEntityType(entityTypeId: string): PageTemplate[] 
 export function getDefaultTemplate(entityTypeId: string): PageTemplate {
   // First, look for a template that exactly matches the entity type ID
   const entitySpecific = pageTemplates.find((t) => t.id === entityTypeId)
-  if (entitySpecific && entitySpecific.forEntityTypes.includes(entityTypeId)) {
+  if (entitySpecific?.forEntityTypes.includes(entityTypeId)) {
     return entitySpecific
   }
 

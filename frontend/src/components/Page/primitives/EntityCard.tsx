@@ -1,12 +1,9 @@
 // src/components/Page/primitives/EntityCard.tsx
-import { cn } from "@/lib/utils"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import {
-  getEntityTypeOrThrow,
-  getRelationshipType,
-} from "../registry"
+import { cn } from "@/lib/utils"
+import { getEntityTypeOrThrow, getRelationshipType } from "../registry"
 
 interface EntityCardEntity {
   id: string
@@ -64,9 +61,11 @@ const sizeConfig = {
 /** Color mapping for avatar backgrounds based on entity type color */
 const colorClasses: Record<string, string> = {
   blue: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  purple: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+  purple:
+    "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
   green: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-  orange: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+  orange:
+    "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
 }
 
 /**
@@ -132,7 +131,12 @@ export function EntityCard({
             </Badge>
           ))}
         </div>
-        <div className={cn("flex items-center gap-1 text-muted-foreground", config.meta)}>
+        <div
+          className={cn(
+            "flex items-center gap-1 text-muted-foreground",
+            config.meta,
+          )}
+        >
           <Icon className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{metaLabel}</span>
         </div>
@@ -144,7 +148,7 @@ export function EntityCard({
     "flex items-center rounded-lg",
     config.padding,
     config.gap,
-    className
+    className,
   )
 
   if (onClick) {
@@ -157,7 +161,7 @@ export function EntityCard({
           baseClasses,
           "w-full text-left",
           "transition-colors",
-          "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         )}
       >
         {content}

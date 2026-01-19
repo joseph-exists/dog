@@ -1,8 +1,8 @@
 // src/components/Page/primitives/BlockContainer.tsx
-import { cn } from "@/lib/utils"
-import { GripVertical, Settings, X } from "lucide-react"
 
+import { GripVertical, Settings, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface BlockContainerProps {
   /** Optional title displayed in header */
@@ -47,7 +47,7 @@ export function BlockContainer({
     <div
       className={cn(
         "flex flex-col rounded-lg border border-border bg-card",
-        className
+        className,
       )}
     >
       {showHeader && (

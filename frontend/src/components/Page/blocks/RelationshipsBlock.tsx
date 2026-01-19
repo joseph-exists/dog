@@ -1,6 +1,7 @@
 // src/components/Page/blocks/RelationshipsBlock.tsx
-import { useMemo } from "react"
+
 import { Plus } from "lucide-react"
+import { useMemo } from "react"
 
 import { Button } from "@/components/ui/button"
 import { BlockContainer, EntityCard } from "../primitives"

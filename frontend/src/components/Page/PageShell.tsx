@@ -1,20 +1,19 @@
 // src/components/Page/PageShell.tsx
 import { useCallback, useState } from "react"
-
+import {
+  ActivityFeedBlock,
+  BioBlock,
+  ChartBlock,
+  ContactBlock,
+  DataTableBlock,
+  GalleryBlock,
+  IdentityBlock,
+  LinksBlock,
+  ProfileImageBlock,
+  RelationshipsBlock,
+} from "./blocks"
 import { PageHeader } from "./PageHeader"
 import { PageLayout } from "./PageLayout"
-import {
-  ProfileImageBlock,
-  IdentityBlock,
-  BioBlock,
-  ContactBlock,
-  LinksBlock,
-  RelationshipsBlock,
-  ActivityFeedBlock,
-  GalleryBlock,
-  DataTableBlock,
-  ChartBlock,
-} from "./blocks"
 import { getDefaultTemplate, type TemplateBlock } from "./registry"
 
 /**
@@ -201,11 +200,12 @@ export function PageShell({
               config={{
                 title: (config.title as string) ?? "",
                 dataSource: (config.dataSource as string) ?? "",
-                columns: (config.columns as Array<{
-                  key: string
-                  label: string
-                  width?: string
-                }>) ?? [],
+                columns:
+                  (config.columns as Array<{
+                    key: string
+                    label: string
+                    width?: string
+                  }>) ?? [],
                 maxRows: (config.maxRows as number) ?? 10,
               }}
             />
@@ -216,7 +216,9 @@ export function PageShell({
             <ChartBlock
               config={{
                 title: (config.title as string) ?? "",
-                chartType: (config.chartType as "area" | "bar" | "line" | "pie") ?? "bar",
+                chartType:
+                  (config.chartType as "area" | "bar" | "line" | "pie") ??
+                  "bar",
                 dataSource: (config.dataSource as string) ?? "",
               }}
             />
@@ -226,7 +228,7 @@ export function PageShell({
           return null
       }
     },
-    [entity]
+    [entity],
   )
 
   return (

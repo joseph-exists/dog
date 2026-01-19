@@ -14,14 +14,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-
-import { Skeleton } from "@/components/ui/skeleton"
 import {
-  ChartConfig,
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import { BlockContainer } from "../primitives"
 import { fetchDataSource } from "../registry"
@@ -81,7 +80,8 @@ export function ChartBlock({ config }: ChartBlockProps) {
     return (
       <BlockContainer title={config.title}>
         <div className="p-4 text-sm text-destructive">
-          Failed to load data: {error instanceof Error ? error.message : "Unknown error"}
+          Failed to load data:{" "}
+          {error instanceof Error ? error.message : "Unknown error"}
         </div>
       </BlockContainer>
     )
@@ -103,7 +103,10 @@ export function ChartBlock({ config }: ChartBlockProps) {
   return (
     <BlockContainer title={config.title}>
       <div className="p-4">
-        <ChartContainer config={defaultChartConfig} className="h-[200px] w-full">
+        <ChartContainer
+          config={defaultChartConfig}
+          className="h-[200px] w-full"
+        >
           {renderChart(config.chartType, chartData)}
         </ChartContainer>
       </div>
@@ -114,12 +117,16 @@ export function ChartBlock({ config }: ChartBlockProps) {
 /**
  * Renders the appropriate chart based on chart type
  */
-function renderChart(chartType: ChartBlockConfig["chartType"], data: Record<string, unknown>[]) {
+function renderChart(
+  chartType: ChartBlockConfig["chartType"],
+  data: Record<string, unknown>[],
+) {
   // Try to infer data keys from the first item
   const firstItem = data[0]
   const keys = Object.keys(firstItem)
-  const labelKey = keys.find(k => typeof firstItem[k] === "string") || keys[0]
-  const valueKey = keys.find(k => typeof firstItem[k] === "number") || keys[1] || "value"
+  const labelKey = keys.find((k) => typeof firstItem[k] === "string") || keys[0]
+  const valueKey =
+    keys.find((k) => typeof firstItem[k] === "number") || keys[1] || "value"
 
   switch (chartType) {
     case "area":
@@ -146,7 +153,11 @@ function renderChart(chartType: ChartBlockConfig["chartType"], data: Record<stri
           <XAxis dataKey={labelKey} tickLine={false} axisLine={false} />
           <YAxis tickLine={false} axisLine={false} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey={valueKey} fill="var(--color-value)" radius={[4, 4, 0, 0]} />
+          <Bar
+            dataKey={valueKey}
+            fill="var(--color-value)"
+            radius={[4, 4, 0, 0]}
+          />
         </BarChart>
       )
 
@@ -181,7 +192,10 @@ function renderChart(chartType: ChartBlockConfig["chartType"], data: Record<stri
             outerRadius={80}
           >
             {data.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+              <Cell
+                key={`cell-${index}`}
+                fill={PIE_COLORS[index % PIE_COLORS.length]}
+              />
             ))}
           </Pie>
         </PieChart>

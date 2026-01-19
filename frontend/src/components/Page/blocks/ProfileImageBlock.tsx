@@ -1,9 +1,8 @@
 // src/components/Page/blocks/ProfileImageBlock.tsx
 import { Camera } from "lucide-react"
-
-import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 export interface ProfileImageBlockConfig {
   shape: "circle" | "square"

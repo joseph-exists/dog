@@ -88,7 +88,10 @@ export function ActivityFeedBlock({
             const Icon = activityIcons[activity.type]
 
             return (
-              <div key={activity.id} className="relative flex items-start gap-3">
+              <div
+                key={activity.id}
+                className="relative flex items-start gap-3"
+              >
                 {/* Icon in circle */}
                 <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted border border-border">
                   <Icon className="h-3 w-3 text-muted-foreground" />
@@ -96,7 +99,9 @@ export function ActivityFeedBlock({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 pt-0.5">
-                  <p className="text-sm text-foreground">{activity.description}</p>
+                  <p className="text-sm text-foreground">
+                    {activity.description}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {formatRelativeTime(activity.timestamp)}
                   </p>

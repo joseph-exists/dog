@@ -80,7 +80,7 @@ export const relationshipTypes: RelationshipTypeDefinition[] = [
  * Get relationship type definition by ID
  */
 export function getRelationshipType(
-  id: string
+  id: string,
 ): RelationshipTypeDefinition | undefined {
   return relationshipTypes.find((r) => r.id === id)
 }
@@ -91,11 +91,11 @@ export function getRelationshipType(
 export function isValidRelationship(
   relationshipId: string,
   sourceTypeId: string,
-  targetTypeId: string
+  targetTypeId: string,
 ): boolean {
   const relType = getRelationshipType(relationshipId)
   if (!relType) return false
   return relType.validPairs.some(
-    (pair) => pair.source === sourceTypeId && pair.target === targetTypeId
+    (pair) => pair.source === sourceTypeId && pair.target === targetTypeId,
   )
 }

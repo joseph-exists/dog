@@ -52,7 +52,7 @@ function BlockColumn({
           variant="outline"
           className={cn(
             "w-full border-dashed border-2",
-            "hover:border-solid hover:bg-muted/50"
+            "hover:border-solid hover:bg-muted/50",
           )}
           onClick={onAddBlock}
         >
@@ -80,10 +80,10 @@ export function PageLayout({
 
   // Split and sort blocks by column
   const primaryBlocks = sortByOrder(
-    blocks.filter((b) => b.column === "primary")
+    blocks.filter((b) => b.column === "primary"),
   )
   const auxiliaryBlocks = sortByOrder(
-    blocks.filter((b) => b.column === "auxiliary")
+    blocks.filter((b) => b.column === "auxiliary"),
   )
 
   // Show auxiliary column if it has blocks or we're in edit mode

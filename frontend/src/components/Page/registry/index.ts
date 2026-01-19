@@ -1,48 +1,45 @@
 // src/components/Page/registry/index.ts
 
+// Block types
+export {
+  type BlockType,
+  type BlockTypeDefinition,
+  blockTypes,
+  type ConfigFieldSchema,
+  type ConfigFieldType,
+  getBlockType,
+  getDataBlocks,
+  getStandardBlocks,
+} from "./blockTypes"
+// Data sources
+export {
+  type DataSourceDefinition,
+  dataSources,
+  fetchDataSource,
+  getDataSource,
+} from "./dataSources"
 // Entity types
 export {
+  type EntityTypeDefinition,
   entityTypes,
   getEntityType,
   getEntityTypeOrThrow,
-  type EntityTypeDefinition,
 } from "./entityTypes"
-
-// Relationship types
-export {
-  relationshipTypes,
-  getRelationshipType,
-  isValidRelationship,
-  type RelationshipTypeDefinition,
-  type RelationshipPair,
-} from "./relationshipTypes"
-
-// Block types
-export {
-  blockTypes,
-  getBlockType,
-  getStandardBlocks,
-  getDataBlocks,
-  type BlockType,
-  type BlockTypeDefinition,
-  type ConfigFieldSchema,
-  type ConfigFieldType,
-} from "./blockTypes"
 
 // Page templates
 export {
-  pageTemplates,
+  getDefaultTemplate,
   getPageTemplate,
   getTemplatesForEntityType,
-  getDefaultTemplate,
   type PageTemplate,
+  pageTemplates,
   type TemplateBlock,
 } from "./pageTemplates"
-
-// Data sources
+// Relationship types
 export {
-  dataSources,
-  getDataSource,
-  fetchDataSource,
-  type DataSourceDefinition,
-} from "./dataSources"
+  getRelationshipType,
+  isValidRelationship,
+  type RelationshipPair,
+  type RelationshipTypeDefinition,
+  relationshipTypes,
+} from "./relationshipTypes"

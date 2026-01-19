@@ -1,5 +1,5 @@
 // src/components/Page/registry/entityTypes.ts
-import { Bot, MessageSquare, User, Users, type LucideIcon } from "lucide-react"
+import { Bot, type LucideIcon, MessageSquare, User, Users } from "lucide-react"
 
 /**
  * Entity type definition for the registry.

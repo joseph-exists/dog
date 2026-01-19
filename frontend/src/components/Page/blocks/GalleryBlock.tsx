@@ -1,13 +1,12 @@
 // src/components/Page/blocks/GalleryBlock.tsx
 import { useState } from "react"
-
-import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import { BlockContainer } from "../primitives"
 
 export interface GalleryImage {
@@ -74,7 +73,7 @@ export function GalleryBlock({ config, images }: GalleryBlockProps) {
               </button>
             ) : (
               <div key={image.id}>{renderImage(image)}</div>
-            )
+            ),
           )}
         </div>
       </BlockContainer>

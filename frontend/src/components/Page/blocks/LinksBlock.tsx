@@ -63,7 +63,7 @@ export function LinksBlock({ config, links }: LinksBlockProps) {
       <div
         className={cn(
           "p-4 gap-3",
-          config.layout === "grid" ? "grid grid-cols-2" : "flex flex-col"
+          config.layout === "grid" ? "grid grid-cols-2" : "flex flex-col",
         )}
       >
         {links.map((link) => {

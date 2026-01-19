@@ -35,7 +35,12 @@ const mockUser = {
     },
   ],
   relationships: [
-    { id: "t1", typeId: "team", name: "Alpha Team", relationshipTypeId: "member" },
+    {
+      id: "t1",
+      typeId: "team",
+      name: "Alpha Team",
+      relationshipTypeId: "member",
+    },
     {
       id: "a1",
       typeId: "agent",

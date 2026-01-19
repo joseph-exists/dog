@@ -61,7 +61,8 @@ export function DataTableBlock({ config }: DataTableBlockProps) {
     return (
       <BlockContainer title={config.title}>
         <div className="p-4 text-sm text-destructive">
-          Failed to load data: {error instanceof Error ? error.message : "Unknown error"}
+          Failed to load data:{" "}
+          {error instanceof Error ? error.message : "Unknown error"}
         </div>
       </BlockContainer>
     )

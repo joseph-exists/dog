@@ -1,13 +1,13 @@
 // src/components/Page/blocks/index.ts
-export { ProfileImageBlock } from "./ProfileImageBlock"
-export { IdentityBlock } from "./IdentityBlock"
-export { BioBlock } from "./BioBlock"
-export { ContactBlock } from "./ContactBlock"
-export { LinksBlock } from "./LinksBlock"
-export { RelationshipsBlock } from "./RelationshipsBlock"
-export { ActivityFeedBlock } from "./ActivityFeedBlock"
-export { GalleryBlock } from "./GalleryBlock"
 
+export { ActivityFeedBlock } from "./ActivityFeedBlock"
+export { BioBlock } from "./BioBlock"
+export { ChartBlock } from "./ChartBlock"
+export { ContactBlock } from "./ContactBlock"
 // Data blocks
 export { DataTableBlock } from "./DataTableBlock"
-export { ChartBlock } from "./ChartBlock"
+export { GalleryBlock } from "./GalleryBlock"
+export { IdentityBlock } from "./IdentityBlock"
+export { LinksBlock } from "./LinksBlock"
+export { ProfileImageBlock } from "./ProfileImageBlock"
+export { RelationshipsBlock } from "./RelationshipsBlock"
