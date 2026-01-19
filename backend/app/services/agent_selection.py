@@ -98,6 +98,19 @@ class AgentSelectionService:
         logger.warning(f"Agent '{participant_id}' not found in database")
         return None, None, None
 
+    async def is_agent_available(
+        self,
+        *,
+        session: AsyncSession,
+        participant_id: str,
+    ) -> bool:
+        """Check if an agent is available in the database."""
+        slug, _, _ = await self.resolve_agent_identifier(
+            session=session,
+            participant_id=participant_id,
+        )
+        return slug is not None
+
     def should_agent_respond_to_message(
         self,
         *,

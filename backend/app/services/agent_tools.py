@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.ag_ui import UIComponent, UIComponentType
 from app.services.a2a_orchestrator import A2AOrchestrator, DEFAULT_MAX_A2A_DEPTH
-from app.services.agent_instance import get_agent_instance
 from app.services.agent_prompt import build_agent_prompt
 from app.services.context_provider import build_room_context
 
@@ -128,6 +127,8 @@ async def _run_agent_for_tool_call(
     - Does NOT enable A2A tools on target agent (prevents infinite recursion)
     - Returns response directly to the calling tool
     """
+    from app.services.agent_instance import get_agent_instance
+
     agent = await get_agent_instance(session, agent_slug)
     if not agent:
         return {

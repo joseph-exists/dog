@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AgentConfig, Room, RoomMessage, RoomParticipant, Story
+from app.services.context_store import ContextItemStore
 
 
 @dataclass
@@ -55,6 +56,7 @@ class RoomContext:
     participants: list[dict[str, Any]]
     room_metadata: dict[str, Any]
     active_agents: list[AgentInfo]
+    extra_contexts: list[dict[str, Any]]
 
 
 async def build_room_context(
@@ -62,6 +64,8 @@ async def build_room_context(
     room_id: uuid.UUID,
     session: AsyncSession,
     message_limit: int = 20,
+    agent_slug: str | None = None,
+    context_store: ContextItemStore | None = None,
 ) -> RoomContext:
     """
     Build context for an agent given a room_id.
@@ -187,6 +191,23 @@ async def build_room_context(
         "last_activity": room.last_activity.isoformat(),
     }
 
+    extra_contexts: list[dict[str, Any]] = []
+    if context_store:
+        items = await context_store.list(room_id=room_id, agent_slug=agent_slug)
+        source_priority = {"seed": 0, "backend": 1, "frontend": 2}
+        items_sorted = sorted(
+            items,
+            key=lambda item: (source_priority.get(item.source, 99), item.created_at),
+        )
+        extra_contexts = [
+            {
+                "context_type": item.context_type,
+                "payload": item.payload,
+                "source": item.source,
+            }
+            for item in items_sorted
+        ]
+
     return RoomContext(
         room_id=room_id,
         story_id=room.story_id,
@@ -195,4 +216,5 @@ async def build_room_context(
         participants=participants,
         room_metadata=room_metadata,
         active_agents=active_agents,
+        extra_contexts=extra_contexts,
     )

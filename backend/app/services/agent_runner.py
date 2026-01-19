@@ -84,7 +84,7 @@ def _get_streaming_runner() -> StreamingAgentRunner:
         _streaming_runner = StreamingAgentRunner(
             context_service=_context_service,
             event_publisher=_event_publisher,
-            is_agent_available=is_agent_available,
+            is_agent_available=_selection_service.is_agent_available,
             get_agent_instance_with_tools=get_agent_instance_with_tools,
             build_agent_prompt=build_agent_prompt,
             deps_factory=_make_agent_deps,
@@ -100,7 +100,7 @@ def _get_non_streaming_runner() -> NonStreamingAgentRunner:
         _non_streaming_runner = NonStreamingAgentRunner(
             context_service=_context_service,
             event_publisher=_event_publisher,
-            is_agent_available=is_agent_available,
+            is_agent_available=_selection_service.is_agent_available,
             get_agent_instance=get_agent_instance,
             build_agent_prompt=build_agent_prompt,
         )
@@ -133,24 +133,6 @@ async def _run_agent_for_a2a(
 # =============================================================================
 
 
-
-
-async def is_agent_available(session: AsyncSession, participant_id: str) -> bool:
-    """
-    Check if an agent is available in the database.
-
-    Args:
-        session: Async database session
-        participant_id: The participant_id from RoomParticipant
-
-    Returns:
-        True if agent can be run, False otherwise
-    """
-    slug, _, _ = await _selection_service.resolve_agent_identifier(
-        session=session,
-        participant_id=participant_id,
-    )
-    return slug is not None
 
 
 # =============================================================================

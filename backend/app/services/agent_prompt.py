@@ -55,6 +55,16 @@ def build_agent_prompt(
             sender = msg.get("agent_name") or "User"
             conversation_context += f"{sender}: {msg.get('content', '')}\n"
 
+    # Add extra contexts if present
+    if context.extra_contexts:
+        conversation_context += "\nAdditional context:\n"
+        for item in context.extra_contexts:
+            context_type = item.get("context_type", "unknown")
+            source = item.get("source", "unknown")
+            conversation_context += (
+                f"- [{source}] {context_type}: {item.get('payload')}\n"
+            )
+
     # Combine context with user message
     if conversation_context:
         return f"{conversation_context}\nUser message: {trigger_message}"

@@ -171,6 +171,55 @@ def print_step(step_num: int, total_steps: int, title: str):
     print("-" * 70)
 
 
+def list_llm_providers(session: requests.Session) -> list[dict]:
+    """List configured LLM providers for the current user."""
+    try:
+        response = session.get(f"{BASE_URL}/llm-providers")
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("data", [])
+        print(f"  ❌ Failed to list providers: {response.status_code}")
+        print(f"     Error: {response.text[:200]}")
+        return []
+    except Exception as e:
+        print(f"  ❌ Exception listing providers: {str(e)}")
+        return []
+
+
+def test_llm_provider(session: requests.Session, provider_id: str) -> bool:
+    """Trigger backend provider test endpoint."""
+    try:
+        response = session.post(f"{BASE_URL}/llm-providers/{provider_id}/test")
+        if response.status_code == 200:
+            return True
+        print(f"  ❌ Provider test failed: {response.status_code}")
+        print(f"     Error: {response.text[:200]}")
+        return False
+    except Exception as e:
+        print(f"  ❌ Exception testing provider: {str(e)}")
+        return False
+
+
+def validate_api_key(session: requests.Session) -> bool:
+    """Validate API key by testing the user's default LLM provider."""
+    providers = list_llm_providers(session)
+    if not providers:
+        print("  ❌ No LLM providers configured; cannot validate API key")
+        return False
+
+    default_provider = next((p for p in providers if p.get("is_default")), None)
+    provider = default_provider or providers[0]
+    provider_id = provider.get("id")
+    provider_name = provider.get("name", "provider")
+
+    if not provider_id:
+        print("  ❌ Provider missing id; cannot validate API key")
+        return False
+
+    print(f"  🔌 Testing provider: {provider_name}")
+    return test_llm_provider(session, provider_id)
+
+
 def create_story(session: requests.Session, title: str, description: str) -> dict | None:
     """Create a test story"""
     try:
@@ -257,6 +306,11 @@ def send_message(session: requests.Session, room_id: str, content: str) -> dict 
     except Exception as e:
         print(f"  ❌ Exception sending message: {str(e)}")
         return None
+
+
+def format_agent_mention(mention: str, content: str) -> str:
+    """Prefix content with agent mention for on_mention participation."""
+    return f"{mention} {content}".strip()
 
 
 def get_room_messages(session: requests.Session, room_id: str) -> list[dict]:
@@ -366,6 +420,13 @@ Examples:
     )
 
     parser.add_argument(
+        "--agent-mention",
+        type=str,
+        default="@StoryAdvisor",
+        help="Agent mention to trigger on_mention participation mode"
+    )
+
+    parser.add_argument(
         "--output",
         type=str,
         default=OUTPUT_FILE,
@@ -385,7 +446,7 @@ Examples:
     print("🤖" * 35)
 
     results = TestResults()
-    total_steps = 9 if not args.no_story else 8
+    total_steps = 10 if not args.no_story else 9
     current_step = 0
 
     try:
@@ -403,7 +464,17 @@ Examples:
         else:
             raise Exception("Failed to get user info")
 
-        # Step 2: Create Story (optional)
+        # Step 2: API Key Validation
+        current_step += 1
+        print_step(current_step, total_steps, "Validating Agent API Key")
+
+        if validate_api_key(session):
+            print("  ✅ Agent API key validated")
+        else:
+            results.add_error("api_key_validation", "Agent API key validation failed")
+            raise Exception("Agent API key validation failed")
+
+        # Step 3: Create Story (optional)
         story_id = None
         if not args.no_story:
             current_step += 1
@@ -423,7 +494,7 @@ Examples:
             else:
                 results.add_error("story", "Failed to create story")
 
-        # Step 3: Create Room
+        # Step 4: Create Room
         current_step += 1
         print_step(current_step, total_steps, "Creating Room")
 
@@ -439,7 +510,7 @@ Examples:
         if story_id:
             print(f"     Linked to story: {args.story_title}")
 
-        # Step 4: Add StoryAdvisor Agent
+        # Step 5: Add StoryAdvisor Agent
         current_step += 1
         print_step(current_step, total_steps, "Adding StoryAdvisor Agent as Participant")
 
@@ -458,14 +529,18 @@ Examples:
         agent_participants = [p for p in participants if p.get('participant_type') == 'agent']
         print(f"  📊 Room participants: {len(participants)} total, {len(agent_participants)} agents")
 
-        # Step 5: Send Initial Message
+        # Step 6: Send Initial Message
         current_step += 1
         print_step(current_step, total_steps, "Sending Initial Message to Trigger Agent")
 
         initial_messages = get_room_messages(session, room_id)
         initial_count = len(initial_messages)
 
-        test_message = "Hello! I'm working on my story and need some advice about pacing. How should I structure the opening chapter?"
+        test_message = format_agent_mention(
+            args.agent_mention,
+            "Hello! I'm working on my story and need some advice about pacing. "
+            "How should I structure the opening chapter?"
+        )
 
         message = send_message(session, room_id, test_message)
 
@@ -482,7 +557,7 @@ Examples:
         if not agent_responded:
             results.add_error("agent_response", "Agent did not respond to message")
 
-        # Step 6: Verify Agent Response
+        # Step 7: Verify Agent Response
         current_step += 1
         print_step(current_step, total_steps, "Verifying Agent Response")
 
@@ -502,7 +577,7 @@ Examples:
         else:
             results.add_error("agent_response", "No agent messages found")
 
-        # Step 7: Test Context Awareness - Story Context
+        # Step 8: Test Context Awareness - Story Context
         current_step += 1
         print_step(current_step, total_steps, "Testing Context Awareness - Story Context")
 
@@ -511,7 +586,10 @@ Examples:
             before_count = len(get_room_messages(session, room_id))
             print(f"  📊 Message count before sending: {before_count}")
 
-            test_message = "Can you remind me what my story is about?"
+            test_message = format_agent_mention(
+                args.agent_mention,
+                "Can you remind me what my story is about?"
+            )
             print(f"  📤 Sending: {test_message}")
 
             message = send_message(session, room_id, test_message)
@@ -555,7 +633,7 @@ Examples:
             results.set_context_test("story_context_test", True, "Skipped (no story created)")
             print(f"  ⏭️  Skipped (no story created)")
 
-        # Step 8: Test Context Awareness - Message History
+        # Step 9: Test Context Awareness - Message History
         current_step += 1
         print_step(current_step, total_steps, "Testing Context Awareness - Message History")
 
@@ -563,7 +641,10 @@ Examples:
         before_count = len(get_room_messages(session, room_id))
         print(f"  📊 Message count before sending: {before_count}")
 
-        test_message = "What did I just ask you about in my previous message?"
+        test_message = format_agent_mention(
+            args.agent_mention,
+            "What did I just ask you about in my previous message?"
+        )
         print(f"  📤 Sending: {test_message}")
 
         message = send_message(session, room_id, test_message)
@@ -604,7 +685,7 @@ Examples:
         else:
             results.set_context_test("message_history_test", False, "Agent did not respond")
 
-        # Step 9: Validate Persistence
+        # Step 10: Validate Persistence
         current_step += 1
         print_step(current_step, total_steps, "Validating Event Persistence")
 

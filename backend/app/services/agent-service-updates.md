@@ -74,7 +74,7 @@
     - `resolve_agent_identifier` (per participant)
     - `should_agent_respond_to_message` (regular agents)
     - `run_agent_for_room_streaming`
-      - `is_agent_available` → `resolve_agent_identifier`
+      - `AgentSelectionService.is_agent_available` → `resolve_agent_identifier`
       - `build_room_context` in `backend/app/services/context_provider.py`
       - `get_agent_instance_with_tools`
         - `get_agent_config`
@@ -92,7 +92,7 @@
           - `resolve_agent_identifier`
         - `run_agent_for_room_streaming` (recursive A2A, depth+1)
   - `run_agent_for_room`
-    - `is_agent_available` → `resolve_agent_identifier`
+    - `AgentSelectionService.is_agent_available` → `resolve_agent_identifier`
     - `build_room_context`
     - `get_agent_instance`
       - `get_agent_config`
@@ -144,7 +144,7 @@
       RAM -->|regular agents| RARS
       RAM --> RAR[run_agent_for_room]
       RAM --> IAM[invoke_agent_manually]
-      RARS --> IAA[is_agent_available]
+      RARS --> IAA[AgentSelectionService.is_agent_available]
       RARS --> BRC[build_room_context]
       RARS --> GAIT[get_agent_instance_with_tools]
       GAIT --> RUC[resolve_user_credentials]

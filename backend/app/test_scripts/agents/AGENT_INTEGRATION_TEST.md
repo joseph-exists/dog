@@ -11,17 +11,18 @@
 - ✅ Event persistence and message retrieval
 - ✅ Full transaction support (user message + agent response atomic)
 
-## Test Flow (9 Steps)
+## Test Flow (10 Steps)
 
 1. **Authentication** - Validates user credentials
-2. **Create Test Story** (optional) - Sets up story context for agent
-3. **Create Room** - Creates a collaborative room
-4. **Add StoryAdvisor Agent** - Adds agent as room participant
-5. **Send Initial Message** - Triggers agent with a question
-6. **Verify Agent Response** - Confirms agent replied
-7. **Test Story Context** - Verifies agent knows about the story
-8. **Test Message History** - Verifies agent remembers conversation
-9. **Validate Persistence** - Confirms all messages are saved
+2. **Validate LLM Provider** - Tests default provider API key (skips if none configured)
+3. **Create Test Story** (optional) - Sets up story context for agent
+4. **Create Room** - Creates a collaborative room
+5. **Add StoryAdvisor Agent** - Adds agent as room participant
+6. **Send Initial Message** - Triggers agent with an explicit @mention
+7. **Verify Agent Response** - Confirms agent replied
+8. **Test Story Context** - Verifies agent knows about the story
+9. **Test Message History** - Verifies agent remembers conversation
+10. **Validate Persistence** - Confirms all messages are saved
 
 ## Prerequisites
 
@@ -46,6 +47,8 @@ fastapi dev app/main.py
 ```
 
 **Important:** The backend must have a valid `OPENAI_API_KEY` set in the `.env` file for the StoryAdvisor agent to function.
+Agents default to `on_mention`, so the script uses `@StoryAdvisor` by default.
+If you have a user provider configured, the script will also test it via `/llm-providers/{id}/test`.
 
 ### 3. Test User
 Ensure your test user credentials are configured in `auth_helper.py`.
@@ -71,6 +74,11 @@ python test_agent_integration.py --room-title "My Agent Test"
 ### Custom Output File
 ```bash
 python test_agent_integration.py --output my_test_results.json
+```
+
+### Custom Agent Mention
+```bash
+python test_agent_integration.py --agent-mention "@StoryAdvisor"
 ```
 
 ### Enable Debug Logging
