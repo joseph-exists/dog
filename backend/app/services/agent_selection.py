@@ -100,7 +100,6 @@ class AgentSelectionService:
 
     async def is_agent_available(
         self,
-        *,
         session: AsyncSession,
         participant_id: str,
     ) -> bool:

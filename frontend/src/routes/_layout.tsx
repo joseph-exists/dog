@@ -37,6 +37,9 @@ const routeTitles: Record<string, string> = {
   "/settings": "Settings",
 }
 
+/** Routes that need full-bleed layout (no max-width or padding) */
+const fullBleedRoutes = ["/r/", "/room/", "/room-v2/"]
+
 function Layout() {
   const matches = useMatches()
   const currentPath = matches[matches.length - 1]?.pathname || "/"
@@ -49,21 +52,34 @@ function Layout() {
     )?.[1] ||
     "Dashboard"
 
+  // Check if this route needs full-bleed layout
+  const isFullBleed = fullBleedRoutes.some((route) =>
+    currentPath.startsWith(route),
+  )
+
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col h-screen">
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1 text-muted-foreground" />
           <Separator orientation="vertical" className="mx-2 h-4" />
           <h1 className="text-base font-medium">{pageTitle}</h1>
         </header>
-        <main className="flex-1 p-6 md:p-8">
-          <div className="mx-auto max-w-7xl">
+        {isFullBleed ? (
+          <main className="flex-1 min-h-0 overflow-hidden">
             <Outlet />
-          </div>
-        </main>
-        <Footer />
+          </main>
+        ) : (
+          <>
+            <main className="flex-1 p-6 md:p-8">
+              <div className="mx-auto max-w-7xl">
+                <Outlet />
+              </div>
+            </main>
+            <Footer />
+          </>
+        )}
       </SidebarInset>
     </SidebarProvider>
   )

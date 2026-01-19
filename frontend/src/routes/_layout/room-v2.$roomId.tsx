@@ -11,7 +11,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { AlertCircle, Loader2, UsersIcon } from "lucide-react"
+import { AlertCircle, ArrowLeftRight, Loader2, UsersIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
   type AgentData,
@@ -341,18 +341,31 @@ function RoomViewV2() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-100px)]">
-      {/* Room Header */}
-      <RoomHeader
-        room={room}
-        participants={participants}
-        activeAgents={activeAgents}
-        currentUserRole={currentUserRole}
-        onAddParticipant={addParticipant}
-        onUpdateRoom={updateRoom}
-        onDeleteRoom={deleteRoom}
-        showDebugPanel={showDebugPanel}
-        onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
-      />
+      {/* Room Header with View Toggle */}
+      <div className="flex items-center gap-2 border-b">
+        <div className="flex-1">
+          <RoomHeader
+            room={room}
+            participants={participants}
+            activeAgents={activeAgents}
+            currentUserRole={currentUserRole}
+            onAddParticipant={addParticipant}
+            onUpdateRoom={updateRoom}
+            onDeleteRoom={deleteRoom}
+            showDebugPanel={showDebugPanel}
+            onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate({ to: "/r/$roomId", params: { roomId } })}
+          className="mr-4"
+        >
+          <ArrowLeftRight className="h-4 w-4 mr-2" />
+          New View
+        </Button>
+      </div>
 
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">

@@ -3,7 +3,7 @@
 Test Agent Integration (Phase 2)
 
 Tests the complete agent integration system:
-- Agent registry and StoryAdvisor agent
+- Agent registry and Quacksworth agent
 - Room creation with agent participants
 - Message sending that triggers agent responses
 - Agent context awareness (story, messages, participants)
@@ -13,7 +13,7 @@ Test Flow:
 1. Authentication
 2. Create a test story (optional)
 3. Create a room
-4. Add StoryAdvisor agent as participant
+4. Add Quacksworth agent as participant
 5. Send messages to trigger agent
 6. Verify agent responses
 7. Test agent context awareness
@@ -59,8 +59,13 @@ class TestResults:
             "room": {"status": "pending", "room_id": None, "title": None},
             "agent_participant": {
                 "status": "pending",
-                "agent_name": "StoryAdvisor",
+                "agent_name": "Quacksworth",
                 "participant_id": None
+            },
+            "agent_configs": {
+                "status": "pending",
+                "count": 0,
+                "configs": []
             },
             "messages": {
                 "user_messages_sent": 0,
@@ -106,6 +111,14 @@ class TestResults:
         """Record agent participant"""
         self.results["agent_participant"]["status"] = "success"
         self.results["agent_participant"]["participant_id"] = participant_id
+
+    def set_agent_configs(self, configs: list[dict]):
+        """Record available agent configs"""
+        self.results["agent_configs"] = {
+            "status": "success",
+            "count": len(configs),
+            "configs": configs,
+        }
 
     def add_message(self, message_type: str, content: str, sender: str, message_id: str = None):
         """Record a message"""
@@ -169,6 +182,32 @@ def print_step(step_num: int, total_steps: int, title: str):
     """Print a step header"""
     print(f"\n[{step_num}/{total_steps}] {title}")
     print("-" * 70)
+
+
+def list_agent_configs(session: requests.Session) -> list[dict]:
+    """List available agent configs for the current user."""
+    try:
+        response = session.get(f"{BASE_URL}/agents")
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("data", [])
+        print(f"  ❌ Failed to list agents: {response.status_code}")
+        print(f"     Error: {response.text[:200]}")
+        return []
+    except Exception as e:
+        print(f"  ❌ Exception listing agents: {str(e)}")
+        return []
+
+
+def resolve_agent_slug(configs: list[dict], agent_mention: str) -> str | None:
+    """Resolve agent slug based on mention text or config list."""
+    target = agent_mention.lstrip("@").strip().lower()
+    for config in configs:
+        slug = (config.get("slug") or "").lower()
+        name = (config.get("name") or "").lower()
+        if slug == target or name == target or name.replace(" ", "") == target:
+            return config.get("slug")
+    return None
 
 
 def list_llm_providers(session: requests.Session) -> list[dict]:
@@ -264,13 +303,17 @@ def create_room(session: requests.Session, title: str, story_id: str = None) -> 
         return None
 
 
-def add_agent_participant(session: requests.Session, room_id: str, agent_name: str = "StoryAdvisor") -> dict | None:
-    """Add agent as room participant"""
+def add_agent_participant(
+    session: requests.Session,
+    room_id: str,
+    agent_identifier: str,
+) -> dict | None:
+    """Add agent as room participant (slug or UUID)"""
     try:
         response = session.post(
             f"{BASE_URL}/rooms/{room_id}/participants",
             json={
-                "participant_id": agent_name,
+                "participant_id": agent_identifier,
                 "participant_type": "agent",
                 "role": "member"
             }
@@ -422,8 +465,15 @@ Examples:
     parser.add_argument(
         "--agent-mention",
         type=str,
-        default="@StoryAdvisor",
+        default="@Quacksworth",
         help="Agent mention to trigger on_mention participation mode"
+    )
+
+    parser.add_argument(
+        "--agent-slug",
+        type=str,
+        default=None,
+        help="Agent slug to add as participant (defaults to slug from agent configs)"
     )
 
     parser.add_argument(
@@ -446,7 +496,7 @@ Examples:
     print("🤖" * 35)
 
     results = TestResults()
-    total_steps = 10 if not args.no_story else 9
+    total_steps = 11 if not args.no_story else 10
     current_step = 0
 
     try:
@@ -474,7 +524,41 @@ Examples:
             results.add_error("api_key_validation", "Agent API key validation failed")
             raise Exception("Agent API key validation failed")
 
-        # Step 3: Create Story (optional)
+        # Step 3: List Agent Configs
+        current_step += 1
+        print_step(current_step, total_steps, "Listing Agent Configs")
+
+        agent_configs = list_agent_configs(session)
+        results.set_agent_configs(agent_configs)
+        if agent_configs:
+            print(f"  ✅ Found {len(agent_configs)} agent configs")
+            for config in agent_configs:
+                name = config.get("name")
+                slug = config.get("slug")
+                enabled = config.get("is_enabled")
+                print(f"     - {name} (@{slug}) enabled={enabled}")
+        else:
+            results.add_error("agent_configs", "No agent configs returned")
+
+        agent_slug = args.agent_slug or resolve_agent_slug(agent_configs, args.agent_mention)
+        if not agent_slug:
+            results.add_error(
+                "agent_configs",
+                f"No matching agent config for mention {args.agent_mention}",
+            )
+            raise Exception("Agent config not found for mention")
+        matching_config = next(
+            (c for c in agent_configs if c.get("slug") == agent_slug),
+            None,
+        )
+        if matching_config and not matching_config.get("is_enabled", True):
+            results.add_error(
+                "agent_configs",
+                f"Matched agent config {agent_slug} is disabled",
+            )
+            raise Exception("Matched agent config is disabled")
+
+        # Step 4: Create Story (optional)
         story_id = None
         if not args.no_story:
             current_step += 1
@@ -494,7 +578,7 @@ Examples:
             else:
                 results.add_error("story", "Failed to create story")
 
-        # Step 4: Create Room
+        # Step 5: Create Room
         current_step += 1
         print_step(current_step, total_steps, "Creating Room")
 
@@ -510,11 +594,11 @@ Examples:
         if story_id:
             print(f"     Linked to story: {args.story_title}")
 
-        # Step 5: Add StoryAdvisor Agent
+        # Step 6: Add Quacksworth Agent
         current_step += 1
-        print_step(current_step, total_steps, "Adding StoryAdvisor Agent as Participant")
+        print_step(current_step, total_steps, "Adding Quacksworth Agent as Participant")
 
-        participant = add_agent_participant(session, room_id, "StoryAdvisor")
+        participant = add_agent_participant(session, room_id, agent_slug)
 
         if not participant:
             raise Exception("Failed to add agent participant")
@@ -529,7 +613,7 @@ Examples:
         agent_participants = [p for p in participants if p.get('participant_type') == 'agent']
         print(f"  📊 Room participants: {len(participants)} total, {len(agent_participants)} agents")
 
-        # Step 6: Send Initial Message
+        # Step 7: Send Initial Message
         current_step += 1
         print_step(current_step, total_steps, "Sending Initial Message to Trigger Agent")
 
@@ -557,7 +641,7 @@ Examples:
         if not agent_responded:
             results.add_error("agent_response", "Agent did not respond to message")
 
-        # Step 7: Verify Agent Response
+        # Step 8: Verify Agent Response
         current_step += 1
         print_step(current_step, total_steps, "Verifying Agent Response")
 
@@ -577,7 +661,7 @@ Examples:
         else:
             results.add_error("agent_response", "No agent messages found")
 
-        # Step 8: Test Context Awareness - Story Context
+        # Step 9: Test Context Awareness - Story Context
         current_step += 1
         print_step(current_step, total_steps, "Testing Context Awareness - Story Context")
 
@@ -633,7 +717,7 @@ Examples:
             results.set_context_test("story_context_test", True, "Skipped (no story created)")
             print(f"  ⏭️  Skipped (no story created)")
 
-        # Step 9: Test Context Awareness - Message History
+        # Step 10: Test Context Awareness - Message History
         current_step += 1
         print_step(current_step, total_steps, "Testing Context Awareness - Message History")
 
@@ -685,7 +769,7 @@ Examples:
         else:
             results.set_context_test("message_history_test", False, "Agent did not respond")
 
-        # Step 10: Validate Persistence
+        # Step 11: Validate Persistence
         current_step += 1
         print_step(current_step, total_steps, "Validating Event Persistence")
 

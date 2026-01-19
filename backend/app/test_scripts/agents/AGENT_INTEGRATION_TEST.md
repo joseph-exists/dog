@@ -11,18 +11,19 @@
 - ✅ Event persistence and message retrieval
 - ✅ Full transaction support (user message + agent response atomic)
 
-## Test Flow (10 Steps)
+## Test Flow (11 Steps)
 
 1. **Authentication** - Validates user credentials
-2. **Validate LLM Provider** - Tests default provider API key (skips if none configured)
-3. **Create Test Story** (optional) - Sets up story context for agent
-4. **Create Room** - Creates a collaborative room
-5. **Add StoryAdvisor Agent** - Adds agent as room participant
-6. **Send Initial Message** - Triggers agent with an explicit @mention
-7. **Verify Agent Response** - Confirms agent replied
-8. **Test Story Context** - Verifies agent knows about the story
-9. **Test Message History** - Verifies agent remembers conversation
-10. **Validate Persistence** - Confirms all messages are saved
+2. **Validate LLM Provider** - Tests default provider API key (fails if none configured)
+3. **List Agent Configs** - Logs available agent configs
+4. **Create Test Story** (optional) - Sets up story context for agent
+5. **Create Room** - Creates a collaborative room
+6. **Add StoryAdvisor Agent** - Adds agent as room participant (by slug)
+7. **Send Initial Message** - Triggers agent with an explicit @mention
+8. **Verify Agent Response** - Confirms agent replied
+9. **Test Story Context** - Verifies agent knows about the story
+10. **Test Message History** - Verifies agent remembers conversation
+11. **Validate Persistence** - Confirms all messages are saved
 
 ## Prerequisites
 
@@ -79,6 +80,11 @@ python test_agent_integration.py --output my_test_results.json
 ### Custom Agent Mention
 ```bash
 python test_agent_integration.py --agent-mention "@StoryAdvisor"
+```
+
+### Explicit Agent Slug
+```bash
+python test_agent_integration.py --agent-slug "duck-butler-quacksworth"
 ```
 
 ### Enable Debug Logging

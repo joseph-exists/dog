@@ -6,6 +6,7 @@
  */
 
 import {
+  ArrowLeftRight,
   BookOpen,
   Grid3X3,
   LayoutGrid,
@@ -58,6 +59,10 @@ interface RoomHeaderProps {
   onDelete?: () => void
   /** Participant click callback */
   onParticipantClick?: (participant: Participant) => void
+  /** Switch view callback (for toggling between old/new UI) */
+  onSwitchView?: () => void
+  /** Label for switch view button */
+  switchViewLabel?: string
   /** Additional className */
   className?: string
 }
@@ -80,6 +85,8 @@ export function RoomHeader({
   onCopyLink,
   onDelete,
   onParticipantClick,
+  onSwitchView,
+  switchViewLabel,
   className,
 }: RoomHeaderProps) {
   const TypeIcon = roomTypeIcons[type]
@@ -136,6 +143,12 @@ export function RoomHeader({
               <DropdownMenuItem onClick={onAddPanel}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Panel
+              </DropdownMenuItem>
+            )}
+            {onSwitchView && (
+              <DropdownMenuItem onClick={onSwitchView}>
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                {switchViewLabel || "Switch View"}
               </DropdownMenuItem>
             )}
             {onCopyLink && (

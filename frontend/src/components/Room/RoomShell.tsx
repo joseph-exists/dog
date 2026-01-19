@@ -32,6 +32,10 @@ interface RoomShellProps {
   onDelete?: () => void
   /** Participant click callback */
   onParticipantClick?: (participant: Participant) => void
+  /** Switch view callback */
+  onSwitchView?: () => void
+  /** Label for switch view button */
+  switchViewLabel?: string
   /** Additional className */
   className?: string
 }
@@ -47,6 +51,8 @@ export function RoomShell({
   onCopyLink,
   onDelete,
   onParticipantClick,
+  onSwitchView,
+  switchViewLabel,
   className,
 }: RoomShellProps) {
   const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
@@ -67,6 +73,8 @@ export function RoomShell({
         onCopyLink={onCopyLink}
         onDelete={onDelete}
         onParticipantClick={onParticipantClick}
+        onSwitchView={onSwitchView}
+        switchViewLabel={switchViewLabel}
       />
       <div className="flex-1 min-h-0">
         <RoomLayout panels={panels} mode={layoutMode} />

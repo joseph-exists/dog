@@ -278,8 +278,12 @@ function RoomView() {
     },
   ]
 
+  const handleSwitchView = () => {
+    navigate({ to: "/room-v2/$roomId", params: { roomId } })
+  }
+
   return (
-    <div className="h-[calc(100vh-8rem)]">
+    <div className="h-full">
       <RoomShell
         title={room?.title || "Untitled Room"}
         type="chat"
@@ -288,6 +292,8 @@ function RoomView() {
         canEdit={canManage}
         onCopyLink={handleCopyLink}
         onDelete={canManage ? handleDeleteRoom : undefined}
+        onSwitchView={handleSwitchView}
+        switchViewLabel="Switch to Classic View"
       />
 
       {/* Edit Message Drawer */}
