@@ -17,6 +17,7 @@ import {
   RoomShell,
 } from "@/components/Room"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
+import RoomDebugPanel from "@/components/Rooms/RoomDebugPanel"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomStream } from "@/hooks/useRoomStream"
@@ -64,6 +65,9 @@ function RoomView() {
   const [editingMessage, setEditingMessage] = useState<MessageViewModel | null>(
     null,
   )
+
+  // Debug panel state
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
 
   // Fetch available agents
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
@@ -203,6 +207,10 @@ function RoomView() {
     }
   }
 
+  const handleSwitchView = () => {
+    navigate({ to: "/room-v2/$roomId", params: { roomId } })
+  }
+
   // Loading state
   if (isLoadingRoom || isLoadingMessages) {
     return (
@@ -279,16 +287,32 @@ function RoomView() {
   ]
 
   return (
-    <div className="h-[calc(100vh-8rem)]">
-      <RoomShell
-        title={room?.title || "Untitled Room"}
-        type="chat"
-        participants={roomParticipants}
-        panels={panels}
-        canEdit={canManage}
-        onCopyLink={handleCopyLink}
-        onDelete={canManage ? handleDeleteRoom : undefined}
-      />
+    <div className="h-[calc(100vh-8rem)] flex">
+      <div className="flex-1 min-w-0">
+        <RoomShell
+          title={room?.title || "Untitled Room"}
+          type="chat"
+          participants={roomParticipants}
+          panels={panels}
+          canEdit={canManage}
+          onCopyLink={handleCopyLink}
+          onDelete={canManage ? handleDeleteRoom : undefined}
+          onSwitchView={handleSwitchView}
+          switchViewLabel="Switch to Classic View"
+          showDebugPanel={showDebugPanel}
+          onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
+        />
+      </div>
+
+      {/* Debug Panel */}
+      {showDebugPanel && (
+        <RoomDebugPanel
+          messages={messages}
+          streamingMessage={streamingMessage}
+          isConnected={isConnected}
+          activeAgents={activeAgents}
+        />
+      )}
 
       {/* Edit Message Drawer */}
       {editingMessage && (
