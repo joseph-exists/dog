@@ -379,10 +379,12 @@ async def handle_user_message(
                 )
 
                 # Trigger agents (within same transaction)
+                # Pass user_id so agents can use the user's API credentials
                 await run_agents_for_message(
                     room_id=room_id,
                     trigger_message=content,
                     session=session,
+                    user_id=user.id,
                 )
 
                 # Transaction commits here

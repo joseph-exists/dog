@@ -35,11 +35,24 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, ModelAPIError, RunContext
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.models.google import GoogleModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
+from pydantic_ai.providers.google import GoogleProvider
+from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AgentConfig, RoomParticipant
+from app.core.security import decrypt_api_key
+from app.models import (
+    AgentConfig,
+    LLMProviderType,
+    RoomParticipant,
+    UserAgentSettings,
+    UserLLMProvider,
+)
 from app.schemas.ag_ui import UIComponent, UIComponentType
 from app.services.context_provider import build_room_context
 from app.services.event_emitter import (
@@ -413,14 +426,138 @@ def is_agent_mentioned(
 # Agent Resolution and Instantiation
 # =============================================================================
 
+
 async def get_agent_config(session: AsyncSession, slug: str) -> AgentConfig | None:
-    """
-    Get agent configuration from database by slug.
-    """
+    """Get agent configuration from database by slug."""
     result = await session.execute(
         select(AgentConfig).where(AgentConfig.slug == slug)
     )
     return result.scalar_one_or_none()
+
+
+async def resolve_user_credentials(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    agent_config: AgentConfig,
+) -> tuple[str, str | None, LLMProviderType | None, str | None]:
+    """
+    Resolve user's credentials for an agent.
+
+    Returns:
+        Tuple of (effective_model_name, decrypted_api_key, provider_type, base_url)
+        - api_key will be None if user has no provider configured (use env vars)
+        - base_url will be None for standard providers, set for OpenAI-compatible
+    """
+    # 1. Check for model override in UserAgentSettings
+    settings_result = await session.execute(
+        select(UserAgentSettings).where(
+            UserAgentSettings.user_id == user_id,
+            UserAgentSettings.agent_config_id == agent_config.id,
+        )
+    )
+    settings = settings_result.scalar_one_or_none()
+
+    effective_model_name = agent_config.model_name
+    if settings and settings.model_name_override:
+        effective_model_name = settings.model_name_override
+        logger.debug(
+            f"Using model override '{effective_model_name}' for agent {agent_config.slug}"
+        )
+
+    # 2. Extract provider type from model name (e.g., "openai:gpt-4o" -> "openai")
+    provider_type_str = effective_model_name.split(":")[0] if ":" in effective_model_name else "openai"
+    try:
+        provider_type = LLMProviderType(provider_type_str)
+    except ValueError:
+        logger.warning(f"Unknown provider type '{provider_type_str}' in model '{effective_model_name}'")
+        return effective_model_name, None, None
+
+    # 3. Find user's provider - first check explicit setting, then default
+    provider: UserLLMProvider | None = None
+
+    if settings and settings.provider_id:
+        provider_result = await session.execute(
+            select(UserLLMProvider).where(
+                UserLLMProvider.id == settings.provider_id,
+                UserLLMProvider.is_enabled,
+            )
+        )
+        provider = provider_result.scalar_one_or_none()
+        if provider:
+            logger.debug(f"Using explicit provider '{provider.name}' for agent {agent_config.slug}")
+
+    if not provider:
+        # Fall back to user's default provider for this type
+        default_result = await session.execute(
+            select(UserLLMProvider).where(
+                UserLLMProvider.user_id == user_id,
+                UserLLMProvider.provider_type == provider_type,
+                UserLLMProvider.is_default,
+                UserLLMProvider.is_enabled,
+            )
+        )
+        provider = default_result.scalar_one_or_none()
+        if provider:
+            logger.debug(f"Using default provider '{provider.name}' for agent {agent_config.slug}")
+
+    if not provider:
+        # No user provider - will use environment variables
+        logger.debug(f"No user provider for agent {agent_config.slug}, using env vars")
+        return effective_model_name, None, provider_type, None
+
+    # 4. Decrypt API key and get base_url
+    api_key = decrypt_api_key(provider.api_key_encrypted)
+    base_url = provider.base_url
+    logger.debug(f"Resolved credentials: api_key=***{api_key[-4:] if api_key else 'None'}, base_url={base_url}")
+    return effective_model_name, api_key, provider_type, base_url
+
+
+def create_model_with_credentials(
+    model_name: str,
+    api_key: str | None,
+    provider_type: LLMProviderType | None,
+    base_url: str | None = None,
+) -> Any:
+    """
+    Create a PydanticAI model with user credentials.
+
+    Args:
+        model_name: Full model name (e.g., "openai:gpt-4o-mini")
+        api_key: User's decrypted API key (None = use env vars)
+        provider_type: Provider type enum
+        base_url: Custom base URL for OpenAI-compatible endpoints
+
+    Returns:
+        A PydanticAI Model instance, or the model_name string if no credentials
+    """
+    if not api_key:
+        # No user credentials - return model name string (PydanticAI will use env vars)
+        return model_name
+
+    # Extract model ID from full name (e.g., "openai:gpt-4o-mini" -> "gpt-4o-mini")
+    model_id = model_name.split(":", 1)[1] if ":" in model_name else model_name
+
+    if provider_type == LLMProviderType.OPENAI:
+        openai_provider = OpenAIProvider(api_key=api_key, base_url=base_url)
+        return OpenAIChatModel(model_id, provider=openai_provider)
+
+    elif provider_type == LLMProviderType.ANTHROPIC:
+        anthropic_provider = AnthropicProvider(api_key=api_key, base_url=base_url)
+        return AnthropicModel(model_id, provider=anthropic_provider)
+
+    elif provider_type == LLMProviderType.GOOGLE:
+        google_provider = GoogleProvider(api_key=api_key)
+        return GoogleModel(model_id, provider=google_provider)
+
+    elif provider_type == LLMProviderType.OPENAI_COMPATIBLE:
+        # OpenAI-compatible endpoints (Ollama, vLLM, Azure, etc.)
+        compat_provider = OpenAIProvider(api_key=api_key, base_url=base_url)
+        return OpenAIChatModel(model_id, provider=compat_provider)
+
+    else:
+        # Unknown provider type - fall back to model name string
+        logger.warning(f"Unknown provider type {provider_type}, using model name directly")
+        return model_name
 
 
 async def get_agent_instance(session: AsyncSession, slug: str) -> Agent[Any, Any] | None:
@@ -447,6 +584,7 @@ async def get_agent_instance(session: AsyncSession, slug: str) -> Agent[Any, Any
 async def get_agent_instance_with_tools(
     session: AsyncSession,
     slug: str,
+    user_id: uuid.UUID | None = None,
     enable_a2a_tool: bool = True,
     enable_ag_ui_tool: bool = True,
 ) -> Agent[AgentDeps, str] | None:
@@ -457,9 +595,14 @@ async def get_agent_instance_with_tools(
     - Use request_agent_assistance to communicate with other agents (A2A)
     - Use emit_ui_component to create rich UI elements (AG-UI)
 
+    When user_id is provided, resolves the user's API credentials and model
+    overrides for this agent. Falls back to environment variables if no
+    user provider is configured.
+
     Args:
         session: Async database session
         slug: Agent slug
+        user_id: Optional user ID for credential resolution
         enable_a2a_tool: Whether to include the request_agent_assistance tool
         enable_ag_ui_tool: Whether to include the emit_ui_component tool
 
@@ -473,6 +616,23 @@ async def get_agent_instance_with_tools(
 
     system_prompt = config.system_prompt or f"You are {config.name}. {config.description}"
 
+    # Resolve model and credentials
+    if user_id:
+        effective_model_name, api_key, provider_type, base_url = await resolve_user_credentials(
+            session, user_id, config
+        )
+        model = create_model_with_credentials(
+            effective_model_name, api_key, provider_type, base_url
+        )
+        logger.debug(
+            f"Resolved credentials for agent {config.slug}: "
+            f"model={effective_model_name}, has_api_key={api_key is not None}, base_url={base_url}"
+        )
+    else:
+        # No user - use model name directly (env vars)
+        model = config.model_name
+        effective_model_name = config.model_name
+
     # Build list of tools
     tools: list[Any] = []
     if enable_a2a_tool:
@@ -482,14 +642,14 @@ async def get_agent_instance_with_tools(
 
     # Create agent with tools and deps type
     agent: Agent[AgentDeps, str] = Agent(
-        config.model_name,
+        model,
         system_prompt=system_prompt,
         tools=tools,
         deps_type=AgentDeps,
     )
 
     logger.debug(
-        f"Instantiated agent {config.slug} with model {config.model_name} "
+        f"Instantiated agent {config.slug} with model {effective_model_name} "
         f"and {len(tools)} tool(s)"
     )
     return agent
@@ -968,6 +1128,7 @@ async def run_agent_for_room_streaming(
     agent_name: str,
     trigger_message: str,
     session: AsyncSession,
+    user_id: uuid.UUID | None = None,
     a2a_depth: int = 0,
 ) -> dict[str, Any]:
     """
@@ -994,6 +1155,7 @@ async def run_agent_for_room_streaming(
         agent_name: Name/slug of the agent to run
         trigger_message: The message that triggered the agent
         session: Async database session
+        user_id: User ID for resolving API credentials (None = use env vars)
         a2a_depth: Current depth in A2A chain (0 = user-triggered, default)
 
     Returns:
@@ -1017,8 +1179,10 @@ async def run_agent_for_room_streaming(
             message_limit=20,
         )
 
-        # Get agent instance with A2A tools
-        agent = await get_agent_instance_with_tools(session, agent_name, enable_a2a_tool=True)
+        # Get agent instance with A2A tools and user credentials
+        agent = await get_agent_instance_with_tools(
+            session, agent_name, user_id=user_id, enable_a2a_tool=True
+        )
         if not agent:
             return {
                 "agent_name": agent_name,
@@ -1037,6 +1201,14 @@ async def run_agent_for_room_streaming(
 
         # Build prompt with context (pass agent_name to exclude from other agents list)
         full_prompt = build_agent_prompt(trigger_message, context, current_agent_slug=agent_name)
+
+        # Debug logging - show what we're sending to the LLM
+        logger.debug(
+            f"Agent {agent_name} making LLM call:\n"
+            f"  Model: {agent.model}\n"
+            f"  Prompt length: {len(full_prompt)} chars\n"
+            f"  Prompt preview: {full_prompt[:500]}..."
+        )
 
         # Run agent with streaming
         # NOTE: stream_text() yields CUMULATIVE text (full message so far), not deltas
@@ -1107,9 +1279,42 @@ async def run_agent_for_room_streaming(
             "ui_components": ui_components_data if ui_components_data else None,
         }
 
-    except Exception as e:
-        logger.error(f"Agent {agent_name} streaming error in room {room_id}: {e}")
+    except ModelAPIError as e:
+        # PydanticAI model API error - includes details from the provider
+        logger.error(
+            f"Agent {agent_name} API error in room {room_id}:\n"
+            f"  Error: {e}\n"
+            f"  Status: {getattr(e, 'status_code', 'N/A')}\n"
+            f"  Body: {getattr(e, 'body', 'N/A')}",
+            exc_info=True,
+        )
+        error_content = f"API Error: {e}"
 
+        try:
+            await emit_event(
+                session=session,
+                room_id=room_id,
+                event_type="room_message.agent",
+                payload={
+                    "agent_name": agent_name,
+                    "content": error_content,
+                },
+            )
+        except Exception as emit_error:
+            logger.error(f"Failed to emit error message: {emit_error}")
+
+        return {
+            "agent_name": agent_name,
+            "content": error_content,
+            "success": False,
+            "error": str(e),
+        }
+
+    except Exception as e:
+        logger.error(
+            f"Agent {agent_name} streaming error in room {room_id}: {e}",
+            exc_info=True,  # This logs the full traceback
+        )
         error_content = "I encountered an error while processing your request."
 
         try:
@@ -1142,6 +1347,7 @@ async def run_agents_for_message(
     room_id: uuid.UUID,
     trigger_message: str,
     session: AsyncSession,
+    user_id: uuid.UUID | None = None,
 ) -> list[dict[str, Any]]:
     """
     Run agents in a room that should respond to a message based on participation mode.
@@ -1164,6 +1370,7 @@ async def run_agents_for_message(
         room_id: UUID of the room
         trigger_message: The message that triggered agents
         session: Async database session (transaction managed by caller)
+        user_id: User ID for resolving API credentials (None = use env vars)
 
     Returns:
         List of agent response dicts (one per agent that ran)
@@ -1216,6 +1423,7 @@ async def run_agents_for_message(
             agent_name=agent_slug,
             trigger_message=trigger_message,
             session=session,
+            user_id=user_id,
         )
         responses.append(response)
 
@@ -1240,6 +1448,7 @@ async def run_agents_for_message(
             agent_name=agent_slug,
             trigger_message=trigger_message,
             session=session,
+            user_id=user_id,
         )
         responses.append(response)
 

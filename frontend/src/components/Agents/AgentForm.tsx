@@ -10,9 +10,10 @@
  * - Participation mode selector
  */
 
-import { ChevronDownIcon, Loader2 } from "lucide-react"
+import { ChevronDownIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import ModelCombobox from "@/components/Agents/providers/ModelCombobox"
 import {
   Collapsible,
   CollapsibleContent,
@@ -23,17 +24,13 @@ import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import useLlmCatalog from "@/hooks/useLlmCatalog"
 import { cn } from "@/lib/utils"
 import type { AgentViewModel, ParticipationMode } from "@/services/agentService"
-import type { LLMProviderType } from "@/services/llmCatalogService"
 
 // Participation modes
 const PARTICIPATION_MODES = [
@@ -94,14 +91,6 @@ export default function AgentForm({
   isEditMode = false,
   className,
 }: AgentFormProps) {
-  // LLM Catalog data
-  const {
-    modelsByProvider,
-    allModels,
-    isLoading: catalogLoading,
-    getProviderLabel,
-  } = useLlmCatalog()
-
   const [name, setName] = useState(initialData?.name || "")
   const [slug, setSlug] = useState(initialData?.slug || "")
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
@@ -208,47 +197,14 @@ export default function AgentForm({
       {/* Model Selector */}
       <div className="space-y-2">
         <Label htmlFor="agent-model">Model</Label>
-        <Select
+        <ModelCombobox
           value={modelName}
-          onValueChange={setModelName}
-          disabled={catalogLoading}
-        >
-          <SelectTrigger id="agent-model" className="w-full">
-            {catalogLoading ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="size-4 animate-spin" />
-                <span>Loading models...</span>
-              </div>
-            ) : (
-              <SelectValue placeholder="Select a model" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {(
-              Object.entries(modelsByProvider) as [
-                LLMProviderType,
-                typeof allModels,
-              ][]
-            ).map(
-              ([providerType, models]) =>
-                models.length > 0 && (
-                  <SelectGroup key={providerType}>
-                    <SelectLabel>{getProviderLabel(providerType)}</SelectLabel>
-                    {models.map((model) => (
-                      <SelectItem key={model.value} value={model.value}>
-                        <div className="flex flex-col">
-                          <span>{model.label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {model.description}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ),
-            )}
-          </SelectContent>
-        </Select>
+          onChange={setModelName}
+          placeholder="Select a model..."
+        />
+        <p className="text-xs text-muted-foreground">
+          Search catalog models or add a custom model
+        </p>
       </div>
 
       {/* System Prompt */}

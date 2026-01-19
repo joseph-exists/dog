@@ -921,6 +921,153 @@ export const JumpRequestSchema = {
 Used by jump endpoint to specify target and optimistic concurrency check.`
 } as const;
 
+export const LLMModelCreateSchema = {
+    properties: {
+        model_id: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Model Id',
+            description: "Model identifier (e.g., 'gpt-4o', no provider prefix)"
+        },
+        display_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Display Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        context_window: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Window',
+            description: 'Max tokens in context window'
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System',
+            description: 'system model',
+            default: false
+        },
+        is_default: {
+            type: 'boolean',
+            title: 'Is Default',
+            description: 'Default/cheapest model for this provider',
+            default: false
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether model is available for use',
+            default: true
+        },
+        is_deprecated: {
+            type: 'boolean',
+            title: 'Is Deprecated',
+            description: 'Model is deprecated (still works)',
+            default: false
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Display ordering within provider',
+            default: 0
+        },
+        has_vision: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Vision',
+            description: 'Supports image input'
+        },
+        has_function_calling: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Function Calling',
+            description: 'Supports function/tool calling'
+        },
+        has_streaming: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Streaming',
+            description: 'Supports streaming responses'
+        },
+        has_json_mode: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Json Mode',
+            description: 'Supports JSON output mode'
+        },
+        secondary_capabilities: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Secondary Capabilities',
+            description: 'Additional capability flags as JSON'
+        },
+        provider_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Provider Id'
+        }
+    },
+    type: 'object',
+    required: ['model_id', 'provider_id'],
+    title: 'LLMModelCreate',
+    description: 'Input model for creating a model catalog entry.'
+} as const;
+
 export const LLMModelPublicSchema = {
     properties: {
         model_id: {
@@ -958,6 +1105,10 @@ export const LLMModelPublicSchema = {
             ],
             title: 'Context Window',
             description: 'Max tokens in context window'
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System'
         },
         is_default: {
             type: 'boolean',
@@ -1115,7 +1266,7 @@ export const LLMModelPublicSchema = {
         }
     },
     type: 'object',
-    required: ['model_id', 'display_name', 'id', 'provider_id', 'deprecated_at', 'sunset_at', 'is_deleted', 'created_at', 'updated_at'],
+    required: ['model_id', 'display_name', 'is_system', 'id', 'provider_id', 'deprecated_at', 'sunset_at', 'is_deleted', 'created_at', 'updated_at'],
     title: 'LLMModelPublic',
     description: 'Public API response for a model catalog entry.'
 } as const;

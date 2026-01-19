@@ -1,0 +1,28 @@
+
+: Public vs Private vs Friends vs Groups
+: every element can be completely private (ie only that user sees it)
+: if page is set to private then a default private page is shown (not user specific)
+: if public element then visible to all other users
+: if friends element then only visible to friends
+: if groups, then user can select, on a per-element basis, a set of users that can see
+
+Page
+├── Metadata
+│   ├── Slug/URL (required)
+│   ├── Created timestamp (required)
+│   └── Last updated (auto-managed)
+│
+├── Identity
+│   ├── Name (required)
+│   ├── Avatar (optional)
+│   └── Tagline (optional)
+│
+├── About
+│   └── Bio (optional - container exists but can be empty)
+│
+├── Presence
+│   ├── Contact (optional)
+│   └── Links (optional array)
+│
+└── Content
+    └── (optional array of content blocks/sections)

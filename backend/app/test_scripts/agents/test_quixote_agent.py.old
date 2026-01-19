@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+
+NOTE: WANT TO REUSE THIS TEST SCRIPT WITH NEW AGENT REGISTRY
 Test Script for Quixote Storytelling Agent
 
 This script tests the Quixote agent by:

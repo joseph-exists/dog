@@ -163,47 +163,6 @@ class AgentRegistryService:
          )
          self._invalidate_cache(slug)
          return updated
-# lets remove this as quick as we can :)
-     def bootstrap_system_agents(self, session: Session) -> None:
-         """Ensure system agents exist. Called on startup."""
-         system_agents = [
-             AgentConfigCreate(
-                 slug="StoryAdvisor",
-                 name="Story Advisor",
-                 description="Helps with story structure, pacing, and narrative flow",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="CharacterForge",
-                 name="Character Forge",
-                 description="Character development, motivations, and arcs",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="SymbolWeaver",
-                 name="Symbol Weaver",
-                 description="Explores themes, symbolism, and deeper meanings",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="PlotTwistArchitect",
-                 name="Plot Twist Architect",
-                 description="Crafts plot twists and narrative surprises",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="DialogueCoach",
-                 name="Dialogue Coach",
-                 description="Refines character voice and conversation flow",
-                 scope="system",
-             ),
-         ]
-
-         for agent_def in system_agents:
-             existing = crud.get_agent_config_by_slug(session=session, slug=agent_def.slug)
-             if not existing:
-                 crud.create_agent_config(session=session, agent_in=agent_def)
-                 logger.info(f"Bootstrapped system agent: {agent_def.slug}")
 
      def _get_config(self, session: Session, slug: str) -> AgentConfig | None:
          if slug in self._config_cache:
@@ -310,8 +269,8 @@ class AgentRegistryService:
              default_stmt = select(UserLLMProvider).where(
                  UserLLMProvider.user_id == user_id,
                  UserLLMProvider.provider_type == provider_type,
-                 UserLLMProvider.is_default == True,
-                 UserLLMProvider.is_enabled == True,
+                 UserLLMProvider.is_default,
+                 UserLLMProvider.is_enabled,
              )
              provider = session.exec(default_stmt).first()
              if provider:

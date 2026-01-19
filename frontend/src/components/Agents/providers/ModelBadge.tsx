@@ -158,9 +158,7 @@ export function ModelBadgeCompact({
   return (
     <span className={cn("inline-flex items-center gap-1", className)}>
       <span className="truncate">{displayName}</span>
-      {isCustom && (
-        <Sparkles className="size-3 text-primary shrink-0" />
-      )}
+      {isCustom && <Sparkles className="size-3 text-primary shrink-0" />}
     </span>
   )
 }

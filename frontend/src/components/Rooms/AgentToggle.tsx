@@ -16,9 +16,9 @@ import { handleError } from "@/utils"
 type DisplayMode = "names" | "ids" | "avatars" | "all"
 
 /**
- * Format UUID for display (first 8 characters)
+ * Format UUID for compact display (first 8 characters)
  */
-function formatUuid(uuid: string): string {
+function formatUuidShort(uuid: string): string {
   return uuid.slice(0, 8)
 }
 
@@ -58,8 +58,8 @@ export default function AgentToggle({
     switch (displayMode) {
       case "ids":
         return (
-          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-            {formatUuid(agentId)}
+          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono break-all">
+            {agentId}
           </code>
         )
       case "all":
@@ -67,11 +67,10 @@ export default function AgentToggle({
           <div className="flex flex-col">
             <span className="text-sm">🤖 {agentName}</span>
             <code className="text-[10px] text-muted-foreground font-mono">
-              {formatUuid(agentId)}
+              {formatUuidShort(agentId)}
             </code>
           </div>
         )
-      case "names":
       default:
         return <span className="text-sm">🤖 {agentName}</span>
     }

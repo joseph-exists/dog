@@ -1,8 +1,9 @@
 """Tests for Context Provider Service."""
-import pytest
 from uuid import uuid4
 
-from app.services.context_provider import build_room_context, RoomContext
+import pytest
+
+from app.services.context_provider import RoomContext, build_room_context
 
 
 class TestContextProvider:

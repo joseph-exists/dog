@@ -9,7 +9,6 @@
  * - Recently used models (future)
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Check, ChevronsUpDown, Loader2, Plus, Sparkles } from "lucide-react"
 import { useState } from "react"
 
@@ -32,11 +31,7 @@ import {
 } from "@/components/ui/popover"
 import useLlmCatalog from "@/hooks/useLlmCatalog"
 import { cn } from "@/lib/utils"
-import {
-  LLM_CATALOG_QUERY_KEYS,
-  type LLMProviderType,
-  type ModelOption,
-} from "@/services/llmCatalogService"
+import type { LLMProviderType, ModelOption } from "@/services/llmCatalogService"
 
 interface ModelComboboxProps {
   /** Currently selected model value (e.g., "openai:gpt-4o") */
@@ -107,14 +102,14 @@ export default function ModelCombobox({
   className,
   popoverWidth = "w-[350px]",
 }: ModelComboboxProps) {
-  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [newModelId, setNewModelId] = useState("")
   const [newDisplayName, setNewDisplayName] = useState("")
+  const [createError, setCreateError] = useState<string | null>(null)
 
-  // Get catalog data
+  // Get catalog data and createCustomModel from hook
   const {
     modelsByProvider,
     allModels,
@@ -122,6 +117,8 @@ export default function ModelCombobox({
     findModel,
     formatModelName,
     getProviderLabel,
+    createCustomModel,
+    isCreatingCustomModel,
   } = useLlmCatalog()
 
   // Filter models by provider type if specified
@@ -141,28 +138,6 @@ export default function ModelCombobox({
       m.label.toLowerCase() === searchLower,
   )
 
-  // Create custom model mutation (placeholder - will be connected to backend)
-  const createModelMutation = useMutation({
-    mutationFn: async (data: { modelId: string; displayName: string; providerType: LLMProviderType }) => {
-      // TODO: Connect to actual backend endpoint when available
-      // For now, we'll just use the model ID directly
-      // return LlmCatalogService.createCustomModel(data)
-      return { value: `${data.providerType}:${data.modelId}`, label: data.displayName }
-    },
-    onSuccess: (result) => {
-      // Invalidate catalog cache
-      queryClient.invalidateQueries({ queryKey: LLM_CATALOG_QUERY_KEYS.all })
-      // Select the new model
-      onChange(result.value)
-      // Reset state
-      setIsCreating(false)
-      setNewModelId("")
-      setNewDisplayName("")
-      setSearchQuery("")
-      setOpen(false)
-    },
-  })
-
   // Handle starting the create flow
   const handleStartCreate = () => {
     setNewModelId(searchQuery)
@@ -171,15 +146,32 @@ export default function ModelCombobox({
   }
 
   // Handle creating the custom model
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newModelId.trim()) return
 
     const effectiveProviderType = providerType || "openai_compatible"
-    createModelMutation.mutate({
-      modelId: newModelId.trim(),
-      displayName: newDisplayName.trim() || suggestDisplayName(newModelId),
-      providerType: effectiveProviderType,
-    })
+    setCreateError(null)
+
+    try {
+      const result = await createCustomModel({
+        modelId: newModelId.trim(),
+        displayName: newDisplayName.trim() || suggestDisplayName(newModelId),
+        providerType: effectiveProviderType,
+      })
+
+      // Select the new model
+      onChange(result.value)
+      // Reset state
+      setIsCreating(false)
+      setNewModelId("")
+      setNewDisplayName("")
+      setSearchQuery("")
+      setOpen(false)
+    } catch (error) {
+      setCreateError(
+        error instanceof Error ? error.message : "Failed to create model",
+      )
+    }
   }
 
   // Handle selecting a model
@@ -220,7 +212,9 @@ export default function ModelCombobox({
           ) : (
             <>
               <span className="flex items-center gap-2 truncate">
-                {value ? displayValue : (
+                {value ? (
+                  displayValue
+                ) : (
                   <span className="text-muted-foreground">{placeholder}</span>
                 )}
                 {value && selectedModel?.isDefault && (
@@ -281,6 +275,10 @@ export default function ModelCombobox({
               </div>
             </div>
 
+            {createError && (
+              <p className="text-xs text-destructive">{createError}</p>
+            )}
+
             <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
@@ -293,10 +291,10 @@ export default function ModelCombobox({
               <Button
                 size="sm"
                 onClick={handleCreate}
-                disabled={!newModelId.trim() || createModelMutation.isPending}
+                disabled={!newModelId.trim() || isCreatingCustomModel}
                 className="flex-1"
               >
-                {createModelMutation.isPending ? (
+                {isCreatingCustomModel ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   "Add Model"
@@ -327,8 +325,8 @@ export default function ModelCombobox({
                   >
                     <Plus className="size-4 text-primary" />
                     <span>
-                      Add "<span className="font-medium">{searchQuery}</span>" as
-                      custom model
+                      Add "<span className="font-medium">{searchQuery}</span>"
+                      as custom model
                     </span>
                   </button>
                 </div>
@@ -402,7 +400,8 @@ export default function ModelCombobox({
                         >
                           <Plus className="size-4" />
                           <span>
-                            Add "<span className="font-medium">{searchQuery}</span>"
+                            Add "
+                            <span className="font-medium">{searchQuery}</span>"
                             as custom model
                           </span>
                         </button>

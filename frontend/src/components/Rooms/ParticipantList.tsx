@@ -56,9 +56,9 @@ function getInitials(name: string): string {
 }
 
 /**
- * Format UUID for display (first 8 characters)
+ * Format UUID for compact display (first 8 characters)
  */
-function formatUuid(uuid: string): string {
+function formatUuidShort(uuid: string): string {
   return uuid.slice(0, 8)
 }
 
@@ -76,7 +76,10 @@ function ParticipantDisplay({
 }) {
   const avatar = (
     <Avatar className="h-6 w-6">
-      <AvatarImage src={participant.avatar_url} alt={participant.display_name} />
+      <AvatarImage
+        src={participant.avatar_url}
+        alt={participant.display_name}
+      />
       <AvatarFallback className="text-xs">
         {isAgent ? "🤖" : getInitials(participant.display_name)}
       </AvatarFallback>
@@ -88,9 +91,7 @@ function ParticipantDisplay({
       return (
         <TooltipProvider delayDuration={200}>
           <Tooltip>
-            <TooltipTrigger asChild>
-              {avatar}
-            </TooltipTrigger>
+            <TooltipTrigger asChild>{avatar}</TooltipTrigger>
             <TooltipContent side="top">
               <p>{participant.display_name}</p>
             </TooltipContent>
@@ -103,15 +104,12 @@ function ParticipantDisplay({
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                {formatUuid(participant.participant_id)}
+              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono break-all">
+                {participant.participant_id}
               </code>
             </TooltipTrigger>
             <TooltipContent side="top">
               <p>{participant.display_name}</p>
-              <p className="text-xs text-muted-foreground font-mono">
-                {participant.participant_id}
-              </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -122,19 +120,21 @@ function ParticipantDisplay({
         <div className="flex items-center gap-2">
           {avatar}
           <div className="flex flex-col">
-            <span className="text-sm">{isAgent && "🤖 "}{participant.display_name}</span>
+            <span className="text-sm">
+              {isAgent && "🤖 "}
+              {participant.display_name}
+            </span>
             <code className="text-[10px] text-muted-foreground font-mono">
-              {formatUuid(participant.participant_id)}
+              {formatUuidShort(participant.participant_id)}
             </code>
           </div>
         </div>
       )
-
-    case "names":
     default:
       return (
         <span className="text-sm">
-          {isAgent && "🤖 "}{participant.display_name}
+          {isAgent && "🤖 "}
+          {participant.display_name}
         </span>
       )
   }
@@ -181,10 +181,12 @@ export default function ParticipantList({
         </Select>
       </div>
 
-      <div className={cn(
-        "flex flex-col gap-2 text-sm",
-        isAvatarMode && "flex-row flex-wrap items-center"
-      )}>
+      <div
+        className={cn(
+          "flex flex-col gap-2 text-sm",
+          isAvatarMode && "flex-row flex-wrap items-center",
+        )}
+      >
         {/* Users section */}
         {activeUsers.length > 0 && (
           <>
@@ -198,7 +200,7 @@ export default function ParticipantList({
                 key={p.participant_id}
                 className={cn(
                   "flex items-center gap-2",
-                  !isAvatarMode && "justify-between w-full"
+                  !isAvatarMode && "justify-between w-full",
                 )}
               >
                 <ParticipantDisplay
@@ -206,14 +208,16 @@ export default function ParticipantList({
                   displayMode={displayMode}
                   isAgent={false}
                 />
-                {!isAvatarMode && currentUserRole === "owner" && onRemoveParticipant && (
-                  <RemoveParticipantButton
-                    participantId={p.participant_id}
-                    participantName={p.display_name}
-                    participantType="user"
-                    onRemove={onRemoveParticipant}
-                  />
-                )}
+                {!isAvatarMode &&
+                  currentUserRole === "owner" &&
+                  onRemoveParticipant && (
+                    <RemoveParticipantButton
+                      participantId={p.participant_id}
+                      participantName={p.display_name}
+                      participantType="user"
+                      onRemove={onRemoveParticipant}
+                    />
+                  )}
               </div>
             ))}
           </>

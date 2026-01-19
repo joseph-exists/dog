@@ -217,6 +217,65 @@ export type JumpRequest = {
 };
 
 /**
+ * Input model for creating a model catalog entry.
+ */
+export type LLMModelCreate = {
+    /**
+     * Model identifier (e.g., 'gpt-4o', no provider prefix)
+     */
+    model_id: string;
+    display_name?: (string | null);
+    description?: (string | null);
+    /**
+     * Max tokens in context window
+     */
+    context_window?: (number | null);
+    /**
+     * system model
+     */
+    is_system?: boolean;
+    /**
+     * Default/cheapest model for this provider
+     */
+    is_default?: boolean;
+    /**
+     * Whether model is available for use
+     */
+    is_enabled?: boolean;
+    /**
+     * Model is deprecated (still works)
+     */
+    is_deprecated?: boolean;
+    /**
+     * Display ordering within provider
+     */
+    sort_order?: number;
+    /**
+     * Supports image input
+     */
+    has_vision?: (boolean | null);
+    /**
+     * Supports function/tool calling
+     */
+    has_function_calling?: (boolean | null);
+    /**
+     * Supports streaming responses
+     */
+    has_streaming?: (boolean | null);
+    /**
+     * Supports JSON output mode
+     */
+    has_json_mode?: (boolean | null);
+    /**
+     * Additional capability flags as JSON
+     */
+    secondary_capabilities?: ({
+    [key: string]: unknown;
+} | null);
+    provider_id: string;
+};
+
+/**
  * Public API response for a model catalog entry.
  */
 export type LLMModelPublic = {
@@ -233,6 +292,7 @@ export type LLMModelPublic = {
      * Max tokens in context window
      */
     context_window?: (number | null);
+    is_system: boolean;
     /**
      * Default/cheapest model for this provider
      */
@@ -1631,6 +1691,21 @@ export type LlmCatalogListProviderModelsData = {
 };
 
 export type LlmCatalogListProviderModelsResponse = (LLMModelsPublic);
+
+export type LlmCatalogCreateCustomModelData = {
+    requestBody: LLMModelCreate;
+};
+
+export type LlmCatalogCreateCustomModelResponse = (LLMModelPublic);
+
+export type LlmCatalogListCustomModelsData = {
+    /**
+     * Filter by provider type
+     */
+    providerType?: (LLMProviderType | null);
+};
+
+export type LlmCatalogListCustomModelsResponse = (LLMModelsPublic);
 
 export type LlmCatalogListModelsData = {
     /**

@@ -22,6 +22,7 @@ import {
   LLM_CATALOG_QUERY_KEYS,
   type LLMProviderType,
   LlmCatalogService,
+  type ModelDisplayInfo,
   type ModelOption,
   PROVIDER_TYPE_LABELS,
 } from "@/services/llmCatalogService"
@@ -69,6 +70,8 @@ export interface UseLlmCatalogReturn {
   isInCatalog: (value: string) => boolean
   /** Check if a model value is a custom (non-catalog) model */
   isCustomModel: (value: string) => boolean
+  /** Get display info for a model with graceful fallback */
+  getModelDisplayInfo: (value: string) => ModelDisplayInfo
   /** Create a custom model (mutation) */
   createCustomModel: (input: CreateCustomModelInput) => Promise<ModelOption>
   /** Whether custom model creation is in progress */
@@ -95,20 +98,33 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
     ...CATALOG_QUERY_OPTIONS,
   })
 
-  // Custom model creation mutation
-  // TODO: Connect to actual backend endpoint when available
+  // Custom model creation mutation - connected to backend
   const createMutation = useMutation({
     mutationFn: async (input: CreateCustomModelInput): Promise<ModelOption> => {
-      // For now, create a local ModelOption
-      // When backend is ready, this will call:
-      // await LlmCatalogService.createCustomModel(input)
-      const modelValue = `${input.providerType}:${input.modelId}`
+      // Find the provider ID for the given provider type
+      const provider = grouped?.providers.find(
+        (p) => p.providerType === input.providerType,
+      )
+      if (!provider) {
+        throw new Error(`No provider found for type: ${input.providerType}`)
+      }
+
+      // Create the model via backend
+      const model = await LlmCatalogService.createCustomModel({
+        modelId: input.modelId,
+        displayName: input.displayName,
+        providerId: provider.id,
+        description: input.description,
+      })
+
+      // Transform to ModelOption format
       return {
-        value: modelValue,
-        label: input.displayName,
-        description: input.description || "",
+        value: `${input.providerType}:${model.modelId}`,
+        label: model.displayName,
+        description: model.description || "",
         provider: input.providerType,
         isDefault: false,
+        isSystem: false,
       }
     },
     onSuccess: () => {
@@ -171,7 +187,13 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
 
     isInCatalog,
 
-    isCustomModel: (value: string) => !isInCatalog(value),
+    isCustomModel: (value: string) => {
+      const model = allModels.find((m) => m.value === value)
+      return model ? model.isSystem === false : true
+    },
+
+    getModelDisplayInfo: (value: string) =>
+      LlmCatalogService.getModelDisplayInfo(value, allModels),
 
     createCustomModel: (input: CreateCustomModelInput) =>
       createMutation.mutateAsync(input),
@@ -193,6 +215,7 @@ function modelToOption(
     description: model.description || "",
     provider: providerType,
     isDefault: model.isDefault,
+    isSystem: model.isSystem,
     capabilities: {
       vision: model.hasVision,
       functionCalling: model.hasFunctionCalling,

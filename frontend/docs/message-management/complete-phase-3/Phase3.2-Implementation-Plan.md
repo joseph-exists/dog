@@ -71,12 +71,6 @@ This document provides a detailed, step-by-step implementation plan for Phase 3.
 - ✅ `/_layout/rooms.tsx` - Room list view
 
 #### **Available Agents (Backend)**
-From `backend/app/agents/__init__.py`:
-1. `StoryAdvisor`
-2. `SymbolWeaver`
-3. `CharacterForge`
-4. `PlotTwistArchitect`
-5. `DialogueCoach`
 
 ### ❌ What Needs to Be Built
 
@@ -127,10 +121,6 @@ Currently, `transformMessage()` and `transformParticipant()` use placeholder nam
 - Existing service layer architecture
 - Existing utility functions (`enrichMessagesWithUserNames`, `enrichParticipantsWithUserProfiles`)
 - Existing transformation functions (keep them pure, no modifications needed)
-
-#### Enables
-- Phase 3.2 deliverable #6 (usernames and agent names displayed with messages)
-- Better UX for participant list
 
 ---
 

@@ -3018,7 +3018,7 @@ def create_user_model(
     model_in: LLMModelCreate,
 ) -> LLMModel:
     """Create a user-owned custom model."""
-    data = model_in.model_dump(exclude={"provider_id"})
+    data = model_in.model_dump(exclude={"provider_id", "is_system"})
 
     # Auto-generate display_name if not provided
     if not data.get("display_name"):

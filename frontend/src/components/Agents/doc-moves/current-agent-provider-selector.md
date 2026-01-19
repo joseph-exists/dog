@@ -22,14 +22,3 @@ If a User makes an agent available to share publicly for other users to use or c
 
 Changing a model for an agent calls a ShadowClone and version update on that agent. (don't worry about this in the design, we will leave notes in the code.)
 
-currently in models.py
-```python
-class LLMProviderType(str, Enum):
-    """Supported LLM provider types."""
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GOOGLE = "google"
-    OPENAI_COMPATIBLE = "openai_compatible"  # For Ollama, vLLM, Azure, proxies
-
-
-```

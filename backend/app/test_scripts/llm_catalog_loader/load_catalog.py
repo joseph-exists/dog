@@ -80,7 +80,7 @@ def load_providers(
             existing = session.exec(
                 select(LLMProvider).where(
                     LLMProvider.name == name,
-                    LLMProvider.is_deleted == False
+                    not LLMProvider.is_deleted,
                 )
             ).first()
 
@@ -174,6 +174,7 @@ def load_models(
                 is_default=parse_bool(row.get("is_default", "false")) or False,
                 is_enabled=parse_bool(row.get("is_enabled", "true")),
                 is_deprecated=False,
+                is_system=True,  # Catalog-seeded models are system models
                 sort_order=parse_int(row.get("sort_order")) or 0,
                 has_vision=parse_bool(row.get("has_vision")),
                 has_function_calling=parse_bool(row.get("has_function_calling")),

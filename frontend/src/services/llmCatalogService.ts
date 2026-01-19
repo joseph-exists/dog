@@ -44,6 +44,8 @@ export interface ModelOption {
   provider: LLMProviderType
   /** Whether this is the default model for the provider */
   isDefault?: boolean
+  /** Whether this is a system (catalog) model vs user-created */
+  isSystem?: boolean
   /** Model capabilities */
   capabilities?: {
     vision: boolean | null
@@ -53,6 +55,18 @@ export interface ModelOption {
   }
   /** Context window size */
   contextWindow?: number | null
+}
+
+/**
+ * Display info for a model - used for graceful fallback display
+ */
+export interface ModelDisplayInfo {
+  /** Display label */
+  label: string
+  /** Whether this is a custom (user-created) model */
+  isCustom: boolean
+  /** Whether this model is deprecated */
+  isDeprecated: boolean
 }
 
 /**
@@ -84,6 +98,7 @@ export interface CatalogModelViewModel {
   isDefault: boolean
   isEnabled: boolean
   isDeprecated: boolean
+  isSystem: boolean
   sortOrder: number
   hasVision: boolean | null
   hasFunctionCalling: boolean | null
@@ -161,6 +176,7 @@ function transformModel(model: LLMModelPublic): CatalogModelViewModel {
     isDefault: model.is_default ?? false,
     isEnabled: model.is_enabled ?? true,
     isDeprecated: model.is_deprecated ?? false,
+    isSystem: model.is_system ?? true,
     sortOrder: model.sort_order ?? 0,
     hasVision: model.has_vision ?? null,
     hasFunctionCalling: model.has_function_calling ?? null,
@@ -207,6 +223,7 @@ function modelToOption(
     description: model.description || "",
     provider: providerType,
     isDefault: model.isDefault,
+    isSystem: model.isSystem,
     capabilities: {
       vision: model.hasVision,
       functionCalling: model.hasFunctionCalling,
@@ -418,6 +435,70 @@ export const LlmCatalogService = {
       .replace(/-/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase())
   },
+
+  // ==========================================================================
+  // Custom Model Operations (Authenticated)
+  // ==========================================================================
+
+  /**
+   * Create a custom model for the current user
+   */
+  async createCustomModel(data: {
+    modelId: string
+    displayName?: string
+    providerId: string
+    description?: string
+  }): Promise<CatalogModelViewModel> {
+    const response = await ApiCatalogService.createCustomModel({
+      requestBody: {
+        model_id: data.modelId,
+        display_name: data.displayName || data.modelId,
+        provider_id: data.providerId,
+        description: data.description,
+      },
+    })
+    return transformModel(response)
+  },
+
+  /**
+   * List current user's custom models
+   */
+  async listCustomModels(options?: {
+    providerType?: LLMProviderType
+  }): Promise<CatalogModelViewModel[]> {
+    const response = await ApiCatalogService.listCustomModels({
+      providerType: options?.providerType,
+    })
+    return response.data.map(transformModel)
+  },
+
+  // ==========================================================================
+  // Display Helpers
+  // ==========================================================================
+
+  /**
+   * Get display info for a model value, with graceful fallback
+   * Returns label, isCustom, and isDeprecated for UI rendering
+   */
+  getModelDisplayInfo(
+    modelValue: string,
+    catalog: ModelOption[],
+  ): ModelDisplayInfo {
+    const match = catalog.find((m) => m.value === modelValue)
+    if (match) {
+      return {
+        label: match.label,
+        isCustom: match.isSystem === false,
+        isDeprecated: false, // TODO: add isDeprecated to ModelOption when needed
+      }
+    }
+    // Fallback for completely unknown models
+    return {
+      label: this.formatModelName(modelValue),
+      isCustom: true,
+      isDeprecated: false,
+    }
+  },
 }
 
 // ============================================================================
@@ -442,6 +523,8 @@ export const LLM_CATALOG_QUERY_KEYS = {
   model: (id: string) => ["llm-catalog", "models", id] as const,
   /** Model options (for dropdowns) */
   modelOptions: ["llm-catalog", "model-options"] as const,
+  /** User's custom models */
+  customModels: ["llm-catalog", "custom-models"] as const,
 }
 
 // ============================================================================

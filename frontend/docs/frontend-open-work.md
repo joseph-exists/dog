@@ -1,3 +1,172 @@
+===============================================================================
+  AGENTFORM INTEGRATION COMPLETED - 1/18 @ 12:15 PM
+===============================================================================
+
+  ModelCombobox is now integrated into AgentForm, enabling custom model
+  creation from both Create Agent and Edit Agent dialogs.
+
+  Changes Made:
+  ─────────────────────────────────────────────────────────────────────────────
+  • AgentForm.tsx:
+    - Replaced standard Select component with ModelCombobox
+    - Removed useLlmCatalog hook (ModelCombobox handles this internally)
+    - Removed unused imports (Loader2, SelectGroup, SelectLabel)
+    - Added helper text: "Search catalog models or add a custom model"
+
+  Impact:
+  - CreateAgentDialog now supports custom model creation
+  - EditAgentDialog now supports custom model creation
+  - Users can type any model ID and add it inline without leaving the form
+
+===============================================================================
+  IMPLEMENTATION COMPLETED - 1/18 @ 11:45 AM
+===============================================================================
+
+  All core frontend integration work is COMPLETE. Backend and frontend are
+  now connected end-to-end for custom model creation.
+
+  Changes Made:
+  ─────────────────────────────────────────────────────────────────────────────
+  • llmCatalogService.ts:
+    - Added `isSystem` field to ModelOption and CatalogModelViewModel
+    - Added `ModelDisplayInfo` interface
+    - Added `createCustomModel()` method (calls backend)
+    - Added `listCustomModels()` method (calls backend)
+    - Added `getModelDisplayInfo()` helper for graceful fallback display
+    - Added `customModels` query key
+
+  • useLlmCatalog.ts:
+    - Connected `createCustomModel` mutation to real backend
+    - Updated `modelToOption` to include `isSystem`
+    - Updated `isCustomModel` to use `isSystem` field
+    - Added `getModelDisplayInfo` to hook return
+
+  • ModelCombobox.tsx:
+    - Removed stub mutation, now uses hook's `createCustomModel`
+    - Added error state display for failed creation
+    - Cleaned up unused imports
+
+===============================================================================
+  MANUAL TEST CASES - End-to-End Verification
+===============================================================================
+
+  Prerequisites:
+  - Backend running (docker compose up or fastapi dev)
+  - Frontend running (npm run dev)
+  - Logged in as authenticated user
+
+  ─────────────────────────────────────────────────────────────────────────────
+  TEST 1: Create Custom Model via Inline Form
+  ─────────────────────────────────────────────────────────────────────────────
+  Steps:
+  1. Navigate to Agent creation/edit page with model selector
+  2. Click on the Model combobox
+  3. Type "llama3.2:70b" (should not match any catalog model)
+  4. Click "Add 'llama3.2:70b' as custom model"
+  5. Verify display name auto-populated as "Llama3.2 70B"
+  6. Click "Add Model" button
+
+  Expected:
+  - Model is created in backend (POST /llm-catalog/models/custom)
+  - Combobox closes and shows "Llama3.2 70B" as selected
+  - No error toast/message
+
+  ─────────────────────────────────────────────────────────────────────────────
+  TEST 2: Custom Model Appears in Catalog After Creation
+  ─────────────────────────────────────────────────────────────────────────────
+  Steps:
+  1. After TEST 1, close and reopen the model combobox
+  2. Search for "llama"
+
+  Expected:
+  - Custom model "Llama3.2 70B" appears in results
+  - Model shows [Custom] badge (sparkles icon)
+  - Can select the custom model
+
+  ─────────────────────────────────────────────────────────────────────────────
+  TEST 3: Custom Model Visible in GET /models Endpoint
+  ─────────────────────────────────────────────────────────────────────────────
+  Steps:
+  1. Open browser dev tools, Network tab
+  2. Navigate to page that loads model catalog (or refresh)
+  3. Find the GET /api/v1/llm-catalog/models/grouped request
+
+  Expected:
+  - Response includes the custom model with is_system=false
+  - Custom model grouped under its provider type
+
+  ─────────────────────────────────────────────────────────────────────────────
+  TEST 4: Display Name Auto-Generation
+  ─────────────────────────────────────────────────────────────────────────────
+  Steps:
+  1. Open model combobox
+  2. Type "ft:gpt-4:acme:custom-v1"
+  3. Click "Add as custom model"
+
+  Expected:
+  - Display name auto-populated as "GPT-4 (Fine-tuned)"
+  - Can edit display name before saving
+  - Saving works with custom display name
+
+  ─────────────────────────────────────────────────────────────────────────────
+  TEST 5: Error Handling for Invalid Provider
+  ─────────────────────────────────────────────────────────────────────────────
+  Steps:
+  1. (Requires temporary code change or API manipulation)
+  2. Try to create a model for a provider type that has no system provider
+
+  Expected:
+  - Error message displayed in inline form: "No provider found for type: X"
+  - Button not stuck in loading state
+  - Can retry or cancel
+
+  ─────────────────────────────────────────────────────────────────────────────
+  TEST 6: Create Custom Model from Agent Creation Dialog
+  ─────────────────────────────────────────────────────────────────────────────
+  Steps:
+  1. Navigate to Agents page
+  2. Click "Create Agent" button
+  3. Fill in agent name (e.g., "Test Agent")
+  4. In the Model field, click the combobox
+  5. Type "my-custom-model"
+  6. Click "Add 'my-custom-model' as custom model"
+  7. Verify display name is auto-populated
+  8. Click "Add Model"
+  9. Complete and save the agent
+
+  Expected:
+  - Custom model created successfully
+  - Model selected in the form
+  - Agent created with the custom model
+  - Custom model persists and appears in future model selections
+
+===============================================================================
+  REMAINING WORK (Deferred / Future)
+===============================================================================
+
+  Not in scope for this implementation:
+  • Settings: Custom Models management page
+  • useRecentModels.ts hook (recently used tracking)
+  • deleteCustomModel endpoint in frontend
+  • First-time onboarding hints
+
+===============================================================================
+  PREVIOUS STATUS (Historical Reference)
+===============================================================================
+
+  Frontend Integration Status (Phases 3-5) AS OF 1/18 10:55 AM
+
+  Phase 3: Combobox Component - ✅ COMPLETE
+  Phase 4: Frontend Integration - ✅ COMPLETE (core features)
+  Phase 5: Graceful Fallback Display - ✅ COMPLETE
+
+
+
+
+
+OLD BELOW FOR REFERENCE
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
   ★ Insight ─────────────────────────────────────
   Why this matters strategically:
   - Discover which models are trending (e.g., lots of users adding deepseek-r1)

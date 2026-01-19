@@ -7,9 +7,9 @@ from app.services.agent_runner import (
     run_agent_for_room,
     should_agent_respond,
     run_agents_for_message,
-    run_story_advisor,
 )
 
+## needs refactoring now that we've removed top level agents ##""
 
 class TestAgentRunner:
     """Test suite for agent runner service."""

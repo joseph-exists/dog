@@ -19,6 +19,7 @@
  *
  */
 
+import { AgentService } from "./agentService"
 import {
   type ParticipantAddRequest,
   type RoomCreate,
@@ -290,6 +291,42 @@ async function getUserDetails(
     return details
   } catch {
     // User not found or error - don't cache failures
+    return null
+  }
+}
+
+/**
+ * In-memory cache for agent details to prevent redundant API calls
+ */
+const agentCache = new Map<
+  string,
+  { name: string; description: string | null }
+>()
+
+/**
+ * Fetch agent details with caching
+ *
+ * @param agentId - Agent UUID
+ * @returns Agent details or null if not found
+ */
+async function getAgentDetails(
+  agentId: string,
+): Promise<{ name: string; description: string | null } | null> {
+  // Check cache first
+  if (agentCache.has(agentId)) {
+    return agentCache.get(agentId)!
+  }
+
+  try {
+    const agent = await AgentService.getAgent(agentId)
+    const details = {
+      name: agent.name,
+      description: agent.description ?? null,
+    }
+    agentCache.set(agentId, details)
+    return details
+  } catch {
+    // Agent not found or error - don't cache failures
     return null
   }
 }
@@ -671,30 +708,46 @@ export const RoomService = {
       .filter((p) => p.active) // Only active participants
       .map(transformParticipant)
 
-    // Collect unique user IDs from participants
+    // Collect unique user IDs and agent IDs from participants
     const userIds = new Set<string>()
+    const agentIds = new Set<string>()
     participants.forEach((p) => {
       if (p.participant_type === "user") {
         userIds.add(p.participant_id)
+      } else if (p.participant_type === "agent") {
+        agentIds.add(p.participant_id)
       }
     })
 
-    // Fetch all user details in parallel
+    // Fetch all user and agent details in parallel
     const userMap = new Map<
       string,
       { full_name: string | null; email: string }
     >()
-    await Promise.all(
-      Array.from(userIds).map(async (userId) => {
+    const agentMap = new Map<
+      string,
+      { name: string; description: string | null }
+    >()
+
+    await Promise.all([
+      // Fetch user details
+      ...Array.from(userIds).map(async (userId) => {
         const details = await getUserDetails(userId)
         if (details) {
           userMap.set(userId, details)
         }
       }),
-    )
+      // Fetch agent details
+      ...Array.from(agentIds).map(async (agentId) => {
+        const details = await getAgentDetails(agentId)
+        if (details) {
+          agentMap.set(agentId, details)
+        }
+      }),
+    ])
 
-    // Use the existing utility function to enrich participants
-    return enrichParticipantsWithUserProfiles(participants, userMap)
+    // Enrich participants with both user and agent profiles
+    return enrichParticipantsWithProfiles(participants, userMap, agentMap)
   },
 
   /**
@@ -835,6 +888,49 @@ export function enrichParticipantsWithUserProfiles(
           ...p,
           display_name: user.full_name || user.email,
           avatar_url: user.avatar_url,
+        }
+      }
+    }
+    return p
+  })
+}
+
+/**
+ * Enrich participants with both user and agent display names
+ *
+ * Handles lookups for both user participants (by UUID) and agent participants
+ * (by agent config ID). This fixes the issue where agent UUIDs were being
+ * displayed instead of their configured names.
+ *
+ * @param participants - Array of participants to enrich
+ * @param users - Map of user_id to user profile data
+ * @param agents - Map of agent_id to agent config data
+ * @returns Participants with updated display_name and avatar_url
+ */
+export function enrichParticipantsWithProfiles(
+  participants: ParticipantViewModel[],
+  users: Map<
+    string,
+    { full_name: string | null; email: string; avatar_url?: string }
+  >,
+  agents: Map<string, { name: string; description: string | null }>,
+): ParticipantViewModel[] {
+  return participants.map((p) => {
+    if (p.participant_type === "user") {
+      const user = users.get(p.participant_id)
+      if (user) {
+        return {
+          ...p,
+          display_name: user.full_name || user.email,
+          avatar_url: user.avatar_url,
+        }
+      }
+    } else if (p.participant_type === "agent") {
+      const agent = agents.get(p.participant_id)
+      if (agent) {
+        return {
+          ...p,
+          display_name: agent.name,
         }
       }
     }
