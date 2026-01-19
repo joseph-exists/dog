@@ -1,3 +1,3 @@
 export { PanelContainer } from "./PanelContainer"
-export { ActionBar } from "./ActionBar"
-export { ParticipantStack } from "./ParticipantStack"
+export { ActionBar, type ActionItem } from "./ActionBar"
+export { ParticipantStack, type Participant } from "./ParticipantStack"

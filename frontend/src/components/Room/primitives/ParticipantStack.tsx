@@ -5,8 +5,7 @@
  * Click to open full participant list popover.
  */
 
-import * as React from "react"
-import { Bot, User } from "lucide-react"
+import { Bot } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {

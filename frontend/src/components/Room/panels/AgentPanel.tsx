@@ -5,7 +5,6 @@
  * Adapts existing agent management components.
  */
 
-import * as React from "react"
 import { Users, Loader2 } from "lucide-react"
 import { PanelContainer } from "../primitives/PanelContainer"
 import {
@@ -33,8 +32,6 @@ interface AgentPanelProps {
   canManage: boolean
   /** Whether loading */
   isLoading: boolean
-  /** Callback when agent is clicked for details */
-  onAgentClick?: (agent: AgentData) => void
 }
 
 export function AgentPanel({
@@ -46,7 +43,6 @@ export function AgentPanel({
   onRemoveAgent,
   canManage,
   isLoading,
-  onAgentClick,
 }: AgentPanelProps) {
   if (isLoading) {
     return (
