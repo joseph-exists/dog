@@ -1,8 +1,12 @@
 // src/components/Page/registry/blockTypes.ts
-import { createElement, type ComponentType } from "react"
 
 /**
  * Available block types for pages.
+ *
+ * NOTE: Block rendering is handled directly by PageShell via switch statement,
+ * not through the registry's component field. This allows type-safe props for
+ * each block type. The registry is used for metadata (labels, descriptions,
+ * configSchema) to drive block pickers and settings UIs.
  */
 export type BlockType =
   | "profileImage"
@@ -38,7 +42,8 @@ export interface ConfigFieldSchema {
 
 /**
  * Block type definition for the registry.
- * Add new block types here - no component changes needed.
+ * Used for metadata to drive block pickers and settings UIs.
+ * Actual rendering is handled by PageShell's renderBlock function.
  */
 export interface BlockTypeDefinition {
   /** Unique identifier */
@@ -47,25 +52,10 @@ export interface BlockTypeDefinition {
   label: string
   /** Description of the block */
   description: string
-  /** React component to render the block */
-  component: ComponentType<{ config: Record<string, unknown> }>
   /** Configuration schema for block settings */
   configSchema: Record<string, ConfigFieldSchema>
   /** Whether this block displays dynamic data (tables, charts) */
   isDataBlock?: boolean
-}
-
-/**
- * Placeholder component for blocks not yet implemented.
- * Shows the block config as JSON for development purposes.
- */
-function PlaceholderBlock({ config }: { config: Record<string, unknown> }) {
-  return createElement(
-    "div",
-    { className: "rounded border border-dashed border-gray-300 bg-gray-50 p-4" },
-    createElement("p", { className: "mb-2 text-sm text-gray-500" }, "Placeholder Block"),
-    createElement("pre", { className: "text-xs text-gray-600" }, JSON.stringify(config, null, 2))
-  )
 }
 
 export const blockTypes: BlockTypeDefinition[] = [
@@ -73,7 +63,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "profileImage",
     label: "Profile Image",
     description: "Display a profile image with configurable shape and size",
-    component: PlaceholderBlock,
     configSchema: {
       shape: {
         type: "select",
@@ -93,7 +82,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "identity",
     label: "Identity",
     description: "Display name and optional tagline",
-    component: PlaceholderBlock,
     configSchema: {
       showTagline: {
         type: "boolean",
@@ -106,7 +94,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "bio",
     label: "Bio",
     description: "Display biography or description text",
-    component: PlaceholderBlock,
     configSchema: {
       maxLength: {
         type: "number",
@@ -124,7 +111,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "contact",
     label: "Contact",
     description: "Display contact information",
-    component: PlaceholderBlock,
     configSchema: {
       showEmail: {
         type: "boolean",
@@ -142,7 +128,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "links",
     label: "Links",
     description: "Display a list of links",
-    component: PlaceholderBlock,
     configSchema: {
       layout: {
         type: "select",
@@ -156,7 +141,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "relationships",
     label: "Relationships",
     description: "Display relationships to other entities",
-    component: PlaceholderBlock,
     configSchema: {
       groupByType: {
         type: "boolean",
@@ -174,7 +158,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "activityFeed",
     label: "Activity Feed",
     description: "Display recent activity",
-    component: PlaceholderBlock,
     configSchema: {
       maxItems: {
         type: "number",
@@ -187,7 +170,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "gallery",
     label: "Gallery",
     description: "Display an image gallery",
-    component: PlaceholderBlock,
     configSchema: {
       columns: {
         type: "number",
@@ -205,7 +187,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "dataTable",
     label: "Data Table",
     description: "Display data in a table format",
-    component: PlaceholderBlock,
     configSchema: {
       title: {
         type: "string",
@@ -234,7 +215,6 @@ export const blockTypes: BlockTypeDefinition[] = [
     id: "chart",
     label: "Chart",
     description: "Display data as a chart",
-    component: PlaceholderBlock,
     configSchema: {
       title: {
         type: "string",
