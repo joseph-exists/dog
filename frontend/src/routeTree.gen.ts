@@ -22,6 +22,7 @@ import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutStoriesIndexRouteImport } from './routes/_layout/stories/index'
 import { Route as LayoutUSlugRouteImport } from './routes/_layout/u.$slug'
+import { Route as LayoutTeamSlugRouteImport } from './routes/_layout/team.$slug'
 import { Route as LayoutRoomRoomIdRouteImport } from './routes/_layout/room.$roomId'
 import { Route as LayoutRoomV2RoomIdRouteImport } from './routes/_layout/room-v2.$roomId'
 import { Route as LayoutAgentAgentIdRouteImport } from './routes/_layout/agent.$agentId'
@@ -91,6 +92,11 @@ const LayoutUSlugRoute = LayoutUSlugRouteImport.update({
   path: '/u/$slug',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutTeamSlugRoute = LayoutTeamSlugRouteImport.update({
+  id: '/team/$slug',
+  path: '/team/$slug',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutRoomRoomIdRoute = LayoutRoomRoomIdRouteImport.update({
   id: '/room/$roomId',
   path: '/room/$roomId',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/team/$slug': typeof LayoutTeamSlugRoute
   '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/team/$slug': typeof LayoutTeamSlugRoute
   '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/_layout/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/_layout/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/_layout/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/_layout/team/$slug': typeof LayoutTeamSlugRoute
   '/_layout/u/$slug': typeof LayoutUSlugRoute
   '/_layout/stories/': typeof LayoutStoriesIndexRoute
   '/_layout/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/agent/$agentId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
+    | '/team/$slug'
     | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/agent/$agentId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
+    | '/team/$slug'
     | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_layout/agent/$agentId'
     | '/_layout/room-v2/$roomId'
     | '/_layout/room/$roomId'
+    | '/_layout/team/$slug'
     | '/_layout/u/$slug'
     | '/_layout/stories/'
     | '/_layout/stories/$storyId/edit'
@@ -328,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutUSlugRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/team/$slug': {
+      id: '/_layout/team/$slug'
+      path: '/team/$slug'
+      fullPath: '/team/$slug'
+      preLoaderRoute: typeof LayoutTeamSlugRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/room/$roomId': {
       id: '/_layout/room/$roomId'
       path: '/room/$roomId'
@@ -369,6 +388,7 @@ interface LayoutRouteChildren {
   LayoutAgentAgentIdRoute: typeof LayoutAgentAgentIdRoute
   LayoutRoomV2RoomIdRoute: typeof LayoutRoomV2RoomIdRoute
   LayoutRoomRoomIdRoute: typeof LayoutRoomRoomIdRoute
+  LayoutTeamSlugRoute: typeof LayoutTeamSlugRoute
   LayoutUSlugRoute: typeof LayoutUSlugRoute
   LayoutStoriesIndexRoute: typeof LayoutStoriesIndexRoute
   LayoutStoriesStoryIdEditRoute: typeof LayoutStoriesStoryIdEditRoute
@@ -384,6 +404,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAgentAgentIdRoute: LayoutAgentAgentIdRoute,
   LayoutRoomV2RoomIdRoute: LayoutRoomV2RoomIdRoute,
   LayoutRoomRoomIdRoute: LayoutRoomRoomIdRoute,
+  LayoutTeamSlugRoute: LayoutTeamSlugRoute,
   LayoutUSlugRoute: LayoutUSlugRoute,
   LayoutStoriesIndexRoute: LayoutStoriesIndexRoute,
   LayoutStoriesStoryIdEditRoute: LayoutStoriesStoryIdEditRoute,
