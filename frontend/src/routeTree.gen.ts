@@ -21,6 +21,7 @@ import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutStoriesIndexRouteImport } from './routes/_layout/stories/index'
+import { Route as LayoutUSlugRouteImport } from './routes/_layout/u.$slug'
 import { Route as LayoutRoomRoomIdRouteImport } from './routes/_layout/room.$roomId'
 import { Route as LayoutRoomV2RoomIdRouteImport } from './routes/_layout/room-v2.$roomId'
 import { Route as LayoutAgentAgentIdRouteImport } from './routes/_layout/agent.$agentId'
@@ -85,6 +86,11 @@ const LayoutStoriesIndexRoute = LayoutStoriesIndexRouteImport.update({
   path: '/stories/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutUSlugRoute = LayoutUSlugRouteImport.update({
+  id: '/u/$slug',
+  path: '/u/$slug',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutRoomRoomIdRoute = LayoutRoomRoomIdRouteImport.update({
   id: '/room/$roomId',
   path: '/room/$roomId',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
 }
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
 }
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/_layout/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/_layout/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/_layout/room/$roomId': typeof LayoutRoomRoomIdRoute
+  '/_layout/u/$slug': typeof LayoutUSlugRoute
   '/_layout/stories/': typeof LayoutStoriesIndexRoute
   '/_layout/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
 }
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/agent/$agentId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
+    | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
   fileRoutesByTo: FileRoutesByTo
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/agent/$agentId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
+    | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
   id:
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/_layout/agent/$agentId'
     | '/_layout/room-v2/$roomId'
     | '/_layout/room/$roomId'
+    | '/_layout/u/$slug'
     | '/_layout/stories/'
     | '/_layout/stories/$storyId/edit'
   fileRoutesById: FileRoutesById
@@ -309,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutStoriesIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/u/$slug': {
+      id: '/_layout/u/$slug'
+      path: '/u/$slug'
+      fullPath: '/u/$slug'
+      preLoaderRoute: typeof LayoutUSlugRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/room/$roomId': {
       id: '/_layout/room/$roomId'
       path: '/room/$roomId'
@@ -350,6 +369,7 @@ interface LayoutRouteChildren {
   LayoutAgentAgentIdRoute: typeof LayoutAgentAgentIdRoute
   LayoutRoomV2RoomIdRoute: typeof LayoutRoomV2RoomIdRoute
   LayoutRoomRoomIdRoute: typeof LayoutRoomRoomIdRoute
+  LayoutUSlugRoute: typeof LayoutUSlugRoute
   LayoutStoriesIndexRoute: typeof LayoutStoriesIndexRoute
   LayoutStoriesStoryIdEditRoute: typeof LayoutStoriesStoryIdEditRoute
 }
@@ -364,6 +384,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAgentAgentIdRoute: LayoutAgentAgentIdRoute,
   LayoutRoomV2RoomIdRoute: LayoutRoomV2RoomIdRoute,
   LayoutRoomRoomIdRoute: LayoutRoomRoomIdRoute,
+  LayoutUSlugRoute: LayoutUSlugRoute,
   LayoutStoriesIndexRoute: LayoutStoriesIndexRoute,
   LayoutStoriesStoryIdEditRoute: LayoutStoriesStoryIdEditRoute,
 }
