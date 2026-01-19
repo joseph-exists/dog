@@ -8,4 +8,6 @@ export { RelationshipsBlock } from "./RelationshipsBlock"
 export { ActivityFeedBlock } from "./ActivityFeedBlock"
 export { GalleryBlock } from "./GalleryBlock"
 
-// Data blocks will be added in Phase 4
+// Data blocks
+export { DataTableBlock } from "./DataTableBlock"
+export { ChartBlock } from "./ChartBlock"
