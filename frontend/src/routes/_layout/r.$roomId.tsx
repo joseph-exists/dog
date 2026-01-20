@@ -2,26 +2,34 @@
  * Unified Room Route
  *
  * New room implementation with multi-panel support.
- * Replaces room.$roomId.tsx and room-v2.$roomId.tsx
+ * Panels are dynamically configured via useRoomPanels hook.
  */
 
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2 } from "lucide-react"
+import type React from "react"
 import { useEffect, useState } from "react"
+
 import EditDrawer from "@/components/Common/EditDrawer"
 import {
+  A2UIPanel,
   AgentPanel,
+  CanvasPanel,
   ChatPanel,
+  DebugPanel,
   type PanelConfig,
   RoomShell,
+  StoryEditorPanel,
 } from "@/components/Room"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
 import RoomDebugPanel from "@/components/Rooms/RoomDebugPanel"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
+import { useRoomPanels } from "@/hooks/useRoomPanels"
 import { useRoomStream } from "@/hooks/useRoomStream"
 import { AgentService, type AgentViewModel } from "@/services/agentService"
+import { getPanelDisplayName } from "@/services/panelService"
 import type {
   MessageViewModel,
   ParticipantViewModel,
@@ -66,7 +74,7 @@ function RoomView() {
     null,
   )
 
-  // Debug panel state
+  // Debug panel overlay state (separate from panel config)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
 
   // Fetch available agents
@@ -107,6 +115,15 @@ function RoomView() {
     onDeleteSuccess: () => {
       navigate({ to: "/rooms" })
     },
+  })
+
+  // Panel configuration from backend
+  const {
+    panels: panelConfigs,
+    // panelSource can be used to display where config came from: "user_override" | "room_defaults" | "type_defaults"
+    isLoading: isLoadingPanels,
+  } = useRoomPanels(roomId, {
+    enabled: !isLoadingRoom,
   })
 
   // WebSocket connection
@@ -237,54 +254,97 @@ function RoomView() {
 
   const canManage = currentUserRole === "owner"
 
-  // Build panel configuration
-  const panels: PanelConfig[] = [
-    {
-      id: "chat",
-      kind: "chat",
-      prominence: "primary",
-      title: "Chat",
-      render: () => (
-        <ChatPanel
-          roomId={roomId}
-          messages={messages}
-          hasMore={hasMoreMessages}
-          onLoadMore={loadMoreMessages}
-          isLoadingMore={isLoadingMoreMessages}
-          isLoading={isLoadingMessages}
-          streamingMessage={streamingMessage}
-          isRoomOwner={canManage}
-          onSendMessage={sendMessage}
-          isSending={isSending}
-          isConnected={isConnected}
-          sendViaWebSocket={sendViaWebSocket}
-          onEditMessage={handleEditMessage}
-          onPinMessage={handlePinMessage}
-          onUnpinMessage={handleUnpinMessage}
-          onToggleContext={handleToggleContext}
-          onDeleteMessage={handleDeleteMessage}
-        />
-      ),
-    },
-    {
-      id: "agents",
-      kind: "agentPanel",
-      prominence: "auxiliary",
-      title: "Agents",
-      render: () => (
-        <AgentPanel
-          roomAgents={roomAgentsAsAgentData}
-          availableAgents={availableAgentsAsAgentData}
-          existingAgentIds={existingAgentIds}
-          onAddAgent={handleAddAgent}
-          onAddMultipleAgents={handleAddMultipleAgents}
-          onRemoveAgent={handleRemoveAgent}
-          canManage={canManage}
-          isLoading={isLoadingParticipants || isLoadingAvailable}
-        />
-      ),
-    },
-  ]
+  // ==========================================================================
+  // Panel component registry - maps panel kinds to render functions
+  // ==========================================================================
+  const panelComponents: Record<string, () => React.ReactNode> = {
+    chat: () => (
+      <ChatPanel
+        roomId={roomId}
+        messages={messages}
+        hasMore={hasMoreMessages}
+        onLoadMore={loadMoreMessages}
+        isLoadingMore={isLoadingMoreMessages}
+        isLoading={isLoadingMessages}
+        streamingMessage={streamingMessage}
+        isRoomOwner={canManage}
+        onSendMessage={sendMessage}
+        isSending={isSending}
+        isConnected={isConnected}
+        sendViaWebSocket={sendViaWebSocket}
+        onEditMessage={handleEditMessage}
+        onPinMessage={handlePinMessage}
+        onUnpinMessage={handleUnpinMessage}
+        onToggleContext={handleToggleContext}
+        onDeleteMessage={handleDeleteMessage}
+      />
+    ),
+    agentPanel: () => (
+      <AgentPanel
+        roomAgents={roomAgentsAsAgentData}
+        availableAgents={availableAgentsAsAgentData}
+        existingAgentIds={existingAgentIds}
+        onAddAgent={handleAddAgent}
+        onAddMultipleAgents={handleAddMultipleAgents}
+        onRemoveAgent={handleRemoveAgent}
+        canManage={canManage}
+        isLoading={isLoadingParticipants || isLoadingAvailable}
+      />
+    ),
+    debug: () => (
+      <DebugPanel
+        messages={messages}
+        streamingMessage={streamingMessage}
+        isConnected={isConnected}
+        activeAgents={activeAgents}
+      />
+    ),
+    storyEditor: () => (
+      <StoryEditorPanel
+        storyId={room?.story_id || ""}
+        onNavigateToStories={() => navigate({ to: "/stories" })}
+      />
+    ),
+    canvas: () => <CanvasPanel />,
+    a2ui: () => <A2UIPanel roomId={roomId} />,
+  }
+
+  // Build panels from configuration
+  const panels: PanelConfig[] = panelConfigs.map((config) => ({
+    id: config.id,
+    kind: config.kind,
+    prominence: config.prominence,
+    title: getPanelDisplayName(
+      config.kind as
+        | "chat"
+        | "storyEditor"
+        | "agentPanel"
+        | "debug"
+        | "canvas"
+        | "a2ui",
+    ),
+    render: panelComponents[config.kind] || (() => null),
+  }))
+
+  // Fallback if no panels configured (shouldn't happen with type_defaults)
+  if (panels.length === 0 && !isLoadingPanels) {
+    panels.push(
+      {
+        id: "chat",
+        kind: "chat",
+        prominence: "primary",
+        title: "Chat",
+        render: panelComponents.chat,
+      },
+      {
+        id: "agents",
+        kind: "agentPanel",
+        prominence: "auxiliary",
+        title: "Agents",
+        render: panelComponents.agentPanel,
+      },
+    )
+  }
 
   return (
     <div className="h-[calc(100vh-8rem)] flex">
@@ -304,7 +364,7 @@ function RoomView() {
         />
       </div>
 
-      {/* Debug Panel */}
+      {/* Debug Panel Overlay (legacy, kept for quick access) */}
       {showDebugPanel && (
         <RoomDebugPanel
           messages={messages}
