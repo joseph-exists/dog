@@ -14,9 +14,8 @@
  * ```
  */
 
-import { Check, ChevronDown, Layout } from "lucide-react"
 import { motion } from "framer-motion"
-import { cn } from "@/lib/utils"
+import { Check, ChevronDown, Layout } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,12 +24,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
+  getTransition,
+  springConfig,
+  useReduceMotion,
+} from "@/components/ui/motion"
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 import { MiniPreview, type MiniPreviewPanel } from "./MiniPreview"
-import { springConfig, useReduceMotion, getTransition } from "@/components/ui/motion"
 
 // ============================================================================
 // Types
@@ -79,13 +83,18 @@ function PresetButton({ preset, isSelected, onSelect }: PresetButtonProps) {
             "relative flex flex-col items-center gap-2 p-2 rounded-lg border transition-colors",
             isSelected
               ? "border-primary bg-primary/5"
-              : "border-transparent hover:border-border hover:bg-muted/50"
+              : "border-transparent hover:border-border hover:bg-muted/50",
           )}
           whileHover={{ scale: reduceMotion ? 1 : 1.02 }}
           whileTap={{ scale: reduceMotion ? 1 : 0.98 }}
           transition={getTransition(springConfig.snappy, reduceMotion)}
         >
-          <MiniPreview panels={preset.panels} width={80} height={50} showLabels={false} />
+          <MiniPreview
+            panels={preset.panels}
+            width={80}
+            height={50}
+            showLabels={false}
+          />
           <span className="text-xs font-medium">{preset.name}</span>
           {isSelected && (
             <Check className="h-3 w-3 text-primary absolute top-1 right-1" />

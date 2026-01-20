@@ -10,6 +10,7 @@ import {
   BookOpen,
   Bug,
   Grid3X3,
+  Layout,
   LayoutGrid,
   LayoutList,
   Link,
@@ -20,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react"
 import type * as React from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -30,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
+import { PanelLayoutDialog } from "./PanelLayoutDialog"
 import {
   type Participant,
   ParticipantStack,
@@ -38,6 +41,8 @@ import {
 export type RoomType = "chat" | "story" | "workspace"
 
 interface RoomHeaderProps {
+  /** Room ID for panel layout settings */
+  roomId?: string
   /** Room title */
   title: string
   /** Room type */
@@ -79,6 +84,7 @@ const roomTypeIcons: Record<RoomType, React.ElementType> = {
 }
 
 export function RoomHeader({
+  roomId,
   title,
   type,
   participants,
@@ -97,6 +103,7 @@ export function RoomHeader({
   className,
 }: RoomHeaderProps) {
   const TypeIcon = roomTypeIcons[type]
+  const [layoutDialogOpen, setLayoutDialogOpen] = useState(false)
 
   return (
     <header
@@ -170,6 +177,12 @@ export function RoomHeader({
                 {showDebugPanel ? "Hide Debug Panel" : "Show Debug Panel"}
               </DropdownMenuItem>
             )}
+            {roomId && (
+              <DropdownMenuItem onClick={() => setLayoutDialogOpen(true)}>
+                <Layout className="h-4 w-4 mr-2" />
+                Panel Layout
+              </DropdownMenuItem>
+            )}
             {canEdit && onSettings && (
               <DropdownMenuItem onClick={onSettings}>
                 <Settings className="h-4 w-4 mr-2" />
@@ -191,6 +204,16 @@ export function RoomHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Panel layout dialog */}
+      {roomId && (
+        <PanelLayoutDialog
+          open={layoutDialogOpen}
+          onOpenChange={setLayoutDialogOpen}
+          roomId={roomId}
+          isRoomOwner={canEdit}
+        />
+      )}
     </header>
   )
 }

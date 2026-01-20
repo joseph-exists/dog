@@ -14,6 +14,7 @@ from app.api.routes import (
     persona_events,
     persona_qualities,
     personas,
+    presets,
     private,
     qualities,
     quality_trait_links,
@@ -24,6 +25,7 @@ from app.api.routes import (
     storynodes,
     trait_conflicts,
     traits,
+    user_panels,
     user_personas,
     user_story_progress,
     users,
@@ -60,6 +62,8 @@ api_router.include_router(room_participant_bindings.router)
 api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)
 api_router.include_router(trait_conflicts.router)
+api_router.include_router(user_panels.router, prefix="/users", tags=["user-panels"])
+api_router.include_router(presets.router, prefix="/presets", tags=["presets"])
 
 if settings.ENVIRONMENT == "local":
     api_router.include_router(private.router)

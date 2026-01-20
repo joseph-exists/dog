@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query"
  * - Optimistic UI updates
  */
 import { useCallback, useEffect, useRef, useState } from "react"
+import type { MessageViewModel } from "@/services/roomService"
 
 interface RoomEvent {
   type: "event"
@@ -65,6 +66,54 @@ export function useRoomStream(
   } | null>(null)
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  const appendUserMessageFromEvent = useCallback(
+    (event: RoomEvent) => {
+      const payload = event.payload ?? {}
+      if (!payload.sender_id || typeof payload.content !== "string") {
+        return
+      }
+
+      const optimisticMessage: MessageViewModel = {
+        message_id: `ws-${event.sequence}`,
+        room_id: roomId || "",
+        sender_type: "user",
+        sender_name: payload.sender_id,
+        sender_id: payload.sender_id,
+        agent_name: null,
+        content: payload.content,
+        button_options: null,
+        created_at: new Date(event.created_at),
+        is_own_message: false,
+        is_pinned: false,
+        active_for_context: false,
+        can_edit: false,
+        can_delete: false,
+        can_pin: false,
+      }
+
+      queryClient.setQueryData(["rooms", roomId, "messages"], (old: any) => {
+        if (!old?.messages) return old
+        if (
+          old.messages.some(
+            (msg: MessageViewModel) =>
+              msg.message_id === optimisticMessage.message_id,
+          )
+        ) {
+          return old
+        }
+        return {
+          ...old,
+          messages: [...old.messages, optimisticMessage],
+          total_count:
+            typeof old.total_count === "number"
+              ? old.total_count + 1
+              : old.total_count,
+        }
+      })
+    },
+    [queryClient, roomId],
+  )
+
   // Send message to room
   const sendMessage = useCallback((content: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -96,6 +145,11 @@ export function useRoomStream(
             // Update last sequence
             setLastSequence(message.sequence)
 
+            if (message.event_type === "room_message.user") {
+              appendUserMessageFromEvent(message)
+              break
+            }
+
             // Clear streaming message BEFORE invalidating queries
             // This prevents race condition where streaming message and final message are both visible
             if (message.event_type === "room_message.agent") {
@@ -109,10 +163,7 @@ export function useRoomStream(
             }
 
             // Invalidate queries to refresh UI
-            if (
-              message.event_type === "room_message.user" ||
-              message.event_type === "room_message.agent"
-            ) {
+            if (message.event_type === "room_message.agent") {
               queryClient.invalidateQueries({
                 queryKey: ["rooms", roomId, "messages"],
               })
@@ -174,7 +225,7 @@ export function useRoomStream(
         console.error("Error parsing WebSocket message:", error)
       }
     },
-    [queryClient, roomId, onError],
+    [queryClient, roomId, onError, appendUserMessageFromEvent],
   )
 
   // Connect to WebSocket

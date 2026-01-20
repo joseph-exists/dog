@@ -697,6 +697,20 @@ export type PersonaUpdate = {
     specific_domain_high?: (string | null);
 };
 
+export type PresetResponse = {
+    id: string;
+    name: string;
+    description: string;
+    panels: Array<{
+        [key: string]: unknown;
+    }>;
+    is_system: boolean;
+};
+
+export type PresetsListResponse = {
+    presets: Array<PresetResponse>;
+};
+
 export type PrivateUserCreate = {
     email: string;
     password: string;
@@ -1444,6 +1458,31 @@ export type UserLLMProviderUpdate = {
     api_key?: (string | null);
 };
 
+/**
+ * Public response for user panel defaults
+ */
+export type UserPanelDefaultsPublic = {
+    id: string;
+    user_id: string;
+    preset_id: (string | null);
+    panels: Array<{
+        [key: string]: unknown;
+    }>;
+    reduce_motion: boolean;
+    updated_at: string;
+};
+
+/**
+ * Update payload for user panel defaults
+ */
+export type UserPanelDefaultsUpdate = {
+    preset_id?: (string | null);
+    panels?: (Array<{
+    [key: string]: unknown;
+}> | null);
+    reduce_motion?: (boolean | null);
+};
+
 export type UserPersonaCreate = {
     nickname?: (string | null);
     is_active?: boolean;
@@ -2094,6 +2133,14 @@ export type PersonasCreatePersonaFromArchetypeData = {
 
 export type PersonasCreatePersonaFromArchetypeResponse = (PersonaPublic);
 
+export type PresetsListPresetsResponse = (PresetsListResponse);
+
+export type PresetsGetPresetData = {
+    presetId: string;
+};
+
+export type PresetsGetPresetResponse = (PresetResponse);
+
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;
 };
@@ -2628,6 +2675,14 @@ export type TraitsDeleteTraitData = {
 };
 
 export type TraitsDeleteTraitResponse = (Message);
+
+export type UserPanelsGetMyPanelDefaultsResponse = ((UserPanelDefaultsPublic | null));
+
+export type UserPanelsUpdateMyPanelDefaultsData = {
+    requestBody: UserPanelDefaultsUpdate;
+};
+
+export type UserPanelsUpdateMyPanelDefaultsResponse = (UserPanelDefaultsPublic);
 
 export type UserPersonasReadUserPersonasData = {
     limit?: number;

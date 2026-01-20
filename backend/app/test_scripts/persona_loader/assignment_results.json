@@ -1,0 +1,1827 @@
+{
+  "assignment_run": {
+    "start_time": "2026-01-20T14:27:46.369328",
+    "end_time": "2026-01-20T14:27:49.681514",
+    "duration_seconds": 3.312186,
+    "field": "specific_domain",
+    "mode": "stochastic",
+    "success": true
+  },
+  "authentication": {
+    "status": "success",
+    "user": {
+      "email": "joseph@existentialdetectives.com",
+      "is_active": true,
+      "is_superuser": true,
+      "full_name": "Jobber Dobbers",
+      "id": "228d7ff2-960d-48b3-91a0-979034859cfe"
+    }
+  },
+  "attributes": {
+    "total_loaded": 781,
+    "source_file": "sample_attributes.csv"
+  },
+  "personas": {
+    "total_found": 138,
+    "missing_field": 138,
+    "updated": 138,
+    "failed": 0,
+    "assignments": [
+      {
+        "persona_name": "uxrwzepfoffetspvgprivnnfntbqkaed",
+        "persona_id": "0ebd93f1-3cd4-4813-9ff2-9a69214c8cce",
+        "attributes": [
+          "Unpredicatable",
+          "Unrestrained",
+          "Sordid",
+          "Retiring",
+          "Crass"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.625766"
+      },
+      {
+        "persona_name": "Test Explorer 105412",
+        "persona_id": "df627258-d639-4c13-9505-04fabc9cf8f0",
+        "attributes": [
+          "Small-thinking",
+          "Noncompetitive",
+          "Weak-willed",
+          "Impassive",
+          "Teacherly"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.644329"
+      },
+      {
+        "persona_name": "Test Explorer 105524",
+        "persona_id": "765c669d-e647-4149-a1b3-6a81ea7440c5",
+        "attributes": [
+          "Organized",
+          "Mellow",
+          "Unconvincing",
+          "Uncritical",
+          "Rowdy"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.663810"
+      },
+      {
+        "persona_name": "Test Explorer 142457",
+        "persona_id": "9dea12af-74d7-4260-ba5c-2c94e9ba3389",
+        "attributes": [
+          "Mannered",
+          "Friendly",
+          "Unhurried",
+          "Expedient",
+          "Practical"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.681938"
+      },
+      {
+        "persona_name": "Test Explorer 090226",
+        "persona_id": "65d3eeb8-5882-445a-ac6e-02b1e36f9022",
+        "attributes": [
+          "Stylish",
+          "Mistaken",
+          "Selfless",
+          "timid",
+          "bold"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.700100"
+      },
+      {
+        "persona_name": "Test Explorer 090248",
+        "persona_id": "dc6b0105-cafe-4cda-ba0b-69a868329949",
+        "attributes": [
+          "extroverted",
+          "Obsessed",
+          "Stern",
+          "Regretful",
+          "Inert"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.718947"
+      },
+      {
+        "persona_name": "Test Explorer 001302",
+        "persona_id": "d5fe84fe-61a3-40df-bd3a-f2d1aa610d89",
+        "attributes": [
+          "Reliable",
+          "Colorless",
+          "Imprudent",
+          "Sarcastic",
+          "Possessive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.737624"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "1a47f53f-ec20-46b1-9657-0e504dfe78fa",
+        "attributes": [
+          "Naive",
+          "Masculine",
+          "Fraudulent",
+          "Persistent",
+          "Mannered"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.755238"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "dcf39752-7c7b-4e80-859d-4bad15c3f453",
+        "attributes": [
+          "Educated",
+          "Resourceful",
+          "Stingy",
+          "Possessive",
+          "Decisive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.772634"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "711dfa5a-80a3-4ca6-8fc9-b84ddd7b2a23",
+        "attributes": [
+          "Creative",
+          "Vague",
+          "Faithless",
+          "Stylish",
+          "Obvious"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.790297"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "43a3bc27-bef3-4530-b33b-154b64b258f9",
+        "attributes": [
+          "Fanatical",
+          "Strong",
+          "Domineering",
+          "Disloyal",
+          "Chummy"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.808648"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "199eb559-0318-4022-9a1b-7122db7768c1",
+        "attributes": [
+          "innovative",
+          "Sly",
+          "grounded",
+          "Complaintive",
+          "Impressionable"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.826396"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "effa6b90-cfb9-495e-9dd6-11eeaade1b89",
+        "attributes": [
+          "Seraphic",
+          "Anxious",
+          "spontaneous",
+          "Cautious",
+          "Natty"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.844579"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "e5ef911c-bcab-4764-8a7b-3966e2256a80",
+        "attributes": [
+          "Modern",
+          "Folksy",
+          "Hypnotic",
+          "Breezy",
+          "Sporting"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.861554"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "e894a9c3-17b5-42d0-8c21-338a91692164",
+        "attributes": [
+          "Generous",
+          "Tasteful",
+          "Amoral",
+          "Overly idealistic",
+          "Anxious"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.880657"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "19266352-833d-421f-aa20-4c7f4418f8fe",
+        "attributes": [
+          "Trusting",
+          "Respectful",
+          "Calculating",
+          "Uncreative",
+          "Money-minded"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.902400"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "917b13dd-9023-496d-945a-62159354d930",
+        "attributes": [
+          "Hearty",
+          "Winning",
+          "Pruposeful",
+          "Submissive",
+          "Money-minded"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.920142"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "f0a9f6e6-9352-47bc-901a-a8f21454959a",
+        "attributes": [
+          "Unlovable",
+          "Flighty",
+          "Imitative",
+          "Airy",
+          "Old-fashined"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.937898"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "86b57d18-d0f3-42c9-937a-301e99c25f71",
+        "attributes": [
+          "Obsessed",
+          "Circumspect",
+          "Shrewd",
+          "Knowledge",
+          "Fair"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.956439"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "c6f05994-91cc-446a-be1d-7b99e0f9ef8f",
+        "attributes": [
+          "conformist",
+          "Kind",
+          "Uncomplaining",
+          "Naive",
+          "Venomous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.975724"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "e61481d0-b1a8-4d71-8e64-0f4ffa581491",
+        "attributes": [
+          "Soft",
+          "Forthright",
+          "Envious",
+          "Miserly",
+          "Painstaking"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:46.992718"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "12e85b72-0001-4fe0-874c-190f80e61b89",
+        "attributes": [
+          "Fraudulent",
+          "Repressed",
+          "Disputatious",
+          "Unctuous",
+          "Faithless"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.009308"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "403726e4-42d3-49d1-bae9-5ce11e097318",
+        "attributes": [
+          "Repentant",
+          "Masculine",
+          "Moody",
+          "Inoffensive",
+          "Benevolent"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.027236"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "acd55d1b-1dff-4fa4-b90d-a5f379d4390f",
+        "attributes": [
+          "Cruel",
+          "Obnoxious",
+          "Winning",
+          "Overimaginative",
+          "Steadfast"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.048848"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "ccbb3115-58a6-4238-b888-4b2e8deb6fa8",
+        "attributes": [
+          "Monstrous",
+          "Hostile",
+          "Hedonistic",
+          "Invulnerable",
+          "Disciplined"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.067705"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "d034a08c-3fcb-4f38-84c6-22b7c0e4a1c7",
+        "attributes": [
+          "Unimaginative",
+          "Humble",
+          "Polished",
+          "Clean",
+          "Annoyingly bubbly"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.088742"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "cad3f5e8-4a94-4e52-a64a-f568b153375c",
+        "attributes": [
+          "Incorruptible",
+          "artistic",
+          "Sweet",
+          "Tasteless",
+          "Uncharitable"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.106939"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "d5bc42fe-3e3b-4901-9c32-1586bfed3c56",
+        "attributes": [
+          "Disconcerting",
+          "Businesslike",
+          "Discreet",
+          "pessimistic",
+          "Secure"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.125422"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "d2b2389f-daf0-4c40-aa8b-f24204b01d9a",
+        "attributes": [
+          "Trusting",
+          "Moderate",
+          "extroverted",
+          "Astigmatic",
+          "Extreme"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.142840"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "6aaa8fa2-8a10-4bcf-8498-5b1f11907a72",
+        "attributes": [
+          "Assertive",
+          "Rowdy",
+          "Tense",
+          "Irresponsible",
+          "Quick-tempered"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.162562"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "acdc9258-202e-4f8f-a47e-3490156924f3",
+        "attributes": [
+          "Eloquent",
+          "Disruptive",
+          "expressive",
+          "Possessive",
+          "conformist"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.186827"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "b27f4e09-4192-44b3-b454-1303620363d9",
+        "attributes": [
+          "Alert",
+          "One-sided",
+          "Cynical",
+          "Unimaginative",
+          "Conciliatory"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.208542"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "834f0a1c-e2d7-4e01-a69a-8467fcde61b5",
+        "attributes": [
+          "Bland",
+          "Apathetic",
+          "curious",
+          "intense",
+          "Creepy"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.233865"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "af4b8b0d-b8ca-4ca9-8a2c-bf4803e902c7",
+        "attributes": [
+          "Sporting",
+          "Whimsical",
+          "Possessive",
+          "social",
+          "Panicked"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.261189"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "09ed82a3-8e5b-4cb4-b316-a2cacf326943",
+        "attributes": [
+          "Patriotic",
+          "Flighty",
+          "Sarcastic",
+          "Creepy",
+          "Pest"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.282513"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "e2d9baeb-028c-4172-9824-c769572a0d9b",
+        "attributes": [
+          "Fearful",
+          "Friendly",
+          "Extravagant",
+          "Contemplative",
+          "Bizarre"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.305481"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "2816b466-6974-4065-8079-5c13058a4caf",
+        "attributes": [
+          "Wise",
+          "Gullible",
+          "rebellious",
+          "Uncharitable",
+          "Barbaric"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.327491"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "d5778219-5695-4a7a-a437-bf47150057a4",
+        "attributes": [
+          "Motivational",
+          "Insensitive",
+          "Neglectful",
+          "Fatalistic",
+          "Regretful"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.349679"
+      },
+      {
+        "persona_name": "wvuffoxoarhorkayejmpuaiawnoclwwi",
+        "persona_id": "4d572f15-9392-4893-813a-f06f91b69047",
+        "attributes": [
+          "expressive",
+          "grounded",
+          "Solid",
+          "Codependent",
+          "Courteous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.372237"
+      },
+      {
+        "persona_name": "vcqwoiwpbnebwogqksjvbnhdttvdczxp",
+        "persona_id": "94c93ae8-f794-49fd-8f2f-9d5c69a2f8c9",
+        "attributes": [
+          "Motivational",
+          "Discourteous",
+          "Solitary",
+          "Negativistic",
+          "Forthright"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.395901"
+      },
+      {
+        "persona_name": "snshjcjkreuckmmlbjfvowjepibvpruw",
+        "persona_id": "6c3329c6-a812-4b5a-945e-5d7f90d18913",
+        "attributes": [
+          "Amoral",
+          "Rebellious",
+          "Obnoxious",
+          "Kind",
+          "Subjective"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.418806"
+      },
+      {
+        "persona_name": "Updated Persona name",
+        "persona_id": "c759dd23-14d8-401e-b8f4-cb5ab8a44a66",
+        "attributes": [
+          "Uncritical",
+          "Odd",
+          "Prim",
+          "Predictable",
+          "Mystical"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.440549"
+      },
+      {
+        "persona_name": "kwtboblfqnfmladnjowxyeylfkkfiwng",
+        "persona_id": "b40c01db-0158-4d34-a1b7-c0a146fba73c",
+        "attributes": [
+          "Persistent",
+          "Misguided",
+          "Erratic",
+          "Patriotic",
+          "Religious"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.462900"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "d15939f1-fb2a-48f8-bc33-3a62f476befa",
+        "attributes": [
+          "Deceptive",
+          "Resourceful",
+          "Unambitious",
+          "Moody",
+          "Timid"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.485093"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "819d61a0-84a3-48dd-8824-e14278d27d50",
+        "attributes": [
+          "Colorful",
+          "Intrusive",
+          "Active",
+          "Stupid",
+          "Crude"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.509430"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "0dfbd69f-86c7-4412-82c1-d12f10c8170e",
+        "attributes": [
+          "Subtle",
+          "Understanding",
+          "Obsessed",
+          "Aimless",
+          "spontaneous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.532775"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "e141de9a-c46f-4253-a79e-4f243e5259e6",
+        "attributes": [
+          "mohawk",
+          "Criminal",
+          "Haughty",
+          "Unchanging",
+          "Independent"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.555512"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "e35faf41-bab2-4bdb-a6a3-4140c88f1d39",
+        "attributes": [
+          "Crass",
+          "Crisp",
+          "Rebellious",
+          "Outrageous",
+          "Methodical"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.577495"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "9af04bea-4c43-4d6a-803a-28617eb1ce86",
+        "attributes": [
+          "Grand",
+          "Venturesome",
+          "Cowardly",
+          "Impassive",
+          "Discouraging"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.600110"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "82d426b7-5767-41a1-bfe4-0190d0d9c0e7",
+        "attributes": [
+          "pessimistic",
+          "Disobedient",
+          "Criminal",
+          "Perverse",
+          "Crude"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.623121"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "64fa4642-7d40-40cf-8b33-b79c4da2b522",
+        "attributes": [
+          "Serious",
+          "Stable",
+          "Coldhearted",
+          "Flippant",
+          "Amoral"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.647189"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "93cb6403-7df3-49a3-adb3-3390ec71e826",
+        "attributes": [
+          "Self-sufficent",
+          "Youthful",
+          "Progressive",
+          "Dedicated",
+          "Naive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.670389"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "6ff9ab93-fce9-48d4-95bc-58f0984636a9",
+        "attributes": [
+          "Difficult",
+          "Hateful",
+          "Manipulative",
+          "Relaxed",
+          "Resentful"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.694407"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "5197489a-6d79-4bff-9df8-9ddc839ba293",
+        "attributes": [
+          "Disciplined",
+          "Dissonant",
+          "Extravagant",
+          "Many-sided",
+          "Patriotic"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.717019"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "cb20789b-0b8e-4142-a206-67316021fc9f",
+        "attributes": [
+          "Cantakerous",
+          "Indulgent",
+          "intense",
+          "Crazy",
+          "Disorganized"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.742994"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "3cfedb90-a1ae-4743-a96e-445d3ac1fb0d",
+        "attributes": [
+          "Crass",
+          "Clear-headed",
+          "Dogmatic",
+          "Determined",
+          "Unappreciative"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.771162"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "346bd103-5b79-4057-87cd-9307c37bb300",
+        "attributes": [
+          "Anticipative",
+          "Unreligious",
+          "Noncommittal",
+          "Meretricious",
+          "intense"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.793203"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "1bcbc1ef-3eb2-47c1-ada9-9c7ef4b3221a",
+        "attributes": [
+          "Gracious",
+          "stoic",
+          "Loquacious",
+          "Narrow",
+          "Fearful"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.815840"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "a2d6a2eb-53d1-4f24-8826-4cc4370bc4ae",
+        "attributes": [
+          "Phlegmatic",
+          "Determined",
+          "Competitive",
+          "Fraudulent",
+          "Profound"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.838086"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "0d5b30b6-8b87-48a8-9c88-2a4e25516638",
+        "attributes": [
+          "Fearful",
+          "inquisitive",
+          "Reflective",
+          "Compassionate",
+          "Crazy"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.859110"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "7c3c198d-a1fd-4e5f-bd75-4d3674b4cf79",
+        "attributes": [
+          "Effeminate",
+          "Astigmatic",
+          "Solemn",
+          "timid",
+          "Muddle-headed"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.881669"
+      },
+      {
+        "persona_name": "Branch Test Persona",
+        "persona_id": "40a7140c-1ef4-4480-8f7f-71e1e531b05b",
+        "attributes": [
+          "Courageous",
+          "Unreliable",
+          "Amiable",
+          "Experimental",
+          "Earnest"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.904955"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "e38e1d18-d284-40b4-ad8b-21c47b4ece20",
+        "attributes": [
+          "Unself-critical",
+          "Negativistic",
+          "Reflective",
+          "Smooth",
+          "Sentimental"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.926730"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "6aa6833e-5f1d-42fb-bca8-0da50b1c6c1e",
+        "attributes": [
+          "Educated",
+          "Lyrical",
+          "Mistaken",
+          "Modern",
+          "Slow"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.948000"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "cb62feaf-97f8-46aa-8d76-a11de9b8477c",
+        "attributes": [
+          "Unhealthy",
+          "Dull",
+          "Quiet",
+          "Unstable",
+          "Distractible"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.969581"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "cc7866f7-a58d-4bc2-bd95-caf3e610513c",
+        "attributes": [
+          "Skeptical",
+          "Accessible",
+          "Perceptive",
+          "Stiff",
+          "Discontented"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:47.993857"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "7603283d-f8e1-409b-a8eb-160d62d97f98",
+        "attributes": [
+          "Rational",
+          "Self-sufficent",
+          "Gentle",
+          "adventurous",
+          "Foolish"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.016521"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "d83db37c-a70a-49fd-9f52-14762507c0d9",
+        "attributes": [
+          "Vague",
+          "Reflective",
+          "Unappreciative",
+          "Impatient",
+          "Escapist"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.041179"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "73b6ba63-7218-4027-8520-9801bc3025dd",
+        "attributes": [
+          "Inhibited",
+          "Unself-critical",
+          "Indifferent",
+          "solitary",
+          "Bland"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.063421"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "ba3c2d5a-76b4-4a68-bed4-98c2d8417ef1",
+        "attributes": [
+          "Farsighted",
+          "Restrained",
+          "Driving",
+          "Libidinous",
+          "Emotional"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.086582"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "90ae7a0d-e2ab-4cf8-bcc8-abc89bca1be4",
+        "attributes": [
+          "Disorderly",
+          "Meddlesome",
+          "Relaxed",
+          "Stupid",
+          "Proud"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.108904"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "51cad06b-396a-4784-b792-a8486c018ad8",
+        "attributes": [
+          "Suave",
+          "Fraudulent",
+          "Placid",
+          "Spontaneous",
+          "Disloyal"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.130999"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "9a584171-3ad3-478b-97f1-2b9801cc4670",
+        "attributes": [
+          "Herioc",
+          "Messy",
+          "Tasteful",
+          "Stoic",
+          "Steadfast"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.154651"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "ff9d8e13-2847-457d-b4af-b370e2c4cb60",
+        "attributes": [
+          "Gracious",
+          "Rowdy",
+          "Desperate",
+          "Charmless",
+          "empathetic"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.176612"
+      },
+      {
+        "persona_name": "yazspxmfagomjzntdnjcyvejgdjltalq",
+        "persona_id": "9828fc02-606c-4a92-85c2-417643cb5406",
+        "attributes": [
+          "Stubborn",
+          "analytical",
+          "Earnest",
+          "Loyal",
+          "Friendly"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.198168"
+      },
+      {
+        "persona_name": "lrzejfprmrifjcyqqkkjnihnenjhnibb",
+        "persona_id": "7fb40175-a72f-4ff6-a17a-7c8513106d07",
+        "attributes": [
+          "Thoughtless",
+          "Graceless",
+          "Decent",
+          "Profligate",
+          "Inconsiderate"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.219967"
+      },
+      {
+        "persona_name": "rqruaoixywdrsclsapnosqgrbbpaigak",
+        "persona_id": "8cbc6d3a-2ed0-45d6-8672-a36d802a1625",
+        "attributes": [
+          "Persuasive",
+          "Shallow",
+          "Fanciful",
+          "Sordid",
+          "Annoyingly bubbly"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.243905"
+      },
+      {
+        "persona_name": "dkayvgrtjkmmyhmzyngosyfsclsvscwm",
+        "persona_id": "7c0f8d4f-57a9-404e-9162-278f3878de8c",
+        "attributes": [
+          "Shortsighted",
+          "Preoccupied",
+          "Indifferent",
+          "Crafty",
+          "Irreligious"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.268525"
+      },
+      {
+        "persona_name": "lcdmhzkgwobjryzahofbkaouedbnarom",
+        "persona_id": "9999ff35-76e9-472c-854e-d84aea89e387",
+        "attributes": [
+          "Opinionated",
+          "Daring",
+          "Dissolute",
+          "Placid",
+          "Proud"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.289929"
+      },
+      {
+        "persona_name": "Test Explorer 135454",
+        "persona_id": "9de16402-fb71-4bb5-b680-ca27c07066f8",
+        "attributes": [
+          "Servile",
+          "Single-minded",
+          "Destructive",
+          "Upright",
+          "Attractive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.314965"
+      },
+      {
+        "persona_name": "Test Explorer 105245",
+        "persona_id": "20ce2637-7638-4577-9e6e-175c1015993f",
+        "attributes": [
+          "Energetic",
+          "Courteous",
+          "Relaxed",
+          "Frugal",
+          "Profligate"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.338411"
+      },
+      {
+        "persona_name": "Test Explorer 105428",
+        "persona_id": "b4a5981c-7af5-46ba-9f9a-79a238133fa4",
+        "attributes": [
+          "Grim",
+          "Self-conscious",
+          "Brilliant",
+          "Paranoid",
+          "Planful"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.359108"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "cf01470c-d7b8-48e3-bf3a-f3f552508c82",
+        "attributes": [
+          "Hypnotic",
+          "Unhurried",
+          "Impractical",
+          "Well-meaning",
+          "Irascible"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.381498"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "d5bbdc0c-359a-4f69-b64d-528b70ad21f3",
+        "attributes": [
+          "Disciplined",
+          "Irresponsible",
+          "Codependent",
+          "Crafty",
+          "Agreeable"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.404768"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "3942b026-090a-413e-8a6b-7c5c85d75c18",
+        "attributes": [
+          "Dignified",
+          "Meretricious",
+          "Undisciplined",
+          "Extraordinary",
+          "Shallow"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.426920"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "f50568f2-74f3-4ea2-ae06-f2dfc1c19f43",
+        "attributes": [
+          "Formal",
+          "Decadent",
+          "Graceless",
+          "idealistic",
+          "Insensitive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.448892"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "134145ee-7eb5-4b94-80b9-5eda6b688efc",
+        "attributes": [
+          "Predatory",
+          "Stiff",
+          "Businesslike",
+          "Dry",
+          "Worrier"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.469336"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "5de40ebb-7b4e-49b0-9e19-650bde723c22",
+        "attributes": [
+          "Impatient",
+          "Thorough",
+          "Deceptive",
+          "Freewheeling",
+          "Proud"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.490220"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "24060715-2f5b-4b05-9e4f-32272b4d5997",
+        "attributes": [
+          "Money-minded",
+          "Vivacious",
+          "Intrusive",
+          "Stupid",
+          "Overly emotional"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.510802"
+      },
+      {
+        "persona_name": "Updated Persona name",
+        "persona_id": "5cfb4774-b4ef-43d4-8e86-5a9b9793ff37",
+        "attributes": [
+          "Desperate",
+          "Mawkish",
+          "Intense",
+          "Vague",
+          "Benevolent"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.531757"
+      },
+      {
+        "persona_name": "The Dreamer",
+        "persona_id": "967d6514-3949-4e22-aeae-b45e4b4ea058",
+        "attributes": [
+          "Delicate",
+          "Considerate",
+          "content",
+          "Self-sufficent",
+          "Rigid"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.555838"
+      },
+      {
+        "persona_name": "The Child",
+        "persona_id": "5d55b951-1989-4541-9044-cb066f4540b4",
+        "attributes": [
+          "Amusing",
+          "Disobedient",
+          "Disorderly",
+          "Gullible",
+          "Businesslike"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.579641"
+      },
+      {
+        "persona_name": "The Philosopher",
+        "persona_id": "2a212559-0d2c-4bdd-ad97-524d867aa275",
+        "attributes": [
+          "Scrupulous",
+          "Greedy",
+          "Self-denying",
+          "Nihilistic",
+          "Maticulous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.604771"
+      },
+      {
+        "persona_name": "The Scholar",
+        "persona_id": "8bac074b-e008-41c5-9290-46feef18111d",
+        "attributes": [
+          "Impractical",
+          "Worrier",
+          "Irascible",
+          "Realistic",
+          "Compulsive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.627807"
+      },
+      {
+        "persona_name": "The Mentor",
+        "persona_id": "e177150f-684b-47e3-a717-2f603c9ac4bb",
+        "attributes": [
+          "Good-humored",
+          "Stingy",
+          "Unreflective",
+          "Opportunistic",
+          "Obnoxious"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.653370"
+      },
+      {
+        "persona_name": "The Wanderer",
+        "persona_id": "11e87cd5-0ae6-49df-bfba-6183271f17c4",
+        "attributes": [
+          "Strong-willed",
+          "Fanatical",
+          "Barbaric",
+          "Pruposeful",
+          "Complex"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.678634"
+      },
+      {
+        "persona_name": "The Seeker",
+        "persona_id": "b745e8a3-8b34-4a0f-9ada-c2c146d9f437",
+        "attributes": [
+          "Cultured",
+          "Servile",
+          "Thoughtless",
+          "Sensual",
+          "innovative"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.706064"
+      },
+      {
+        "persona_name": "The Revolutionary",
+        "persona_id": "ce6f3619-05d4-47c0-b953-a191b6c90627",
+        "attributes": [
+          "Unreflective",
+          "Breezy",
+          "Delicate",
+          "Impressionable",
+          "Criminal"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.732630"
+      },
+      {
+        "persona_name": "The Maverick",
+        "persona_id": "ef6c56cd-1241-4711-a112-25e9b7342173",
+        "attributes": [
+          "Simple",
+          "Messy",
+          "Dreamy",
+          "Dogmatic",
+          "Unprincipled"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.760071"
+      },
+      {
+        "persona_name": "The Iconoclast",
+        "persona_id": "32204f16-3640-4dc9-b4f5-ba65245733b6",
+        "attributes": [
+          "Servile",
+          "Well-read",
+          "Escapist",
+          "Resourceful",
+          "Breezy"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.784863"
+      },
+      {
+        "persona_name": "The Wizard",
+        "persona_id": "44637778-e2eb-46ad-ab2a-bd559952b0bd",
+        "attributes": [
+          "Conceited",
+          "Reflective",
+          "Sociable",
+          "Scholarly",
+          "empathetic"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.809079"
+      },
+      {
+        "persona_name": "The Catalyst",
+        "persona_id": "18d1519c-6f80-4e45-83c4-635354f1c671",
+        "attributes": [
+          "Demanding",
+          "Passionate",
+          "Neutral",
+          "Anxious",
+          "Bewildered"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.833871"
+      },
+      {
+        "persona_name": "The Shaman",
+        "persona_id": "e3bc3384-4519-4613-a746-7b06541b4be1",
+        "attributes": [
+          "Charmless",
+          "Principled",
+          "Slow",
+          "Cowardly",
+          "Outspoken"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.857664"
+      },
+      {
+        "persona_name": "The Warrior",
+        "persona_id": "e0ea85d6-9435-400a-9a9b-8e10038af505",
+        "attributes": [
+          "mohawk",
+          "independent",
+          "Guileless",
+          "Helpful",
+          "Unstable"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.880476"
+      },
+      {
+        "persona_name": "The Dragon Slayer",
+        "persona_id": "ef514158-eaeb-4f63-b502-bd6cdb5bbf1e",
+        "attributes": [
+          "grounded",
+          "Forgiving",
+          "Scornful",
+          "Unimaginative",
+          "curious"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.905683"
+      },
+      {
+        "persona_name": "The Romantic",
+        "persona_id": "cacdfd44-7575-44c6-bf1a-24a65e727df5",
+        "attributes": [
+          "Manipulative",
+          "Indifferent",
+          "Dutiful",
+          "Subjective",
+          "Single-minded"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.929916"
+      },
+      {
+        "persona_name": "The Sensualist",
+        "persona_id": "3937d2c3-139f-408a-8112-894c0c5777ae",
+        "attributes": [
+          "Small-thinking",
+          "Curious",
+          "Persistent",
+          "Mechanical",
+          "Dull"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.953347"
+      },
+      {
+        "persona_name": "The Companion",
+        "persona_id": "f9970b50-8be1-47d9-8583-0ce697606d88",
+        "attributes": [
+          "Appreciative",
+          "Unctuous",
+          "Insulting",
+          "Sloppy",
+          "Self-critical"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:48.976992"
+      },
+      {
+        "persona_name": "The Trickster",
+        "persona_id": "bae3a620-eac5-4f02-bc06-fa29fcc8da4a",
+        "attributes": [
+          "Progressive",
+          "Orderly",
+          "Clever",
+          "Sporting",
+          "solitary"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.002018"
+      },
+      {
+        "persona_name": "The Fool",
+        "persona_id": "c1819db5-5ffa-46aa-855e-cda7f41610b4",
+        "attributes": [
+          "Lazy",
+          "Honorable",
+          "Authoritarian",
+          "Pretentious",
+          "Cute"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.025285"
+      },
+      {
+        "persona_name": "The Comedian",
+        "persona_id": "bf9b256c-f5c2-40db-b1ea-1c3cc630aa2a",
+        "attributes": [
+          "Self-critical",
+          "Desperate",
+          "Mellow",
+          "Neat",
+          "Stoic"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.049527"
+      },
+      {
+        "persona_name": "The Regular Guy",
+        "persona_id": "6418bdce-cb5b-4316-8d05-683a92f387ba",
+        "attributes": [
+          "Neurotic",
+          "Impassive",
+          "Intolerant",
+          "Annoyingly bubbly",
+          "Presumptuous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.073275"
+      },
+      {
+        "persona_name": "The Realist",
+        "persona_id": "c232b17f-f0d8-4581-b345-428cf352c3f3",
+        "attributes": [
+          "Disloyal",
+          "Shrewd",
+          "Arrogant",
+          "Resourceful",
+          "Restrained"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.098968"
+      },
+      {
+        "persona_name": "The Healer",
+        "persona_id": "ed27f743-fbcb-473f-8234-73c963c16394",
+        "attributes": [
+          "Airy",
+          "Complacent",
+          "Good-natured",
+          "Independent",
+          "Frivolous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.122108"
+      },
+      {
+        "persona_name": "The Guardian",
+        "persona_id": "ecbefd27-b49d-4f0b-959f-c64edab5c8da",
+        "attributes": [
+          "Ascetic",
+          "cautious",
+          "Conciliatory",
+          "Natty",
+          "Calm"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.146551"
+      },
+      {
+        "persona_name": "The Parent",
+        "persona_id": "edcc1d91-7f28-4966-8da0-6baf73af5cc8",
+        "attributes": [
+          "Insincere",
+          "Observant",
+          "Courteous",
+          "Secretive",
+          "Shallow"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.170901"
+      },
+      {
+        "persona_name": "The Sovereign",
+        "persona_id": "fbcae088-5470-4797-b222-2c251d10881c",
+        "attributes": [
+          "Fanatical",
+          "Weak-willed",
+          "Coldhearted",
+          "Messy",
+          "Restrained"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.195397"
+      },
+      {
+        "persona_name": "The Executive",
+        "persona_id": "4203a928-8ef2-444e-9a88-d509d6bdde74",
+        "attributes": [
+          "Conservative",
+          "Shrewd",
+          "passionate",
+          "Formal",
+          "Aspiring"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.218866"
+      },
+      {
+        "persona_name": "The Patriarch",
+        "persona_id": "8b8b4a4e-b7c3-4c33-99be-e5a853ab22ad",
+        "attributes": [
+          "Nihilistic",
+          "Prim",
+          "Passionate",
+          "Intrusive",
+          "Insulting"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.246192"
+      },
+      {
+        "persona_name": "The Inventor",
+        "persona_id": "8ac1a525-b710-45cc-8178-a83dcb0624bb",
+        "attributes": [
+          "Charmless",
+          "Self-reliant",
+          "extroverted",
+          "rebellious",
+          "Meddlesome"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.272308"
+      },
+      {
+        "persona_name": "The Visionary Leader",
+        "persona_id": "3dda4e2b-985d-4db9-8a4d-fd379b1a6ee8",
+        "attributes": [
+          "ambiverted",
+          "Oppressed",
+          "Morbid",
+          "Courageous",
+          "Self-denying"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.297246"
+      },
+      {
+        "persona_name": "Test Explorer 142235",
+        "persona_id": "ab85350d-3b26-4b10-af28-7a030c6e21c0",
+        "attributes": [
+          "Opinionated",
+          "Goody-two-shoes",
+          "Perfectionist",
+          "Humble",
+          "Self-denying"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.322430"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "36d25f05-15de-4c6e-9b09-0c2bb2cd31a4",
+        "attributes": [
+          "Crisp",
+          "High-minded",
+          "Playful",
+          "serious",
+          "Zany"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.344019"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "8c7755cd-202e-4b6d-b7b7-d3f2c0873230",
+        "attributes": [
+          "Wise",
+          "Mechanical",
+          "Enervated",
+          "Asocial",
+          "Indecisive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.365716"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "d8419095-f34d-4012-8f01-eebcf3d32773",
+        "attributes": [
+          "Flamboyant",
+          "Fickle",
+          "Brittle",
+          "Decisive",
+          "Criminal"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.387334"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "486213c1-a845-45f2-aa22-809616bdc442",
+        "attributes": [
+          "pessimistic",
+          "Intrusive",
+          "Disorganized",
+          "Goody-two-shoes",
+          "Playful"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.410134"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "f5a469f7-d30d-49b9-b13b-2fd5c6b16419",
+        "attributes": [
+          "Abrasive",
+          "Know-it-all",
+          "Faithful",
+          "Polished",
+          "Sympathetic"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.430641"
+      },
+      {
+        "persona_name": "nazojcazgtfmalrxkjsuoxjxdmzgyekv",
+        "persona_id": "4ed9e505-0c6f-4a63-8ef2-26a11dffbcb4",
+        "attributes": [
+          "passionate",
+          "Clear-headed",
+          "Flamboyant",
+          "Genuine",
+          "Inhibited"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.451793"
+      },
+      {
+        "persona_name": "Long Path Test Persona",
+        "persona_id": "c50120d7-c5e2-4d67-ab7a-e65624230bde",
+        "attributes": [
+          "Private",
+          "Passive",
+          "Fanatical",
+          "Amusing",
+          "Courteous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.473311"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "6c983c3c-f7f9-427c-bd8a-4b3eb2890720",
+        "attributes": [
+          "Clumsy",
+          "Debonair",
+          "Sophisticated",
+          "Regimental",
+          "Monstrous"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.496117"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "c9158032-2fdb-4679-bb55-3a82b0f6f695",
+        "attributes": [
+          "Religious",
+          "Tasteless",
+          "Excitable",
+          "Caring",
+          "Compulsive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.517536"
+      },
+      {
+        "persona_name": "Test Persona",
+        "persona_id": "becb5566-ad4e-4128-bcce-33b91d6c33f5",
+        "attributes": [
+          "Charmless",
+          "False",
+          "Irrational",
+          "Artificial",
+          "Assertive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.538302"
+      },
+      {
+        "persona_name": "jlcrlvryupmjtztzosjzfkcymmmsihws",
+        "persona_id": "83aac7b1-643b-4e9d-b5c2-6168c9847a58",
+        "attributes": [
+          "Discouraging",
+          "Patriotic",
+          "mohawk",
+          "Libidinous",
+          "Insensitive"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.558386"
+      },
+      {
+        "persona_name": "The Idealist",
+        "persona_id": "88e6e033-aebd-4490-a174-b66d0c103aec",
+        "attributes": [
+          "Timid",
+          "collaborative",
+          "Flippant",
+          "Ebullient",
+          "Superstitious"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.582602"
+      },
+      {
+        "persona_name": "The Pioneer",
+        "persona_id": "2f09b822-3e8a-4070-adcc-91a14253bbb8",
+        "attributes": [
+          "Annoyingly bubbly",
+          "Venomous",
+          "Egocentric",
+          "Lovable",
+          "Contradictory"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.606985"
+      },
+      {
+        "persona_name": "The Champion",
+        "persona_id": "bc9a4f2d-44ba-450f-b759-144fe151890d",
+        "attributes": [
+          "Athletic",
+          "Masculine",
+          "grounded",
+          "Narrow",
+          "Impatient"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.629658"
+      },
+      {
+        "persona_name": "The Good Neighbor",
+        "persona_id": "052e761d-82e1-4b77-8131-3f6e3357a4cd",
+        "attributes": [
+          "Surprising",
+          "Stoic",
+          "Stubborn",
+          "Persuasive",
+          "Political"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.654482"
+      },
+      {
+        "persona_name": "The Artist",
+        "persona_id": "4b86be27-1f05-47b3-b70e-c9b59c6606c4",
+        "attributes": [
+          "Conservative",
+          "Irreverent",
+          "Confidential",
+          "Sober",
+          "pessimistic"
+        ],
+        "success": true,
+        "timestamp": "2026-01-20T14:27:49.681360"
+      }
+    ]
+  },
+  "errors": []
+}

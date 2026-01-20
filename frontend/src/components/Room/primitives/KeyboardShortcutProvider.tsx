@@ -18,7 +18,13 @@
  */
 
 import * as React from "react"
-import { createContext, useContext, useEffect, useCallback, useMemo } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react"
 
 // ============================================================================
 // Types
@@ -54,9 +60,9 @@ interface KeyboardShortcutContextValue {
 // Context
 // ============================================================================
 
-const KeyboardShortcutContext = createContext<KeyboardShortcutContextValue | undefined>(
-  undefined
-)
+const KeyboardShortcutContext = createContext<
+  KeyboardShortcutContextValue | undefined
+>(undefined)
 
 // ============================================================================
 // Platform Detection
@@ -153,7 +159,7 @@ export function KeyboardShortcutProvider({
 
       return isMac ? `${modString}${keyString}` : `${modString}+${keyString}`
     },
-    [isMac]
+    [isMac],
   )
 
   // Global keyboard listener
@@ -203,7 +209,7 @@ export function KeyboardShortcutProvider({
       isMac,
       formatShortcut,
     }),
-    [registerShortcut, getShortcuts, isMac, formatShortcut]
+    [registerShortcut, getShortcuts, isMac, formatShortcut],
   )
 
   return (
@@ -226,7 +232,7 @@ export function useKeyboardShortcuts(): KeyboardShortcutContextValue {
   const context = useContext(KeyboardShortcutContext)
   if (!context) {
     throw new Error(
-      "useKeyboardShortcuts must be used within KeyboardShortcutProvider"
+      "useKeyboardShortcuts must be used within KeyboardShortcutProvider",
     )
   }
   return context
@@ -252,7 +258,7 @@ export function useShortcut(shortcut: KeyboardShortcut) {
 
   useEffect(() => {
     return registerShortcut(shortcut)
-  }, [registerShortcut, shortcut.key, shortcut.modifiers.join(",")])
+  }, [registerShortcut, shortcut.key, shortcut])
 }
 
 /**

@@ -2446,6 +2446,53 @@ export const PersonasPublicSchema = {
     description: 'Collection model for Personas API responses.'
 } as const;
 
+export const PresetResponseSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        description: {
+            type: 'string',
+            title: 'Description'
+        },
+        panels: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Panels'
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name', 'description', 'panels', 'is_system'],
+    title: 'PresetResponse'
+} as const;
+
+export const PresetsListResponseSchema = {
+    properties: {
+        presets: {
+            items: {
+                '$ref': '#/components/schemas/PresetResponse'
+            },
+            type: 'array',
+            title: 'Presets'
+        }
+    },
+    type: 'object',
+    required: ['presets'],
+    title: 'PresetsListResponse'
+} as const;
+
 export const PrivateUserCreateSchema = {
     properties: {
         email: {
@@ -5199,6 +5246,98 @@ export const UserLLMProvidersPublicSchema = {
     required: ['data', 'count'],
     title: 'UserLLMProvidersPublic',
     description: 'Collection response for UserLLMProviders.'
+} as const;
+
+export const UserPanelDefaultsPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        preset_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Preset Id'
+        },
+        panels: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Panels'
+        },
+        reduce_motion: {
+            type: 'boolean',
+            title: 'Reduce Motion'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'user_id', 'preset_id', 'panels', 'reduce_motion', 'updated_at'],
+    title: 'UserPanelDefaultsPublic',
+    description: 'Public response for user panel defaults'
+} as const;
+
+export const UserPanelDefaultsUpdateSchema = {
+    properties: {
+        preset_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Preset Id'
+        },
+        panels: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Panels'
+        },
+        reduce_motion: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reduce Motion'
+        }
+    },
+    type: 'object',
+    title: 'UserPanelDefaultsUpdate',
+    description: 'Update payload for user panel defaults'
 } as const;
 
 export const UserPersonaCreateSchema = {
