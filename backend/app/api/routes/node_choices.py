@@ -23,6 +23,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import select, func
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_story_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     NodeChoice,
     Story,
@@ -33,6 +35,7 @@ from app.models import (
     NodeChoiceUpdate,
     UserNodeChoice,
     Message,
+    User,
 )
 from app import crud
 
@@ -150,6 +153,22 @@ def create_node_choice(
     session.commit()
     session.refresh(choice)
 
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story.id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story.id,
+                entity_data=snapshot,
+                message=f"Story choice created: {choice.text}",
+            )
+    except Exception:
+        pass
+
     return choice
 
 @router.put("/{choice_id}", response_model=NodeChoicePublic)
@@ -218,6 +237,22 @@ def update_node_choice(
     session.commit()
     session.refresh(choice)
 
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story.id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story.id,
+                entity_data=snapshot,
+                message=f"Story choice updated: {choice.text}",
+            )
+    except Exception:
+        pass
+
     return choice
 @router.delete("/{choice_id}")
 def delete_node_choice(
@@ -280,7 +315,21 @@ def delete_node_choice(
     session.delete(choice)
     session.commit()
 
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story.id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story.id,
+                entity_data=snapshot,
+                message=f"Story choice deleted: {choice_id}",
+            )
+    except Exception:
+        pass
+
     return Message(message="Choice deleted successfully")
-
-
 

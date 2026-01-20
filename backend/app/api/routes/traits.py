@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_trait_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     Trait,
     TraitCreate,
@@ -60,6 +62,18 @@ def create_trait(
     session.add(trait)
     session.commit()
     session.refresh(trait)
+    try:
+        snapshot = build_trait_snapshot(session=session, trait_id=trait.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="trait",
+            entity_id=trait.id,
+            entity_data=snapshot,
+            message=f"Create trait: {trait.name}",
+        )
+    except Exception:
+        pass
     return trait
 
 
@@ -84,6 +98,18 @@ def update_trait(
     session.add(trait)
     session.commit()
     session.refresh(trait)
+    try:
+        snapshot = build_trait_snapshot(session=session, trait_id=trait.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="trait",
+            entity_id=trait.id,
+            entity_data=snapshot,
+            message=f"Update trait: {trait.name}",
+        )
+    except Exception:
+        pass
     return trait
 
 
@@ -99,6 +125,18 @@ def delete_trait(
         raise HTTPException(status_code=404, detail="trait not found")
     if not current_user.is_superuser:
         raise HTTPException(status_code=400, detail="Not enough permissions")
+    try:
+        snapshot = build_trait_snapshot(session=session, trait_id=trait.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="trait",
+            entity_id=trait.id,
+            entity_data=snapshot,
+            message=f"Delete trait: {trait.name}",
+        )
+    except Exception:
+        pass
     session.delete(trait)
     session.commit()
     return Message(message="Trait deleted successfully")

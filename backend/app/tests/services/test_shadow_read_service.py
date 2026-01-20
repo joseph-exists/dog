@@ -229,6 +229,95 @@ def test_shadow_read_service_forgejo_failure_falls_back_to_db(db: Session) -> No
     assert result.snapshot_json == db_snapshot
 
 
+def test_shadow_read_service_latest_committed_wins_over_pending(db: Session) -> None:
+    user_in = UserCreate(email=f"shadow-latest-{uuid.uuid4()}@example.com", password="password123")
+    from app import crud
+
+    user: User = crud.create_user(session=db, user_create=user_in)
+
+    entity_id = uuid.uuid4()
+    shadow_repo = ShadowRepo(
+        owner_id=user.id,
+        entity_type="room",
+        entity_id=entity_id,
+        forgejo_repo_name=f"room-{str(entity_id)[:8]}",
+        forgejo_repo_id=None,
+    )
+    db.add(shadow_repo)
+    db.commit()
+    db.refresh(shadow_repo)
+
+    committed_snapshot = {"entity_type": "room", "version": 1}
+    committed = ShadowVersion(
+        shadow_repo_id=shadow_repo.id,
+        commit_sha="commit1111",
+        version_number=1,
+        message="committed",
+        snapshot_json=committed_snapshot,
+        created_by_id=user.id,
+        status="committed",
+    )
+    db.add(committed)
+    db.commit()
+
+    pending_snapshot = {"entity_type": "room", "version": 2}
+    pending = ShadowVersion(
+        shadow_repo_id=shadow_repo.id,
+        commit_sha="pending",
+        version_number=2,
+        message="pending",
+        snapshot_json=pending_snapshot,
+        created_by_id=user.id,
+        status="pending",
+    )
+    db.add(pending)
+    db.commit()
+
+    result = shadow_read_service.get_latest_snapshot(
+        session=db, entity_type="room", entity_id=entity_id
+    )
+    assert result.version_number == 1
+    assert result.snapshot_json == committed_snapshot
+
+
+def test_shadow_read_service_latest_pending_when_no_committed(db: Session) -> None:
+    user_in = UserCreate(email=f"shadow-pending-{uuid.uuid4()}@example.com", password="password123")
+    from app import crud
+
+    user: User = crud.create_user(session=db, user_create=user_in)
+
+    entity_id = uuid.uuid4()
+    shadow_repo = ShadowRepo(
+        owner_id=user.id,
+        entity_type="room",
+        entity_id=entity_id,
+        forgejo_repo_name=f"room-{str(entity_id)[:8]}",
+        forgejo_repo_id=None,
+    )
+    db.add(shadow_repo)
+    db.commit()
+    db.refresh(shadow_repo)
+
+    pending_snapshot = {"entity_type": "room", "version": 1}
+    pending = ShadowVersion(
+        shadow_repo_id=shadow_repo.id,
+        commit_sha="pending",
+        version_number=1,
+        message="pending",
+        snapshot_json=pending_snapshot,
+        created_by_id=user.id,
+        status="pending",
+    )
+    db.add(pending)
+    db.commit()
+
+    result = shadow_read_service.get_latest_snapshot(
+        session=db, entity_type="room", entity_id=entity_id
+    )
+    assert result.version_number == 1
+    assert result.snapshot_json == pending_snapshot
+
+
 def test_shadow_read_service_missing_shadow_repo_raises_typed_error(db: Session) -> None:
     """Test that calling read with no ShadowRepo raises ShadowRepoNotFound."""
     entity_id = uuid.uuid4()
@@ -264,4 +353,3 @@ def test_shadow_read_service_missing_shadow_version_raises_typed_error(db: Sessi
         shadow_read_service.get_latest_snapshot(
             session=db, entity_type="persona", entity_id=entity_id
         )
-

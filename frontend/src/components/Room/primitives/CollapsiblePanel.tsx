@@ -18,22 +18,22 @@
  * ```
  */
 
-import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import { Minus, Plus } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react"
 import { Button } from "@/components/ui/button"
+import {
+  getTransition,
+  instantTransition,
+  transitions,
+  useReduceMotion,
+} from "@/components/ui/motion"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  transitions,
-  instantTransition,
-  useReduceMotion,
-  getTransition,
-} from "@/components/ui/motion"
+import { cn } from "@/lib/utils"
 
 // ============================================================================
 // Types
@@ -128,7 +128,7 @@ export function CollapsiblePanel({
         <div
           className={cn(
             "flex items-center justify-between px-4 h-12 bg-background border-b border-border",
-            titleBarClassName
+            titleBarClassName,
           )}
         >
           <span className="text-sm font-medium text-muted-foreground">
@@ -210,7 +210,7 @@ export function useCollapsiblePanels(options: {
 
   const isCollapsed = React.useCallback(
     (panelId: string) => collapsed.has(panelId),
-    [collapsed]
+    [collapsed],
   )
 
   const toggle = React.useCallback((panelId: string) => {

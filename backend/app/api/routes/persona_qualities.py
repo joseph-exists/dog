@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_persona_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     PersonaQualityLink,
     Persona,
@@ -63,6 +65,18 @@ def add_quality_to_persona(
             persona_id=persona_id,
             quality_id=quality_id
         )
+        try:
+            snapshot = build_persona_snapshot(session=session, persona_id=persona_id)
+            shadow_service.enqueue_entity_version(
+                session=session,
+                user=current_user,
+                entity_type="persona",
+                entity_id=persona_id,
+                entity_data=snapshot,
+                message=f"Persona quality added: {quality_id}",
+            )
+        except Exception:
+            pass
         return Message(message="Quality added to persona successfully")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -89,6 +103,18 @@ def remove_quality_from_persona(
             persona_id=persona_id,
             quality_id=quality_id
         )
+        try:
+            snapshot = build_persona_snapshot(session=session, persona_id=persona_id)
+            shadow_service.enqueue_entity_version(
+                session=session,
+                user=current_user,
+                entity_type="persona",
+                entity_id=persona_id,
+                entity_data=snapshot,
+                message=f"Persona quality removed: {quality_id}",
+            )
+        except Exception:
+            pass
         return Message(message="Quality removed from persona successfully")
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

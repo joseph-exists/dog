@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_persona_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     Persona,
     Event,
@@ -42,6 +44,19 @@ def process_persona_event(
             persona_id=persona_id,
             event_id=event_id
         )
+
+        try:
+            snapshot = build_persona_snapshot(session=session, persona_id=persona_id)
+            shadow_service.enqueue_entity_version(
+                session=session,
+                user=current_user,
+                entity_type="persona",
+                entity_id=persona_id,
+                entity_data=snapshot,
+                message=f"Persona event processed: {event_id}",
+            )
+        except Exception:
+            pass
 
         if affected_links:
             return Message(message=f"Event processed successfully. {len(affected_links)} qualities affected.")

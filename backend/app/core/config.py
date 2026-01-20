@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     SHADOW_STORIES_TOKEN: str | None = None # shadow-stories account
     SHADOW_ROOMS_TOKEN: str | None = None   # shadow-rooms account
     SHADOW_PERSONAS_TOKEN: str | None = None  # shadow-personas account
+    SHADOW_QUALITIES_TOKEN: str | None = None  # shadow-qualities account
+    SHADOW_TRAITS_TOKEN: str | None = None  # shadow-traits account
     SHADOW_LLM_MODELS_TOKEN: str | None = None  # shadow-llm-models account
     SHADOW_USER_LLM_PROVIDERS_TOKEN: str | None = None  # shadow-user-llm-providers account
     SHADOW_PROMPTS_TOKEN: str | None = None  # shadow-prompts account

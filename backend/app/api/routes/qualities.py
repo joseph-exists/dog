@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_quality_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     Quality,
     QualityCreate,
@@ -60,6 +62,18 @@ def create_quality(
     session.add(quality)
     session.commit()
     session.refresh(quality)
+    try:
+        snapshot = build_quality_snapshot(session=session, quality_id=quality.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="quality",
+            entity_id=quality.id,
+            entity_data=snapshot,
+            message=f"Create quality: {quality.name}",
+        )
+    except Exception:
+        pass
     return quality
 
 
@@ -84,6 +98,18 @@ def update_quality(
     session.add(quality)
     session.commit()
     session.refresh(quality)
+    try:
+        snapshot = build_quality_snapshot(session=session, quality_id=quality.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="quality",
+            entity_id=quality.id,
+            entity_data=snapshot,
+            message=f"Update quality: {quality.name}",
+        )
+    except Exception:
+        pass
     return quality
 
 
@@ -99,6 +125,18 @@ def delete_quality(
         raise HTTPException(status_code=404, detail="quality not found")
     if not current_user.is_superuser:
         raise HTTPException(status_code=400, detail="Not enough permissions")
+    try:
+        snapshot = build_quality_snapshot(session=session, quality_id=quality.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="quality",
+            entity_id=quality.id,
+            entity_data=snapshot,
+            message=f"Delete quality: {quality.name}",
+        )
+    except Exception:
+        pass
     session.delete(quality)
     session.commit()
     return Message(message="Quality deleted successfully")

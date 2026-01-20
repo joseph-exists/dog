@@ -1,0 +1,36 @@
+{
+  "test_suite": "zed suite",
+  "start_time": "2026-01-20T13:54:54.592433",
+  "end_time": "2026-01-20T13:54:54.947151",
+  "duration_seconds": 0.354718,
+  "stories_created": [],
+  "total_tests": 2,
+  "passed": 1,
+  "failed": 1,
+  "success_rate": "50.0%",
+  "test_entities": {},
+  "tests": [
+    {
+      "name": "create_story",
+      "passed": true,
+      "message": "Story created: \"Test Story Zed Title\" (ID: 43fbcb5f...), version 1",
+      "details": {},
+      "timestamp": "2026-01-20T13:54:54.883129"
+    },
+    {
+      "name": "test_story_zed",
+      "passed": false,
+      "message": "Failed to publish story: {\"detail\":{\"message\":\"Story has undefined state variables\",\"undefined_variables\":[\"courage\",\"path\"],\"error_count\":4,\"hint\":\"Define these variables in the state schema or use force=true to publish anyway\"}}",
+      "details": {},
+      "timestamp": "2026-01-20T13:54:54.947086"
+    }
+  ],
+  "authentication": {
+    "status": "success",
+    "user": {
+      "id": "228d7ff2-960d-48b3-91a0-979034859cfe",
+      "email": "joseph@existentialdetectives.com",
+      "is_superuser": true
+    }
+  }
+}

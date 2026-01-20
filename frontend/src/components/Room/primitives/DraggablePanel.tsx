@@ -17,17 +17,17 @@
  * ```
  */
 
-import * as React from "react"
-import { useState, useCallback } from "react"
 import { motion } from "framer-motion"
 import { GripVertical } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react"
+import { useCallback, useState } from "react"
 import {
-  springConfig,
-  variants,
-  useReduceMotion,
   getTransition,
+  springConfig,
+  useReduceMotion,
+  variants,
 } from "@/components/ui/motion"
+import { cn } from "@/lib/utils"
 
 // ============================================================================
 // Types
@@ -39,7 +39,11 @@ export interface DraggablePanelProps {
   /** Children to render inside the draggable wrapper */
   children: React.ReactNode
   /** Called when a panel is dropped onto this panel's drop zone */
-  onDrop?: (draggedId: string, targetId: string, position: "before" | "after") => void
+  onDrop?: (
+    draggedId: string,
+    targetId: string,
+    position: "before" | "after",
+  ) => void
   /** Called when drag starts */
   onDragStart?: (panelId: string) => void
   /** Called when drag ends */
@@ -77,19 +81,16 @@ const DragContext = React.createContext<DragContextValue | undefined>(undefined)
  *
  * Wrap panel groups to coordinate drag state between panels.
  */
-export function DragContextProvider({ children }: { children: React.ReactNode }) {
+export function DragContextProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const [draggedId, setDraggedId] = useState<string | null>(null)
 
-  const value = React.useMemo(
-    () => ({ draggedId, setDraggedId }),
-    [draggedId]
-  )
+  const value = React.useMemo(() => ({ draggedId, setDraggedId }), [draggedId])
 
-  return (
-    <DragContext.Provider value={value}>
-      {children}
-    </DragContext.Provider>
-  )
+  return <DragContext.Provider value={value}>{children}</DragContext.Provider>
 }
 
 function useDragContext() {
@@ -105,7 +106,11 @@ function useDragContext() {
  *
  * Visual handle for initiating drag. Renders as grip icon.
  */
-export function DragHandle({ isDragging, onPointerDown, className }: DragHandleProps) {
+export function DragHandle({
+  isDragging,
+  onPointerDown,
+  className,
+}: DragHandleProps) {
   return (
     <button
       type="button"
@@ -115,7 +120,7 @@ export function DragHandle({ isDragging, onPointerDown, className }: DragHandleP
         "text-muted-foreground hover:text-foreground hover:bg-muted/50",
         "transition-colors",
         isDragging && "cursor-grabbing",
-        className
+        className,
       )}
       aria-label="Drag to reorder"
     >
@@ -149,8 +154,10 @@ function DropZone({
     <motion.div
       className={cn(
         "absolute z-10 transition-opacity",
-        position === "before" ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2",
-        "top-0 bottom-0 w-4"
+        position === "before"
+          ? "left-0 -translate-x-1/2"
+          : "right-0 translate-x-1/2",
+        "top-0 bottom-0 w-4",
       )}
       onPointerEnter={onDragEnter}
       onPointerLeave={onDragLeave}
@@ -163,7 +170,7 @@ function DropZone({
         className={cn(
           "h-full w-1 mx-auto rounded-full",
           "bg-primary/50",
-          isActive && "animate-pulse"
+          isActive && "animate-pulse",
         )}
       />
     </motion.div>
@@ -192,7 +199,9 @@ export function DraggablePanel({
   const setDraggedId = dragContext?.setDraggedId ?? setLocalDraggedId
 
   const [isDragging, setIsDragging] = useState(false)
-  const [activeDropZone, setActiveDropZone] = useState<"before" | "after" | null>(null)
+  const [activeDropZone, setActiveDropZone] = useState<
+    "before" | "after" | null
+  >(null)
   const reduceMotion = useReduceMotion()
 
   const isBeingDragged = isDragging || draggedId === panelId
@@ -206,7 +215,7 @@ export function DraggablePanel({
       setDraggedId(panelId)
       onDragStart?.(panelId)
     },
-    [disabled, panelId, setDraggedId, onDragStart]
+    [disabled, panelId, setDraggedId, onDragStart],
   )
 
   // Global pointer up listener
@@ -230,7 +239,7 @@ export function DraggablePanel({
       }
       setActiveDropZone(null)
     },
-    [draggedId, panelId, onDrop]
+    [draggedId, panelId, onDrop],
   )
 
   // Clone children to inject drag handle
@@ -240,17 +249,20 @@ export function DraggablePanel({
     // If child is PanelContainer, inject drag handle into headerActions
     if (dragHandlePosition === "header") {
       const childProps = child.props as { headerActions?: React.ReactNode }
-      return React.cloneElement(child as React.ReactElement<{ headerActions?: React.ReactNode }>, {
-        headerActions: (
-          <div className="flex items-center gap-1">
-            <DragHandle
-              isDragging={isBeingDragged}
-              onPointerDown={handlePointerDown}
-            />
-            {childProps.headerActions}
-          </div>
-        ),
-      })
+      return React.cloneElement(
+        child as React.ReactElement<{ headerActions?: React.ReactNode }>,
+        {
+          headerActions: (
+            <div className="flex items-center gap-1">
+              <DragHandle
+                isDragging={isBeingDragged}
+                onPointerDown={handlePointerDown}
+              />
+              {childProps.headerActions}
+            </div>
+          ),
+        },
+      )
     }
 
     return child

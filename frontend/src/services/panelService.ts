@@ -140,7 +140,9 @@ export async function updateMyPanelConfig(
   useRoomDefaults: boolean,
 ): Promise<UserRoomPanelConfigPublic> {
   // Cast to API expected type (generic dict array or null)
-  const requestBody = panels as unknown as Array<{ [key: string]: unknown }> | null
+  const requestBody = panels as unknown as Array<{
+    [key: string]: unknown
+  }> | null
   return await RoomPanelsService.updateMyPanelConfig({
     roomId,
     requestBody,

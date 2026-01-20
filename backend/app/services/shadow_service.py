@@ -64,6 +64,8 @@ SERVICE_ACCOUNT_MAP = {
     "story": "SHADOW_STORIES_TOKEN",
     "room": "SHADOW_ROOMS_TOKEN",
     "persona": "SHADOW_PERSONAS_TOKEN",
+    "quality": "SHADOW_QUALITIES_TOKEN",
+    "trait": "SHADOW_TRAITS_TOKEN",
     "llm_model": "SHADOW_LLM_MODELS_TOKEN",
     "user_llm_provider": "SHADOW_USER_LLM_PROVIDERS_TOKEN",
 }
@@ -75,6 +77,8 @@ SERVICE_ACCOUNT_USERNAMES = {
     "story": "shadow-stories",
     "room": "shadow-rooms",
     "persona": "shadow-personas",
+    "quality": "shadow-qualities",
+    "trait": "shadow-traits",
     "llm_model": "shadow-llm-models",
     "user_llm_provider": "shadow-user-llm-providers",
 }

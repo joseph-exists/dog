@@ -91,7 +91,7 @@ export function MiniPreview({
     <div
       className={cn(
         "flex rounded border border-border bg-muted/30 overflow-hidden",
-        className
+        className,
       )}
       style={{ width, height }}
       role="img"
@@ -108,7 +108,7 @@ export function MiniPreview({
               key={panel.id}
               className={cn(
                 "flex-1 rounded-sm border flex items-center justify-center",
-                panelColors[panel.kind] || "bg-muted border-border"
+                panelColors[panel.kind] || "bg-muted border-border",
               )}
             >
               {showLabels && (
@@ -132,12 +132,13 @@ export function MiniPreview({
               key={panel.id}
               className={cn(
                 "flex-1 rounded-sm border flex items-center justify-center",
-                panelColors[panel.kind] || "bg-muted border-border"
+                panelColors[panel.kind] || "bg-muted border-border",
               )}
             >
               {showLabels && (
                 <span className="text-[6px] text-muted-foreground font-medium truncate px-0.5">
-                  {panelNames[panel.kind]?.substring(0, 3) || panel.kind.substring(0, 3)}
+                  {panelNames[panel.kind]?.substring(0, 3) ||
+                    panel.kind.substring(0, 3)}
                 </span>
               )}
             </div>

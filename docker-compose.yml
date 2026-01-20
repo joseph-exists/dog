@@ -155,6 +155,20 @@ services:
       # Enable redirection for HTTP and HTTPS
       - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.middlewares=https-redirect
 
+  shadow-outbox-worker:
+    image: "${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}-shadow-worker"
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - .env
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    command: ["python", "-m", "app.services.shadow_outbox_worker"]
+
   frontend:
     image: "${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}"
     restart: always

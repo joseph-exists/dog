@@ -9,10 +9,20 @@ from app.models import (
     AgentConfig,
     AgentPersona,
     LLMModel,
+    NodeChoice,
     Persona,
+    PersonaQualityLink,
+    PersonaTraitLink,
+    Quality,
+    QualityTraitLink,
     Room,
     RoomParticipant,
     RoomParticipantBinding,
+    Story,
+    StoryNode,
+    StoryRequirement,
+    StoryStateVariable,
+    Trait,
     UserLLMProvider,
 )
 
@@ -111,14 +121,87 @@ def build_agent_snapshot(*, session: Session, agent_id: uuid.UUID) -> dict[str, 
     }
 
 
+def build_story_snapshot(*, session: Session, story_id: uuid.UUID) -> dict[str, Any]:
+    story = session.get(Story, story_id)
+    if not story:
+        raise ValueError("Story not found")
+
+    nodes = session.exec(
+        select(StoryNode)
+        .where(StoryNode.story_id == story_id)
+        .order_by(StoryNode.story_version.asc(), StoryNode.created_at.asc())
+    ).all()
+    node_ids = [node.id for node in nodes]
+
+    if node_ids:
+        choices = session.exec(
+            select(NodeChoice)
+            .where(NodeChoice.from_node_id.in_(node_ids))
+            .order_by(NodeChoice.from_node_id.asc())
+        ).all()
+    else:
+        choices = []
+
+    requirements = session.exec(
+        select(StoryRequirement)
+        .where(StoryRequirement.story_id == story_id)
+        .order_by(StoryRequirement.id.asc())
+    ).all()
+
+    state_variables = session.exec(
+        select(StoryStateVariable)
+        .where(StoryStateVariable.story_id == story_id)
+        .order_by(StoryStateVariable.story_version.asc(), StoryStateVariable.key.asc())
+    ).all()
+
+    return {
+        "schema_version": 1,
+        "entity_type": "story",
+        "story": story.model_dump(mode="json"),
+        "nodes": [node.model_dump(mode="json") for node in nodes],
+        "choices": [choice.model_dump(mode="json") for choice in choices],
+        "requirements": [req.model_dump(mode="json") for req in requirements],
+        "state_variables": [var.model_dump(mode="json") for var in state_variables],
+    }
+
+
 def build_persona_snapshot(*, session: Session, persona_id: uuid.UUID) -> dict[str, Any]:
     persona = session.get(Persona, persona_id)
     if not persona:
         raise ValueError("Persona not found")
+
+    trait_links = session.exec(
+        select(PersonaTraitLink)
+        .where(PersonaTraitLink.persona_id == persona_id)
+        .order_by(PersonaTraitLink.created_at.asc())
+    ).all()
+    trait_ids = [link.trait_id for link in trait_links]
+    traits = (
+        session.exec(select(Trait).where(Trait.id.in_(trait_ids))).all()
+        if trait_ids
+        else []
+    )
+
+    quality_links = session.exec(
+        select(PersonaQualityLink)
+        .where(PersonaQualityLink.persona_id == persona_id)
+        .order_by(PersonaQualityLink.created_at.asc())
+    ).all()
+    quality_ids = [link.quality_id for link in quality_links]
+    qualities = (
+        session.exec(select(Quality).where(Quality.id.in_(quality_ids))).all()
+        if quality_ids
+        else []
+    )
+
     return {
         "schema_version": 1,
         "entity_type": "persona",
         "persona": persona.model_dump(mode="json"),
+        "traits": [trait.model_dump(mode="json") for trait in traits],
+        "qualities": [quality.model_dump(mode="json") for quality in qualities],
+        "persona_trait_links": [link.model_dump(mode="json") for link in trait_links],
+        "persona_quality_links": [link.model_dump(mode="json") for link in quality_links],
     }
 
 
@@ -130,6 +213,40 @@ def build_llm_model_snapshot(*, session: Session, llm_model_id: uuid.UUID) -> di
         "schema_version": 1,
         "entity_type": "llm_model",
         "llm_model": llm_model.model_dump(mode="json"),
+    }
+
+
+def build_quality_snapshot(*, session: Session, quality_id: uuid.UUID) -> dict[str, Any]:
+    quality = session.get(Quality, quality_id)
+    if not quality:
+        raise ValueError("Quality not found")
+    links = session.exec(
+        select(QualityTraitLink)
+        .where(QualityTraitLink.quality_id == quality_id)
+        .order_by(QualityTraitLink.created_at.asc())
+    ).all()
+    return {
+        "schema_version": 1,
+        "entity_type": "quality",
+        "quality": quality.model_dump(mode="json"),
+        "quality_trait_links": [link.model_dump(mode="json") for link in links],
+    }
+
+
+def build_trait_snapshot(*, session: Session, trait_id: uuid.UUID) -> dict[str, Any]:
+    trait = session.get(Trait, trait_id)
+    if not trait:
+        raise ValueError("Trait not found")
+    links = session.exec(
+        select(QualityTraitLink)
+        .where(QualityTraitLink.trait_id == trait_id)
+        .order_by(QualityTraitLink.created_at.asc())
+    ).all()
+    return {
+        "schema_version": 1,
+        "entity_type": "trait",
+        "trait": trait.model_dump(mode="json"),
+        "quality_trait_links": [link.model_dump(mode="json") for link in links],
     }
 
 
@@ -163,4 +280,3 @@ def build_user_llm_provider_snapshot(
             "last_test_success": provider.last_test_success,
         },
     }
-

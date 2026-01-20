@@ -6,6 +6,8 @@ from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_persona_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     Archetype,
     Persona,
@@ -70,6 +72,18 @@ def create_persona(
     session.add(persona)
     session.commit()
     session.refresh(persona)
+    try:
+        snapshot = build_persona_snapshot(session=session, persona_id=persona.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="persona",
+            entity_id=persona.id,
+            entity_data=snapshot,
+            message=f"Create persona: {persona.name}",
+        )
+    except Exception:
+        pass
     return persona
 
 
@@ -94,6 +108,18 @@ def update_persona(
     session.add(persona)
     session.commit()
     session.refresh(persona)
+    try:
+        snapshot = build_persona_snapshot(session=session, persona_id=persona.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="persona",
+            entity_id=persona.id,
+            entity_data=snapshot,
+            message=f"Update persona: {persona.name}",
+        )
+    except Exception:
+        pass
     return persona
 
 
@@ -109,6 +135,18 @@ def delete_persona(
         raise HTTPException(status_code=404, detail="persona not found")
     if not current_user.is_superuser:
         raise HTTPException(status_code=400, detail="Not enough permissions")
+    try:
+        snapshot = build_persona_snapshot(session=session, persona_id=persona.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="persona",
+            entity_id=persona.id,
+            entity_data=snapshot,
+            message=f"Delete persona: {persona.name}",
+        )
+    except Exception:
+        pass
     session.delete(persona)
     session.commit()
     return Message(message="Persona deleted successfully")
@@ -135,6 +173,18 @@ def create_persona_from_archetype(
         persona = crud.create_persona_with_archetype(
             session=session, persona_in=persona_in, archetype_id=archetype_id
         )
+        try:
+            snapshot = build_persona_snapshot(session=session, persona_id=persona.id)
+            shadow_service.enqueue_entity_version(
+                session=session,
+                user=current_user,
+                entity_type="persona",
+                entity_id=persona.id,
+                entity_data=snapshot,
+                message=f"Create persona from archetype: {persona.name}",
+            )
+        except Exception:
+            pass
         return persona
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -66,7 +66,17 @@ class ShadowReadService:
         shadow_repo = self._get_shadow_repo(
             session=session, entity_type=entity_type, entity_id=entity_id
         )
-        shadow_version = self._get_latest_version(session=session, shadow_repo_id=shadow_repo.id)
+        shadow_version = self._get_latest_committed_version(
+            session=session, shadow_repo_id=shadow_repo.id
+        )
+        if shadow_version is None:
+            shadow_version = self._get_latest_pending_version(
+                session=session, shadow_repo_id=shadow_repo.id
+            )
+            if shadow_version is None:
+                raise ShadowVersionNotFound(
+                    f"No ShadowVersion found for shadow_repo_id={shadow_repo.id}"
+                )
         return self._get_snapshot_from_version(
             session=session,
             shadow_repo=shadow_repo,
@@ -139,6 +149,32 @@ class ShadowReadService:
         if not version:
             raise ShadowVersionNotFound(f"No ShadowVersion found for shadow_repo_id={shadow_repo_id}")
         return version
+
+    def _get_latest_committed_version(
+        self, *, session: Session, shadow_repo_id: uuid.UUID
+    ) -> ShadowVersion | None:
+        stmt = (
+            select(ShadowVersion)
+            .where(
+                ShadowVersion.shadow_repo_id == shadow_repo_id,
+                ShadowVersion.status == "committed",
+            )
+            .order_by(ShadowVersion.version_number.desc())
+        )
+        return session.exec(stmt).first()
+
+    def _get_latest_pending_version(
+        self, *, session: Session, shadow_repo_id: uuid.UUID
+    ) -> ShadowVersion | None:
+        stmt = (
+            select(ShadowVersion)
+            .where(
+                ShadowVersion.shadow_repo_id == shadow_repo_id,
+                ShadowVersion.status.in_(["pending", "error"]),
+            )
+            .order_by(ShadowVersion.version_number.desc())
+        )
+        return session.exec(stmt).first()
 
     def _get_version_by_number(
         self,

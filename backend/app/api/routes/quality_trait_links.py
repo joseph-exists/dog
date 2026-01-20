@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_quality_snapshot, build_trait_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     QualitiesPublic,
     QualityPublic,
@@ -105,6 +107,27 @@ def create_quality_trait_link(
     session.add(link)
     session.commit()
     session.refresh(link)
+    try:
+        quality_snapshot = build_quality_snapshot(session=session, quality_id=quality.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="quality",
+            entity_id=quality.id,
+            entity_data=quality_snapshot,
+            message=f"Quality-trait link created: {quality.id} -> {trait.id}",
+        )
+        trait_snapshot = build_trait_snapshot(session=session, trait_id=trait.id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="trait",
+            entity_id=trait.id,
+            entity_data=trait_snapshot,
+            message=f"Quality-trait link created: {quality.id} -> {trait.id}",
+        )
+    except Exception:
+        pass
 
     # Convert to a dict and add the trait and quality objects
     link_data = link.model_dump()
@@ -133,6 +156,27 @@ def delete_quality_trait_link(
         raise HTTPException(status_code=404, detail="Link not found")
     if not current_user.is_superuser:
         raise HTTPException(status_code=400, detail="Not enough permissions")
+    try:
+        quality_snapshot = build_quality_snapshot(session=session, quality_id=quality_id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="quality",
+            entity_id=quality_id,
+            entity_data=quality_snapshot,
+            message=f"Quality-trait link deleted: {quality_id} -> {trait_id}",
+        )
+        trait_snapshot = build_trait_snapshot(session=session, trait_id=trait_id)
+        shadow_service.enqueue_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="trait",
+            entity_id=trait_id,
+            entity_data=trait_snapshot,
+            message=f"Quality-trait link deleted: {quality_id} -> {trait_id}",
+        )
+    except Exception:
+        pass
     session.delete(link)
     session.commit()
     return Message(message="Quality-Trait link deleted successfully")

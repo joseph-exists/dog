@@ -43,6 +43,7 @@ from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_story_snapshot
 from app.services.shadow_service import shadow_service
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ from app.models import (
     StoryUpdate,
     StoryValidationResult,
     Trait,
+    User,
 )
 
 router = APIRouter(prefix="/stories", tags=["stories"])
@@ -517,12 +519,13 @@ def create_story(
 
     # Shadow versioning (non-blocking - skips if user not set up)
     try:
+        snapshot = build_story_snapshot(session=session, story_id=story.id)
         version = shadow_service.enqueue_entity_version(
             session=session,
             user=current_user,
             entity_type="story",
             entity_id=story.id,
-            entity_data=story.model_dump(mode="json"),
+            entity_data=snapshot,
             message=f"Create story: {story.title}",
         )
         if version:
@@ -561,12 +564,13 @@ def update_story(
 
     # Shadow versioning (non-blocking - skips if user not set up)
     try:
+        snapshot = build_story_snapshot(session=session, story_id=story.id)
         version = shadow_service.enqueue_entity_version(
             session=session,
             user=current_user,
             entity_type="story",
             entity_id=story.id,
-            entity_data=story.model_dump(mode="json"),
+            entity_data=snapshot,
             message=f"Update story: {story.title}",
         )
         if version:
@@ -894,6 +898,22 @@ def create_story_requirement(
     session.commit()
     session.refresh(requirement)
 
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story_id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story_id,
+                entity_data=snapshot,
+                message=f"Story requirement created: {requirement.id}",
+            )
+    except Exception:
+        pass
+
     return requirement
 
 
@@ -934,6 +954,22 @@ def delete_story_requirement(
 
     session.delete(requirement)
     session.commit()
+
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story_id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story_id,
+                entity_data=snapshot,
+                message=f"Story requirement deleted: {requirement_id}",
+            )
+    except Exception:
+        pass
 
     return Message(message="Requirement deleted successfully")
 
@@ -1033,6 +1069,22 @@ def create_story_state_variable(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story_id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story_id,
+                entity_data=snapshot,
+                message=f"Story state variable created: {variable.id}",
+            )
+    except Exception:
+        pass
+
     return variable
 
 
@@ -1097,6 +1149,22 @@ def update_story_state_variable(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story_id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story_id,
+                entity_data=snapshot,
+                message=f"Story state variable updated: {variable_id}",
+            )
+    except Exception:
+        pass
+
     return updated
 
 
@@ -1143,6 +1211,22 @@ def delete_story_state_variable(
         crud.delete_story_state_variable(session=session, variable_id=variable_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    try:
+        snapshot = build_story_snapshot(session=session, story_id=story_id)
+        owner = session.get(User, story.owner_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story_id,
+                entity_data=snapshot,
+                message=f"Story state variable deleted: {variable_id}",
+            )
+    except Exception:
+        pass
 
     return Message(message="Variable deleted successfully")
 

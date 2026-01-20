@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.shadow_exporters import build_story_snapshot
+from app.services.shadow_service import shadow_service
 from app.models import (
     Message,
     NodeChoice,
@@ -12,11 +14,13 @@ from app.models import (
     NodeChoiceCreate,
     NodeChoicePublic,
     NodeChoicesPublic,
+    Story,
     StoryNode,
     StoryNodeCreate,
     StoryNodePublic,
     StoryNodesPublic,
     StoryNodeUpdate,
+    User,
 )
 
 router = APIRouter(prefix="/storynodes", tags=["storynodes"])
@@ -67,6 +71,22 @@ def create_storynode(
     session.add(storynode)
     session.commit()
     session.refresh(storynode)
+    try:
+        story = session.get(Story, storynode.story_id)
+        owner = session.get(User, story.owner_id) if story else None
+        snapshot = build_story_snapshot(session=session, story_id=storynode.story_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=storynode.story_id,
+                entity_data=snapshot,
+                message=f"Story node created: {storynode.title}",
+            )
+    except Exception:
+        pass
     return storynode
 
 
@@ -91,6 +111,22 @@ def update_storynode(
     session.add(storynode)
     session.commit()
     session.refresh(storynode)
+    try:
+        story = session.get(Story, storynode.story_id)
+        owner = session.get(User, story.owner_id) if story else None
+        snapshot = build_story_snapshot(session=session, story_id=storynode.story_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=storynode.story_id,
+                entity_data=snapshot,
+                message=f"Story node updated: {storynode.title}",
+            )
+    except Exception:
+        pass
     return storynode
 
 
@@ -106,8 +142,25 @@ def delete_storynode(
         raise HTTPException(status_code=404, detail="storynode not found")
     if not current_user.is_superuser:
         raise HTTPException(status_code=400, detail="Not enough permissions")
+    story_id = storynode.story_id
     session.delete(storynode)
     session.commit()
+    try:
+        story = session.get(Story, story_id)
+        owner = session.get(User, story.owner_id) if story else None
+        snapshot = build_story_snapshot(session=session, story_id=story_id)
+        if owner:
+            shadow_service.enqueue_entity_version_with_owner(
+                session=session,
+                owner=owner,
+                actor=current_user,
+                entity_type="story",
+                entity_id=story_id,
+                entity_data=snapshot,
+                message=f"Story node deleted: {id}",
+            )
+    except Exception:
+        pass
     return Message(message="StoryNode deleted successfully")
 
 @router.get("/{node_id}/choices", response_model=NodeChoicesPublic)

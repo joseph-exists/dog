@@ -425,49 +425,47 @@ Room bindings:
 
 ### E) Worker implementation
 
-- [ ] Add a worker entrypoint (module + CLI):
+- [x] Add a worker entrypoint (module + CLI):
   - Suggested location: `backend/app/services/shadow_outbox_worker.py` (core worker)
   - Suggested runner: `backend/app/scripts/` or an existing CLI pattern in this repo
 - [x] Add a minimal worker container/process:
   - Build a small image that runs only the worker (no web server).
   - Minimize and contain dependencies to what the worker imports (DB client + `openapi_client` + settings).
-- [ ] Add a minimal worker container/process:
-  - Build a small image that runs only the worker (no web server).
-  - Minimize and contain dependencies to what the worker imports (DB client + `openapi_client` + settings).
-- [ ] Implement polling:
-  - [ ] select eligible jobs (`queued`/`retryable_error`, `run_after <= now`)
-  - [ ] acquire job lease (`FOR UPDATE SKIP LOCKED` or equivalent)
-  - [ ] enforce per-repo serialization (decision A1)
-- [ ] Implement processing steps:
-  - [ ] load `ShadowRepo` + `ShadowVersion`
-  - [ ] ensure Forgejo repo exists (create if missing)
-  - [ ] write `{entity_type}.json` (update/create with file SHA)
-  - [ ] finalize `ShadowVersion` (`commit_sha`, `status="committed"`, timestamps)
-  - [ ] finalize outbox job (`status="committed"`, unlock)
-- [ ] Implement error handling:
-  - [ ] classify fatal vs retryable (decision A4)
-  - [ ] compute backoff and set `run_after` (decision A3)
-  - [ ] record attempt diagnostics (and optional `shadow_outbox_attempts` rows)
+- [x] Document worker environment variables and polling knobs (`backend/docs/shadow/ShadowOutboxWorker.md`).
+- [x] Implement polling:
+  - [x] select eligible jobs (`queued`/`retryable_error`, `run_after <= now`)
+  - [x] acquire job lease (`FOR UPDATE SKIP LOCKED` or equivalent)
+  - [x] enforce per-repo serialization (decision A1)
+- [x] Implement processing steps:
+  - [x] load `ShadowRepo` + `ShadowVersion`
+  - [x] ensure Forgejo repo exists (create if missing)
+  - [x] write `{entity_type}.json` (update/create with file SHA)
+  - [x] finalize `ShadowVersion` (`commit_sha`, `status="committed"`, timestamps)
+  - [x] finalize outbox job (`status="committed"`, unlock)
+- [x] Implement error handling:
+  - [x] classify fatal vs retryable (decision A4)
+  - [x] compute backoff and set `run_after` (decision A3)
+  - [x] record attempt diagnostics (and optional `shadow_outbox_attempts` rows)
 
 ### F) Repair/reconciliation jobs
 
-- [ ] Missing job scanner:
-  - [ ] query for `ShadowVersion.status in ("pending", "error")` without a matching outbox job
-  - [ ] enqueue jobs (idempotent)
-- [ ] Repo/commit missing reconciler:
-  - [ ] validate `{entity_type}.json` readable at pinned `commit_sha`
-  - [ ] enqueue repair write (and record incident details)
+- [x] Missing job scanner:
+  - [x] query for `ShadowVersion.status in ("pending", "error")` without a matching outbox job
+  - [x] enqueue jobs (idempotent)
+- [x] Repo/commit missing reconciler:
+  - [x] validate `{entity_type}.json` readable at pinned `commit_sha`
+  - [x] enqueue repair write (and record incident details)
 
 ### G) Tests (minimum)
 
 Add tests in `backend/app/tests/` matching the existing service test patterns:
 
-- [ ] Enqueue creates `ShadowVersion(status="pending")` + outbox job in one transaction.
-- [ ] Worker success path finalizes `ShadowVersion(commit_sha, status="committed")` and marks job committed.
-- [ ] Worker retry path updates job to `retryable_error` with increasing `run_after`.
-- [ ] Worker fatal path moves job to `dead` and records last_error.
-- [ ] Per-repo serialization prevents concurrent writes to the same `shadow_repo_id` (unit-level simulation is fine).
-- [ ] Missing job scanner creates jobs for orphan pending versions.
+- [x] Enqueue creates `ShadowVersion(status="pending")` + outbox job in one transaction.
+- [x] Worker success path finalizes `ShadowVersion(commit_sha, status="committed")` and marks job committed.
+- [x] Worker retry path updates job to `retryable_error` with increasing `run_after`.
+- [x] Worker fatal path moves job to `dead` and records last_error.
+- [x] Per-repo serialization prevents concurrent writes to the same `shadow_repo_id` (unit-level simulation is fine).
+- [x] Missing job scanner creates jobs for orphan pending versions.
 
 ### H) Rollout steps (operator-facing)
 
