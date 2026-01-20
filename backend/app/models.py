@@ -3186,6 +3186,60 @@ class ResolvedPanelConfig(SQLModel):
     source: str  # "user_override", "room_defaults", "type_defaults"
 
 
+class UserPanelDefaults(SQLModel, table=True):
+    """User's global default panel layout (applies to all rooms)"""
+    __tablename__ = "user_panel_defaults"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", unique=True, index=True)
+    preset_id: str | None = Field(default=None)  # "focus", "collaborate", etc.
+    panels: list[dict] = Field(default=[], sa_column=Column(JSON))
+    reduce_motion: bool = Field(default=False)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserPanelDefaultsPublic(SQLModel):
+    """Public response for user panel defaults"""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    preset_id: str | None
+    panels: list[dict]
+    reduce_motion: bool
+    updated_at: datetime
+
+
+class UserPanelDefaultsUpdate(SQLModel):
+    """Update payload for user panel defaults"""
+    preset_id: str | None = None
+    panels: list[dict] | None = None
+    reduce_motion: bool | None = None
+
+
+class PanelPreset(SQLModel, table=True):
+    """Panel layout preset (system or user-created)"""
+    __tablename__ = "panel_presets"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", index=True)
+    name: str
+    description: str | None = None
+    panels: list[dict] = Field(sa_column=Column(JSON))
+    is_system: bool = Field(default=False)
+    shared_to_room_id: uuid.UUID | None = Field(default=None, foreign_key="rooms.room_id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PanelPresetPublic(SQLModel):
+    """Public response for panel preset"""
+    id: uuid.UUID
+    owner_id: uuid.UUID | None
+    name: str
+    description: str | None
+    panels: list[dict]
+    is_system: bool
+    created_at: datetime
+
+
 # ==================== ShadowVersion Models ====================
 
 class ShadowVersionBase(SQLModel):
