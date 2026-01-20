@@ -4,7 +4,7 @@
  * Manages panel arrangement with resizable splits.
  * Handles responsive behavior and panel/tab toggle.
  */
-
+import React from "react"
 import {
   ResizableHandle,
   ResizablePanel,

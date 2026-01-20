@@ -19,10 +19,10 @@ import {
   IconUsers,
 } from "@tabler/icons-react"
 
-import { NavDocuments } from "@/components/nav-documents"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavDocuments } from "@/components/Common/NavDocuments"
+import { NavMain } from "@/components/Common/NavMain"
+import { NavSecondary } from "@/components/Common/NavSecondary"
+import { NavUser } from "@/components/Common/NavUser"
 import {
   Sidebar,
   SidebarContent,

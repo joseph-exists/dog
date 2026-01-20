@@ -150,7 +150,7 @@ export function PageLayout({
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full">
-      <ResizablePanel defaultSize={70} minSize={40}>
+      <ResizablePanel>
         <BlockColumn
           blocks={primaryBlocks}
           editMode={editMode}
@@ -160,7 +160,7 @@ export function PageLayout({
         />
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
+      <ResizablePanel>
         <BlockColumn
           blocks={auxiliaryBlocks}
           editMode={editMode}
