@@ -517,7 +517,7 @@ def create_story(
 
     # Shadow versioning (non-blocking - skips if user not set up)
     try:
-        version = shadow_service.create_entity_version(
+        version = shadow_service.enqueue_entity_version(
             session=session,
             user=current_user,
             entity_type="story",
@@ -526,7 +526,7 @@ def create_story(
             message=f"Create story: {story.title}",
         )
         if version:
-            logger.info(f"Shadow version {version.version_number} created for story {story.title}")
+            logger.info(f"Shadow version {version.version_number} enqueued for story {story.title}")
     except Exception as e:
         logger.warning(f"Shadow versioning failed for story {story.title}: {e}")
 
@@ -561,7 +561,7 @@ def update_story(
 
     # Shadow versioning (non-blocking - skips if user not set up)
     try:
-        version = shadow_service.create_entity_version(
+        version = shadow_service.enqueue_entity_version(
             session=session,
             user=current_user,
             entity_type="story",
@@ -570,7 +570,7 @@ def update_story(
             message=f"Update story: {story.title}",
         )
         if version:
-            logger.info(f"Shadow version {version.version_number} created for story {story.title}")
+            logger.info(f"Shadow version {version.version_number} enqueued for story {story.title}")
     except Exception as e:
         logger.warning(f"Shadow versioning failed for story {story.title}: {e}")
 

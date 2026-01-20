@@ -104,7 +104,7 @@ def create_agent_persona(
         )
         try:
             snapshot = build_agent_snapshot(session=session, agent_id=agent_id)
-            shadow_service.create_entity_version(
+            shadow_service.enqueue_entity_version(
                 session=session,
                 user=current_user,
                 entity_type="agent",
@@ -145,7 +145,7 @@ def update_agent_persona(
     )
     try:
         snapshot = build_agent_snapshot(session=session, agent_id=agent_id)
-        shadow_service.create_entity_version(
+        shadow_service.enqueue_entity_version(
             session=session,
             user=current_user,
             entity_type="agent",
@@ -178,7 +178,7 @@ def delete_agent_persona(
     crud.delete_agent_persona(session=session, db_agent_persona=agent_persona)
     try:
         snapshot = build_agent_snapshot(session=session, agent_id=agent_id)
-        shadow_service.create_entity_version(
+        shadow_service.enqueue_entity_version(
             session=session,
             user=current_user,
             entity_type="agent",

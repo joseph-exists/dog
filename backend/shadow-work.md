@@ -216,6 +216,94 @@ THIS MILESTONE NEEDS FURTHER REVIEW PRIOR TO IMPLEMENTATION.  ONLY PROCEED ONCE 
 - Replace in-request Forgejo commits with an outbox/job queue + worker.
 - Worker: ensure repo → commit → retry/backoff → persist SHA/error diagnostics.
 
+#### Current-state reality check (what we have today)
+
+Today, Forgejo IO happens in-process via synchronous calls in `backend/app/services/shadow_service.py`:
+
+- Repo creation: `ShadowService.ensure_shadow_repo(...)` → `RepositoryApi.create_current_user_repo(...)`
+- Commit/write: `ShadowService.create_version(...)` → `RepositoryApi.repo_get_contents(...)` then `repo_update_file(...)` / `repo_create_file(...)`
+
+“Non-blocking” in several routes currently means “wrapped in a try/except”, not “moved off the request thread”.
+
+#### Touchpoint inventory (breadth)
+
+Request-path synchronous Forgejo writes (highest impact if we asyncify):
+
+- Agents:
+  - `backend/app/api/routes/agent_routes.py` (`create_agent`, `update_agent`) calls `shadow_service.create_entity_version(...)`
+  - `backend/app/api/routes/agent_personas.py` (create/update/delete agent persona) calls `shadow_service.create_entity_version(...)` for `entity_type="agent"`
+- Stories:
+  - `backend/app/api/routes/stories.py` (`create_story`, `update_story`) calls `shadow_service.create_entity_version(...)`
+
+Post-response background task (still in the web process, not durable):
+
+- Rooms:
+  - `backend/app/api/routes/room_participant_bindings.py` schedules `shadow_room_version_best_effort(...)`
+  - `backend/app/services/shadow_tasks.py` opens a sync DB `Session(engine)` and calls `shadow_service.create_entity_version_with_owner(...)`
+
+Note: the snapshot builders for Milestone 1/2 entity types already exist in `backend/app/services/shadow_exporters.py`, but most entity types beyond agent/story/room aren’t yet wired to mutation points.
+
+#### Flow traces (depth)
+
+Flow A — request-path (agent/story):
+
+1. Route writes domain state to DB (e.g., create/update agent/story) and commits.
+2. Route builds a snapshot from DB (e.g., `build_agent_snapshot(...)`).
+3. Route calls `shadow_service.create_entity_version(...)`:
+   - `ensure_shadow_repo(...)` may create the Forgejo repo (network IO).
+   - `create_version(...)` reads file SHA then updates/creates `{entity_type}.json` (network IO).
+   - A `ShadowVersion` row is written even on Forgejo failure, with `commit_sha` set to `error-<status>` (and `snapshot_json` stored in DB).
+
+Flow B — “background task” (room binding changes):
+
+1. Route updates bindings transactionally, then returns response.
+2. FastAPI BackgroundTasks runs `shadow_room_version_best_effort(...)` after the response:
+   - Re-opens a new DB session, rebuilds the room snapshot, then executes the same Forgejo repo+commit path as Flow A.
+
+#### Scope multipliers / why outbox+worker is non-trivial
+
+When we move to an outbox/job queue, we need to make explicit decisions (and update code accordingly) for:
+
+- Transaction boundaries (durability):
+  - “DB mutation succeeds but enqueue fails” must not silently drop Shadow writes.
+  - The enqueue should happen in the *same* DB transaction as the domain mutation (classic outbox pattern).
+- Snapshot consistency:
+  - Do we enqueue the full `snapshot_json` (stable, but increases payload size), or enqueue a “recompute snapshot from DB” instruction (risk: DB state changes before worker runs)?
+- Provenance state machine:
+  - Today `ShadowVersion` is written at the same time we attempt the Forgejo commit, and the model is described as immutable.
+  - With async commits, we need a representation for “version exists in DB but Forgejo commit pending/failed/retried”.
+- Idempotency:
+  - Retrying must not create duplicate versions or out-of-order version numbers.
+  - We likely need a stable idempotency key per version attempt (e.g., `(shadow_repo_id, version_number)`), and/or a unique constraint on the outbox row.
+- Concurrency + file SHA conflicts:
+  - Multiple pending writes to the same repo will contend on `{entity_type}.json` updates.
+  - Worker should serialize per repo (lock/lease) or implement robust refetch+retry on SHA conflicts.
+- Operational concerns:
+  - retries/backoff + dead-lettering
+  - metrics/logs with correlation from request → outbox → worker attempt
+  - a repair/reconciliation loop that can detect “DB says version N exists but Forgejo commit missing” and replay safely
+
+#### Change impact matrix (what will actually change)
+
+| Area | Current behavior | What changes with outbox+worker | Notes / risk |
+|---|---|---|---|
+| Request handlers | Often do Forgejo IO inline (agent/story) | Only enqueue; no Forgejo calls | Requires refactor so enqueue is durable |
+| `shadow_tasks.py` | BackgroundTasks run in web process | Either removed or becomes “enqueue only” | BackgroundTasks is not a job queue |
+| DB schema | `ShadowRepo`, `ShadowVersion` only | Add outbox + attempt/lease state | Decide how to represent pending/failed commits |
+| `ShadowVersion` semantics | Written immediately; `commit_sha` can be `error-*` | Either (a) create “pending version” then finalize, or (b) create version only after worker success | Model currently describes versions as immutable |
+| Snapshot source | Snapshot built in request, stored in DB | Store snapshot in outbox or recompute in worker | Recompute risks race with later edits |
+| Idempotency | “Best effort”; duplicates possible under retries | Must be strict; retries safe | Needs stable keys + uniqueness constraints |
+| Concurrency | Multiple requests can contend; no explicit locks | Worker must serialize per repo or handle conflicts | File SHA conflict retry loops |
+| Ops/observability | Logs only; no job visibility | Job monitoring + DLQ + metrics | Needed to debug missing commits |
+
+#### Breadth-first review checklist (before we write Milestone 3 spec)
+
+1. Enumerate every call site of `shadow_service.create_entity_version*` (done above) and decide which become “enqueue only”.
+2. Decide the “pending version” representation (new tables vs updating `ShadowVersion`).
+3. Decide whether the outbox payload is “full snapshot_json” vs “recompute snapshot from DB”.
+4. Decide worker model (simple polling loop, RQ/Celery, Temporal, etc.) and deployment topology (same container vs separate).
+5. Write the failure modes explicitly (“DB ok, Forgejo down”, “worker crash mid-commit”, “duplicate enqueue”) and how each is repaired.
+
 **2) Relationship materialization**
 
 - Implement a per-user ShadowUser “reference index” repo:

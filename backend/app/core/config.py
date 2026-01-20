@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     SHADOW_PERSONAS_TOKEN: str | None = None  # shadow-personas account
     SHADOW_LLM_MODELS_TOKEN: str | None = None  # shadow-llm-models account
     SHADOW_USER_LLM_PROVIDERS_TOKEN: str | None = None  # shadow-user-llm-providers account
+    SHADOW_PROMPTS_TOKEN: str | None = None  # shadow-prompts account
 
     @computed_field  # type: ignore[prop-decorator]
     @property

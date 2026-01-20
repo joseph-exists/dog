@@ -49,6 +49,5 @@ Example flow using a user and a story:
    - The clone ("Rabbit Walks Two") remains pinned to the original version it referenced.
    - The user's ShadowUser repo receives an additional reference for this update.
 
-## Next implementation targets
 
-Extend coverage to Rooms, Agents, Models, and Providers.
+[x] Extend coverage to Rooms, Agents, Models, and Providers.

@@ -1939,6 +1939,8 @@ git commit -m "feat(api): add room panel configuration endpoints"
 cd /home/josep/dog/frontend && npm run generate-client
 ```
 
+COMPLETE!
+
 **Step 2: Create panel service**
 
 ```typescript

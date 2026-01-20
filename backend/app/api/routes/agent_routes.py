@@ -150,7 +150,7 @@ def create_agent(
         # Shadow versioning (non-blocking - skips if user not set up)
         try:
             snapshot = build_agent_snapshot(session=session, agent_id=config.id)
-            version = shadow_service.create_entity_version(
+            version = shadow_service.enqueue_entity_version(
                 session=session,
                 user=current_user,
                 entity_type="agent",
@@ -159,7 +159,7 @@ def create_agent(
                 message=f"Create agent: {config.name}",
             )
             if version:
-                logger.info(f"Shadow version {version.version_number} created for agent {config.slug}")
+                logger.info(f"Shadow version {version.version_number} enqueued for agent {config.slug}")
         except Exception as e:
             logger.warning(f"Shadow versioning failed for agent {config.slug}: {e}")
 
@@ -198,7 +198,7 @@ def update_agent(
     if updated:
         try:
             snapshot = build_agent_snapshot(session=session, agent_id=updated.id)
-            version = shadow_service.create_entity_version(
+            version = shadow_service.enqueue_entity_version(
                 session=session,
                 user=current_user,
                 entity_type="agent",
@@ -207,7 +207,7 @@ def update_agent(
                 message=f"Update agent: {updated.name}",
             )
             if version:
-                logger.info(f"Shadow version {version.version_number} created for agent {updated.slug}")
+                logger.info(f"Shadow version {version.version_number} enqueued for agent {updated.slug}")
         except Exception as e:
             logger.warning(f"Shadow versioning failed for agent {updated.slug}: {e}")
 

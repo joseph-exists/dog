@@ -38,7 +38,7 @@ def shadow_room_version_best_effort(
                 return
 
             snapshot = build_room_snapshot(session=session, room_id=room_id)
-            shadow_service.create_entity_version_with_owner(
+            shadow_service.enqueue_entity_version_with_owner(
                 session=session,
                 owner=owner,
                 actor=actor,
@@ -49,4 +49,3 @@ def shadow_room_version_best_effort(
             )
     except Exception as e:
         logger.warning(f"Shadow room versioning failed for room {room_id}: {e}")
-

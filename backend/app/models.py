@@ -3220,6 +3220,8 @@ class ShadowVersion(ShadowVersionBase, table=True):
     Pretty-printed JSON for git diff readability.
     Immutable once created - never updated.
     """
+    __table_args__ = (UniqueConstraint("shadow_repo_id", "version_number"),)
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     shadow_repo_id: uuid.UUID = Field(
         foreign_key="shadowrepo.id",
@@ -3236,6 +3238,11 @@ class ShadowVersion(ShadowVersionBase, table=True):
         description="User who created this version"
     )
     created_at: datetime = Field(default_factory=datetime.now)
+    # Milestone 3: async Forgejo commit finalization metadata
+    status: str = Field(default="committed", max_length=20)
+    committed_at: datetime | None = Field(default=None)
+    last_error: str | None = Field(default=None)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ShadowVersionPublic(ShadowVersionBase):
@@ -3256,6 +3263,93 @@ class ShadowVersionsPublic(SQLModel):
     """Collection response for ShadowVersions"""
     data: list[ShadowVersionPublic]
     count: int
+
+# ==================== Shadow Outbox Models (Milestone 3) ====================
+
+class ShadowOutboxJobBase(SQLModel):
+    """
+    Durable outbox job for asynchronous Shadow Forgejo writes.
+
+    One row represents one intended Forgejo write for one ShadowVersion.
+    """
+    shadow_repo_id: uuid.UUID = Field(foreign_key="shadowrepo.id", nullable=False, index=True)
+    shadow_version_id: uuid.UUID = Field(
+        foreign_key="shadowversion.id",
+        nullable=False,
+        unique=True,
+        index=True,
+        description="Idempotency anchor: one job per ShadowVersion"
+    )
+    entity_type: str = Field(max_length=50, index=True)
+    entity_id: uuid.UUID = Field(index=True)
+
+    status: str = Field(default="queued", max_length=30, index=True)
+    attempt_count: int = Field(default=0)
+    run_after: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+    locked_at: datetime | None = Field(default=None)
+    locked_by: str | None = Field(default=None, max_length=255)
+
+    last_error: str | None = Field(default=None)
+    last_error_at: datetime | None = Field(default=None)
+
+    priority: int = Field(default=100)
+
+
+class ShadowOutboxJob(ShadowOutboxJobBase, table=True):
+    __tablename__ = "shadow_outbox_jobs"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ShadowOutboxAttemptBase(SQLModel):
+    outbox_job_id: uuid.UUID = Field(foreign_key="shadow_outbox_jobs.id", nullable=False, index=True)
+    attempt_number: int
+    started_at: datetime = Field(default_factory=datetime.utcnow)
+    finished_at: datetime | None = Field(default=None)
+    result: str = Field(max_length=30)
+    error_type: str | None = Field(default=None, max_length=100)
+    error_message: str | None = Field(default=None)
+    forgejo_repo: str | None = Field(default=None, max_length=255)
+    forgejo_commit_sha: str | None = Field(default=None, max_length=40)
+
+
+class ShadowOutboxAttempt(ShadowOutboxAttemptBase, table=True):
+    __tablename__ = "shadow_outbox_attempts"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
+class ShadowOutboxRepoLeaseBase(SQLModel):
+    shadow_repo_id: uuid.UUID = Field(
+        foreign_key="shadowrepo.id",
+        nullable=False,
+        primary_key=True,
+        description="One lease row per shadow repo"
+    )
+    locked_at: datetime | None = Field(default=None)
+    locked_by: str | None = Field(default=None, max_length=255)
+
+
+class ShadowOutboxRepoLease(ShadowOutboxRepoLeaseBase, table=True):
+    __tablename__ = "shadow_outbox_repo_leases"
+
+
+class ShadowRepoVersionCounterBase(SQLModel):
+    shadow_repo_id: uuid.UUID = Field(
+        foreign_key="shadowrepo.id",
+        nullable=False,
+        primary_key=True,
+        description="Per-repo sequence counter for ShadowVersion.version_number allocation"
+    )
+    next_version_number: int = Field(default=1)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ShadowRepoVersionCounter(ShadowRepoVersionCounterBase, table=True):
+    __tablename__ = "shadow_repo_version_counters"
 
 # ============================================================================
 # Shadow Forgejo Relationships

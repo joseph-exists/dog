@@ -14,7 +14,7 @@ Usage:
     from app.services.shadow_service import shadow_service
 
     # On entity save (automatic, no user involvement):
-    version = shadow_service.create_entity_version(
+    version = shadow_service.enqueue_entity_version(
         session=session,
         user=current_user,
         entity_type="agent",
@@ -34,6 +34,7 @@ from datetime import datetime
 from typing import Any
 
 import openapi_client
+from sqlalchemy.exc import IntegrityError
 from openapi_client import (
     ApiException,
     CreateFileOptions,
@@ -49,6 +50,8 @@ from app.models import (
     ShadowUser,
     ShadowVersion,
     User,
+    ShadowOutboxJob,
+    ShadowRepoVersionCounter,
 )
 
 logger = logging.getLogger(__name__)
@@ -203,6 +206,44 @@ class ShadowService:
     # ShadowRepo Management
     # =========================================================================
 
+    def ensure_shadow_repo_db_only(
+        self,
+        session: Session,
+        owner: User,
+        entity_type: str,
+        entity_id: uuid.UUID,
+    ) -> ShadowRepo | None:
+        """
+        Create or fetch the DB ShadowRepo record only (no Forgejo IO).
+
+        Milestone 3 invariant: only the worker creates/ensures Forgejo repos.
+        """
+        if not self.is_enabled(entity_type):
+            logger.debug(f"Shadow not enabled for {entity_type}")
+            return None
+
+        stmt = select(ShadowRepo).where(
+            ShadowRepo.entity_type == entity_type,
+            ShadowRepo.entity_id == entity_id,
+        )
+        existing = session.exec(stmt).first()
+        if existing:
+            return existing
+
+        repo_name = f"{entity_type}-{str(entity_id)[:8]}"
+        shadow_repo = ShadowRepo(
+            owner_id=owner.id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            forgejo_repo_name=repo_name,
+            forgejo_repo_id=None,
+            created_at=datetime.now(),
+        )
+        session.add(shadow_repo)
+        session.commit()
+        session.refresh(shadow_repo)
+        return shadow_repo
+
     def ensure_shadow_repo(
         self,
         session: Session,
@@ -296,6 +337,40 @@ class ShadowService:
 
         logger.info(f"Created shadow repo record: {entity_type}/{entity_id}")
         return shadow_repo
+
+    def _allocate_next_version_number(self, session: Session, shadow_repo_id: uuid.UUID) -> int:
+        """
+        Allocate the next per-repo ShadowVersion.version_number using a counter table.
+
+        This avoids the race-prone "select max(version)+1" under concurrent enqueues.
+        """
+        while True:
+            counter = session.exec(
+                select(ShadowRepoVersionCounter)
+                .where(ShadowRepoVersionCounter.shadow_repo_id == shadow_repo_id)
+                .with_for_update()
+            ).first()
+
+            if counter is None:
+                try:
+                    counter = ShadowRepoVersionCounter(
+                        shadow_repo_id=shadow_repo_id,
+                        next_version_number=2,
+                        updated_at=datetime.utcnow(),
+                    )
+                    session.add(counter)
+                    session.flush()
+                    return 1
+                except IntegrityError:
+                    session.rollback()
+                    continue
+
+            version_number = counter.next_version_number
+            counter.next_version_number = counter.next_version_number + 1
+            counter.updated_at = datetime.utcnow()
+            session.add(counter)
+            session.flush()
+            return version_number
 
     def get_shadow_repo(
         self,
@@ -535,6 +610,75 @@ class ShadowService:
             session, shadow_repo, entity_data, message, user
         )
 
+    def enqueue_entity_version(
+        self,
+        session: Session,
+        user: User,
+        entity_type: str,
+        entity_id: uuid.UUID,
+        entity_data: dict[str, Any],
+        message: str,
+    ) -> ShadowVersion | None:
+        """
+        Milestone 3: enqueue a Shadow write intent (DB-only) for background processing.
+
+        Creates:
+        - DB ShadowRepo record (no Forgejo IO)
+        - ShadowVersion row with `status="pending"` and `commit_sha="pending"`
+        - ShadowOutboxJob row (durable worker queue)
+        """
+        if not self.is_enabled(entity_type):
+            logger.debug(f"Shadow not enabled for {entity_type}")
+            return None
+
+        shadow_repo = self.ensure_shadow_repo_db_only(session, user, entity_type, entity_id)
+        if not shadow_repo:
+            return None
+
+        version_number = self._allocate_next_version_number(session, shadow_repo.id)
+        shadow_version = ShadowVersion(
+            shadow_repo_id=shadow_repo.id,
+            commit_sha="pending",
+            version_number=version_number,
+            message=message,
+            snapshot_json=entity_data,
+            created_by_id=user.id,
+            created_at=datetime.now(),
+            status="pending",
+            committed_at=None,
+            last_error=None,
+            updated_at=datetime.utcnow(),
+        )
+        session.add(shadow_version)
+        session.flush()
+
+        job = ShadowOutboxJob(
+            shadow_repo_id=shadow_repo.id,
+            shadow_version_id=shadow_version.id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            status="queued",
+            attempt_count=0,
+            run_after=datetime.utcnow(),
+            locked_at=None,
+            locked_by=None,
+            last_error=None,
+            last_error_at=None,
+            priority=100,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        session.add(job)
+
+        session.commit()
+        session.refresh(shadow_version)
+
+        logger.info(
+            f"Enqueued shadow outbox job for {entity_type}/{entity_id} "
+            f"v{shadow_version.version_number} repo={shadow_repo.forgejo_repo_name}"
+        )
+        return shadow_version
+
     def create_entity_version_with_owner(
         self,
         session: Session,
@@ -564,6 +708,66 @@ class ShadowService:
         return self.create_version(
             session, shadow_repo, entity_data, message, actor
         )
+
+    def enqueue_entity_version_with_owner(
+        self,
+        session: Session,
+        owner: User,
+        actor: User,
+        entity_type: str,
+        entity_id: uuid.UUID,
+        entity_data: dict[str, Any],
+        message: str,
+    ) -> ShadowVersion | None:
+        """
+        Like enqueue_entity_version, but allows a distinct owner vs actor.
+        """
+        if not self.is_enabled(entity_type):
+            logger.debug(f"Shadow not enabled for {entity_type}")
+            return None
+
+        shadow_repo = self.ensure_shadow_repo_db_only(session, owner, entity_type, entity_id)
+        if not shadow_repo:
+            return None
+
+        version_number = self._allocate_next_version_number(session, shadow_repo.id)
+        shadow_version = ShadowVersion(
+            shadow_repo_id=shadow_repo.id,
+            commit_sha="pending",
+            version_number=version_number,
+            message=message,
+            snapshot_json=entity_data,
+            created_by_id=actor.id,
+            created_at=datetime.now(),
+            status="pending",
+            committed_at=None,
+            last_error=None,
+            updated_at=datetime.utcnow(),
+        )
+        session.add(shadow_version)
+        session.flush()
+
+        job = ShadowOutboxJob(
+            shadow_repo_id=shadow_repo.id,
+            shadow_version_id=shadow_version.id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            status="queued",
+            attempt_count=0,
+            run_after=datetime.utcnow(),
+            locked_at=None,
+            locked_by=None,
+            last_error=None,
+            last_error_at=None,
+            priority=100,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        session.add(job)
+
+        session.commit()
+        session.refresh(shadow_version)
+        return shadow_version
 
     def get_entity_history(
         self,

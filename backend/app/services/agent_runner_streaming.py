@@ -63,6 +63,7 @@ class StreamingAgentRunner:
                 room_id=room_id,
                 session=session,
                 message_limit=20,
+                agent_slug=agent_name,
             )
 
             agent = await self._get_agent_instance_with_tools(

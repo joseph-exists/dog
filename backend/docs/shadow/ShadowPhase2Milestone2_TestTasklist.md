@@ -11,22 +11,22 @@ This file lists the test cases needed to fully satisfy Milestone 2’s reliabili
 
 Target: `backend/app/services/shadow_read_service.py`
 
-- [ ] `test_shadow_read_service_get_snapshot_by_version_returns_db_snapshot`
+- [x] `test_shadow_read_service_get_snapshot_by_version_returns_db_snapshot`
   - Setup: create `ShadowRepo` + multiple `ShadowVersion`s for the same `(entity_type, entity_id)`.
   - Assert: `get_snapshot_by_version(..., version_number=n)` returns that version’s `snapshot_json`, `version_number=n`.
 
-- [ ] `test_shadow_read_service_get_snapshot_by_commit_partial_match`
+- [x] `test_shadow_read_service_get_snapshot_by_commit_partial_match`
   - Setup: create `ShadowVersion(commit_sha="abc123...")`.
   - Assert: `get_snapshot_by_commit(commit_sha="abc123")` resolves the same version.
 
-- [ ] `test_shadow_read_service_forgejo_failure_falls_back_to_db`
+- [x] `test_shadow_read_service_forgejo_failure_falls_back_to_db`
   - Approach A (recommended): monkeypatch `ShadowReadService._read_json_file_from_forgejo` to raise `ShadowReadError`.
   - Assert: result uses `source="db"`, `is_stale=True`, and returns DB `snapshot_json`.
 
-- [ ] `test_shadow_read_service_missing_shadow_repo_raises_typed_error`
+- [x] `test_shadow_read_service_missing_shadow_repo_raises_typed_error`
   - Assert: calling read with no `ShadowRepo` raises `ShadowRepoNotFound`.
 
-- [ ] `test_shadow_read_service_missing_shadow_version_raises_typed_error`
+- [x] `test_shadow_read_service_missing_shadow_version_raises_typed_error`
   - Setup: create `ShadowRepo` but no versions.
   - Assert: raises `ShadowVersionNotFound`.
 
@@ -43,11 +43,11 @@ Targets:
 
 - [x] `test_summarize_user_llm_provider_redacts_keys` (already added in `backend/app/tests/services/test_shadow_summaries.py`)
 
-- [ ] `test_summarize_room_contains_active_bindings_shape`
+- [x] `test_summarize_room_contains_active_bindings_shape`
   - Input: a room snapshot shaped like `build_room_snapshot` output.
   - Assert: summary includes `participants[*].participant_id/type/role/active` and `active_bindings[*].participant_id/type/persona_id/model_name/user_llm_provider_id`.
 
-- [ ] `test_shadow_summary_service_returns_summary_dispatch_result`
+- [x] `test_shadow_summary_service_returns_summary_dispatch_result`
   - Setup: create `ShadowRepo` + `ShadowVersion` for an entity type and snapshot_json that the summarizer can parse.
   - Assert: `get_latest_summary` returns a `summary` field (not raw snapshot) and preserves `commit_sha/version_number/is_stale`.
 
@@ -64,23 +64,23 @@ Suggested fixture additions:
 
 Target: `backend/app/services/shadow_context_loader.py`
 
-- [ ] `test_shadow_context_loader_emits_missing_item_when_room_shadow_missing`
+- [x] `test_shadow_context_loader_emits_missing_item_when_room_shadow_missing`
   - Setup: create a room in DB but do not create `ShadowRepo/ShadowVersion` for it.
   - Call: `build_shadow_context_items(room_id=..., agent_slug=None, ...)`.
   - Assert: returned items include `context_type="shadow.room.summary"` with payload containing `missing_shadow_snapshot=True`.
 
-- [ ] `test_shadow_context_loader_emits_missing_item_when_story_shadow_missing`
+- [x] `test_shadow_context_loader_emits_missing_item_when_story_shadow_missing`
   - Setup: room with `story_id`, but story has no shadow repo/version.
   - Assert: includes `context_type="shadow.story.summary"` missing payload.
 
-- [ ] `test_shadow_context_loader_agent_scoped_items_use_binding_row`
+- [x] `test_shadow_context_loader_agent_scoped_items_use_binding_row`
   - Setup:
     - `AgentConfig(slug=...)`
     - room participant binding row for `(room_id, 'agent', participant_id=<slug>)`
     - shadow repo/version for agent (and optionally persona/provider)
   - Assert: includes `shadow.agent.summary`, plus `shadow.persona.summary` and `shadow.runtime.summary` when IDs exist.
 
-- [ ] `test_shadow_context_loader_runtime_provider_missing_is_embedded`
+- [x] `test_shadow_context_loader_runtime_provider_missing_is_embedded`
   - Setup: binding has `user_llm_provider_id` but provider has no shadow repo/version.
   - Assert: `shadow.runtime.summary` payload includes `user_llm_provider_missing` with `missing_shadow_snapshot=True`.
 
@@ -94,17 +94,17 @@ Targets:
 - `backend/app/services/context_provider.py`
 - `backend/app/services/agent_tools.py`
 
-- [ ] `test_build_room_context_logs_warning_on_shadow_loader_failure` (optional)
+- [x] `test_build_room_context_logs_warning_on_shadow_loader_failure` (optional)
   - Monkeypatch `build_shadow_context_items` to raise.
   - Assert (caplog): warning log contains room_id and agent_slug.
 
-- [ ] `test_build_room_context_includes_shadow_items_when_context_store_provided`
+- [x] `test_build_room_context_includes_shadow_items_when_context_store_provided`
   - Use `InMemoryContextStore`.
   - Setup minimal ShadowRepo/ShadowVersion data for room (and story if present).
   - Call `build_room_context(..., context_store=store, agent_slug=...)`.
   - Assert: `context.extra_contexts` contains at least one item with `source="shadow"`.
 
-- [ ] `test_a2a_tool_call_passes_agent_slug_to_build_room_context`
+- [x] `test_a2a_tool_call_passes_agent_slug_to_build_room_context`
   - Monkeypatch `build_room_context` to capture kwargs, or monkeypatch `ContextItemStore.list` to ensure agent_slug scoping is honored.
   - Assert: `agent_slug` argument is provided in `_run_agent_for_tool_call`.
 
@@ -117,7 +117,7 @@ Important maintenance task (existing tests):
 
 ## E) Documentation verification (non-test, but required deliverable)
 
-- [ ] Update `backend/docs/shadow/ShadowPhase2Milestone2_ImplementationGuide.md`:
+- [IN PROGRESS] Update `backend/docs/shadow/ShadowPhase2Milestone2_ImplementationGuide.md`:
   - mark items `[~]` → `[x]` once tests above exist
   - mark optional caching tests if you decide to ship them
 

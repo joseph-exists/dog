@@ -32,9 +32,10 @@ FORGE_URL = "http://localhost:3000/api/v1"
 # Admin token (forge-test user): 63d42c1df2b231be68209d45739f14732f06eaba
 # Claude token: 4b0f449a6dcf184b0ee94a1fcb0c8b768ca8b779
 
-# Currently using: Claude's token
-API_TOKEN = "4b0f449a6dcf184b0ee94a1fcb0c8b768ca8b779"
-JOSEP_API_TOKEN= "63d42c1df2b231be68209d45739f14732f06eaba"
+#  Claude's token
+# API_TOKEN = "4b0f449a6dcf184b0ee94a1fcb0c8b768ca8b779"
+# josep token
+API_TOKEN= "63d42c1df2b231be68209d45739f14732f06eaba"
 
 # =============================================================================
 # Client Factory
