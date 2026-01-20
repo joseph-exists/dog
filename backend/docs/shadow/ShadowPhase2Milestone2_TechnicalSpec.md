@@ -64,6 +64,16 @@ Milestone 2 entity types (minimum viable for context):
 - `llm_model`
 - `user_llm_provider`
 
+Recommended reserved entity types (useful soon, but not required to ship Milestone 2):
+
+- `room_policy` (room-level policy/config artifact)
+- `prompt` (system prompts + reusable templates)
+- `tool` (tool definitions/metadata)
+- `mcp_server` (MCP server configs/manifests; never secrets)
+- `external_doc` (snapshotted external documentation, e.g. `pydantic-ai-v2`)
+- `context_pack` (curated bundles of references to other entities)
+- `reference_index` (graph/index of references to pinned SHAs across entities)
+
 ## ShadowReadService (Forgejo + DB fallback)
 
 ### Responsibilities
@@ -345,3 +355,23 @@ To add `entity_type="room_policy"` in the future:
 - Forgejo outage triggers DB fallback with `is_stale=true` and no hard failures.
 - Provider snapshots remain redacted.
 
+
+Additional Definitions:
+
+SERVICE_ACCOUNT_MAP is the code-level registry that maps each entity_type string (e.g. room, prompt) to the env var name that holds the Forgejo token for the service account that owns repos of that type.
+
+So “verify and document SERVICE_ACCOUNT_MAP” includes both:
+
+In-repo code + docs (what we control here)
+Add/verify entries in shadow_service.py:
+SERVICE_ACCOUNT_MAP contains every entity_type you’ve locked/reserved.
+SERVICE_ACCOUNT_USERNAMES contains the corresponding Forgejo usernames (e.g. shadow-rooms).
+Add/verify env vars in config.py (the Settings fields) for each token.
+Document the contract in your Shadow docs (entity_type → username → env var name).
+
+Out-of-repo operational setup (creating the actual Forgejo accounts)
+Yes: it also implies you must create those Forgejo users (service accounts) and generate tokens for them, then set the env vars in deployment.
+That operational work typically lives in:
+your infra/deployment docs (or a runbook), and/or
+a one-time setup script outside the app (since it requires admin access to Forgejo).
+In short: the repo task is “make sure the map is complete and clearly documented”; the real-world counterpart is “ensure the Forgejo service accounts actually exist and tokens are configured to match the map.”

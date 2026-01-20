@@ -7,6 +7,7 @@ context window overflow while maintaining conversation relevance.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -16,6 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AgentConfig, Room, RoomMessage, RoomParticipant, Story
 from app.services.context_store import ContextItemStore
+from app.services.shadow_context_loader import build_shadow_context_items
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -152,36 +156,31 @@ async def build_room_context(
     active_agents: list[AgentInfo] = []
     for p in participants_list:
         if p.participant_type == "agent":
-            # participant_id is the agent's UUID (stored as string)
-            try:
-                agent_uuid = uuid.UUID(p.participant_id)
-                agent_config = await session.get(AgentConfig, agent_uuid)
-                if agent_config and agent_config.is_enabled:
-                    active_agents.append(
-                        AgentInfo(
-                            slug=agent_config.slug,
-                            name=agent_config.name,
-                            description=agent_config.description or "",
-                            participation_mode=agent_config.participation_mode or "on_mention",
-                            capabilities=agent_config.capabilities or [],
-                        )
+            # participant_id is AgentConfig.slug (preferred) with legacy UUID support.
+            agent_config = None
+
+            agent_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == p.participant_id)
+            )
+            agent_config = agent_result.scalar_one_or_none()
+
+            if not agent_config:
+                try:
+                    agent_uuid = uuid.UUID(p.participant_id)
+                    agent_config = await session.get(AgentConfig, agent_uuid)
+                except ValueError:
+                    agent_config = None
+
+            if agent_config and agent_config.is_enabled:
+                active_agents.append(
+                    AgentInfo(
+                        slug=agent_config.slug,
+                        name=agent_config.name,
+                        description=agent_config.description or "",
+                        participation_mode=agent_config.participation_mode or "on_mention",
+                        capabilities=agent_config.capabilities or [],
                     )
-            except ValueError:
-                # participant_id might be a slug instead of UUID (legacy)
-                agent_result = await session.execute(
-                    select(AgentConfig).where(AgentConfig.slug == p.participant_id)
                 )
-                agent_config = agent_result.scalar_one_or_none()
-                if agent_config and agent_config.is_enabled:
-                    active_agents.append(
-                        AgentInfo(
-                            slug=agent_config.slug,
-                            name=agent_config.name,
-                            description=agent_config.description or "",
-                            participation_mode=agent_config.participation_mode or "on_mention",
-                            capabilities=agent_config.capabilities or [],
-                        )
-                    )
 
     room_metadata = {
         "room_id": str(room.room_id),
@@ -193,6 +192,19 @@ async def build_room_context(
 
     extra_contexts: list[dict[str, Any]] = []
     if context_store:
+        try:
+            shadow_items = await build_shadow_context_items(
+                room_id=room_id,
+                agent_slug=agent_slug,
+                session=session,
+            )
+            for item in shadow_items:
+                await context_store.add(item)
+        except Exception as exc:
+            logger.warning(
+                f"Failed to build Shadow context items for room {room_id} (agent_slug={agent_slug}): {exc}"
+            )
+
         items = await context_store.list(room_id=room_id, agent_slug=agent_slug)
         source_priority = {"seed": 0, "backend": 1, "frontend": 2}
         items_sorted = sorted(

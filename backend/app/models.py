@@ -2323,6 +2323,7 @@ class Room(RoomBase, table=True):
     )
 
 
+
 class RoomPublic(RoomBase):
     """Public room response model for API."""
 
@@ -3123,6 +3124,68 @@ class ShadowReposPublic(SQLModel):
     data: list[ShadowRepoPublic]
     count: int
 
+
+class PanelConfigItem(SQLModel):
+    """Individual panel configuration"""
+    id: str
+    kind: str  # chat, storyEditor, agentPanel, debug, canvas, a2ui
+    prominence: str  # primary, auxiliary
+
+
+class RoomPanelDefaultsBase(SQLModel):
+    """Base properties for room panel defaults"""
+    panels: list[dict] = Field(default=[], sa_column=Column(JSON))
+
+
+class RoomPanelDefaults(RoomPanelDefaultsBase, table=True):
+    """Default panel configuration set by room owner"""
+    __tablename__ = "room_panel_defaults"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    room_id: uuid.UUID = Field(foreign_key="rooms.room_id", unique=True, index=True)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class RoomPanelDefaultsPublic(RoomPanelDefaultsBase):
+    """Public response for room panel defaults"""
+    id: uuid.UUID
+    room_id: uuid.UUID
+    updated_at: datetime
+
+
+class UserRoomPanelConfigBase(SQLModel):
+    """Base properties for user room panel config"""
+    panels: list[dict] | None = Field(default=None, sa_column=Column(JSON))
+    use_room_defaults: bool = Field(default=True)
+
+
+class UserRoomPanelConfig(UserRoomPanelConfigBase, table=True):
+    """User's personal panel override for a specific room"""
+    __tablename__ = "user_room_panel_config"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    room_id: uuid.UUID = Field(foreign_key="rooms.room_id", index=True)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Composite unique constraint
+    __table_args__ = (UniqueConstraint("user_id", "room_id"),)
+
+
+class UserRoomPanelConfigPublic(UserRoomPanelConfigBase):
+    """Public response for user panel config"""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    room_id: uuid.UUID
+    updated_at: datetime
+
+
+class ResolvedPanelConfig(SQLModel):
+    """Resolved panel config for a user in a room"""
+    panels: list[dict]
+    source: str  # "user_override", "room_defaults", "type_defaults"
+
+
 # ==================== ShadowVersion Models ====================
 
 class ShadowVersionBase(SQLModel):
@@ -3334,6 +3397,7 @@ UserNodeChoice.snapshots = Relationship(
     }
 )
 
+
 # ============================================================================
 # Post-Definition Relationship Binding
 # ============================================================================
@@ -3388,3 +3452,15 @@ AgentPersona.agent_config = Relationship(back_populates="agent_personas")
 # Persona <-> AgentPersona
 Persona.agent_personas = Relationship(back_populates="persona")
 AgentPersona.persona = Relationship(back_populates="agent_personas")
+
+RoomPanelDefaults.room = Relationship(
+    back_populates="panel_defaults"
+)
+
+Room.panel_defaults = Relationship(
+    back_populates="room",
+    sa_relationship_kwargs={
+        "foreign_keys": "[RoomPanelDefaults.room_id]",
+        "uselist": False
+    }
+)

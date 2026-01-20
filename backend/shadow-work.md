@@ -1,5 +1,14 @@
 # Shadow Work Plan (Milestones 1–3)
 
+## References:
+
+```
+    `backend/docs/shadow/ShadowPhase1Milestone1.md`
+    `backend/docs/shadow/ShadowPhase1Milestone1_1.md`
+    - `backend/docs/shadow/ShadowPhase2Milestone2_TechnicalSpec.md`
+    - `backend/docs/shadow/ShadowPhase2Milestone2_ImplementationGuide.md`
+```
+
 This document turns the Shadow goals in `backend/docs/shadow/shadow-overview.md` and our design conversation into an executable implementation plan. It includes a minimal schema to support:
 
 - One active persona per participant per room (users and agents)

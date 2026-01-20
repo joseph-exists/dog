@@ -1,0 +1,1 @@
+The read service currently uses DB ShadowVersion.commit_sha to choose the Forgejo ref (good for pinning/caching), but it means “latest snapshot” is “latest version recorded in DB”. That’s desirable for provenance; if you ever want “latest commit on default branch” semantics, we should add an explicit mode for that (not recommended for Milestone 2).

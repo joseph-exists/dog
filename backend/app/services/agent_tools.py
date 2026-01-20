@@ -12,6 +12,7 @@ from app.schemas.ag_ui import UIComponent, UIComponentType
 from app.services.a2a_orchestrator import A2AOrchestrator, DEFAULT_MAX_A2A_DEPTH
 from app.services.agent_prompt import build_agent_prompt
 from app.services.context_provider import build_room_context
+from app.services.context_store import RedisContextStore
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,8 @@ async def _run_agent_for_tool_call(
             room_id=room_id,
             session=session,
             message_limit=20,
+            agent_slug=agent_slug,
+            context_store=RedisContextStore(),
         )
 
         prompt = f"@{requesting_agent} is asking for your assistance:\n\n{request}"

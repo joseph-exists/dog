@@ -1537,9 +1537,6 @@ class RoomPanelDefaults(RoomPanelDefaultsBase, table=True):
     room_id: uuid.UUID = Field(foreign_key="room.id", unique=True, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # Relationship
-    room: "Room" = Relationship(back_populates="panel_defaults")
-
 
 class RoomPanelDefaultsPublic(RoomPanelDefaultsBase):
     """Public response for room panel defaults"""
@@ -1584,16 +1581,26 @@ class ResolvedPanelConfig(SQLModel):
 **Step 2: Add relationship to Room model**
 
 Find the Room model and add:
-```python
-class Room(...):
-    # ... existing fields ...
 
-    # Panel defaults (one-to-one)
-    panel_defaults: "RoomPanelDefaults" | None = Relationship(
-        back_populates="room",
-        sa_relationship_kwargs={"uselist": False}
-    )
+Notes: modified from original plan.  relationship bindings added to end of models.py, not in class.
+
+implementation:
+
 ```
+Room.panel_defaults = Relationship(
+    back_populates="room",
+    sa_relationship_kwargs={
+        "foreign_keys": "[RoomPanelDefaults.room_id]",
+        "uselist": False
+    }
+)
+
+
+RoomPanelDefaults.room = Relationship(
+    back_populates="panel_defaults"
+)
+```
+
 
 **Step 3: Create migration**
 
