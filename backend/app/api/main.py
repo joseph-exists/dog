@@ -17,6 +17,7 @@ from app.api.routes import (
     private,
     qualities,
     quality_trait_links,
+    room_panels,
     room_participant_bindings,
     rooms,
     stories,
@@ -54,6 +55,7 @@ api_router.include_router(agent_personas.router)
 api_router.include_router(llm_providers.router)
 api_router.include_router(llm_catalog.router)
 api_router.include_router(rooms.router)
+api_router.include_router(room_panels.router, prefix="/rooms", tags=["room-panels"])
 api_router.include_router(room_participant_bindings.router)
 api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)
