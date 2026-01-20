@@ -413,6 +413,137 @@ export const AgentConfigsPublicSchema = {
     title: 'AgentConfigsPublic'
 } as const;
 
+export const AgentPersonaCreateSchema = {
+    properties: {
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Persona Id'
+        }
+    },
+    type: 'object',
+    required: ['persona_id'],
+    title: 'AgentPersonaCreate'
+} as const;
+
+export const AgentPersonaPublicSchema = {
+    properties: {
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        agent_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Agent Id'
+        },
+        persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Persona Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'agent_id', 'persona_id', 'created_at', 'updated_at'],
+    title: 'AgentPersonaPublic',
+    description: 'Public model for AgentPersona API responses.'
+} as const;
+
+export const AgentPersonaUpdateSchema = {
+    properties: {
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        is_active: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Active'
+        }
+    },
+    type: 'object',
+    title: 'AgentPersonaUpdate'
+} as const;
+
+export const AgentPersonasPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/AgentPersonaPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'AgentPersonasPublic',
+    description: 'Collection model for AgentPersona API responses.'
+} as const;
+
 export const ArchetypeCreateSchema = {
     properties: {
         name: {
@@ -1833,7 +1964,7 @@ export const ParticipantAddRequestSchema = {
             type: 'string',
             maxLength: 255,
             title: 'Participant Id',
-            description: 'UUID string for users, agent name for agents'
+            description: 'UUID string for users, AgentConfig.slug for agents'
         },
         participant_type: {
             type: 'string',
@@ -1855,6 +1986,58 @@ export const ParticipantAddRequestSchema = {
     description: `Request model for adding a participant to a room.
 
 Used by: POST /rooms/{room_id}/participants`
+} as const;
+
+export const ParticipantBindingChangeRequestSchema = {
+    properties: {
+        participant_type: {
+            type: 'string',
+            enum: ['user', 'agent'],
+            title: 'Participant Type'
+        },
+        persona_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Persona Id'
+        },
+        model_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name'
+        },
+        user_llm_provider_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Llm Provider Id'
+        }
+    },
+    type: 'object',
+    required: ['participant_type'],
+    title: 'ParticipantBindingChangeRequest',
+    description: `Request model for setting a participant's active binding in a room.
+
+Payload is event-sourced via participant.binding_changed.`
 } as const;
 
 export const ParticipantRoleChangeRequestSchema = {
@@ -2546,6 +2729,27 @@ export const QualityUpdateSchema = {
     title: 'QualityUpdate'
 } as const;
 
+export const ResolvedPanelConfigSchema = {
+    properties: {
+        panels: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Panels'
+        },
+        source: {
+            type: 'string',
+            title: 'Source'
+        }
+    },
+    type: 'object',
+    required: ['panels', 'source'],
+    title: 'ResolvedPanelConfig',
+    description: 'Resolved panel config for a user in a room'
+} as const;
+
 export const RoomCreateSchema = {
     properties: {
         title: {
@@ -2766,13 +2970,179 @@ export const RoomMessagesPublicSchema = {
     description: 'Paginated collection of messages.'
 } as const;
 
+export const RoomPanelDefaultsPublicSchema = {
+    properties: {
+        panels: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Panels',
+            default: []
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'room_id', 'updated_at'],
+    title: 'RoomPanelDefaultsPublic',
+    description: 'Public response for room panel defaults'
+} as const;
+
+export const RoomParticipantBindingPublicSchema = {
+    properties: {
+        participant_type: {
+            type: 'string',
+            maxLength: 10,
+            title: 'Participant Type',
+            description: "Either 'user' or 'agent'"
+        },
+        participant_id: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Participant Id',
+            description: 'UUID string for users; AgentConfig.slug for agents'
+        },
+        persona_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Persona Id'
+        },
+        model_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name',
+            description: "Same format as AgentConfig.model_name (e.g., 'openai:gpt-4o-mini')"
+        },
+        user_llm_provider_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Llm Provider Id',
+            description: 'User-owned provider config to use (must belong to current user)'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Id'
+        },
+        agent_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Id'
+        },
+        effective_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Effective At'
+        },
+        ended_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ended At'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['participant_type', 'participant_id', 'id', 'room_id', 'user_id', 'agent_id', 'effective_at', 'ended_at', 'created_at'],
+    title: 'RoomParticipantBindingPublic'
+} as const;
+
+export const RoomParticipantBindingsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/RoomParticipantBindingPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'RoomParticipantBindingsPublic'
+} as const;
+
 export const RoomParticipantPublicSchema = {
     properties: {
         participant_id: {
             type: 'string',
             maxLength: 255,
             title: 'Participant Id',
-            description: 'UUID string for users, agent name for agents'
+            description: 'UUID string for users, AgentConfig.slug for agents'
         },
         participant_type: {
             type: 'string',
@@ -5033,6 +5403,55 @@ export const UserRegisterSchema = {
     type: 'object',
     required: ['email', 'password'],
     title: 'UserRegister'
+} as const;
+
+export const UserRoomPanelConfigPublicSchema = {
+    properties: {
+        panels: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Panels'
+        },
+        use_room_defaults: {
+            type: 'boolean',
+            title: 'Use Room Defaults',
+            default: true
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'user_id', 'room_id', 'updated_at'],
+    title: 'UserRoomPanelConfigPublic',
+    description: 'Public response for user panel config'
 } as const;
 
 export const UserStoryProgressPublicSchema = {

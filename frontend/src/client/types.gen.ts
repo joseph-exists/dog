@@ -86,6 +86,38 @@ export type AgentConfigUpdate = {
     capabilities?: (Array<(string)> | null);
 };
 
+export type AgentPersonaCreate = {
+    nickname?: (string | null);
+    is_active?: boolean;
+    persona_id: string;
+};
+
+/**
+ * Public model for AgentPersona API responses.
+ */
+export type AgentPersonaPublic = {
+    nickname?: (string | null);
+    is_active?: boolean;
+    id: string;
+    agent_id: string;
+    persona_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Collection model for AgentPersona API responses.
+ */
+export type AgentPersonasPublic = {
+    data: Array<AgentPersonaPublic>;
+    count: number;
+};
+
+export type AgentPersonaUpdate = {
+    nickname?: (string | null);
+    is_active?: (boolean | null);
+};
+
 export type ArchetypeCreate = {
     name: string;
     description?: (string | null);
@@ -554,7 +586,7 @@ export type NodeChoiceUpdate = {
  */
 export type ParticipantAddRequest = {
     /**
-     * UUID string for users, agent name for agents
+     * UUID string for users, AgentConfig.slug for agents
      */
     participant_id: string;
     /**
@@ -576,6 +608,18 @@ export type participant_type = 'user' | 'agent';
  * Participant role (default: member)
  */
 export type role = 'owner' | 'member';
+
+/**
+ * Request model for setting a participant's active binding in a room.
+ *
+ * Payload is event-sourced via participant.binding_changed.
+ */
+export type ParticipantBindingChangeRequest = {
+    participant_type: 'user' | 'agent';
+    persona_id?: (string | null);
+    model_name?: (string | null);
+    user_llm_provider_id?: (string | null);
+};
 
 /**
  * Request model for changing a participant's role.
@@ -729,6 +773,16 @@ export type QualityUpdate = {
 };
 
 /**
+ * Resolved panel config for a user in a room
+ */
+export type ResolvedPanelConfig = {
+    panels: Array<{
+        [key: string]: unknown;
+    }>;
+    source: string;
+};
+
+/**
  * Properties required when creating a room via API.
  */
 export type RoomCreate = {
@@ -787,11 +841,55 @@ export type RoomMessagesPublic = {
 };
 
 /**
+ * Public response for room panel defaults
+ */
+export type RoomPanelDefaultsPublic = {
+    panels?: Array<{
+        [key: string]: unknown;
+    }>;
+    id: string;
+    room_id: string;
+    updated_at: string;
+};
+
+export type RoomParticipantBindingPublic = {
+    /**
+     * Either 'user' or 'agent'
+     */
+    participant_type: string;
+    /**
+     * UUID string for users; AgentConfig.slug for agents
+     */
+    participant_id: string;
+    persona_id?: (string | null);
+    /**
+     * Same format as AgentConfig.model_name (e.g., 'openai:gpt-4o-mini')
+     */
+    model_name?: (string | null);
+    /**
+     * User-owned provider config to use (must belong to current user)
+     */
+    user_llm_provider_id?: (string | null);
+    id: string;
+    room_id: string;
+    user_id: (string | null);
+    agent_id: (string | null);
+    effective_at: string;
+    ended_at: (string | null);
+    created_at: string;
+};
+
+export type RoomParticipantBindingsPublic = {
+    data: Array<RoomParticipantBindingPublic>;
+    count: number;
+};
+
+/**
  * Public participant response model for API.
  */
 export type RoomParticipantPublic = {
     /**
-     * UUID string for users, agent name for agents
+     * UUID string for users, AgentConfig.slug for agents
      */
     participant_id: string;
     /**
@@ -1393,6 +1491,20 @@ export type UserRegister = {
 };
 
 /**
+ * Public response for user panel config
+ */
+export type UserRoomPanelConfigPublic = {
+    panels?: (Array<{
+    [key: string]: unknown;
+}> | null);
+    use_room_defaults?: boolean;
+    id: string;
+    user_id: string;
+    room_id: string;
+    updated_at: string;
+};
+
+/**
  * Collection model for User API responses.
  */
 export type UsersPublic = {
@@ -1458,6 +1570,43 @@ export type ValidationError = {
     msg: string;
     type: string;
 };
+
+export type AgentPersonasReadAgentPersonasData = {
+    agentId: string;
+    limit?: number;
+    skip?: number;
+};
+
+export type AgentPersonasReadAgentPersonasResponse = (AgentPersonasPublic);
+
+export type AgentPersonasCreateAgentPersonaData = {
+    agentId: string;
+    requestBody: AgentPersonaCreate;
+};
+
+export type AgentPersonasCreateAgentPersonaResponse = (AgentPersonaPublic);
+
+export type AgentPersonasReadAgentPersonaData = {
+    agentId: string;
+    id: string;
+};
+
+export type AgentPersonasReadAgentPersonaResponse = (AgentPersonaPublic);
+
+export type AgentPersonasUpdateAgentPersonaData = {
+    agentId: string;
+    id: string;
+    requestBody: AgentPersonaUpdate;
+};
+
+export type AgentPersonasUpdateAgentPersonaResponse = (AgentPersonaPublic);
+
+export type AgentPersonasDeleteAgentPersonaData = {
+    agentId: string;
+    id: string;
+};
+
+export type AgentPersonasDeleteAgentPersonaResponse = (Message);
 
 export type AgentsListAgentsData = {
     limit?: number;
@@ -2007,6 +2156,58 @@ export type QualityTraitLinksDeleteQualityTraitLinkData = {
 };
 
 export type QualityTraitLinksDeleteQualityTraitLinkResponse = (Message);
+
+export type RoomPanelsGetResolvedPanelsData = {
+    roomId: string;
+};
+
+export type RoomPanelsGetResolvedPanelsResponse = (ResolvedPanelConfig);
+
+export type RoomPanelsGetRoomDefaultsData = {
+    roomId: string;
+};
+
+export type RoomPanelsGetRoomDefaultsResponse = ((RoomPanelDefaultsPublic | null));
+
+export type RoomPanelsUpdateRoomDefaultsData = {
+    requestBody: Array<{
+        [key: string]: unknown;
+    }>;
+    roomId: string;
+};
+
+export type RoomPanelsUpdateRoomDefaultsResponse = (RoomPanelDefaultsPublic);
+
+export type RoomPanelsGetMyPanelConfigData = {
+    roomId: string;
+};
+
+export type RoomPanelsGetMyPanelConfigResponse = ((UserRoomPanelConfigPublic | null));
+
+export type RoomPanelsUpdateMyPanelConfigData = {
+    requestBody: (Array<{
+    [key: string]: unknown;
+}> | null);
+    roomId: string;
+    useRoomDefaults: boolean;
+};
+
+export type RoomPanelsUpdateMyPanelConfigResponse = (UserRoomPanelConfigPublic);
+
+export type RoomParticipantBindingsReadRoomBindingsData = {
+    includeHistory?: boolean;
+    roomId: string;
+};
+
+export type RoomParticipantBindingsReadRoomBindingsResponse = (RoomParticipantBindingsPublic);
+
+export type RoomParticipantBindingsPutParticipantBindingData = {
+    participantId: string;
+    requestBody: ParticipantBindingChangeRequest;
+    roomId: string;
+};
+
+export type RoomParticipantBindingsPutParticipantBindingResponse = (RoomParticipantBindingPublic);
 
 export type RoomsCreateNewRoomData = {
     requestBody: RoomCreate;
