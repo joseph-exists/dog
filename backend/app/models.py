@@ -2349,7 +2349,7 @@ class RoomParticipantBase(SQLModel):
 
     participant_id: str = Field(
         max_length=255,
-        description="UUID string for users, agent name for agents",
+        description="UUID string for users, AgentConfig.slug for agents",
     )
     participant_type: str = Field(
         max_length=10,
@@ -2426,7 +2426,7 @@ class ParticipantAddRequest(SQLModel):
     participant_id: str = Field(
         ...,
         max_length=255,
-        description="UUID string for users, agent name for agents",
+        description="UUID string for users, AgentConfig.slug for agents",
         # examples=["550e8400-e29b-41d4-a716-446655440000", "StoryAdvisor"],
     )
     participant_type: Literal["user", "agent"] = Field(
@@ -2461,6 +2461,106 @@ class MessageResponse(SQLModel):
         ...,
         description="Success message",
     )
+
+# ============================================================================
+# RoomParticipantBinding Models (Room-scoped runtime persona + model/provider)
+# ============================================================================
+
+
+class RoomParticipantBindingBase(SQLModel):
+    """Shared properties for room participant runtime bindings."""
+
+    participant_type: str = Field(
+        max_length=10,
+        description="Either 'user' or 'agent'",
+    )
+    participant_id: str = Field(
+        max_length=255,
+        description="UUID string for users; AgentConfig.slug for agents",
+    )
+
+    persona_id: uuid.UUID | None = Field(default=None, foreign_key="persona.id")
+
+    model_name: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Same format as AgentConfig.model_name (e.g., 'openai:gpt-4o-mini')",
+    )
+    user_llm_provider_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="userllmprovider.id",
+        description="User-owned provider config to use (must belong to current user)",
+    )
+
+
+class RoomParticipantBindingCreate(RoomParticipantBindingBase):
+    room_id: uuid.UUID
+    user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    agent_id: uuid.UUID | None = Field(default=None, foreign_key="agent_configs.id")
+    effective_at: datetime
+    ended_at: datetime | None = None
+
+
+class RoomParticipantBindingUpdate(SQLModel):
+    persona_id: uuid.UUID | None = None
+    model_name: str | None = None
+    user_llm_provider_id: uuid.UUID | None = None
+
+
+class RoomParticipantBinding(RoomParticipantBindingBase, table=True):
+    """
+    Room-scoped runtime binding for a participant with history.
+
+    Invariant: one active binding per (room_id, participant_type, participant_id),
+    where active means ended_at IS NULL.
+    """
+
+    __tablename__ = "room_participant_bindings"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    room_id: uuid.UUID = Field(
+        foreign_key="rooms.room_id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True,
+    )
+
+    user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", nullable=True)
+    agent_id: uuid.UUID | None = Field(
+        default=None, foreign_key="agent_configs.id", nullable=True
+    )
+
+    effective_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    ended_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
+class RoomParticipantBindingPublic(RoomParticipantBindingBase):
+    id: uuid.UUID
+    room_id: uuid.UUID
+    user_id: uuid.UUID | None
+    agent_id: uuid.UUID | None
+    effective_at: datetime
+    ended_at: datetime | None
+    created_at: datetime
+
+
+class RoomParticipantBindingsPublic(SQLModel):
+    data: list[RoomParticipantBindingPublic]
+    count: int
+
+
+class ParticipantBindingChangeRequest(SQLModel):
+    """
+    Request model for setting a participant's active binding in a room.
+
+    Payload is event-sourced via participant.binding_changed.
+    """
+
+    participant_type: Literal["user", "agent"]
+    persona_id: uuid.UUID | None = None
+    model_name: str | None = Field(default=None, max_length=100)
+    user_llm_provider_id: uuid.UUID | None = None
 
 # ============================================================================
 # Message Models (Projection)

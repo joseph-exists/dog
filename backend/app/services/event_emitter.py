@@ -33,10 +33,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func
 
 from app.models import (
+    AgentConfig,
     Room,
     RoomEvent,
     RoomMessage,
     RoomParticipant,
+    RoomParticipantBinding,
 )
 from app.services.realtime_publisher import (
     publish_ephemeral_message,
@@ -399,6 +401,7 @@ async def _update_projections(
         "participant.joined": _handle_participant_joined,
         "participant.left": _handle_participant_left,
         "participant.role_changed": _handle_participant_role_changed,
+        "participant.binding_changed": _handle_participant_binding_changed,
         "room_message.user": _handle_room_message_user,
         "room_message.agent": _handle_room_message_agent,
         "room_message.agent_internal": _handle_room_message_agent_internal,
@@ -504,20 +507,55 @@ async def _handle_participant_joined(
     Supports both initial join and re-join (reactivation).
 
     Payload:
-        - participant_id: str (UUID string for users, agent name for agents)
+        - participant_id: str (UUID string for users; AgentConfig.slug for agents)
         - participant_type: "user" | "agent" (required)
         - role: "owner" | "member" (required)
     """
     payload = event.payload
 
+    participant_id = payload["participant_id"]
+    if payload.get("participant_type") == "agent":
+        # Normalize agent participant_id to AgentConfig.slug.
+        # Note: events are immutable; normalization happens in projections only.
+        legacy_uuid_str: str | None = None
+        try:
+            agent_uuid = uuid.UUID(participant_id)
+            legacy_uuid_str = str(agent_uuid)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                participant_id = agent_config.slug
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                legacy_uuid_str = str(agent_config.id)
+                participant_id = agent_config.slug
+
     # Check if participant previously existed (re-join scenario)
     result = await session.execute(
         select(RoomParticipant).where(
             RoomParticipant.room_id == event.room_id,
-            RoomParticipant.participant_id == payload["participant_id"],
+            RoomParticipant.participant_id == participant_id,
         )
     )
     existing = result.scalar_one_or_none()
+
+    if not existing and payload.get("participant_type") == "agent":
+        # Transitional compatibility: if an existing room participant row is keyed by the
+        # agent UUID string, upgrade it to slug in-place.
+        if legacy_uuid_str:
+            result = await session.execute(
+                select(RoomParticipant).where(
+                    RoomParticipant.room_id == event.room_id,
+                    RoomParticipant.participant_id == legacy_uuid_str,
+                )
+            )
+            existing = result.scalar_one_or_none()
 
     if existing:
         # Reactivate existing participant
@@ -525,13 +563,15 @@ async def _handle_participant_joined(
         existing.joined_at = event.created_at
         existing.left_at = None
         existing.role = payload["role"]
+        existing.participant_id = participant_id
+        existing.participant_type = payload["participant_type"]
         session.add(existing)
     else:
         # Create new participant
         participant = RoomParticipant(
             id=uuid.uuid4(),
             room_id=event.room_id,
-            participant_id=payload["participant_id"],
+            participant_id=participant_id,
             participant_type=payload["participant_type"],
             role=payload["role"],
             joined_at=event.created_at,
@@ -548,17 +588,54 @@ async def _handle_participant_left(
     Handle participant.left event (soft delete).
 
     Payload:
-        - participant_id: str (UUID string for users, agent name for agents)
+        - participant_id: str (UUID string for users; AgentConfig.slug for agents)
     """
     payload = event.payload
+
+    participant_id = payload["participant_id"]
 
     result = await session.execute(
         select(RoomParticipant).where(
             RoomParticipant.room_id == event.room_id,
-            RoomParticipant.participant_id == payload["participant_id"],
+            RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.scalar_one()
+    participant = result.scalar_one_or_none()
+
+    if not participant:
+        # Transitional compatibility: attempt slug/UUID normalization for agents.
+        try:
+            agent_uuid = uuid.UUID(participant_id)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                result = await session.execute(
+                    select(RoomParticipant).where(
+                        RoomParticipant.room_id == event.room_id,
+                        RoomParticipant.participant_id == agent_config.slug,
+                    )
+                )
+                participant = result.scalar_one_or_none()
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                result = await session.execute(
+                    select(RoomParticipant).where(
+                        RoomParticipant.room_id == event.room_id,
+                        RoomParticipant.participant_id == str(agent_config.id),
+                    )
+                )
+                participant = result.scalar_one_or_none()
+
+    if not participant:
+        raise ValueError(
+            f"Participant not found for participant.left: room_id={event.room_id} participant_id={payload['participant_id']}"
+        )
 
     participant.active = False
     participant.left_at = event.created_at
@@ -574,22 +651,150 @@ async def _handle_participant_role_changed(
     Handle participant.role_changed event.
 
     Payload:
-        - participant_id: str (UUID string for users, agent name for agents)
+        - participant_id: str (UUID string for users; AgentConfig.slug for agents)
         - new_role: "owner" | "member" (required)
     """
     payload = event.payload
 
+    participant_id = payload["participant_id"]
     result = await session.execute(
         select(RoomParticipant).where(
             RoomParticipant.room_id == event.room_id,
-            RoomParticipant.participant_id == payload["participant_id"],
+            RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.scalar_one()
+    participant = result.scalar_one_or_none()
+
+    if not participant:
+        # Transitional compatibility: attempt slug/UUID normalization for agents.
+        try:
+            agent_uuid = uuid.UUID(participant_id)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                result = await session.execute(
+                    select(RoomParticipant).where(
+                        RoomParticipant.room_id == event.room_id,
+                        RoomParticipant.participant_id == agent_config.slug,
+                    )
+                )
+                participant = result.scalar_one_or_none()
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                result = await session.execute(
+                    select(RoomParticipant).where(
+                        RoomParticipant.room_id == event.room_id,
+                        RoomParticipant.participant_id == str(agent_config.id),
+                    )
+                )
+                participant = result.scalar_one_or_none()
+
+    if not participant:
+        raise ValueError(
+            f"Participant not found for participant.role_changed: room_id={event.room_id} participant_id={payload['participant_id']}"
+        )
 
     participant.role = payload["new_role"]
 
     session.add(participant)
+
+
+async def _handle_participant_binding_changed(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    Handle participant.binding_changed event.
+
+    Payload:
+        - participant_type: "user" | "agent" (required)
+        - participant_id: str (UUID string for users; AgentConfig.slug for agents; UUID accepted as legacy)
+        - persona_id: uuid str | null
+        - model_name: str | null
+        - user_llm_provider_id: uuid str | null
+
+    Semantics:
+        - Close previous active binding (ended_at set)
+        - Insert new binding row (ended_at NULL)
+        - Must run transactionally with event write
+    """
+    payload = event.payload
+    participant_type = payload["participant_type"]
+    participant_id = payload["participant_id"]
+
+    resolved_user_id: uuid.UUID | None = None
+    resolved_agent_id: uuid.UUID | None = None
+
+    if participant_type == "user":
+        resolved_user_id = uuid.UUID(participant_id)
+        participant_id = str(resolved_user_id)
+    elif participant_type == "agent":
+        # Normalize agent participant_id to slug (accept UUID as legacy).
+        try:
+            agent_uuid = uuid.UUID(participant_id)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if not agent_config:
+                raise ValueError("Agent not found for binding change")
+            resolved_agent_id = agent_config.id
+            participant_id = agent_config.slug
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if not agent_config:
+                raise ValueError("Agent not found for binding change")
+            resolved_agent_id = agent_config.id
+            participant_id = agent_config.slug
+    else:
+        raise ValueError("participant_type must be 'user' or 'agent'")
+
+    persona_id_raw = payload.get("persona_id")
+    provider_id_raw = payload.get("user_llm_provider_id")
+    model_name = payload.get("model_name")
+
+    persona_id = uuid.UUID(persona_id_raw) if persona_id_raw else None
+    user_llm_provider_id = uuid.UUID(provider_id_raw) if provider_id_raw else None
+
+    # Close previous active binding row (if any).
+    result = await session.execute(
+        select(RoomParticipantBinding).where(
+            RoomParticipantBinding.room_id == event.room_id,
+            RoomParticipantBinding.participant_type == participant_type,
+            RoomParticipantBinding.participant_id == participant_id,
+            RoomParticipantBinding.ended_at.is_(None),
+        )
+    )
+    existing = result.scalars().all()
+    for row in existing:
+        row.ended_at = event.created_at
+        session.add(row)
+
+    # Insert new binding row.
+    binding = RoomParticipantBinding(
+        id=uuid.uuid4(),
+        room_id=event.room_id,
+        participant_type=participant_type,
+        participant_id=participant_id,
+        user_id=resolved_user_id,
+        agent_id=resolved_agent_id,
+        persona_id=persona_id,
+        model_name=model_name,
+        user_llm_provider_id=user_llm_provider_id,
+        effective_at=event.created_at,
+        created_at=event.created_at,
+        ended_at=None,
+    )
+    session.add(binding)
 
 
 # ============================================================================

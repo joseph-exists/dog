@@ -59,6 +59,10 @@ SERVICE_ACCOUNT_MAP = {
     "user": "SHADOW_USERS_TOKEN",
     "agent": "SHADOW_AGENTS_TOKEN",
     "story": "SHADOW_STORIES_TOKEN",
+    "room": "SHADOW_ROOMS_TOKEN",
+    "persona": "SHADOW_PERSONAS_TOKEN",
+    "llm_model": "SHADOW_LLM_MODELS_TOKEN",
+    "user_llm_provider": "SHADOW_USER_LLM_PROVIDERS_TOKEN",
 }
 
 # Service account usernames (must match Forgejo accounts)
@@ -66,6 +70,10 @@ SERVICE_ACCOUNT_USERNAMES = {
     "user": "shadow-users",
     "agent": "shadow-agents",
     "story": "shadow-stories",
+    "room": "shadow-rooms",
+    "persona": "shadow-personas",
+    "llm_model": "shadow-llm-models",
+    "user_llm_provider": "shadow-user-llm-providers",
 }
 
 
@@ -525,6 +533,36 @@ class ShadowService:
         # Create version
         return self.create_version(
             session, shadow_repo, entity_data, message, user
+        )
+
+    def create_entity_version_with_owner(
+        self,
+        session: Session,
+        owner: User,
+        actor: User,
+        entity_type: str,
+        entity_id: uuid.UUID,
+        entity_data: dict[str, Any],
+        message: str,
+    ) -> ShadowVersion | None:
+        """
+        Version an entity where the entity owner and the actor differ.
+
+        Use this for room-scoped updates (e.g., bindings) where the room creator
+        is the entity owner, but another participant initiated the change.
+        """
+        if not self.is_enabled(entity_type):
+            logger.debug(f"Shadow not enabled for {entity_type}")
+            return None
+
+        shadow_repo = self.ensure_shadow_repo(
+            session, owner, entity_type, entity_id
+        )
+        if not shadow_repo:
+            return None
+
+        return self.create_version(
+            session, shadow_repo, entity_data, message, actor
         )
 
     def get_entity_history(

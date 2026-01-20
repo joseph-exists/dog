@@ -12,6 +12,8 @@ from app.models import (
     AgentPersonaUpdate,
     Message,
 )
+from app.services.shadow_exporters import build_agent_snapshot
+from app.services.shadow_service import shadow_service
 
 router = APIRouter(prefix="/agents/{agent_id}/personas", tags=["agent-personas"])
 
@@ -97,9 +99,22 @@ def create_agent_persona(
         session=session, current_user=current_user, agent_id=agent_id
     )
     try:
-        return crud.create_agent_persona(
+        agent_persona = crud.create_agent_persona(
             session=session, agent_persona_in=agent_persona_in, agent_id=agent_id
         )
+        try:
+            snapshot = build_agent_snapshot(session=session, agent_id=agent_id)
+            shadow_service.create_entity_version(
+                session=session,
+                user=current_user,
+                entity_type="agent",
+                entity_id=agent_id,
+                entity_data=snapshot,
+                message="Update agent personas",
+            )
+        except Exception:
+            pass
+        return agent_persona
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -123,11 +138,24 @@ def update_agent_persona(
     if not agent_persona:
         raise HTTPException(status_code=404, detail="Agent persona not found")
 
-    return crud.update_agent_persona(
+    updated = crud.update_agent_persona(
         session=session,
         db_agent_persona=agent_persona,
         agent_persona_in=agent_persona_in,
     )
+    try:
+        snapshot = build_agent_snapshot(session=session, agent_id=agent_id)
+        shadow_service.create_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="agent",
+            entity_id=agent_id,
+            entity_data=snapshot,
+            message="Update agent personas",
+        )
+    except Exception:
+        pass
+    return updated
 
 
 @router.delete("/{id}")
@@ -148,4 +176,16 @@ def delete_agent_persona(
         raise HTTPException(status_code=404, detail="Agent persona not found")
 
     crud.delete_agent_persona(session=session, db_agent_persona=agent_persona)
+    try:
+        snapshot = build_agent_snapshot(session=session, agent_id=agent_id)
+        shadow_service.create_entity_version(
+            session=session,
+            user=current_user,
+            entity_type="agent",
+            entity_id=agent_id,
+            entity_data=snapshot,
+            message="Update agent personas",
+        )
+    except Exception:
+        pass
     return Message(message="Agent persona deleted successfully")

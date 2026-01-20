@@ -11,6 +11,8 @@ Architecture:
 - All writes go through event_emitter.emit_event()
 - Authorization enforced at CRUD level
 - Supports both user and agent participants as first-class entities
+
+NOTE: agent participants are addressed by `AgentConfig.slug` (not display name).
 """
 
 from datetime import datetime

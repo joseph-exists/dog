@@ -80,9 +80,7 @@ export function RoomLayout({ panels, mode, className }: RoomLayoutProps) {
       {primaryPanels.map((panel, index) => (
         <React.Fragment key={panel.id}>
           {index > 0 && <ResizableHandle withHandle />}
-          <ResizablePanel>
-            {panel.render()}
-          </ResizablePanel>
+          <ResizablePanel>{panel.render()}</ResizablePanel>
         </React.Fragment>
       ))}
 

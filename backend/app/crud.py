@@ -53,6 +53,8 @@ from app.models import (
     RoomMessagePublic,
     RoomMessagesPublic,
     RoomParticipant,
+    RoomParticipantBinding,
+    RoomParticipantBindingsPublic,
     RoomPublic,
     RoomsPublic,
     StateSchemaValidationError,
@@ -82,6 +84,7 @@ from app.models import (
     TraitCreate,
     User,
     UserCreate,
+    UserLLMProvider,
     UserNodeChoice,
     UserPersona,
     UserPersonaCreate,
@@ -1989,13 +1992,37 @@ async def add_participant(
             detail="role must be 'owner' or 'member'",
         )
 
+    # Standardize agent participant_id to AgentConfig.slug (preferred addressing key).
+    # PRI-1 TODO: Remove agent UUID participant_id support once Milestone 1.1 tasks
+    # 2, 3, and 4 are complete and validated (bindings table + binding event flow + APIs).
+    normalized_participant_id = participant_id
+    if participant_type == "agent":
+        # Accept UUID strings temporarily, but normalize to slug internally.
+        try:
+            agent_uuid = UUID(participant_id)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if not agent_config:
+                raise HTTPException(status_code=400, detail="Agent not found")
+            normalized_participant_id = agent_config.slug
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if not agent_config:
+                raise HTTPException(status_code=400, detail="Agent not found")
+            normalized_participant_id = agent_config.slug
+
     # Emit participant.joined event (idempotent via handler)
     await emit_event(
         session=session,
         room_id=room_id,
         event_type="participant.joined",
         payload={
-            "participant_id": participant_id,
+            "participant_id": normalized_participant_id,
             "participant_type": participant_type,
             "role": role,
         },
@@ -2005,7 +2032,7 @@ async def add_participant(
     result = await session.execute(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
-            RoomParticipant.participant_id == participant_id,
+            RoomParticipant.participant_id == normalized_participant_id,
         )
     )
     participant = result.scalar_one()
@@ -2044,7 +2071,7 @@ async def remove_participant(
             detail="Only room owners can remove participants",
         )
 
-    # Verify participant exists
+    # Verify participant exists (normalize agent UUID/slug mismatch if needed).
     result = await session.execute(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
@@ -2052,6 +2079,35 @@ async def remove_participant(
         )
     )
     participant = result.scalar_one_or_none()
+
+    normalized_participant_id = participant_id
+    if not participant:
+        # If caller provided an agent UUID string but the room stores slug (or vice versa),
+        # attempt to resolve and retry.
+        try:
+            agent_uuid = UUID(participant_id)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                normalized_participant_id = agent_config.slug
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                normalized_participant_id = agent_config.slug
+
+        if normalized_participant_id != participant_id:
+            result = await session.execute(
+                select(RoomParticipant).where(
+                    RoomParticipant.room_id == room_id,
+                    RoomParticipant.participant_id == normalized_participant_id,
+                )
+            )
+            participant = result.scalar_one_or_none()
 
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found")
@@ -2061,7 +2117,11 @@ async def remove_participant(
         session=session,
         room_id=room_id,
         event_type="participant.left",
-        payload={"participant_id": participant_id},
+        payload={
+            "participant_id": normalized_participant_id,
+            # Optional field for forward compatibility; handler should not require it.
+            "participant_type": participant.participant_type,
+        },
     )
 
 
@@ -2109,7 +2169,7 @@ async def change_participant_role(
             detail="new_role must be 'owner' or 'member'",
         )
 
-    # Verify participant exists
+    # Verify participant exists (normalize agent UUID/slug mismatch if needed).
     result = await session.execute(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
@@ -2117,6 +2177,34 @@ async def change_participant_role(
         )
     )
     participant = result.scalar_one_or_none()
+
+    normalized_participant_id = participant_id
+    if not participant:
+        # Try resolve slug/UUID mismatch for agents.
+        try:
+            agent_uuid = UUID(participant_id)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                normalized_participant_id = agent_config.slug
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+            if agent_config:
+                normalized_participant_id = agent_config.slug
+
+        if normalized_participant_id != participant_id:
+            result = await session.execute(
+                select(RoomParticipant).where(
+                    RoomParticipant.room_id == room_id,
+                    RoomParticipant.participant_id == normalized_participant_id,
+                )
+            )
+            participant = result.scalar_one_or_none()
 
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found")
@@ -2127,8 +2215,10 @@ async def change_participant_role(
         room_id=room_id,
         event_type="participant.role_changed",
         payload={
-            "participant_id": participant_id,
+            "participant_id": normalized_participant_id,
             "new_role": new_role,
+            # Optional field for forward compatibility; handler should not require it.
+            "participant_type": participant.participant_type,
         },
     )
 
@@ -2136,11 +2226,201 @@ async def change_participant_role(
     result = await session.execute(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
-            RoomParticipant.participant_id == participant_id,
+            RoomParticipant.participant_id == normalized_participant_id,
         )
     )
     participant = result.scalar_one()
     return participant
+
+
+# ============================================================================
+# Room Participant Bindings (Shadow Milestone 1.1 tasks 2/3/4)
+# ============================================================================
+
+
+async def list_room_participant_bindings(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+    include_history: bool = False,
+) -> RoomParticipantBindingsPublic:
+    """
+    List runtime bindings for participants in a room.
+
+    Authorization: active room membership required.
+    """
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a room participant")
+
+    stmt = select(RoomParticipantBinding).where(
+        RoomParticipantBinding.room_id == room_id
+    )
+    if not include_history:
+        stmt = stmt.where(RoomParticipantBinding.ended_at.is_(None))
+
+    result = await session.execute(
+        stmt.order_by(RoomParticipantBinding.effective_at.desc())
+    )
+    rows = list(result.scalars().all())
+    return RoomParticipantBindingsPublic(data=rows, count=len(rows))
+
+
+async def set_participant_binding(
+    *,
+    room_id: UUID,
+    acting_user: User,
+    participant_type: str,
+    participant_id: str,
+    persona_id: UUID | None,
+    model_name: str | None,
+    user_llm_provider_id: UUID | None,
+    session: AsyncSession,
+) -> RoomParticipantBinding:
+    """
+    Set a participant's active binding (event-sourced).
+
+    Rules (agreed defaults, with clarified ownership semantics):
+    - user_llm_provider_id (if set) must belong to acting_user
+    - for agent participants: only agent owner or superuser may change any binding
+    - for user participants: user themselves or room owner may change binding
+    """
+    if not await check_room_membership(
+        room_id=room_id, user_id=acting_user.id, session=session
+    ):
+        raise HTTPException(status_code=403, detail="Not a room participant")
+
+    resolved_user_id: UUID | None = None
+    resolved_agent_id: UUID | None = None
+    normalized_participant_id = participant_id
+    agent_config: AgentConfig | None = None
+
+    if participant_type == "user":
+        try:
+            resolved_user_id = UUID(participant_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid user participant_id (must be UUID string)",
+            )
+        normalized_participant_id = str(resolved_user_id)
+    elif participant_type == "agent":
+        # PRI-1 TODO: Remove agent UUID participant_id support once Milestone 1.1 tasks
+        # 2, 3, and 4 are complete and validated (bindings table + binding event flow + APIs).
+        try:
+            agent_uuid = UUID(participant_id)
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+        except ValueError:
+            agent_config_result = await session.execute(
+                select(AgentConfig).where(AgentConfig.slug == participant_id)
+            )
+            agent_config = agent_config_result.scalar_one_or_none()
+
+        if not agent_config:
+            raise HTTPException(status_code=400, detail="Agent not found")
+        resolved_agent_id = agent_config.id
+        normalized_participant_id = agent_config.slug
+    else:
+        raise HTTPException(
+            status_code=400, detail="participant_type must be 'user' or 'agent'"
+        )
+
+    participant_result = await session.execute(
+        select(RoomParticipant).where(
+            RoomParticipant.room_id == room_id,
+            RoomParticipant.participant_type == participant_type,
+            RoomParticipant.participant_id == normalized_participant_id,
+            RoomParticipant.active == True,  # noqa: E712
+        )
+    )
+    participant = participant_result.scalar_one_or_none()
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found in room")
+
+    is_owner = await check_room_owner(
+        room_id=room_id, user_id=acting_user.id, session=session
+    )
+    if participant_type == "user":
+        if not (is_owner or (resolved_user_id == acting_user.id)):
+            raise HTTPException(status_code=403, detail="Access denied")
+    else:
+        # For agents, only the agent owner or superuser can change bindings.
+        if not acting_user.is_superuser and agent_config.owner_id != acting_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the agent owner can change this agent's binding",
+            )
+
+    # Provider ownership rule (hard rule): only acting_user's providers can be referenced.
+    if user_llm_provider_id is not None:
+        provider_result = await session.execute(
+            select(UserLLMProvider).where(
+                UserLLMProvider.id == user_llm_provider_id,
+                UserLLMProvider.user_id == acting_user.id,
+            )
+        )
+        provider = provider_result.scalar_one_or_none()
+        if not provider:
+            raise HTTPException(
+                status_code=403, detail="Invalid provider_id for current user"
+            )
+
+    # Persona ownership rule: must exist in participant's library (when persona_id is set).
+    if persona_id is not None:
+        if participant_type == "user":
+            user_persona_result = await session.execute(
+                select(UserPersona).where(
+                    UserPersona.user_id == resolved_user_id,
+                    UserPersona.persona_id == persona_id,
+                )
+            )
+            if not user_persona_result.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=400, detail="Persona not in user's library"
+                )
+        else:
+            agent_persona_result = await session.execute(
+                select(AgentPersona).where(
+                    AgentPersona.agent_id == resolved_agent_id,
+                    AgentPersona.persona_id == persona_id,
+                )
+            )
+            if not agent_persona_result.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=400, detail="Persona not in agent's library"
+                )
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="participant.binding_changed",
+        payload={
+            "participant_type": participant_type,
+            "participant_id": normalized_participant_id,
+            "persona_id": str(persona_id) if persona_id else None,
+            "model_name": model_name,
+            "user_llm_provider_id": (
+                str(user_llm_provider_id) if user_llm_provider_id else None
+            ),
+            "actor_user_id": str(acting_user.id),
+        },
+    )
+
+    binding_result = await session.execute(
+        select(RoomParticipantBinding)
+        .where(
+            RoomParticipantBinding.room_id == room_id,
+            RoomParticipantBinding.participant_type == participant_type,
+            RoomParticipantBinding.participant_id == normalized_participant_id,
+            RoomParticipantBinding.ended_at.is_(None),
+        )
+        .order_by(RoomParticipantBinding.effective_at.desc())
+    )
+    binding = binding_result.scalar_one()
+    return binding
 
 
 # ============================================================================

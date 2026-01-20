@@ -24,6 +24,7 @@ from app.models import (
 )
 from app.services.agent_registry_service import agent_registry_service
 from app.services.shadow_service import shadow_service
+from app.services.shadow_exporters import build_agent_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -148,12 +149,13 @@ def create_agent(
 
         # Shadow versioning (non-blocking - skips if user not set up)
         try:
+            snapshot = build_agent_snapshot(session=session, agent_id=config.id)
             version = shadow_service.create_entity_version(
                 session=session,
                 user=current_user,
                 entity_type="agent",
                 entity_id=config.id,
-                entity_data=config.model_dump(mode="json"),
+                entity_data=snapshot,
                 message=f"Create agent: {config.name}",
             )
             if version:
@@ -195,12 +197,13 @@ def update_agent(
     # Shadow versioning (non-blocking - skips if user not set up)
     if updated:
         try:
+            snapshot = build_agent_snapshot(session=session, agent_id=updated.id)
             version = shadow_service.create_entity_version(
                 session=session,
                 user=current_user,
                 entity_type="agent",
                 entity_id=updated.id,
-                entity_data=updated.model_dump(mode="json"),
+                entity_data=snapshot,
                 message=f"Update agent: {updated.name}",
             )
             if version:
