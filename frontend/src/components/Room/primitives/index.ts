@@ -24,5 +24,13 @@ export {
   type Preset,
   type PresetPickerProps,
 } from "./PresetPicker"
+export {
+  KeyboardShortcutProvider,
+  useKeyboardShortcuts,
+  useShortcut,
+  useShortcutDisplay,
+  type KeyboardShortcut,
+  type Modifier,
+} from "./KeyboardShortcutProvider"
 export { type Participant, ParticipantStack } from "./ParticipantStack"
 export { PlaceholderContent } from "./PlaceholderContent"
