@@ -149,7 +149,7 @@ export function PageLayout({
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full">
+    <ResizablePanelGroup direction="vertical" className="h-full">
       <ResizablePanel defaultSize={70} minSize={40}>
         <BlockColumn
           blocks={primaryBlocks}

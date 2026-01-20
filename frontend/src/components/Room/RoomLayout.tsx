@@ -5,7 +5,6 @@
  * Handles responsive behavior and panel/tab toggle.
  */
 
-import * as React from "react"
 import {
   ResizableHandle,
   ResizablePanel,
@@ -81,7 +80,7 @@ export function RoomLayout({ panels, mode, className }: RoomLayoutProps) {
       {primaryPanels.map((panel, index) => (
         <React.Fragment key={panel.id}>
           {index > 0 && <ResizableHandle withHandle />}
-          <ResizablePanel defaultSize={100 / primaryPanels.length} minSize={20}>
+          <ResizablePanel>
             {panel.render()}
           </ResizablePanel>
         </React.Fragment>
@@ -91,8 +90,8 @@ export function RoomLayout({ panels, mode, className }: RoomLayoutProps) {
       {auxiliaryPanels.length > 0 && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
-            <ResizablePanelGroup direction="vertical">
+          <ResizablePanel>
+            <ResizablePanelGroup direction="horizontal">
               {auxiliaryPanels.map((panel, index) => (
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}
