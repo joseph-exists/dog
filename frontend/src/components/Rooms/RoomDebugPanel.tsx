@@ -1,13 +1,17 @@
 /**
  * RoomDebugPanel - Debug sidebar for room/agent debugging
  *
+ * This file exports two components:
+ * - RoomDebugPanelContent: The inner content (collapsible sections)
+ * - RoomDebugPanel: The outer wrapper with aside styling (legacy)
+ *
  * Features:
  * - Shows messages active for agent context
  * - Displays current streaming state
  * - Shows connection status
  * - Collapsible sections matching StoryPreview pattern
  *
- * @see StoryPreview.tsx for design pattern reference
+ * @see Room/panels/DebugPanel.tsx for the new panel wrapper
  */
 
 import {
@@ -36,19 +40,23 @@ import type {
   ParticipantViewModel,
 } from "@/services/roomService"
 
-interface RoomDebugPanelProps {
+export interface RoomDebugPanelContentProps {
   messages: MessageViewModel[]
   streamingMessage: { agent_name: string; content: string } | null
   isConnected: boolean
   activeAgents: ParticipantViewModel[]
 }
 
-export default function RoomDebugPanel({
+/**
+ * Inner content of the debug panel - collapsible sections
+ * Can be used standalone or wrapped by different containers
+ */
+export function RoomDebugPanelContent({
   messages,
   streamingMessage,
   isConnected,
   activeAgents,
-}: RoomDebugPanelProps) {
+}: RoomDebugPanelContentProps) {
   const [expandedSections, setExpandedSections] = useState({
     apiPayload: true,
     context: true,
@@ -109,12 +117,7 @@ export default function RoomDebugPanel({
   }
 
   return (
-    <aside className="bg-background border-border w-80 overflow-y-auto border-l p-4 space-y-4">
-      <h3 className="text-sm font-semibold flex items-center gap-2">
-        <Bug className="h-4 w-4" />
-        Debug Panel
-      </h3>
-
+    <div className="space-y-4">
       {/* Connection Status */}
       <div className="flex items-center gap-2 text-xs">
         {isConnected ? (
@@ -402,6 +405,22 @@ export default function RoomDebugPanel({
         <p>In Context: {contextMessages.length}</p>
         <p>Pinned: {messages.filter((m) => m.is_pinned).length}</p>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Legacy wrapper - maintains backward compatibility
+ * @deprecated Use DebugPanel from Room/panels for new code
+ */
+export default function RoomDebugPanel(props: RoomDebugPanelContentProps) {
+  return (
+    <aside className="bg-background border-border w-80 overflow-y-auto border-l p-4 space-y-4">
+      <h3 className="text-sm font-semibold flex items-center gap-2">
+        <Bug className="h-4 w-4" />
+        Debug Panel
+      </h3>
+      <RoomDebugPanelContent {...props} />
     </aside>
   )
 }
