@@ -118,8 +118,13 @@ export function ReduceMotionProvider({
     return () => mediaQuery.removeEventListener("change", handler)
   }, [])
 
+  const value = React.useMemo(
+    () => ({ reduceMotion, setReduceMotion }),
+    [reduceMotion, setReduceMotion]
+  )
+
   return (
-    <ReduceMotionContext.Provider value={{ reduceMotion, setReduceMotion }}>
+    <ReduceMotionContext.Provider value={value}>
       {children}
     </ReduceMotionContext.Provider>
   )
