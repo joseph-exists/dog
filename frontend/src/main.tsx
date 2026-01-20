@@ -9,6 +9,7 @@ import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { ApiError, OpenAPI } from "./client"
 import { ThemeProvider } from "./components/theme-provider"
+import { ReduceMotionProvider } from "./components/ui/motion"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
 import { routeTree } from "./routeTree.gen"
@@ -44,8 +45,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster richColors closeButton />
+        <ReduceMotionProvider>
+          <RouterProvider router={router} />
+          <Toaster richColors closeButton />
+        </ReduceMotionProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,
