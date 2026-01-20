@@ -1,8 +1,8 @@
 """Tests for NonStreamingAgentRunner."""
 from __future__ import annotations
 
-from types import SimpleNamespace
 import uuid
+from types import SimpleNamespace
 
 import pytest
 
@@ -41,7 +41,7 @@ async def test_non_streaming_runner_success() -> None:
     async def get_agent_instance(session, agent_name: str):
         return _Agent()
 
-    def build_agent_prompt(trigger_message, context, current_agent_slug=None) -> str:
+    def build_agent_prompt(trigger_message, context, current_agent_slug=None) -> str:  # noqa: ARG001
         return f"prompt:{trigger_message}"
 
     runner = NonStreamingAgentRunner(

@@ -33,3 +33,24 @@
   - Implement edit mode mutations
   - Add block picker UI for customization
   - Clean up worktree: git worktree remove .worktrees/pages-system
+
+● Registry files location: frontend/src/components/Page/registry/
+  ┌──────────────────────┬─────────────────────────────────────────────────────────────────────────────────────┐
+  │         File         │                                       Purpose                                       │
+  ├──────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ entityTypes.ts       │ Defines entity types (user, agent, team, room) with icons, colors, route patterns   │
+  ├──────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ relationshipTypes.ts │ Defines relationships (member, owner, creator, participant) with valid entity pairs │
+  ├──────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ blockTypes.ts        │ Defines block types with config schemas for settings UI                             │
+  ├──────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ pageTemplates.ts     │ Default block layouts for each entity type                                          │
+  ├──────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ dataSources.ts       │ Data source definitions for DataTable/Chart blocks                                  │
+  ├──────────────────────┼─────────────────────────────────────────────────────────────────────────────────────┤
+  │ index.ts             │ Barrel export for all registries                                                    │
+  └──────────────────────┴─────────────────────────────────────────────────────────────────────────────────────┘
+  Import via:
+  import { entityTypes, getEntityType, blockTypes } from "@/components/Page/registry"
+  // or
+  import { entityTypes } from "@/components/Page"
