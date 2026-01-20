@@ -399,14 +399,14 @@ Record (stable literals used across code/tests/docs):
 
 Goal: every caller switches from “commit now” to “enqueue intent”.
 
-- [ ] Introduce an enqueue service API (new module or in `ShadowService`), e.g.:
+- [x] Introduce an enqueue service API (new module or in `ShadowService`), e.g.:
   - `enqueue_entity_version(...)`
   - `enqueue_entity_version_with_owner(...)`
-- [ ] Ensure enqueue happens in the same DB transaction as the domain mutation where possible:
+- [x] Ensure enqueue happens in the same DB transaction as the domain mutation where possible:
   - For sync SQLModel sessions: insert `ShadowVersion(status="pending", commit_sha="pending", snapshot_json=...)` + outbox job row in one transaction.
   - For async routes: either (a) enqueue using the same transaction-bound session, or (b) explicitly document and repair-gap scan (not preferred).
-- [ ] Allocate `ShadowVersion.version_number` via `shadow_repo_version_counters` inside the same transaction (no “max+1”).
-- [ ] Ensure the old Forgejo-writing methods are no longer called by request handlers:
+- [x] Allocate `ShadowVersion.version_number` via `shadow_repo_version_counters` inside the same transaction (no “max+1”).
+- [x] Ensure the old Forgejo-writing methods are no longer called by request handlers:
   - `ShadowService.ensure_shadow_repo(...)`
   - `ShadowService.create_version(...)`
 
@@ -414,20 +414,23 @@ Goal: every caller switches from “commit now” to “enqueue intent”.
 
 Replace the following with enqueue calls:
 
-- [ ] `backend/app/api/routes/agent_routes.py` (create/update agent)
-- [ ] `backend/app/api/routes/stories.py` (create/update story)
-- [ ] `backend/app/api/routes/agent_personas.py` (agent persona create/update/delete)
+- [x] `backend/app/api/routes/agent_routes.py` (create/update agent)
+- [x] `backend/app/api/routes/stories.py` (create/update story)
+- [x] `backend/app/api/routes/agent_personas.py` (agent persona create/update/delete)
 
 Room bindings:
 
-- [ ] Update `backend/app/services/shadow_tasks.py` so `shadow_room_version_best_effort(...)` enqueues a room shadow job instead of calling Forgejo.
-- [ ] Keep `BackgroundTasks` temporarily if needed, but make it enqueue-only (no network IO).
+- [x] Update `backend/app/services/shadow_tasks.py` so `shadow_room_version_best_effort(...)` enqueues a room shadow job instead of calling Forgejo.
+- [x] Keep `BackgroundTasks` temporarily if needed, but make it enqueue-only (no network IO).
 
 ### E) Worker implementation
 
 - [ ] Add a worker entrypoint (module + CLI):
   - Suggested location: `backend/app/services/shadow_outbox_worker.py` (core worker)
   - Suggested runner: `backend/app/scripts/` or an existing CLI pattern in this repo
+- [x] Add a minimal worker container/process:
+  - Build a small image that runs only the worker (no web server).
+  - Minimize and contain dependencies to what the worker imports (DB client + `openapi_client` + settings).
 - [ ] Add a minimal worker container/process:
   - Build a small image that runs only the worker (no web server).
   - Minimize and contain dependencies to what the worker imports (DB client + `openapi_client` + settings).

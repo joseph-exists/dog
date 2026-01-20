@@ -445,3 +445,12 @@ If user B must “specify that agent’s config”, the clone should copy the sh
 Practically: the cloned agent owned by user B references user B’s UserLLMProvider (or equivalent) and chosen model; until set, the agent is incomplete/disabled.
 Shadow-wise: create a new agent repo for the cloned agent and record forked_from_id/source commit to preserve provenance.
 If you want, I can propose the minimal table set + constraints for agent_personas and the room participant binding, aligned with your existing RoomParticipant and UserLLMProvider patterns.
+
+Version numbering / ordering: sequence number.
+pending versions: return latest_committed
+
+1000% alignment: are we aligned that enqueue creates/ensures the DB ShadowRepo record only (no Forgejo), and the worker is the only place that creates/ensures the Forgejo repo?
+
+migration/back-compat: i'll truncate tables.
+
+worker deployment: it needs to be in a separate container/process, and that container should be as tiny as possible, so minimize and contain its dependencies.  Great call out.
