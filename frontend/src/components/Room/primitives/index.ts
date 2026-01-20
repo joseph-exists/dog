@@ -1,5 +1,11 @@
 export { ActionBar, type ActionItem } from "./ActionBar"
 export {
+  CollapsiblePanel,
+  CollapseButton,
+  useCollapsiblePanels,
+  type CollapsiblePanelProps,
+} from "./CollapsiblePanel"
+export {
   DraggablePanel,
   DragContextProvider,
   DragHandle,
