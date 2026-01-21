@@ -98,19 +98,22 @@ export function ParticipantPanel({
                 key={agent.participant_id}
                 className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
               >
-                <div className="size-8 rounded-full bg-accent flex items-center justify-center text-xs">
-                  🤖
-                </div>
-                <span className="flex-1 text-sm truncate">
-                  {agent.display_name}
-                </span>
-                {canManage && onToggleAgent && (
+                {canManage && onToggleAgent ? (
                   <AgentToggle
                     agentId={agent.participant_id}
                     agentName={agent.display_name}
                     isActive={agent.is_active}
                     onToggle={onToggleAgent}
                   />
+                ) : (
+                  <>
+                    <div className="size-8 rounded-full bg-accent flex items-center justify-center text-xs">
+                      🤖
+                    </div>
+                    <span className="flex-1 text-sm truncate">
+                      {agent.display_name}
+                    </span>
+                  </>
                 )}
               </div>
             ))}
