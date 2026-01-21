@@ -31,6 +31,10 @@ interface ChatPanelProps {
   streamingMessage: { agent_name: string; content: string } | null
   /** Whether current user is room owner */
   isRoomOwner: boolean
+  /** Include internal agent messages in message queries (dev mode). */
+  includeInternalMessages?: boolean
+  /** Toggle internal agent message visibility (dev mode). */
+  onToggleInternalMessages?: (enabled: boolean) => void
   /** Send message callback */
   onSendMessage: (content: string) => Promise<void>
   /** Whether sending message */
@@ -60,6 +64,8 @@ export function ChatPanel({
   isLoading,
   streamingMessage,
   isRoomOwner,
+  includeInternalMessages = false,
+  onToggleInternalMessages,
   onSendMessage,
   isSending,
   isConnected,
@@ -145,6 +151,8 @@ export function ChatPanel({
           isLoading={isLoading}
           streamingMessage={streamingMessage}
           isRoomOwner={isRoomOwner}
+          includeInternalMessages={includeInternalMessages}
+          onToggleInternalMessages={onToggleInternalMessages}
           onEditMessage={onEditMessage}
           onPinMessage={onPinMessage}
           onUnpinMessage={onUnpinMessage}

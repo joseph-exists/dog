@@ -2435,6 +2435,7 @@ async def list_room_messages(
       active_for_context: bool | None = None,
       is_pinned: bool | None = None,
       sender_type: str | None = None,
+      include_internal: bool = False,
       limit: int,
       before: datetime | None,
       session: AsyncSession,
@@ -2478,6 +2479,8 @@ async def list_room_messages(
 
       if sender_type is not None:  # ADD: filter by sender type
           query = query.where(RoomMessage.sender_type == sender_type)
+      elif not include_internal:
+          query = query.where(RoomMessage.sender_type != "agent_internal")
 
       result = await session.execute(query)
 

@@ -11,6 +11,8 @@
  * - Action menu (edit, pin, delete, toggle context)
  */
 
+import { AgentUIRenderer } from "@/components/AgentUI"
+import { Badge } from "@/components/ui/badge"
 import { MessageBadge } from "@/components/ui/message-badge"
 import { cn } from "@/lib/utils"
 import type { MessageViewModel } from "@/services/roomService"
@@ -26,6 +28,8 @@ interface MessageProps {
   onUnpin?: () => void
   onToggleContext?: (active: boolean) => void
   onDelete?: () => void
+  /** Handle AG-UI action button clicks within the message. */
+  onUiAction?: (action: string, message: MessageViewModel) => void
 }
 
 /**
@@ -53,9 +57,11 @@ export default function Message({
   onUnpin,
   onToggleContext,
   onDelete,
+  onUiAction,
 }: MessageProps) {
-  const isAgent = message.sender_type === "agent"
+  const isAgent = message.sender_type !== "user"
   const isOwnMessage = message.is_own_message
+  const isInternal = message.sender_type === "agent_internal"
 
   // Use message's built-in properties (from backend)
   const { is_pinned, active_for_context, edited_at } = message
@@ -106,8 +112,13 @@ export default function Message({
       )}
 
       {/* Sender name */}
-      <p className="text-xs opacity-80 mb-1 font-medium">
-        {message.sender_name}
+      <p className="text-xs opacity-80 mb-1 font-medium flex items-center gap-2">
+        <span>{message.sender_name}</span>
+        {isInternal && (
+          <Badge variant="outline" className="text-[10px]">
+            internal
+          </Badge>
+        )}
         {isStreaming && (
           <span className="ml-2 text-xs opacity-60">typing...</span>
         )}
@@ -124,6 +135,19 @@ export default function Message({
 
       {/* Message content */}
       <p className="whitespace-pre-wrap">{message.content}</p>
+
+      {/* Agent UI components */}
+      {message.ui_components && message.ui_components.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {message.ui_components.map((component, index) => (
+            <AgentUIRenderer
+              key={component.id || `${component.type}-${index}`}
+              component={component}
+              onAction={(action) => onUiAction?.(action, message)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Timestamp */}
       <p className="text-xs opacity-60 mt-1">

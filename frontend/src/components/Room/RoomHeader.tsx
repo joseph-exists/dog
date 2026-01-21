@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import type * as React from "react"
 import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -73,6 +74,8 @@ interface RoomHeaderProps {
   showDebugPanel?: boolean
   /** Toggle debug panel callback */
   onToggleDebugPanel?: () => void
+  /** Show dev mode indicator when internal messages are enabled. */
+  devModeEnabled?: boolean
   /** Additional className */
   className?: string
 }
@@ -100,6 +103,7 @@ export function RoomHeader({
   switchViewLabel,
   showDebugPanel,
   onToggleDebugPanel,
+  devModeEnabled,
   className,
 }: RoomHeaderProps) {
   const TypeIcon = roomTypeIcons[type]
@@ -116,7 +120,14 @@ export function RoomHeader({
       <div className="flex items-center gap-3">
         <TypeIcon className="h-5 w-5 text-muted-foreground" />
         <div>
-          <h1 className="text-base font-semibold">{title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold">{title}</h1>
+            {devModeEnabled && (
+              <Badge variant="outline" className="text-[10px]">
+                Dev Mode
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 

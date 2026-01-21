@@ -1,7 +1,9 @@
 // src/routes/_layout/u.$slug.tsx
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 
 import { PageShell } from "@/components/Page"
+import { PageService } from "@/services/pageService"
 
 // TODO: Replace with actual service
 const mockUser = {
@@ -75,6 +77,11 @@ function UserPage() {
 
   const user = { ...mockUser, slug }
 
+  const { data: layout } = useQuery({
+    queryKey: ["pages", "user", slug],
+    queryFn: () => PageService.getLayout("user", slug),
+  })
+
   // TODO: Check actual ownership
   const isOwner = true
 
@@ -83,5 +90,12 @@ function UserPage() {
     navigate({ to: "/" })
   }
 
-  return <PageShell entity={user} isOwner={isOwner} onDelete={handleDelete} />
+  return (
+    <PageShell
+      entity={user}
+      isOwner={isOwner}
+      blocks={layout?.layout}
+      onDelete={handleDelete}
+    />
+  )
 }

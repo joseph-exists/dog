@@ -32,6 +32,8 @@ export interface UseRoomMessagesOptions {
   enablePolling?: boolean
   pollingInterval?: number
   pageSize?: number
+  /** Include internal agent-to-agent messages in queries (debug only). */
+  includeInternalMessages?: boolean
 }
 
 export interface UseRoomMessagesResult {
@@ -102,6 +104,7 @@ export function useRoomMessages(
   const enablePolling = options?.enablePolling ?? true
   const pollingInterval = options?.pollingInterval ?? 3000 // 3 seconds
   const pageSize = options?.pageSize ?? 50
+  const includeInternalMessages = options?.includeInternalMessages ?? false
 
   // State for pagination
   const [hasMore, setHasMore] = useState(false)
@@ -109,7 +112,12 @@ export function useRoomMessages(
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Query key for messages
-  const messagesQueryKey = ["rooms", roomId, "messages"]
+  const messagesQueryKey = [
+    "rooms",
+    roomId,
+    "messages",
+    includeInternalMessages ? "with-internal" : "default",
+  ]
 
   // Fetch messages query with polling
   const {
@@ -121,7 +129,7 @@ export function useRoomMessages(
     queryFn: async () => {
       const result = await RoomService.getMessages(
         roomId,
-        { limit: pageSize },
+        { limit: pageSize, includeInternal: includeInternalMessages },
         user?.id,
       )
       setHasMore(result.has_more)
@@ -288,7 +296,11 @@ export function useRoomMessages(
 
       const result = await RoomService.getMessages(
         roomId,
-        { limit: pageSize, before: beforeCursor },
+        {
+          limit: pageSize,
+          before: beforeCursor,
+          includeInternal: includeInternalMessages,
+        },
         user?.id,
       )
 
@@ -316,6 +328,7 @@ export function useRoomMessages(
     roomId,
     pageSize,
     user?.id,
+    includeInternalMessages,
     queryClient,
     messagesQueryKey,
   ])

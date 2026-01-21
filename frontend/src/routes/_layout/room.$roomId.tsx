@@ -9,9 +9,12 @@
  * - Message management (edit, pin, delete, toggle context)
  */
 
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
+import type { ApiError } from "@/client"
+import type { UIPageLayoutPreviewData } from "@/components/AgentUI/types"
 import EditDrawer from "@/components/Common/EditDrawer"
 import MessageInput from "@/components/Rooms/MessageInput"
 import MessageList from "@/components/Rooms/MessageList"
@@ -21,7 +24,24 @@ import RoomHeader from "@/components/Rooms/RoomHeader"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomStream } from "@/hooks/useRoomStream"
+import { PageService } from "@/services/pageService"
 import type { MessageViewModel } from "@/services/roomService"
+import { handleError } from "@/utils"
+
+/**
+ * Validate agent layout preview payloads before saving.
+ */
+function isPageLayoutPreviewData(
+  value: unknown,
+): value is UIPageLayoutPreviewData {
+  if (!value || typeof value !== "object") return false
+  const record = value as Record<string, unknown>
+  return (
+    typeof record.entity_type === "string" &&
+    typeof record.entity_id === "string" &&
+    Array.isArray(record.layout_json)
+  )
+}
 
 export const Route = createFileRoute("/_layout/room/$roomId")({
   component: RoomView,
@@ -30,7 +50,8 @@ export const Route = createFileRoute("/_layout/room/$roomId")({
 function RoomView() {
   const { roomId } = Route.useParams()
   const navigate = useNavigate()
-  const { showSuccessToast } = useCustomToast()
+  const queryClient = useQueryClient()
+  const { showErrorToast, showSuccessToast } = useCustomToast()
 
   // Edit drawer state
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
@@ -40,6 +61,7 @@ function RoomView() {
 
   // Debug panel state
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [showInternalMessages, setShowInternalMessages] = useState(false)
 
   // Use the aggregate room hook
   const {
@@ -70,6 +92,7 @@ function RoomView() {
     deleteMessage,
   } = useRoom(roomId, {
     enablePolling: true,
+    includeInternalMessages: showInternalMessages,
     onDeleteSuccess: () => {
       navigate({ to: "/rooms" })
     },
@@ -81,6 +104,37 @@ function RoomView() {
     sendMessage: sendViaWebSocket,
     streamingMessage,
   } = useRoomStream(roomId)
+
+  const saveLayoutMutation = useMutation({
+    mutationFn: PageService.saveLayout,
+    onSuccess: (layout) => {
+      queryClient.invalidateQueries({
+        queryKey: ["pages", layout.entityType, layout.entityId],
+      })
+      showSuccessToast("Page layout saved")
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err)
+    },
+  })
+
+  const handleUiAction = async (action: string, message: MessageViewModel) => {
+    if (action !== "page_layout.accept") return
+
+    const preview = message.ui_components?.find(
+      (component) => component.type === "page_layout_preview",
+    )
+    if (!preview || !isPageLayoutPreviewData(preview.data)) {
+      showErrorToast("Missing or invalid layout preview")
+      return
+    }
+
+    await saveLayoutMutation.mutateAsync({
+      entityType: preview.data.entity_type,
+      entityId: preview.data.entity_id,
+      layout: preview.data.layout_json,
+    })
+  }
 
   // Handle authorization errors (403 - not a participant)
   useEffect(() => {
@@ -171,6 +225,7 @@ function RoomView() {
         onDeleteRoom={deleteRoom}
         showDebugPanel={showDebugPanel}
         onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
+        devModeEnabled={showInternalMessages}
       />
 
       {/* Main content area */}
@@ -187,11 +242,14 @@ function RoomView() {
               isLoading={isLoadingMessages}
               streamingMessage={streamingMessage}
               isRoomOwner={currentUserRole === "owner"}
+              includeInternalMessages={showInternalMessages}
+              onToggleInternalMessages={setShowInternalMessages}
               onEditMessage={handleEditMessage}
               onPinMessage={handlePinMessage}
               onUnpinMessage={handleUnpinMessage}
               onToggleContext={handleToggleContext}
               onDeleteMessage={handleDeleteMessage}
+              onUiAction={handleUiAction}
             />
           </div>
 
@@ -224,6 +282,8 @@ function RoomView() {
             streamingMessage={streamingMessage}
             isConnected={isConnected}
             activeAgents={activeAgents}
+            showInternalMessages={showInternalMessages}
+            onToggleInternalMessages={setShowInternalMessages}
           />
         )}
       </div>

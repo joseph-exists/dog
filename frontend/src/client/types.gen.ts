@@ -580,6 +580,32 @@ export type NodeChoiceUpdate = {
 };
 
 /**
+ * Update model for page layout.
+ */
+export type PageLayoutUpdate = {
+    layout_json: Array<{
+        [key: string]: unknown;
+    }>;
+    layout_version?: (number | null);
+};
+
+/**
+ * Public response model for pages.
+ */
+export type PagePublic = {
+    entity_type: string;
+    entity_id: string;
+    layout_version?: number;
+    layout_json: Array<{
+        [key: string]: unknown;
+    }>;
+    id: string;
+    owner_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
  * Request model for adding a participant to a room.
  *
  * Used by: POST /rooms/{room_id}/participants
@@ -813,7 +839,7 @@ export type RoomMessagePublic = {
      */
     content: string;
     /**
-     * Either 'user' or 'agent'
+     * Either 'user', 'agent', or 'agent_internal'
      */
     sender_type: string;
     message_id: string;
@@ -834,6 +860,9 @@ export type RoomMessagePublic = {
     button_options?: ({
     [key: string]: unknown;
 } | null);
+    ui_components?: (Array<{
+    [key: string]: unknown;
+}> | null);
 };
 
 /**
@@ -2067,6 +2096,36 @@ export type NodeChoicesDeleteNodeChoiceData = {
 
 export type NodeChoicesDeleteNodeChoiceResponse = (Message);
 
+export type PagesGetPageLayoutData = {
+    entityId: string;
+    entityType: string;
+};
+
+export type PagesGetPageLayoutResponse = ((PagePublic | null));
+
+export type PagesUpsertPageLayoutData = {
+    entityId: string;
+    entityType: string;
+    requestBody: PageLayoutUpdate;
+};
+
+export type PagesUpsertPageLayoutResponse = (PagePublic);
+
+export type PagesUpdatePageData = {
+    pageId: string;
+    requestBody: PageLayoutUpdate;
+};
+
+export type PagesUpdatePageResponse = (PagePublic);
+
+export type PagesDeletePageData = {
+    pageId: string;
+};
+
+export type PagesDeletePageResponse = ({
+    [key: string]: (string);
+});
+
 export type PersonaEventsProcessPersonaEventData = {
     eventId: string;
     personaId: string;
@@ -2328,6 +2387,7 @@ export type RoomsSendMessageResponse = (RoomMessagePublic);
 export type RoomsListMessagesData = {
     activeForContext?: (boolean | null);
     before?: (string | null);
+    includeInternal?: boolean;
     isPinned?: (boolean | null);
     limit?: number;
     roomId: string;

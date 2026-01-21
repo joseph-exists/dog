@@ -33,6 +33,8 @@ export interface UseRoomOptions {
   pollingInterval?: number
   autoScrollToBottom?: boolean
   onDeleteSuccess?: () => void // callback when room is deleted no crash-crash
+  /** Include internal agent-to-agent messages in message queries (debug only). */
+  includeInternalMessages?: boolean
 }
 
 const { showErrorToast } = useCustomToast()
@@ -133,6 +135,7 @@ export function useRoom(
   // Options with defaults
   const enablePolling = options?.enablePolling ?? true
   const pollingInterval = options?.pollingInterval ?? 5000 // 5 seconds for participants
+  const includeInternalMessages = options?.includeInternalMessages ?? false
 
   // Query keys
   const roomQueryKey = ["rooms", roomId]
@@ -192,6 +195,7 @@ export function useRoom(
   } = useRoomMessages(roomId, {
     enablePolling,
     pollingInterval: options?.pollingInterval ?? 3000, // 3 seconds for messages
+    includeInternalMessages,
   })
 
   // ==========================================================================

@@ -35,6 +35,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import type {
   MessageViewModel,
   ParticipantViewModel,
@@ -45,6 +47,10 @@ export interface RoomDebugPanelContentProps {
   streamingMessage: { agent_name: string; content: string } | null
   isConnected: boolean
   activeAgents: ParticipantViewModel[]
+  /** Whether internal agent messages are visible in the message list. */
+  showInternalMessages: boolean
+  /** Toggle internal message visibility in the message list. */
+  onToggleInternalMessages: (enabled: boolean) => void
 }
 
 /**
@@ -56,6 +62,8 @@ export function RoomDebugPanelContent({
   streamingMessage,
   isConnected,
   activeAgents,
+  showInternalMessages,
+  onToggleInternalMessages,
 }: RoomDebugPanelContentProps) {
   const [expandedSections, setExpandedSections] = useState({
     apiPayload: true,
@@ -89,7 +97,7 @@ export function RoomDebugPanelContent({
   const apiPayload = useMemo(() => {
     // Format context messages as they would appear in an API call
     const formattedMessages = contextMessages.map((msg) => ({
-      role: msg.sender_type === "agent" ? "assistant" : "user",
+      role: msg.sender_type !== "user" ? "assistant" : "user",
       content: msg.content,
       name: msg.sender_name,
       // Include metadata that might be relevant
@@ -118,6 +126,26 @@ export function RoomDebugPanelContent({
 
   return (
     <div className="space-y-4">
+      {/* Developer Mode */}
+      <div className="flex items-center justify-between gap-2 text-xs rounded-md border border-border p-2">
+        <div>
+          <p className="text-xs font-medium">Dev Mode</p>
+          <p className="text-[10px] text-muted-foreground">
+            Show internal agent-to-agent messages
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="internal-messages"
+            checked={showInternalMessages}
+            onCheckedChange={onToggleInternalMessages}
+          />
+          <Label htmlFor="internal-messages" className="text-[10px]">
+            Internal
+          </Label>
+        </div>
+      </div>
+
       {/* Connection Status */}
       <div className="flex items-center gap-2 text-xs">
         {isConnected ? (
@@ -377,13 +405,18 @@ export function RoomDebugPanelContent({
                     <div className="flex items-center gap-1">
                       <span
                         className={`font-semibold ${
-                          msg.sender_type === "agent"
-                            ? "text-purple-600 dark:text-purple-400"
-                            : "text-blue-600 dark:text-blue-400"
+                          msg.sender_type === "user"
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-purple-600 dark:text-purple-400"
                         }`}
                       >
                         {msg.sender_name}
                       </span>
+                      {msg.sender_type === "agent_internal" && (
+                        <Badge variant="outline" className="text-[8px]">
+                          internal
+                        </Badge>
+                      )}
                       {msg.active_for_context && (
                         <Eye className="h-3 w-3 text-green-500" />
                       )}

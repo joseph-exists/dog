@@ -838,6 +838,7 @@ async def _handle_room_message_agent(
     Payload:
         - agent_name: str (required)
         - content: str (required)
+        - ui_components: list[dict] | None (optional)
     """
     payload = event.payload
 
@@ -848,6 +849,7 @@ async def _handle_room_message_agent(
         sender_id=None,
         agent_name=payload["agent_name"],
         content=payload["content"],
+        ui_components=payload.get("ui_components"),
         created_at=event.created_at,
     )
 

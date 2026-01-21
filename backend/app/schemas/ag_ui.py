@@ -222,6 +222,19 @@ class UIDivider(BaseModel):
     variant: Literal["solid", "dashed", "dotted"] = Field(default="solid")
 
 
+class UIPageLayoutPreview(BaseModel):
+    """
+    A preview of a proposed page layout.
+
+    Use for: agent-proposed page layouts that a user can accept or discard.
+    """
+
+    entity_type: str = Field(..., description="Target entity type (e.g., 'user', 'team')")
+    entity_id: str = Field(..., description="Target entity ID or slug")
+    layout_json: list[dict[str, Any]] = Field(..., description="TemplateBlock[] payload")
+    summary: str | None = Field(default=None, description="Optional summary of changes")
+
+
 # =============================================================================
 # Component Type Enum and Union
 # =============================================================================
@@ -238,6 +251,7 @@ UIComponentType = Literal[
     "collapsible",
     "tabs",
     "divider",
+    "page_layout_preview",
 ]
 
 

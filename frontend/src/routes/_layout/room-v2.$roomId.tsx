@@ -193,6 +193,7 @@ function RoomViewV2() {
 
   // Debug panel state
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [showInternalMessages, setShowInternalMessages] = useState(false)
 
   // Fetch available agents
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
@@ -231,6 +232,7 @@ function RoomViewV2() {
     deleteMessage,
   } = useRoom(roomId, {
     enablePolling: true,
+    includeInternalMessages: showInternalMessages,
     onDeleteSuccess: () => {
       navigate({ to: "/rooms" })
     },
@@ -354,6 +356,7 @@ function RoomViewV2() {
             onDeleteRoom={deleteRoom}
             showDebugPanel={showDebugPanel}
             onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
+            devModeEnabled={showInternalMessages}
           />
         </div>
         <Button
@@ -381,6 +384,8 @@ function RoomViewV2() {
               isLoading={isLoadingMessages}
               streamingMessage={streamingMessage}
               isRoomOwner={currentUserRole === "owner"}
+              includeInternalMessages={showInternalMessages}
+              onToggleInternalMessages={setShowInternalMessages}
               onEditMessage={handleEditMessage}
               onPinMessage={handlePinMessage}
               onUnpinMessage={handleUnpinMessage}
@@ -440,6 +445,8 @@ function RoomViewV2() {
             streamingMessage={streamingMessage}
             isConnected={isConnected}
             activeAgents={activeAgents}
+            showInternalMessages={showInternalMessages}
+            onToggleInternalMessages={setShowInternalMessages}
           />
         )}
       </div>

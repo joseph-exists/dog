@@ -367,7 +367,8 @@ async def list_messages(
     before: datetime | None = Query(default=None),
     active_for_context: bool | None = None,  # None = both, True = active only, False = inactive only
     is_pinned: bool | None = None,           # None = both, True = pinned only, False = unpinned only
-    sender_type: str | None = None,          # "user" | "agent" | None
+    sender_type: str | None = None,          # "user" | "agent" | "agent_internal" | None
+    include_internal: bool = Query(default=False),
     sender_id: UUID | None = None,           # Specific user/agent
 ) -> Any:
     """
@@ -382,6 +383,10 @@ async def list_messages(
     room_messages = await list_room_messages(
         room_id=room_id,
         user_id=current_user.id,
+        active_for_context=active_for_context,
+        is_pinned=is_pinned,
+        sender_type=sender_type,
+        include_internal=include_internal,
         limit=limit,
         before=before,
         session=session,

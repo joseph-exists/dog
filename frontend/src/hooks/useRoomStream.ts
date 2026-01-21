@@ -163,7 +163,10 @@ export function useRoomStream(
             }
 
             // Invalidate queries to refresh UI
-            if (message.event_type === "room_message.agent") {
+            if (
+              message.event_type === "room_message.agent" ||
+              message.event_type === "room_message.agent_internal"
+            ) {
               queryClient.invalidateQueries({
                 queryKey: ["rooms", roomId, "messages"],
               })

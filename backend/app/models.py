@@ -2573,8 +2573,8 @@ class RoomMessageBase(SQLModel):
 
     content: str = Field(description="Message text content")
     sender_type: str = Field(
-        max_length=10,
-        description="Either 'user' or 'agent'",
+        max_length=20,
+        description="Either 'user', 'agent', or 'agent_internal'",
     )
 
 
@@ -2646,6 +2646,10 @@ class RoomMessage(RoomMessageBase, table=True):
 
     button_options: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     # AG-UI interactive buttons: [{"label": str, "value": str, "style": str}]
+    ui_components: list[dict[str, Any]] | None = Field(
+        default=None,
+        sa_column=Column(JSONB),
+    )
     # Relationships
     room: Room = Relationship(back_populates="room_messages")
 
@@ -2672,6 +2676,10 @@ class RoomMessagePublic(RoomMessageBase):
     sender_display_name: str | None = None
 
     button_options: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    ui_components: list[dict[str, Any]] | None = Field(
+        default=None,
+        sa_column=Column(JSONB),
+    )
 
 
 class RoomMessagesPublic(SQLModel):
@@ -2679,6 +2687,58 @@ class RoomMessagesPublic(SQLModel):
 
     data: list[RoomMessagePublic]
     count: int
+
+
+# ============================================================================
+# Page Layout Models (Agent-Authored Pages)
+# ============================================================================
+
+
+class PageBase(SQLModel):
+    """Shared properties for persisted page layouts."""
+
+    entity_type: str = Field(max_length=50, index=True)
+    entity_id: str = Field(max_length=255, index=True)
+    layout_version: int = Field(default=1)
+    layout_json: list[dict[str, Any]] = Field(sa_column=Column(JSONB))
+
+
+class PageCreate(PageBase):
+    """Input model for creating a page layout."""
+
+    owner_id: uuid.UUID
+
+
+class PageLayoutUpdate(SQLModel):
+    """Update model for page layout."""
+
+    layout_json: list[dict[str, Any]]
+    layout_version: int | None = None
+
+
+class Page(PageBase, table=True):
+    """
+    Persisted page layouts for entities.
+
+    One layout per entity_type/entity_id pair.
+    """
+
+    __tablename__ = "pages"
+    __table_args__ = (UniqueConstraint("entity_type", "entity_id"),)
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PagePublic(PageBase):
+    """Public response model for pages."""
+
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
 
 
 # ============================================================================
@@ -3612,3 +3672,7 @@ Room.panel_defaults = Relationship(
         "uselist": False
     }
 )
+
+# User <-> Page relationship
+User.pages = Relationship(back_populates="owner")
+Page.owner = Relationship(back_populates="pages")

@@ -1958,6 +1958,86 @@ export const NodeChoicesPublicSchema = {
     description: 'Collection response for NodeChoices'
 } as const;
 
+export const PageLayoutUpdateSchema = {
+    properties: {
+        layout_json: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Layout Json'
+        },
+        layout_version: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Layout Version'
+        }
+    },
+    type: 'object',
+    required: ['layout_json'],
+    title: 'PageLayoutUpdate',
+    description: 'Update model for page layout.'
+} as const;
+
+export const PagePublicSchema = {
+    properties: {
+        entity_type: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Entity Type'
+        },
+        entity_id: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Entity Id'
+        },
+        layout_version: {
+            type: 'integer',
+            title: 'Layout Version',
+            default: 1
+        },
+        layout_json: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Layout Json'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['entity_type', 'entity_id', 'layout_json', 'id', 'owner_id', 'created_at', 'updated_at'],
+    title: 'PagePublic',
+    description: 'Public response model for pages.'
+} as const;
+
 export const ParticipantAddRequestSchema = {
     properties: {
         participant_id: {
@@ -2838,9 +2918,9 @@ export const RoomMessagePublicSchema = {
         },
         sender_type: {
             type: 'string',
-            maxLength: 10,
+            maxLength: 20,
             title: 'Sender Type',
-            description: "Either 'user' or 'agent'"
+            description: "Either 'user', 'agent', or 'agent_internal'"
         },
         message_id: {
             type: 'string',
@@ -2975,6 +3055,21 @@ export const RoomMessagePublicSchema = {
                 }
             ],
             title: 'Button Options'
+        },
+        ui_components: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ui Components'
         }
     },
     type: 'object',

@@ -22,6 +22,10 @@ interface DebugPanelProps {
   isConnected: boolean
   /** Active agents in room */
   activeAgents: ParticipantViewModel[]
+  /** Whether internal agent messages are visible in the message list. */
+  showInternalMessages: boolean
+  /** Toggle internal message visibility in the message list. */
+  onToggleInternalMessages: (enabled: boolean) => void
   /** Hide panel header (when page provides its own) */
   hideHeader?: boolean
   /** Additional className */
@@ -33,6 +37,8 @@ export function DebugPanel({
   streamingMessage,
   isConnected,
   activeAgents,
+  showInternalMessages,
+  onToggleInternalMessages,
   hideHeader = false,
   className,
 }: DebugPanelProps) {
@@ -43,6 +49,8 @@ export function DebugPanel({
         streamingMessage={streamingMessage}
         isConnected={isConnected}
         activeAgents={activeAgents}
+        showInternalMessages={showInternalMessages}
+        onToggleInternalMessages={onToggleInternalMessages}
       />
     </div>
   )

@@ -23,6 +23,10 @@ export interface MessageFilters {
 
 interface MessageFiltersProps {
   filters: MessageFilters
+  /** Whether internal messages are included in query results. */
+  includeInternalMessages?: boolean
+  /** Toggle internal message visibility (dev mode). */
+  onIncludeInternalChange?: (enabled: boolean) => void
   onFilterChange: <K extends keyof MessageFilters>(
     key: K,
     value: MessageFilters[K],
@@ -35,6 +39,8 @@ const selectClassName =
 
 export default function MessageFilters({
   filters,
+  includeInternalMessages,
+  onIncludeInternalChange,
   onFilterChange,
   onClearFilters,
 }: MessageFiltersProps) {
@@ -102,6 +108,18 @@ export default function MessageFilters({
       >
         <X className="h-4 w-4" />
       </Button>
+
+      {onIncludeInternalChange && (
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            className="h-3.5 w-3.5"
+            checked={includeInternalMessages ?? false}
+            onChange={(event) => onIncludeInternalChange(event.target.checked)}
+          />
+          Include internal messages
+        </label>
+      )}
     </div>
   )
 }

@@ -118,6 +118,25 @@ def get_agent(
     return config
 
 
+@router.get("/slug/{slug}", response_model=AgentConfigPublic)
+def get_agent_by_slug(
+    session: SessionDep,
+    current_user: CurrentUser,
+    slug: str,
+) -> Any:
+    """Get agent configuration by slug."""
+    config = crud.get_agent_config_by_slug(session=session, slug=slug)
+    if not config:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    # Check access: system agents visible to all, personal only to owner/admin
+    if config.scope == "personal" and config.owner_id != current_user.id:
+        if not current_user.is_superuser:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    return config
+
+
 @router.post("/", response_model=AgentConfigPublic)
 def create_agent(
     *,

@@ -19,6 +19,11 @@ import {
   Quote,
 } from "lucide-react"
 import { useState } from "react"
+import {
+  type BlockType,
+  getBlockType,
+  type TemplateBlock,
+} from "@/components/Page/registry"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -55,6 +60,7 @@ import type {
   UIComponent,
   UIDividerData,
   UIListData,
+  UIPageLayoutPreviewData,
   UIProgressData,
   UIQuoteData,
   UITableData,
@@ -104,6 +110,12 @@ export default function AgentUIRenderer({
       return <TabsComponent data={data as unknown as UITabsData} />
     case "divider":
       return <DividerComponent data={data as unknown as UIDividerData} />
+    case "page_layout_preview":
+      return (
+        <PageLayoutPreviewComponent
+          data={data as unknown as UIPageLayoutPreviewData}
+        />
+      )
     default:
       // Unknown component type - show fallback
       return fallback_text ? (
@@ -453,5 +465,72 @@ function DividerComponent({ data }: { data: UIDividerData }) {
 
   return (
     <Separator className={cn("mt-3", variantStyles[data.variant || "solid"])} />
+  )
+}
+
+/**
+ * Render a compact preview of a proposed page layout.
+ */
+function PageLayoutPreviewComponent({
+  data,
+}: {
+  data: UIPageLayoutPreviewData
+}) {
+  const layoutBlocks = Array.isArray(data.layout_json) ? data.layout_json : []
+  const primaryBlocks = layoutBlocks.filter(
+    (block) => block.column === "primary",
+  )
+  const auxiliaryBlocks = layoutBlocks.filter(
+    (block) => block.column === "auxiliary",
+  )
+
+  const renderBlockLabel = (block: TemplateBlock) => {
+    const def = getBlockType(block.type as BlockType)
+    return def?.label ?? block.type
+  }
+
+  return (
+    <Card className="mt-3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Proposed Page Layout</CardTitle>
+        {data.summary && (
+          <CardDescription className="text-xs">{data.summary}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">
+            Primary
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {primaryBlocks.length > 0 ? (
+              primaryBlocks.map((block, index) => (
+                <Badge key={`${block.type}-${index}`} variant="secondary">
+                  {renderBlockLabel(block)}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-xs text-muted-foreground">None</span>
+            )}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">
+            Auxiliary
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {auxiliaryBlocks.length > 0 ? (
+              auxiliaryBlocks.map((block, index) => (
+                <Badge key={`${block.type}-${index}`} variant="outline">
+                  {renderBlockLabel(block)}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-xs text-muted-foreground">None</span>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

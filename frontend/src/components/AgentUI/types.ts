@@ -5,6 +5,8 @@
  * These mirror the backend Pydantic schemas in app/schemas/ag_ui.py
  */
 
+import type { TemplateBlock } from "@/components/Page/registry"
+
 export type UIComponentType =
   | "card"
   | "list"
@@ -17,6 +19,7 @@ export type UIComponentType =
   | "collapsible"
   | "tabs"
   | "divider"
+  | "page_layout_preview"
 
 export interface UIComponent {
   type: UIComponentType
@@ -130,4 +133,11 @@ export interface UITabsData {
 export interface UIDividerData {
   label?: string
   variant?: "solid" | "dashed" | "dotted"
+}
+
+export interface UIPageLayoutPreviewData {
+  entity_type: string
+  entity_id: string
+  layout_json: TemplateBlock[]
+  summary?: string
 }

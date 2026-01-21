@@ -14,6 +14,7 @@ from app.api.routes import (
     persona_events,
     persona_qualities,
     personas,
+    pages,
     presets,
     private,
     qualities,
@@ -57,6 +58,7 @@ api_router.include_router(agent_personas.router)
 api_router.include_router(llm_providers.router)
 api_router.include_router(llm_catalog.router)
 api_router.include_router(rooms.router)
+api_router.include_router(pages.router)
 api_router.include_router(room_panels.router, prefix="/rooms", tags=["room-panels"])
 api_router.include_router(room_participant_bindings.router)
 api_router.include_router(node_choices.router)

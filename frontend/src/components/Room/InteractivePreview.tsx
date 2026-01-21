@@ -204,7 +204,11 @@ export function InteractivePreview({
         >
           <AnimatePresence mode="popLayout">
             {primaryPanels.map((panel) => (
-              <Reorder.Item key={panel.id} value={panel} dragListener={!disabled}>
+              <Reorder.Item
+                key={panel.id}
+                value={panel}
+                dragListener={!disabled}
+              >
                 <PreviewPanelItem
                   panel={panel}
                   isCollapsed={collapsedPanels.has(panel.id)}
@@ -241,7 +245,11 @@ export function InteractivePreview({
         >
           <AnimatePresence mode="popLayout">
             {auxiliaryPanels.map((panel) => (
-              <Reorder.Item key={panel.id} value={panel} dragListener={!disabled}>
+              <Reorder.Item
+                key={panel.id}
+                value={panel}
+                dragListener={!disabled}
+              >
                 <PreviewPanelItem
                   panel={panel}
                   isCollapsed={collapsedPanels.has(panel.id)}

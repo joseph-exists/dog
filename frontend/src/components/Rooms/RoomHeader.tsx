@@ -11,6 +11,7 @@
 
 import { Bug } from "lucide-react"
 import { RoomActionsMenu } from "@/components/Rooms/RoomsActionsMenu"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type {
@@ -34,6 +35,8 @@ interface RoomHeaderProps {
   showDebugPanel?: boolean
   /** Callback to toggle debug panel */
   onToggleDebugPanel?: () => void
+  /** Show dev mode indicator when internal messages are enabled. */
+  devModeEnabled?: boolean
 }
 
 export default function RoomHeader({
@@ -46,6 +49,7 @@ export default function RoomHeader({
   onDeleteRoom,
   showDebugPanel,
   onToggleDebugPanel,
+  devModeEnabled,
 }: RoomHeaderProps) {
   return (
     <div className="p-4 border-b border-border bg-background">
@@ -68,6 +72,11 @@ export default function RoomHeader({
         </div>
 
         <div className="flex items-center gap-2">
+          {devModeEnabled && (
+            <Badge variant="outline" className="text-[10px]">
+              Dev Mode
+            </Badge>
+          )}
           {/* Owner actions */}
           {currentUserRole === "owner" && room && (
             <>

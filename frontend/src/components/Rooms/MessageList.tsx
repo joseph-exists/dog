@@ -31,11 +31,16 @@ interface MessageListProps {
   streamingMessage: { agent_name: string; content: string } | null
   /** Whether current user is the room owner (grants full message permissions) */
   isRoomOwner?: boolean
+  /** Include internal agent messages in message queries (dev mode). */
+  includeInternalMessages?: boolean
+  /** Toggle internal agent message visibility (dev mode). */
+  onToggleInternalMessages?: (enabled: boolean) => void
   onEditMessage?: (message: MessageViewModel) => void
   onPinMessage?: (messageId: string) => void
   onUnpinMessage?: (messageId: string) => void
   onToggleContext?: (messageId: string, active: boolean) => void
   onDeleteMessage?: (messageId: string) => void
+  onUiAction?: (action: string, message: MessageViewModel) => void
 }
 
 export default function MessageList({
@@ -47,11 +52,14 @@ export default function MessageList({
   isLoading = false,
   streamingMessage,
   isRoomOwner = false,
+  includeInternalMessages = false,
+  onToggleInternalMessages,
   onEditMessage,
   onPinMessage,
   onUnpinMessage,
   onToggleContext,
   onDeleteMessage,
+  onUiAction,
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -96,7 +104,12 @@ export default function MessageList({
 
       // Filter by sender type
       if (filters.senderType !== "all") {
-        if (msg.sender_type !== filters.senderType) {
+        const isAgentMessage =
+          msg.sender_type === "agent" || msg.sender_type === "agent_internal"
+        if (
+          (filters.senderType === "agent" && !isAgentMessage) ||
+          (filters.senderType === "user" && msg.sender_type !== "user")
+        ) {
           return false
         }
       }
@@ -145,6 +158,8 @@ export default function MessageList({
       {/* Filter controls */}
       <MessageFilters
         filters={filters}
+        includeInternalMessages={includeInternalMessages}
+        onIncludeInternalChange={onToggleInternalMessages}
         onFilterChange={updateFilter}
         onClearFilters={clearFilters}
       />
@@ -198,6 +213,7 @@ export default function MessageList({
                   ? () => onDeleteMessage(message.message_id)
                   : undefined
               }
+              onUiAction={onUiAction}
             />
           ))
       ) : (
@@ -219,6 +235,7 @@ export default function MessageList({
             agent_name: streamingMessage.agent_name,
             content: streamingMessage.content,
             button_options: null,
+            ui_components: null,
             created_at: new Date(),
             is_own_message: false,
             is_pinned: false,

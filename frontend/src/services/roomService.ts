@@ -20,6 +20,7 @@
  */
 
 import {
+  OpenAPI,
   type ParticipantAddRequest,
   type RoomCreate,
   type RoomMessagePublic,
@@ -33,6 +34,9 @@ import {
   type RoomUpdate,
   UsersService,
 } from "@/client"
+import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
+import { request as __request } from "@/client/core/request"
+import type { UIComponent } from "@/components/AgentUI/types"
 import { AgentService } from "./agentService"
 
 // ============================================================================
@@ -73,12 +77,13 @@ export interface RoomViewModel {
 export interface MessageViewModel {
   message_id: string
   room_id: string
-  sender_type: "user" | "agent"
+  sender_type: "user" | "agent" | "agent_internal"
   sender_name: string
   sender_id: string | null
   agent_name: string | null
   content: string
   button_options?: Record<string, unknown> | null
+  ui_components?: UIComponent[] | null
   created_at: Date
 
   // Computed fields
@@ -185,7 +190,7 @@ function transformMessage(
 ): MessageViewModel {
   // Determine sender name
   let sender_name: string
-  if (message.sender_type === "agent") {
+  if (message.sender_type !== "user") {
     sender_name = message.agent_name || "Unknown Agent"
   } else {
     // For user messages, we'll need to look up the user's name
@@ -203,12 +208,13 @@ function transformMessage(
   return {
     message_id: message.message_id,
     room_id: message.room_id,
-    sender_type: message.sender_type as "user" | "agent",
+    sender_type: message.sender_type as "user" | "agent" | "agent_internal",
     sender_name,
     sender_id: message.sender_id,
     agent_name: message.agent_name,
     content: message.content,
     button_options: message.button_options,
+    ui_components: msg.ui_components ?? null,
     created_at: new Date(message.created_at),
     is_own_message,
     // Phase 5: Message management fields
@@ -304,7 +310,7 @@ const agentCache = new Map<
 >()
 
 /**
- * Fetch agent details with caching
+ * Fetch agent details with caching.
  *
  * @param agentId - Agent UUID
  * @returns Agent details or null if not found
@@ -312,6 +318,10 @@ const agentCache = new Map<
 async function getAgentDetails(
   agentId: string,
 ): Promise<{ name: string; description: string | null } | null> {
+  if (!isUuid(agentId)) {
+    return null
+  }
+
   // Check cache first
   if (agentCache.has(agentId)) {
     return agentCache.get(agentId)!
@@ -329,6 +339,15 @@ async function getAgentDetails(
     // Agent not found or error - don't cache failures
     return null
   }
+}
+
+/**
+ * Minimal UUID v4/variant check to avoid 422s for slug identifiers.
+ */
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  )
 }
 
 // ============================================================================
@@ -448,20 +467,26 @@ export const RoomService = {
    *
    * @param roomId - Room UUID
    * @param options - Pagination options
+   * @param options.includeInternal - Include agent_internal messages (debug only)
    * @param currentUserId - Current user's ID for computing is_own_message
    * @returns Paginated messages response
    * @throws ApiError - 403 if not a room participant, 404 if room not found
    */
   async getMessages(
     roomId: string,
-    options?: { limit?: number; before?: string },
+    options?: { limit?: number; before?: string; includeInternal?: boolean },
     currentUserId?: string | null,
   ): Promise<PaginatedMessages> {
-    const response: RoomMessagesPublic = await RoomsService.listMessages({
-      roomId,
-      limit: options?.limit,
-      before: options?.before,
-    })
+    const requestOptions: ApiRequestOptions<RoomMessagesPublic> = {
+      method: "GET",
+      url: `/api/v1/rooms/${roomId}/messages`,
+      query: {
+        limit: options?.limit,
+        before: options?.before,
+        include_internal: options?.includeInternal,
+      },
+    }
+    const response = await __request(OpenAPI, requestOptions)
 
     // Transform messages first (without user enrichment)
     const messages = response.data.map((msg) =>

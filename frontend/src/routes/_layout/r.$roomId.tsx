@@ -76,6 +76,7 @@ function RoomView() {
 
   // Debug panel overlay state (separate from panel config)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [showInternalMessages, setShowInternalMessages] = useState(false)
 
   // Fetch available agents
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
@@ -112,6 +113,7 @@ function RoomView() {
     deleteMessage,
   } = useRoom(roomId, {
     enablePolling: true,
+    includeInternalMessages: showInternalMessages,
     onDeleteSuccess: () => {
       navigate({ to: "/rooms" })
     },
@@ -268,6 +270,8 @@ function RoomView() {
         isLoading={isLoadingMessages}
         streamingMessage={streamingMessage}
         isRoomOwner={canManage}
+        includeInternalMessages={showInternalMessages}
+        onToggleInternalMessages={setShowInternalMessages}
         onSendMessage={sendMessage}
         isSending={isSending}
         isConnected={isConnected}
@@ -297,6 +301,8 @@ function RoomView() {
         streamingMessage={streamingMessage}
         isConnected={isConnected}
         activeAgents={activeAgents}
+        showInternalMessages={showInternalMessages}
+        onToggleInternalMessages={setShowInternalMessages}
       />
     ),
     storyEditor: () => (
@@ -361,6 +367,7 @@ function RoomView() {
           switchViewLabel="Switch to Classic View"
           showDebugPanel={showDebugPanel}
           onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
+          devModeEnabled={showInternalMessages}
         />
       </div>
 
@@ -371,6 +378,8 @@ function RoomView() {
           streamingMessage={streamingMessage}
           isConnected={isConnected}
           activeAgents={activeAgents}
+          showInternalMessages={showInternalMessages}
+          onToggleInternalMessages={setShowInternalMessages}
         />
       )}
 
