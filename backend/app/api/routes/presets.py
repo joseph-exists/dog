@@ -19,6 +19,16 @@ SYSTEM_PRESETS = {
         "panels": [{"id": "chat", "kind": "chat", "prominence": "primary"}],
         "is_system": True,
     },
+    "classic": {
+        "id": "classic",
+        "name": "Classic",
+        "description": "Chat with participants sidebar (V1 style)",
+        "panels": [
+            {"id": "chat", "kind": "chat", "prominence": "primary"},
+            {"id": "participants", "kind": "participantPanel", "prominence": "auxiliary"},
+        ],
+        "is_system": True,
+    },
     "collaborate": {
         "id": "collaborate",
         "name": "Collaborate",
