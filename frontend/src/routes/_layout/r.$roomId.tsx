@@ -19,6 +19,7 @@ import {
   ChatPanel,
   DebugPanel,
   type PanelConfig,
+  ParticipantPanel,
   RoomShell,
   StoryEditorPanel,
 } from "@/components/Room"
@@ -148,6 +149,7 @@ function RoomView() {
 
   // Convert data for components
   const roomParticipants: Participant[] = participants.map(toParticipant)
+  const activeUsers = participants.filter((p) => p.participant_type === "user")
   const roomAgentsAsAgentData = activeAgents.map((p) => ({
     id: p.participant_id,
     name: p.display_name,
@@ -313,6 +315,22 @@ function RoomView() {
     ),
     canvas: () => <CanvasPanel />,
     a2ui: () => <A2UIPanel roomId={roomId} />,
+    participantPanel: () => (
+      <ParticipantPanel
+        activeUsers={activeUsers}
+        activeAgents={activeAgents}
+        isLoading={isLoadingParticipants}
+        currentUserRole={currentUserRole}
+        onRemoveParticipant={removeParticipant}
+        onToggleAgent={async (agentId, activate) => {
+          if (activate) {
+            await addParticipant(agentId, "agent")
+          } else {
+            await removeParticipant(agentId)
+          }
+        }}
+      />
+    ),
   }
 
   // Build panels from configuration
@@ -327,7 +345,8 @@ function RoomView() {
         | "agentPanel"
         | "debug"
         | "canvas"
-        | "a2ui",
+        | "a2ui"
+        | "participantPanel",
     ),
     render: panelComponents[config.kind] || (() => null),
   }))

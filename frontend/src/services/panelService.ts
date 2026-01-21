@@ -33,7 +33,14 @@ import {
  */
 export interface PanelConfig {
   id: string
-  kind: "chat" | "storyEditor" | "agentPanel" | "debug" | "canvas" | "a2ui"
+  kind:
+    | "chat"
+    | "storyEditor"
+    | "agentPanel"
+    | "debug"
+    | "canvas"
+    | "a2ui"
+    | "participantPanel"
   prominence: "primary" | "auxiliary"
 }
 
@@ -165,6 +172,7 @@ export function isValidPanelKind(kind: string): kind is PanelConfig["kind"] {
     "debug",
     "canvas",
     "a2ui",
+    "participantPanel",
   ].includes(kind)
 }
 
@@ -179,6 +187,7 @@ export function getPanelDisplayName(kind: PanelConfig["kind"]): string {
     debug: "Debug",
     canvas: "Canvas",
     a2ui: "Agent UI",
+    participantPanel: "Participants",
   }
   return names[kind]
 }
