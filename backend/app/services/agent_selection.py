@@ -5,7 +5,7 @@ import re
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import AgentConfig, RoomParticipant
 
@@ -53,14 +53,14 @@ class AgentSelectionService:
         session: AsyncSession,
         room_id: uuid.UUID,
     ) -> list[RoomParticipant]:
-        result = await session.execute(
+        result = await session.exec(
             select(RoomParticipant).where(
                 RoomParticipant.room_id == room_id,
                 RoomParticipant.participant_type == "agent",
                 RoomParticipant.active == True,  # noqa: E712
             )
         )
-        return result.scalars().all()
+        return result.all()
 
     async def resolve_agent_identifier(
         self,
@@ -86,10 +86,10 @@ class AgentSelectionService:
         except ValueError:
             pass
 
-        result = await session.execute(
+        result = await session.exec(
             select(AgentConfig).where(AgentConfig.slug == participant_id)
         )
-        agent_config = result.scalar_one_or_none()
+        agent_config = result.one_or_none()
 
         if agent_config and agent_config.is_enabled:
             logger.debug(f"Found database agent by slug: {participant_id}")

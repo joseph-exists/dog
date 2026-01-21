@@ -29,7 +29,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import func
 
 from app.models import (
@@ -358,11 +358,11 @@ async def _get_next_room_sequence(
 
     # Advisory lock for this room (transaction-scoped)
     lock_key = hash(room_id) % (2**31)  # Postgres bigint range
-    await session.execute(
+    await session.exec(
         text("SELECT pg_advisory_xact_lock(:lock_key)"),
         {"lock_key": lock_key}
     )
-    result = await session.execute(
+    result = await session.exec(
         select(func.max(RoomEvent.room_sequence)).where(
             RoomEvent.room_id == room_id
         )
@@ -486,10 +486,10 @@ async def _handle_room_updated(
     Payload:
         - updated_fields: dict with fields to update (e.g., {"title": "New Title"})
     """
-    result = await session.execute(
+    result = await session.exec(
         select(Room).where(Room.room_id == event.room_id)
     )
-    room = result.scalar_one()
+    room = result.one()
 
     updated_fields = event.payload.get("updated_fields", {})
     for field, value in updated_fields.items():
@@ -505,10 +505,10 @@ async def _update_room_last_activity(
     timestamp: datetime,
 ) -> None:
     """Update room.last_activity timestamp."""
-    result = await session.execute(
+    result = await session.exec(
         select(Room).where(Room.room_id == room_id)
     )
-    room = result.scalar_one_or_none()
+    room = result.one_or_none()
 
     if room:
         room.last_activity = timestamp
@@ -544,41 +544,41 @@ async def _handle_participant_joined(
         try:
             agent_uuid = uuid.UUID(participant_id)
             legacy_uuid_str = str(agent_uuid)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
                 participant_id = agent_config.slug
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
                 legacy_uuid_str = str(agent_config.id)
                 participant_id = agent_config.slug
 
     # Check if participant previously existed (re-join scenario)
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == event.room_id,
             RoomParticipant.participant_id == participant_id,
         )
     )
-    existing = result.scalar_one_or_none()
+    existing = result.one_or_none()
 
     if not existing and payload.get("participant_type") == "agent":
         # Transitional compatibility: if an existing room participant row is keyed by the
         # agent UUID string, upgrade it to slug in-place.
         if legacy_uuid_str:
-            result = await session.execute(
+            result = await session.exec(
                 select(RoomParticipant).where(
                     RoomParticipant.room_id == event.room_id,
                     RoomParticipant.participant_id == legacy_uuid_str,
                 )
             )
-            existing = result.scalar_one_or_none()
+            existing = result.one_or_none()
 
     if existing:
         # Reactivate existing participant
@@ -617,43 +617,43 @@ async def _handle_participant_left(
 
     participant_id = payload["participant_id"]
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == event.room_id,
             RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
 
     if not participant:
         # Transitional compatibility: attempt slug/UUID normalization for agents.
         try:
             agent_uuid = uuid.UUID(participant_id)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
-                result = await session.execute(
+                result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == agent_config.slug,
                     )
                 )
-                participant = result.scalar_one_or_none()
+                participant = result.one_or_none()
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
-                result = await session.execute(
+                result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == str(agent_config.id),
                     )
                 )
-                participant = result.scalar_one_or_none()
+                participant = result.one_or_none()
 
     if not participant:
         raise ValueError(
@@ -680,43 +680,43 @@ async def _handle_participant_role_changed(
     payload = event.payload
 
     participant_id = payload["participant_id"]
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == event.room_id,
             RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
 
     if not participant:
         # Transitional compatibility: attempt slug/UUID normalization for agents.
         try:
             agent_uuid = uuid.UUID(participant_id)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
-                result = await session.execute(
+                result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == agent_config.slug,
                     )
                 )
-                participant = result.scalar_one_or_none()
+                participant = result.one_or_none()
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
-                result = await session.execute(
+                result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == str(agent_config.id),
                     )
                 )
-                participant = result.scalar_one_or_none()
+                participant = result.one_or_none()
 
     if not participant:
         raise ValueError(
@@ -761,19 +761,19 @@ async def _handle_participant_binding_changed(
         # Normalize agent participant_id to slug (accept UUID as legacy).
         try:
             agent_uuid = uuid.UUID(participant_id)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if not agent_config:
                 raise ValueError("Agent not found for binding change")
             resolved_agent_id = agent_config.id
             participant_id = agent_config.slug
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if not agent_config:
                 raise ValueError("Agent not found for binding change")
             resolved_agent_id = agent_config.id
@@ -789,7 +789,7 @@ async def _handle_participant_binding_changed(
     user_llm_provider_id = uuid.UUID(provider_id_raw) if provider_id_raw else None
 
     # Close previous active binding row (if any).
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipantBinding).where(
             RoomParticipantBinding.room_id == event.room_id,
             RoomParticipantBinding.participant_type == participant_type,
@@ -797,7 +797,7 @@ async def _handle_participant_binding_changed(
             RoomParticipantBinding.ended_at.is_(None),
         )
     )
-    existing = result.scalars().all()
+    existing = result.all()
     for row in existing:
         row.ended_at = event.created_at
         session.add(row)
@@ -934,12 +934,12 @@ async def _handle_message_edited(
     """
     payload = event.payload
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.scalar_one()
+    message = result.one()
 
     message.content = payload["new_content"]
     message.edited_at = event.created_at
@@ -963,12 +963,12 @@ async def _handle_message_pinned(
     """
     payload = event.payload
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.scalar_one()
+    message = result.one()
 
     message.is_pinned = True
     message.pinned_at = event.created_at
@@ -992,12 +992,12 @@ async def _handle_message_unpinned(
     """
     payload = event.payload
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.scalar_one()
+    message = result.one()
 
     message.is_pinned = False
     message.pinned_at = None
@@ -1021,12 +1021,12 @@ async def _handle_message_context_toggled(
     """
     payload = event.payload
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.scalar_one()
+    message = result.one()
 
     message.active_for_context = payload["active_for_context"]
 
@@ -1049,12 +1049,12 @@ async def _handle_message_deleted(
     """
     payload = event.payload
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.scalar_one_or_none()
+    message = result.one_or_none()
 
     if message:
         await session.delete(message)
@@ -1085,23 +1085,23 @@ async def replay_events_for_room(
         room_id: UUID of the room to replay
     """
     # Delete existing projections for this room
-    await session.execute(
+    await session.exec(
         select(RoomMessage).where(RoomMessage.room_id == room_id)
     )
-    await session.execute(
+    await session.exec(
         select(RoomParticipant).where(RoomParticipant.room_id == room_id)
     )
-    await session.execute(
+    await session.exec(
         select(Room).where(Room.room_id == room_id)
     )
 
     # Replay all events in sequence order
-    result = await session.execute(
+    result = await session.exec(
         select(RoomEvent)
         .where(RoomEvent.room_id == room_id)
         .order_by(RoomEvent.room_sequence)
     )
-    events = result.scalars().all()
+    events = result.all()
 
     for event in events:
         await _update_projections(session, event)

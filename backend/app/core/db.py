@@ -1,8 +1,8 @@
 from collections.abc import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Session, create_engine, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app import crud
 from app.core.config import settings
@@ -11,16 +11,13 @@ from app.models import User, UserCreate
 # Sync engine (existing functionality)
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
-# Async engine for rooms and event sourcing
 async_engine = create_async_engine(
-    str(settings.SQLALCHEMY_DATABASE_URI).replace(
-        "postgresql://", "postgresql+asyncpg://"
-    ),
+    str(settings.ASYNC_SQLALCHEMY_DATABASE_URI),
     echo=False,
     future=True,
 )
 
-async_session_maker = sessionmaker(
+async_session_maker = async_sessionmaker(
     async_engine,
     class_=AsyncSession,
     expire_on_commit=False,

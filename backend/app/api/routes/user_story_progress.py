@@ -236,7 +236,7 @@ def get_current_node(
         raise HTTPException(status_code=404, detail="Current node not found")
 
     # Get available choices (filtered by story state)
-    available_choices = crud.get_available_choices(
+    available_choices = crud.get_available_choices_sync(
         session=session,
         node_id=progress.current_node_id,
         story_state=progress.story_state,
@@ -305,7 +305,7 @@ def make_story_choice(
         )
 
     # Check if the choice's requirements are met
-    available_choices = crud.get_available_choices(
+    available_choices = crud.get_available_choices_sync(
         session=session,
         node_id=progress.current_node_id,
         story_state=progress.story_state,

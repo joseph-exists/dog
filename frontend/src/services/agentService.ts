@@ -147,7 +147,7 @@ function transformAgent(agent: AgentConfigPublic): AgentViewModel {
   return {
     id: agent.id,
     name: agent.name,
-    slug: agent.slug,
+    slug: agent.slug ?? "",
     description: agent.description ?? null,
     model_name: agent.model_name ?? "openai:gpt-4o-mini",
     display_model: formatModelName(agent.model_name),

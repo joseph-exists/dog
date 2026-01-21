@@ -5,7 +5,7 @@ import uuid
 from typing import Any, Awaitable, Callable
 
 from pydantic_ai import ModelAPIError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.services.a2a_orchestrator import A2AOrchestrator
 from app.services.agent_context import RoomContextService

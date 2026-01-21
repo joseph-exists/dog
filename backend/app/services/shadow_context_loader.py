@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from app.models import AgentConfig, Room, RoomParticipantBinding
@@ -83,8 +83,8 @@ async def build_shadow_context_items(
     now = datetime.now(tz=timezone.utc)
     items: list[ContextItem] = []
 
-    room_result = await session.execute(select(Room).where(Room.room_id == room_id))
-    room = room_result.scalar_one_or_none()
+    room_result = await session.exec(select(Room).where(Room.room_id == room_id))
+    room = room_result.one_or_none()
     if not room:
         return items
 
@@ -161,10 +161,10 @@ async def build_shadow_context_items(
         return items
 
     # Agent summary (agent-scoped)
-    agent_result = await session.execute(
+    agent_result = await session.exec(
         select(AgentConfig).where(AgentConfig.slug == agent_slug)
     )
-    agent_config = agent_result.scalar_one_or_none()
+    agent_config = agent_result.one_or_none()
     if not agent_config:
         return items
 
@@ -202,7 +202,7 @@ async def build_shadow_context_items(
         )
 
     # Binding-driven persona + runtime (agent-scoped)
-    binding_result = await session.execute(
+    binding_result = await session.exec(
         select(RoomParticipantBinding).where(
             RoomParticipantBinding.room_id == room_id,
             RoomParticipantBinding.participant_type == "agent",
@@ -210,7 +210,7 @@ async def build_shadow_context_items(
             RoomParticipantBinding.ended_at.is_(None),
         )
     )
-    binding = binding_result.scalar_one_or_none()
+    binding = binding_result.one_or_none()
     if not binding:
         return items
 

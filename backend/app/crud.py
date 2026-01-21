@@ -7,8 +7,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, and_, func, or_, select, true
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
@@ -38,10 +38,7 @@ from app.models import (
     PersonaCreate,
     PersonaQualityLink,
     PersonaTraitLink,
-    PersonaUpdate,
     ProgressSnapshot,
-    ProgressSnapshotPublic,
-    ProgressSnapshotsPublic,
     Quality,
     QualityCreate,
     QualityEventTrigger,
@@ -51,39 +48,35 @@ from app.models import (
     QualityTraitLink,
     QualityTraitLinkCreate,
     Room,
+    RoomAgentSettings,
+    RoomAgentSettingsBundle,
+    RoomAgentSettingsPublic,
+    RoomAgentSettingsUpdate,
+    RoomContextItemCreate,
+    RoomContextItemPublic,
+    RoomContextItemsPublic,
     RoomMessage,
     RoomMessagePublic,
     RoomMessagesPublic,
     RoomParticipant,
     RoomParticipantBinding,
     RoomParticipantBindingsPublic,
-    RoomContextItemCreate,
-    RoomContextItemPublic,
-    RoomContextItemsPublic,
-    RoomAgentSettings,
-    RoomAgentSettingsBundle,
-    RoomAgentSettingsPublic,
-    RoomAgentSettingsUpdate,
+    RoomPublic,
     RoomRuntimeAdvanceRequest,
     RoomRuntimePublic,
     RoomRuntimeResetRequest,
     RoomRuntimeRewindRequest,
     RoomRuntimeStartRequest,
-    RoomStoryProgress,
-    RoomPublic,
     RoomsPublic,
+    RoomStoryProgress,
     StateSchemaValidationError,
     StateSchemaValidationResult,
     StateValueType,
-    StoriesPublic,
     Story,
     StoryCreate,
     StoryNode,
     StoryNodeCreate,
     StoryNodePublic,
-    StoryNodesPublic,
-    StoryNodeUpdate,
-    StoryPublic,
     StoryRequirement,
     StoryRequirementCreate,
     StoryStateVariable,
@@ -109,8 +102,8 @@ from app.models import (
     UserStoryProgressUpdate,
     UserUpdate,
 )
-from app.services.event_emitter import emit_event
 from app.services.context_store import ContextItem, ContextItemStore, RedisContextStore
+from app.services.event_emitter import emit_event
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -681,27 +674,28 @@ def update_user_story_progress(
     return db_progress
 
 
-def get_available_choices(
-    *, session: Session, node_id: uuid.UUID, story_state: dict | None = None
+async def get_available_choices(
+    *, session: AsyncSession, node_id: uuid.UUID, story_state: dict | None = None
 ) -> list[NodeChoice]:
     """
     Get available choices for a node, filtering by story state requirements.
-    
+
     Choices are filtered based on their requires_state field:
     - If a choice has no requires_state, it's always available
     - If a choice has requires_state, all key-value pairs must match story_state
-    
+
     Args:
         session: Database session
         node_id: StoryNode ID
         story_state: Current story state dictionary (from UserStoryProgress)
-    
+
     Returns:
         List of available NodeChoice objects
     """
     # Get all choices for this node
     statement = select(NodeChoice).where(NodeChoice.from_node_id == node_id)
-    choices = session.exec(statement).all()
+    result = await session.exec(statement)
+    choices = result.all()
 
     # If there's no story state, return all choices
     if not story_state:
@@ -716,6 +710,37 @@ def get_available_choices(
             continue
 
         # Check if all required states are met
+        requirements_met = True
+        for key, value in choice.requires_state.items():
+            if key not in story_state or story_state[key] != value:
+                requirements_met = False
+                break
+
+        if requirements_met:
+            available_choices.append(choice)
+
+    return list[NodeChoice](available_choices)
+
+
+def get_available_choices_sync(
+    *, session: Session, node_id: uuid.UUID, story_state: dict | None = None
+) -> list[NodeChoice]:
+    """
+    Sync wrapper for get_available_choices (used by sync routes).
+    """
+    statement = select(NodeChoice).where(NodeChoice.from_node_id == node_id)
+    result = session.exec(statement)
+    choices = result.all()
+
+    if not story_state:
+        return list(choices)
+
+    available_choices = []
+    for choice in choices:
+        if not choice.requires_state:
+            available_choices.append(choice)
+            continue
+
         requirements_met = True
         for key, value in choice.requires_state.items():
             if key not in story_state or story_state[key] != value:
@@ -1062,60 +1087,6 @@ def get_trait_conflict_memberships(
 # =============================================================================
 # CONFLICT VALIDATION
 # =============================================================================
-
-def check_trait_conflicts(
-    *,
-    session: Session,
-    persona_id: uuid.UUID,
-    new_trait_id: uuid.UUID
-) -> list[dict]:
-    """
-    Check if adding a trait to a persona would create a logical conflict.
-    Returns list of conflicts found, empty list if no conflicts.
-    """
-    # Get all conflict groups that include the new trait
-    conflict_groups = session.exec(
-        select(TraitConflictGroup)
-        .join(TraitConflictGroupMember)
-        .where(TraitConflictGroupMember.trait_id == new_trait_id)
-    ).all()
-
-    if not conflict_groups:
-        return []
-
-    # Get persona's current trait IDs
-    current_trait_ids = {
-        link.trait_id for link in
-        session.exec(
-            select(PersonaTraitLink)
-            .where(PersonaTraitLink.persona_id == persona_id)
-        ).all()
-    }
-
-    conflicts = []
-    for group in conflict_groups:
-        # Get all trait IDs in this conflict group
-        group_trait_ids = {
-            member.trait_id for member in
-            session.exec(
-                select(TraitConflictGroupMember)
-                .where(TraitConflictGroupMember.group_id == group.id)
-            ).all()
-        }
-
-        # Check for overlap with current traits (excluding the new trait)
-        conflicting_traits = current_trait_ids & group_trait_ids
-
-        if conflicting_traits:
-            conflicts.append({
-                "group_id": str(group.id),
-                "group_name": group.name,
-                "conflict_type": group.conflict_type,
-                "reason": group.reason,
-                "conflicting_trait_ids": [str(tid) for tid in conflicting_traits]
-            })
-
-    return conflicts
 
 
 def check_archetype_trait_conflicts(
@@ -1481,11 +1452,9 @@ def get_undefined_variables_in_choices(
 """
 Room CRUD Operations
 
-This module contains room-related CRUD operations for Phase 1 implementation.
-These operations are designed for review before being added to the centralized
-CRUD layer (app/crud.py).
+This module contains room-related CRUD operations
 
-All operations follow Phase 1 requirements:
+All operations:
 - Use async for I/O operations
 - Enforce room-based authorization via RoomParticipant membership
 - Use event_emitter.emit_event() for all writes (no direct projection updates)
@@ -1524,7 +1493,7 @@ async def check_room_membership(
     Returns:
         True if user is an active participant, False otherwise
     """
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.participant_type == "user",
@@ -1556,7 +1525,7 @@ async def check_room_owner(
     Returns:
         True if user is an active owner, False otherwise
     """
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.participant_type == "user",
@@ -1586,12 +1555,12 @@ async def _build_room_runtime_public(
     available_choices: list[NodeChoicePublic] = []
 
     if progress.current_node_id:
-        node_result = await session.execute(
-            select(StoryNode).where(StoryNode.id == progress.current_node_id)
+        available_choices_result = await get_available_choices(
+            session=session,
+            node_id=progress.current_node_id,
+            story_state=progress.story_state or {},
         )
-        node = node_result.scalar_one_or_none()
-        if node:
-            current_node = StoryNodePublic.model_validate(node)
+        available_choices = [NodeChoicePublic.model_validate(c) for c in available_choices_result]
 
     node_chain_ids: list[uuid.UUID] = []
     if progress.head_choice_id:
@@ -1602,7 +1571,7 @@ async def _build_room_runtime_public(
             node_chain_ids.append(chain[0].from_node_id)
             node_chain_ids.extend([choice.to_node_id for choice in chain])
     else:
-        start_node_result = await session.execute(
+        start_node_result = await session.exec(
             select(StoryNode).where(
                 StoryNode.story_id == progress.story_id,
                 StoryNode.story_version == progress.story_version,
@@ -1614,10 +1583,10 @@ async def _build_room_runtime_public(
             node_chain_ids.append(start_node.id)
 
     if node_chain_ids:
-        nodes_result = await session.execute(
+        nodes_result = await session.exec(
             select(StoryNode).where(StoryNode.id.in_(node_chain_ids))
         )
-        nodes = nodes_result.scalars().all()
+        nodes = nodes_result.all()
         nodes_by_id = {node.id: node for node in nodes}
         node_chain = [
             StoryNodePublic.model_validate(nodes_by_id[node_id])
@@ -1626,12 +1595,12 @@ async def _build_room_runtime_public(
         ]
 
     if progress.current_node_id:
-        choices = get_available_choices(
-            session=session.sync_session,
+        available_choices_result = await get_available_choices(
+            session=session,
             node_id=progress.current_node_id,
             story_state=progress.story_state or {},
         )
-        available_choices = [NodeChoicePublic.model_validate(c) for c in choices]
+        available_choices = [NodeChoicePublic.model_validate(c) for c in available_choices_result]
 
     return RoomRuntimePublic(
         room_id=room_id,
@@ -1664,14 +1633,14 @@ async def get_room_runtime(
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Not a member of this room")
 
-    rsp_result = await session.execute(
+    rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
     room_story_progress = rsp_result.scalar_one_or_none()
     if not room_story_progress:
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
-    progress_result = await session.execute(
+    progress_result = await session.exec(
         select(UserStoryProgress).where(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
@@ -1711,7 +1680,7 @@ async def start_room_runtime(
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Only room owners can start the room runtime")
 
-    room_result = await session.execute(select(Room).where(Room.room_id == room_id))
+    room_result = await session.exec(select(Room).where(Room.room_id == room_id))
     room = room_result.scalar_one_or_none()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -1719,7 +1688,7 @@ async def start_room_runtime(
         raise HTTPException(status_code=400, detail="Room has no story selected")
 
     # Validate user persona ownership (we reuse the persona-bound progress model).
-    user_persona_result = await session.execute(
+    user_persona_result = await session.exec(
         select(UserPersona).where(
             UserPersona.id == req.user_persona_id,
             UserPersona.user_id == user_id,
@@ -1738,7 +1707,7 @@ async def start_room_runtime(
         target_version = story.published_version or story.current_version
 
     # Find start node for the selected version.
-    start_node_result = await session.execute(
+    start_node_result = await session.exec(
         select(StoryNode).where(
             StoryNode.story_id == story.id,
             StoryNode.story_version == target_version,
@@ -1753,13 +1722,13 @@ async def start_room_runtime(
         )
 
     # Initialize state from schema defaults for this version.
-    state_vars_result = await session.execute(
+    state_vars_result = await session.exec(
         select(StoryStateVariable).where(
             StoryStateVariable.story_id == story.id,
             StoryStateVariable.story_version == target_version,
         )
     )
-    state_vars = state_vars_result.scalars().all()
+    state_vars = state_vars_result.all()
     initial_state: dict[str, Any] = {}
     for var in state_vars:
         initial_state[var.key] = var.default_value
@@ -1780,7 +1749,7 @@ async def start_room_runtime(
     session.add(new_progress)
     await session.flush()
 
-    rsp_result = await session.execute(
+    rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
     room_story_progress = rsp_result.scalar_one_or_none()
@@ -1846,7 +1815,7 @@ async def advance_room_runtime(
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Only room owners can advance the room runtime")
 
-    rsp_result = await session.execute(
+    rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
     room_story_progress = rsp_result.scalar_one_or_none()
@@ -1856,7 +1825,7 @@ async def advance_room_runtime(
     if req.expected_revision is not None and req.expected_revision != room_story_progress.revision:
         raise HTTPException(status_code=409, detail="Room runtime revision mismatch")
 
-    progress_result = await session.execute(
+    progress_result = await session.exec(
         select(UserStoryProgress).where(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
@@ -1865,7 +1834,7 @@ async def advance_room_runtime(
     if not progress:
         raise HTTPException(status_code=404, detail="Active progress not found")
 
-    choice_result = await session.execute(
+    choice_result = await session.exec(
         select(NodeChoice).where(NodeChoice.id == req.choice_id)
     )
     choice = choice_result.scalar_one_or_none()
@@ -1877,8 +1846,8 @@ async def advance_room_runtime(
             status_code=400, detail="Choice is not available for the current node"
         )
 
-    available_choices = get_available_choices(
-        session=session.sync_session,
+    available_choices = await get_available_choices(
+        session=session,
         node_id=progress.current_node_id,
         story_state=progress.story_state or {},
     )
@@ -1904,12 +1873,12 @@ async def advance_room_runtime(
     progress.head_choice_id = user_choice.id
     progress.head_version += 1
     progress.story_state = replay_state_from_head_optimized(
-        session=session.sync_session,
+        session=session,
         progress_id=progress.id,
         head_choice_id=progress.head_choice_id,
     )
     progress.current_node_id = get_current_node_from_head(
-        session=session.sync_session,
+        session=session,
         head_choice_id=progress.head_choice_id,
         story_id=progress.story_id,
         story_version=progress.story_version,
@@ -1967,7 +1936,7 @@ async def rewind_room_runtime(
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Only room owners can rewind the room runtime")
 
-    rsp_result = await session.execute(
+    rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
     room_story_progress = rsp_result.scalar_one_or_none()
@@ -1977,7 +1946,7 @@ async def rewind_room_runtime(
     if req.expected_revision is not None and req.expected_revision != room_story_progress.revision:
         raise HTTPException(status_code=409, detail="Room runtime revision mismatch")
 
-    progress_result = await session.execute(
+    progress_result = await session.exec(
         select(UserStoryProgress).where(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
@@ -1986,7 +1955,7 @@ async def rewind_room_runtime(
     if not progress:
         raise HTTPException(status_code=404, detail="Active progress not found")
 
-    target_result = await session.execute(
+    target_result = await session.exec(
         select(UserNodeChoice).where(
             UserNodeChoice.id == req.target_choice_id,
             UserNodeChoice.progress_id == progress.id,
@@ -2053,7 +2022,7 @@ async def rewind_room_runtime(
         story_version=new_progress.story_version,
     )
 
-    node_result = await session.execute(
+    node_result = await session.exec(
         select(StoryNode).where(StoryNode.id == new_progress.current_node_id)
     )
     node = node_result.scalar_one_or_none()
@@ -2096,14 +2065,14 @@ async def reset_room_runtime(
     """
     Reset the room's shared story run by branching to a new start state.
     """
-    rsp_result = await session.execute(
+    rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
     room_story_progress = rsp_result.scalar_one_or_none()
     if not room_story_progress:
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
-    progress_result = await session.execute(
+    progress_result = await session.exec(
         select(UserStoryProgress).where(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
@@ -2151,8 +2120,16 @@ def _validate_context_item(
     payload: dict[str, Any],
     source: str,
 ) -> None:
+    allowed_prefixes = (
+        "upload.",
+        "note.",
+        "system.",
+        "shadow.",
+    )
     if not context_type or len(context_type) > 100:
         raise HTTPException(status_code=400, detail="Invalid context_type")
+    if not any(context_type.startswith(prefix) for prefix in allowed_prefixes):
+        raise HTTPException(status_code=400, detail="context_type not allowed")
     if not source or len(source) > 50:
         raise HTTPException(status_code=400, detail="Invalid source")
     try:
@@ -2353,10 +2330,10 @@ async def list_room_agent_settings(
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Not a member of this room")
 
-    settings_result = await session.execute(
+    settings_result = await session.exec(
         select(RoomAgentSettings).where(RoomAgentSettings.room_id == room_id)
     )
-    settings = settings_result.scalars().all()
+    settings = settings_result.all()
 
     room_defaults = next((s for s in settings if s.agent_slug is None), None)
     overrides = [s for s in settings if s.agent_slug is not None]
@@ -2382,7 +2359,7 @@ async def upsert_room_agent_settings(
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Only room owners can update agent settings")
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomAgentSettings).where(
             RoomAgentSettings.room_id == room_id,
             RoomAgentSettings.agent_slug == agent_slug,
@@ -2444,7 +2421,7 @@ async def delete_room_agent_settings_override(
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Only room owners can update agent settings")
 
-    result = await session.execute(
+    result = await session.exec(
         select(RoomAgentSettings).where(
             RoomAgentSettings.room_id == room_id,
             RoomAgentSettings.agent_slug == agent_slug,
@@ -2489,7 +2466,7 @@ async def check_can_edit_message(
         True if user is authorized to edit the message, False otherwise
     """
     # Get the message
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     message = result.scalar_one_or_none()
@@ -2629,7 +2606,7 @@ async def create_room(
     )
 
     # Fetch and return the created room projection
-    result = await session.execute(select(Room).where(Room.room_id == room_id))
+    result = await session.exec(select(Room).where(Room.room_id == room_id))
     room = result.scalar_one()
     return room
 
@@ -2645,7 +2622,7 @@ async def list_rooms_for_story(
     Return rooms for a story where the user is either a creator or an active participant, ordered by last_activity_desc.
 
     This provides the user's room list for a particular story for UI display. Only shows rooms where the user has active membership.
-    
+
     Notes: uses rooms_story_id_fkey index for O(log n) lookup
 
     Args:
@@ -2660,7 +2637,7 @@ async def list_rooms_for_story(
 
 """
     # Query rooms for story where user is creator or active participant
-    result = await session.execute(
+    result = await session.exec(
         select(Room)
         .where(
         Room.story_id == str(story_id),  # Filter by story_id (uses FK index)
@@ -2669,10 +2646,10 @@ async def list_rooms_for_story(
         .offset(skip)
         .limit(limit)
     )
-    rooms = result.scalars().all()
+    rooms = result.all()
 
     # Get total count (same filter)
-    count_result = await session.execute(
+    count_result = await session.exec(
         select(func.count(Room.room_id))
         .join(RoomParticipant)
         .where(
@@ -2718,7 +2695,7 @@ async def list_rooms_for_user(
         RoomsPublic with data and count
     """
     # Query rooms where user is an active participant
-    result = await session.execute(
+    result = await session.exec(
         select(Room)
         .join(RoomParticipant)
         .where(
@@ -2730,11 +2707,11 @@ async def list_rooms_for_user(
         .offset(skip)
         .limit(limit)
     )
-    rooms = result.scalars().all()
+    rooms = result.all()
 
     # Get total count
-    count_result = await session.execute(
-        select(Room)
+    count_result = await session.exec(
+        select(func.count(Room.room_id))
         .join(RoomParticipant)
         .where(
             RoomParticipant.participant_type == "user",
@@ -2742,7 +2719,8 @@ async def list_rooms_for_user(
             RoomParticipant.active == True,  # noqa: E712
         )
     )
-    total_count = len(count_result.scalars().all())
+    #total_count = len(count_result.all())
+    total_count = count_result.scalar_one()
 
     return RoomsPublic(
         data=[RoomPublic.model_validate(room) for room in rooms],
@@ -2779,7 +2757,7 @@ async def get_room_for_user(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Fetch room
-    result = await session.execute(select(Room).where(Room.room_id == room_id))
+    result = await session.exec(select(Room).where(Room.room_id == room_id))
     room = result.scalar_one_or_none()
 
     if not room:
@@ -2841,7 +2819,7 @@ async def update_room_metadata(
     )
 
     # Fetch and return updated room
-    result = await session.execute(select(Room).where(Room.room_id == room_id))
+    result = await session.exec(select(Room).where(Room.room_id == room_id))
     room = result.scalar_one()
     return room
 
@@ -2912,7 +2890,7 @@ async def add_participant(
         # Accept UUID strings temporarily, but normalize to slug internally.
         try:
             agent_uuid = UUID(participant_id)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.scalar_one_or_none()
@@ -2920,7 +2898,7 @@ async def add_participant(
                 raise HTTPException(status_code=400, detail="Agent not found")
             normalized_participant_id = agent_config.slug
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.scalar_one_or_none()
@@ -2941,7 +2919,7 @@ async def add_participant(
     )
 
     # Fetch and return participant
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.participant_id == normalized_participant_id,
@@ -2984,7 +2962,7 @@ async def remove_participant(
         )
 
     # Verify participant exists (normalize agent UUID/slug mismatch if needed).
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.participant_id == participant_id,
@@ -2998,14 +2976,14 @@ async def remove_participant(
         # attempt to resolve and retry.
         try:
             agent_uuid = UUID(participant_id)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.scalar_one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.scalar_one_or_none()
@@ -3013,7 +2991,7 @@ async def remove_participant(
                 normalized_participant_id = agent_config.slug
 
         if normalized_participant_id != participant_id:
-            result = await session.execute(
+            result = await session.exec(
                 select(RoomParticipant).where(
                     RoomParticipant.room_id == room_id,
                     RoomParticipant.participant_id == normalized_participant_id,
@@ -3082,7 +3060,7 @@ async def change_participant_role(
         )
 
     # Verify participant exists (normalize agent UUID/slug mismatch if needed).
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.participant_id == participant_id,
@@ -3095,14 +3073,14 @@ async def change_participant_role(
         # Try resolve slug/UUID mismatch for agents.
         try:
             agent_uuid = UUID(participant_id)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.scalar_one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.scalar_one_or_none()
@@ -3110,7 +3088,7 @@ async def change_participant_role(
                 normalized_participant_id = agent_config.slug
 
         if normalized_participant_id != participant_id:
-            result = await session.execute(
+            result = await session.exec(
                 select(RoomParticipant).where(
                     RoomParticipant.room_id == room_id,
                     RoomParticipant.participant_id == normalized_participant_id,
@@ -3135,7 +3113,7 @@ async def change_participant_role(
     )
 
     # Fetch and return updated participant
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.participant_id == normalized_participant_id,
@@ -3171,10 +3149,10 @@ async def list_room_participant_bindings(
     if not include_history:
         stmt = stmt.where(RoomParticipantBinding.ended_at.is_(None))
 
-    result = await session.execute(
+    result = await session.exec(
         stmt.order_by(RoomParticipantBinding.effective_at.desc())
     )
-    rows = list(result.scalars().all())
+    rows = list(result.all())
     return RoomParticipantBindingsPublic(data=rows, count=len(rows))
 
 
@@ -3221,12 +3199,12 @@ async def set_participant_binding(
         # 2, 3, and 4 are complete and validated (bindings table + binding event flow + APIs).
         try:
             agent_uuid = UUID(participant_id)
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.scalar_one_or_none()
         except ValueError:
-            agent_config_result = await session.execute(
+            agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.scalar_one_or_none()
@@ -3240,7 +3218,7 @@ async def set_participant_binding(
             status_code=400, detail="participant_type must be 'user' or 'agent'"
         )
 
-    participant_result = await session.execute(
+    participant_result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.participant_type == participant_type,
@@ -3268,7 +3246,7 @@ async def set_participant_binding(
 
     # Provider ownership rule (hard rule): only acting_user's providers can be referenced.
     if user_llm_provider_id is not None:
-        provider_result = await session.execute(
+        provider_result = await session.exec(
             select(UserLLMProvider).where(
                 UserLLMProvider.id == user_llm_provider_id,
                 UserLLMProvider.user_id == acting_user.id,
@@ -3283,7 +3261,7 @@ async def set_participant_binding(
     # Persona ownership rule: must exist in participant's library (when persona_id is set).
     if persona_id is not None:
         if participant_type == "user":
-            user_persona_result = await session.execute(
+            user_persona_result = await session.exec(
                 select(UserPersona).where(
                     UserPersona.user_id == resolved_user_id,
                     UserPersona.persona_id == persona_id,
@@ -3294,7 +3272,7 @@ async def set_participant_binding(
                     status_code=400, detail="Persona not in user's library"
                 )
         else:
-            agent_persona_result = await session.execute(
+            agent_persona_result = await session.exec(
                 select(AgentPersona).where(
                     AgentPersona.agent_id == resolved_agent_id,
                     AgentPersona.persona_id == persona_id,
@@ -3321,7 +3299,7 @@ async def set_participant_binding(
         },
     )
 
-    binding_result = await session.execute(
+    binding_result = await session.exec(
         select(RoomParticipantBinding)
         .where(
             RoomParticipantBinding.room_id == room_id,
@@ -3347,6 +3325,7 @@ async def list_room_messages(
       active_for_context: bool | None = None,
       is_pinned: bool | None = None,
       sender_type: str | None = None,
+      sender_id: UUID | None = None,
       include_internal: bool = False,
       limit: int,
       before: datetime | None,
@@ -3394,7 +3373,10 @@ async def list_room_messages(
       elif not include_internal:
           query = query.where(RoomMessage.sender_type != "agent_internal")
 
-      result = await session.execute(query)
+      if sender_id is not None:
+          query = query.where(RoomMessage.sender_id == sender_id)
+
+      result = await session.exec(query)
 
       # ┌─────────────────────────────────────────────────────────────────────┐
       # │ RESULT PROCESSING CHANGES HERE                                       │
@@ -3422,7 +3404,7 @@ async def list_room_messages(
           messages.append(msg_public)
 
       # Get total count for this room (consider if filters should apply here too)
-      count_result = await session.execute(
+      count_result = await session.exec(
           select(func.count()).select_from(RoomMessage).where(RoomMessage.room_id == room_id)
       )
       total_count = count_result.scalar()  # CHANGE: more efficient count query
@@ -3475,7 +3457,7 @@ async def send_user_message(
     )
 
     # Fetch the most recent message for this user
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage)
         .where(
             RoomMessage.room_id == room_id,
@@ -3524,7 +3506,7 @@ async def edit_message(
         HTTPException: 404 if message does not exist
     """
     # Verify message exists
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     message = result.scalar_one_or_none()
@@ -3545,7 +3527,7 @@ async def edit_message(
     )
 
     # Fetch and return updated message
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     return result.scalar_one()
@@ -3578,7 +3560,7 @@ async def pin_message(
         HTTPException: 404 if message does not exist
     """
     # Verify message exists
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     message = result.scalar_one_or_none()
@@ -3598,7 +3580,7 @@ async def pin_message(
     )
 
     # Fetch and return updated message
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     return result.scalar_one()
@@ -3629,7 +3611,7 @@ async def unpin_message(
         HTTPException: 404 if message does not exist
     """
     # Verify message exists
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     message = result.scalar_one_or_none()
@@ -3648,7 +3630,7 @@ async def unpin_message(
     )
 
     # Fetch and return updated message
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     return result.scalar_one()
@@ -3681,7 +3663,7 @@ async def toggle_message_context(
         HTTPException: 404 if message does not exist
     """
     # Verify message exists
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     message = result.scalar_one_or_none()
@@ -3701,7 +3683,7 @@ async def toggle_message_context(
     )
 
     # Fetch and return updated message
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     return result.scalar_one()
@@ -3731,7 +3713,7 @@ async def delete_message(
         HTTPException: 404 if message does not exist
     """
     # Verify message exists
-    result = await session.execute(
+    result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
     message = result.scalar_one_or_none()
@@ -4244,7 +4226,7 @@ def get_agent_configs(
      """Get paginated agent configs with filtering."""
      filters = []
      if enabled_only:
-         filters.append(AgentConfig.is_enabled == True)
+         filters.append(AgentConfig.is_enabled)
      if scope:
          filters.append(AgentConfig.scope == scope)
      if owner_id:
@@ -4323,7 +4305,7 @@ def get_user_models(
     """Get all custom models for a user."""
     filters = [
         LLMModel.created_by_user_id == user_id,
-        LLMModel.is_deleted == False,
+        not LLMModel.is_deleted,
     ]
 
     stmt = select(LLMModel).where(*filters).order_by(LLMModel.display_name)
@@ -4376,7 +4358,7 @@ def get_llm_providers(
     """Get paginated LLM providers with filtering."""
     filters = []
     if not include_deleted:
-        filters.append(LLMProvider.is_deleted == False)
+        filters.append(not LLMProvider.is_deleted)
     if provider_type is not None:
         filters.append(LLMProvider.provider_type == provider_type)
     if is_enabled is not None:
@@ -4420,8 +4402,8 @@ def get_llm_provider_model_count(
     """Get count of active models for a provider."""
     filters = [LLMModel.provider_id == provider_id]
     if not include_deleted:
-        filters.append(LLMModel.is_deleted == False)
-        filters.append(LLMModel.is_enabled == True)
+        filters.append(not LLMModel.is_deleted)
+        filters.append(LLMModel.is_enabled)
 
     stmt = select(func.count()).select_from(LLMModel).where(*filters)
     return session.exec(stmt).one()
@@ -4451,20 +4433,20 @@ def get_llm_models(
     """
     filters = []
     if not include_deleted:
-        filters.append(LLMModel.is_deleted == False)
-        filters.append(LLMProvider.is_deleted == False)
+        filters.append(not LLMModel.is_deleted)
+        filters.append(not LLMProvider.is_deleted)
 
     # Ownership filter: system models OR user's custom models
     if user_id is not None:
         filters.append(
             or_(
-                LLMModel.is_system == True,
+                LLMModel.is_system,
                 LLMModel.created_by_user_id == user_id,
             )
         )
     else:
         # No user - only system models
-        filters.append(LLMModel.is_system == True)
+        filters.append(LLMModel.is_system)
 
     if provider_id is not None:
         filters.append(LLMModel.provider_id == provider_id)
@@ -4543,7 +4525,7 @@ def get_llm_models_grouped(
     # Get providers
     provider_filters = []
     if not include_deleted:
-        provider_filters.append(LLMProvider.is_deleted == False)
+        provider_filters.append(not LLMProvider.is_deleted)
     if provider_type is not None:
         provider_filters.append(LLMProvider.provider_type == provider_type)
     if is_enabled is not None:
@@ -4561,7 +4543,7 @@ def get_llm_models_grouped(
     for provider in providers:
         model_filters = [LLMModel.provider_id == provider.id]
         if not include_deleted:
-            model_filters.append(LLMModel.is_deleted == False)
+            model_filters.append(not LLMModel.is_deleted)
         if is_enabled is not None:
             model_filters.append(LLMModel.is_enabled == is_enabled)
 
@@ -4569,12 +4551,12 @@ def get_llm_models_grouped(
         if user_id is not None:
             model_filters.append(
                 or_(
-                    LLMModel.is_system == True,
+                    LLMModel.is_system,
                     LLMModel.created_by_user_id == user_id,
                 )
             )
         else:
-            model_filters.append(LLMModel.is_system == True)
+            model_filters.append(LLMModel.is_system)
 
         model_stmt = (
             select(LLMModel)

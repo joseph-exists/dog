@@ -33,10 +33,7 @@ export type AgentConfigPublic = {
      * Display name
      */
     name: string;
-    /**
-     * Unique identifier/registry key
-     */
-    slug: string;
+    slug: (string | null);
     description?: (string | null);
     model_name?: string;
     system_prompt?: (string | null);
@@ -641,9 +638,21 @@ export type role = 'owner' | 'member';
  * Payload is event-sourced via participant.binding_changed.
  */
 export type ParticipantBindingChangeRequest = {
+    /**
+     * Type of participant (user or agent)
+     */
     participant_type: 'user' | 'agent';
+    /**
+     * Persona to bind for this participant (optional).
+     */
     persona_id?: (string | null);
+    /**
+     * Model identifier (e.g., 'openai:gpt-4o-mini').
+     */
     model_name?: (string | null);
+    /**
+     * User-owned provider config to use (must belong to current user).
+     */
     user_llm_provider_id?: (string | null);
 };
 
@@ -822,6 +831,80 @@ export type ResolvedPanelConfig = {
     source: string;
 };
 
+export type RoomAgentSettingsBundle = {
+    room_defaults: (RoomAgentSettingsPublic | null);
+    agent_overrides: Array<RoomAgentSettingsPublic>;
+    participant_type: 'user' | 'agent';
+    persona_id?: (string | null);
+    model_name?: (string | null);
+    user_llm_provider_id?: (string | null);
+};
+
+export type RoomAgentSettingsPublic = {
+    /**
+     * Null for room-wide defaults; set for per-agent overrides.
+     */
+    agent_slug?: (string | null);
+    prompt_config?: ({
+    [key: string]: unknown;
+} | null);
+    tool_policy?: ({
+    [key: string]: unknown;
+} | null);
+    rule_config?: ({
+    [key: string]: unknown;
+} | null);
+    revision?: number;
+    id: string;
+    room_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+export type RoomAgentSettingsUpdate = {
+    prompt_config?: ({
+    [key: string]: unknown;
+} | null);
+    tool_policy?: ({
+    [key: string]: unknown;
+} | null);
+    rule_config?: ({
+    [key: string]: unknown;
+} | null);
+    expected_revision?: (number | null);
+};
+
+/**
+ * Request model to attach supplemental context to a room.
+ */
+export type RoomContextItemCreate = {
+    context_type: string;
+    payload: {
+        [key: string]: unknown;
+    };
+    source: string;
+    agent_slug?: (string | null);
+    expires_at?: (string | null);
+};
+
+export type RoomContextItemPublic = {
+    id: string;
+    room_id: string;
+    agent_slug: (string | null);
+    context_type: string;
+    payload: {
+        [key: string]: unknown;
+    };
+    source: string;
+    created_at: string;
+    expires_at: (string | null);
+};
+
+export type RoomContextItemsPublic = {
+    data: Array<RoomContextItemPublic>;
+    count: number;
+};
+
 /**
  * Properties required when creating a room via API.
  */
@@ -968,6 +1051,63 @@ export type RoomPublic = {
     creator_id: string;
     created_at: string;
     last_activity: string;
+};
+
+/**
+ * Request model to advance the room's shared story run.
+ */
+export type RoomRuntimeAdvanceRequest = {
+    choice_id: string;
+    expected_revision?: (number | null);
+};
+
+/**
+ * Read model for the room's shared story run, suitable for UI and agent projection.
+ *
+ * This is intentionally a projection, not a dump of the full event log.
+ */
+export type RoomRuntimePublic = {
+    room_id: string;
+    story_id: string;
+    story_version: number;
+    active_progress_id: string;
+    revision: number;
+    current_node_id: (string | null);
+    head_choice_id: (string | null);
+    head_version: number;
+    story_state: ({
+    [key: string]: unknown;
+} | null);
+    updated_at: string;
+    current_node?: (StoryNodePublic | null);
+    node_chain?: Array<StoryNodePublic>;
+    available_choices?: Array<NodeChoicePublic>;
+};
+
+/**
+ * Request model to reset the room's shared story run to the start node.
+ */
+export type RoomRuntimeResetRequest = {
+    expected_revision?: (number | null);
+};
+
+/**
+ * Request model to rewind the room's shared story run to a prior choice.
+ */
+export type RoomRuntimeRewindRequest = {
+    target_choice_id: string;
+    expected_revision?: (number | null);
+};
+
+/**
+ * Request model to initialize (or re-initialize) a room's shared story run.
+ *
+ * A room run is backed by an underlying UserStoryProgress record.
+ */
+export type RoomRuntimeStartRequest = {
+    user_persona_id: string;
+    story_version?: (number | null);
+    expected_revision?: (number | null);
 };
 
 /**
@@ -1717,6 +1857,12 @@ export type AgentsDeleteAgentData = {
 
 export type AgentsDeleteAgentResponse = (Message);
 
+export type AgentsGetAgentBySlugData = {
+    slug: string;
+};
+
+export type AgentsGetAgentBySlugResponse = (AgentConfigPublic);
+
 export type AgentsGetMyAgentSettingsData = {
     agentId: string;
 };
@@ -2263,6 +2409,65 @@ export type QualityTraitLinksDeleteQualityTraitLinkData = {
 
 export type QualityTraitLinksDeleteQualityTraitLinkResponse = (Message);
 
+export type RoomAgentSettingsReadRoomAgentSettingsData = {
+    roomId: string;
+};
+
+export type RoomAgentSettingsReadRoomAgentSettingsResponse = (RoomAgentSettingsBundle);
+
+export type RoomAgentSettingsPutRoomAgentSettingsData = {
+    requestBody: RoomAgentSettingsUpdate;
+    roomId: string;
+};
+
+export type RoomAgentSettingsPutRoomAgentSettingsResponse = (RoomAgentSettingsPublic);
+
+export type RoomAgentSettingsPutRoomAgentSettingsOverrideData = {
+    agentSlug: string;
+    requestBody: RoomAgentSettingsUpdate;
+    roomId: string;
+};
+
+export type RoomAgentSettingsPutRoomAgentSettingsOverrideResponse = (RoomAgentSettingsPublic);
+
+export type RoomAgentSettingsDeleteRoomAgentSettingsData = {
+    agentSlug: string;
+    roomId: string;
+};
+
+export type RoomAgentSettingsDeleteRoomAgentSettingsResponse = (unknown);
+
+export type RoomContextsListRoomContextsData = {
+    agentSlug?: (string | null);
+    roomId: string;
+};
+
+export type RoomContextsListRoomContextsResponse = (RoomContextItemsPublic);
+
+export type RoomContextsCreateRoomContextData = {
+    replaceByType?: boolean;
+    requestBody: RoomContextItemCreate;
+    roomId: string;
+};
+
+export type RoomContextsCreateRoomContextResponse = (RoomContextItemPublic);
+
+export type RoomContextsDeleteRoomContextData = {
+    contextId: string;
+    roomId: string;
+};
+
+export type RoomContextsDeleteRoomContextResponse = (unknown);
+
+export type RoomContextsUpsertRoomContextData = {
+    contextId: string;
+    replaceByType?: boolean;
+    requestBody: RoomContextItemCreate;
+    roomId: string;
+};
+
+export type RoomContextsUpsertRoomContextResponse = (RoomContextItemPublic);
+
 export type RoomPanelsGetResolvedPanelsData = {
     roomId: string;
 };
@@ -2314,6 +2519,40 @@ export type RoomParticipantBindingsPutParticipantBindingData = {
 };
 
 export type RoomParticipantBindingsPutParticipantBindingResponse = (RoomParticipantBindingPublic);
+
+export type RoomRuntimeReadRoomRuntimeData = {
+    roomId: string;
+};
+
+export type RoomRuntimeReadRoomRuntimeResponse = (RoomRuntimePublic);
+
+export type RoomRuntimePutRoomRuntimeData = {
+    requestBody: RoomRuntimeStartRequest;
+    roomId: string;
+};
+
+export type RoomRuntimePutRoomRuntimeResponse = (RoomRuntimePublic);
+
+export type RoomRuntimeAdvanceRoomRuntimeRouteData = {
+    requestBody: RoomRuntimeAdvanceRequest;
+    roomId: string;
+};
+
+export type RoomRuntimeAdvanceRoomRuntimeRouteResponse = (RoomRuntimePublic);
+
+export type RoomRuntimeRewindRoomRuntimeRouteData = {
+    requestBody: RoomRuntimeRewindRequest;
+    roomId: string;
+};
+
+export type RoomRuntimeRewindRoomRuntimeRouteResponse = (RoomRuntimePublic);
+
+export type RoomRuntimeResetRoomRuntimeRouteData = {
+    requestBody: RoomRuntimeResetRequest;
+    roomId: string;
+};
+
+export type RoomRuntimeResetRoomRuntimeRouteResponse = (RoomRuntimePublic);
 
 export type RoomsCreateNewRoomData = {
     requestBody: RoomCreate;

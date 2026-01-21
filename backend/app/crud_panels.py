@@ -7,8 +7,8 @@ All operations are async to match the codebase patterns.
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
     PanelPreset,
@@ -42,8 +42,8 @@ async def get_room_panel_defaults(
     statement = select(RoomPanelDefaults).where(
         RoomPanelDefaults.room_id == room_id
     )
-    result = await session.execute(statement)
-    return result.scalar_one_or_none()
+    result = await session.exec(statement)
+    return result.one_or_none()
 
 
 async def set_room_panel_defaults(
@@ -158,8 +158,8 @@ async def get_user_panel_defaults(
     statement = select(UserPanelDefaults).where(
         UserPanelDefaults.user_id == user_id
     )
-    result = await session.execute(statement)
-    return result.scalar_one_or_none()
+    result = await session.exec(statement)
+    return result.one_or_none()
 
 
 async def create_user_panel_defaults(

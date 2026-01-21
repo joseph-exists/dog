@@ -9,9 +9,9 @@ Provides async Redis client for:
 Pattern follows app/core/db.py for consistency.
 """
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
-from redis.asyncio import Redis, ConnectionPool
+from redis.asyncio import ConnectionPool, Redis
 
 from app.core.config import settings
 

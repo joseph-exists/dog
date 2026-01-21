@@ -496,4 +496,41 @@ This section records what has been implemented so far in the repo.
 
 ### Surface 2 — Pending
 
-- Allowlisted `context_type` rules beyond length/size validation
+### Surface 2 — Completed: Allowlisted context_type rules
+
+- `context_type` must begin with one of:
+  - `upload.`
+  - `note.`
+  - `system.`
+  - `shadow.`
+  (enforced in `backend/app/crud.py`)
+
+### Surface 3 — Completed: Models + API + events (baseline)
+
+- Models:
+  - `RoomAgentSettings`
+  - `RoomAgentSettingsPublic`
+  - `RoomAgentSettingsUpdate`
+  - `RoomAgentSettingsBundle`
+  (all in `backend/app/models.py`)
+- Migration:
+  - `backend/app/alembic/versions/8f2d2d7b3f44_add_room_agent_settings.py`
+- CRUD:
+  - `list_room_agent_settings(...)`
+  - `upsert_room_agent_settings(...)`
+  - `delete_room_agent_settings_override(...)`
+  (all in `backend/app/crud.py`)
+- Routes:
+  - `GET /rooms/{room_id}/agent-settings`
+  - `PUT /rooms/{room_id}/agent-settings` (room defaults)
+  - `PUT /rooms/{room_id}/agents/{agent_slug}/agent-settings` (override)
+  - `DELETE /rooms/{room_id}/agents/{agent_slug}/agent-settings`
+  (implemented in `backend/app/api/routes/room_agent_settings.py`, wired in `backend/app/api/main.py`)
+- Events:
+  - `room.agent_settings.updated`
+  - `room.agent_settings.deleted`
+  (emitted in `backend/app/crud.py`, handled as no-op projection updates in `backend/app/services/event_emitter.py`)
+
+### Surface 3 — Pending
+
+- Enforcement logic: apply room agent settings to prompt/tool configuration at instantiation time.

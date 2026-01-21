@@ -8,8 +8,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Page
 
@@ -24,8 +24,8 @@ async def get_page_by_entity(
         Page.entity_type == entity_type,
         Page.entity_id == entity_id,
     )
-    result = await session.execute(statement)
-    return result.scalar_one_or_none()
+    result = await session.exec(statement)
+    return result.one_or_none()
 
 
 async def get_page_by_id(session: AsyncSession, page_id: UUID) -> Page | None:

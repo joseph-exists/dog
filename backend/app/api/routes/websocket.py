@@ -14,16 +14,16 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 
-from app.core.db import async_session_maker
-from app.api.deps import get_current_user_from_token
+from app.core.db import get_async_session
+from app.api.deps import get_current_user_from_token, get_async_session_with_transaction
 from app.models import User
 from app.services.websocket_manager import connection_manager
 from app.services.event_replay import replay_events_since
 from app.services.agent_runner import run_agents_for_message
 from app.services.event_emitter import emit_event
-from app.crud import check_room_membership, send_user_message
+from app.crud import check_room_membership
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ async def websocket_room_session(
         return
 
     # Get database session
-    async with async_session_maker() as session:
+    async for session in get_async_session():
         logger.debug(f"[WS] Got DB session for room {room_id}")
 
         # Check room membership
@@ -154,6 +154,7 @@ async def websocket_room_session(
         finally:
             logger.info(f"[WS] Cleaning up connection for room {room_id}")
             await connection_manager.disconnect(websocket)
+        break
 
 @router.websocket("/ws/stories/{story_id}")
 async def websocket_story_session(
@@ -198,7 +199,7 @@ async def websocket_story_session(
         return
 
     # Get database session
-    async with async_session_maker() as session:
+    async for session in get_async_session():
         # Verify user has access to this story
         # (Check via UserStoryProgress or Story.creator_id)
         from app import crud
@@ -206,7 +207,7 @@ async def websocket_story_session(
         from app.models import UserStoryProgress, Story
 
         # Check if user has progress for this story (any persona)
-        has_access = await session.execute(
+        has_access = await session.exec(
             select(UserStoryProgress)
             .join(Story)
             .where(
@@ -260,13 +261,13 @@ async def websocket_story_session(
             from app.models import UserStoryProgress
             from sqlmodel import select
 
-            progress = await session.execute(
+            progress = await session.exec(
                 select(UserStoryProgress).where(
                     UserStoryProgress.user_persona_id == UUID(user_persona_id),
                     UserStoryProgress.story_id == story_id,
                 )
             )
-            current_progress = progress.scalar_one_or_none()
+            current_progress = progress.one_or_none()
 
             # If head_version changed, send timeline sync
             if current_progress and last_head_version is not None:
@@ -346,6 +347,7 @@ async def websocket_story_session(
             await pubsub.unsubscribe(channel)
             await pubsub.close()
             logger.info(f"[WS_STORY] Cleanup complete for story {story_id}")
+        break
 
 async def handle_user_message(
     websocket: WebSocket,
@@ -365,29 +367,29 @@ async def handle_user_message(
     """
     try:
         # Create new session with transaction for this message
-        async with async_session_maker() as session:
-            async with session.begin():
-                # Emit user message event
-                await emit_event(
-                    session=session,
-                    room_id=room_id,
-                    event_type="room_message.user",
-                    payload={
-                        "sender_id": str(user.id),
-                        "content": content,
-                    },
-                )
+        async for session in get_async_session_with_transaction():
+            # Emit user message event
+            await emit_event(
+                session=session,
+                room_id=room_id,
+                event_type="room_message.user",
+                payload={
+                    "sender_id": str(user.id),
+                    "content": content,
+                },
+            )
 
-                # Trigger agents (within same transaction)
-                # Pass user_id so agents can use the user's API credentials
-                await run_agents_for_message(
-                    room_id=room_id,
-                    trigger_message=content,
-                    session=session,
-                    user_id=user.id,
-                )
+            # Trigger agents (within same transaction)
+            # Pass user_id so agents can use the user's API credentials
+            await run_agents_for_message(
+                room_id=room_id,
+                trigger_message=content,
+                session=session,
+                user_id=user.id,
+            )
 
-                # Transaction commits here
+            # Transaction commits here
+            break
 
     except Exception as e:
         logger.error(f"Error handling user message: {e}")

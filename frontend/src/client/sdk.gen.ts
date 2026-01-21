@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AgentPersonasReadAgentPersonasData, AgentPersonasReadAgentPersonasResponse, AgentPersonasCreateAgentPersonaData, AgentPersonasCreateAgentPersonaResponse, AgentPersonasReadAgentPersonaData, AgentPersonasReadAgentPersonaResponse, AgentPersonasUpdateAgentPersonaData, AgentPersonasUpdateAgentPersonaResponse, AgentPersonasDeleteAgentPersonaData, AgentPersonasDeleteAgentPersonaResponse, AgentsListAgentsData, AgentsListAgentsResponse, AgentsCreateAgentData, AgentsCreateAgentResponse, AgentsListAvailableAgentsData, AgentsListAvailableAgentsResponse, AgentsGetAgentData, AgentsGetAgentResponse, AgentsUpdateAgentData, AgentsUpdateAgentResponse, AgentsDeleteAgentData, AgentsDeleteAgentResponse, AgentsGetMyAgentSettingsData, AgentsGetMyAgentSettingsResponse, AgentsUpdateMyAgentSettingsData, AgentsUpdateMyAgentSettingsResponse, AgentsDeleteMyAgentSettingsData, AgentsDeleteMyAgentSettingsResponse, ArchetypesReadArchetypesData, ArchetypesReadArchetypesResponse, ArchetypesCreateArchetypeData, ArchetypesCreateArchetypeResponse, ArchetypesReadArchetypeData, ArchetypesReadArchetypeResponse, ArchetypesUpdateArchetypeData, ArchetypesUpdateArchetypeResponse, ArchetypesDeleteArchetypeData, ArchetypesDeleteArchetypeResponse, CatalogReadCatalogData, CatalogReadCatalogResponse, CatalogReadCatalogStoryData, CatalogReadCatalogStoryResponse, CatalogReadCatalogStoryNodesData, CatalogReadCatalogStoryNodesResponse, CatalogReadCatalogStoryRequirementsData, CatalogReadCatalogStoryRequirementsResponse, EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LlmCatalogListProvidersData, LlmCatalogListProvidersResponse, LlmCatalogGetProviderData, LlmCatalogGetProviderResponse, LlmCatalogListProviderModelsData, LlmCatalogListProviderModelsResponse, LlmCatalogCreateCustomModelData, LlmCatalogCreateCustomModelResponse, LlmCatalogListCustomModelsData, LlmCatalogListCustomModelsResponse, LlmCatalogListModelsData, LlmCatalogListModelsResponse, LlmCatalogListModelsGroupedData, LlmCatalogListModelsGroupedResponse, LlmCatalogGetModelData, LlmCatalogGetModelResponse, LlmProvidersListProvidersData, LlmProvidersListProvidersResponse, LlmProvidersCreateProviderData, LlmProvidersCreateProviderResponse, LlmProvidersGetProviderData, LlmProvidersGetProviderResponse, LlmProvidersUpdateProviderData, LlmProvidersUpdateProviderResponse, LlmProvidersDeleteProviderData, LlmProvidersDeleteProviderResponse, LlmProvidersTestProviderData, LlmProvidersTestProviderResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NodeChoicesReadNodeChoicesData, NodeChoicesReadNodeChoicesResponse, NodeChoicesCreateNodeChoiceData, NodeChoicesCreateNodeChoiceResponse, NodeChoicesReadNodeChoiceData, NodeChoicesReadNodeChoiceResponse, NodeChoicesUpdateNodeChoiceData, NodeChoicesUpdateNodeChoiceResponse, NodeChoicesDeleteNodeChoiceData, NodeChoicesDeleteNodeChoiceResponse, PagesGetPageLayoutData, PagesGetPageLayoutResponse, PagesUpsertPageLayoutData, PagesUpsertPageLayoutResponse, PagesUpdatePageData, PagesUpdatePageResponse, PagesDeletePageData, PagesDeletePageResponse, PersonaEventsProcessPersonaEventData, PersonaEventsProcessPersonaEventResponse, PersonaQualitiesReadPersonaQualitiesData, PersonaQualitiesReadPersonaQualitiesResponse, PersonaQualitiesAddQualityToPersonaData, PersonaQualitiesAddQualityToPersonaResponse, PersonaQualitiesRemoveQualityFromPersonaData, PersonaQualitiesRemoveQualityFromPersonaResponse, PersonasReadPersonasData, PersonasReadPersonasResponse, PersonasCreatePersonaData, PersonasCreatePersonaResponse, PersonasReadPersonaData, PersonasReadPersonaResponse, PersonasUpdatePersonaData, PersonasUpdatePersonaResponse, PersonasDeletePersonaData, PersonasDeletePersonaResponse, PersonasCreatePersonaFromArchetypeData, PersonasCreatePersonaFromArchetypeResponse, PresetsListPresetsResponse, PresetsGetPresetData, PresetsGetPresetResponse, PrivateCreateUserData, PrivateCreateUserResponse, QualitiesReadQualitiesData, QualitiesReadQualitiesResponse, QualitiesCreateQualityData, QualitiesCreateQualityResponse, QualitiesReadQualityData, QualitiesReadQualityResponse, QualitiesUpdateQualityData, QualitiesUpdateQualityResponse, QualitiesDeleteQualityData, QualitiesDeleteQualityResponse, QualityTraitLinksReadQualityTraitsData, QualityTraitLinksReadQualityTraitsResponse, QualityTraitLinksReadTraitQualitiesData, QualityTraitLinksReadTraitQualitiesResponse, QualityTraitLinksCreateQualityTraitLinkData, QualityTraitLinksCreateQualityTraitLinkResponse, QualityTraitLinksDeleteQualityTraitLinkData, QualityTraitLinksDeleteQualityTraitLinkResponse, RoomPanelsGetResolvedPanelsData, RoomPanelsGetResolvedPanelsResponse, RoomPanelsGetRoomDefaultsData, RoomPanelsGetRoomDefaultsResponse, RoomPanelsUpdateRoomDefaultsData, RoomPanelsUpdateRoomDefaultsResponse, RoomPanelsGetMyPanelConfigData, RoomPanelsGetMyPanelConfigResponse, RoomPanelsUpdateMyPanelConfigData, RoomPanelsUpdateMyPanelConfigResponse, RoomParticipantBindingsReadRoomBindingsData, RoomParticipantBindingsReadRoomBindingsResponse, RoomParticipantBindingsPutParticipantBindingData, RoomParticipantBindingsPutParticipantBindingResponse, RoomsCreateNewRoomData, RoomsCreateNewRoomResponse, RoomsListUserRoomsData, RoomsListUserRoomsResponse, RoomsGetRoomData, RoomsGetRoomResponse, RoomsUpdateRoomData, RoomsUpdateRoomResponse, RoomsAddRoomParticipantData, RoomsAddRoomParticipantResponse, RoomsListRoomParticipantsData, RoomsListRoomParticipantsResponse, RoomsGetRoomsForStoryData, RoomsGetRoomsForStoryResponse, RoomsRemoveRoomParticipantData, RoomsRemoveRoomParticipantResponse, RoomsChangeRoomParticipantRoleData, RoomsChangeRoomParticipantRoleResponse, RoomsSendMessageData, RoomsSendMessageResponse, RoomsListMessagesData, RoomsListMessagesResponse, RoomsEditMessageEndpointData, RoomsEditMessageEndpointResponse, RoomsDeleteMessageEndpointData, RoomsDeleteMessageEndpointResponse, RoomsPinMessageEndpointData, RoomsPinMessageEndpointResponse, RoomsUnpinMessageEndpointData, RoomsUnpinMessageEndpointResponse, RoomsToggleMessageContextEndpointData, RoomsToggleMessageContextEndpointResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, StoriesCreateStoryData, StoriesCreateStoryResponse, StoriesReadStoryData, StoriesReadStoryResponse, StoriesUpdateStoryData, StoriesUpdateStoryResponse, StoriesDeleteStoryData, StoriesDeleteStoryResponse, StoriesValidateStoryData, StoriesValidateStoryResponse, StoriesGetStoryTreeData, StoriesGetStoryTreeResponse, StoriesGetStoryStartNodeData, StoriesGetStoryStartNodeResponse, StoriesPublishStoryData, StoriesPublishStoryResponse, StoriesUnpublishStoryData, StoriesUnpublishStoryResponse, StoriesCreateNewStoryVersionData, StoriesCreateNewStoryVersionResponse, StoriesReadStoryRequirementsData, StoriesReadStoryRequirementsResponse, StoriesCreateStoryRequirementData, StoriesCreateStoryRequirementResponse, StoriesDeleteStoryRequirementData, StoriesDeleteStoryRequirementResponse, StoriesReadStoryStateSchemaData, StoriesReadStoryStateSchemaResponse, StoriesCreateStoryStateVariableData, StoriesCreateStoryStateVariableResponse, StoriesUpdateStoryStateVariableData, StoriesUpdateStoryStateVariableResponse, StoriesDeleteStoryStateVariableData, StoriesDeleteStoryStateVariableResponse, StoriesValidateStoryStateSchemaData, StoriesValidateStoryStateSchemaResponse, StorynodesReadStorynodesData, StorynodesReadStorynodesResponse, StorynodesCreateStorynodeData, StorynodesCreateStorynodeResponse, StorynodesReadStorynodeData, StorynodesReadStorynodeResponse, StorynodesUpdateStorynodeData, StorynodesUpdateStorynodeResponse, StorynodesDeleteStorynodeData, StorynodesDeleteStorynodeResponse, StorynodesReadNodeChoicesData, StorynodesReadNodeChoicesResponse, StorynodesCreateNodeChoiceFromNodeData, StorynodesCreateNodeChoiceFromNodeResponse, TraitConflictsReadTraitConflictGroupsData, TraitConflictsReadTraitConflictGroupsResponse, TraitConflictsCreateTraitConflictGroupData, TraitConflictsCreateTraitConflictGroupResponse, TraitConflictsReadTraitConflictGroupData, TraitConflictsReadTraitConflictGroupResponse, TraitConflictsUpdateTraitConflictGroupData, TraitConflictsUpdateTraitConflictGroupResponse, TraitConflictsDeleteTraitConflictGroupData, TraitConflictsDeleteTraitConflictGroupResponse, TraitConflictsReadConflictGroupMembersData, TraitConflictsReadConflictGroupMembersResponse, TraitConflictsAddTraitToConflictGroupData, TraitConflictsAddTraitToConflictGroupResponse, TraitConflictsRemoveTraitFromConflictGroupData, TraitConflictsRemoveTraitFromConflictGroupResponse, TraitConflictsCheckPersonaTraitConflictsData, TraitConflictsCheckPersonaTraitConflictsResponse, TraitConflictsCheckArchetypeTraitConflictsData, TraitConflictsCheckArchetypeTraitConflictsResponse, TraitConflictsGetConflictGroupsByTraitData, TraitConflictsGetConflictGroupsByTraitResponse, TraitConflictsValidateConflictGroupData, TraitConflictsValidateConflictGroupResponse, TraitsReadTraitsData, TraitsReadTraitsResponse, TraitsCreateTraitData, TraitsCreateTraitResponse, TraitsReadTraitData, TraitsReadTraitResponse, TraitsUpdateTraitData, TraitsUpdateTraitResponse, TraitsDeleteTraitData, TraitsDeleteTraitResponse, UserPanelsGetMyPanelDefaultsResponse, UserPanelsUpdateMyPanelDefaultsData, UserPanelsUpdateMyPanelDefaultsResponse, UserPersonasReadUserPersonasData, UserPersonasReadUserPersonasResponse, UserPersonasCreateUserPersonaData, UserPersonasCreateUserPersonaResponse, UserPersonasReadUserPersonaData, UserPersonasReadUserPersonaResponse, UserPersonasUpdateUserPersonaData, UserPersonasUpdateUserPersonaResponse, UserPersonasDeleteUserPersonaData, UserPersonasDeleteUserPersonaResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UserStoryProgressReadUserStoryProgressesData, UserStoryProgressReadUserStoryProgressesResponse, UserStoryProgressReadUserStoryProgressData, UserStoryProgressReadUserStoryProgressResponse, UserStoryProgressCreateUserStoryProgressData, UserStoryProgressCreateUserStoryProgressResponse, UserStoryProgressUpdateUserStoryProgressData, UserStoryProgressUpdateUserStoryProgressResponse, UserStoryProgressGetCurrentNodeData, UserStoryProgressGetCurrentNodeResponse, UserStoryProgressMakeStoryChoiceData, UserStoryProgressMakeStoryChoiceResponse, UserStoryProgressValidateStoryStateData, UserStoryProgressValidateStoryStateResponse, UserStoryProgressUndoStoryChoiceData, UserStoryProgressUndoStoryChoiceResponse, UserStoryProgressJumpStoryHeadData, UserStoryProgressJumpStoryHeadResponse, UserStoryProgressReadStoryTimelineData, UserStoryProgressReadStoryTimelineResponse, UserStoryProgressReadStorySnapshotsData, UserStoryProgressReadStorySnapshotsResponse, UserStoryProgressCreateStorySnapshotData, UserStoryProgressCreateStorySnapshotResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AgentPersonasReadAgentPersonasData, AgentPersonasReadAgentPersonasResponse, AgentPersonasCreateAgentPersonaData, AgentPersonasCreateAgentPersonaResponse, AgentPersonasReadAgentPersonaData, AgentPersonasReadAgentPersonaResponse, AgentPersonasUpdateAgentPersonaData, AgentPersonasUpdateAgentPersonaResponse, AgentPersonasDeleteAgentPersonaData, AgentPersonasDeleteAgentPersonaResponse, AgentsListAgentsData, AgentsListAgentsResponse, AgentsCreateAgentData, AgentsCreateAgentResponse, AgentsListAvailableAgentsData, AgentsListAvailableAgentsResponse, AgentsGetAgentData, AgentsGetAgentResponse, AgentsUpdateAgentData, AgentsUpdateAgentResponse, AgentsDeleteAgentData, AgentsDeleteAgentResponse, AgentsGetAgentBySlugData, AgentsGetAgentBySlugResponse, AgentsGetMyAgentSettingsData, AgentsGetMyAgentSettingsResponse, AgentsUpdateMyAgentSettingsData, AgentsUpdateMyAgentSettingsResponse, AgentsDeleteMyAgentSettingsData, AgentsDeleteMyAgentSettingsResponse, ArchetypesReadArchetypesData, ArchetypesReadArchetypesResponse, ArchetypesCreateArchetypeData, ArchetypesCreateArchetypeResponse, ArchetypesReadArchetypeData, ArchetypesReadArchetypeResponse, ArchetypesUpdateArchetypeData, ArchetypesUpdateArchetypeResponse, ArchetypesDeleteArchetypeData, ArchetypesDeleteArchetypeResponse, CatalogReadCatalogData, CatalogReadCatalogResponse, CatalogReadCatalogStoryData, CatalogReadCatalogStoryResponse, CatalogReadCatalogStoryNodesData, CatalogReadCatalogStoryNodesResponse, CatalogReadCatalogStoryRequirementsData, CatalogReadCatalogStoryRequirementsResponse, EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LlmCatalogListProvidersData, LlmCatalogListProvidersResponse, LlmCatalogGetProviderData, LlmCatalogGetProviderResponse, LlmCatalogListProviderModelsData, LlmCatalogListProviderModelsResponse, LlmCatalogCreateCustomModelData, LlmCatalogCreateCustomModelResponse, LlmCatalogListCustomModelsData, LlmCatalogListCustomModelsResponse, LlmCatalogListModelsData, LlmCatalogListModelsResponse, LlmCatalogListModelsGroupedData, LlmCatalogListModelsGroupedResponse, LlmCatalogGetModelData, LlmCatalogGetModelResponse, LlmProvidersListProvidersData, LlmProvidersListProvidersResponse, LlmProvidersCreateProviderData, LlmProvidersCreateProviderResponse, LlmProvidersGetProviderData, LlmProvidersGetProviderResponse, LlmProvidersUpdateProviderData, LlmProvidersUpdateProviderResponse, LlmProvidersDeleteProviderData, LlmProvidersDeleteProviderResponse, LlmProvidersTestProviderData, LlmProvidersTestProviderResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NodeChoicesReadNodeChoicesData, NodeChoicesReadNodeChoicesResponse, NodeChoicesCreateNodeChoiceData, NodeChoicesCreateNodeChoiceResponse, NodeChoicesReadNodeChoiceData, NodeChoicesReadNodeChoiceResponse, NodeChoicesUpdateNodeChoiceData, NodeChoicesUpdateNodeChoiceResponse, NodeChoicesDeleteNodeChoiceData, NodeChoicesDeleteNodeChoiceResponse, PagesGetPageLayoutData, PagesGetPageLayoutResponse, PagesUpsertPageLayoutData, PagesUpsertPageLayoutResponse, PagesUpdatePageData, PagesUpdatePageResponse, PagesDeletePageData, PagesDeletePageResponse, PersonaEventsProcessPersonaEventData, PersonaEventsProcessPersonaEventResponse, PersonaQualitiesReadPersonaQualitiesData, PersonaQualitiesReadPersonaQualitiesResponse, PersonaQualitiesAddQualityToPersonaData, PersonaQualitiesAddQualityToPersonaResponse, PersonaQualitiesRemoveQualityFromPersonaData, PersonaQualitiesRemoveQualityFromPersonaResponse, PersonasReadPersonasData, PersonasReadPersonasResponse, PersonasCreatePersonaData, PersonasCreatePersonaResponse, PersonasReadPersonaData, PersonasReadPersonaResponse, PersonasUpdatePersonaData, PersonasUpdatePersonaResponse, PersonasDeletePersonaData, PersonasDeletePersonaResponse, PersonasCreatePersonaFromArchetypeData, PersonasCreatePersonaFromArchetypeResponse, PresetsListPresetsResponse, PresetsGetPresetData, PresetsGetPresetResponse, PrivateCreateUserData, PrivateCreateUserResponse, QualitiesReadQualitiesData, QualitiesReadQualitiesResponse, QualitiesCreateQualityData, QualitiesCreateQualityResponse, QualitiesReadQualityData, QualitiesReadQualityResponse, QualitiesUpdateQualityData, QualitiesUpdateQualityResponse, QualitiesDeleteQualityData, QualitiesDeleteQualityResponse, QualityTraitLinksReadQualityTraitsData, QualityTraitLinksReadQualityTraitsResponse, QualityTraitLinksReadTraitQualitiesData, QualityTraitLinksReadTraitQualitiesResponse, QualityTraitLinksCreateQualityTraitLinkData, QualityTraitLinksCreateQualityTraitLinkResponse, QualityTraitLinksDeleteQualityTraitLinkData, QualityTraitLinksDeleteQualityTraitLinkResponse, RoomAgentSettingsReadRoomAgentSettingsData, RoomAgentSettingsReadRoomAgentSettingsResponse, RoomAgentSettingsPutRoomAgentSettingsData, RoomAgentSettingsPutRoomAgentSettingsResponse, RoomAgentSettingsPutRoomAgentSettingsOverrideData, RoomAgentSettingsPutRoomAgentSettingsOverrideResponse, RoomAgentSettingsDeleteRoomAgentSettingsData, RoomAgentSettingsDeleteRoomAgentSettingsResponse, RoomContextsListRoomContextsData, RoomContextsListRoomContextsResponse, RoomContextsCreateRoomContextData, RoomContextsCreateRoomContextResponse, RoomContextsDeleteRoomContextData, RoomContextsDeleteRoomContextResponse, RoomContextsUpsertRoomContextData, RoomContextsUpsertRoomContextResponse, RoomPanelsGetResolvedPanelsData, RoomPanelsGetResolvedPanelsResponse, RoomPanelsGetRoomDefaultsData, RoomPanelsGetRoomDefaultsResponse, RoomPanelsUpdateRoomDefaultsData, RoomPanelsUpdateRoomDefaultsResponse, RoomPanelsGetMyPanelConfigData, RoomPanelsGetMyPanelConfigResponse, RoomPanelsUpdateMyPanelConfigData, RoomPanelsUpdateMyPanelConfigResponse, RoomParticipantBindingsReadRoomBindingsData, RoomParticipantBindingsReadRoomBindingsResponse, RoomParticipantBindingsPutParticipantBindingData, RoomParticipantBindingsPutParticipantBindingResponse, RoomRuntimeReadRoomRuntimeData, RoomRuntimeReadRoomRuntimeResponse, RoomRuntimePutRoomRuntimeData, RoomRuntimePutRoomRuntimeResponse, RoomRuntimeAdvanceRoomRuntimeRouteData, RoomRuntimeAdvanceRoomRuntimeRouteResponse, RoomRuntimeRewindRoomRuntimeRouteData, RoomRuntimeRewindRoomRuntimeRouteResponse, RoomRuntimeResetRoomRuntimeRouteData, RoomRuntimeResetRoomRuntimeRouteResponse, RoomsCreateNewRoomData, RoomsCreateNewRoomResponse, RoomsListUserRoomsData, RoomsListUserRoomsResponse, RoomsGetRoomData, RoomsGetRoomResponse, RoomsUpdateRoomData, RoomsUpdateRoomResponse, RoomsAddRoomParticipantData, RoomsAddRoomParticipantResponse, RoomsListRoomParticipantsData, RoomsListRoomParticipantsResponse, RoomsGetRoomsForStoryData, RoomsGetRoomsForStoryResponse, RoomsRemoveRoomParticipantData, RoomsRemoveRoomParticipantResponse, RoomsChangeRoomParticipantRoleData, RoomsChangeRoomParticipantRoleResponse, RoomsSendMessageData, RoomsSendMessageResponse, RoomsListMessagesData, RoomsListMessagesResponse, RoomsEditMessageEndpointData, RoomsEditMessageEndpointResponse, RoomsDeleteMessageEndpointData, RoomsDeleteMessageEndpointResponse, RoomsPinMessageEndpointData, RoomsPinMessageEndpointResponse, RoomsUnpinMessageEndpointData, RoomsUnpinMessageEndpointResponse, RoomsToggleMessageContextEndpointData, RoomsToggleMessageContextEndpointResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, StoriesCreateStoryData, StoriesCreateStoryResponse, StoriesReadStoryData, StoriesReadStoryResponse, StoriesUpdateStoryData, StoriesUpdateStoryResponse, StoriesDeleteStoryData, StoriesDeleteStoryResponse, StoriesValidateStoryData, StoriesValidateStoryResponse, StoriesGetStoryTreeData, StoriesGetStoryTreeResponse, StoriesGetStoryStartNodeData, StoriesGetStoryStartNodeResponse, StoriesPublishStoryData, StoriesPublishStoryResponse, StoriesUnpublishStoryData, StoriesUnpublishStoryResponse, StoriesCreateNewStoryVersionData, StoriesCreateNewStoryVersionResponse, StoriesReadStoryRequirementsData, StoriesReadStoryRequirementsResponse, StoriesCreateStoryRequirementData, StoriesCreateStoryRequirementResponse, StoriesDeleteStoryRequirementData, StoriesDeleteStoryRequirementResponse, StoriesReadStoryStateSchemaData, StoriesReadStoryStateSchemaResponse, StoriesCreateStoryStateVariableData, StoriesCreateStoryStateVariableResponse, StoriesUpdateStoryStateVariableData, StoriesUpdateStoryStateVariableResponse, StoriesDeleteStoryStateVariableData, StoriesDeleteStoryStateVariableResponse, StoriesValidateStoryStateSchemaData, StoriesValidateStoryStateSchemaResponse, StorynodesReadStorynodesData, StorynodesReadStorynodesResponse, StorynodesCreateStorynodeData, StorynodesCreateStorynodeResponse, StorynodesReadStorynodeData, StorynodesReadStorynodeResponse, StorynodesUpdateStorynodeData, StorynodesUpdateStorynodeResponse, StorynodesDeleteStorynodeData, StorynodesDeleteStorynodeResponse, StorynodesReadNodeChoicesData, StorynodesReadNodeChoicesResponse, StorynodesCreateNodeChoiceFromNodeData, StorynodesCreateNodeChoiceFromNodeResponse, TraitConflictsReadTraitConflictGroupsData, TraitConflictsReadTraitConflictGroupsResponse, TraitConflictsCreateTraitConflictGroupData, TraitConflictsCreateTraitConflictGroupResponse, TraitConflictsReadTraitConflictGroupData, TraitConflictsReadTraitConflictGroupResponse, TraitConflictsUpdateTraitConflictGroupData, TraitConflictsUpdateTraitConflictGroupResponse, TraitConflictsDeleteTraitConflictGroupData, TraitConflictsDeleteTraitConflictGroupResponse, TraitConflictsReadConflictGroupMembersData, TraitConflictsReadConflictGroupMembersResponse, TraitConflictsAddTraitToConflictGroupData, TraitConflictsAddTraitToConflictGroupResponse, TraitConflictsRemoveTraitFromConflictGroupData, TraitConflictsRemoveTraitFromConflictGroupResponse, TraitConflictsCheckPersonaTraitConflictsData, TraitConflictsCheckPersonaTraitConflictsResponse, TraitConflictsCheckArchetypeTraitConflictsData, TraitConflictsCheckArchetypeTraitConflictsResponse, TraitConflictsGetConflictGroupsByTraitData, TraitConflictsGetConflictGroupsByTraitResponse, TraitConflictsValidateConflictGroupData, TraitConflictsValidateConflictGroupResponse, TraitsReadTraitsData, TraitsReadTraitsResponse, TraitsCreateTraitData, TraitsCreateTraitResponse, TraitsReadTraitData, TraitsReadTraitResponse, TraitsUpdateTraitData, TraitsUpdateTraitResponse, TraitsDeleteTraitData, TraitsDeleteTraitResponse, UserPanelsGetMyPanelDefaultsResponse, UserPanelsUpdateMyPanelDefaultsData, UserPanelsUpdateMyPanelDefaultsResponse, UserPersonasReadUserPersonasData, UserPersonasReadUserPersonasResponse, UserPersonasCreateUserPersonaData, UserPersonasCreateUserPersonaResponse, UserPersonasReadUserPersonaData, UserPersonasReadUserPersonaResponse, UserPersonasUpdateUserPersonaData, UserPersonasUpdateUserPersonaResponse, UserPersonasDeleteUserPersonaData, UserPersonasDeleteUserPersonaResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UserStoryProgressReadUserStoryProgressesData, UserStoryProgressReadUserStoryProgressesResponse, UserStoryProgressReadUserStoryProgressData, UserStoryProgressReadUserStoryProgressResponse, UserStoryProgressCreateUserStoryProgressData, UserStoryProgressCreateUserStoryProgressResponse, UserStoryProgressUpdateUserStoryProgressData, UserStoryProgressUpdateUserStoryProgressResponse, UserStoryProgressGetCurrentNodeData, UserStoryProgressGetCurrentNodeResponse, UserStoryProgressMakeStoryChoiceData, UserStoryProgressMakeStoryChoiceResponse, UserStoryProgressValidateStoryStateData, UserStoryProgressValidateStoryStateResponse, UserStoryProgressUndoStoryChoiceData, UserStoryProgressUndoStoryChoiceResponse, UserStoryProgressJumpStoryHeadData, UserStoryProgressJumpStoryHeadResponse, UserStoryProgressReadStoryTimelineData, UserStoryProgressReadStoryTimelineResponse, UserStoryProgressReadStorySnapshotsData, UserStoryProgressReadStorySnapshotsResponse, UserStoryProgressCreateStorySnapshotData, UserStoryProgressCreateStorySnapshotResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AgentPersonasService {
     /**
@@ -266,6 +266,27 @@ export class AgentsService {
             url: '/api/v1/agents/{agent_id}',
             path: {
                 agent_id: data.agentId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Agent By Slug
+     * Get agent configuration by slug.
+     * @param data The data for the request.
+     * @param data.slug
+     * @returns AgentConfigPublic Successful Response
+     * @throws ApiError
+     */
+    public static getAgentBySlug(data: AgentsGetAgentBySlugData): CancelablePromise<AgentsGetAgentBySlugResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/agents/slug/{slug}',
+            path: {
+                slug: data.slug
             },
             errors: {
                 422: 'Validation Error'
@@ -1982,6 +2003,202 @@ export class QualityTraitLinksService {
     }
 }
 
+export class RoomAgentSettingsService {
+    /**
+     * Read Room Agent Settings
+     * @param data The data for the request.
+     * @param data.roomId
+     * @returns RoomAgentSettingsBundle Successful Response
+     * @throws ApiError
+     */
+    public static readRoomAgentSettings(data: RoomAgentSettingsReadRoomAgentSettingsData): CancelablePromise<RoomAgentSettingsReadRoomAgentSettingsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/rooms/{room_id}/agent-settings',
+            path: {
+                room_id: data.roomId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Put Room Agent Settings
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.requestBody
+     * @returns RoomAgentSettingsPublic Successful Response
+     * @throws ApiError
+     */
+    public static putRoomAgentSettings(data: RoomAgentSettingsPutRoomAgentSettingsData): CancelablePromise<RoomAgentSettingsPutRoomAgentSettingsResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/rooms/{room_id}/agent-settings',
+            path: {
+                room_id: data.roomId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Put Room Agent Settings Override
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.agentSlug
+     * @param data.requestBody
+     * @returns RoomAgentSettingsPublic Successful Response
+     * @throws ApiError
+     */
+    public static putRoomAgentSettingsOverride(data: RoomAgentSettingsPutRoomAgentSettingsOverrideData): CancelablePromise<RoomAgentSettingsPutRoomAgentSettingsOverrideResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/rooms/{room_id}/agents/{agent_slug}/agent-settings',
+            path: {
+                room_id: data.roomId,
+                agent_slug: data.agentSlug
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Room Agent Settings
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.agentSlug
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static deleteRoomAgentSettings(data: RoomAgentSettingsDeleteRoomAgentSettingsData): CancelablePromise<RoomAgentSettingsDeleteRoomAgentSettingsResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/rooms/{room_id}/agents/{agent_slug}/agent-settings',
+            path: {
+                room_id: data.roomId,
+                agent_slug: data.agentSlug
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class RoomContextsService {
+    /**
+     * List Room Contexts
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.agentSlug
+     * @returns RoomContextItemsPublic Successful Response
+     * @throws ApiError
+     */
+    public static listRoomContexts(data: RoomContextsListRoomContextsData): CancelablePromise<RoomContextsListRoomContextsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/rooms/{room_id}/contexts',
+            path: {
+                room_id: data.roomId
+            },
+            query: {
+                agent_slug: data.agentSlug
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Room Context
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.requestBody
+     * @param data.replaceByType
+     * @returns RoomContextItemPublic Successful Response
+     * @throws ApiError
+     */
+    public static createRoomContext(data: RoomContextsCreateRoomContextData): CancelablePromise<RoomContextsCreateRoomContextResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/rooms/{room_id}/contexts',
+            path: {
+                room_id: data.roomId
+            },
+            query: {
+                replace_by_type: data.replaceByType
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Room Context
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.contextId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static deleteRoomContext(data: RoomContextsDeleteRoomContextData): CancelablePromise<RoomContextsDeleteRoomContextResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/rooms/{room_id}/contexts/{context_id}',
+            path: {
+                room_id: data.roomId,
+                context_id: data.contextId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Upsert Room Context
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.contextId
+     * @param data.requestBody
+     * @param data.replaceByType
+     * @returns RoomContextItemPublic Successful Response
+     * @throws ApiError
+     */
+    public static upsertRoomContext(data: RoomContextsUpsertRoomContextData): CancelablePromise<RoomContextsUpsertRoomContextResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/rooms/{room_id}/contexts/{context_id}',
+            path: {
+                room_id: data.roomId,
+                context_id: data.contextId
+            },
+            query: {
+                replace_by_type: data.replaceByType
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
 export class RoomPanelsService {
     /**
      * Get Resolved Panels
@@ -2148,6 +2365,131 @@ export class RoomParticipantBindingsService {
             path: {
                 room_id: data.roomId,
                 participant_id: data.participantId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class RoomRuntimeService {
+    /**
+     * Read Room Runtime
+     * Read the room's shared runtime projection (Surface 1, read-only).
+     *
+     * This endpoint is the UI-friendly "current story run state" for a room.
+     * @param data The data for the request.
+     * @param data.roomId
+     * @returns RoomRuntimePublic Successful Response
+     * @throws ApiError
+     */
+    public static readRoomRuntime(data: RoomRuntimeReadRoomRuntimeData): CancelablePromise<RoomRuntimeReadRoomRuntimeResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/rooms/{room_id}/runtime',
+            path: {
+                room_id: data.roomId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Put Room Runtime
+     * Initialize (or restart) the room's shared story run (Surface 1).
+     *
+     * Branching semantics:
+     * - Always creates a new underlying progress record
+     * - Points the room's active progress at the new branch
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.requestBody
+     * @returns RoomRuntimePublic Successful Response
+     * @throws ApiError
+     */
+    public static putRoomRuntime(data: RoomRuntimePutRoomRuntimeData): CancelablePromise<RoomRuntimePutRoomRuntimeResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/rooms/{room_id}/runtime',
+            path: {
+                room_id: data.roomId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Advance Room Runtime Route
+     * Advance the room's shared story run by applying a choice.
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.requestBody
+     * @returns RoomRuntimePublic Successful Response
+     * @throws ApiError
+     */
+    public static advanceRoomRuntimeRoute(data: RoomRuntimeAdvanceRoomRuntimeRouteData): CancelablePromise<RoomRuntimeAdvanceRoomRuntimeRouteResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/rooms/{room_id}/runtime/advance',
+            path: {
+                room_id: data.roomId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Rewind Room Runtime Route
+     * Rewind the room's shared story run by branching to a prior choice.
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.requestBody
+     * @returns RoomRuntimePublic Successful Response
+     * @throws ApiError
+     */
+    public static rewindRoomRuntimeRoute(data: RoomRuntimeRewindRoomRuntimeRouteData): CancelablePromise<RoomRuntimeRewindRoomRuntimeRouteResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/rooms/{room_id}/runtime/rewind',
+            path: {
+                room_id: data.roomId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Reset Room Runtime Route
+     * Reset the room's shared story run by branching to a new start state.
+     * @param data The data for the request.
+     * @param data.roomId
+     * @param data.requestBody
+     * @returns RoomRuntimePublic Successful Response
+     * @throws ApiError
+     */
+    public static resetRoomRuntimeRoute(data: RoomRuntimeResetRoomRuntimeRouteData): CancelablePromise<RoomRuntimeResetRoomRuntimeRouteResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/rooms/{room_id}/runtime/reset',
+            path: {
+                room_id: data.roomId
             },
             body: data.requestBody,
             mediaType: 'application/json',

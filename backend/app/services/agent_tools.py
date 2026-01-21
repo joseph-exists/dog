@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pydantic_ai import RunContext
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.schemas.ag_ui import UIComponent, UIComponentType
 from app.services.a2a_orchestrator import A2AOrchestrator, DEFAULT_MAX_A2A_DEPTH

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.services.context_provider import RoomContext, build_room_context
 from app.services.context_store import ContextItemStore, RedisContextStore

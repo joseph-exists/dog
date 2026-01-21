@@ -231,7 +231,7 @@ async def list_room_participants(
 
     Only accessible to room participants. Returns both users and agents.
     """
-    from sqlalchemy import select
+    from sqlmodel import select
 
     # Check membership first
     from app.crud import check_room_membership
@@ -244,13 +244,14 @@ async def list_room_participants(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Query active participants
-    result = await session.execute(
+    rp = RoomParticipant.__table__.c
+    result = await session.exec(
         select(RoomParticipant).where(
-            RoomParticipant.room_id == room_id,
-            RoomParticipant.active == True,  # noqa: E712
+            rp.room_id == room_id,
+            rp.active.is_(True),
         )
     )
-    participants = result.scalars().all()
+    participants = result.all()
 
     return RoomParticipantsPublic(
         data=[RoomParticipantPublic.model_validate(p) for p in participants],
@@ -386,6 +387,7 @@ async def list_messages(
         active_for_context=active_for_context,
         is_pinned=is_pinned,
         sender_type=sender_type,
+        sender_id=sender_id,
         include_internal=include_internal,
         limit=limit,
         before=before,

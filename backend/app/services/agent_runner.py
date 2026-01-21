@@ -35,7 +35,7 @@ from typing import Any
 
 from dataclasses import asdict
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
     RoomParticipant,
@@ -210,7 +210,7 @@ async def should_agent_respond(
     # into thinking we're passing a `bool` into `where(...)`. Using table columns
     # avoids that and also makes the generated SQL explicit.
     rp = RoomParticipant.__table__.c
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             rp.room_id == room_id,
             rp.participant_type == "agent",
@@ -218,7 +218,7 @@ async def should_agent_respond(
             rp.active.is_(True),
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
 
     return participant is not None
 
@@ -407,7 +407,7 @@ async def invoke_agent_manually(
 
     # Check if agent is participant in room
     rp = RoomParticipant.__table__.c
-    result = await session.execute(
+    result = await session.exec(
         select(RoomParticipant).where(
             rp.room_id == room_id,
             rp.participant_type == "agent",
@@ -415,7 +415,7 @@ async def invoke_agent_manually(
             rp.active.is_(True),
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
 
     if not participant:
         return {

@@ -120,10 +120,15 @@ export const AgentConfigPublicSchema = {
             description: 'Display name'
         },
         slug: {
-            type: 'string',
-            maxLength: 50,
-            title: 'Slug',
-            description: 'Unique identifier/registry key'
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
         },
         description: {
             anyOf: [
@@ -2073,7 +2078,8 @@ export const ParticipantBindingChangeRequestSchema = {
         participant_type: {
             type: 'string',
             enum: ['user', 'agent'],
-            title: 'Participant Type'
+            title: 'Participant Type',
+            description: 'Type of participant (user or agent)'
         },
         persona_id: {
             anyOf: [
@@ -2085,7 +2091,8 @@ export const ParticipantBindingChangeRequestSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Persona Id'
+            title: 'Persona Id',
+            description: 'Persona to bind for this participant (optional).'
         },
         model_name: {
             anyOf: [
@@ -2097,7 +2104,8 @@ export const ParticipantBindingChangeRequestSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Model Name'
+            title: 'Model Name',
+            description: "Model identifier (e.g., 'openai:gpt-4o-mini')."
         },
         user_llm_provider_id: {
             anyOf: [
@@ -2109,7 +2117,8 @@ export const ParticipantBindingChangeRequestSchema = {
                     type: 'null'
                 }
             ],
-            title: 'User Llm Provider Id'
+            title: 'User Llm Provider Id',
+            description: 'User-owned provider config to use (must belong to current user).'
         }
     },
     type: 'object',
@@ -2877,6 +2886,330 @@ export const ResolvedPanelConfigSchema = {
     description: 'Resolved panel config for a user in a room'
 } as const;
 
+export const RoomAgentSettingsBundleSchema = {
+    properties: {
+        room_defaults: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/RoomAgentSettingsPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        agent_overrides: {
+            items: {
+                '$ref': '#/components/schemas/RoomAgentSettingsPublic'
+            },
+            type: 'array',
+            title: 'Agent Overrides'
+        },
+        participant_type: {
+            type: 'string',
+            enum: ['user', 'agent'],
+            title: 'Participant Type'
+        },
+        persona_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Persona Id'
+        },
+        model_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name'
+        },
+        user_llm_provider_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Llm Provider Id'
+        }
+    },
+    type: 'object',
+    required: ['room_defaults', 'agent_overrides', 'participant_type'],
+    title: 'RoomAgentSettingsBundle'
+} as const;
+
+export const RoomAgentSettingsPublicSchema = {
+    properties: {
+        agent_slug: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Slug',
+            description: 'Null for room-wide defaults; set for per-agent overrides.'
+        },
+        prompt_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config'
+        },
+        tool_policy: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Policy'
+        },
+        rule_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rule Config'
+        },
+        revision: {
+            type: 'integer',
+            title: 'Revision',
+            default: 0
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'room_id', 'created_at', 'updated_at'],
+    title: 'RoomAgentSettingsPublic'
+} as const;
+
+export const RoomAgentSettingsUpdateSchema = {
+    properties: {
+        prompt_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config'
+        },
+        tool_policy: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Policy'
+        },
+        rule_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rule Config'
+        },
+        expected_revision: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expected Revision'
+        }
+    },
+    type: 'object',
+    title: 'RoomAgentSettingsUpdate'
+} as const;
+
+export const RoomContextItemCreateSchema = {
+    properties: {
+        context_type: {
+            type: 'string',
+            title: 'Context Type'
+        },
+        payload: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Payload'
+        },
+        source: {
+            type: 'string',
+            title: 'Source'
+        },
+        agent_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Slug'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        }
+    },
+    type: 'object',
+    required: ['context_type', 'payload', 'source'],
+    title: 'RoomContextItemCreate',
+    description: 'Request model to attach supplemental context to a room.'
+} as const;
+
+export const RoomContextItemPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        agent_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Slug'
+        },
+        context_type: {
+            type: 'string',
+            title: 'Context Type'
+        },
+        payload: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Payload'
+        },
+        source: {
+            type: 'string',
+            title: 'Source'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'room_id', 'agent_slug', 'context_type', 'payload', 'source', 'created_at', 'expires_at'],
+    title: 'RoomContextItemPublic'
+} as const;
+
+export const RoomContextItemsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/RoomContextItemPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'RoomContextItemsPublic'
+} as const;
+
 export const RoomCreateSchema = {
     properties: {
         title: {
@@ -3408,6 +3741,216 @@ export const RoomPublicSchema = {
     required: ['room_id', 'creator_id', 'created_at', 'last_activity'],
     title: 'RoomPublic',
     description: 'Public room response model for API.'
+} as const;
+
+export const RoomRuntimeAdvanceRequestSchema = {
+    properties: {
+        choice_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Choice Id'
+        },
+        expected_revision: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expected Revision'
+        }
+    },
+    type: 'object',
+    required: ['choice_id'],
+    title: 'RoomRuntimeAdvanceRequest',
+    description: "Request model to advance the room's shared story run."
+} as const;
+
+export const RoomRuntimePublicSchema = {
+    properties: {
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        story_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Story Id'
+        },
+        story_version: {
+            type: 'integer',
+            title: 'Story Version'
+        },
+        active_progress_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Active Progress Id'
+        },
+        revision: {
+            type: 'integer',
+            title: 'Revision'
+        },
+        current_node_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Current Node Id'
+        },
+        head_choice_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Head Choice Id'
+        },
+        head_version: {
+            type: 'integer',
+            title: 'Head Version'
+        },
+        story_state: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Story State'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        current_node: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/StoryNodePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        node_chain: {
+            items: {
+                '$ref': '#/components/schemas/StoryNodePublic'
+            },
+            type: 'array',
+            title: 'Node Chain'
+        },
+        available_choices: {
+            items: {
+                '$ref': '#/components/schemas/NodeChoicePublic'
+            },
+            type: 'array',
+            title: 'Available Choices'
+        }
+    },
+    type: 'object',
+    required: ['room_id', 'story_id', 'story_version', 'active_progress_id', 'revision', 'current_node_id', 'head_choice_id', 'head_version', 'story_state', 'updated_at'],
+    title: 'RoomRuntimePublic',
+    description: `Read model for the room's shared story run, suitable for UI and agent projection.
+
+This is intentionally a projection, not a dump of the full event log.`
+} as const;
+
+export const RoomRuntimeResetRequestSchema = {
+    properties: {
+        expected_revision: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expected Revision'
+        }
+    },
+    type: 'object',
+    title: 'RoomRuntimeResetRequest',
+    description: "Request model to reset the room's shared story run to the start node."
+} as const;
+
+export const RoomRuntimeRewindRequestSchema = {
+    properties: {
+        target_choice_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Target Choice Id'
+        },
+        expected_revision: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expected Revision'
+        }
+    },
+    type: 'object',
+    required: ['target_choice_id'],
+    title: 'RoomRuntimeRewindRequest',
+    description: "Request model to rewind the room's shared story run to a prior choice."
+} as const;
+
+export const RoomRuntimeStartRequestSchema = {
+    properties: {
+        user_persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Persona Id'
+        },
+        story_version: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Story Version'
+        },
+        expected_revision: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expected Revision'
+        }
+    },
+    type: 'object',
+    required: ['user_persona_id'],
+    title: 'RoomRuntimeStartRequest',
+    description: `Request model to initialize (or re-initialize) a room's shared story run.
+
+A room run is backed by an underlying UserStoryProgress record.`
 } as const;
 
 export const RoomUpdateSchema = {

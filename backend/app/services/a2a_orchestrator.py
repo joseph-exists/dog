@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import AgentConfig, RoomParticipant
 
@@ -41,14 +41,14 @@ class A2AOrchestrator:
         room_id: uuid.UUID,
         agent_identifier: str,
     ) -> tuple[bool, str | None, AgentConfig | None]:
-        result = await session.execute(
+        result = await session.exec(
             select(RoomParticipant).where(
                 RoomParticipant.room_id == room_id,
                 RoomParticipant.participant_type == "agent",
                 RoomParticipant.active == True,  # noqa: E712
             )
         )
-        agent_participants = result.scalars().all()
+        agent_participants = result.all()
 
         for participant in agent_participants:
             slug, name, config = await self._resolve_agent_identifier(
@@ -168,10 +168,10 @@ class A2AOrchestrator:
         except ValueError:
             pass
 
-        result = await session.execute(
+        result = await session.exec(
             select(AgentConfig).where(AgentConfig.slug == participant_id)
         )
-        agent_config = result.scalar_one_or_none()
+        agent_config = result.one_or_none()
 
         if agent_config and agent_config.is_enabled:
             logger.debug(f"Found database agent by slug: {participant_id}")

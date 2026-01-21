@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any
 import base64
 import hashlib
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import jwt
 from cryptography.fernet import Fernet

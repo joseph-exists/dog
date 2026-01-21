@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import AgentConfig, Room, RoomMessage, RoomParticipant, Story
 from app.services.context_store import ContextItemStore
@@ -92,18 +92,18 @@ async def build_room_context(
         ValueError: If room does not exist
     """
     # Load room
-    result = await session.execute(select(Room).where(Room.room_id == room_id))
-    room = result.scalar_one_or_none()
+    result = await session.exec(select(Room).where(Room.room_id == room_id))
+    room = result.one_or_none()
     if not room:
         raise ValueError(f"Room {room_id} not found")
 
     # Load story data if associated
     story_data = None
     if room.story_id:
-        story_result = await session.execute(
+        story_result = await session.exec(
             select(Story).where(Story.id == room.story_id)
         )
-        story = story_result.scalar_one_or_none()
+        story = story_result.one_or_none()
         if story:
             story_data = {
                 "id": str(story.id),
@@ -113,13 +113,13 @@ async def build_room_context(
             }
 
     # Load recent messages (ordered by created_at desc, then reversed)
-    messages_result = await session.execute(
+    messages_result = await session.exec(
         select(RoomMessage)
         .where(RoomMessage.room_id == room_id)
         .order_by(RoomMessage.created_at.desc())
         .limit(message_limit)
     )
-    messages = messages_result.scalars().all()
+    messages = messages_result.all()
 
     recent_messages = [
         {
@@ -134,13 +134,13 @@ async def build_room_context(
     ]
 
     # Load active participants
-    participants_result = await session.execute(
+    participants_result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
             RoomParticipant.active == True,  # noqa: E712
         )
     )
-    participants_list = participants_result.scalars().all()
+    participants_list = participants_result.all()
 
     participants = [
         {
@@ -159,10 +159,10 @@ async def build_room_context(
             # participant_id is AgentConfig.slug (preferred) with legacy UUID support.
             agent_config = None
 
-            agent_result = await session.execute(
+            agent_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == p.participant_id)
             )
-            agent_config = agent_result.scalar_one_or_none()
+            agent_config = agent_result.one_or_none()
 
             if not agent_config:
                 try:

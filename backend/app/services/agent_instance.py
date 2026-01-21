@@ -12,7 +12,7 @@ from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import decrypt_api_key
 from app.models import (
@@ -28,10 +28,10 @@ logger = logging.getLogger(__name__)
 
 async def get_agent_config(session: AsyncSession, slug: str) -> AgentConfig | None:
     """Get agent configuration from database by slug."""
-    result = await session.execute(
+    result = await session.exec(
         select(AgentConfig).where(AgentConfig.slug == slug)
     )
-    return result.scalar_one_or_none()
+    return result.one_or_none()
 
 
 async def resolve_user_credentials(
@@ -45,13 +45,13 @@ async def resolve_user_credentials(
     Returns:
         Tuple of (effective_model_name, decrypted_api_key, provider_type, base_url)
     """
-    settings_result = await session.execute(
+    settings_result = await session.exec(
         select(UserAgentSettings).where(
             UserAgentSettings.user_id == user_id,
             UserAgentSettings.agent_config_id == agent_config.id,
         )
     )
-    settings = settings_result.scalar_one_or_none()
+    settings = settings_result.one_or_none()
 
     effective_model_name = agent_config.model_name
     if settings and settings.model_name_override:
@@ -74,20 +74,20 @@ async def resolve_user_credentials(
     provider: UserLLMProvider | None = None
 
     if settings and settings.provider_id:
-        provider_result = await session.execute(
+        provider_result = await session.exec(
             select(UserLLMProvider).where(
                 UserLLMProvider.id == settings.provider_id,
                 UserLLMProvider.is_enabled,
             )
         )
-        provider = provider_result.scalar_one_or_none()
+        provider = provider_result.one_or_none()
         if provider:
             logger.debug(
                 f"Using explicit provider '{provider.name}' for agent {agent_config.slug}"
             )
 
     if not provider:
-        default_result = await session.execute(
+        default_result = await session.exec(
             select(UserLLMProvider).where(
                 UserLLMProvider.user_id == user_id,
                 UserLLMProvider.provider_type == provider_type,
@@ -95,7 +95,7 @@ async def resolve_user_credentials(
                 UserLLMProvider.is_enabled,
             )
         )
-        provider = default_result.scalar_one_or_none()
+        provider = default_result.one_or_none()
         if provider:
             logger.debug(
                 f"Using default provider '{provider.name}' for agent {agent_config.slug}"

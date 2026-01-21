@@ -16,7 +16,7 @@ from uuid import UUID
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import RoomEvent
 
@@ -56,7 +56,7 @@ async def replay_events_since(
     - Large replays (>limit) return first N events + warning
     - Client should handle pagination if needed (future enhancement)
     """
-    result = await session.execute(
+    result = await session.exec(
         select(RoomEvent)
         .where(
             RoomEvent.room_id == room_id,
@@ -65,7 +65,7 @@ async def replay_events_since(
         .order_by(RoomEvent.room_sequence)
         .limit(limit)
     )
-    events = result.scalars().all()
+    events = result.all()
 
     if len(events) >= limit:
         logger.warning(
@@ -98,12 +98,13 @@ async def get_latest_sequence(
     Returns:
         Latest sequence number, or 0 if no events
     """
-    result = await session.execute(
+    result = await session.exec(
         select(RoomEvent.room_sequence)
         .where(RoomEvent.room_id == room_id)
         .order_by(RoomEvent.room_sequence.desc())
         .limit(1)
     )
-    latest = result.scalar_one_or_none()
-
-    return latest if latest is not None else 0
+    latest_row = result.first()
+    if not latest_row:
+        return 0
+    return int(latest_row[0])
