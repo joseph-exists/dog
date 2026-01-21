@@ -371,6 +371,7 @@ function RoomView() {
     <div className="h-[calc(100vh-8rem)] flex">
       <div className="flex-1 min-w-0">
         <RoomShell
+          roomId={roomId}
           title={room?.title || "Untitled Room"}
           type="chat"
           participants={roomParticipants}

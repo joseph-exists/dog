@@ -12,6 +12,8 @@ import { RoomHeader, type RoomType } from "./RoomHeader"
 import { type PanelConfig, RoomLayout } from "./RoomLayout"
 
 interface RoomShellProps {
+  /** Room ID for panel layout dialog */
+  roomId?: string
   /** Room title */
   title: string
   /** Room type */
@@ -43,6 +45,7 @@ interface RoomShellProps {
 }
 
 export function RoomShell({
+  roomId,
   title,
   type,
   participants,
@@ -65,6 +68,7 @@ export function RoomShell({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       <RoomHeader
+        roomId={roomId}
         title={title}
         type={type}
         participants={participants}

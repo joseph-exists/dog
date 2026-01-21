@@ -2557,6 +2557,208 @@ class ParticipantBindingChangeRequest(SQLModel):
 
     Payload is event-sourced via participant.binding_changed.
     """
+    participant_type: Literal["user", "agent"] = Field(
+        ...,
+        description="Type of participant (user or agent)",
+    )
+    persona_id: uuid.UUID | None = Field(
+        default=None,
+        description="Persona to bind for this participant (optional).",
+    )
+    model_name: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Model identifier (e.g., 'openai:gpt-4o-mini').",
+    )
+    user_llm_provider_id: uuid.UUID | None = Field(
+        default=None,
+        description="User-owned provider config to use (must belong to current user).",
+    )
+
+
+# ============================================================================
+# RoomStoryProgress Models (Shared Room Run)
+# ============================================================================
+
+
+class RoomStoryProgressBase(SQLModel):
+    """
+    Room-scoped pointer to the active shared story run ("party progress").
+
+    The underlying run state is stored using existing progress primitives:
+    - UserStoryProgress.story_state (canonical state block)
+    - UserNodeChoice (choice history / event log)
+    - ProgressSnapshot (periodic immutable snapshots)
+    """
+
+    story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False)
+    story_version: int = Field(nullable=False)
+    active_progress_id: uuid.UUID = Field(
+        foreign_key="userstoryprogress.id", nullable=False
+    )
+    revision: int = Field(
+        default=0, description="Monotonically increasing optimistic concurrency token."
+    )
+
+
+class RoomStoryProgress(RoomStoryProgressBase, table=True):
+    __tablename__ = "room_story_progresses"
+    __table_args__ = (UniqueConstraint("room_id"),)
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    room_id: uuid.UUID = Field(
+        foreign_key="rooms.room_id", nullable=False, ondelete="CASCADE", index=True
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
+class RoomStoryProgressPublic(RoomStoryProgressBase):
+    id: uuid.UUID
+    room_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class RoomRuntimePublic(SQLModel):
+    """
+    Read model for the room's shared story run, suitable for UI and agent projection.
+
+    This is intentionally a projection, not a dump of the full event log.
+    """
+
+    room_id: uuid.UUID
+    story_id: uuid.UUID
+    story_version: int
+    active_progress_id: uuid.UUID
+    revision: int
+
+    current_node_id: uuid.UUID | None
+    head_choice_id: uuid.UUID | None
+    head_version: int
+    story_state: dict[str, Any] | None
+    updated_at: datetime
+    current_node: StoryNodePublic | None = None
+    node_chain: list[StoryNodePublic] = Field(default_factory=list)
+    available_choices: list[NodeChoicePublic] = Field(default_factory=list)
+
+
+class RoomRuntimeStartRequest(SQLModel):
+    """
+    Request model to initialize (or re-initialize) a room's shared story run.
+
+    A room run is backed by an underlying UserStoryProgress record.
+    """
+
+    user_persona_id: uuid.UUID
+    story_version: int | None = None
+    expected_revision: int | None = None
+
+
+class RoomRuntimeAdvanceRequest(SQLModel):
+    """
+    Request model to advance the room's shared story run.
+    """
+
+    choice_id: uuid.UUID
+    expected_revision: int | None = None
+
+
+class RoomRuntimeRewindRequest(SQLModel):
+    """
+    Request model to rewind the room's shared story run to a prior choice.
+    """
+
+    target_choice_id: uuid.UUID
+    expected_revision: int | None = None
+
+
+class RoomRuntimeResetRequest(SQLModel):
+    """
+    Request model to reset the room's shared story run to the start node.
+    """
+
+    expected_revision: int | None = None
+
+
+class RoomContextItemCreate(SQLModel):
+    """
+    Request model to attach supplemental context to a room.
+    """
+
+    context_type: str
+    payload: dict[str, Any]
+    source: str
+    agent_slug: str | None = None
+    expires_at: datetime | None = None
+
+
+class RoomContextItemPublic(SQLModel):
+    id: str
+    room_id: uuid.UUID
+    agent_slug: str | None
+    context_type: str
+    payload: dict[str, Any]
+    source: str
+    created_at: datetime
+    expires_at: datetime | None
+
+
+class RoomContextItemsPublic(SQLModel):
+    data: list[RoomContextItemPublic]
+    count: int
+
+
+# ============================================================================
+# Room Agent Settings Models (Room-scoped agent policy)
+# ============================================================================
+
+
+class RoomAgentSettingsBase(SQLModel):
+    """
+    Room-scoped agent policy settings (prompt + tool rules).
+    """
+
+    agent_slug: str | None = Field(
+        default=None,
+        max_length=50,
+        description="Null for room-wide defaults; set for per-agent overrides.",
+    )
+    prompt_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    tool_policy: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    rule_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    revision: int = Field(default=0)
+
+
+class RoomAgentSettings(RoomAgentSettingsBase, table=True):
+    __tablename__ = "room_agent_settings"
+    __table_args__ = (UniqueConstraint("room_id", "agent_slug"),)
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    room_id: uuid.UUID = Field(
+        foreign_key="rooms.room_id", nullable=False, ondelete="CASCADE", index=True
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
+class RoomAgentSettingsPublic(RoomAgentSettingsBase):
+    id: uuid.UUID
+    room_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class RoomAgentSettingsUpdate(SQLModel):
+    prompt_config: dict[str, Any] | None = None
+    tool_policy: dict[str, Any] | None = None
+    rule_config: dict[str, Any] | None = None
+    expected_revision: int | None = None
+
+
+class RoomAgentSettingsBundle(SQLModel):
+    room_defaults: RoomAgentSettingsPublic | None
+    agent_overrides: list[RoomAgentSettingsPublic]
 
     participant_type: Literal["user", "agent"]
     persona_id: uuid.UUID | None = None

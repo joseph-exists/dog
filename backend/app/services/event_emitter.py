@@ -402,6 +402,15 @@ async def _update_projections(
         "participant.left": _handle_participant_left,
         "participant.role_changed": _handle_participant_role_changed,
         "participant.binding_changed": _handle_participant_binding_changed,
+        "room.runtime.started": _handle_room_runtime_event,
+        "room.runtime.advanced": _handle_room_runtime_event,
+        "room.runtime.rewound": _handle_room_runtime_event,
+        "room.runtime.reset": _handle_room_runtime_event,
+        "room.context_item.created": _handle_room_runtime_event,
+        "room.context_item.deleted": _handle_room_runtime_event,
+        "room.context_item.upserted": _handle_room_runtime_event,
+        "room.agent_settings.updated": _handle_room_runtime_event,
+        "room.agent_settings.deleted": _handle_room_runtime_event,
         "room_message.user": _handle_room_message_user,
         "room_message.agent": _handle_room_message_agent,
         "room_message.agent_internal": _handle_room_message_agent_internal,
@@ -425,6 +434,20 @@ async def _update_projections(
 # ============================================================================
 # Room Event Handlers
 # ============================================================================
+
+
+async def _handle_room_runtime_event(
+    session: AsyncSession,
+    event: RoomEvent,
+) -> None:
+    """
+    No-op projection handler for room runtime transitions.
+
+    These events are emitted for auditability + real-time updates, but do not
+    alter projections directly.
+    """
+    _ = session
+    _ = event
 
 
 async def _handle_room_created(

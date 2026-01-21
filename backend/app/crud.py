@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
 from typing import Any
@@ -32,6 +33,7 @@ from app.models import (
     LLMProviderType,
     Message,
     NodeChoice,
+    NodeChoicePublic,
     Persona,
     PersonaCreate,
     PersonaQualityLink,
@@ -55,6 +57,19 @@ from app.models import (
     RoomParticipant,
     RoomParticipantBinding,
     RoomParticipantBindingsPublic,
+    RoomContextItemCreate,
+    RoomContextItemPublic,
+    RoomContextItemsPublic,
+    RoomAgentSettings,
+    RoomAgentSettingsBundle,
+    RoomAgentSettingsPublic,
+    RoomAgentSettingsUpdate,
+    RoomRuntimeAdvanceRequest,
+    RoomRuntimePublic,
+    RoomRuntimeResetRequest,
+    RoomRuntimeRewindRequest,
+    RoomRuntimeStartRequest,
+    RoomStoryProgress,
     RoomPublic,
     RoomsPublic,
     StateSchemaValidationError,
@@ -95,6 +110,7 @@ from app.models import (
     UserUpdate,
 )
 from app.services.event_emitter import emit_event
+from app.services.context_store import ContextItem, ContextItemStore, RedisContextStore
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -1551,6 +1567,902 @@ async def check_room_owner(
     )
     participant = result.scalar_one_or_none()
     return participant is not None
+
+
+# ============================================================================
+# Room Runtime (Shared Room Run)
+# ============================================================================
+
+
+async def _build_room_runtime_public(
+    *,
+    room_id: UUID,
+    room_story_progress: RoomStoryProgress,
+    progress: UserStoryProgress,
+    session: AsyncSession,
+) -> RoomRuntimePublic:
+    current_node = None
+    node_chain: list[StoryNodePublic] = []
+    available_choices: list[NodeChoicePublic] = []
+
+    if progress.current_node_id:
+        node_result = await session.execute(
+            select(StoryNode).where(StoryNode.id == progress.current_node_id)
+        )
+        node = node_result.scalar_one_or_none()
+        if node:
+            current_node = StoryNodePublic.model_validate(node)
+
+    node_chain_ids: list[uuid.UUID] = []
+    if progress.head_choice_id:
+        chain = get_choice_ancestor_chain(
+            session=session.sync_session, choice_id=progress.head_choice_id
+        )
+        if chain:
+            node_chain_ids.append(chain[0].from_node_id)
+            node_chain_ids.extend([choice.to_node_id for choice in chain])
+    else:
+        start_node_result = await session.execute(
+            select(StoryNode).where(
+                StoryNode.story_id == progress.story_id,
+                StoryNode.story_version == progress.story_version,
+                StoryNode.is_start_node == True,  # noqa: E712
+            )
+        )
+        start_node = start_node_result.scalar_one_or_none()
+        if start_node:
+            node_chain_ids.append(start_node.id)
+
+    if node_chain_ids:
+        nodes_result = await session.execute(
+            select(StoryNode).where(StoryNode.id.in_(node_chain_ids))
+        )
+        nodes = nodes_result.scalars().all()
+        nodes_by_id = {node.id: node for node in nodes}
+        node_chain = [
+            StoryNodePublic.model_validate(nodes_by_id[node_id])
+            for node_id in node_chain_ids
+            if node_id in nodes_by_id
+        ]
+
+    if progress.current_node_id:
+        choices = get_available_choices(
+            session=session.sync_session,
+            node_id=progress.current_node_id,
+            story_state=progress.story_state or {},
+        )
+        available_choices = [NodeChoicePublic.model_validate(c) for c in choices]
+
+    return RoomRuntimePublic(
+        room_id=room_id,
+        story_id=room_story_progress.story_id,
+        story_version=room_story_progress.story_version,
+        active_progress_id=room_story_progress.active_progress_id,
+        revision=room_story_progress.revision,
+        current_node_id=progress.current_node_id,
+        head_choice_id=progress.head_choice_id,
+        head_version=progress.head_version,
+        story_state=progress.story_state,
+        updated_at=room_story_progress.updated_at,
+        current_node=current_node,
+        node_chain=node_chain,
+        available_choices=available_choices,
+    )
+
+
+async def get_room_runtime(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> RoomRuntimePublic:
+    """
+    Read-only runtime projection for a room's shared story run.
+
+    Authorization: active room membership required.
+    """
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    rsp_result = await session.execute(
+        select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
+    )
+    room_story_progress = rsp_result.scalar_one_or_none()
+    if not room_story_progress:
+        raise HTTPException(status_code=404, detail="Room runtime not initialized")
+
+    progress_result = await session.execute(
+        select(UserStoryProgress).where(
+            UserStoryProgress.id == room_story_progress.active_progress_id
+        )
+    )
+    progress = progress_result.scalar_one_or_none()
+    if not progress:
+        raise HTTPException(status_code=404, detail="Active progress not found")
+
+    return await _build_room_runtime_public(
+        room_id=room_id,
+        room_story_progress=room_story_progress,
+        progress=progress,
+        session=session,
+    )
+
+
+async def start_room_runtime(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    req: RoomRuntimeStartRequest,
+    session: AsyncSession,
+) -> RoomRuntimePublic:
+    """
+    Initialize (or re-initialize) a room's shared story run ("party progress").
+
+    Creates a new underlying UserStoryProgress record and points the room's
+    RoomStoryProgress.active_progress_id at it. Existing progress is preserved
+    for audit/debugging (branching semantics).
+
+    Authorization:
+    - active membership required
+    - owner-only (default policy) to start/restart the shared run
+    """
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can start the room runtime")
+
+    room_result = await session.execute(select(Room).where(Room.room_id == room_id))
+    room = room_result.scalar_one_or_none()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if not room.story_id:
+        raise HTTPException(status_code=400, detail="Room has no story selected")
+
+    # Validate user persona ownership (we reuse the persona-bound progress model).
+    user_persona_result = await session.execute(
+        select(UserPersona).where(
+            UserPersona.id == req.user_persona_id,
+            UserPersona.user_id == user_id,
+        )
+    )
+    user_persona = user_persona_result.scalar_one_or_none()
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    story = await session.get(Story, room.story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    target_version = req.story_version
+    if target_version is None:
+        target_version = story.published_version or story.current_version
+
+    # Find start node for the selected version.
+    start_node_result = await session.execute(
+        select(StoryNode).where(
+            StoryNode.story_id == story.id,
+            StoryNode.story_version == target_version,
+            StoryNode.is_start_node == True,  # noqa: E712
+        )
+    )
+    start_node = start_node_result.scalar_one_or_none()
+    if not start_node:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No start node found for story version {target_version}",
+        )
+
+    # Initialize state from schema defaults for this version.
+    state_vars_result = await session.execute(
+        select(StoryStateVariable).where(
+            StoryStateVariable.story_id == story.id,
+            StoryStateVariable.story_version == target_version,
+        )
+    )
+    state_vars = state_vars_result.scalars().all()
+    initial_state: dict[str, Any] = {}
+    for var in state_vars:
+        initial_state[var.key] = var.default_value
+
+    now = datetime.utcnow()
+    new_progress = UserStoryProgress(
+        id=uuid.uuid4(),
+        user_persona_id=req.user_persona_id,
+        story_id=story.id,
+        story_version=target_version,
+        current_node_id=start_node.id,
+        story_state=initial_state,
+        head_choice_id=None,
+        head_version=0,
+        started_at=now,
+        updated_at=now,
+    )
+    session.add(new_progress)
+    await session.flush()
+
+    rsp_result = await session.execute(
+        select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
+    )
+    room_story_progress = rsp_result.scalar_one_or_none()
+
+    if room_story_progress is None:
+        room_story_progress = RoomStoryProgress(
+            id=uuid.uuid4(),
+            room_id=room_id,
+            story_id=story.id,
+            story_version=target_version,
+            active_progress_id=new_progress.id,
+            revision=0,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(room_story_progress)
+    else:
+        if req.expected_revision is not None and req.expected_revision != room_story_progress.revision:
+            raise HTTPException(status_code=409, detail="Room runtime revision mismatch")
+        room_story_progress.story_id = story.id
+        room_story_progress.story_version = target_version
+        room_story_progress.active_progress_id = new_progress.id
+        room_story_progress.revision += 1
+        room_story_progress.updated_at = now
+        session.add(room_story_progress)
+
+    await session.flush()
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.runtime.started",
+        payload={
+            "story_id": str(story.id),
+            "story_version": target_version,
+            "active_progress_id": str(new_progress.id),
+            "revision": room_story_progress.revision,
+        },
+    )
+
+    return await _build_room_runtime_public(
+        room_id=room_id,
+        room_story_progress=room_story_progress,
+        progress=new_progress,
+        session=session,
+    )
+
+
+async def advance_room_runtime(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    req: RoomRuntimeAdvanceRequest,
+    session: AsyncSession,
+) -> RoomRuntimePublic:
+    """
+    Advance the room's shared story run by applying a choice.
+
+    Authorization: active membership + owner-only (default policy).
+    """
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can advance the room runtime")
+
+    rsp_result = await session.execute(
+        select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
+    )
+    room_story_progress = rsp_result.scalar_one_or_none()
+    if not room_story_progress:
+        raise HTTPException(status_code=404, detail="Room runtime not initialized")
+
+    if req.expected_revision is not None and req.expected_revision != room_story_progress.revision:
+        raise HTTPException(status_code=409, detail="Room runtime revision mismatch")
+
+    progress_result = await session.execute(
+        select(UserStoryProgress).where(
+            UserStoryProgress.id == room_story_progress.active_progress_id
+        )
+    )
+    progress = progress_result.scalar_one_or_none()
+    if not progress:
+        raise HTTPException(status_code=404, detail="Active progress not found")
+
+    choice_result = await session.execute(
+        select(NodeChoice).where(NodeChoice.id == req.choice_id)
+    )
+    choice = choice_result.scalar_one_or_none()
+    if not choice:
+        raise HTTPException(status_code=404, detail="Choice not found")
+
+    if progress.current_node_id != choice.from_node_id:
+        raise HTTPException(
+            status_code=400, detail="Choice is not available for the current node"
+        )
+
+    available_choices = get_available_choices(
+        session=session.sync_session,
+        node_id=progress.current_node_id,
+        story_state=progress.story_state or {},
+    )
+    if not any(c.id == choice.id for c in available_choices):
+        raise HTTPException(
+            status_code=403,
+            detail="Choice requirements not met for current story state",
+        )
+
+    user_choice = UserNodeChoice(
+        id=uuid.uuid4(),
+        progress_id=progress.id,
+        parent_choice_id=progress.head_choice_id,
+        choice_text=choice.text,
+        from_node_id=choice.from_node_id,
+        to_node_id=choice.to_node_id,
+        state_changes=choice.sets_state,
+        rng_data=None,
+    )
+    session.add(user_choice)
+    await session.flush()
+
+    progress.head_choice_id = user_choice.id
+    progress.head_version += 1
+    progress.story_state = replay_state_from_head_optimized(
+        session=session.sync_session,
+        progress_id=progress.id,
+        head_choice_id=progress.head_choice_id,
+    )
+    progress.current_node_id = get_current_node_from_head(
+        session=session.sync_session,
+        head_choice_id=progress.head_choice_id,
+        story_id=progress.story_id,
+        story_version=progress.story_version,
+    )
+
+    snapshot = create_snapshot_if_needed(
+        session=session.sync_session,
+        progress=progress,
+        snapshot_interval=10,
+    )
+    if snapshot:
+        session.add(snapshot)
+
+    now = datetime.utcnow()
+    progress.updated_at = now
+
+    room_story_progress.revision += 1
+    room_story_progress.updated_at = now
+    session.add(progress)
+    session.add(room_story_progress)
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.runtime.advanced",
+        payload={
+            "choice_id": str(user_choice.id),
+            "active_progress_id": str(progress.id),
+            "revision": room_story_progress.revision,
+        },
+    )
+
+    return await _build_room_runtime_public(
+        room_id=room_id,
+        room_story_progress=room_story_progress,
+        progress=progress,
+        session=session,
+    )
+
+
+async def rewind_room_runtime(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    req: RoomRuntimeRewindRequest,
+    session: AsyncSession,
+) -> RoomRuntimePublic:
+    """
+    Rewind the room's shared story run by branching to a prior choice.
+
+    Creates a new progress branch with a cloned ancestor chain.
+    """
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can rewind the room runtime")
+
+    rsp_result = await session.execute(
+        select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
+    )
+    room_story_progress = rsp_result.scalar_one_or_none()
+    if not room_story_progress:
+        raise HTTPException(status_code=404, detail="Room runtime not initialized")
+
+    if req.expected_revision is not None and req.expected_revision != room_story_progress.revision:
+        raise HTTPException(status_code=409, detail="Room runtime revision mismatch")
+
+    progress_result = await session.execute(
+        select(UserStoryProgress).where(
+            UserStoryProgress.id == room_story_progress.active_progress_id
+        )
+    )
+    progress = progress_result.scalar_one_or_none()
+    if not progress:
+        raise HTTPException(status_code=404, detail="Active progress not found")
+
+    target_result = await session.execute(
+        select(UserNodeChoice).where(
+            UserNodeChoice.id == req.target_choice_id,
+            UserNodeChoice.progress_id == progress.id,
+        )
+    )
+    target_choice = target_result.scalar_one_or_none()
+    if not target_choice:
+        raise HTTPException(status_code=404, detail="Target choice not found in active progress")
+
+    chain = get_choice_ancestor_chain(
+        session=session.sync_session,
+        choice_id=req.target_choice_id,
+    )
+
+    now = datetime.utcnow()
+    new_progress = UserStoryProgress(
+        id=uuid.uuid4(),
+        user_persona_id=progress.user_persona_id,
+        story_id=progress.story_id,
+        story_version=progress.story_version,
+        current_node_id=progress.current_node_id,
+        is_completed=False,
+        story_state={},
+        head_choice_id=None,
+        head_version=0,
+        started_at=now,
+        updated_at=now,
+    )
+    session.add(new_progress)
+    await session.flush()
+
+    new_head_id: uuid.UUID | None = None
+    previous_id: uuid.UUID | None = None
+    for choice in chain:
+        new_choice_id = uuid.uuid4()
+        new_choice = UserNodeChoice(
+            id=new_choice_id,
+            progress_id=new_progress.id,
+            parent_choice_id=previous_id,
+            choice_text=choice.choice_text,
+            from_node_id=choice.from_node_id,
+            to_node_id=choice.to_node_id,
+            state_changes=choice.state_changes,
+            rng_data=choice.rng_data,
+            choice_time=choice.choice_time,
+        )
+        session.add(new_choice)
+        previous_id = new_choice_id
+        new_head_id = new_choice_id
+
+    await session.flush()
+
+    new_progress.head_choice_id = new_head_id
+    new_progress.head_version = len(chain)
+    new_progress.story_state = replay_state_from_head_optimized(
+        session=session.sync_session,
+        progress_id=new_progress.id,
+        head_choice_id=new_head_id,
+    )
+    new_progress.current_node_id = get_current_node_from_head(
+        session=session.sync_session,
+        head_choice_id=new_head_id,
+        story_id=new_progress.story_id,
+        story_version=new_progress.story_version,
+    )
+
+    node_result = await session.execute(
+        select(StoryNode).where(StoryNode.id == new_progress.current_node_id)
+    )
+    node = node_result.scalar_one_or_none()
+    new_progress.is_completed = bool(node and node.is_end_node)
+
+    new_progress.updated_at = now
+
+    room_story_progress.active_progress_id = new_progress.id
+    room_story_progress.revision += 1
+    room_story_progress.updated_at = now
+    session.add(new_progress)
+    session.add(room_story_progress)
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.runtime.rewound",
+        payload={
+            "target_choice_id": str(req.target_choice_id),
+            "active_progress_id": str(new_progress.id),
+            "revision": room_story_progress.revision,
+        },
+    )
+
+    return await _build_room_runtime_public(
+        room_id=room_id,
+        room_story_progress=room_story_progress,
+        progress=new_progress,
+        session=session,
+    )
+
+
+async def reset_room_runtime(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    req: RoomRuntimeResetRequest,
+    session: AsyncSession,
+) -> RoomRuntimePublic:
+    """
+    Reset the room's shared story run by branching to a new start state.
+    """
+    rsp_result = await session.execute(
+        select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
+    )
+    room_story_progress = rsp_result.scalar_one_or_none()
+    if not room_story_progress:
+        raise HTTPException(status_code=404, detail="Room runtime not initialized")
+
+    progress_result = await session.execute(
+        select(UserStoryProgress).where(
+            UserStoryProgress.id == room_story_progress.active_progress_id
+        )
+    )
+    progress = progress_result.scalar_one_or_none()
+    if not progress:
+        raise HTTPException(status_code=404, detail="Active progress not found")
+
+    result = await start_room_runtime(
+        room_id=room_id,
+        user_id=user_id,
+        req=RoomRuntimeStartRequest(
+            user_persona_id=progress.user_persona_id,
+            story_version=room_story_progress.story_version,
+            expected_revision=req.expected_revision,
+        ),
+        session=session,
+    )
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.runtime.reset",
+        payload={
+            "active_progress_id": str(result.active_progress_id),
+            "revision": result.revision,
+        },
+    )
+
+    return result
+
+
+# ============================================================================
+# Room Context Item API (Supplemental Context)
+# ============================================================================
+
+
+def _context_store(store: ContextItemStore | None) -> ContextItemStore:
+    return store or RedisContextStore()
+
+
+def _validate_context_item(
+    *,
+    context_type: str,
+    payload: dict[str, Any],
+    source: str,
+) -> None:
+    if not context_type or len(context_type) > 100:
+        raise HTTPException(status_code=400, detail="Invalid context_type")
+    if not source or len(source) > 50:
+        raise HTTPException(status_code=400, detail="Invalid source")
+    try:
+        payload_bytes = len(json.dumps(payload).encode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid payload: {exc}") from exc
+    if payload_bytes > 50_000:
+        raise HTTPException(status_code=400, detail="Payload too large")
+
+
+async def list_room_context_items(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+    agent_slug: str | None = None,
+    store: ContextItemStore | None = None,
+) -> RoomContextItemsPublic:
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    items = await _context_store(store).list(room_id=room_id, agent_slug=agent_slug)
+    return RoomContextItemsPublic(
+        data=[
+            RoomContextItemPublic(
+                id=item.id,
+                room_id=item.room_id,
+                agent_slug=item.agent_slug,
+                context_type=item.context_type,
+                payload=item.payload,
+                source=item.source,
+                created_at=item.created_at,
+                expires_at=item.expires_at,
+            )
+            for item in items
+        ],
+        count=len(items),
+    )
+
+
+async def add_room_context_item(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+    context_in: RoomContextItemCreate,
+    store: ContextItemStore | None = None,
+) -> RoomContextItemPublic:
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can add context items")
+
+    _validate_context_item(
+        context_type=context_in.context_type,
+        payload=context_in.payload,
+        source=context_in.source,
+    )
+
+    item = ContextItem(
+        id=str(uuid.uuid4()),
+        room_id=room_id,
+        agent_slug=context_in.agent_slug,
+        context_type=context_in.context_type,
+        payload=context_in.payload,
+        source=context_in.source,
+        created_at=datetime.utcnow(),
+        expires_at=context_in.expires_at,
+    )
+    await _context_store(store).add(item)
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.context_item.created",
+        payload={
+            "context_id": item.id,
+            "context_type": item.context_type,
+            "source": item.source,
+            "agent_slug": item.agent_slug,
+        },
+    )
+    return RoomContextItemPublic(
+        id=item.id,
+        room_id=item.room_id,
+        agent_slug=item.agent_slug,
+        context_type=item.context_type,
+        payload=item.payload,
+        source=item.source,
+        created_at=item.created_at,
+        expires_at=item.expires_at,
+    )
+
+
+async def upsert_room_context_item(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    context_id: str,
+    session: AsyncSession,
+    context_in: RoomContextItemCreate,
+    replace_by_type: bool = False,
+    store: ContextItemStore | None = None,
+) -> RoomContextItemPublic:
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can upsert context items")
+
+    _validate_context_item(
+        context_type=context_in.context_type,
+        payload=context_in.payload,
+        source=context_in.source,
+    )
+
+    store_obj = _context_store(store)
+    if replace_by_type:
+        existing = await store_obj.list(room_id=room_id, agent_slug=context_in.agent_slug)
+        for item in existing:
+            if item.context_type == context_in.context_type:
+                await store_obj.delete(room_id=room_id, context_id=item.id)
+
+    await store_obj.delete(room_id=room_id, context_id=context_id)
+
+    item = ContextItem(
+        id=context_id,
+        room_id=room_id,
+        agent_slug=context_in.agent_slug,
+        context_type=context_in.context_type,
+        payload=context_in.payload,
+        source=context_in.source,
+        created_at=datetime.utcnow(),
+        expires_at=context_in.expires_at,
+    )
+    await store_obj.add(item)
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.context_item.upserted",
+        payload={
+            "context_id": item.id,
+            "context_type": item.context_type,
+            "source": item.source,
+            "agent_slug": item.agent_slug,
+            "replace_by_type": replace_by_type,
+        },
+    )
+
+    return RoomContextItemPublic(
+        id=item.id,
+        room_id=item.room_id,
+        agent_slug=item.agent_slug,
+        context_type=item.context_type,
+        payload=item.payload,
+        source=item.source,
+        created_at=item.created_at,
+        expires_at=item.expires_at,
+    )
+
+
+async def delete_room_context_item(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    context_id: str,
+    session: AsyncSession,
+    store: ContextItemStore | None = None,
+) -> None:
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can delete context items")
+
+    removed = await _context_store(store).delete(room_id=room_id, context_id=context_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Context item not found")
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.context_item.deleted",
+        payload={"context_id": context_id},
+    )
+
+
+# ============================================================================
+# Room Agent Settings (Prompt/Tool Policy)
+# ============================================================================
+
+
+async def list_room_agent_settings(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> RoomAgentSettingsBundle:
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    settings_result = await session.execute(
+        select(RoomAgentSettings).where(RoomAgentSettings.room_id == room_id)
+    )
+    settings = settings_result.scalars().all()
+
+    room_defaults = next((s for s in settings if s.agent_slug is None), None)
+    overrides = [s for s in settings if s.agent_slug is not None]
+
+    return RoomAgentSettingsBundle(
+        room_defaults=RoomAgentSettingsPublic.model_validate(room_defaults)
+        if room_defaults
+        else None,
+        agent_overrides=[RoomAgentSettingsPublic.model_validate(s) for s in overrides],
+    )
+
+
+async def upsert_room_agent_settings(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    agent_slug: str | None,
+    settings_in: RoomAgentSettingsUpdate,
+    session: AsyncSession,
+) -> RoomAgentSettingsPublic:
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can update agent settings")
+
+    result = await session.execute(
+        select(RoomAgentSettings).where(
+            RoomAgentSettings.room_id == room_id,
+            RoomAgentSettings.agent_slug == agent_slug,
+        )
+    )
+    settings = result.scalar_one_or_none()
+
+    now = datetime.utcnow()
+    if settings is None:
+        settings = RoomAgentSettings(
+            id=uuid.uuid4(),
+            room_id=room_id,
+            agent_slug=agent_slug,
+            prompt_config=settings_in.prompt_config,
+            tool_policy=settings_in.tool_policy,
+            rule_config=settings_in.rule_config,
+            revision=0,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(settings)
+    else:
+        if settings_in.expected_revision is not None and settings_in.expected_revision != settings.revision:
+            raise HTTPException(status_code=409, detail="Room agent settings revision mismatch")
+        if settings_in.prompt_config is not None:
+            settings.prompt_config = settings_in.prompt_config
+        if settings_in.tool_policy is not None:
+            settings.tool_policy = settings_in.tool_policy
+        if settings_in.rule_config is not None:
+            settings.rule_config = settings_in.rule_config
+        settings.revision += 1
+        settings.updated_at = now
+        session.add(settings)
+
+    await session.flush()
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.agent_settings.updated",
+        payload={
+            "agent_slug": agent_slug,
+            "revision": settings.revision,
+        },
+    )
+
+    return RoomAgentSettingsPublic.model_validate(settings)
+
+
+async def delete_room_agent_settings_override(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    agent_slug: str,
+    session: AsyncSession,
+) -> None:
+    if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Only room owners can update agent settings")
+
+    result = await session.execute(
+        select(RoomAgentSettings).where(
+            RoomAgentSettings.room_id == room_id,
+            RoomAgentSettings.agent_slug == agent_slug,
+        )
+    )
+    settings = result.scalar_one_or_none()
+    if not settings:
+        raise HTTPException(status_code=404, detail="Agent settings override not found")
+
+    await session.delete(settings)
+    await session.flush()
+
+    await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room.agent_settings.deleted",
+        payload={"agent_slug": agent_slug},
+    )
 
 
 async def check_can_edit_message(

@@ -180,6 +180,7 @@ async def get_agent_instance_with_tools(
     user_id: uuid.UUID | None = None,
     enable_a2a_tool: bool = True,
     enable_ag_ui_tool: bool = True,
+    room_id: uuid.UUID | None = None,
 ) -> Agent[AgentDeps, str] | None:
     """
     Get agent instance with A2A and AG-UI tools enabled.
@@ -218,6 +219,9 @@ async def get_agent_instance_with_tools(
         tools=tools,
         deps_type=AgentDeps,
     )
+
+    # TODO: Apply room-specific agent settings (prompt/tool policy) when available.
+    _ = room_id
 
     logger.debug(
         f"Instantiated agent {config.slug} with model {effective_model_name} "

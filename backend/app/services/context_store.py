@@ -35,6 +35,9 @@ class ContextItemStore(Protocol):
     ) -> list[ContextItem]:
         ...
 
+    async def delete(self, *, room_id: uuid.UUID, context_id: str) -> bool:
+        ...
+
 
 @dataclass
 class InMemoryContextStore:
@@ -54,6 +57,12 @@ class InMemoryContextStore:
         return [
             item for item in items if item.agent_slug is None or item.agent_slug == agent_slug
         ]
+
+    async def delete(self, *, room_id: uuid.UUID, context_id: str) -> bool:
+        items = self._items.get(room_id, [])
+        original_len = len(items)
+        self._items[room_id] = [item for item in items if item.id != context_id]
+        return len(self._items[room_id]) != original_len
 
 
 @dataclass
@@ -101,6 +110,43 @@ class RedisContextStore:
         return [
             item for item in items if item.agent_slug is None or item.agent_slug == agent_slug
         ]
+
+    async def delete(self, *, room_id: uuid.UUID, context_id: str) -> bool:
+        try:
+            redis = await get_redis()
+            key = self._key(room_id)
+            raw_items = await redis.lrange(key, 0, -1)
+        except Exception as exc:
+            logger.warning(f"Failed to read context items from Redis: {exc}")
+            return False
+
+        filtered: list[str] = []
+        removed = False
+        for raw in raw_items:
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8")
+            try:
+                data = json.loads(raw)
+            except Exception:
+                filtered.append(raw)
+                continue
+            if data.get("id") == context_id:
+                removed = True
+                continue
+            filtered.append(raw if isinstance(raw, str) else json.dumps(data))
+
+        if not removed:
+            return False
+
+        try:
+            await redis.delete(key)
+            if filtered:
+                await redis.rpush(key, *filtered)
+        except Exception as exc:
+            logger.warning(f"Failed to rewrite context items in Redis: {exc}")
+            return False
+
+        return True
 
     def _key(self, room_id: uuid.UUID) -> str:
         return f"{self.key_prefix}:{room_id}:{self.key_suffix}"

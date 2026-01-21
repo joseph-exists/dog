@@ -21,6 +21,9 @@ from app.api.routes import (
     quality_trait_links,
     room_panels,
     room_participant_bindings,
+    room_contexts,
+    room_agent_settings,
+    room_runtime,
     rooms,
     stories,
     storynodes,
@@ -58,6 +61,9 @@ api_router.include_router(agent_personas.router)
 api_router.include_router(llm_providers.router)
 api_router.include_router(llm_catalog.router)
 api_router.include_router(rooms.router)
+api_router.include_router(room_contexts.router)
+api_router.include_router(room_agent_settings.router)
+api_router.include_router(room_runtime.router)
 api_router.include_router(pages.router)
 api_router.include_router(room_panels.router, prefix="/rooms", tags=["room-panels"])
 api_router.include_router(room_participant_bindings.router)

@@ -67,7 +67,11 @@ class StreamingAgentRunner:
             )
 
             agent = await self._get_agent_instance_with_tools(
-                session, agent_name, user_id=req.user_id, enable_a2a_tool=True
+                session,
+                agent_name,
+                user_id=req.user_id,
+                enable_a2a_tool=True,
+                room_id=room_id,
             )
             if not agent:
                 return AgentRunResult(

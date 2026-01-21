@@ -172,7 +172,7 @@ Add a small room-scoped wrapper (conceptual “RoomStoryProgress”) that select
 - `room_id`
 - `story_id`
 - `story_version`
-- `progress_id` (points at the underlying progress + choice history + snapshots)
+- `active_progress_id` (points at the underlying progress + choice history + snapshots)
 - optional `revision`/`updated_at` (optimistic concurrency for UI-driven edits)
 
 Key operations (API-level intent):
@@ -183,7 +183,7 @@ Key operations (API-level intent):
   - apply `sets_state` to `story_state`
   - append to `UserNodeChoice` history, update head, and create `ProgressSnapshot` periodically
 - Rewind:
-  - move head to a previous choice (or node checkpoint), reconstruct state from nearest `ProgressSnapshot` + replay
+  - branch to a new progress record at a previous checkpoint (reconstruct state from nearest `ProgressSnapshot` + replay, then set it as the active progress)
 
 ### 3) RoomContext side (agent-time projection)
 Owned by: context provider + prompt builder.
