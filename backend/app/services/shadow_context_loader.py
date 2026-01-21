@@ -91,7 +91,7 @@ async def build_shadow_context_items(
     # Room summary
     try:
         room_summary = await shadow_summary_service.get_latest_summary(
-            session=session.sync_session,
+            session=session,
             entity_type="room",
             entity_id=room_id,
         )
@@ -126,7 +126,7 @@ async def build_shadow_context_items(
     if room.story_id:
         try:
             story_summary = await shadow_summary_service.get_latest_summary(
-                session=session.sync_session,
+                session=session,
                 entity_type="story",
                 entity_id=room.story_id,
             )
@@ -170,7 +170,7 @@ async def build_shadow_context_items(
 
     try:
         agent_summary = await shadow_summary_service.get_latest_summary(
-            session=session.sync_session,
+            session=session,
             entity_type="agent",
             entity_id=agent_config.id,
         )
@@ -217,7 +217,7 @@ async def build_shadow_context_items(
     if binding.persona_id:
         try:
             persona_summary = await shadow_summary_service.get_latest_summary(
-                session=session.sync_session,
+                session=session,
                 entity_type="persona",
                 entity_id=binding.persona_id,
             )
@@ -266,7 +266,7 @@ async def build_shadow_context_items(
     if binding.user_llm_provider_id:
         try:
             provider_summary = await shadow_summary_service.get_latest_summary(
-                session=session.sync_session,
+                session=session,
                 entity_type="user_llm_provider",
                 entity_id=binding.user_llm_provider_id,
             )

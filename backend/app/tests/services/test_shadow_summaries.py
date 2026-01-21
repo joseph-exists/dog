@@ -4,7 +4,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import ShadowRepo, ShadowVersion, User, UserCreate
 from app.services.shadow_summaries import summarize_user_llm_provider
@@ -39,13 +39,15 @@ def test_summarize_user_llm_provider_redacts_keys() -> None:
 
 
 @pytest.mark.asyncio
-async def test_summarize_room_contains_active_bindings_shape(db: Session) -> None:
+async def test_summarize_room_contains_active_bindings_shape(async_session: AsyncSession) -> None:
     """Test that room summary includes proper active_bindings shape."""
     # Setup: create user and shadow repo
     user_in = UserCreate(email=f"shadow-room-{uuid.uuid4()}@example.com", password="password123")
     from app import crud
 
-    user: User = crud.create_user(session=db, user_create=user_in)
+    user: User = await async_session.run_sync(
+        lambda session: crud.create_user(session=session, user_create=user_in)
+    )
 
     entity_id = uuid.uuid4()
     shadow_repo = ShadowRepo(
@@ -55,9 +57,9 @@ async def test_summarize_room_contains_active_bindings_shape(db: Session) -> Non
         forgejo_repo_name=f"room-{str(entity_id)[:8]}",
         forgejo_repo_id=None,
     )
-    db.add(shadow_repo)
-    db.commit()
-    db.refresh(shadow_repo)
+    async_session.add(shadow_repo)
+    await async_session.commit()
+    await async_session.refresh(shadow_repo)
 
     # Create a room snapshot with participants and active bindings
     room_snapshot = {
@@ -99,12 +101,12 @@ async def test_summarize_room_contains_active_bindings_shape(db: Session) -> Non
         snapshot_json=room_snapshot,
         created_by_id=user.id,
     )
-    db.add(shadow_version)
-    db.commit()
+    async_session.add(shadow_version)
+    await async_session.commit()
 
     # Test: get summary and verify structure
     result = await shadow_summary_service.get_latest_summary(
-        session=db, entity_type="room", entity_id=entity_id
+        session=async_session, entity_type="room", entity_id=entity_id
     )
 
     assert result.summary is not None
@@ -113,13 +115,15 @@ async def test_summarize_room_contains_active_bindings_shape(db: Session) -> Non
 
 
 @pytest.mark.asyncio
-async def test_shadow_summary_service_returns_summary_dispatch_result(db: Session) -> None:
+async def test_shadow_summary_service_returns_summary_dispatch_result(async_session: AsyncSession) -> None:
     """Test that get_latest_summary returns summary field and preserves metadata."""
     # Setup: create user and shadow repo
     user_in = UserCreate(email=f"shadow-summary-{uuid.uuid4()}@example.com", password="password123")
     from app import crud
 
-    user: User = crud.create_user(session=db, user_create=user_in)
+    user: User = await async_session.run_sync(
+        lambda session: crud.create_user(session=session, user_create=user_in)
+    )
 
     entity_id = uuid.uuid4()
     shadow_repo = ShadowRepo(
@@ -129,9 +133,9 @@ async def test_shadow_summary_service_returns_summary_dispatch_result(db: Sessio
         forgejo_repo_name=f"provider-{str(entity_id)[:8]}",
         forgejo_repo_id=None,
     )
-    db.add(shadow_repo)
-    db.commit()
-    db.refresh(shadow_repo)
+    async_session.add(shadow_repo)
+    await async_session.commit()
+    await async_session.refresh(shadow_repo)
 
     commit_sha = "deadbeefcafe"
     snapshot = {
@@ -152,12 +156,12 @@ async def test_shadow_summary_service_returns_summary_dispatch_result(db: Sessio
         snapshot_json=snapshot,
         created_by_id=user.id,
     )
-    db.add(shadow_version)
-    db.commit()
+    async_session.add(shadow_version)
+    await async_session.commit()
 
     # Test: get summary
     result = await shadow_summary_service.get_latest_summary(
-        session=db, entity_type="provider", entity_id=entity_id
+        session=async_session, entity_type="provider", entity_id=entity_id
     )
 
     assert isinstance(result, ShadowSummaryResult)
@@ -168,4 +172,3 @@ async def test_shadow_summary_service_returns_summary_dispatch_result(db: Sessio
     assert result.source == "db"
     assert result.is_stale is True
     assert result.summary is not None
-

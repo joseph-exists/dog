@@ -5,7 +5,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from sqlmodel import Session, select
 
@@ -20,9 +20,7 @@ from app.services.shadow_summaries import SUMMARY_DISPATCH
 logger = logging.getLogger(__name__)
 
 """Shadow Summary Service with Caching.
-Note: uses sync DB session (session.sync_session) via the async session.
-to isolate sync usage, need to refactor towards a dedicated sync session
-within the loader.
+Note: uses run_sync when handed an async session to safely access sync helpers.
 """
 
 @dataclass(frozen=True)
@@ -54,8 +52,11 @@ class ShadowSummaryService:
         entity_type: str,
         entity_id: uuid.UUID,
     ) -> ShadowSummaryResult:
-        snapshot = shadow_read_service.get_latest_snapshot(
-            session=session, entity_type=entity_type, entity_id=entity_id
+        snapshot = await self._run_sync(
+            session,
+            shadow_read_service.get_latest_snapshot,
+            entity_type=entity_type,
+            entity_id=entity_id,
         )
         return await self._summarize_with_cache(
             session=session,
@@ -71,8 +72,9 @@ class ShadowSummaryService:
         entity_id: uuid.UUID,
         version_number: int,
     ) -> ShadowSummaryResult:
-        snapshot = shadow_read_service.get_snapshot_by_version(
-            session=session,
+        snapshot = await self._run_sync(
+            session,
+            shadow_read_service.get_snapshot_by_version,
             entity_type=entity_type,
             entity_id=entity_id,
             version_number=version_number,
@@ -91,8 +93,9 @@ class ShadowSummaryService:
         entity_id: uuid.UUID,
         commit_sha: str,
     ) -> ShadowSummaryResult:
-        snapshot = shadow_read_service.get_snapshot_by_commit(
-            session=session,
+        snapshot = await self._run_sync(
+            session,
+            shadow_read_service.get_snapshot_by_commit,
             entity_type=entity_type,
             entity_id=entity_id,
             commit_sha=commit_sha,
@@ -110,8 +113,11 @@ class ShadowSummaryService:
         snapshot: ShadowSnapshotResult,
         ttl_seconds: int,
     ) -> ShadowSummaryResult:
-        shadow_repo_id = self._get_shadow_repo_id(
-            session=session, entity_type=snapshot.entity_type, entity_id=snapshot.entity_id
+        shadow_repo_id = await self._run_sync(
+            session,
+            self._get_shadow_repo_id,
+            entity_type=snapshot.entity_type,
+            entity_id=snapshot.entity_id,
         )
         cache_key = self._cache_key(shadow_repo_id, snapshot.commit_sha)
         if cache_key:
@@ -138,6 +144,19 @@ class ShadowSummaryService:
         if cache_key:
             await self._set_cached_summary(cache_key, result, ttl_seconds)
         return result
+
+    _T = TypeVar("_T")
+
+    async def _run_sync(
+        self,
+        session: Session,
+        func: Callable[..., _T],
+        **kwargs: Any,
+    ) -> _T:
+        run_sync = getattr(session, "run_sync", None)
+        if callable(run_sync):
+            return await run_sync(lambda sync_session: func(session=sync_session, **kwargs))
+        return func(session=session, **kwargs)
 
     def _get_shadow_repo_id(
         self,
@@ -204,4 +223,3 @@ class ShadowSummaryService:
 
 
 shadow_summary_service = ShadowSummaryService()
-

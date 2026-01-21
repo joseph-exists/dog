@@ -11,7 +11,7 @@ from app.services.agent_runner_types import AgentRunRequest
 
 
 class _ContextService:
-    async def build(self, *, room_id, session, message_limit: int = 20):
+    async def build(self, *, room_id, session, message_limit: int = 20, agent_slug=None):
         return object()
 
 

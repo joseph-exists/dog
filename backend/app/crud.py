@@ -1501,7 +1501,7 @@ async def check_room_membership(
             RoomParticipant.active == True,  # noqa: E712
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
     return participant is not None
 
 
@@ -1534,7 +1534,7 @@ async def check_room_owner(
             RoomParticipant.active == True,  # noqa: E712
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
     return participant is not None
 
 
@@ -1578,7 +1578,7 @@ async def _build_room_runtime_public(
                 StoryNode.is_start_node == True,  # noqa: E712
             )
         )
-        start_node = start_node_result.scalar_one_or_none()
+        start_node = start_node_result.one_or_none()
         if start_node:
             node_chain_ids.append(start_node.id)
 
@@ -1636,7 +1636,7 @@ async def get_room_runtime(
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
-    room_story_progress = rsp_result.scalar_one_or_none()
+    room_story_progress = rsp_result.one_or_none()
     if not room_story_progress:
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
@@ -1645,7 +1645,7 @@ async def get_room_runtime(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
     )
-    progress = progress_result.scalar_one_or_none()
+    progress = progress_result.one_or_none()
     if not progress:
         raise HTTPException(status_code=404, detail="Active progress not found")
 
@@ -1681,7 +1681,7 @@ async def start_room_runtime(
         raise HTTPException(status_code=403, detail="Only room owners can start the room runtime")
 
     room_result = await session.exec(select(Room).where(Room.room_id == room_id))
-    room = room_result.scalar_one_or_none()
+    room = room_result.one_or_none()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     if not room.story_id:
@@ -1694,7 +1694,7 @@ async def start_room_runtime(
             UserPersona.user_id == user_id,
         )
     )
-    user_persona = user_persona_result.scalar_one_or_none()
+    user_persona = user_persona_result.one_or_none()
     if not user_persona:
         raise HTTPException(status_code=404, detail="User persona not found")
 
@@ -1714,7 +1714,7 @@ async def start_room_runtime(
             StoryNode.is_start_node == True,  # noqa: E712
         )
     )
-    start_node = start_node_result.scalar_one_or_none()
+    start_node = start_node_result.one_or_none()
     if not start_node:
         raise HTTPException(
             status_code=400,
@@ -1752,7 +1752,7 @@ async def start_room_runtime(
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
-    room_story_progress = rsp_result.scalar_one_or_none()
+    room_story_progress = rsp_result.one_or_none()
 
     if room_story_progress is None:
         room_story_progress = RoomStoryProgress(
@@ -1818,7 +1818,7 @@ async def advance_room_runtime(
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
-    room_story_progress = rsp_result.scalar_one_or_none()
+    room_story_progress = rsp_result.one_or_none()
     if not room_story_progress:
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
@@ -1830,14 +1830,14 @@ async def advance_room_runtime(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
     )
-    progress = progress_result.scalar_one_or_none()
+    progress = progress_result.one_or_none()
     if not progress:
         raise HTTPException(status_code=404, detail="Active progress not found")
 
     choice_result = await session.exec(
         select(NodeChoice).where(NodeChoice.id == req.choice_id)
     )
-    choice = choice_result.scalar_one_or_none()
+    choice = choice_result.one_or_none()
     if not choice:
         raise HTTPException(status_code=404, detail="Choice not found")
 
@@ -1939,7 +1939,7 @@ async def rewind_room_runtime(
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
-    room_story_progress = rsp_result.scalar_one_or_none()
+    room_story_progress = rsp_result.one_or_none()
     if not room_story_progress:
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
@@ -1951,7 +1951,7 @@ async def rewind_room_runtime(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
     )
-    progress = progress_result.scalar_one_or_none()
+    progress = progress_result.one_or_none()
     if not progress:
         raise HTTPException(status_code=404, detail="Active progress not found")
 
@@ -1961,7 +1961,7 @@ async def rewind_room_runtime(
             UserNodeChoice.progress_id == progress.id,
         )
     )
-    target_choice = target_result.scalar_one_or_none()
+    target_choice = target_result.one_or_none()
     if not target_choice:
         raise HTTPException(status_code=404, detail="Target choice not found in active progress")
 
@@ -2025,7 +2025,7 @@ async def rewind_room_runtime(
     node_result = await session.exec(
         select(StoryNode).where(StoryNode.id == new_progress.current_node_id)
     )
-    node = node_result.scalar_one_or_none()
+    node = node_result.one_or_none()
     new_progress.is_completed = bool(node and node.is_end_node)
 
     new_progress.updated_at = now
@@ -2068,7 +2068,7 @@ async def reset_room_runtime(
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
-    room_story_progress = rsp_result.scalar_one_or_none()
+    room_story_progress = rsp_result.one_or_none()
     if not room_story_progress:
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
@@ -2077,7 +2077,7 @@ async def reset_room_runtime(
             UserStoryProgress.id == room_story_progress.active_progress_id
         )
     )
-    progress = progress_result.scalar_one_or_none()
+    progress = progress_result.one_or_none()
     if not progress:
         raise HTTPException(status_code=404, detail="Active progress not found")
 
@@ -2365,7 +2365,7 @@ async def upsert_room_agent_settings(
             RoomAgentSettings.agent_slug == agent_slug,
         )
     )
-    settings = result.scalar_one_or_none()
+    settings = result.one_or_none()
 
     now = datetime.utcnow()
     if settings is None:
@@ -2427,7 +2427,7 @@ async def delete_room_agent_settings_override(
             RoomAgentSettings.agent_slug == agent_slug,
         )
     )
-    settings = result.scalar_one_or_none()
+    settings = result.one_or_none()
     if not settings:
         raise HTTPException(status_code=404, detail="Agent settings override not found")
 
@@ -2469,7 +2469,7 @@ async def check_can_edit_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    message = result.scalar_one_or_none()
+    message = result.one_or_none()
     if not message:
         return False
 
@@ -2758,7 +2758,7 @@ async def get_room_for_user(
 
     # Fetch room
     result = await session.exec(select(Room).where(Room.room_id == room_id))
-    room = result.scalar_one_or_none()
+    room = result.one_or_none()
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -2893,7 +2893,7 @@ async def add_participant(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if not agent_config:
                 raise HTTPException(status_code=400, detail="Agent not found")
             normalized_participant_id = agent_config.slug
@@ -2901,7 +2901,7 @@ async def add_participant(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if not agent_config:
                 raise HTTPException(status_code=400, detail="Agent not found")
             normalized_participant_id = agent_config.slug
@@ -2968,7 +2968,7 @@ async def remove_participant(
             RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
 
     normalized_participant_id = participant_id
     if not participant:
@@ -2979,14 +2979,14 @@ async def remove_participant(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
 
@@ -2997,7 +2997,7 @@ async def remove_participant(
                     RoomParticipant.participant_id == normalized_participant_id,
                 )
             )
-            participant = result.scalar_one_or_none()
+            participant = result.one_or_none()
 
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found")
@@ -3066,7 +3066,7 @@ async def change_participant_role(
             RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.scalar_one_or_none()
+    participant = result.one_or_none()
 
     normalized_participant_id = participant_id
     if not participant:
@@ -3076,14 +3076,14 @@ async def change_participant_role(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
 
@@ -3094,7 +3094,7 @@ async def change_participant_role(
                     RoomParticipant.participant_id == normalized_participant_id,
                 )
             )
-            participant = result.scalar_one_or_none()
+            participant = result.one_or_none()
 
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found")
@@ -3202,12 +3202,12 @@ async def set_participant_binding(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
         except ValueError:
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.scalar_one_or_none()
+            agent_config = agent_config_result.one_or_none()
 
         if not agent_config:
             raise HTTPException(status_code=400, detail="Agent not found")
@@ -3226,7 +3226,7 @@ async def set_participant_binding(
             RoomParticipant.active == True,  # noqa: E712
         )
     )
-    participant = participant_result.scalar_one_or_none()
+    participant = participant_result.one_or_none()
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found in room")
 
@@ -3252,7 +3252,7 @@ async def set_participant_binding(
                 UserLLMProvider.user_id == acting_user.id,
             )
         )
-        provider = provider_result.scalar_one_or_none()
+        provider = provider_result.one_or_none()
         if not provider:
             raise HTTPException(
                 status_code=403, detail="Invalid provider_id for current user"
@@ -3267,7 +3267,7 @@ async def set_participant_binding(
                     UserPersona.persona_id == persona_id,
                 )
             )
-            if not user_persona_result.scalar_one_or_none():
+            if not user_persona_result.one_or_none():
                 raise HTTPException(
                     status_code=400, detail="Persona not in user's library"
                 )
@@ -3278,7 +3278,7 @@ async def set_participant_binding(
                     AgentPersona.persona_id == persona_id,
                 )
             )
-            if not agent_persona_result.scalar_one_or_none():
+            if not agent_persona_result.one_or_none():
                 raise HTTPException(
                     status_code=400, detail="Persona not in agent's library"
                 )
@@ -3509,7 +3509,7 @@ async def edit_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    message = result.scalar_one_or_none()
+    message = result.one_or_none()
 
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -3563,7 +3563,7 @@ async def pin_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    message = result.scalar_one_or_none()
+    message = result.one_or_none()
 
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -3614,7 +3614,7 @@ async def unpin_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    message = result.scalar_one_or_none()
+    message = result.one_or_none()
 
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -3666,7 +3666,7 @@ async def toggle_message_context(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    message = result.scalar_one_or_none()
+    message = result.one_or_none()
 
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
@@ -3716,7 +3716,7 @@ async def delete_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    message = result.scalar_one_or_none()
+    message = result.one_or_none()
 
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")

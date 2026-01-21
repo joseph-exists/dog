@@ -225,7 +225,7 @@ def list_llm_providers(session: requests.Session) -> list[dict]:
         return []
 
 
-def test_llm_provider(session: requests.Session, provider_id: str) -> bool:
+def run_llm_provider_test(session: requests.Session, provider_id: str) -> bool:
     """Trigger backend provider test endpoint."""
     try:
         response = session.post(f"{BASE_URL}/llm-providers/{provider_id}/test")
@@ -256,7 +256,7 @@ def validate_api_key(session: requests.Session) -> bool:
         return False
 
     print(f"  🔌 Testing provider: {provider_name}")
-    return test_llm_provider(session, provider_id)
+    return run_llm_provider_test(session, provider_id)
 
 
 def create_story(session: requests.Session, title: str, description: str) -> dict | None:

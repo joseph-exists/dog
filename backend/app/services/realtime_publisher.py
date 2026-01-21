@@ -46,6 +46,21 @@ async def publish_event_to_redis(
     - This ensures graceful degradation
     """
     try:
+        loop = asyncio.get_running_loop()
+        if loop.is_closed():
+            logger.warning(
+                "Skipping Redis publish for %s; event loop is closed.",
+                channel,
+            )
+            return
+    except RuntimeError:
+        logger.warning(
+            "Skipping Redis publish for %s; no running event loop.",
+            channel,
+        )
+        return
+
+    try:
         redis = await get_redis()
 
         message = {
@@ -95,6 +110,21 @@ async def publish_ephemeral_message(
 
     These messages are NOT stored in the event log.
     """
+    try:
+        loop = asyncio.get_running_loop()
+        if loop.is_closed():
+            logger.warning(
+                "Skipping Redis publish for %s; event loop is closed.",
+                channel,
+            )
+            return
+    except RuntimeError:
+        logger.warning(
+            "Skipping Redis publish for %s; no running event loop.",
+            channel,
+        )
+        return
+
     try:
         redis = await get_redis()
 

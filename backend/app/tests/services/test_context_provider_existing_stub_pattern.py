@@ -10,7 +10,7 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Room, User, UserCreate
 from app.services.context_provider import build_room_context
@@ -19,7 +19,7 @@ from app.services.context_store import InMemoryContextStore
 
 @pytest.mark.asyncio
 async def test_build_room_context_shadow_injection_stub(
-    db: Session,
+    async_session: AsyncSession,
 ) -> None:
     """
     Verify that existing unit tests can stub shadow injection.
@@ -31,16 +31,18 @@ async def test_build_room_context_shadow_injection_stub(
     user_in = UserCreate(email=f"test-{uuid.uuid4()}@example.com", password="password123")
     from app import crud
 
-    user: User = crud.create_user(session=db, user_create=user_in)
+    user: User = await async_session.run_sync(
+        lambda session: crud.create_user(session=session, user_create=user_in)
+    )
 
     room = Room(
-        name="Test Room",
-        description="Test Description",
-        owner_id=user.id,
+        room_id=uuid.uuid4(),
+        creator_id=user.id,
+        title="Test Room",
     )
-    db.add(room)
-    db.commit()
-    db.refresh(room)
+    async_session.add(room)
+    await async_session.commit()
+    await async_session.refresh(room)
 
     # Stub shadow injection to return empty list (keeps unit test scope narrow)
     with patch(
@@ -50,8 +52,8 @@ async def test_build_room_context_shadow_injection_stub(
     ):
         context_store = InMemoryContextStore()
         context = await build_room_context(
-            session=db,
-            room=room,
+            session=async_session,
+            room_id=room.room_id,
             context_store=context_store,
             agent_slug=None,
         )
@@ -61,6 +63,6 @@ async def test_build_room_context_shadow_injection_stub(
         # Shadow items should not be added since we stubbed it to return empty list
         shadow_items = [
             item for item in (context.extra_contexts or [])
-            if hasattr(item, "source") and item.source == "shadow"
+            if item.get("source") == "shadow"
         ]
         assert len(shadow_items) == 0
