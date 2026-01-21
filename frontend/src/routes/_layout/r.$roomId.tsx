@@ -228,10 +228,6 @@ function RoomView() {
     }
   }
 
-  const handleSwitchView = () => {
-    navigate({ to: "/room-v2/$roomId", params: { roomId } })
-  }
-
   // Loading state
   if (isLoadingRoom || isLoadingMessages) {
     return (
@@ -382,8 +378,6 @@ function RoomView() {
           canEdit={canManage}
           onCopyLink={handleCopyLink}
           onDelete={canManage ? handleDeleteRoom : undefined}
-          onSwitchView={handleSwitchView}
-          switchViewLabel="Switch to Classic View"
           showDebugPanel={showDebugPanel}
           onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
           devModeEnabled={showInternalMessages}
