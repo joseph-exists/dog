@@ -32,10 +32,6 @@ interface RoomShellProps {
   onDelete?: () => void
   /** Participant click callback */
   onParticipantClick?: (participant: Participant) => void
-  /** Switch view callback */
-  onSwitchView?: () => void
-  /** Label for switch view button */
-  switchViewLabel?: string
   /** Whether debug panel is shown */
   showDebugPanel?: boolean
   /** Toggle debug panel callback */
@@ -57,8 +53,6 @@ export function RoomShell({
   onCopyLink,
   onDelete,
   onParticipantClick,
-  onSwitchView,
-  switchViewLabel,
   showDebugPanel,
   onToggleDebugPanel,
   devModeEnabled,
@@ -82,8 +76,6 @@ export function RoomShell({
         onCopyLink={onCopyLink}
         onDelete={onDelete}
         onParticipantClick={onParticipantClick}
-        onSwitchView={onSwitchView}
-        switchViewLabel={switchViewLabel}
         showDebugPanel={showDebugPanel}
         onToggleDebugPanel={onToggleDebugPanel}
         devModeEnabled={devModeEnabled}

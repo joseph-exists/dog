@@ -6,7 +6,6 @@
  */
 
 import {
-  ArrowLeftRight,
   BookOpen,
   Bug,
   Grid3X3,
@@ -66,10 +65,6 @@ interface RoomHeaderProps {
   onDelete?: () => void
   /** Participant click callback */
   onParticipantClick?: (participant: Participant) => void
-  /** Switch view callback */
-  onSwitchView?: () => void
-  /** Label for switch view button */
-  switchViewLabel?: string
   /** Whether debug panel is shown */
   showDebugPanel?: boolean
   /** Toggle debug panel callback */
@@ -99,8 +94,6 @@ export function RoomHeader({
   onCopyLink,
   onDelete,
   onParticipantClick,
-  onSwitchView,
-  switchViewLabel,
   showDebugPanel,
   onToggleDebugPanel,
   devModeEnabled,
@@ -174,12 +167,6 @@ export function RoomHeader({
               <DropdownMenuItem onClick={onCopyLink}>
                 <Link className="h-4 w-4 mr-2" />
                 Copy Link
-              </DropdownMenuItem>
-            )}
-            {onSwitchView && (
-              <DropdownMenuItem onClick={onSwitchView}>
-                <ArrowLeftRight className="h-4 w-4 mr-2" />
-                {switchViewLabel || "Switch View"}
               </DropdownMenuItem>
             )}
             {onToggleDebugPanel && (
