@@ -164,7 +164,7 @@ const StoryCard = ({ story }: StoryCardProps) => {
               {linkedRooms.map((room) => (
                 <Link
                   key={room.room_id}
-                  to="/room/$roomId"
+                  to="/r/$roomId"
                   params={{ roomId: room.room_id }}
                 >
                   <Badge

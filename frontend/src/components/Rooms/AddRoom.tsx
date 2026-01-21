@@ -76,7 +76,7 @@ export default function AddRoom({
       showSuccessToast("Room created successfully.")
       reset()
       handleOpenChange(false)
-      navigate({ to: "/room/$roomId", params: { roomId: room.room_id } })
+      navigate({ to: "/r/$roomId", params: { roomId: room.room_id } })
     },
     onError: (err: ApiError) => {
       handleError.call(showErrorToast, err as ApiError)
