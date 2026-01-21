@@ -188,6 +188,15 @@ export const SYSTEM_PRESETS: Preset[] = [
     panels: [{ id: "chat", kind: "chat", prominence: "primary" }],
   },
   {
+    id: "classic",
+    name: "Classic",
+    description: "Chat with participants sidebar",
+    panels: [
+      { id: "chat", kind: "chat", prominence: "primary" },
+      { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
+    ],
+  },
+  {
     id: "collaborate",
     name: "Collaborate",
     description: "Chat with agents sidebar",
