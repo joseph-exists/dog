@@ -294,10 +294,11 @@ function ActionButtonsComponent({
     vertical: "flex flex-col gap-2",
     grid: "grid grid-cols-2 gap-2",
   }
+  const buttons = Array.isArray(data.buttons) ? data.buttons : []
 
   return (
     <div className={cn("mt-3", layoutClasses[data.layout || "horizontal"])}>
-      {data.buttons.map((btn, idx) => (
+      {buttons.map((btn, idx) => (
         <Button
           key={idx}
           variant={

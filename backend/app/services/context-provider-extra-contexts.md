@@ -79,3 +79,74 @@ Notes / Future Work
 - Replace InMemoryContextStore with DB-backed ContextItem model and table.
 - Add versioning or snapshots once data persistence is required.
 - Add expiration cleanup task for expires_at when present.
+
+
+USE CASE ALPHA:
+Currently the top level story (without any node objects, their relationships, or the change nodes that define their state changes and requirements) are passed into the room context.  
+
+Needed outcome: within a room that has a story:
+
+The story is loaded (and remains loaded)
+- the first node is loaded
+- the first set of choices and state requirements for that node is loaded
+
+within the room, an event (could be user or agent driven or some other mechanism) occurs.  that event triggers a state change - one of the choices is made, and the second node - with it's set of choices and state - is loaded into context.  
+
+the users can also 'rewind' nodes (in some cases) and reset the context/state to a prior state.  so if they are at node4 in the tree, and rewind to node2, the state reverts, and node2 is their new context.
+
+USE CASE BETA:
+We will (in the near future) allow users to adjust a) the prompts for the agents in a room, and b) the tools that are currently available in the room.  
+
+USE CASE THREE: these two will be linked through a currently not designed interface/mechanic.  It is possible for a story to have tools only be exposed in node 3, for example.
+
+
+
+
+...
+
+Here’s the call path for build_room_context and where it fits in a UI-managed “room context” feature, with concrete file refs you can follow.
+
+Call path (runtime)
+
+REST: user sends message → rooms.py (line 333) → run_agents_for_message(...) → agent_runner.py (line 252) → run_agent_for_room_streaming(...) → agent_runner_streaming.py (line 56) → RoomContextService.build(...) → agent_context.py (line 20) → build_room_context(...) in context_provider.py (line 66).
+WebSocket: websocket.py (line 352) → run_agents_for_message(...) → same chain as above.
+A2A tool calls also do this path directly in agent_tools.py (line 124) (uses build_room_context with RedisContextStore()).
+What build_room_context actually does
+
+Loads room, story, recent messages, participants → context_provider.py (line 66).
+
+If a context_store is passed, it adds Shadow-derived context items every time it runs, then reads the store and exposes items as RoomContext.extra_contexts:
+
+Adds items: context_provider.py (line 194) → build_shadow_context_items(...) in shadow_context_loader.py (line 65).
+
+Reads items: context_provider.py (line 208) → context_store.list(...), filters agent-scoped items, sorts by source and created_at.
+
+That means, today, the only production “context add” is Shadow auto-injection. Any “room context” you want the UI to manage isn’t wired in yet.
+
+Where the store lives
+
+RedisContextStore uses a Redis list at room:{room_id}:contexts → context_store.py (line 103).
+
+It is append-only (rpush) with optional TTL inside the item, but no delete/update/list-by-id APIs.
+
+Why this matters for a UI “room context manager”
+
+To let the UI add/modify context items, you’ll need an explicit API that calls ContextItemStore.add(...) (and likely delete/replace functionality). 
+
+The design note already hints at this: context-provider-extra-contexts.md suggests add_context_item(...) and a thin service wrapper.
+
+Concrete places to extend
+
+Service layer: add a small wrapper or method around ContextItemStore.add(...) (e.g., new function in context_store.py or a new service).
+
+API: create routes for POST /rooms/{room_id}/contexts (and optionally DELETE or PATCH) that validate membership and write to Redis.
+
+If you need deterministic ordering or replace-by-id, you’ll need to decide whether to:
+
+keep Redis list and add removal logic, or
+move to a hash/set keyed by ContextItem.id.
+
+
+
+
+If you want, I can sketch the minimal API endpoints + data model for UI-managed context, or we can trace where the frontend would call into it.

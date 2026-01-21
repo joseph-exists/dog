@@ -3045,6 +3045,7 @@ class AgentConfig(AgentConfigBase, table=True):
 
 class AgentConfigPublic(AgentConfigBase):
      id: uuid.UUID
+     slug: str | None
      owner_id: uuid.UUID | None
      created_at: datetime
      updated_at: datetime | None

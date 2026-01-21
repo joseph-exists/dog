@@ -22,7 +22,10 @@ import {
   type AgentConfigsPublic,
   type AgentConfigUpdate,
   AgentsService,
+  OpenAPI,
 } from "@/client"
+import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
+import { request as __request } from "@/client/core/request"
 
 // ============================================================================
 // Type Definitions - ViewModels
@@ -247,6 +250,22 @@ export const AgentService = {
    */
   async getAgent(agentId: string): Promise<AgentViewModel> {
     const agent: AgentConfigPublic = await AgentsService.getAgent({ agentId })
+    return transformAgent(agent)
+  },
+
+  /**
+   * Get a single agent by slug
+   *
+   * @param slug - Agent slug
+   * @returns AgentViewModel
+   * @throws ApiError - 404 if agent not found
+   */
+  async getAgentBySlug(slug: string): Promise<AgentViewModel> {
+    const options: ApiRequestOptions<AgentConfigPublic> = {
+      method: "GET",
+      url: `/api/v1/agents/slug/${slug}`,
+    }
+    const agent = await __request(OpenAPI, options)
     return transformAgent(agent)
   },
 

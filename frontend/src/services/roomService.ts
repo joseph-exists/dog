@@ -312,28 +312,29 @@ const agentCache = new Map<
 /**
  * Fetch agent details with caching.
  *
- * @param agentId - Agent UUID
+ * @param agentId - Agent UUID or slug
  * @returns Agent details or null if not found
  */
 async function getAgentDetails(
   agentId: string,
 ): Promise<{ name: string; description: string | null } | null> {
-  if (!isUuid(agentId)) {
-    return null
-  }
+  const isUuidValue = isUuid(agentId)
+  const cacheKey = isUuidValue ? `id:${agentId}` : `slug:${agentId}`
 
   // Check cache first
-  if (agentCache.has(agentId)) {
-    return agentCache.get(agentId)!
+  if (agentCache.has(cacheKey)) {
+    return agentCache.get(cacheKey)!
   }
 
   try {
-    const agent = await AgentService.getAgent(agentId)
+    const agent = isUuidValue
+      ? await AgentService.getAgent(agentId)
+      : await AgentService.getAgentBySlug(agentId)
     const details = {
       name: agent.name,
       description: agent.description ?? null,
     }
-    agentCache.set(agentId, details)
+    agentCache.set(cacheKey, details)
     return details
   } catch {
     // Agent not found or error - don't cache failures
