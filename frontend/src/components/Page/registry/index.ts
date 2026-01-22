@@ -2,6 +2,7 @@
 
 // Block types
 export {
+  BLOCK_TYPES,
   type BlockType,
   type BlockTypeDefinition,
   blockTypes,
@@ -31,6 +32,7 @@ export {
   getDefaultTemplate,
   getPageTemplate,
   getTemplatesForEntityType,
+  type InstantiatedBlock,
   type PageTemplate,
   pageTemplates,
   type TemplateBlock,

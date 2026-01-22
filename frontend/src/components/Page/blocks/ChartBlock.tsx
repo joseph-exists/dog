@@ -31,8 +31,14 @@ export interface ChartBlockConfig {
   dataSource: string
 }
 
+export interface ChartContent {
+  data?: Record<string, unknown>[]
+}
+
 export interface ChartBlockProps {
   config: ChartBlockConfig
+  content?: ChartContent
+  className?: string
 }
 
 // Default chart config for styling
@@ -57,17 +63,24 @@ const PIE_COLORS = [
  *
  * Fetches data using TanStack Query and renders it using recharts.
  * Supports area, bar, line, and pie chart types.
+ * Can receive data directly via content prop or fetch from dataSource.
+ * View-only block - no edit functionality.
  */
-export function ChartBlock({ config }: ChartBlockProps) {
-  const { data, isLoading, error } = useQuery({
+export function ChartBlock({ config, content, className }: ChartBlockProps) {
+  // Only fetch if no content is provided
+  const { data: fetchedData, isLoading, error } = useQuery({
     queryKey: ["blockData", config.dataSource],
     queryFn: () => fetchDataSource(config.dataSource),
+    enabled: !content?.data,
   })
 
-  // Loading state
-  if (isLoading) {
+  // Use content if provided, otherwise use fetched data
+  const data = content?.data ?? fetchedData
+
+  // Loading state (only if fetching)
+  if (isLoading && !content?.data) {
     return (
-      <BlockContainer title={config.title}>
+      <BlockContainer title={config.title} className={className}>
         <div className="p-4">
           <Skeleton className="h-[200px] w-full" />
         </div>
@@ -76,9 +89,9 @@ export function ChartBlock({ config }: ChartBlockProps) {
   }
 
   // Error state
-  if (error) {
+  if (error && !content?.data) {
     return (
-      <BlockContainer title={config.title}>
+      <BlockContainer title={config.title} className={className}>
         <div className="p-4 text-sm text-destructive">
           Failed to load data:{" "}
           {error instanceof Error ? error.message : "Unknown error"}
@@ -90,7 +103,7 @@ export function ChartBlock({ config }: ChartBlockProps) {
   // Empty state
   if (!data || data.length === 0) {
     return (
-      <BlockContainer title={config.title}>
+      <BlockContainer title={config.title} className={className}>
         <div className="p-4 text-sm text-muted-foreground">
           No data available
         </div>
@@ -101,7 +114,7 @@ export function ChartBlock({ config }: ChartBlockProps) {
   const chartData = data as Record<string, unknown>[]
 
   return (
-    <BlockContainer title={config.title}>
+    <BlockContainer title={config.title} className={className}>
       <div className="p-4">
         <ChartContainer
           config={defaultChartConfig}

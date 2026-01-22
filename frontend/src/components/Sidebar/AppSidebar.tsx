@@ -4,6 +4,7 @@ import {
   Briefcase,
   Home,
   MessageSquare,
+  User2,
   Users,
 } from "lucide-react"
 
@@ -30,9 +31,18 @@ const baseItems: Item[] = [
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
 
-  const items = currentUser?.is_superuser
-    ? [...baseItems, { icon: Users, title: "Admin", path: "/admin" }]
-    : baseItems
+  // Build items list based on user state
+  const items: Item[] = [...baseItems]
+
+  // Add "My Page" only for authenticated users
+  if (currentUser?.id) {
+    items.push({ icon: User2, title: "My Page", path: `/u/${currentUser.id}` })
+  }
+
+  // Add Admin for superusers
+  if (currentUser?.is_superuser) {
+    items.push({ icon: Users, title: "Admin", path: "/admin" })
+  }
 
   return (
     <Sidebar collapsible="icon">

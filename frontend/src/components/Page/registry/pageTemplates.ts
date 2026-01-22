@@ -3,12 +3,47 @@ import type { BlockType } from "./blockTypes"
 
 /**
  * A block instance within a page template.
+ *
+ * When used in page templates (defaultBlocks), `id` and `visibility` are optional
+ * and will be assigned defaults when instantiated. When used in actual page instances,
+ * all fields should be present.
  */
 export interface TemplateBlock {
+  /** Unique instance ID (uuid) - assigned when block is instantiated */
+  id?: string
+  /** Block type identifier */
   type: BlockType
+  /** Layout column */
   column: "primary" | "auxiliary"
+  /** Sort order within column */
   order: number
+  /** Display settings */
   config: Record<string, unknown>
+  /** Actual data content for the block */
+  content?: Record<string, unknown>
+  /** Visibility toggle - defaults to "visible" */
+  visibility?: "visible" | "hidden"
+}
+
+/**
+ * A fully instantiated block with all required fields.
+ * Use this type when working with blocks in actual page instances.
+ */
+export interface InstantiatedBlock {
+  /** Unique instance ID (uuid) */
+  id: string
+  /** Block type identifier */
+  type: BlockType
+  /** Layout column */
+  column: "primary" | "auxiliary"
+  /** Sort order within column */
+  order: number
+  /** Display settings */
+  config: Record<string, unknown>
+  /** Actual data content for the block */
+  content?: Record<string, unknown>
+  /** Visibility toggle */
+  visibility: "visible" | "hidden"
 }
 
 /**
@@ -34,30 +69,58 @@ export const pageTemplates: PageTemplate[] = [
     forEntityTypes: ["user", "agent", "team"],
     defaultBlocks: [
       {
+        id: "template-standard-profileImage",
         type: "profileImage",
         column: "primary",
         order: 1,
         config: { shape: "circle", size: "lg" },
+        content: { imageUrl: "", alt: "" },
+        visibility: "visible",
       },
       {
+        id: "template-standard-identity",
         type: "identity",
         column: "primary",
         order: 2,
         config: { showTagline: true },
+        content: { name: "", tagline: "" },
+        visibility: "visible",
       },
-      { type: "bio", column: "primary", order: 3, config: {} },
       {
+        id: "template-standard-bio",
+        type: "bio",
+        column: "primary",
+        order: 3,
+        config: {},
+        content: { text: "" },
+        visibility: "visible",
+      },
+      {
+        id: "template-standard-relationships",
         type: "relationships",
         column: "primary",
         order: 4,
         config: { groupByType: true },
+        content: { items: [] },
+        visibility: "visible",
       },
-      { type: "contact", column: "auxiliary", order: 1, config: {} },
       {
+        id: "template-standard-contact",
+        type: "contact",
+        column: "auxiliary",
+        order: 1,
+        config: {},
+        content: { email: "", phone: "" },
+        visibility: "visible",
+      },
+      {
+        id: "template-standard-links",
         type: "links",
         column: "auxiliary",
         order: 2,
         config: { layout: "list" },
+        content: { items: [] },
+        visibility: "visible",
       },
     ],
   },
@@ -68,23 +131,40 @@ export const pageTemplates: PageTemplate[] = [
     forEntityTypes: ["user", "agent", "team"],
     defaultBlocks: [
       {
+        id: "template-minimal-profileImage",
         type: "profileImage",
         column: "primary",
         order: 1,
         config: { shape: "circle", size: "md" },
+        content: { imageUrl: "", alt: "" },
+        visibility: "visible",
       },
       {
+        id: "template-minimal-identity",
         type: "identity",
         column: "primary",
         order: 2,
         config: { showTagline: true },
+        content: { name: "", tagline: "" },
+        visibility: "visible",
       },
-      { type: "bio", column: "primary", order: 3, config: {} },
       {
+        id: "template-minimal-bio",
+        type: "bio",
+        column: "primary",
+        order: 3,
+        config: {},
+        content: { text: "" },
+        visibility: "visible",
+      },
+      {
+        id: "template-minimal-links",
         type: "links",
         column: "primary",
         order: 4,
         config: { layout: "grid" },
+        content: { items: [] },
+        visibility: "visible",
       },
     ],
   },
@@ -95,20 +175,50 @@ export const pageTemplates: PageTemplate[] = [
     forEntityTypes: ["user", "team"],
     defaultBlocks: [
       {
+        id: "template-showcase-profileImage",
         type: "profileImage",
         column: "primary",
         order: 1,
         config: { shape: "square", size: "lg" },
+        content: { imageUrl: "", alt: "" },
+        visibility: "visible",
       },
       {
+        id: "template-showcase-identity",
         type: "identity",
         column: "primary",
         order: 2,
         config: { showTagline: true },
+        content: { name: "", tagline: "" },
+        visibility: "visible",
       },
-      { type: "gallery", column: "primary", order: 3, config: { columns: 3 } },
-      { type: "bio", column: "auxiliary", order: 1, config: {} },
-      { type: "links", column: "auxiliary", order: 2, config: {} },
+      {
+        id: "template-showcase-gallery",
+        type: "gallery",
+        column: "primary",
+        order: 3,
+        config: { columns: 3 },
+        content: { images: [] },
+        visibility: "visible",
+      },
+      {
+        id: "template-showcase-bio",
+        type: "bio",
+        column: "auxiliary",
+        order: 1,
+        config: {},
+        content: { text: "" },
+        visibility: "visible",
+      },
+      {
+        id: "template-showcase-links",
+        type: "links",
+        column: "auxiliary",
+        order: 2,
+        config: {},
+        content: { items: [] },
+        visibility: "visible",
+      },
     ],
   },
   {
@@ -118,34 +228,49 @@ export const pageTemplates: PageTemplate[] = [
     forEntityTypes: ["agent"],
     defaultBlocks: [
       {
+        id: "template-agent-profileImage",
         type: "profileImage",
         column: "primary",
         order: 1,
         config: { shape: "square", size: "lg" },
+        content: { imageUrl: "", alt: "" },
+        visibility: "visible",
       },
       {
+        id: "template-agent-identity",
         type: "identity",
         column: "primary",
         order: 2,
         config: { showTagline: true },
+        content: { name: "", tagline: "" },
+        visibility: "visible",
       },
       {
+        id: "template-agent-bio",
         type: "bio",
         column: "primary",
         order: 3,
         config: { allowRichText: true },
+        content: { text: "" },
+        visibility: "visible",
       },
       {
+        id: "template-agent-relationships",
         type: "relationships",
         column: "primary",
         order: 4,
         config: { groupByType: true },
+        content: { items: [] },
+        visibility: "visible",
       },
       {
+        id: "template-agent-activityFeed",
         type: "activityFeed",
         column: "auxiliary",
         order: 1,
         config: { maxItems: 5 },
+        content: {},
+        visibility: "visible",
       },
     ],
   },

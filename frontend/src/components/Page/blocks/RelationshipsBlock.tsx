@@ -1,13 +1,11 @@
 // src/components/Page/blocks/RelationshipsBlock.tsx
 
-import { Plus } from "lucide-react"
 import { useMemo } from "react"
 
-import { Button } from "@/components/ui/button"
 import { BlockContainer, EntityCard } from "../primitives"
 import { getEntityType } from "../registry"
 
-export interface RelatedEntity {
+export interface RelationshipItem {
   id: string
   typeId: string
   name: string
@@ -21,18 +19,21 @@ export interface RelationshipsBlockConfig {
   maxVisible: number
 }
 
+export interface RelationshipsContent {
+  items: RelationshipItem[]
+}
+
 export interface RelationshipsBlockProps {
   config: RelationshipsBlockConfig
-  relationships: RelatedEntity[]
-  canEdit?: boolean
-  onAdd?: () => void
-  onEntityClick?: (entity: RelatedEntity) => void
+  content?: RelationshipsContent
+  className?: string
+  onEntityClick?: (entity: RelationshipItem) => void
 }
 
 interface GroupedRelationships {
   typeId: string
   label: string
-  entities: RelatedEntity[]
+  entities: RelationshipItem[]
 }
 
 /**
@@ -40,15 +41,17 @@ interface GroupedRelationships {
  *
  * Groups entities by type when config.groupByType is true.
  * Shows entity cards with optional click handling.
- * Supports edit mode with an Add button.
+ * Returns null if no relationships exist.
+ * View-only block - no edit functionality.
  */
 export function RelationshipsBlock({
   config,
-  relationships,
-  canEdit = false,
-  onAdd,
+  content,
+  className,
   onEntityClick,
 }: RelationshipsBlockProps) {
+  const relationships = content?.items || []
+
   const { groups, visibleCount, totalCount } = useMemo(() => {
     if (relationships.length === 0) {
       return { groups: [], visibleCount: 0, totalCount: 0 }
@@ -73,7 +76,7 @@ export function RelationshipsBlock({
     }
 
     // Group by typeId
-    const groupMap = new Map<string, RelatedEntity[]>()
+    const groupMap = new Map<string, RelationshipItem[]>()
     for (const entity of limitedRelationships) {
       const existing = groupMap.get(entity.typeId) || []
       existing.push(entity)
@@ -99,32 +102,13 @@ export function RelationshipsBlock({
 
   const hasMore = totalCount > visibleCount
 
-  const headerActions = canEdit ? (
-    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAdd}>
-      <Plus className="h-3.5 w-3.5" />
-    </Button>
-  ) : undefined
-
-  // Empty state with edit capability
-  if (relationships.length === 0 && canEdit) {
-    return (
-      <BlockContainer title="Relationships" headerActions={headerActions}>
-        <div className="p-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            No relationships yet. Click the + button to add one.
-          </p>
-        </div>
-      </BlockContainer>
-    )
-  }
-
-  // Empty state without edit capability
+  // Empty state - render nothing
   if (relationships.length === 0) {
     return null
   }
 
   return (
-    <BlockContainer title="Relationships" headerActions={headerActions}>
+    <BlockContainer title="Relationships" className={className}>
       <div className="p-4 space-y-4">
         {groups.map((group) => (
           <div key={group.typeId} className="space-y-2">

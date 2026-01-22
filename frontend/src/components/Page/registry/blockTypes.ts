@@ -1,12 +1,26 @@
 // src/components/Page/registry/blockTypes.ts
 
+import type { LucideIcon } from "lucide-react"
+import {
+  Activity,
+  BarChart,
+  FileText,
+  Image,
+  Link,
+  Mail,
+  Table,
+  User,
+  UserCircle,
+  Users,
+} from "lucide-react"
+
 /**
  * Available block types for pages.
  *
  * NOTE: Block rendering is handled directly by PageShell via switch statement,
  * not through the registry's component field. This allows type-safe props for
  * each block type. The registry is used for metadata (labels, descriptions,
- * configSchema) to drive block pickers and settings UIs.
+ * icons, defaults) to drive block pickers and settings UIs.
  */
 export type BlockType =
   | "profileImage"
@@ -46,214 +60,172 @@ export interface ConfigFieldSchema {
  * Actual rendering is handled by PageShell's renderBlock function.
  */
 export interface BlockTypeDefinition {
-  /** Unique identifier */
-  id: BlockType
+  /** Block type identifier */
+  type: BlockType
   /** Display label */
   label: string
   /** Description of the block */
   description: string
-  /** Configuration schema for block settings */
-  configSchema: Record<string, ConfigFieldSchema>
-  /** Whether this block displays dynamic data (tables, charts) */
-  isDataBlock?: boolean
+  /** Icon component from lucide-react */
+  icon: LucideIcon
+  /** Default configuration values for block settings */
+  defaultConfig: Record<string, unknown>
+  /** Default content structure for the block */
+  defaultContent: Record<string, unknown>
 }
 
-export const blockTypes: BlockTypeDefinition[] = [
+export const BLOCK_TYPES: BlockTypeDefinition[] = [
   {
-    id: "profileImage",
+    type: "profileImage",
     label: "Profile Image",
     description: "Display a profile image with configurable shape and size",
-    configSchema: {
-      shape: {
-        type: "select",
-        label: "Shape",
-        default: "circle",
-        options: ["circle", "square"],
-      },
-      size: {
-        type: "select",
-        label: "Size",
-        default: "md",
-        options: ["sm", "md", "lg"],
-      },
+    icon: User,
+    defaultConfig: {
+      shape: "circle",
+      size: "md",
+    },
+    defaultContent: {
+      imageUrl: "",
+      alt: "",
     },
   },
   {
-    id: "identity",
+    type: "identity",
     label: "Identity",
     description: "Display name and optional tagline",
-    configSchema: {
-      showTagline: {
-        type: "boolean",
-        label: "Show Tagline",
-        default: true,
-      },
+    icon: UserCircle,
+    defaultConfig: {
+      showTagline: true,
+    },
+    defaultContent: {
+      name: "",
+      tagline: "",
     },
   },
   {
-    id: "bio",
+    type: "bio",
     label: "Bio",
     description: "Display biography or description text",
-    configSchema: {
-      maxLength: {
-        type: "number",
-        label: "Max Length",
-        default: 500,
-      },
-      allowRichText: {
-        type: "boolean",
-        label: "Allow Rich Text",
-        default: false,
-      },
+    icon: FileText,
+    defaultConfig: {
+      maxLength: 500,
+      allowRichText: false,
+    },
+    defaultContent: {
+      text: "",
     },
   },
   {
-    id: "contact",
+    type: "contact",
     label: "Contact",
     description: "Display contact information",
-    configSchema: {
-      showEmail: {
-        type: "boolean",
-        label: "Show Email",
-        default: true,
-      },
-      showPhone: {
-        type: "boolean",
-        label: "Show Phone",
-        default: false,
-      },
+    icon: Mail,
+    defaultConfig: {
+      showEmail: true,
+      showPhone: false,
+    },
+    defaultContent: {
+      email: "",
+      phone: "",
     },
   },
   {
-    id: "links",
+    type: "links",
     label: "Links",
     description: "Display a list of links",
-    configSchema: {
-      layout: {
-        type: "select",
-        label: "Layout",
-        default: "list",
-        options: ["list", "grid"],
-      },
+    icon: Link,
+    defaultConfig: {
+      layout: "list",
+    },
+    defaultContent: {
+      items: [],
     },
   },
   {
-    id: "relationships",
+    type: "relationships",
     label: "Relationships",
     description: "Display relationships to other entities",
-    configSchema: {
-      groupByType: {
-        type: "boolean",
-        label: "Group by Type",
-        default: true,
-      },
-      maxVisible: {
-        type: "number",
-        label: "Max Visible",
-        default: 10,
-      },
+    icon: Users,
+    defaultConfig: {
+      groupByType: true,
+      maxVisible: 10,
+    },
+    defaultContent: {
+      items: [],
     },
   },
   {
-    id: "activityFeed",
+    type: "activityFeed",
     label: "Activity Feed",
     description: "Display recent activity",
-    configSchema: {
-      maxItems: {
-        type: "number",
-        label: "Max Items",
-        default: 5,
-      },
+    icon: Activity,
+    defaultConfig: {
+      maxItems: 5,
     },
+    defaultContent: {},
   },
   {
-    id: "gallery",
+    type: "gallery",
     label: "Gallery",
     description: "Display an image gallery",
-    configSchema: {
-      columns: {
-        type: "number",
-        label: "Columns",
-        default: 3,
-      },
-      lightbox: {
-        type: "boolean",
-        label: "Enable Lightbox",
-        default: true,
-      },
+    icon: Image,
+    defaultConfig: {
+      columns: 3,
+      lightbox: true,
+    },
+    defaultContent: {
+      images: [],
     },
   },
   {
-    id: "dataTable",
+    type: "dataTable",
     label: "Data Table",
     description: "Display data in a table format",
-    configSchema: {
-      title: {
-        type: "string",
-        label: "Title",
-        default: "",
-      },
-      dataSource: {
-        type: "string",
-        label: "Data Source",
-        default: "",
-      },
-      columns: {
-        type: "columnConfig",
-        label: "Columns",
-        default: [],
-      },
-      maxRows: {
-        type: "number",
-        label: "Max Rows",
-        default: 10,
-      },
+    icon: Table,
+    defaultConfig: {
+      title: "",
+      dataSource: "",
+      columns: [],
+      maxRows: 10,
     },
-    isDataBlock: true,
+    defaultContent: {},
   },
   {
-    id: "chart",
+    type: "chart",
     label: "Chart",
     description: "Display data as a chart",
-    configSchema: {
-      title: {
-        type: "string",
-        label: "Title",
-        default: "",
-      },
-      chartType: {
-        type: "select",
-        label: "Chart Type",
-        default: "bar",
-        options: ["bar", "line", "pie", "area"],
-      },
-      dataSource: {
-        type: "string",
-        label: "Data Source",
-        default: "",
-      },
+    icon: BarChart,
+    defaultConfig: {
+      title: "",
+      chartType: "bar",
+      dataSource: "",
     },
-    isDataBlock: true,
+    defaultContent: {},
   },
 ]
 
+// Legacy export for backward compatibility
+export const blockTypes = BLOCK_TYPES
+
 /**
- * Get block type definition by ID
+ * Get block type definition by type
  */
-export function getBlockType(id: BlockType): BlockTypeDefinition | undefined {
-  return blockTypes.find((b) => b.id === id)
+export function getBlockType(type: BlockType): BlockTypeDefinition | undefined {
+  return BLOCK_TYPES.find((b) => b.type === type)
 }
 
 /**
  * Get all standard (non-data) blocks
  */
 export function getStandardBlocks(): BlockTypeDefinition[] {
-  return blockTypes.filter((b) => !b.isDataBlock)
+  const dataBlockTypes: BlockType[] = ["dataTable", "chart"]
+  return BLOCK_TYPES.filter((b) => !dataBlockTypes.includes(b.type))
 }
 
 /**
  * Get all data blocks (tables, charts)
  */
 export function getDataBlocks(): BlockTypeDefinition[] {
-  return blockTypes.filter((b) => b.isDataBlock)
+  const dataBlockTypes: BlockType[] = ["dataTable", "chart"]
+  return BLOCK_TYPES.filter((b) => dataBlockTypes.includes(b.type))
 }

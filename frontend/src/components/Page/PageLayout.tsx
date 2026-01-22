@@ -16,7 +16,7 @@ interface PageLayoutProps {
   blocks: TemplateBlock[]
   editMode: boolean
   onAddBlock?: (column: "primary" | "auxiliary") => void
-  renderBlock: (block: TemplateBlock, editMode: boolean) => React.ReactNode
+  renderBlock: (block: TemplateBlock) => React.ReactNode
 }
 
 /**
@@ -39,13 +39,15 @@ function BlockColumn({
   blocks: TemplateBlock[]
   editMode: boolean
   onAddBlock?: () => void
-  renderBlock: (block: TemplateBlock, editMode: boolean) => React.ReactNode
+  renderBlock: (block: TemplateBlock) => React.ReactNode
   columnType: "primary" | "auxiliary"
 }) {
   return (
     <div className="h-full overflow-y-auto p-4 space-y-4">
-      {blocks.map((block, index) => (
-        <div key={`${block.type}-${index}`}>{renderBlock(block, editMode)}</div>
+      {blocks.map((block) => (
+        <div key={block.id ?? `${block.type}-${block.order}`}>
+          {renderBlock(block)}
+        </div>
       ))}
       {editMode && onAddBlock && (
         <Button
@@ -94,9 +96,9 @@ export function PageLayout({
     return (
       <div className="flex flex-col h-full overflow-y-auto p-4 space-y-4">
         {/* Primary blocks */}
-        {primaryBlocks.map((block, index) => (
-          <div key={`primary-${block.type}-${index}`}>
-            {renderBlock(block, editMode)}
+        {primaryBlocks.map((block) => (
+          <div key={block.id ?? `primary-${block.type}-${block.order}`}>
+            {renderBlock(block)}
           </div>
         ))}
         {editMode && onAddBlock && (
@@ -113,9 +115,9 @@ export function PageLayout({
         {/* Auxiliary blocks (if any or edit mode) */}
         {hasAuxiliary && (
           <>
-            {auxiliaryBlocks.map((block, index) => (
-              <div key={`auxiliary-${block.type}-${index}`}>
-                {renderBlock(block, editMode)}
+            {auxiliaryBlocks.map((block) => (
+              <div key={block.id ?? `auxiliary-${block.type}-${block.order}`}>
+                {renderBlock(block)}
               </div>
             ))}
             {editMode && onAddBlock && (

@@ -21,6 +21,12 @@ interface BlockContainerProps {
   onRemove?: () => void
   /** Called when settings button clicked in edit mode */
   onSettings?: () => void
+  /** Visual variant for the container */
+  variant?: "default" | "card" | "transparent"
+  /** Whether the block is selected (shows highlight ring) */
+  isSelected?: boolean
+  /** Click handler for selection */
+  onClick?: () => void
 }
 
 /**
@@ -40,15 +46,40 @@ export function BlockContainer({
   editMode = false,
   onRemove,
   onSettings,
+  variant = "default",
+  isSelected = false,
+  onClick,
 }: BlockContainerProps) {
   const showHeader = title || headerActions || editMode
+
+  const variantStyles = {
+    default: "border border-border bg-card",
+    card: "border border-border bg-card shadow-sm",
+    transparent: "border-transparent bg-transparent",
+  }
 
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg border border-border bg-card",
+        "flex flex-col rounded-lg",
+        variantStyles[variant],
+        isSelected && "ring-2 ring-primary",
+        onClick && "cursor-pointer",
         className,
       )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
     >
       {showHeader && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -67,7 +98,11 @@ export function BlockContainer({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={onSettings}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSettings?.()
+                }}
+                aria-label="Block settings"
               >
                 <Settings className="h-3.5 w-3.5" />
               </Button>
@@ -77,7 +112,11 @@ export function BlockContainer({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={onRemove}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemove?.()
+                }}
+                aria-label="Remove block"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>

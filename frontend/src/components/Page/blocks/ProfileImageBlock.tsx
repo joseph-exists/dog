@@ -1,7 +1,5 @@
 // src/components/Page/blocks/ProfileImageBlock.tsx
-import { Camera } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export interface ProfileImageBlockConfig {
@@ -9,11 +7,15 @@ export interface ProfileImageBlockConfig {
   size: "sm" | "md" | "lg"
 }
 
+export interface ProfileImageContent {
+  imageUrl?: string
+  alt?: string
+}
+
 export interface ProfileImageBlockProps {
   config: ProfileImageBlockConfig
-  entity: { name: string; avatarUrl?: string }
-  canEdit?: boolean
-  onEdit?: () => void
+  content?: ProfileImageContent
+  className?: string
 }
 
 /** Size-based styling configurations */
@@ -30,10 +32,14 @@ const shapeClasses = {
 }
 
 /**
- * Get initials from a name for avatar fallback
+ * Get initials for avatar fallback
+ * Returns "?" when no alt text is available
  */
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
+function getInitials(alt?: string): string {
+  if (!alt) {
+    return "?"
+  }
+  const parts = alt.trim().split(/\s+/)
   if (parts.length === 1) {
     return parts[0].substring(0, 2).toUpperCase()
   }
@@ -41,41 +47,29 @@ function getInitials(name: string): string {
 }
 
 /**
- * ProfileImageBlock - Displays an entity avatar with optional edit overlay
+ * ProfileImageBlock - Displays a profile avatar image
  *
  * Supports different sizes (sm, md, lg) and shapes (circle, square).
- * When canEdit is true, shows a camera icon button for editing.
+ * Shows initials fallback when no image is available.
+ * View-only block - no edit functionality.
  */
 export function ProfileImageBlock({
   config,
-  entity,
-  canEdit = false,
-  onEdit,
+  content,
+  className,
 }: ProfileImageBlockProps) {
   const sizeClass = sizeClasses[config.size]
   const shapeClass = shapeClasses[config.shape]
 
   return (
-    <div className="flex justify-center">
+    <div className={cn("flex justify-center", className)}>
       <div className="relative inline-block">
         <Avatar className={cn(sizeClass, shapeClass)}>
-          <AvatarImage src={entity.avatarUrl} alt={entity.name} />
+          <AvatarImage src={content?.imageUrl} alt={content?.alt || ""} />
           <AvatarFallback className={cn(shapeClass, "text-2xl")}>
-            {getInitials(entity.name)}
+            {getInitials(content?.alt)}
           </AvatarFallback>
         </Avatar>
-        {canEdit && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon-sm"
-            className="absolute bottom-0 right-0 rounded-full shadow-md"
-            onClick={onEdit}
-            aria-label="Edit profile image"
-          >
-            <Camera className="h-4 w-4" />
-          </Button>
-        )}
       </div>
     </div>
   )

@@ -32,6 +32,8 @@ export interface PageHeaderProps {
   onEditModeChange: (enabled: boolean) => void
   onShare: () => void
   onDelete?: () => void
+  isSaving?: boolean
+  isDirty?: boolean
 }
 
 /**
@@ -85,6 +87,8 @@ export function PageHeader({
   onEditModeChange,
   onShare,
   onDelete,
+  isSaving,
+  isDirty,
 }: PageHeaderProps) {
   const entityType = getEntityTypeOrThrow(entityTypeId)
 
@@ -113,6 +117,13 @@ export function PageHeader({
 
       {/* Right section: Actions */}
       <div className="flex items-center gap-2">
+        {/* Status indicator in edit mode */}
+        {editMode && (
+          <span className="text-xs text-muted-foreground">
+            {isSaving ? "Saving..." : isDirty ? "Unsaved changes" : ""}
+          </span>
+        )}
+
         {/* Edit toggle - owner only */}
         {isOwner && (
           <div className="flex items-center gap-2">
@@ -120,6 +131,7 @@ export function PageHeader({
               id="edit-mode"
               checked={editMode}
               onCheckedChange={onEditModeChange}
+              disabled={isSaving}
             />
             <Label htmlFor="edit-mode" className="text-sm">
               Edit
