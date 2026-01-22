@@ -91,12 +91,12 @@ export function PageShell({
     await navigator.clipboard.writeText(window.location.href)
   }
 
-  const handleEditModeChange = (editing: boolean) => {
+  const handleEditModeChange = async (editing: boolean) => {
     if (editing) {
       startEditing()
     } else {
       if (isDirty) {
-        save()
+        await save()
       } else {
         cancelEditing()
       }
@@ -407,6 +407,7 @@ export function PageShell({
           isOwner={isOwner}
           editMode={isEditing}
           onEditModeChange={handleEditModeChange}
+          onSave={save}
           onShare={handleShare}
           onDelete={onDelete}
           isSaving={isSaving}

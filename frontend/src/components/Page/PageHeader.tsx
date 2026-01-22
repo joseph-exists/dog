@@ -1,5 +1,5 @@
 // src/components/Page/PageHeader.tsx
-import { ChevronRight, MoreVertical, Pencil, Share2 } from "lucide-react"
+import { ChevronRight, MoreVertical, Pencil, Save, Share2 } from "lucide-react"
 
 import {
   Breadcrumb,
@@ -30,6 +30,7 @@ export interface PageHeaderProps {
   isOwner: boolean
   editMode: boolean
   onEditModeChange: (enabled: boolean) => void
+  onSave?: () => void
   onShare: () => void
   onDelete?: () => void
   isSaving?: boolean
@@ -85,6 +86,7 @@ export function PageHeader({
   isOwner,
   editMode,
   onEditModeChange,
+  onSave,
   onShare,
   onDelete,
   isSaving,
@@ -122,6 +124,20 @@ export function PageHeader({
           <span className="text-xs text-muted-foreground">
             {isSaving ? "Saving..." : isDirty ? "Unsaved changes" : ""}
           </span>
+        )}
+
+        {/* Save button - shown in edit mode when dirty */}
+        {editMode && isDirty && (
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={onSave}
+            disabled={isSaving}
+          >
+            <Save className="h-4 w-4 mr-1" />
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
         )}
 
         {/* Edit toggle - owner only */}
