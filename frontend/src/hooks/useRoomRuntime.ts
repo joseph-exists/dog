@@ -21,7 +21,10 @@ export interface UseRoomRuntimeResult {
   error: ApiError | null
   refetch: () => Promise<unknown>
 
-  start: (params: { userPersonaId: string; storyVersion?: number | null }) => Promise<void>
+  start: (params: {
+    userPersonaId: string
+    storyVersion?: number | null
+  }) => Promise<void>
   advance: (choiceId: string) => Promise<void>
   rewind: (targetChoiceId: string) => Promise<void>
   reset: () => Promise<void>
@@ -41,10 +44,7 @@ function shouldTreatAsNoRuntime(error: ApiError): boolean {
   return error.status === 404 || error.status === 410
 }
 
-function handleRuntimeMutationError(
-  error: ApiError,
-  onRefetch: () => void,
-) {
+function handleRuntimeMutationError(error: ApiError, onRefetch: () => void) {
   console.error("Runtime mutation failed", {
     status: error.status,
     message: error.message,

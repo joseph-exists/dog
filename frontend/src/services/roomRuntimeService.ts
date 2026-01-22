@@ -8,11 +8,11 @@
 import {
   type ContentFormat,
   type NodeChoicePublic,
-  type RoomRuntimePublic,
-  RoomRuntimeService as RoomRuntimeApi,
   type RoomRuntimeAdvanceRequest,
-  type RoomRuntimeRewindRequest,
+  RoomRuntimeService as RoomRuntimeApi,
+  type RoomRuntimePublic,
   type RoomRuntimeResetRequest,
+  type RoomRuntimeRewindRequest,
   type RoomRuntimeStartRequest,
   type StoryNodePublic,
 } from "@/client"
@@ -98,8 +98,9 @@ function sortChoices(choices: ChoiceViewModel[]): ChoiceViewModel[] {
 }
 
 function toViewModel(runtime: RoomRuntimePublic): RoomRuntimeViewModel {
-  const currentNode =
-    runtime.current_node ? toNodeViewModel(runtime.current_node) : null
+  const currentNode = runtime.current_node
+    ? toNodeViewModel(runtime.current_node)
+    : null
   const nodeChain = runtime.node_chain
     ? runtime.node_chain.map(toNodeViewModel)
     : []

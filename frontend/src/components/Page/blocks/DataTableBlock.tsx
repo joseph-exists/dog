@@ -51,7 +51,11 @@ export function DataTableBlock({
   className,
 }: DataTableBlockProps) {
   // Only fetch if no content is provided
-  const { data: fetchedData, isLoading, error } = useQuery({
+  const {
+    data: fetchedData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["blockData", config.dataSource],
     queryFn: () => fetchDataSource(config.dataSource),
     enabled: !content?.rows,

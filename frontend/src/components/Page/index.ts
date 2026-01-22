@@ -1,5 +1,6 @@
 // src/components/Page/index.ts
 
+export { BlockWrapper } from "./BlockWrapper"
 // Blocks
 export {
   ActivityFeedBlock,
@@ -13,7 +14,6 @@ export {
   ProfileImageBlock,
   RelationshipsBlock,
 } from "./blocks"
-export { BlockWrapper } from "./BlockWrapper"
 export { CreatePageDialog } from "./CreatePageDialog"
 export { PageHeader } from "./PageHeader"
 export { PageLayout } from "./PageLayout"

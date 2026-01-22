@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime
+import logging
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -102,6 +103,8 @@ from app.models import (
     UserStoryProgressUpdate,
     UserUpdate,
 )
+
+logger = logging.getLogger(__name__)
 from app.services.context_store import ContextItem, ContextItemStore, RedisContextStore
 from app.services.event_emitter import emit_event
 
@@ -1564,8 +1567,9 @@ async def _build_room_runtime_public(
 
     node_chain_ids: list[uuid.UUID] = []
     if progress.head_choice_id:
-        chain = get_choice_ancestor_chain(
-            session=session.sync_session, choice_id=progress.head_choice_id
+        chain = await get_choice_ancestor_chain_async(
+            session=session,
+            choice_id=progress.head_choice_id,
         )
         if chain:
             node_chain_ids.append(chain[0].from_node_id)
@@ -1810,6 +1814,13 @@ async def advance_room_runtime(
 
     Authorization: active membership + owner-only (default policy).
     """
+    logger.info(
+        "Advance room runtime start room_id=%s user_id=%s choice_id=%s expected_revision=%s",
+        room_id,
+        user_id,
+        req.choice_id,
+        req.expected_revision,
+    )
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Not a member of this room")
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
@@ -1823,6 +1834,12 @@ async def advance_room_runtime(
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
     if req.expected_revision is not None and req.expected_revision != room_story_progress.revision:
+        logger.warning(
+            "Advance room runtime revision mismatch room_id=%s expected=%s actual=%s",
+            room_id,
+            req.expected_revision,
+            room_story_progress.revision,
+        )
         raise HTTPException(status_code=409, detail="Room runtime revision mismatch")
 
     progress_result = await session.exec(
@@ -1872,20 +1889,20 @@ async def advance_room_runtime(
 
     progress.head_choice_id = user_choice.id
     progress.head_version += 1
-    progress.story_state = replay_state_from_head_optimized(
+    progress.story_state = await replay_state_from_head_optimized_async(
         session=session,
         progress_id=progress.id,
         head_choice_id=progress.head_choice_id,
     )
-    progress.current_node_id = get_current_node_from_head(
+    progress.current_node_id = await get_current_node_from_head_async(
         session=session,
         head_choice_id=progress.head_choice_id,
         story_id=progress.story_id,
         story_version=progress.story_version,
     )
 
-    snapshot = create_snapshot_if_needed(
-        session=session.sync_session,
+    snapshot = await create_snapshot_if_needed_async(
+        session=session,
         progress=progress,
         snapshot_interval=10,
     )
@@ -1899,6 +1916,13 @@ async def advance_room_runtime(
     room_story_progress.updated_at = now
     session.add(progress)
     session.add(room_story_progress)
+    logger.info(
+        "Advance room runtime updated room_id=%s progress_id=%s head_choice_id=%s revision=%s",
+        room_id,
+        progress.id,
+        progress.head_choice_id,
+        room_story_progress.revision,
+    )
 
     await emit_event(
         session=session,
@@ -1931,6 +1955,13 @@ async def rewind_room_runtime(
 
     Creates a new progress branch with a cloned ancestor chain.
     """
+    logger.info(
+        "Rewind room runtime start room_id=%s user_id=%s target_choice_id=%s expected_revision=%s",
+        room_id,
+        user_id,
+        req.target_choice_id,
+        req.expected_revision,
+    )
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Not a member of this room")
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
@@ -1944,6 +1975,12 @@ async def rewind_room_runtime(
         raise HTTPException(status_code=404, detail="Room runtime not initialized")
 
     if req.expected_revision is not None and req.expected_revision != room_story_progress.revision:
+        logger.warning(
+            "Rewind room runtime revision mismatch room_id=%s expected=%s actual=%s",
+            room_id,
+            req.expected_revision,
+            room_story_progress.revision,
+        )
         raise HTTPException(status_code=409, detail="Room runtime revision mismatch")
 
     progress_result = await session.exec(
@@ -1965,9 +2002,15 @@ async def rewind_room_runtime(
     if not target_choice:
         raise HTTPException(status_code=404, detail="Target choice not found in active progress")
 
-    chain = get_choice_ancestor_chain(
-        session=session.sync_session,
+    chain = await get_choice_ancestor_chain_async(
+        session=session,
         choice_id=req.target_choice_id,
+    )
+    logger.debug(
+        "Rewind room runtime ancestor chain room_id=%s target_choice_id=%s chain_length=%s",
+        room_id,
+        req.target_choice_id,
+        len(chain),
     )
 
     now = datetime.utcnow()
@@ -2010,13 +2053,13 @@ async def rewind_room_runtime(
 
     new_progress.head_choice_id = new_head_id
     new_progress.head_version = len(chain)
-    new_progress.story_state = replay_state_from_head_optimized(
-        session=session.sync_session,
+    new_progress.story_state = await replay_state_from_head_optimized_async(
+        session=session,
         progress_id=new_progress.id,
         head_choice_id=new_head_id,
     )
-    new_progress.current_node_id = get_current_node_from_head(
-        session=session.sync_session,
+    new_progress.current_node_id = await get_current_node_from_head_async(
+        session=session,
         head_choice_id=new_head_id,
         story_id=new_progress.story_id,
         story_version=new_progress.story_version,
@@ -2035,6 +2078,13 @@ async def rewind_room_runtime(
     room_story_progress.updated_at = now
     session.add(new_progress)
     session.add(room_story_progress)
+    logger.info(
+        "Rewind room runtime updated room_id=%s new_progress_id=%s head_choice_id=%s revision=%s",
+        room_id,
+        new_progress.id,
+        new_progress.head_choice_id,
+        room_story_progress.revision,
+    )
 
     await emit_event(
         session=session,
@@ -2065,6 +2115,12 @@ async def reset_room_runtime(
     """
     Reset the room's shared story run by branching to a new start state.
     """
+    logger.info(
+        "Reset room runtime start room_id=%s user_id=%s expected_revision=%s",
+        room_id,
+        user_id,
+        req.expected_revision,
+    )
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
     )
@@ -2090,6 +2146,12 @@ async def reset_room_runtime(
             expected_revision=req.expected_revision,
         ),
         session=session,
+    )
+    logger.info(
+        "Reset room runtime new progress room_id=%s active_progress_id=%s revision=%s",
+        room_id,
+        result.active_progress_id,
+        result.revision,
     )
 
     await emit_event(
@@ -3779,6 +3841,24 @@ def get_choice_ancestor_chain(
 
     return list(reversed(chain))  # Root → head order
 
+async def get_choice_ancestor_chain_async(
+    *, session: AsyncSession, choice_id: uuid.UUID
+) -> list[UserNodeChoice]:
+    """
+    Async version of get_choice_ancestor_chain for AsyncSession use.
+    """
+    chain = []
+    current_id = choice_id
+
+    while current_id is not None:
+        choice = await session.get(UserNodeChoice, current_id)
+        if not choice:
+            raise ValueError(f"Choice {current_id} not found in database (data corruption)")
+        chain.append(choice)
+        current_id = choice.parent_choice_id
+
+    return list(reversed(chain))  # Root → head order
+
 def replay_state_from_head(
     *, session: Session, progress_id: uuid.UUID, head_choice_id: uuid.UUID | None
 ) -> dict[str, Any]:
@@ -3813,6 +3893,36 @@ def replay_state_from_head(
             )
 
     # Replay events (shallow merge)
+    state: dict[str, Any] = {}
+    for choice in chain:
+        if choice.state_changes:
+            state.update(choice.state_changes)
+
+    return state
+
+async def replay_state_from_head_async(
+    *,
+    session: AsyncSession,
+    progress_id: uuid.UUID,
+    head_choice_id: uuid.UUID | None,
+) -> dict[str, Any]:
+    """
+    Async version of replay_state_from_head for AsyncSession use.
+    """
+    if head_choice_id is None:
+        return {}
+
+    chain = await get_choice_ancestor_chain_async(
+        session=session,
+        choice_id=head_choice_id,
+    )
+
+    for choice in chain:
+        if choice.progress_id != progress_id:
+            raise ValueError(
+                f"Choice {choice.id} doesn't belong to progress {progress_id}"
+            )
+
     state: dict[str, Any] = {}
     for choice in chain:
         if choice.state_changes:
@@ -3861,6 +3971,40 @@ def get_current_node_from_head(
 
     # Return destination of head choice
     choice = session.get(UserNodeChoice, head_choice_id)
+    if not choice:
+        raise ValueError(f"Head choice {head_choice_id} not found")
+    return choice.to_node_id
+
+async def get_current_node_from_head_async(
+    *,
+    session: AsyncSession,
+    head_choice_id: uuid.UUID | None,
+    story_id: uuid.UUID,
+    story_version: int,
+) -> uuid.UUID:
+    """
+    Async version of get_current_node_from_head for AsyncSession use.
+    """
+    if head_choice_id is None:
+        statement = select(StoryNode).where(
+            StoryNode.story_id == story_id,
+            StoryNode.story_version == story_version,
+            StoryNode.is_start_node == True,  # noqa: E712
+        )
+        start_node_result = await session.exec(statement)
+        start_row = start_node_result.one_or_none()
+        start_node = (
+            start_row[0]
+            if start_row and not isinstance(start_row, StoryNode)
+            else start_row
+        )
+        if not start_node:
+            raise ValueError(
+                f"No start node for story {story_id} version {story_version}"
+            )
+        return start_node.id
+
+    choice = await session.get(UserNodeChoice, head_choice_id)
     if not choice:
         raise ValueError(f"Head choice {head_choice_id} not found")
     return choice.to_node_id
@@ -4083,6 +4227,63 @@ def replay_state_from_head_optimized(
 
     return state
 
+async def replay_state_from_head_optimized_async(
+    *,
+    session: AsyncSession,
+    progress_id: uuid.UUID,
+    head_choice_id: uuid.UUID | None,
+) -> dict[str, Any]:
+    """
+    Async version of replay_state_from_head_optimized for AsyncSession use.
+    """
+    if head_choice_id is None:
+        return {}
+
+    ancestor_chain = await get_choice_ancestor_chain_async(
+        session=session,
+        choice_id=head_choice_id,
+    )
+
+    if not ancestor_chain:
+        return {}
+
+    ancestor_ids = [c.id for c in ancestor_chain]
+
+    snapshot_stmt = (
+        select(ProgressSnapshot)
+        .where(
+            ProgressSnapshot.progress_id == progress_id,
+            ProgressSnapshot.choice_id.in_(ancestor_ids),
+        )
+        .order_by(desc(ProgressSnapshot.created_at))
+        .limit(1)
+    )
+
+    snapshot_result = await session.exec(snapshot_stmt)
+    snapshot_row = snapshot_result.first()
+    snapshot = (
+        snapshot_row[0]
+        if snapshot_row and not isinstance(snapshot_row, ProgressSnapshot)
+        else snapshot_row
+    )
+
+    if snapshot:
+        state = snapshot.story_state.copy()
+        snapshot_idx = next(
+            i for i, c in enumerate(ancestor_chain)
+            if c.id == snapshot.choice_id
+        )
+        for choice in ancestor_chain[snapshot_idx + 1:]:
+            if choice.state_changes:
+                state.update(choice.state_changes)
+    else:
+        state = {}
+        for choice in ancestor_chain:
+            if choice.state_changes:
+                state.update(choice.state_changes)
+
+    return state
+
 
 def create_snapshot_if_needed(
     *,
@@ -4143,6 +4344,52 @@ def create_snapshot_if_needed(
             choice_id=progress.head_choice_id,
             story_state=progress.story_state.copy() if progress.story_state else {},
             current_node_id=progress.current_node_id
+        )
+
+        return snapshot
+
+    return None
+
+
+async def create_snapshot_if_needed_async(
+    *,
+    session: AsyncSession,
+    progress: UserStoryProgress,
+    snapshot_interval: int = 10,
+) -> ProgressSnapshot | None:
+    """
+    Async version of create_snapshot_if_needed for AsyncSession use.
+    """
+    if progress.head_choice_id is None:
+        return None
+
+    chain = await get_choice_ancestor_chain_async(
+        session=session,
+        choice_id=progress.head_choice_id,
+    )
+    chain_length = len(chain)
+
+    if chain_length % snapshot_interval == 0:
+        existing_result = await session.exec(
+            select(ProgressSnapshot).where(
+                ProgressSnapshot.progress_id == progress.id,
+                ProgressSnapshot.choice_id == progress.head_choice_id,
+            )
+        )
+        existing_row = existing_result.first()
+        existing = (
+            existing_row[0]
+            if existing_row and not isinstance(existing_row, ProgressSnapshot)
+            else existing_row
+        )
+        if existing:
+            return None
+
+        snapshot = ProgressSnapshot(
+            progress_id=progress.id,
+            choice_id=progress.head_choice_id,
+            story_state=progress.story_state.copy() if progress.story_state else {},
+            current_node_id=progress.current_node_id,
         )
 
         return snapshot

@@ -6,10 +6,10 @@ export { BlockPaletteItem } from "./BlockPaletteItem"
 
 // Block Editor Forms
 export {
-  ProfileImageForm,
-  IdentityForm,
   BioForm,
   ContactForm,
-  LinksForm,
   GalleryForm,
+  IdentityForm,
+  LinksForm,
+  ProfileImageForm,
 } from "./forms"

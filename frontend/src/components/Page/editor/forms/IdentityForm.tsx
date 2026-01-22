@@ -1,11 +1,12 @@
 // src/components/Page/editor/forms/IdentityForm.tsx
+
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import type {
-  IdentityContent,
   IdentityBlockConfig,
+  IdentityContent,
 } from "@/components/Page/blocks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,8 +57,9 @@ export function IdentityForm({
           id="name"
           ref={(e) => {
             nameRef(e)
-            ;(inputRef as React.MutableRefObject<HTMLInputElement | null>).current =
-              e
+            ;(
+              inputRef as React.MutableRefObject<HTMLInputElement | null>
+            ).current = e
           }}
           {...nameRegister}
           placeholder="Enter name"

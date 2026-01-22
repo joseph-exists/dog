@@ -36,7 +36,7 @@ export function BlockPalette({
       <div
         className={cn(
           "flex flex-col border-r border-border bg-background",
-          className
+          className,
         )}
       >
         <Button
@@ -56,7 +56,7 @@ export function BlockPalette({
     <div
       className={cn(
         "flex flex-col w-[220px] border-r border-border bg-background shrink-0",
-        className
+        className,
       )}
     >
       {/* Header */}

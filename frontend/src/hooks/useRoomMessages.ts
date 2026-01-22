@@ -59,7 +59,6 @@ export interface UseRoomMessagesResult {
   isTogglingContext: boolean
   deleteMessage: (messageId: string) => Promise<void>
   isDeleting: boolean
-
 }
 
 /**

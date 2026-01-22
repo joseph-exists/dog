@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -20,6 +21,7 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/rooms", tags=["room-runtime"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/{room_id}/runtime", response_model=RoomRuntimePublic)
@@ -74,6 +76,13 @@ async def advance_room_runtime_route(
     """
     Advance the room's shared story run by applying a choice.
     """
+    logger.info(
+        "Room runtime advance requested room_id=%s user_id=%s choice_id=%s expected_revision=%s",
+        room_id,
+        current_user.id,
+        advance_in.choice_id,
+        advance_in.expected_revision,
+    )
     return await advance_room_runtime(
         room_id=room_id,
         user_id=current_user.id,
@@ -93,6 +102,13 @@ async def rewind_room_runtime_route(
     """
     Rewind the room's shared story run by branching to a prior choice.
     """
+    logger.info(
+        "Room runtime rewind requested room_id=%s user_id=%s target_choice_id=%s expected_revision=%s",
+        room_id,
+        current_user.id,
+        rewind_in.target_choice_id,
+        rewind_in.expected_revision,
+    )
     return await rewind_room_runtime(
         room_id=room_id,
         user_id=current_user.id,
@@ -112,6 +128,12 @@ async def reset_room_runtime_route(
     """
     Reset the room's shared story run by branching to a new start state.
     """
+    logger.info(
+        "Room runtime reset requested room_id=%s user_id=%s expected_revision=%s",
+        room_id,
+        current_user.id,
+        reset_in.expected_revision,
+    )
     return await reset_room_runtime(
         room_id=room_id,
         user_id=current_user.id,

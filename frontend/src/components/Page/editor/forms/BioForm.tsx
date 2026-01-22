@@ -1,12 +1,13 @@
 // src/components/Page/editor/forms/BioForm.tsx
+
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import type { BioContent, BioBlockConfig } from "@/components/Page/blocks"
+import type { BioBlockConfig, BioContent } from "@/components/Page/blocks"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 const schema = z.object({
   text: z.string(),
@@ -62,8 +63,9 @@ export function BioForm({ content, config, onSave, onCancel }: BioFormProps) {
           id="text"
           ref={(e) => {
             textRef(e)
-            ;(textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current =
-              e
+            ;(
+              textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>
+            ).current = e
           }}
           {...textRegister}
           placeholder="Write a bio..."

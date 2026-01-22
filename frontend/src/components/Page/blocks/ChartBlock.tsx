@@ -68,7 +68,11 @@ const PIE_COLORS = [
  */
 export function ChartBlock({ config, content, className }: ChartBlockProps) {
   // Only fetch if no content is provided
-  const { data: fetchedData, isLoading, error } = useQuery({
+  const {
+    data: fetchedData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["blockData", config.dataSource],
     queryFn: () => fetchDataSource(config.dataSource),
     enabled: !content?.data,

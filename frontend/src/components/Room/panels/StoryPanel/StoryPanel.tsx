@@ -16,8 +16,8 @@ import { ChoiceList } from "./ChoiceList"
 import { NodeChainCollapsible } from "./NodeChainCollapsible"
 import { NodeDisplay } from "./NodeDisplay"
 import { RuntimeControls } from "./RuntimeControls"
-import { StoryStateCollapsible } from "./StoryStateCollapsible"
 import { StoryRuntimeStartDialog } from "./StoryRuntimeStartDialog"
+import { StoryStateCollapsible } from "./StoryStateCollapsible"
 
 interface StoryPanelProps {
   roomId: string

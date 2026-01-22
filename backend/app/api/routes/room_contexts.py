@@ -1,9 +1,10 @@
+import logging
 from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import AsyncSessionDep, CurrentUser
+from app.api.deps import AsyncSessionDep, AsyncSessionTransactionDep, CurrentUser
 from app.crud import (
     add_room_context_item,
     delete_room_context_item,
@@ -13,6 +14,7 @@ from app.crud import (
 from app.models import RoomContextItemCreate, RoomContextItemPublic, RoomContextItemsPublic
 
 router = APIRouter(prefix="/rooms", tags=["room-contexts"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/{room_id}/contexts", response_model=RoomContextItemsPublic)
@@ -22,6 +24,12 @@ async def list_room_contexts(
     current_user: CurrentUser,
     agent_slug: str | None = Query(default=None),
 ) -> Any:
+    logger.debug(
+        "Room contexts list room_id=%s user_id=%s agent_slug=%s",
+        room_id,
+        current_user.id,
+        agent_slug,
+    )
     return await list_room_context_items(
         room_id=room_id,
         user_id=current_user.id,
@@ -35,10 +43,18 @@ async def create_room_context(
     *,
     room_id: UUID,
     context_in: RoomContextItemCreate,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     replace_by_type: bool = Query(default=False),
 ) -> Any:
+    logger.info(
+        "Room context create room_id=%s user_id=%s context_type=%s agent_slug=%s replace_by_type=%s",
+        room_id,
+        current_user.id,
+        context_in.context_type,
+        context_in.agent_slug,
+        replace_by_type,
+    )
     if replace_by_type:
         context_id = str(uuid4())
         return await upsert_room_context_item(
@@ -62,9 +78,15 @@ async def delete_room_context(
     *,
     room_id: UUID,
     context_id: str,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
 ) -> Any:
+    logger.info(
+        "Room context delete room_id=%s user_id=%s context_id=%s",
+        room_id,
+        current_user.id,
+        context_id,
+    )
     await delete_room_context_item(
         room_id=room_id,
         user_id=current_user.id,
@@ -80,10 +102,19 @@ async def upsert_room_context(
     room_id: UUID,
     context_id: str,
     context_in: RoomContextItemCreate,
-    session: AsyncSessionDep,
+    session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     replace_by_type: bool = Query(default=False),
 ) -> Any:
+    logger.info(
+        "Room context upsert room_id=%s user_id=%s context_id=%s context_type=%s agent_slug=%s replace_by_type=%s",
+        room_id,
+        current_user.id,
+        context_id,
+        context_in.context_type,
+        context_in.agent_slug,
+        replace_by_type,
+    )
     return await upsert_room_context_item(
         room_id=room_id,
         user_id=current_user.id,

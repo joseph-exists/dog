@@ -54,7 +54,6 @@ function renderNodeContent(
           <ReactMarkdown>{content}</ReactMarkdown>
         </div>
       )
-    case "text":
     default:
       return <p className="whitespace-pre-wrap">{content}</p>
   }

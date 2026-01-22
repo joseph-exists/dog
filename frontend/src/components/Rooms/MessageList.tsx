@@ -126,7 +126,7 @@ export default function MessageList({
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages.length, streamingMessage?.content])
+  }, [])
 
   // Loading state
   if (isLoading) {

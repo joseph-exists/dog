@@ -1,11 +1,12 @@
 // src/components/Page/editor/forms/ProfileImageForm.tsx
+
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import type {
-  ProfileImageContent,
   ProfileImageBlockConfig,
+  ProfileImageContent,
 } from "@/components/Page/blocks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,8 +69,9 @@ export function ProfileImageForm({
           id="imageUrl"
           ref={(e) => {
             imageUrlRef(e)
-            ;(inputRef as React.MutableRefObject<HTMLInputElement | null>).current =
-              e
+            ;(
+              inputRef as React.MutableRefObject<HTMLInputElement | null>
+            ).current = e
           }}
           {...imageUrlRegister}
           placeholder="https://..."

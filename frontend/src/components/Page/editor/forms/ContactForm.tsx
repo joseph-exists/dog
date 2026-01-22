@@ -1,11 +1,12 @@
 // src/components/Page/editor/forms/ContactForm.tsx
+
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import type {
-  ContactContent,
   ContactBlockConfig,
+  ContactContent,
 } from "@/components/Page/blocks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +18,7 @@ const schema = z.object({
     .optional()
     .refine(
       (val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
-      "Invalid email format"
+      "Invalid email format",
     ),
   phone: z.string().optional(),
 })
@@ -61,8 +62,9 @@ export function ContactForm({
           type="email"
           ref={(e) => {
             emailRef(e)
-            ;(inputRef as React.MutableRefObject<HTMLInputElement | null>).current =
-              e
+            ;(
+              inputRef as React.MutableRefObject<HTMLInputElement | null>
+            ).current = e
           }}
           {...emailRegister}
           placeholder="email@example.com"

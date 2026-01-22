@@ -1,18 +1,20 @@
 // src/components/Page/editor/BlockEditorSheet.tsx
 
 import type {
-  ProfileImageContent,
-  ProfileImageBlockConfig,
-  IdentityContent,
-  IdentityBlockConfig,
-  BioContent,
   BioBlockConfig,
-  ContactContent,
+  BioContent,
   ContactBlockConfig,
-  LinksContent,
-  LinksBlockConfig,
-  GalleryContent,
+  ContactContent,
   GalleryBlockConfig,
+  GalleryContent,
+  IdentityBlockConfig,
+  IdentityContent,
+  LinksBlockConfig,
+  LinksContent,
+  ProfileImageBlockConfig,
+  ProfileImageContent,
+  RelationshipsBlockConfig,
+  RelationshipsContent,
 } from "@/components/Page/blocks"
 import { getBlockType, type TemplateBlock } from "@/components/Page/registry"
 import {
@@ -22,12 +24,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import {
-  ProfileImageForm,
-  IdentityForm,
   BioForm,
   ContactForm,
-  LinksForm,
   GalleryForm,
+  IdentityForm,
+  LinksForm,
+  ProfileImageForm,
+  RelationshipsForm,
 } from "./forms"
 
 interface BlockEditorSheetProps {
@@ -123,7 +126,16 @@ export function BlockEditorSheet({
             onCancel={onClose}
           />
         )
-      // Note: relationships, activityFeed, dataTable, chart don't have forms yet
+      case "relationships":
+        return (
+          <RelationshipsForm
+            content={content as RelationshipsContent}
+            config={config as RelationshipsBlockConfig}
+            onSave={createSaveHandler<RelationshipsContent>(block.id)}
+            onCancel={onClose}
+          />
+        )
+      // Note: activityFeed, dataTable, chart don't have forms yet
       default:
         return (
           <div className="p-4 text-center text-muted-foreground">
@@ -135,7 +147,10 @@ export function BlockEditorSheet({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-[400px] sm:w-[450px] overflow-y-auto">
+      <SheetContent
+        side="right"
+        className="w-[400px] sm:w-[450px] overflow-y-auto"
+      >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {blockTypeDef && (
@@ -146,9 +161,7 @@ export function BlockEditorSheet({
             )}
           </SheetTitle>
         </SheetHeader>
-        <div className="mt-4">
-          {renderForm()}
-        </div>
+        <div className="mt-4">{renderForm()}</div>
       </SheetContent>
     </Sheet>
   )

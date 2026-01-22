@@ -1,12 +1,13 @@
 // src/components/Page/editor/forms/GalleryForm.tsx
-import { useEffect, useRef } from "react"
-import { useForm, useFieldArray } from "react-hook-form"
+
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 import { Plus, Trash2 } from "lucide-react"
+import { useEffect, useRef } from "react"
+import { useFieldArray, useForm } from "react-hook-form"
+import { z } from "zod"
 import type {
-  GalleryContent,
   GalleryBlockConfig,
+  GalleryContent,
 } from "@/components/Page/blocks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

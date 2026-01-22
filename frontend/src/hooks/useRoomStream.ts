@@ -10,8 +10,8 @@ import { useQueryClient } from "@tanstack/react-query"
  * - Optimistic UI updates
  */
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { MessageViewModel } from "@/services/roomService"
 import useCustomToast from "@/hooks/useCustomToast"
+import type { MessageViewModel } from "@/services/roomService"
 import useAuth from "./useAuth"
 
 interface RoomEvent {
@@ -154,7 +154,7 @@ export function useRoomStream(
         },
       )
     },
-    [queryClient, roomId],
+    [queryClient, roomId, shouldLog, user],
   )
 
   // Send message to room
@@ -288,7 +288,14 @@ export function useRoomStream(
         console.error("Error parsing WebSocket message:", error)
       }
     },
-    [queryClient, roomId, onError, appendUserMessageFromEvent],
+    [
+      queryClient,
+      roomId,
+      onError,
+      appendUserMessageFromEvent,
+      shouldLog,
+      showWarningToast,
+    ],
   )
 
   // Connect to WebSocket

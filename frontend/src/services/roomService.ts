@@ -195,8 +195,7 @@ function transformMessage(
   } else {
     // Prefer backend-supplied display name when available.
     const msg = message as any
-    sender_name =
-      msg.sender_display_name || message.sender_id || "Unknown User"
+    sender_name = msg.sender_display_name || message.sender_id || "Unknown User"
   }
 
   // Check if this is the current user's message

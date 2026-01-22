@@ -1,8 +1,11 @@
 // src/components/Page/CreatePageDialog.tsx
 
-import { useState } from "react"
 import { Check, LayoutTemplate } from "lucide-react"
-import { pageTemplates, getTemplatesForEntityType } from "@/components/Page/registry"
+import { useState } from "react"
+import {
+  getTemplatesForEntityType,
+  pageTemplates,
+} from "@/components/Page/registry"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -35,7 +38,9 @@ export function CreatePageDialog({
   isCreating,
   entityType,
 }: CreatePageDialogProps) {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null,
+  )
 
   // Get templates, optionally filtered by entity type
   const templates = entityType
@@ -64,7 +69,8 @@ export function CreatePageDialog({
             Create Your Page
           </DialogTitle>
           <DialogDescription>
-            Choose a template to get started. You can customize it after creation.
+            Choose a template to get started. You can customize it after
+            creation.
           </DialogDescription>
         </DialogHeader>
 
@@ -79,7 +85,7 @@ export function CreatePageDialog({
                 "hover:border-primary/50 hover:bg-accent/50",
                 selectedTemplateId === template.id
                   ? "border-primary bg-accent"
-                  : "border-border"
+                  : "border-border",
               )}
             >
               {selectedTemplateId === template.id && (

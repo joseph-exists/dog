@@ -1,13 +1,14 @@
 // src/routes/_layout/u.$slug.tsx
-import { useState } from "react"
+
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus, User } from "lucide-react"
+import { useState } from "react"
 
-import { PageShell, CreatePageDialog } from "@/components/Page"
-import { usePageEditor } from "@/hooks/usePageEditor"
-import useAuth from "@/hooks/useAuth"
+import { CreatePageDialog, PageShell } from "@/components/Page"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import useAuth from "@/hooks/useAuth"
+import { usePageEditor } from "@/hooks/usePageEditor"
 
 export const Route = createFileRoute("/_layout/u/$slug")({
   component: UserPage,

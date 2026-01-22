@@ -1,8 +1,8 @@
 // src/components/Page/PageShell.tsx
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { usePageEditor } from "@/hooks/usePageEditor"
-
+import { BlockWrapper } from "./BlockWrapper"
 import {
   ActivityFeedBlock,
   BioBlock,
@@ -15,7 +15,6 @@ import {
   ProfileImageBlock,
   RelationshipsBlock,
 } from "./blocks"
-import { BlockWrapper } from "./BlockWrapper"
 import { BlockEditorSheet, BlockPalette } from "./editor"
 import { PageHeader } from "./PageHeader"
 import { PageLayout } from "./PageLayout"
@@ -59,7 +58,34 @@ export function PageShell({
     selectBlock,
     updateBlockContent,
     addBlock,
+    removeBlock,
+    reorderBlocks,
+    toggleBlockVisibility,
   } = usePageEditor(entityType, entityId)
+
+  // Compute entity name from identity block content
+  const entityName = useMemo(() => {
+    if (!blocks) return "Page"
+    const identityBlock = blocks.find((b) => b.type === "identity")
+    const name = identityBlock?.content?.name as string | undefined
+    return name || "Untitled Page"
+  }, [blocks])
+
+  // Warn user about unsaved changes when leaving the page
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault()
+        // Modern browsers show a generic message, but we set returnValue for compatibility
+        e.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?"
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isDirty])
 
   const handleShare = async () => {
     await navigator.clipboard.writeText(window.location.href)
@@ -87,6 +113,49 @@ export function PageShell({
     content: Record<string, unknown>,
   ) => {
     updateBlockContent(blockId, content)
+  }
+
+  const handleMoveBlock = (blockId: string, direction: "up" | "down") => {
+    if (!blocks) return
+
+    const block = blocks.find((b) => b.id === blockId)
+    if (!block) return
+
+    const columnBlocks = blocks
+      .filter((b) => b.column === block.column)
+      .sort((a, b) => a.order - b.order)
+
+    const currentIndex = columnBlocks.findIndex((b) => b.id === blockId)
+    if (currentIndex === -1) return
+
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+    if (newIndex < 0 || newIndex >= columnBlocks.length) return
+
+    // Swap positions in the ordered array
+    const newOrder = columnBlocks.map((b) => b.id!)
+    ;[newOrder[currentIndex], newOrder[newIndex]] = [
+      newOrder[newIndex],
+      newOrder[currentIndex],
+    ]
+
+    reorderBlocks(block.column, newOrder)
+  }
+
+  const getBlockPosition = (blockId: string) => {
+    if (!blocks) return { isFirst: true, isLast: true }
+
+    const block = blocks.find((b) => b.id === blockId)
+    if (!block) return { isFirst: true, isLast: true }
+
+    const columnBlocks = blocks
+      .filter((b) => b.column === block.column)
+      .sort((a, b) => a.order - b.order)
+
+    const index = columnBlocks.findIndex((b) => b.id === blockId)
+    return {
+      isFirst: index === 0,
+      isLast: index === columnBlocks.length - 1,
+    }
   }
 
   const renderBlock = (block: TemplateBlock): React.ReactNode => {
@@ -291,12 +360,21 @@ export function PageShell({
     })()
 
     // Wrap with BlockWrapper for selection in edit mode
+    const { isFirst, isLast } = getBlockPosition(block.id ?? "")
+
     return (
       <BlockWrapper
         blockId={block.id ?? ""}
         isEditing={isEditing}
         isSelected={selectedBlockId === block.id}
+        isVisible={block.visibility !== "hidden"}
+        isFirst={isFirst}
+        isLast={isLast}
         onSelect={selectBlock}
+        onMoveUp={(id) => handleMoveBlock(id, "up")}
+        onMoveDown={(id) => handleMoveBlock(id, "down")}
+        onToggleVisibility={toggleBlockVisibility}
+        onDelete={removeBlock}
       >
         {blockContent}
       </BlockWrapper>
@@ -323,7 +401,7 @@ export function PageShell({
       <div className="flex-1 flex flex-col min-w-0">
         <PageHeader
           entityTypeId={entityType}
-          entityName="Page"
+          entityName={entityName}
           createdAt={new Date()}
           updatedAt={new Date()}
           isOwner={isOwner}

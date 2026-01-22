@@ -38,7 +38,7 @@ export function BlockPaletteItem({
       variant="ghost"
       className={cn(
         "w-full justify-start gap-2 h-auto py-2 px-3",
-        "cursor-grab active:cursor-grabbing"
+        "cursor-grab active:cursor-grabbing",
       )}
       draggable
       onDragStart={handleDragStart}

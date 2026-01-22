@@ -8,7 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { type FormEvent, useEffect, useMemo, useState } from "react"
 import type { ApiError } from "@/client"
 import {
   CatalogService,
@@ -90,75 +90,71 @@ export function StoryRuntimeStartDialog({
 
   const defaultStoryVersion = useMemo(() => {
     if (!catalogStory) return ""
-    return String(catalogStory.published_version || catalogStory.current_version)
+    return String(
+      catalogStory.published_version || catalogStory.current_version,
+    )
   }, [catalogStory])
 
-  const {
-    mutateAsync: createStoryAndRoom,
-    isPending: isCreatingRoom,
-  } = useMutation({
-    mutationFn: async () => {
-      const story = await StoriesService.createStory({
-        requestBody: { title: newStoryTitle.trim() || "Untitled Room Story" },
-      })
-      const room = await RoomService.createRoom({
-        title: roomTitle || story.title,
-        story_id: story.id,
-      })
-      await RoomRuntimeService.startRuntime(room.room_id, {
-        user_persona_id: selectedPersonaId,
-        story_version: null,
-        expected_revision: null,
-      })
-      return room.room_id
-    },
-    onSuccess: (newRoomId) => {
-      showSuccessToast("Story created. Runtime started in a new room.")
-      onOpenChange(false)
-      navigate({ to: "/r/$roomId", params: { roomId: newRoomId } })
-    },
-    onError: (err: ApiError) => {
-      handleError.call(showErrorToast, err)
-    },
-  })
+  const { mutateAsync: createStoryAndRoom, isPending: isCreatingRoom } =
+    useMutation({
+      mutationFn: async () => {
+        const story = await StoriesService.createStory({
+          requestBody: { title: newStoryTitle.trim() || "Untitled Room Story" },
+        })
+        const room = await RoomService.createRoom({
+          title: roomTitle || story.title,
+          story_id: story.id,
+        })
+        await RoomRuntimeService.startRuntime(room.room_id, {
+          user_persona_id: selectedPersonaId,
+          story_version: null,
+          expected_revision: null,
+        })
+        return room.room_id
+      },
+      onSuccess: (newRoomId) => {
+        showSuccessToast("Story created. Runtime started in a new room.")
+        onOpenChange(false)
+        navigate({ to: "/r/$roomId", params: { roomId: newRoomId } })
+      },
+      onError: (err: ApiError) => {
+        handleError.call(showErrorToast, err)
+      },
+    })
 
-  const {
-    mutateAsync: createBasicPersona,
-    isPending: isCreatingPersona,
-  } = useMutation({
-    mutationFn: async () => {
-      const personaName = roomTitle?.trim()
-        ? `${roomTitle.trim()} Persona`
-        : "Default Persona"
-      const persona = await PersonasService.createPersona({
-        requestBody: { name: personaName },
-      })
-      const userPersona = await UserPersonasService.createUserPersona({
-        requestBody: {
-          persona_id: persona.id,
-          nickname: personaName,
-        },
-      })
-      return userPersona.id
-    },
-    onSuccess: async (userPersonaId) => {
-      await queryClient.invalidateQueries({ queryKey: ["user-personas"] })
-      setSelectedPersonaId(userPersonaId)
-      showSuccessToast("Persona created for this user.")
-    },
-    onError: (err: ApiError) => {
-      handleError.call(showErrorToast, err)
-    },
-  })
+  const { mutateAsync: createBasicPersona, isPending: isCreatingPersona } =
+    useMutation({
+      mutationFn: async () => {
+        const personaName = roomTitle?.trim()
+          ? `${roomTitle.trim()} Persona`
+          : "Default Persona"
+        const persona = await PersonasService.createPersona({
+          requestBody: { name: personaName },
+        })
+        const userPersona = await UserPersonasService.createUserPersona({
+          requestBody: {
+            persona_id: persona.id,
+            nickname: personaName,
+          },
+        })
+        return userPersona.id
+      },
+      onSuccess: async (userPersonaId) => {
+        await queryClient.invalidateQueries({ queryKey: ["user-personas"] })
+        setSelectedPersonaId(userPersonaId)
+        showSuccessToast("Persona created for this user.")
+      },
+      onError: (err: ApiError) => {
+        handleError.call(showErrorToast, err)
+      },
+    })
 
-  const canSubmitPersona =
-    Boolean(selectedPersonaId) && !isLoadingPersonas
+  const canSubmitPersona = Boolean(selectedPersonaId) && !isLoadingPersonas
 
   const canStartExistingRoom =
     Boolean(roomStoryId) && canSubmitPersona && !isStarting
 
-  const canCreateRoom =
-    !roomStoryId && canSubmitPersona && !isCreatingRoom
+  const canCreateRoom = !roomStoryId && canSubmitPersona && !isCreatingRoom
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -221,28 +217,27 @@ export function StoryRuntimeStartDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {!isLoadingPersonas &&
-                (personasData?.data.length ?? 0) === 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      No personas found. Create one to continue.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        void createBasicPersona()
-                      }}
-                      disabled={isCreatingPersona}
-                    >
-                      {isCreatingPersona && (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      )}
-                      Create basic persona
-                    </Button>
-                  </div>
-                )}
+              {!isLoadingPersonas && (personasData?.data.length ?? 0) === 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    No personas found. Create one to continue.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      void createBasicPersona()
+                    }}
+                    disabled={isCreatingPersona}
+                  >
+                    {isCreatingPersona && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                    Create basic persona
+                  </Button>
+                </div>
+              )}
             </div>
 
             {roomStoryId ? (
