@@ -3,12 +3,47 @@ import type { BlockType } from "./blockTypes"
 
 /**
  * A block instance within a page template.
+ *
+ * When used in page templates (defaultBlocks), `id` and `visibility` are optional
+ * and will be assigned defaults when instantiated. When used in actual page instances,
+ * all fields should be present.
  */
 export interface TemplateBlock {
+  /** Unique instance ID (uuid) - assigned when block is instantiated */
+  id?: string
+  /** Block type identifier */
   type: BlockType
+  /** Layout column */
   column: "primary" | "auxiliary"
+  /** Sort order within column */
   order: number
+  /** Display settings */
   config: Record<string, unknown>
+  /** Actual data content for the block */
+  content?: Record<string, unknown>
+  /** Visibility toggle - defaults to "visible" */
+  visibility?: "visible" | "hidden"
+}
+
+/**
+ * A fully instantiated block with all required fields.
+ * Use this type when working with blocks in actual page instances.
+ */
+export interface InstantiatedBlock {
+  /** Unique instance ID (uuid) */
+  id: string
+  /** Block type identifier */
+  type: BlockType
+  /** Layout column */
+  column: "primary" | "auxiliary"
+  /** Sort order within column */
+  order: number
+  /** Display settings */
+  config: Record<string, unknown>
+  /** Actual data content for the block */
+  content?: Record<string, unknown>
+  /** Visibility toggle */
+  visibility: "visible" | "hidden"
 }
 
 /**

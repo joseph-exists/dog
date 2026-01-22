@@ -31,6 +31,7 @@ export {
   getDefaultTemplate,
   getPageTemplate,
   getTemplatesForEntityType,
+  type InstantiatedBlock,
   type PageTemplate,
   pageTemplates,
   type TemplateBlock,
