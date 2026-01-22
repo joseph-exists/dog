@@ -1,4 +1,6 @@
 import logging
+import os
+import threading
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
@@ -10,6 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 import app.agents  # noqa: F401
 from app.api.main import api_router
 from app.core.config import settings
+from app.services.shadow_outbox_worker import run_worker as run_shadow_outbox_worker
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -52,3 +55,22 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.on_event("startup")
+def start_shadow_outbox_worker() -> None:
+    """
+    Start the Shadow outbox worker in-process for local/dev environments.
+    Use SHADOW_OUTBOX_AUTOSTART=0 to disable.
+    """
+    if os.getenv("SHADOW_OUTBOX_AUTOSTART", "1") != "1":
+        logger.info("Shadow outbox worker autostart disabled")
+        return
+
+    thread = threading.Thread(
+        target=run_shadow_outbox_worker,
+        name="shadow-outbox-worker",
+        daemon=True,
+    )
+    thread.start()
+    logger.info("Shadow outbox worker started")
