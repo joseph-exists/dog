@@ -29,8 +29,6 @@ import useAuth from "./useAuth"
 import { useRoomMessages } from "./useRoomMessages"
 
 export interface UseRoomOptions {
-  enablePolling?: boolean
-  pollingInterval?: number
   autoScrollToBottom?: boolean
   onDeleteSuccess?: () => void // callback when room is deleted no crash-crash
   /** Include internal agent-to-agent messages in message queries (debug only). */
@@ -133,8 +131,6 @@ export function useRoom(
   const { user } = useAuth()
 
   // Options with defaults
-  const enablePolling = options?.enablePolling ?? true
-  const pollingInterval = options?.pollingInterval ?? 5000 // 5 seconds for participants
   const includeInternalMessages = options?.includeInternalMessages ?? false
 
   // Query keys
@@ -153,8 +149,7 @@ export function useRoom(
   } = useQuery({
     queryKey: roomQueryKey,
     queryFn: () => RoomService.getRoom(roomId),
-    // Room metadata rarely changes, poll less frequently
-    refetchInterval: enablePolling ? pollingInterval * 2 : false,
+    refetchInterval: false,
     refetchIntervalInBackground: false,
   })
 
@@ -166,7 +161,7 @@ export function useRoom(
   } = useQuery({
     queryKey: participantsQueryKey,
     queryFn: () => RoomService.getParticipants(roomId),
-    refetchInterval: enablePolling ? pollingInterval : false,
+    refetchInterval: false,
     refetchIntervalInBackground: false,
     placeholderData: (previousData) => previousData,
   })
@@ -193,8 +188,6 @@ export function useRoom(
     deleteMessage: deleteMessageFn,
     isDeleting,
   } = useRoomMessages(roomId, {
-    enablePolling,
-    pollingInterval: options?.pollingInterval ?? 3000, // 3 seconds for messages
     includeInternalMessages,
   })
 

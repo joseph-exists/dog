@@ -11,6 +11,8 @@ import { useQueryClient } from "@tanstack/react-query"
  */
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { MessageViewModel } from "@/services/roomService"
+import useCustomToast from "@/hooks/useCustomToast"
+import useAuth from "./useAuth"
 
 interface RoomEvent {
   type: "event"
@@ -36,11 +38,33 @@ interface ErrorMessage {
   message: string
 }
 
-type WebSocketMessage = RoomEvent | MessageDelta | SessionCreated | ErrorMessage
+interface WarningMessage {
+  type: "warning"
+  message: string
+}
+
+type WebSocketMessage =
+  | RoomEvent
+  | MessageDelta
+  | SessionCreated
+  | ErrorMessage
+  | WarningMessage
 
 interface UseRoomStreamOptions {
   enabled?: boolean
   onError?: (error: Error) => void
+}
+
+const RUNTIME_EVENT_TYPES = new Set([
+  "room.runtime.started",
+  "room.runtime.advanced",
+  "room.runtime.rewound",
+  "room.runtime.reset",
+  "room.runtime.cleared",
+])
+
+export function shouldInvalidateRuntime(eventType: string): boolean {
+  return RUNTIME_EVENT_TYPES.has(eventType)
 }
 
 export function useRoomStream(
@@ -51,6 +75,10 @@ export function useRoomStream(
 
   const wsRef = useRef<WebSocket | null>(null)
   const queryClient = useQueryClient()
+  const shouldLog =
+    import.meta.env.DEV && localStorage.getItem("debugRoomLogs") === "1"
+  const { user } = useAuth()
+  const { showWarningToast } = useCustomToast()
 
   const [isConnected, setIsConnected] = useState(false)
   const [lastSequence, setLastSequence] = useState(0)
@@ -73,11 +101,15 @@ export function useRoomStream(
         return
       }
 
+      const senderName =
+        user && payload.sender_id === user.id
+          ? user.full_name || user.email || "You"
+          : payload.sender_id
       const optimisticMessage: MessageViewModel = {
         message_id: `ws-${event.sequence}`,
         room_id: roomId || "",
         sender_type: "user",
-        sender_name: payload.sender_id,
+        sender_name: senderName,
         sender_id: payload.sender_id,
         agent_name: null,
         content: payload.content,
@@ -91,25 +123,36 @@ export function useRoomStream(
         can_pin: false,
       }
 
-      queryClient.setQueryData(["rooms", roomId, "messages"], (old: any) => {
-        if (!old?.messages) return old
-        if (
-          old.messages.some(
-            (msg: MessageViewModel) =>
-              msg.message_id === optimisticMessage.message_id,
-          )
-        ) {
-          return old
-        }
-        return {
-          ...old,
-          messages: [...old.messages, optimisticMessage],
-          total_count:
-            typeof old.total_count === "number"
-              ? old.total_count + 1
-              : old.total_count,
-        }
-      })
+      queryClient.setQueriesData(
+        { queryKey: ["rooms", roomId, "messages"] },
+        (old: any) => {
+          if (!old?.messages) {
+            return old
+          }
+          if (
+            old.messages.some(
+              (msg: MessageViewModel) =>
+                msg.message_id === optimisticMessage.message_id,
+            )
+          ) {
+            return old
+          }
+          if (shouldLog) {
+            console.log("[useRoomStream] messages cache updated", {
+              roomId,
+              message_id: optimisticMessage.message_id,
+            })
+          }
+          return {
+            ...old,
+            messages: [optimisticMessage, ...old.messages],
+            total_count:
+              typeof old.total_count === "number"
+                ? old.total_count + 1
+                : old.total_count,
+          }
+        },
+      )
     },
     [queryClient, roomId],
   )
@@ -146,6 +189,12 @@ export function useRoomStream(
             setLastSequence(message.sequence)
 
             if (message.event_type === "room_message.user") {
+              if (shouldLog) {
+                console.log("[useRoomStream] room_message.user received", {
+                  roomId,
+                  sequence: message.sequence,
+                })
+              }
               appendUserMessageFromEvent(message)
               break
             }
@@ -169,12 +218,19 @@ export function useRoomStream(
             ) {
               queryClient.invalidateQueries({
                 queryKey: ["rooms", roomId, "messages"],
+                exact: false,
               })
             }
 
             if (message.event_type.startsWith("participant.")) {
               queryClient.invalidateQueries({
                 queryKey: ["rooms", roomId, "participants"],
+              })
+            }
+
+            if (shouldInvalidateRuntime(message.event_type)) {
+              queryClient.invalidateQueries({
+                queryKey: ["rooms", roomId, "runtime"],
               })
             }
 
@@ -188,6 +244,7 @@ export function useRoomStream(
             ) {
               queryClient.invalidateQueries({
                 queryKey: ["rooms", roomId, "messages"],
+                exact: false,
               })
             }
             break
@@ -222,6 +279,9 @@ export function useRoomStream(
           case "error":
             console.error("WebSocket error:", message.message)
             onError?.(new Error(message.message))
+            break
+          case "warning":
+            showWarningToast(message.message)
             break
         }
       } catch (error) {

@@ -16,7 +16,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import type { ApiError } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import type { MessageViewModel } from "@/services/roomService"
@@ -29,8 +29,6 @@ import useAuth from "./useAuth"
 const { showErrorToast } = useCustomToast()
 
 export interface UseRoomMessagesOptions {
-  enablePolling?: boolean
-  pollingInterval?: number
   pageSize?: number
   /** Include internal agent-to-agent messages in queries (debug only). */
   includeInternalMessages?: boolean
@@ -62,9 +60,6 @@ export interface UseRoomMessagesResult {
   deleteMessage: (messageId: string) => Promise<void>
   isDeleting: boolean
 
-  // Polling Status
-  isPolling: boolean
-  lastUpdated: Date | null
 }
 
 /**
@@ -99,17 +94,17 @@ export function useRoomMessages(
 ): UseRoomMessagesResult {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const shouldLog =
+    import.meta.env.DEV && localStorage.getItem("debugRoomLogs") === "1"
+  const isInitialLoadRef = useRef(true)
 
   // Options with defaults
-  const enablePolling = options?.enablePolling ?? true
-  const pollingInterval = options?.pollingInterval ?? 3000 // 3 seconds
   const pageSize = options?.pageSize ?? 50
   const includeInternalMessages = options?.includeInternalMessages ?? false
 
   // State for pagination
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Query key for messages
   const messagesQueryKey = [
@@ -117,6 +112,12 @@ export function useRoomMessages(
     roomId,
     "messages",
     includeInternalMessages ? "with-internal" : "default",
+  ]
+  const fallbackMessagesQueryKey = [
+    "rooms",
+    roomId,
+    "messages",
+    includeInternalMessages ? "default" : "with-internal",
   ]
 
   // Fetch messages query with polling
@@ -132,15 +133,29 @@ export function useRoomMessages(
         { limit: pageSize, includeInternal: includeInternalMessages },
         user?.id,
       )
+      const firstId = result.messages[0]?.message_id || null
+      const lastId =
+        result.messages[result.messages.length - 1]?.message_id || null
+      const loadType = isInitialLoadRef.current ? "initial" : "subsequent"
+      if (shouldLog) {
+        console.log("[useRoomMessages] fetch messages", {
+          loadType,
+          roomId,
+          count: result.messages.length,
+          firstId,
+          lastId,
+        })
+      }
+      isInitialLoadRef.current = false
       setHasMore(result.has_more)
-      setLastUpdated(new Date())
       return result
     },
-    refetchInterval: enablePolling ? pollingInterval : false,
+    refetchInterval: false,
     // Disable polling when tab is not visible
     refetchIntervalInBackground: false,
     // Keep previous data while refetching
-    placeholderData: (previousData) => previousData,
+    placeholderData: () =>
+      queryClient.getQueryData(fallbackMessagesQueryKey) ?? undefined,
   })
 
   // Messages array from query data
@@ -291,7 +306,7 @@ export function useRoomMessages(
     setIsLoadingMore(true)
     try {
       // Use the oldest message's timestamp as cursor
-      const oldestMessage = messages[0]
+      const oldestMessage = messages[messages.length - 1]
       const beforeCursor = oldestMessage?.created_at.toISOString()
 
       const result = await RoomService.getMessages(
@@ -310,7 +325,7 @@ export function useRoomMessages(
 
         return {
           ...old,
-          messages: [...result.messages, ...old.messages],
+          messages: [...old.messages, ...result.messages],
           has_more: result.has_more,
         }
       })
@@ -377,9 +392,6 @@ export function useRoomMessages(
     [deleteMessageMutation],
   )
 
-  // Determine if polling is active
-  const isPolling = enablePolling && !isLoading
-
   return {
     messages,
     isLoading,
@@ -405,9 +417,5 @@ export function useRoomMessages(
     isTogglingContext: toggleContextMutation.isPending,
     deleteMessage,
     isDeleting: deleteMessageMutation.isPending,
-
-    // Polling Status
-    isPolling,
-    lastUpdated,
   }
 }

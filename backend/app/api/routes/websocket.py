@@ -17,7 +17,8 @@ from uuid import UUID
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 
 from app.core.db import get_async_session
-from app.api.deps import get_current_user_from_token, get_async_session_with_transaction
+from app.api.deps import get_current_user_from_token
+from app.core.db import async_session_maker
 from app.models import User
 from app.services.websocket_manager import connection_manager
 from app.services.event_replay import replay_events_since
@@ -366,30 +367,43 @@ async def handle_user_message(
     WebSocket connections are long-lived, not transactional.
     """
     try:
-        # Create new session with transaction for this message
-        async for session in get_async_session_with_transaction():
-            # Emit user message event
-            await emit_event(
-                session=session,
-                room_id=room_id,
-                event_type="room_message.user",
-                payload={
-                    "sender_id": str(user.id),
-                    "content": content,
-                },
-            )
+        async with async_session_maker() as session:
+            async with session.begin():
+                # Emit user message event
+                await emit_event(
+                    session=session,
+                    room_id=room_id,
+                    event_type="room_message.user",
+                    payload={
+                        "sender_id": str(user.id),
+                        "content": content,
+                    },
+                )
 
-            # Trigger agents (within same transaction)
-            # Pass user_id so agents can use the user's API credentials
-            await run_agents_for_message(
-                room_id=room_id,
-                trigger_message=content,
-                session=session,
-                user_id=user.id,
-            )
-
-            # Transaction commits here
-            break
+                # Trigger agents (within same transaction)
+                # Pass user_id so agents can use the user's API credentials
+                try:
+                    await run_agents_for_message(
+                        room_id=room_id,
+                        trigger_message=content,
+                        session=session,
+                        user_id=user.id,
+                    )
+                except Exception:
+                    logger.exception(
+                        "run_agents_for_message failed; user message committed",
+                        extra={"room_id": str(room_id), "user_id": str(user.id)},
+                    )
+                    try:
+                        await websocket.send_json({
+                            "type": "warning",
+                            "message": "Message sent, but agent execution failed.",
+                        })
+                    except Exception:
+                        logger.exception(
+                            "Failed to send warning over websocket",
+                            extra={"room_id": str(room_id), "user_id": str(user.id)},
+                        )
 
     except Exception as e:
         logger.error(f"Error handling user message: {e}")

@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from sqlmodel import Session, and_, func, or_, select, true
+from sqlmodel import Session, and_, desc, func, or_, select, true
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
@@ -1554,7 +1554,7 @@ async def _build_room_runtime_public(
     node_chain: list[StoryNodePublic] = []
     available_choices: list[NodeChoicePublic] = []
 
-    if progress.current_node_id:
+    if progress.current_node_id is not None:
         available_choices_result = await get_available_choices(
             session=session,
             node_id=progress.current_node_id,
@@ -1584,7 +1584,7 @@ async def _build_room_runtime_public(
 
     if node_chain_ids:
         nodes_result = await session.exec(
-            select(StoryNode).where(StoryNode.id.in_(node_chain_ids))
+            select(StoryNode).where(StoryNode.id.in_([str(nid) for nid in node_chain_ids]))
         )
         nodes = nodes_result.all()
         nodes_by_id = {node.id: node for node in nodes}
@@ -1594,7 +1594,7 @@ async def _build_room_runtime_public(
             if node_id in nodes_by_id
         ]
 
-    if progress.current_node_id:
+    if progress.current_node_id is not None:
         available_choices_result = await get_available_choices(
             session=session,
             node_id=progress.current_node_id,
@@ -2607,7 +2607,7 @@ async def create_room(
 
     # Fetch and return the created room projection
     result = await session.exec(select(Room).where(Room.room_id == room_id))
-    room = result.scalar_one()
+    room = result.one()
     return room
 
 async def list_rooms_for_story(
@@ -2642,7 +2642,7 @@ async def list_rooms_for_story(
         .where(
         Room.story_id == str(story_id),  # Filter by story_id (uses FK index)
         )
-        .order_by(Room.last_activity.desc())
+        .order_by(desc(Room.last_activity))
         .offset(skip)
         .limit(limit)
     )
@@ -2664,7 +2664,7 @@ async def list_rooms_for_story(
             )
         )
     )
-    total_count = count_result.scalar_one()
+    total_count = count_result.one()
 
     return RoomsPublic(
         data=[RoomPublic.model_validate(room) for room in rooms],
@@ -2703,7 +2703,7 @@ async def list_rooms_for_user(
             RoomParticipant.participant_id == str(user_id),
             RoomParticipant.active == True,  # noqa: E712
         )
-        .order_by(Room.last_activity.desc())
+        .order_by(desc(Room.last_activity))
         .offset(skip)
         .limit(limit)
     )
@@ -2720,7 +2720,7 @@ async def list_rooms_for_user(
         )
     )
     #total_count = len(count_result.all())
-    total_count = count_result.scalar_one()
+    total_count = count_result.one()
 
     return RoomsPublic(
         data=[RoomPublic.model_validate(room) for room in rooms],
@@ -2820,7 +2820,7 @@ async def update_room_metadata(
 
     # Fetch and return updated room
     result = await session.exec(select(Room).where(Room.room_id == room_id))
-    room = result.scalar_one()
+    room = result.one()
     return room
 
 
@@ -2925,7 +2925,7 @@ async def add_participant(
             RoomParticipant.participant_id == normalized_participant_id,
         )
     )
-    participant = result.scalar_one()
+    participant = result.one()
     return participant
 
 
@@ -3119,7 +3119,7 @@ async def change_participant_role(
             RoomParticipant.participant_id == normalized_participant_id,
         )
     )
-    participant = result.scalar_one()
+    participant = result.one()
     return participant
 
 
@@ -3309,7 +3309,7 @@ async def set_participant_binding(
         )
         .order_by(RoomParticipantBinding.effective_at.desc())
     )
-    binding = binding_result.scalar_one()
+    binding = binding_result.one()
     return binding
 
 
@@ -3407,7 +3407,7 @@ async def list_room_messages(
       count_result = await session.exec(
           select(func.count()).select_from(RoomMessage).where(RoomMessage.room_id == room_id)
       )
-      total_count = count_result.scalar()  # CHANGE: more efficient count query
+      total_count = count_result.one()  # CHANGE: more efficient count query
 
       return RoomMessagesPublic(
           data=messages,
@@ -3466,7 +3466,7 @@ async def send_user_message(
         .order_by(RoomMessage.created_at.desc())
         .limit(1)
     )
-    room_message = result.scalar_one()
+    room_message = result.one()
     return room_message
 
 
@@ -3530,7 +3530,7 @@ async def edit_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    return result.scalar_one()
+    return result.one()
 
 
 async def pin_message(
@@ -3583,7 +3583,7 @@ async def pin_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    return result.scalar_one()
+    return result.one()
 
 
 async def unpin_message(
@@ -3633,7 +3633,7 @@ async def unpin_message(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    return result.scalar_one()
+    return result.one()
 
 
 async def toggle_message_context(
@@ -3686,7 +3686,7 @@ async def toggle_message_context(
     result = await session.exec(
         select(RoomMessage).where(RoomMessage.message_id == message_id)
     )
-    return result.scalar_one()
+    return result.one()
 
 
 async def delete_message(
@@ -4052,9 +4052,9 @@ def replay_state_from_head_optimized(
         select(ProgressSnapshot)
         .where(
             ProgressSnapshot.progress_id == progress_id,
-            ProgressSnapshot.choice_id.in_(ancestor_ids)
+            ProgressSnapshot.choice_id.in_(ancestor_ids),
         )
-        .order_by(ProgressSnapshot.created_at.desc())
+        .order_by(desc(ProgressSnapshot.created_at))
         .limit(1)
     )
 
@@ -4183,9 +4183,9 @@ def get_nearest_snapshot(
         select(ProgressSnapshot)
         .where(
             ProgressSnapshot.progress_id == progress_id,
-            ProgressSnapshot.choice_id.in_(ancestor_ids)
+            ProgressSnapshot.choice_id.in_(ancestor_ids),
         )
-        .order_by(ProgressSnapshot.created_at.desc())
+        .order_by(desc(ProgressSnapshot.created_at))
         .limit(1)
     )
 

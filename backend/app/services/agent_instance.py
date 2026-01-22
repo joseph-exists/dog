@@ -31,7 +31,8 @@ async def get_agent_config(session: AsyncSession, slug: str) -> AgentConfig | No
     result = await session.exec(
         select(AgentConfig).where(AgentConfig.slug == slug)
     )
-    return result.one_or_none()
+    row = result.one_or_none()
+    return row[0] if row else None
 
 
 async def resolve_user_credentials(
@@ -51,7 +52,8 @@ async def resolve_user_credentials(
             UserAgentSettings.agent_config_id == agent_config.id,
         )
     )
-    settings = settings_result.one_or_none()
+    settings_row = settings_result.one_or_none()
+    settings = settings_row[0] if settings_row else None
 
     effective_model_name = agent_config.model_name
     if settings and settings.model_name_override:
@@ -80,7 +82,8 @@ async def resolve_user_credentials(
                 UserLLMProvider.is_enabled,
             )
         )
-        provider = provider_result.one_or_none()
+        provider_row = provider_result.one_or_none()
+        provider = provider_row[0] if provider_row else None
         if provider:
             logger.debug(
                 f"Using explicit provider '{provider.name}' for agent {agent_config.slug}"
@@ -95,7 +98,8 @@ async def resolve_user_credentials(
                 UserLLMProvider.is_enabled,
             )
         )
-        provider = default_result.one_or_none()
+        provider_row = default_result.one_or_none()
+        provider = provider_row[0] if provider_row else None
         if provider:
             logger.debug(
                 f"Using default provider '{provider.name}' for agent {agent_config.slug}"

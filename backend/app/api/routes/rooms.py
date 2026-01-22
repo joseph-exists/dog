@@ -16,6 +16,7 @@ NOTE: agent participants are addressed by `AgentConfig.slug` (not display name).
 """
 
 from datetime import datetime
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -62,6 +63,7 @@ from app.models import (
 from app.services.agent_runner import run_agents_for_message
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -244,11 +246,10 @@ async def list_room_participants(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Query active participants
-    rp = RoomParticipant.__table__.c
     result = await session.exec(
         select(RoomParticipant).where(
-            rp.room_id == room_id,
-            rp.active.is_(True),
+            RoomParticipant.room_id == room_id,
+            RoomParticipant.active,
         )
     )
     participants = result.all()
@@ -348,12 +349,18 @@ async def send_message(
 
     # 2. Trigger agents (within same transaction)
     # Pass user_id so agents can use the user's API credentials
-    await run_agents_for_message(
-        room_id=room_id,
-        trigger_message=message_in.content,
-        session=session,
-        user_id=current_user.id,
-    )
+    try:
+        await run_agents_for_message(
+            room_id=room_id,
+            trigger_message=message_in.content,
+            session=session,
+            user_id=current_user.id,
+        )
+    except Exception:
+        logger.exception(
+            "run_agents_for_message failed; user message committed",
+            extra={"room_id": str(room_id), "user_id": str(current_user.id)},
+        )
 
     # 3. Transaction commits here (on return)
     return room_message
@@ -381,17 +388,40 @@ async def list_messages(
         limit: Maximum number of messages to return (max 100)
         before: Cursor timestamp - returns messages before this time
     """
-    room_messages = await list_room_messages(
-        room_id=room_id,
-        user_id=current_user.id,
-        active_for_context=active_for_context,
-        is_pinned=is_pinned,
-        sender_type=sender_type,
-        sender_id=sender_id,
-        include_internal=include_internal,
-        limit=limit,
-        before=before,
-        session=session,
+    try:
+        room_messages = await list_room_messages(
+            room_id=room_id,
+            user_id=current_user.id,
+            active_for_context=active_for_context,
+            is_pinned=is_pinned,
+            sender_type=sender_type,
+            sender_id=sender_id,
+            include_internal=include_internal,
+            limit=limit,
+            before=before,
+            session=session,
+        )
+    except Exception:
+        logger.exception(
+            "list_messages failed",
+            extra={
+                "room_id": str(room_id),
+                "user_id": str(current_user.id),
+                "limit": limit,
+                "before": str(before) if before else None,
+                "include_internal": include_internal,
+            },
+        )
+        raise
+
+    logger.info(
+        "list_messages success",
+        extra={
+            "room_id": str(room_id),
+            "user_id": str(current_user.id),
+            "count": room_messages.count,
+            "size": len(room_messages.data),
+        },
     )
     return room_messages
 

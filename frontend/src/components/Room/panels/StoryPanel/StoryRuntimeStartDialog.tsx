@@ -5,13 +5,14 @@
  * Handles persona selection and, when needed, creating a new story + room.
  */
 
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import type { ApiError } from "@/client"
 import {
   CatalogService,
+  PersonasService,
   StoriesService,
   UserPersonasService,
 } from "@/client"
@@ -62,6 +63,7 @@ export function StoryRuntimeStartDialog({
   onStartRuntime,
 }: StoryRuntimeStartDialogProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>("")
   const [storyVersionInput, setStoryVersionInput] = useState<string>("")
   const [newStoryTitle, setNewStoryTitle] = useState<string>(
@@ -114,6 +116,35 @@ export function StoryRuntimeStartDialog({
       showSuccessToast("Story created. Runtime started in a new room.")
       onOpenChange(false)
       navigate({ to: "/r/$roomId", params: { roomId: newRoomId } })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err)
+    },
+  })
+
+  const {
+    mutateAsync: createBasicPersona,
+    isPending: isCreatingPersona,
+  } = useMutation({
+    mutationFn: async () => {
+      const personaName = roomTitle?.trim()
+        ? `${roomTitle.trim()} Persona`
+        : "Default Persona"
+      const persona = await PersonasService.createPersona({
+        requestBody: { name: personaName },
+      })
+      const userPersona = await UserPersonasService.createUserPersona({
+        requestBody: {
+          persona_id: persona.id,
+          nickname: personaName,
+        },
+      })
+      return userPersona.id
+    },
+    onSuccess: async (userPersonaId) => {
+      await queryClient.invalidateQueries({ queryKey: ["user-personas"] })
+      setSelectedPersonaId(userPersonaId)
+      showSuccessToast("Persona created for this user.")
     },
     onError: (err: ApiError) => {
       handleError.call(showErrorToast, err)
@@ -192,9 +223,25 @@ export function StoryRuntimeStartDialog({
               </Select>
               {!isLoadingPersonas &&
                 (personasData?.data.length ?? 0) === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No personas found. Create one before starting runtime.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      No personas found. Create one to continue.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        void createBasicPersona()
+                      }}
+                      disabled={isCreatingPersona}
+                    >
+                      {isCreatingPersona && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                      Create basic persona
+                    </Button>
+                  </div>
                 )}
             </div>
 

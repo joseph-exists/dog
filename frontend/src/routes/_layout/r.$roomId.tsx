@@ -90,6 +90,13 @@ function RoomView() {
 
   // Use the aggregate room hook
   const {
+    isConnected,
+    sendMessage: sendViaWebSocket,
+    streamingMessage,
+  } = useRoomStream(roomId)
+
+  // Use the aggregate room hook
+  const {
     room,
     messages,
     participants,
@@ -114,7 +121,6 @@ function RoomView() {
     toggleContext,
     deleteMessage,
   } = useRoom(roomId, {
-    enablePolling: true,
     includeInternalMessages: showInternalMessages,
     onDeleteSuccess: () => {
       navigate({ to: "/rooms" })
@@ -129,13 +135,6 @@ function RoomView() {
   } = useRoomPanels(roomId, {
     enabled: !isLoadingRoom,
   })
-
-  // WebSocket connection
-  const {
-    isConnected,
-    sendMessage: sendViaWebSocket,
-    streamingMessage,
-  } = useRoomStream(roomId)
 
   // Handle authorization errors
   useEffect(() => {

@@ -32,24 +32,29 @@ export function ChoiceItem({
 
   if (variant === "compact") {
     return (
-      <button
-        type="button"
-        className={cn(
-          "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
-          isDisabled
-            ? "cursor-not-allowed bg-muted text-muted-foreground"
-            : "hover:border-primary hover:bg-muted/60",
+      <div className="space-y-1">
+        <button
+          type="button"
+          className={cn(
+            "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
+            isDisabled
+              ? "cursor-not-allowed bg-muted text-muted-foreground"
+              : "hover:border-primary hover:bg-muted/60",
+          )}
+          disabled={isDisabled}
+          onClick={() => onSelect(choice)}
+          title={unavailableReason || undefined}
+        >
+          <div className="flex items-center gap-2">
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {!isAvailable && !isLoading && <Lock className="h-4 w-4" />}
+            <span>{choice.text}</span>
+          </div>
+        </button>
+        {isDisabled && unavailableReason && (
+          <p className="text-xs text-muted-foreground">{unavailableReason}</p>
         )}
-        disabled={isDisabled}
-        onClick={() => onSelect(choice)}
-        title={unavailableReason || undefined}
-      >
-        <div className="flex items-center gap-2">
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {!isAvailable && !isLoading && <Lock className="h-4 w-4" />}
-          <span>{choice.text}</span>
-        </div>
-      </button>
+      </div>
     )
   }
 
@@ -68,6 +73,7 @@ export function ChoiceItem({
           className="w-full text-left"
           onClick={() => onSelect(choice)}
           disabled={isDisabled}
+          title={unavailableReason || undefined}
         >
           <div className="flex items-center gap-2">
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -75,6 +81,11 @@ export function ChoiceItem({
             <span className="font-medium">{choice.text}</span>
           </div>
         </button>
+        {isDisabled && unavailableReason && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {unavailableReason}
+          </p>
+        )}
         {onInspect && (
           <button
             type="button"
@@ -89,17 +100,23 @@ export function ChoiceItem({
   }
 
   return (
-    <Button
-      type="button"
-      variant="secondary"
-      className="w-full justify-start gap-2"
-      disabled={isDisabled}
-      onClick={() => onSelect(choice)}
-      title={unavailableReason || undefined}
-    >
-      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-      {!isAvailable && !isLoading && <Lock className="h-4 w-4" />}
-      <span className="truncate">{choice.text}</span>
-    </Button>
+    <div className="space-y-1">
+      <Button
+        type="button"
+        variant="secondary"
+        className="w-full justify-start gap-2"
+        disabled={isDisabled}
+        onClick={() => onSelect(choice)}
+        title={unavailableReason || undefined}
+      >
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+        {!isAvailable && !isLoading && <Lock className="h-4 w-4" />}
+        <span className="truncate">{choice.text}</span>
+      </Button>
+      {isDisabled && unavailableReason && (
+        // TODO: consider using a tooltip component when reason codes stabilize.
+        <p className="text-xs text-muted-foreground">{unavailableReason}</p>
+      )}
+    </div>
   )
 }

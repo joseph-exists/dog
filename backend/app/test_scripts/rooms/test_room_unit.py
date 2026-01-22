@@ -200,7 +200,7 @@ def test_add_agent_participant(session: requests.Session, results: UnitTestResul
         response = session.post(
             f"{BASE_URL}/rooms/{room_id}/participants",
             json={
-                "participant_id": "StoryAdvisor",
+                "participant_id": "zebra-friday-monserrat",
                 "participant_type": "agent",
                 "role": "member"
             }
@@ -211,17 +211,17 @@ def test_add_agent_participant(session: requests.Session, results: UnitTestResul
             
             # Verify participant structure
             checks = [
-                participant.get('participant_id') == 'StoryAdvisor',
+                participant.get('participant_id') == 'zebzeb',
                 participant.get('participant_type') == 'agent',
                 participant.get('role') == 'member',
-                participant.get('active') == True
+                participant.get('active')
             ]
             
             if all(checks):
                 results.add_test(
                     "add_agent_participant",
                     True,
-                    f"Agent 'StoryAdvisor' added as member (ID: {participant.get('id', 'N/A')[:8]}...)"
+                    f"Agent 'zebzeb' added as member (ID: {participant.get('id', 'N/A')[:8]}...)"
                 )
                 return participant
             else:

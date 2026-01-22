@@ -89,11 +89,25 @@ export function StoryPanel({
           title="No Story Attached"
           description="Attach a story to begin playing in this room."
           action={
-            <Button size="sm" onClick={() => setStartDialogOpen(true)}>
+            <Button
+              size="sm"
+              onClick={() => setStartDialogOpen(true)}
+              disabled={!canWrite}
+              title={
+                canWrite
+                  ? undefined
+                  : "Only room owners can start the runtime right now."
+              }
+            >
               Start Runtime
             </Button>
           }
         />
+        {!canWrite && (
+          <p className="px-4 text-xs text-muted-foreground">
+            Only room owners can start the runtime right now.
+          </p>
+        )}
         <StoryRuntimeStartDialog
           open={startDialogOpen}
           onOpenChange={setStartDialogOpen}

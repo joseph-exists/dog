@@ -261,20 +261,21 @@ src/
 
 ## Revisit This Session
 
-- [ ] Runtime start policy: backend enforces owner-only; confirm UI guard vs backend change
-- [ ] Story loader contract: catalog selection + new room creation when `story_id` is missing
-- [ ] Persona empty-state: add persona creation path or clear blocking copy
+- [x] Runtime start policy: backend enforces owner-only; confirm UI guard vs backend change
+- [x] Story loader contract: catalog selection + new room creation when `story_id` is missing
+- [x] Persona empty-state: add persona creation path or clear blocking copy
 - [ ] Content rendering policy: pick markdown renderer + sanitization rules
 - [ ] Rewind behavior: confirm one-step UI copy + disabled state behavior
-- [ ] Locked choices: confirm hide vs show-with-reason
-- [ ] Realtime invalidation wiring: subscribe to `room.runtime.*` and invalidate runtime query
-- [ ] Error handling copy: confirm 404/410/422 user messaging
-- [ ] Telemetry events: define payload + owner
+- [x] Locked choices: confirm hide vs show-with-reason
+- [x] Realtime invalidation wiring: subscribe to `room.runtime.*` and invalidate runtime query
+- [x] Error handling copy: confirm 404/410/422 user messaging
+- [x] Telemetry events: define payload + owner (stubbed for now)
 - [ ] Accessibility pass: focus return after advance + collapsible labels
 
 ## Testing Notes
 
 - [ ] Add tests for realtime invalidation warnings when runtime events arrive
+- Recommended approach: unit-test `shouldInvalidateRuntime` for the event list, then add a lightweight integration test that stubs room event delivery and asserts the runtime query is invalidated once per event.
 
 ## shadcn/ui Components Required
 
@@ -367,7 +368,7 @@ Decision: if the user lacks write permission, show a read-only banner in the Sto
 Decision: use markdown rendering for `content_format: "markdown"` via the existing markdown renderer used in the app (align with Story Editor). `content_format: "html"` is rendered as sanitized HTML (DOMPurify). `content_format: "json"` renders a pretty JSON block with monospace. `null` or unknown formats fall back to plain text rendering.
 
 - [x] 6) Document choice ordering and availability display.
-Decision: sort `available_choices` by `order` ascending, then by `id` as a stable tie-breaker. Locked choices are hidden (only render `available_choices`); do not show unavailable reasons until the backend provides them.
+Decision: sort `available_choices` by `order` ascending, then by `id` as a stable tie-breaker. When locked choices are available from the backend, render them as visible-but-disabled; keep unavailable reasons for future rule-state work (hidden vs disabled nuance).
 
 - [x] 7) Lock in node chain window rule.
 Decision: show an ancestors-only chain limited to the last 12 nodes (current node included). On mobile, collapse the chain by default and show only the last 5 entries when expanded.

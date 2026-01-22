@@ -67,11 +67,7 @@ export default function MessageInput({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={
-            isConnected
-              ? "Type a message..."
-              : "Type a message... (isConnected: offline bug?)"
-          }
+          placeholder="Type a message..."
           disabled={disabled || isSending}
           className="flex-1"
         />

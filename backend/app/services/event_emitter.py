@@ -360,14 +360,14 @@ async def _get_next_room_sequence(
     lock_key = hash(room_id) % (2**31)  # Postgres bigint range
     await session.exec(
         text("SELECT pg_advisory_xact_lock(:lock_key)"),
-        {"lock_key": lock_key}
+        params={"lock_key": lock_key},
     )
     result = await session.exec(
         select(func.max(RoomEvent.room_sequence)).where(
             RoomEvent.room_id == room_id
         )
     )
-    max_sequence = result.scalar()
+    max_sequence = result.one()[0]
 
     # First event in room starts at sequence 1
     return 1 if max_sequence is None else max_sequence + 1
@@ -489,7 +489,8 @@ async def _handle_room_updated(
     result = await session.exec(
         select(Room).where(Room.room_id == event.room_id)
     )
-    room = result.one()
+    row = result.one()
+    room = row[0]
 
     updated_fields = event.payload.get("updated_fields", {})
     for field, value in updated_fields.items():
@@ -508,9 +509,10 @@ async def _update_room_last_activity(
     result = await session.exec(
         select(Room).where(Room.room_id == room_id)
     )
-    room = result.one_or_none()
+    row = result.one_or_none()
 
-    if room:
+    if row:
+        room = row[0]
         room.last_activity = timestamp
         session.add(room)
 
@@ -547,15 +549,17 @@ async def _handle_participant_joined(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.one_or_none()
-            if agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if agent_config_row:
+                agent_config = agent_config_row[0]
                 participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.one_or_none()
-            if agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if agent_config_row:
+                agent_config = agent_config_row[0]
                 legacy_uuid_str = str(agent_config.id)
                 participant_id = agent_config.slug
 
@@ -566,7 +570,8 @@ async def _handle_participant_joined(
             RoomParticipant.participant_id == participant_id,
         )
     )
-    existing = result.one_or_none()
+    existing_row = result.one_or_none()
+    existing = existing_row[0] if existing_row else None
 
     if not existing and payload.get("participant_type") == "agent":
         # Transitional compatibility: if an existing room participant row is keyed by the
@@ -578,7 +583,8 @@ async def _handle_participant_joined(
                     RoomParticipant.participant_id == legacy_uuid_str,
                 )
             )
-            existing = result.one_or_none()
+            existing_row = result.one_or_none()
+            existing = existing_row[0] if existing_row else None
 
     if existing:
         # Reactivate existing participant
@@ -623,7 +629,8 @@ async def _handle_participant_left(
             RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.one_or_none()
+    participant_row = result.one_or_none()
+    participant = participant_row[0] if participant_row else None
 
     if not participant:
         # Transitional compatibility: attempt slug/UUID normalization for agents.
@@ -632,28 +639,32 @@ async def _handle_participant_left(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.one_or_none()
-            if agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if agent_config_row:
+                agent_config = agent_config_row[0]
                 result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == agent_config.slug,
                     )
                 )
-                participant = result.one_or_none()
+                participant_row = result.one_or_none()
+                participant = participant_row[0] if participant_row else None
         except ValueError:
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.one_or_none()
-            if agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if agent_config_row:
+                agent_config = agent_config_row[0]
                 result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == str(agent_config.id),
                     )
                 )
-                participant = result.one_or_none()
+                participant_row = result.one_or_none()
+                participant = participant_row[0] if participant_row else None
 
     if not participant:
         raise ValueError(
@@ -686,7 +697,8 @@ async def _handle_participant_role_changed(
             RoomParticipant.participant_id == participant_id,
         )
     )
-    participant = result.one_or_none()
+    participant_row = result.one_or_none()
+    participant = participant_row[0] if participant_row else None
 
     if not participant:
         # Transitional compatibility: attempt slug/UUID normalization for agents.
@@ -695,28 +707,32 @@ async def _handle_participant_role_changed(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.one_or_none()
-            if agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if agent_config_row:
+                agent_config = agent_config_row[0]
                 result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == agent_config.slug,
                     )
                 )
-                participant = result.one_or_none()
+                participant_row = result.one_or_none()
+                participant = participant_row[0] if participant_row else None
         except ValueError:
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.one_or_none()
-            if agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if agent_config_row:
+                agent_config = agent_config_row[0]
                 result = await session.exec(
                     select(RoomParticipant).where(
                         RoomParticipant.room_id == event.room_id,
                         RoomParticipant.participant_id == str(agent_config.id),
                     )
                 )
-                participant = result.one_or_none()
+                participant_row = result.one_or_none()
+                participant = participant_row[0] if participant_row else None
 
     if not participant:
         raise ValueError(
@@ -764,18 +780,20 @@ async def _handle_participant_binding_changed(
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.id == agent_uuid)
             )
-            agent_config = agent_config_result.one_or_none()
-            if not agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if not agent_config_row:
                 raise ValueError("Agent not found for binding change")
+            agent_config = agent_config_row[0]
             resolved_agent_id = agent_config.id
             participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == participant_id)
             )
-            agent_config = agent_config_result.one_or_none()
-            if not agent_config:
+            agent_config_row = agent_config_result.one_or_none()
+            if not agent_config_row:
                 raise ValueError("Agent not found for binding change")
+            agent_config = agent_config_row[0]
             resolved_agent_id = agent_config.id
             participant_id = agent_config.slug
     else:
@@ -797,10 +815,11 @@ async def _handle_participant_binding_changed(
             RoomParticipantBinding.ended_at.is_(None),
         )
     )
-    existing = result.all()
-    for row in existing:
-        row.ended_at = event.created_at
-        session.add(row)
+    existing_rows = result.all()
+    for row in existing_rows:
+        binding = row[0]
+        binding.ended_at = event.created_at
+        session.add(binding)
 
     # Insert new binding row.
     binding = RoomParticipantBinding(
@@ -939,7 +958,8 @@ async def _handle_message_edited(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.one()
+    message_row = result.one()
+    message = message_row[0]
 
     message.content = payload["new_content"]
     message.edited_at = event.created_at
@@ -968,7 +988,8 @@ async def _handle_message_pinned(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.one()
+    message_row = result.one()
+    message = message_row[0]
 
     message.is_pinned = True
     message.pinned_at = event.created_at
@@ -997,7 +1018,8 @@ async def _handle_message_unpinned(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.one()
+    message_row = result.one()
+    message = message_row[0]
 
     message.is_pinned = False
     message.pinned_at = None
@@ -1026,7 +1048,8 @@ async def _handle_message_context_toggled(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.one()
+    message_row = result.one()
+    message = message_row[0]
 
     message.active_for_context = payload["active_for_context"]
 
@@ -1054,7 +1077,8 @@ async def _handle_message_deleted(
             RoomMessage.message_id == uuid.UUID(payload["message_id"])
         )
     )
-    message = result.one_or_none()
+    message_row = result.one_or_none()
+    message = message_row[0] if message_row else None
 
     if message:
         await session.delete(message)

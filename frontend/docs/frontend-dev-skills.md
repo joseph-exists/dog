@@ -56,10 +56,9 @@ Multiple specialized skills will handle these frontend tasks:
    - Composite hooks delegate to specialized hooks (e.g., `useRoom` wraps `useRoomMessages`)
    - Derived state computed via `useMemo`
 
-3. **Polling → WebSocket/SSE Migration** (IN PROGRESS)
-   - Current: `refetchInterval` for real-time updates
-   - Planned: Replace with WebSocket/SSE from event-sourcing system
-   - Impact on near-term work: TBD
+3. **Polling → WebSocket/SSE Migration** 
+   - Current: `refetchInterval` completely removed, replaced with WebSocket/SSE from event-sourcing system
+
 
 ### Auto-Generated API Client Workflow
 
@@ -181,8 +180,7 @@ onSuccess: () => {
   queryClient.invalidateQueries({ queryKey: ["rooms", roomId] })
 }
 
-// Polling (temporary until WebSocket migration)
-refetchInterval: enablePolling ? 5000 : false
+
 ```
 
 ### Data Flow
@@ -375,7 +373,7 @@ npm run build        # Production build
 - Create new hooks without approval
 - Edit files in `src/client/` (auto-generated)
 - Edit files in `src/components/ui/` without shadcn CLI
-- Use `refetchInterval` for new features (prepare for WebSocket migration)
+- Use `refetchInterval` for new features 
 - Create components over 300 lines without extracting logic
 - Skip JSDoc documentation on components and hooks
 - Introduce new dependencies without approval

@@ -1,5 +1,8 @@
+import logging
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import ResponseValidationError
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
@@ -21,6 +24,22 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
 )
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(
+    request: Request,
+    exc: ResponseValidationError,
+) -> JSONResponse:
+    logger.exception(
+        "Response validation error",
+        extra={"path": request.url.path, "errors": exc.errors()},
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Response validation error"},
+    )
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:

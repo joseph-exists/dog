@@ -45,7 +45,12 @@ function handleRuntimeMutationError(
   error: ApiError,
   onRefetch: () => void,
 ) {
+  console.error("Runtime mutation failed", {
+    status: error.status,
+    message: error.message,
+  })
   if (error.status === 403) {
+    // Backend currently enforces owner-only runtime writes; keep this handled.
     showErrorToast("You don't have permission to modify this runtime.")
     onRefetch()
     return

@@ -193,9 +193,10 @@ function transformMessage(
   if (message.sender_type !== "user") {
     sender_name = message.agent_name || "Unknown Agent"
   } else {
-    // For user messages, we'll need to look up the user's name
-    // For now, use a placeholder that indicates we need user data
-    sender_name = message.sender_id || "Unknown User"
+    // Prefer backend-supplied display name when available.
+    const msg = message as any
+    sender_name =
+      msg.sender_display_name || message.sender_id || "Unknown User"
   }
 
   // Check if this is the current user's message

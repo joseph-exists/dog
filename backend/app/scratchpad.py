@@ -80,10 +80,9 @@
       count_result = await session.execute(
           select(func.count()).select_from(RoomMessage).where(RoomMessage.room_id == room_id)
       )
-      total_count = count_result.scalar()  # CHANGE: more efficient count query
+      total_count = count_result.one()  # CHANGE: more efficient count query
 
       return RoomMessagesPublic(
           data=messages,
           count=total_count,
       )
-

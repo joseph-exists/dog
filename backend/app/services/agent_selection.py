@@ -60,7 +60,8 @@ class AgentSelectionService:
                 RoomParticipant.active == True,  # noqa: E712
             )
         )
-        return result.all()
+        rows = result.all()
+        return [row[0] for row in rows]
 
     async def resolve_agent_identifier(
         self,
@@ -89,7 +90,8 @@ class AgentSelectionService:
         result = await session.exec(
             select(AgentConfig).where(AgentConfig.slug == participant_id)
         )
-        agent_config = result.one_or_none()
+        row = result.one_or_none()
+        agent_config = row[0] if row else None
 
         if agent_config and agent_config.is_enabled:
             logger.debug(f"Found database agent by slug: {participant_id}")

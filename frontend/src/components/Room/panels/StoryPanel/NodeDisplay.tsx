@@ -7,6 +7,7 @@
 
 import DOMPurify from "dompurify"
 import type { ReactNode } from "react"
+import ReactMarkdown from "react-markdown"
 import type { ContentFormat } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -49,7 +50,9 @@ function renderNodeContent(
       }
     case "markdown":
       return (
-        <div className="prose max-w-none whitespace-pre-wrap">{content}</div>
+        <div className="prose max-w-none">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </div>
       )
     case "text":
     default:
