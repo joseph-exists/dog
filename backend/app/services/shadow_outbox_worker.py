@@ -37,6 +37,7 @@ from app.models import (
     ShadowOutboxRepoLease,
     ShadowRepo,
     ShadowVersion,
+    RoomEvent,
 )
 from app.services.shadow_service import shadow_service
 
@@ -168,10 +169,14 @@ def _ensure_forgejo_repo(
 
 
 def _commit_snapshot(
-    *, shadow_repo: ShadowRepo, snapshot_json: dict[str, Any], message: str
+    *,
+    shadow_repo: ShadowRepo,
+    snapshot_json: dict[str, Any],
+    message: str,
+    file_path: str | None = None,
 ) -> str:
     repo_api, owner = _get_repo_api(shadow_repo.entity_type)
-    file_path = f"{shadow_repo.entity_type}.json"
+    resolved_path = file_path or f"{shadow_repo.entity_type}.json"
     json_content = json.dumps(snapshot_json, indent=2, sort_keys=True, default=str)
     content_b64 = base64.b64encode(json_content.encode()).decode()
 
@@ -179,7 +184,7 @@ def _commit_snapshot(
         existing_file = repo_api.repo_get_contents(
             owner=owner,
             repo=shadow_repo.forgejo_repo_name,
-            filepath=file_path,
+            filepath=resolved_path,
         )
         existing_sha = existing_file.to_dict().get("sha")
         update_options = UpdateFileOptions(
@@ -190,7 +195,7 @@ def _commit_snapshot(
         result = repo_api.repo_update_file(
             owner=owner,
             repo=shadow_repo.forgejo_repo_name,
-            filepath=file_path,
+            filepath=resolved_path,
             body=update_options,
         )
     except ApiException as e:
@@ -203,12 +208,37 @@ def _commit_snapshot(
         result = repo_api.repo_create_file(
             owner=owner,
             repo=shadow_repo.forgejo_repo_name,
-            filepath=file_path,
+            filepath=resolved_path,
             body=create_options,
         )
 
     result_dict = result.to_dict()
     return result_dict.get("commit", {}).get("sha", "unknown")
+
+
+def _build_room_redis_snapshot(*, session: Session, room_id: uuid.UUID) -> dict[str, Any]:
+    events = session.exec(
+        select(RoomEvent)
+        .where(RoomEvent.room_id == room_id)
+        .order_by(RoomEvent.room_sequence.asc())
+    ).all()
+    return {
+        "schema_version": 1,
+        "entity_type": "room_redis",
+        "room_id": str(room_id),
+        "events": [
+            {
+                "type": "event",
+                "sequence": event.room_sequence,
+                "event_type": event.event_type,
+                "payload": event.payload,
+                "created_at": event.created_at.isoformat()
+                if event.created_at
+                else None,
+            }
+            for event in events
+        ],
+    }
 
 
 def _process_job(job_id: uuid.UUID, worker_id: str) -> None:
@@ -249,6 +279,17 @@ def _process_job(job_id: uuid.UUID, worker_id: str) -> None:
                 snapshot_json=shadow_version.snapshot_json,
                 message=shadow_version.message,
             )
+            if shadow_repo.entity_type == "room":
+                room_snapshot = _build_room_redis_snapshot(
+                    session=session,
+                    room_id=shadow_repo.entity_id,
+                )
+                commit_sha = _commit_snapshot(
+                    shadow_repo=shadow_repo,
+                    snapshot_json=room_snapshot,
+                    message=f"{shadow_version.message} (redis events)",
+                    file_path="room_events.redis.json",
+                )
 
             shadow_version.commit_sha = commit_sha
             shadow_version.status = "committed"

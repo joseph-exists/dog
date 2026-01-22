@@ -105,7 +105,7 @@ export function StoryEditorPanel({
   const editorContent = (
     <ResizablePanelGroup direction="horizontal" className="h-full">
       {/* Left Panel: Node Tree (30%) */}
-      <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+      <ResizablePanel>
         <NodeTree
           nodes={nodes}
           choices={choices}
@@ -119,7 +119,7 @@ export function StoryEditorPanel({
       <ResizableHandle withHandle />
 
       {/* Right Panel: Node Editor (70%) */}
-      <ResizablePanel defaultSize={70} minSize={40}>
+      <ResizablePanel>
         <NodeEditor
           nodeId={selectedNodeId}
           storyId={storyId}

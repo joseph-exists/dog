@@ -112,12 +112,17 @@ class StreamingAgentRunner:
 
             ui_components = getattr(deps, "ui_components", None) or []
             ui_components_data = [c.model_dump() for c in ui_components]
+            message_content = full_response
+            if not message_content and ui_components_data:
+                message_content = (
+                    "...UI components, no full_response text..."
+                )
 
             await self._event_publisher.emit_message(
                 session=session,
                 room_id=room_id,
                 agent_name=agent_name,
-                content=full_response,
+                content=message_content,
                 ui_components=ui_components_data if ui_components_data else None,
             )
 
