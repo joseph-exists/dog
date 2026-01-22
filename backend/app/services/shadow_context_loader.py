@@ -84,7 +84,8 @@ async def build_shadow_context_items(
     items: list[ContextItem] = []
 
     room_result = await session.exec(select(Room).where(Room.room_id == room_id))
-    room = room_result.one_or_none()
+    room_row = room_result.one_or_none()
+    room = room_row[0] if room_row and not isinstance(room_row, Room) else room_row
     if not room:
         return items
 
@@ -210,7 +211,12 @@ async def build_shadow_context_items(
             RoomParticipantBinding.ended_at.is_(None),
         )
     )
-    binding = binding_result.one_or_none()
+    binding_row = binding_result.one_or_none()
+    binding = (
+        binding_row[0]
+        if binding_row and not isinstance(binding_row, RoomParticipantBinding)
+        else binding_row
+    )
     if not binding:
         return items
 

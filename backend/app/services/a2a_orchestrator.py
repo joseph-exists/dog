@@ -171,7 +171,10 @@ class A2AOrchestrator:
         result = await session.exec(
             select(AgentConfig).where(AgentConfig.slug == participant_id)
         )
-        agent_config = result.one_or_none()
+        row = result.one_or_none()
+        agent_config = (
+            row[0] if row and not isinstance(row, AgentConfig) else row
+        )
 
         if agent_config and agent_config.is_enabled:
             logger.debug(f"Found database agent by slug: {participant_id}")

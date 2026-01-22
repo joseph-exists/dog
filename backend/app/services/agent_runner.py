@@ -218,7 +218,12 @@ async def should_agent_respond(
             rp.active.is_(True),
         )
     )
-    participant = result.one_or_none()
+    participant_row = result.one_or_none()
+    participant = (
+        participant_row[0]
+        if participant_row and not isinstance(participant_row, RoomParticipant)
+        else participant_row
+    )
 
     return participant is not None
 
@@ -415,7 +420,12 @@ async def invoke_agent_manually(
             rp.active.is_(True),
         )
     )
-    participant = result.one_or_none()
+    participant_row = result.one_or_none()
+    participant = (
+        participant_row[0]
+        if participant_row and not isinstance(participant_row, RoomParticipant)
+        else participant_row
+    )
 
     if not participant:
         return {

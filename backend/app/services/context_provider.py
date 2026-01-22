@@ -93,7 +93,8 @@ async def build_room_context(
     """
     # Load room
     result = await session.exec(select(Room).where(Room.room_id == room_id))
-    room = result.one_or_none()
+    room_row = result.one_or_none()
+    room = room_row[0] if room_row and not isinstance(room_row, Room) else room_row
     if not room:
         raise ValueError(f"Room {room_id} not found")
 
@@ -103,7 +104,12 @@ async def build_room_context(
         story_result = await session.exec(
             select(Story).where(Story.id == room.story_id)
         )
-        story = story_result.one_or_none()
+        story_row = story_result.one_or_none()
+        story = (
+            story_row[0]
+            if story_row and not isinstance(story_row, Story)
+            else story_row
+        )
         if story:
             story_data = {
                 "id": str(story.id),
@@ -162,7 +168,12 @@ async def build_room_context(
             agent_result = await session.exec(
                 select(AgentConfig).where(AgentConfig.slug == p.participant_id)
             )
-            agent_config = agent_result.one_or_none()
+            agent_config_row = agent_result.one_or_none()
+            agent_config = (
+                agent_config_row[0]
+                if agent_config_row and not isinstance(agent_config_row, AgentConfig)
+                else agent_config_row
+            )
 
             if not agent_config:
                 try:
