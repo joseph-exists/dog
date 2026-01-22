@@ -2,9 +2,9 @@
 
 // Block types
 export {
+  BLOCK_TYPES,
   type BlockType,
   type BlockTypeDefinition,
-  BLOCK_TYPES,
   blockTypes,
   type ConfigFieldSchema,
   type ConfigFieldType,

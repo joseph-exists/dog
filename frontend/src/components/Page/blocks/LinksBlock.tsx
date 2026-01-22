@@ -22,9 +22,14 @@ export interface LinksBlockConfig {
   layout: "list" | "grid"
 }
 
+export interface LinksContent {
+  items: Link[]
+}
+
 export interface LinksBlockProps {
   config: LinksBlockConfig
-  links: Link[]
+  content?: LinksContent
+  className?: string
 }
 
 const linkIcons: Record<Link["type"], LucideIcon> = {
@@ -52,14 +57,17 @@ function getHostname(url: string): string {
  * Renders links in either grid or list layout based on config.
  * Each link shows an icon based on type and opens in a new tab.
  * Returns null if no links are provided.
+ * View-only block - no edit functionality.
  */
-export function LinksBlock({ config, links }: LinksBlockProps) {
+export function LinksBlock({ config, content, className }: LinksBlockProps) {
+  const links = content?.items || []
+
   if (links.length === 0) {
     return null
   }
 
   return (
-    <BlockContainer title="Links">
+    <BlockContainer title="Links" className={className}>
       <div
         className={cn(
           "p-4 gap-3",

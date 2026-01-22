@@ -21,9 +21,14 @@ export interface GalleryBlockConfig {
   lightbox: boolean
 }
 
+export interface GalleryContent {
+  images: GalleryImage[]
+}
+
 export interface GalleryBlockProps {
   config: GalleryBlockConfig
-  images: GalleryImage[]
+  content?: GalleryContent
+  className?: string
 }
 
 const gridColumnClasses: Record<number, string> = {
@@ -39,9 +44,16 @@ const gridColumnClasses: Record<number, string> = {
  * Renders images in a configurable grid layout (1-4 columns).
  * When lightbox is enabled, clicking an image opens it in a dialog.
  * Returns null if no images are provided.
+ * View-only block - no edit functionality.
  */
-export function GalleryBlock({ config, images }: GalleryBlockProps) {
+export function GalleryBlock({
+  config,
+  content,
+  className,
+}: GalleryBlockProps) {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null)
+
+  const images = content?.images || []
 
   if (images.length === 0) {
     return null
@@ -59,7 +71,7 @@ export function GalleryBlock({ config, images }: GalleryBlockProps) {
 
   return (
     <>
-      <BlockContainer title="Gallery">
+      <BlockContainer title="Gallery" className={className}>
         <div className={cn("grid gap-2 p-4", columnClass)}>
           {images.map((image) =>
             config.lightbox ? (

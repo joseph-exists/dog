@@ -13,6 +13,8 @@ export {
   ProfileImageBlock,
   RelationshipsBlock,
 } from "./blocks"
+export { BlockWrapper } from "./BlockWrapper"
+export { CreatePageDialog } from "./CreatePageDialog"
 export { PageHeader } from "./PageHeader"
 export { PageLayout } from "./PageLayout"
 // Main components

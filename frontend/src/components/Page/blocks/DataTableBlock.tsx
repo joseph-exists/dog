@@ -27,8 +27,14 @@ export interface DataTableBlockConfig {
   maxRows: number
 }
 
+export interface DataTableContent {
+  rows?: Record<string, unknown>[]
+}
+
 export interface DataTableBlockProps {
   config: DataTableBlockConfig
+  content?: DataTableContent
+  className?: string
 }
 
 /**
@@ -36,17 +42,28 @@ export interface DataTableBlockProps {
  *
  * Fetches data using TanStack Query and renders it in a shadcn Table.
  * Supports configurable columns and row limits.
+ * Can receive data directly via content prop or fetch from dataSource.
+ * View-only block - no edit functionality.
  */
-export function DataTableBlock({ config }: DataTableBlockProps) {
-  const { data, isLoading, error } = useQuery({
+export function DataTableBlock({
+  config,
+  content,
+  className,
+}: DataTableBlockProps) {
+  // Only fetch if no content is provided
+  const { data: fetchedData, isLoading, error } = useQuery({
     queryKey: ["blockData", config.dataSource],
     queryFn: () => fetchDataSource(config.dataSource),
+    enabled: !content?.rows,
   })
 
-  // Loading state
-  if (isLoading) {
+  // Use content if provided, otherwise use fetched data
+  const data = content?.rows ?? fetchedData
+
+  // Loading state (only if fetching)
+  if (isLoading && !content?.rows) {
     return (
-      <BlockContainer title={config.title}>
+      <BlockContainer title={config.title} className={className}>
         <div className="p-4 space-y-2">
           {Array.from({ length: Math.min(config.maxRows, 5) }).map((_, i) => (
             <Skeleton key={i} className="h-10 w-full" />
@@ -57,9 +74,9 @@ export function DataTableBlock({ config }: DataTableBlockProps) {
   }
 
   // Error state
-  if (error) {
+  if (error && !content?.rows) {
     return (
-      <BlockContainer title={config.title}>
+      <BlockContainer title={config.title} className={className}>
         <div className="p-4 text-sm text-destructive">
           Failed to load data:{" "}
           {error instanceof Error ? error.message : "Unknown error"}
@@ -71,7 +88,7 @@ export function DataTableBlock({ config }: DataTableBlockProps) {
   // Empty state
   if (!data || data.length === 0) {
     return (
-      <BlockContainer title={config.title}>
+      <BlockContainer title={config.title} className={className}>
         <div className="p-4 text-sm text-muted-foreground">
           No data available
         </div>
@@ -83,7 +100,7 @@ export function DataTableBlock({ config }: DataTableBlockProps) {
   const rows = data.slice(0, config.maxRows) as Record<string, unknown>[]
 
   return (
-    <BlockContainer title={config.title} scrollable>
+    <BlockContainer title={config.title} scrollable className={className}>
       <Table>
         <TableHeader>
           <TableRow>

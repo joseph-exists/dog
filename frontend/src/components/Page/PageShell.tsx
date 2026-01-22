@@ -1,5 +1,8 @@
 // src/components/Page/PageShell.tsx
-import { useCallback, useState } from "react"
+import { useState } from "react"
+
+import { usePageEditor } from "@/hooks/usePageEditor"
+
 import {
   ActivityFeedBlock,
   BioBlock,
@@ -12,98 +15,86 @@ import {
   ProfileImageBlock,
   RelationshipsBlock,
 } from "./blocks"
+import { BlockWrapper } from "./BlockWrapper"
+import { BlockEditorSheet, BlockPalette } from "./editor"
 import { PageHeader } from "./PageHeader"
 import { PageLayout } from "./PageLayout"
-import { getDefaultTemplate, type TemplateBlock } from "./registry"
+import type { TemplateBlock } from "./registry"
 
-/**
- * Entity data structure for page display
- */
-export interface PageEntity {
-  id: string
-  typeId: string
-  name: string
-  slug?: string
-  avatarUrl?: string
-  tagline?: string
-  bio?: string
-  email?: string
-  phone?: string
-  links?: Array<{
-    id: string
-    type: "website" | "github" | "twitter" | "linkedin" | "other"
-    url: string
-    label?: string
-  }>
-  relationships?: Array<{
-    id: string
-    typeId: string
-    name: string
-    avatarUrl?: string
-    badges?: string[]
-    relationshipTypeId: string
-  }>
-  activities?: Array<{
-    id: string
-    type: "message" | "joined" | "updated" | "other"
-    description: string
-    timestamp: Date
-  }>
-  images?: Array<{
-    id: string
-    url: string
-    alt?: string
-    caption?: string
-  }>
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface PageShellProps {
-  entity: PageEntity
+interface PageShellProps {
+  entityType: string
+  entityId: string
   isOwner: boolean
-  blocks?: TemplateBlock[]
   onDelete?: () => void
 }
 
 /**
  * PageShell - Main container that orchestrates the page layout
  *
- * Renders the PageHeader and PageLayout with blocks based on
- * the provided template or the default template for the entity type.
+ * Uses usePageEditor hook to manage layout state and editing.
+ * Renders the PageHeader, PageLayout with blocks, and editor components.
  */
 export function PageShell({
-  entity,
+  entityType,
+  entityId,
   isOwner,
-  blocks: customBlocks,
   onDelete,
 }: PageShellProps) {
-  const [editMode, setEditMode] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(true)
+  const [targetColumn, setTargetColumn] = useState<"primary" | "auxiliary">(
+    "primary",
+  )
 
-  // Get blocks from custom override or default template
-  const blocks = customBlocks ?? getDefaultTemplate(entity.typeId).defaultBlocks
+  const {
+    blocks,
+    isLoading,
+    isEditing,
+    isDirty,
+    isSaving,
+    selectedBlockId,
+    selectedBlock,
+    startEditing,
+    cancelEditing,
+    save,
+    selectBlock,
+    updateBlockContent,
+    addBlock,
+  } = usePageEditor(entityType, entityId)
 
-  /**
-   * Copy current URL to clipboard
-   */
-  const handleShare = useCallback(async () => {
+  const handleShare = async () => {
     await navigator.clipboard.writeText(window.location.href)
-  }, [])
+  }
 
-  /**
-   * Placeholder for adding new blocks
-   */
-  const handleAddBlock = useCallback((column: "primary" | "auxiliary") => {
-    console.log("Add block to column:", column)
-  }, [])
+  const handleEditModeChange = (editing: boolean) => {
+    if (editing) {
+      startEditing()
+    } else {
+      if (isDirty) {
+        save()
+      } else {
+        cancelEditing()
+      }
+    }
+  }
 
-  /**
-   * Render a block component based on its type
-   */
-  const renderBlock = useCallback(
-    (block: TemplateBlock, canEdit: boolean): React.ReactNode => {
-      const config = block.config
+  const handleAddBlock = (column: "primary" | "auxiliary") => {
+    setTargetColumn(column)
+    // The palette is used to pick block types
+  }
 
+  const handleSaveBlock = (
+    blockId: string,
+    content: Record<string, unknown>,
+  ) => {
+    updateBlockContent(blockId, content)
+  }
+
+  const renderBlock = (block: TemplateBlock): React.ReactNode => {
+    const config = block.config
+    // Content is stored as Record<string, unknown>, blocks handle missing fields gracefully
+    const content = block.content as Record<string, unknown> | undefined
+
+    const blockContent = (() => {
       switch (block.type) {
         case "profileImage":
           return (
@@ -112,8 +103,14 @@ export function PageShell({
                 shape: (config.shape as "circle" | "square") ?? "circle",
                 size: (config.size as "sm" | "md" | "lg") ?? "md",
               }}
-              entity={{ name: entity.name, avatarUrl: entity.avatarUrl }}
-              canEdit={canEdit}
+              content={
+                content
+                  ? {
+                      imageUrl: content.imageUrl as string | undefined,
+                      alt: content.alt as string | undefined,
+                    }
+                  : undefined
+              }
             />
           )
 
@@ -123,8 +120,14 @@ export function PageShell({
               config={{
                 showTagline: (config.showTagline as boolean) ?? true,
               }}
-              entity={{ name: entity.name, tagline: entity.tagline }}
-              canEdit={canEdit}
+              content={
+                content
+                  ? {
+                      name: (content.name as string) ?? "",
+                      tagline: content.tagline as string | undefined,
+                    }
+                  : undefined
+              }
             />
           )
 
@@ -135,8 +138,9 @@ export function PageShell({
                 maxLength: config.maxLength as number | undefined,
                 allowRichText: config.allowRichText as boolean | undefined,
               }}
-              bio={entity.bio}
-              canEdit={canEdit}
+              content={
+                content?.text ? { text: content.text as string } : undefined
+              }
             />
           )
 
@@ -147,7 +151,14 @@ export function PageShell({
                 showEmail: (config.showEmail as boolean) ?? true,
                 showPhone: (config.showPhone as boolean) ?? false,
               }}
-              contact={{ email: entity.email, phone: entity.phone }}
+              content={
+                content
+                  ? {
+                      email: content.email as string | undefined,
+                      phone: content.phone as string | undefined,
+                    }
+                  : undefined
+              }
             />
           )
 
@@ -157,7 +168,23 @@ export function PageShell({
               config={{
                 layout: (config.layout as "list" | "grid") ?? "list",
               }}
-              links={entity.links ?? []}
+              content={
+                content?.items
+                  ? {
+                      items: content.items as Array<{
+                        id: string
+                        type:
+                          | "website"
+                          | "github"
+                          | "twitter"
+                          | "linkedin"
+                          | "other"
+                        url: string
+                        label?: string
+                      }>,
+                    }
+                  : undefined
+              }
             />
           )
 
@@ -168,8 +195,20 @@ export function PageShell({
                 groupByType: (config.groupByType as boolean) ?? true,
                 maxVisible: (config.maxVisible as number) ?? 10,
               }}
-              relationships={entity.relationships ?? []}
-              canEdit={canEdit}
+              content={
+                content?.items
+                  ? {
+                      items: content.items as Array<{
+                        id: string
+                        typeId: string
+                        name: string
+                        avatarUrl?: string
+                        badges?: string[]
+                        relationshipTypeId: string
+                      }>,
+                    }
+                  : undefined
+              }
             />
           )
 
@@ -179,7 +218,18 @@ export function PageShell({
               config={{
                 maxItems: (config.maxItems as number) ?? 5,
               }}
-              activities={entity.activities ?? []}
+              content={
+                content?.activities
+                  ? {
+                      activities: content.activities as Array<{
+                        id: string
+                        type: "message" | "joined" | "updated" | "other"
+                        description: string
+                        timestamp: Date
+                      }>,
+                    }
+                  : undefined
+              }
             />
           )
 
@@ -190,7 +240,18 @@ export function PageShell({
                 columns: (config.columns as number) ?? 3,
                 lightbox: (config.lightbox as boolean) ?? true,
               }}
-              images={entity.images ?? []}
+              content={
+                content?.images
+                  ? {
+                      images: content.images as Array<{
+                        id: string
+                        url: string
+                        alt?: string
+                        caption?: string
+                      }>,
+                    }
+                  : undefined
+              }
             />
           )
 
@@ -227,28 +288,67 @@ export function PageShell({
         default:
           return null
       }
-    },
-    [entity],
-  )
+    })()
+
+    // Wrap with BlockWrapper for selection in edit mode
+    return (
+      <BlockWrapper
+        blockId={block.id ?? ""}
+        isEditing={isEditing}
+        isSelected={selectedBlockId === block.id}
+        onSelect={selectBlock}
+      >
+        {blockContent}
+      </BlockWrapper>
+    )
+  }
+
+  if (isLoading) {
+    return <div className="p-4">Loading...</div>
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      <PageHeader
-        entityTypeId={entity.typeId}
-        entityName={entity.name}
-        createdAt={entity.createdAt}
-        updatedAt={entity.updatedAt}
-        isOwner={isOwner}
-        editMode={editMode}
-        onEditModeChange={setEditMode}
-        onShare={handleShare}
-        onDelete={onDelete}
-      />
-      <PageLayout
-        blocks={blocks}
-        editMode={editMode}
-        onAddBlock={handleAddBlock}
-        renderBlock={renderBlock}
+    <div className="flex h-full">
+      {/* Block Palette (edit mode only) */}
+      {isEditing && (
+        <BlockPalette
+          onAddBlock={addBlock}
+          targetColumn={targetColumn}
+          isOpen={paletteOpen}
+          onToggle={() => setPaletteOpen(!paletteOpen)}
+        />
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <PageHeader
+          entityTypeId={entityType}
+          entityName="Page"
+          createdAt={new Date()}
+          updatedAt={new Date()}
+          isOwner={isOwner}
+          editMode={isEditing}
+          onEditModeChange={handleEditModeChange}
+          onShare={handleShare}
+          onDelete={onDelete}
+          isSaving={isSaving}
+          isDirty={isDirty}
+        />
+        <div className="flex-1 overflow-hidden">
+          <PageLayout
+            blocks={blocks ?? []}
+            editMode={isEditing}
+            onAddBlock={handleAddBlock}
+            renderBlock={renderBlock}
+          />
+        </div>
+      </div>
+
+      {/* Block Editor Sheet */}
+      <BlockEditorSheet
+        block={selectedBlock}
+        onSave={handleSaveBlock}
+        onClose={() => selectBlock(null)}
       />
     </div>
   )

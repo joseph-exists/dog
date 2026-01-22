@@ -14,9 +14,14 @@ export interface ActivityFeedBlockConfig {
   maxItems: number
 }
 
+export interface ActivityFeedContent {
+  activities: ActivityItem[]
+}
+
 export interface ActivityFeedBlockProps {
   config: ActivityFeedBlockConfig
-  activities: ActivityItem[]
+  content?: ActivityFeedContent
+  className?: string
 }
 
 const activityIcons = {
@@ -66,11 +71,16 @@ function formatRelativeTime(date: Date): string {
  *
  * Shows a vertical timeline with icons, descriptions, and relative timestamps.
  * Activities are limited to config.maxItems.
+ * Returns null if no activities are provided.
+ * View-only block - no edit functionality.
  */
 export function ActivityFeedBlock({
   config,
-  activities,
+  content,
+  className,
 }: ActivityFeedBlockProps) {
+  const activities = content?.activities || []
+
   if (activities.length === 0) {
     return null
   }
@@ -78,7 +88,7 @@ export function ActivityFeedBlock({
   const visibleActivities = activities.slice(0, config.maxItems)
 
   return (
-    <BlockContainer title="Activity" scrollable>
+    <BlockContainer title="Activity" scrollable className={className}>
       <div className="relative p-4">
         {/* Vertical timeline line */}
         <div className="absolute left-7 top-4 bottom-4 w-px bg-border" />

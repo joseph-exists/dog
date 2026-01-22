@@ -1,17 +1,19 @@
 // src/components/Page/blocks/IdentityBlock.tsx
-import { Pencil } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 export interface IdentityBlockConfig {
   showTagline: boolean
 }
 
+export interface IdentityContent {
+  name: string
+  tagline?: string
+}
+
 export interface IdentityBlockProps {
   config: IdentityBlockConfig
-  entity: { name: string; tagline?: string }
-  canEdit?: boolean
-  onEdit?: () => void
+  content?: IdentityContent
+  className?: string
 }
 
 /**
@@ -19,32 +21,21 @@ export interface IdentityBlockProps {
  *
  * Centered layout with large heading for the name.
  * Shows tagline below when configured and available.
- * When canEdit is true, shows a pencil icon button for editing.
+ * Shows "Unnamed" if no name is provided.
+ * View-only block - no edit functionality.
  */
 export function IdentityBlock({
   config,
-  entity,
-  canEdit = false,
-  onEdit,
+  content,
+  className,
 }: IdentityBlockProps) {
+  const displayName = content?.name || "Unnamed"
+
   return (
-    <div className="text-center">
-      <div className="inline-flex items-center gap-2">
-        <h1 className="text-2xl font-bold">{entity.name}</h1>
-        {canEdit && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={onEdit}
-            aria-label="Edit identity"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-      {config.showTagline && entity.tagline && (
-        <p className="text-sm text-muted-foreground">{entity.tagline}</p>
+    <div className={cn("text-center", className)}>
+      <h1 className="text-2xl font-bold">{displayName}</h1>
+      {config.showTagline && content?.tagline && (
+        <p className="text-sm text-muted-foreground">{content.tagline}</p>
       )}
     </div>
   )
