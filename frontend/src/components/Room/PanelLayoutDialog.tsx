@@ -63,6 +63,7 @@ export interface PanelLayoutDialogProps {
 const AVAILABLE_PANELS: PreviewPanel[] = [
   { id: "chat", kind: "chat", prominence: "primary" },
   { id: "story", kind: "storyEditor", prominence: "primary" },
+  { id: "runtime", kind: "storyRuntime", prominence: "primary" },
   { id: "canvas", kind: "canvas", prominence: "primary" },
   { id: "a2ui", kind: "a2ui", prominence: "primary" },
   { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
@@ -72,6 +73,7 @@ const AVAILABLE_PANELS: PreviewPanel[] = [
 const panelNames: Record<string, string> = {
   chat: "Chat",
   storyEditor: "Story Editor",
+  storyRuntime: "Story Runtime",
   canvas: "Canvas",
   a2ui: "Agent UI",
   agentPanel: "Agents",

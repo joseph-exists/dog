@@ -164,7 +164,7 @@ async def build_shadow_context_items(
     agent_result = await session.exec(
         select(AgentConfig).where(AgentConfig.slug == agent_slug)
     )
-    agent_config = agent_result.one_or_none()
+    agent_config = agent_result.first()
     if not agent_config:
         return items
 

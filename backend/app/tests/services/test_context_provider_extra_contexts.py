@@ -62,7 +62,10 @@ async def test_build_context_includes_extra_contexts_ordered(
         for item in context.extra_contexts
         if not item.get("context_type", "").startswith("shadow.")
     ]
-    assert non_shadow_sources == ["seed", "backend", "frontend"]
+    expected_sources = ["seed", "backend", "frontend"]
+    assert non_shadow_sources == expected_sources, (
+        f"extra_contexts: {context.extra_contexts}"
+    )
 
 
 @pytest.mark.asyncio
@@ -108,4 +111,6 @@ async def test_build_context_scopes_agent_specific_items(
         for item in context.extra_contexts
         if not item.get("context_type", "").startswith("shadow.")
     ]
-    assert len(non_shadow_items) == 2
+    assert len(non_shadow_items) == 2, (
+        f"extra_contexts: {context.extra_contexts}"
+    )

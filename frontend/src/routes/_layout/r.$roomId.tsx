@@ -22,6 +22,7 @@ import {
   ParticipantPanel,
   RoomShell,
   StoryEditorPanel,
+  StoryPanel,
 } from "@/components/Room"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
 import RoomDebugPanel from "@/components/Rooms/RoomDebugPanel"
@@ -309,6 +310,14 @@ function RoomView() {
         onNavigateToStories={() => navigate({ to: "/stories" })}
       />
     ),
+    storyRuntime: () => (
+      <StoryPanel
+        roomId={roomId}
+        roomTitle={room?.title ?? null}
+        roomStoryId={room?.story_id ?? null}
+        canWrite={canManage}
+      />
+    ),
     canvas: () => <CanvasPanel />,
     a2ui: () => <A2UIPanel roomId={roomId} />,
     participantPanel: () => (
@@ -338,6 +347,7 @@ function RoomView() {
       config.kind as
         | "chat"
         | "storyEditor"
+        | "storyRuntime"
         | "agentPanel"
         | "debug"
         | "canvas"

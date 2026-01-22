@@ -216,6 +216,16 @@ export const SYSTEM_PRESETS: Preset[] = [
     ],
   },
   {
+    id: "story_runtime",
+    name: "Story Runtime",
+    description: "Playthrough with runtime controls",
+    panels: [
+      { id: "runtime", kind: "storyRuntime", prominence: "primary" },
+      { id: "chat", kind: "chat", prominence: "primary" },
+      { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+    ],
+  },
+  {
     id: "debug",
     name: "Debug",
     description: "Chat with debug info",

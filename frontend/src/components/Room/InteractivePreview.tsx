@@ -59,6 +59,7 @@ export interface InteractivePreviewProps {
 const panelNames: Record<string, string> = {
   chat: "Chat",
   storyEditor: "Story Editor",
+  storyRuntime: "Story Runtime",
   agentPanel: "Agents",
   debug: "Debug",
   canvas: "Canvas",

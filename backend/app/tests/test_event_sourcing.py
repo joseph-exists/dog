@@ -5,11 +5,10 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
-
+import asyncio
 from app.models import ProgressSnapshot, UserNodeChoice
 from app import crud
 
-# TODO: re-enable after we create new test fixtures.
 
 def test_snapshot_created_every_10_choices(
     client: TestClient, 

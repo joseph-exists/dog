@@ -36,6 +36,7 @@ export interface PanelConfig {
   kind:
     | "chat"
     | "storyEditor"
+    | "storyRuntime"
     | "agentPanel"
     | "debug"
     | "canvas"
@@ -168,6 +169,7 @@ export function isValidPanelKind(kind: string): kind is PanelConfig["kind"] {
   return [
     "chat",
     "storyEditor",
+    "storyRuntime",
     "agentPanel",
     "debug",
     "canvas",
@@ -183,6 +185,7 @@ export function getPanelDisplayName(kind: PanelConfig["kind"]): string {
   const names: Record<PanelConfig["kind"], string> = {
     chat: "Chat",
     storyEditor: "Story Editor",
+    storyRuntime: "Story Runtime",
     agentPanel: "Agents",
     debug: "Debug",
     canvas: "Canvas",

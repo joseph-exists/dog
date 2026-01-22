@@ -29,6 +29,15 @@ Make sure your editor is using the correct Python virtual environment, with the 
 
 Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
 
+## Service Diagrams (Mermaid)
+
+- Agent streaming sequence: `app/services/agent_streaming_sequence.mmd`
+- Event sourcing + realtime flow: `app/services/event_sourcing_realtime_flow.mmd`
+- Shadow versioning pipeline: `app/services/shadow_versioning_pipeline.mmd`
+
+To render Mermaid locally, open the `.mmd` file in an editor with Mermaid preview
+support (for example, the Mermaid Preview extension in VS Code).
+
 ## VS Code
 
 There are already configurations in place to run the backend through the VS Code debugger, so that you can use breakpoints, pause and explore variables, etc.

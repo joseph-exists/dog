@@ -47,6 +47,7 @@ export interface MiniPreviewProps {
 const panelNames: Record<string, string> = {
   chat: "Chat",
   storyEditor: "Story",
+  storyRuntime: "Runtime",
   agentPanel: "Agents",
   debug: "Debug",
   canvas: "Canvas",
@@ -60,6 +61,7 @@ const panelNames: Record<string, string> = {
 const panelColors: Record<string, string> = {
   chat: "bg-blue-500/20 border-blue-500/30",
   storyEditor: "bg-purple-500/20 border-purple-500/30",
+  storyRuntime: "bg-amber-500/20 border-amber-500/30",
   agentPanel: "bg-green-500/20 border-green-500/30",
   debug: "bg-orange-500/20 border-orange-500/30",
   canvas: "bg-pink-500/20 border-pink-500/30",
