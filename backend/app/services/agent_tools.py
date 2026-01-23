@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import BaseModel
 from pydantic_ai import RunContext
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -183,7 +184,128 @@ def emit_ui_component(
 ) -> str:
     """
     Emit a structured UI component to be displayed alongside your response.
+
+    The `data` dict MUST match the exact schema for the given `component_type`.
+    Use the correct field names below — do NOT invent your own field names.
+
+    ## Component Schemas
+
+    ### card
+    - title: str (REQUIRED)
+    - body: str (REQUIRED, supports markdown)
+    - subtitle: str | null
+    - footer: str | null
+    - variant: "default" | "highlight" | "warning" | "success" | "info"
+    - icon: str | null
+
+    ### list
+    - items: list of {label: str, description?: str, icon?: str, badge?: str} (REQUIRED)
+    - title: str | null
+    - ordered: bool (default false)
+    - variant: "default" | "compact" | "detailed"
+
+    ### table
+    - columns: list of {key: str, header: str, align?: "left"|"center"|"right"} (REQUIRED)
+    - rows: list of dicts mapping column keys to values (REQUIRED)
+    - title: str | null
+    - striped: bool (default true)
+    - compact: bool (default false)
+
+    ### progress
+    - items: list of {label: str, value: int (0-100), color?: "blue"|"green"|"yellow"|"red"|"purple"} (REQUIRED)
+    - title: str | null
+    - show_percentage: bool (default true)
+
+    ### action_buttons
+    - buttons: list of {label: str, action: str, variant?: "primary"|"secondary"|"outline"|"ghost", disabled?: bool} (REQUIRED)
+    - layout: "horizontal" | "vertical" | "grid" (default "horizontal")
+    NOTE: "action" must be a plain STRING identifier (e.g. "expand_details"), NOT an object.
+    NOTE: Use "label" for button text, NOT "title" or "text".
+
+    ### code
+    - code: str (REQUIRED)
+    - language: str | null (e.g. "python", "json")
+    - title: str | null
+    - line_numbers: bool (default false)
+
+    ### quote
+    - text: str (REQUIRED)
+    - attribution: str | null
+    - variant: "default" | "highlight" | "subtle"
+
+    ### alert
+    - message: str (REQUIRED)
+    - title: str | null
+    - variant: "info" | "success" | "warning" | "error"
+    - dismissible: bool (default false)
+
+    ### collapsible
+    - title: str (REQUIRED)
+    - content: str (REQUIRED, supports markdown)
+    - default_open: bool (default false)
+    - icon: str | null
+
+    ### tabs
+    - tabs: list of {label: str, content: str} (REQUIRED)
+    - default_tab: int (default 0)
+
+    ### divider
+    - label: str | null
+    - variant: "solid" | "dashed" | "dotted"
     """
+    # -------------------------------------------------------------------------
+    # Validate data against the correct Pydantic schema for this component type.
+    # This catches field name mistakes (e.g. "title" vs "label") early and gives
+    # the LLM a clear error message it can use to self-correct on retry.
+    # -------------------------------------------------------------------------
+    from app.schemas.ag_ui import (
+        UIActionButtons as UIActionButtonsModel,
+        UIAlert as UIAlertModel,
+        UICard as UICardModel,
+        UICodeBlock as UICodeBlockModel,
+        UICollapsible as UICollapsibleModel,
+        UIDivider as UIDividerModel,
+        UIList as UIListModel,
+        UIPageLayoutPreview as UIPageLayoutPreviewModel,
+        UIProgress as UIProgressModel,
+        UIQuote as UIQuoteModel,
+        UITable as UITableModel,
+        UITabs as UITabsModel,
+    )
+
+    _COMPONENT_VALIDATORS: dict[str, type[BaseModel]] = {
+        "card": UICardModel,
+        "list": UIListModel,
+        "table": UITableModel,
+        "progress": UIProgressModel,
+        "action_buttons": UIActionButtonsModel,
+        "code": UICodeBlockModel,
+        "quote": UIQuoteModel,
+        "alert": UIAlertModel,
+        "collapsible": UICollapsibleModel,
+        "tabs": UITabsModel,
+        "divider": UIDividerModel,
+        "page_layout_preview": UIPageLayoutPreviewModel,
+    }
+
+    validator = _COMPONENT_VALIDATORS.get(component_type)
+    if validator:
+        try:
+            validated = validator.model_validate(data)
+            # Use the validated+normalized data (fills defaults, strips extras)
+            data = validated.model_dump()
+        except Exception as exc:
+            error_msg = (
+                f"[UI Component Error: {component_type}] Invalid data: {exc}. "
+                f"Please fix the data fields and call emit_ui_component again. "
+                f"Refer to the schema in the tool description for correct field names."
+            )
+            logger.warning(
+                f"AG-UI: Agent {ctx.deps.current_agent_slug} emitted invalid "
+                f"{component_type} data: {exc}"
+            )
+            return error_msg
+
     component = UIComponent(
         type=component_type,
         data=data,
