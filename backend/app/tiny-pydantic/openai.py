@@ -12,25 +12,27 @@ from functools import cached_property
 from typing import Any, Literal, cast, overload
 
 from pydantic import BaseModel, ValidationError
-from pydantic_core import to_json
-from typing_extensions import assert_never, deprecated
-
-from .. import ModelAPIError, ModelHTTPError, UnexpectedModelBehavior, _utils, usage
-from .._output import DEFAULT_OUTPUT_TOOL_NAME, OutputObjectDefinition
-from .._run_context import RunContext
-from .._thinking_part import split_content_into_text_and_thinking
-from .._utils import guard_tool_call_id as _guard_tool_call_id, now_utc as _now_utc, number_to_datetime
-from ..builtin_tools import (
+from pydantic_ai._output import DEFAULT_OUTPUT_TOOL_NAME, OutputObjectDefinition
+from pydantic_ai._run_context import RunContext
+from pydantic_ai._thinking_part import split_content_into_text_and_thinking
+from pydantic_ai._utils import guard_tool_call_id as _guard_tool_call_id
+from pydantic_ai._utils import now_utc as _now_utc
+from pydantic_ai._utils import number_to_datetime
+from pydantic_ai.builtin_tools import (
     AbstractBuiltinTool,
     CodeExecutionTool,
-    FileSearchTool,
     ImageAspectRatio,
     ImageGenerationTool,
     MCPServerTool,
     WebSearchTool,
 )
-from ..exceptions import UserError
-from ..messages import (
+from pydantic_ai.exceptions import (
+    ModelAPIError,
+    ModelHTTPError,
+    UnexpectedModelBehavior,
+    UserError,
+)
+from pydantic_ai.messages import (
     AudioUrl,
     BinaryContent,
     BinaryImage,
@@ -56,24 +58,36 @@ from ..messages import (
     UserPromptPart,
     VideoUrl,
 )
-from ..profiles import ModelProfile, ModelProfileSpec
-from ..profiles.openai import OpenAIModelProfile, OpenAISystemPromptRole
-from ..providers import Provider, infer_provider
-from ..settings import ModelSettings
-from ..tools import ToolDefinition
-from . import (
+from pydantic_ai.models import (
     Model,
     ModelRequestParameters,
-    OpenAIChatCompatibleProvider,
-    OpenAIResponsesCompatibleProvider,
+    # OpenAIChatCompatibleProvider,
+    # penAIResponsesCompatibleProvider,
     StreamedResponse,
+    _utils,
     check_allow_model_requests,
     download_item,
     get_user_agent,
+    # usage,
 )
+from pydantic_ai.profiles import ModelProfile, ModelProfileSpec
+from pydantic_ai.profiles.openai import OpenAIModelProfile, OpenAISystemPromptRole
+from pydantic_ai.providers import Provider, infer_provider
+from pydantic_ai.settings import ModelSettings
+from pydantic_ai.tools import ToolDefinition
+from pydantic_core import to_json
+from typing_extensions import assert_never, deprecated
 
 try:
-    from openai import NOT_GIVEN, APIConnectionError, APIStatusError, AsyncOpenAI, AsyncStream, Omit, omit
+    from openai import (
+        NOT_GIVEN,
+        APIConnectionError,
+        APIStatusError,
+        AsyncOpenAI,
+        AsyncStream,
+        Omit,
+        omit,
+    )
     from openai.types import AllModels, chat, responses
     from openai.types.chat import (
         ChatCompletionChunk,
@@ -86,23 +100,37 @@ try:
         chat_completion_token_logprob,
     )
     from openai.types.chat.chat_completion_content_part_image_param import ImageURL
-    from openai.types.chat.chat_completion_content_part_input_audio_param import InputAudio
+    from openai.types.chat.chat_completion_content_part_input_audio_param import (
+        InputAudio,
+    )
     from openai.types.chat.chat_completion_content_part_param import File, FileFile
-    from openai.types.chat.chat_completion_message_custom_tool_call import ChatCompletionMessageCustomToolCall
-    from openai.types.chat.chat_completion_message_function_tool_call import ChatCompletionMessageFunctionToolCall
+    from openai.types.chat.chat_completion_message_custom_tool_call import (
+        ChatCompletionMessageCustomToolCall,
+    )
+    from openai.types.chat.chat_completion_message_function_tool_call import (
+        ChatCompletionMessageFunctionToolCall,
+    )
     from openai.types.chat.chat_completion_message_function_tool_call_param import (
         ChatCompletionMessageFunctionToolCallParam,
     )
-    from openai.types.chat.chat_completion_prediction_content_param import ChatCompletionPredictionContentParam
+    from openai.types.chat.chat_completion_prediction_content_param import (
+        ChatCompletionPredictionContentParam,
+    )
     from openai.types.chat.completion_create_params import (
         WebSearchOptions,
         WebSearchOptionsUserLocation,
         WebSearchOptionsUserLocationApproximate,
     )
-    from openai.types.responses import ComputerToolParam, FileSearchToolParam, WebSearchToolParam
+    from openai.types.responses import (
+        ComputerToolParam,
+        FileSearchToolParam,
+        WebSearchToolParam,
+    )
     from openai.types.responses.response_input_param import FunctionCallOutput, Message
     from openai.types.responses.response_reasoning_item_param import (
         Content as ReasoningContent,
+    )
+    from openai.types.responses.response_reasoning_item_param import (
         Summary as ReasoningSummary,
     )
     from openai.types.responses.response_status import ResponseStatus
