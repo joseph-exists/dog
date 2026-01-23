@@ -8,6 +8,7 @@ import {
   Image,
   Link,
   Mail,
+  Smile,
   Table,
   User,
   UserCircle,
@@ -33,6 +34,7 @@ export type BlockType =
   | "gallery"
   | "dataTable"
   | "chart"
+  | "personas"
 
 /**
  * Configuration field types for block settings.
@@ -199,6 +201,18 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
       title: "",
       chartType: "bar",
       dataSource: "",
+    },
+    defaultContent: {},
+  },
+  {
+    type: "personas",
+    label: "Personas",
+    description: "Display persona library for this entity",
+    icon: Smile,
+    defaultConfig: {
+      layout: "grid",
+      maxVisible: 6,
+      showAddButton: true,
     },
     defaultContent: {},
   },

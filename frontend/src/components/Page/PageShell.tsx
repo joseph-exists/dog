@@ -12,6 +12,7 @@ import {
   GalleryBlock,
   IdentityBlock,
   LinksBlock,
+  PersonasBlock,
   ProfileImageBlock,
   RelationshipsBlock,
 } from "./blocks"
@@ -351,6 +352,20 @@ export function PageShell({
                   "bar",
                 dataSource: (config.dataSource as string) ?? "",
               }}
+            />
+          )
+
+        case "personas":
+          return (
+            <PersonasBlock
+              config={{
+                layout: (config.layout as "list" | "grid") ?? "grid",
+                maxVisible: (config.maxVisible as number) ?? 6,
+                showAddButton: (config.showAddButton as boolean) ?? true,
+              }}
+              entityType={entityType}
+              entityId={entityId}
+              isEditing={isEditing}
             />
           )
 

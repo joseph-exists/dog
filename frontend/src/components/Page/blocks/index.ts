@@ -61,6 +61,12 @@ export type {
 // Links Block
 export { LinksBlock } from "./LinksBlock"
 export type {
+  PersonasBlockConfig,
+  PersonasBlockProps,
+} from "./PersonasBlock"
+// Personas Block
+export { PersonasBlock } from "./PersonasBlock"
+export type {
   ProfileImageBlockConfig,
   ProfileImageBlockProps,
   ProfileImageContent,
