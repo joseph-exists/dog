@@ -1,10 +1,12 @@
 // src/routes/_layout/persona.$personaId.tsx
 
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Plus, Smile } from "lucide-react"
-import { useState } from "react"
+import { Smile } from "lucide-react"
+import { useEffect, useRef } from "react"
 
-import { CreatePageDialog, PageShell } from "@/components/Page"
+import { PersonasService } from "@/client"
+import { PageShell } from "@/components/Page"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
@@ -21,30 +23,51 @@ function PersonaPage() {
   const { personaId } = Route.useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
+  const creatingRef = useRef(false)
 
   // Any authenticated user can edit persona pages
   const isOwner = !!user
 
-  const { isLoading, pageExists, createPage } = usePageEditor(
-    "persona",
-    personaId,
-  )
+  const {
+    isLoading: pageLoading,
+    pageExists,
+    createPage,
+  } = usePageEditor("persona", personaId)
 
-  const handleCreatePage = async (templateId: string) => {
-    setIsCreating(true)
-    try {
-      await createPage(templateId)
-      setShowCreateDialog(false)
-    } finally {
-      setIsCreating(false)
+  // Fetch persona data for page hydration
+  const { data: persona, isLoading: personaLoading } = useQuery({
+    queryKey: ["persona", personaId],
+    queryFn: () => PersonasService.readPersona({ id: personaId }),
+  })
+
+  // Auto-create page with hydrated content when persona is loaded but page doesn't exist
+  useEffect(() => {
+    if (pageLoading || personaLoading || pageExists || !persona || !isOwner) {
+      return
     }
-  }
+    if (creatingRef.current) return
+    creatingRef.current = true
 
-  const handleDelete = () => {
-    navigate({ to: "/personas" })
-  }
+    createPage("persona", {
+      identity: {
+        name: persona.name,
+        tagline: persona.description ?? "",
+      },
+      bio: {
+        text: persona.long_description ?? persona.description ?? "",
+      },
+      domains: {
+        generalDomain: persona.general_domain ?? "",
+        specificDomain: persona.specific_domain ?? "",
+        generalDomainHigh: persona.general_domain_high ?? "",
+        specificDomainHigh: persona.specific_domain_high ?? "",
+      },
+    }).catch(() => {
+      creatingRef.current = false
+    })
+  }, [pageLoading, personaLoading, pageExists, persona, isOwner, createPage])
+
+  const isLoading = pageLoading || personaLoading
 
   if (isLoading) {
     return (
@@ -62,36 +85,8 @@ function PersonaPage() {
     )
   }
 
-  if (!pageExists) {
-    if (isOwner) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full p-6">
-          <div className="flex flex-col items-center gap-4 text-center max-w-md">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-              <Smile className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold">Create Persona Page</h1>
-            <p className="text-muted-foreground">
-              This persona doesn't have a profile page yet. Create one to
-              display its identity, domains, and traits.
-            </p>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Page
-            </Button>
-          </div>
-
-          <CreatePageDialog
-            open={showCreateDialog}
-            onOpenChange={setShowCreateDialog}
-            onCreatePage={handleCreatePage}
-            isCreating={isCreating}
-            entityType="persona"
-          />
-        </div>
-      )
-    }
-
+  // Non-owner viewing a persona with no page yet
+  if (!pageExists && !isOwner) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6">
         <div className="flex flex-col items-center gap-4 text-center max-w-md">
@@ -118,7 +113,7 @@ function PersonaPage() {
       entityType="persona"
       entityId={personaId}
       isOwner={isOwner}
-      onDelete={handleDelete}
+      onDelete={() => navigate({ to: "/personas" })}
     />
   )
 }
