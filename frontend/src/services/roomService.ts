@@ -565,6 +565,43 @@ export const RoomService = {
     return transformMessage(message, currentUserId || null)
   },
 
+  /**
+   * Send a UI action to the backend.
+   *
+   * Called when a user clicks an AG-UI action button rendered in a message.
+   * The backend resolves the originating agent from source_message_id and
+   * invokes it with a trigger message like "[UI Action: expand_details]".
+   * The agent's response arrives as a new room message via the existing
+   * WebSocket/polling pipeline — no local state update needed here.
+   *
+   * @param roomId - Room where the action button was clicked
+   * @param action - Action identifier string from the button (e.g. "expand_details")
+   * @param sourceMessageId - UUID of the agent message that emitted the button
+   * @param componentId - Optional ID of the specific UI component clicked
+   * @returns Backend acknowledgement { status, agent, action }
+   */
+  async sendUIAction(
+    roomId: string,
+    action: string,
+    sourceMessageId: string,
+    componentId?: string | null,
+  ): Promise<{ status: string; agent: string; action: string }> {
+    const requestOptions: ApiRequestOptions = {
+      method: "POST",
+      url: `/api/v1/rooms/${roomId}/ui-action`,
+      body: {
+        action,
+        source_message_id: sourceMessageId,
+        component_id: componentId ?? null,
+      },
+    }
+    return (await __request(OpenAPI, requestOptions)) as {
+      status: string
+      agent: string
+      action: string
+    }
+  },
+
   // ==========================================================================
   // Phase 5: Message Management Operations
   // ==========================================================================

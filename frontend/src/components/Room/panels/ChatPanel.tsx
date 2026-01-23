@@ -53,6 +53,11 @@ interface ChatPanelProps {
   onToggleContext?: (messageId: string, active: boolean) => void
   /** Delete message callback */
   onDeleteMessage?: (messageId: string) => void
+  /** AG-UI action button click callback — fires when user clicks an action button
+   *  rendered in an agent message. The action string identifies what was clicked
+   *  (e.g. "expand_details", "regenerate") and the message provides context about
+   *  which agent emitted it. */
+  onUiAction?: (action: string, message: MessageViewModel) => void
 }
 
 export function ChatPanel({
@@ -75,6 +80,7 @@ export function ChatPanel({
   onUnpinMessage,
   onToggleContext,
   onDeleteMessage,
+  onUiAction,
 }: ChatPanelProps) {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [showSearch, setShowSearch] = React.useState(false)
@@ -158,6 +164,7 @@ export function ChatPanel({
           onUnpinMessage={onUnpinMessage}
           onToggleContext={onToggleContext}
           onDeleteMessage={onDeleteMessage}
+          onUiAction={onUiAction}
         />
       </div>
     </PanelContainer>

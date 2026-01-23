@@ -50,6 +50,7 @@ from app.models import (
     ParticipantAddRequest,
     ParticipantRoleChangeRequest,
     RoomCreate,
+    RoomMessage,
     RoomMessagePublic,
     RoomMessageSend,
     RoomMessagesPublic,
@@ -59,8 +60,9 @@ from app.models import (
     RoomPublic,
     RoomsPublic,
     RoomUpdate,
+    UIActionRequest,
 )
-from app.services.agent_runner import run_agents_for_message
+from app.services.agent_runner import invoke_agent_manually, run_agents_for_message
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 logger = logging.getLogger(__name__)
@@ -613,3 +615,95 @@ async def delete_message_endpoint(
         user_id=current_user.id,
         session=session,
     )
+
+
+# ============================================================================
+# AG-UI Actions
+# ============================================================================
+
+
+@router.post("/{room_id}/ui-action")
+async def handle_ui_action(
+    *,
+    room_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+    action_in: UIActionRequest,
+) -> Any:
+    """
+    Handle a UI action button click from the frontend.
+
+    When an agent emits action_buttons via emit_ui_component(), each button has
+    an `action` string (e.g., "expand_section", "regenerate"). When the user
+    clicks one, the frontend sends it here.
+
+    This endpoint:
+    1. Looks up the source message to identify which agent emitted the component
+    2. Invokes that specific agent with the action as trigger context
+    3. The agent processes the action and responds (new message in the room)
+
+    Unlike regular messages, this:
+    - Does NOT create a user-visible message in the chat history
+    - Targets only the originating agent (not all agents in the room)
+    - Bypasses participation mode checks (the agent is invoked directly)
+
+    Authorization: Must be an active participant in the room.
+    """
+    # Verify the user is a participant in this room
+    await check_room_membership(
+        room_id=room_id,
+        user_id=current_user.id,
+        session=session,
+    )
+
+    # Look up the source message to find which agent emitted the action button.
+    # The source_message_id identifies the agent message containing the UI component.
+    source_msg = await session.get(RoomMessage, action_in.source_message_id)
+    if not source_msg:
+        raise HTTPException(
+            status_code=404,
+            detail="Source message not found",
+        )
+
+    # Only agent messages can have UI components — reject if it's a user message
+    if source_msg.sender_type != "agent":
+        raise HTTPException(
+            status_code=400,
+            detail="Source message is not from an agent",
+        )
+
+    # The agent_name on the message is the agent's slug (unique identifier).
+    # This is what invoke_agent_manually uses to resolve and run the agent.
+    agent_slug = source_msg.agent_name
+    if not agent_slug:
+        raise HTTPException(
+            status_code=400,
+            detail="Source message has no agent identifier",
+        )
+
+    # Construct the trigger message the agent will receive.
+    # Format: "[UI Action: action_string]" — agents can parse this to understand
+    # the user clicked an action button and respond appropriately.
+    trigger_message = f"[UI Action: {action_in.action}]"
+
+    logger.info(
+        "AG-UI action: user=%s agent=%s action=%s component=%s",
+        current_user.id,
+        agent_slug,
+        action_in.action,
+        action_in.component_id,
+    )
+
+    # Invoke the originating agent directly, bypassing participation mode.
+    # This runs the agent with the action as context; the agent's response
+    # will be emitted as a new message in the room (visible to all participants).
+    await invoke_agent_manually(
+        room_id=room_id,
+        agent_slug=agent_slug,
+        trigger_message=trigger_message,
+        session=session,
+    )
+
+    # Return 200 with status. The agent's response arrives asynchronously
+    # via the normal message stream (WebSocket or polling).
+    return {"status": "accepted", "agent": agent_slug, "action": action_in.action}

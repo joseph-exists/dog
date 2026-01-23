@@ -32,9 +32,10 @@ import { useRoomPanels } from "@/hooks/useRoomPanels"
 import { useRoomStream } from "@/hooks/useRoomStream"
 import { AgentService, type AgentViewModel } from "@/services/agentService"
 import { getPanelDisplayName } from "@/services/panelService"
-import type {
-  MessageViewModel,
-  ParticipantViewModel,
+import {
+  type MessageViewModel,
+  type ParticipantViewModel,
+  RoomService,
 } from "@/services/roomService"
 
 export const Route = createFileRoute("/_layout/r/$roomId")({
@@ -217,6 +218,24 @@ function RoomView() {
     }
   }
 
+  /**
+   * Handle AG-UI action button clicks.
+   *
+   * When a user clicks an action button rendered inside an agent message,
+   * this sends the action to the backend which re-invokes the originating
+   * agent with a trigger like "[UI Action: expand_details]". The agent's
+   * response arrives as a new room message via WebSocket — no local state
+   * update is needed.
+   *
+   * @param action - Action identifier from the clicked button
+   * @param message - The MessageViewModel containing the button's source info
+   */
+  const handleUiAction = async (action: string, message: MessageViewModel) => {
+    // message.message_id is the agent message UUID that emitted the action button.
+    // The backend uses this to look up which agent originally sent it.
+    await RoomService.sendUIAction(roomId, action, message.message_id)
+  }
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href)
     showSuccessToast("Link copied to clipboard")
@@ -279,6 +298,7 @@ function RoomView() {
         onUnpinMessage={handleUnpinMessage}
         onToggleContext={handleToggleContext}
         onDeleteMessage={handleDeleteMessage}
+        onUiAction={handleUiAction}
       />
     ),
     agentPanel: () => (

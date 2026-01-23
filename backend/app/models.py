@@ -2792,6 +2792,38 @@ class RoomMessageSend(SQLModel):
     content: str = Field(description="Message text content")
 
 
+class UIActionRequest(SQLModel):
+    """
+    Request body for AG-UI action button clicks.
+
+    When a user clicks an action button emitted by an agent, the frontend sends
+    this payload to POST /rooms/{room_id}/ui-action. The backend looks up the
+    originating agent from the source message and invokes it with the action
+    string as context, bypassing normal participation mode checks.
+
+    This enables bidirectional agent interaction without polluting the chat
+    history with raw action strings.
+    """
+
+    # The action identifier from the UIActionButton (e.g., "expand_section",
+    # "regenerate", "accept_layout"). Passed to the agent as trigger context.
+    action: str = Field(description="Action identifier from the button that was clicked")
+
+    # The message_id of the agent message that contained the UI component.
+    # Used to look up which agent should handle this action.
+    source_message_id: UUID = Field(
+        description="ID of the agent message that emitted the action button"
+    )
+
+    # Optional: identifies the specific component within a message (if the
+    # message contained multiple action_buttons components). Currently used
+    # for logging/debugging; agents receive the action string regardless.
+    component_id: str | None = Field(
+        default=None,
+        description="Optional ID of the specific UI component that was clicked",
+    )
+
+
 class RoomMessageUpdate(SQLModel):
     """
     Messages are immutable once created.
