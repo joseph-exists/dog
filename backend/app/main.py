@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import sentry_sdk
+import logfire
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
 from fastapi.responses import JSONResponse
@@ -21,6 +22,9 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
+
+if settings.ENVIRONMENT != "local":
+    logfire.configure()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

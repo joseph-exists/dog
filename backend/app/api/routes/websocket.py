@@ -9,6 +9,7 @@ Implements AG-UI JSON-RPC WebSocket protocol:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -25,6 +26,8 @@ from app.services.event_replay import replay_events_since
 from app.services.agent_runner import run_agents_for_message
 from app.services.event_emitter import emit_event
 from app.crud import check_room_membership
+
+import logfire
 
 logger = logging.getLogger(__name__)
 
@@ -59,38 +62,43 @@ async def websocket_room_session(
     - message.delta: Ephemeral agent token streaming
     - error: Error notification
     """
-    logger.info(f"[WS_ROUTE] ===== WebSocket route handler called for room {room_id} =====")
-    logger.info(f"[WS] Connection attempt for room {room_id}")
+    with logfire.span("ws.room_session", room_id=str(room_id)):
+        logger.info(f"[WS_ROUTE] ===== WebSocket route handler called for room {room_id} =====")
+        logger.info(f"[WS] Connection attempt for room {room_id}")
 
-    # Extract token from query params
-    token = websocket.query_params.get("token")
-    if not token:
-        logger.warning(f"[WS] No token provided for room {room_id}")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
+        # Extract token from query params
+        token = websocket.query_params.get("token")
+        if not token:
+            logger.warning(f"[WS] No token provided for room {room_id}")
+            logfire.warning("ws.missing_token", room_id=str(room_id))
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
-    # Authenticate user
-    try:
-        user = await get_current_user_from_token(token)
-        logger.info(f"[WS] Authenticated user {user.id} for room {room_id}")
-    except Exception as e:
-        logger.warning(f"[WS] Auth failed for room {room_id}: {e}")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
+        # Authenticate user
+        try:
+            user = await get_current_user_from_token(token)
+            logger.info(f"[WS] Authenticated user {user.id} for room {room_id}")
+            logfire.info("ws.authenticated", room_id=str(room_id), user_id=str(user.id))
+        except Exception as e:
+            logger.warning(f"[WS] Auth failed for room {room_id}: {e}")
+            logfire.warning("ws.auth_failed", room_id=str(room_id))
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
 
-    # Get database session
-    async for session in get_async_session():
-        logger.debug(f"[WS] Got DB session for room {room_id}")
-
-        # Check room membership
-        is_member = await check_room_membership(
-            session=session,
-            room_id=room_id,
-            user_id=user.id,
-        )
+        # Check room membership using a short-lived session
+        is_member = False
+        async for session in get_async_session():
+            logger.debug(f"[WS] Got DB session for room {room_id}")
+            is_member = await check_room_membership(
+                session=session,
+                room_id=room_id,
+                user_id=user.id,
+            )
+            break
 
         if not is_member:
             logger.warning(f"[WS] User {user.id} is not a member of room {room_id}")
+            logfire.warning("ws.not_member", room_id=str(room_id), user_id=str(user.id))
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -104,18 +112,28 @@ async def websocket_room_session(
         try:
             # Wait for handshake from client
             logger.info(f"[WS] Waiting for handshake from client for room {room_id}")
-            handshake_data = await websocket.receive_json()
+            try:
+                handshake_data = await asyncio.wait_for(websocket.receive_json(), timeout=10)
+            except asyncio.TimeoutError:
+                logger.warning(f"[WS] Handshake timeout for room {room_id}")
+                logfire.warning("ws.handshake_timeout", room_id=str(room_id), user_id=str(user.id))
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
+
             last_sequence = handshake_data.get("last_sequence", 0)
             logger.info(f"[WS] Received handshake for room {room_id}, last_sequence={last_sequence}")
 
             # Replay missed events
             if last_sequence > 0:
                 logger.info(f"[WS] Replaying events since sequence {last_sequence} for room {room_id}")
-                missed_events = await replay_events_since(
-                    session=session,
-                    room_id=room_id,
-                    after_sequence=last_sequence,
-                )
+                missed_events = []
+                async for session in get_async_session():
+                    missed_events = await replay_events_since(
+                        session=session,
+                        room_id=room_id,
+                        after_sequence=last_sequence,
+                    )
+                    break
                 logger.info(f"[WS] Replaying {len(missed_events)} missed events for room {room_id}")
 
                 for event in missed_events:
@@ -146,8 +164,10 @@ async def websocket_room_session(
 
         except WebSocketDisconnect:
             logger.info(f"[WS] Disconnected: user={user.id}, room={room_id}")
+            logfire.info("ws.disconnected", room_id=str(room_id), user_id=str(user.id))
         except Exception as e:
             logger.error(f"[WS] Error in room {room_id}: {e}", exc_info=True)
+            logfire.exception("ws.error", room_id=str(room_id), user_id=str(user.id))
             await websocket.send_json({
                 "type": "error",
                 "message": "Internal server error",
@@ -155,7 +175,6 @@ async def websocket_room_session(
         finally:
             logger.info(f"[WS] Cleaning up connection for room {room_id}")
             await connection_manager.disconnect(websocket)
-        break
 
 @router.websocket("/ws/stories/{story_id}")
 async def websocket_story_session(

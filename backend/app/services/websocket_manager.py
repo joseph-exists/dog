@@ -18,26 +18,17 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-# import logfire
 from typing import Any
 from uuid import UUID
-
-from datetime import data
 
 from fastapi import WebSocket
 from redis.asyncio.client import PubSub
 
 from app.core.redis import get_redis
 
-# logfire.configure()
-# logfire.info('Hello, {name}!', name='world')
+import logfire
 
-# with logfire.span('Asking the user their {question}', question='age'):
-#     user_input = input('How old are you [YYYY-mm-dd]? ')
-#     dob = date.fromisoformat(user_input)
-#     logfire.debug('{dob=} {age=!r}', dob=dob, age=date.today() - dob)
-
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
@@ -66,6 +57,7 @@ class ConnectionManager:
             room_id: UUID of the room to subscribe to
         """
         logger.info(f"[CONN_MGR] connect() called for room {room_id}")
+        logfire.info("ws.connect", room_id=str(room_id))
         await websocket.accept()
         logger.info(f"[CONN_MGR] WebSocket accepted for room {room_id}")
 
@@ -109,6 +101,7 @@ class ConnectionManager:
                 del self.room_connections[room_id]
 
         logger.info(f"WebSocket disconnected from room {room_id}")
+        logfire.info("ws.disconnect", room_id=str(room_id))
 
     async def send_to_room(self, room_id: UUID, message: dict[str, Any]) -> None:
         """
@@ -132,6 +125,7 @@ class ConnectionManager:
                 await websocket.send_text(message_text)
             except Exception as e:
                 logger.error(f"Error sending to WebSocket: {e}")
+                logfire.exception("ws.send_error", room_id=str(room_id))
                 disconnected.append(websocket)
 
         # Clean up disconnected sockets
@@ -168,6 +162,7 @@ class ConnectionManager:
 
         except Exception as e:
             logger.error(f"[REDIS] Failed to subscribe to room {room_id}: {e}", exc_info=True)
+            logfire.exception("ws.subscribe_failed", room_id=str(room_id))
 
     async def _unsubscribe_from_room(self, room_id: UUID) -> None:
         """
@@ -179,8 +174,10 @@ class ConnectionManager:
                 await pubsub.unsubscribe()
                 await pubsub.close()
                 logger.info(f"Unsubscribed from room {room_id}")
+                logfire.info("ws.unsubscribed", room_id=str(room_id))
             except Exception as e:
                 logger.error(f"Error unsubscribing from room {room_id}: {e}")
+                logfire.exception("ws.unsubscribe_error", room_id=str(room_id))
 
     async def _listen_to_room(self, room_id: UUID, pubsub: PubSub) -> None:
         """
@@ -222,6 +219,7 @@ class ConnectionManager:
                 logger.info(f"[LISTENER] Redis connection closed for room {room_id} (cleanup)")
             else:
                 logger.error(f"[LISTENER] Error in Redis listener for room {room_id}: {e}", exc_info=True)
+                logfire.exception("ws.listener_error", room_id=str(room_id))
         finally:
             logger.info(f"[LISTENER] _listen_to_room exiting for room {room_id}")
 
