@@ -32,6 +32,8 @@ const routeTitles: Record<string, string> = {
   "/stories": "Stories",
   "/rooms": "Rooms",
   "/agents": "Agents",
+  "/personas": "Personas",
+  "/persona": "Persona",
   "/items": "Items",
   "/u": "Profile",
   "/admin": "Admin",
@@ -39,7 +41,7 @@ const routeTitles: Record<string, string> = {
 }
 
 /** Routes that need full-bleed layout (no max-width or padding) */
-const fullBleedRoutes = ["/r/", "/room/", "/room-v2/", "/u/"]
+const fullBleedRoutes = ["/r/", "/room/", "/room-v2/", "/u/", "/persona/"]
 
 function Layout() {
   const matches = useMatches()

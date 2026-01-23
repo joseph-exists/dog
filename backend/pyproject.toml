@@ -29,6 +29,7 @@ dependencies = [
     "openapi-client",
     "asyncpg>=0.31.0",
     "logfire>=4.16.0",
+    "coolname>=2.2.0",
 ]
 
 [tool.uv]

@@ -5,7 +5,7 @@ import {
   type StoryStateVariableUpdate,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 // Query hook for fetching state schema variables
@@ -33,8 +33,6 @@ export const useValidateStateSchema = (storyId: string, version: number) => {
   })
 }
 
-const { showSuccessToast, showErrorToast } = useCustomToast()
-
 // Mutation hook for creating a state variable
 export const useCreateStateVariable = (storyId: string, version: number) => {
   const queryClient = useQueryClient()
@@ -61,7 +59,6 @@ export const useCreateStateVariable = (storyId: string, version: number) => {
 // Mutation hook for updating a state variable
 export const useUpdateStateVariable = (storyId: string, version: number) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: ({
@@ -92,7 +89,6 @@ export const useUpdateStateVariable = (storyId: string, version: number) => {
 // Mutation hook for deleting a state variable
 export const useDeleteStateVariable = (storyId: string, version: number) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (variableId: string) =>

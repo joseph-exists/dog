@@ -17,7 +17,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import type { ApiError } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast } from "@/hooks/useCustomToast"
 import type {
   MessageViewModel,
   ParticipantViewModel,
@@ -34,8 +34,6 @@ export interface UseRoomOptions {
   /** Include internal agent-to-agent messages in message queries (debug only). */
   includeInternalMessages?: boolean
 }
-
-const { showErrorToast } = useCustomToast()
 
 export interface UseRoomResult {
   // Room State

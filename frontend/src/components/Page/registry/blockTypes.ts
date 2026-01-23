@@ -5,10 +5,12 @@ import {
   Activity,
   BarChart,
   FileText,
+  Globe,
   Image,
   Link,
   Mail,
   Smile,
+  Sparkles,
   Table,
   User,
   UserCircle,
@@ -35,6 +37,8 @@ export type BlockType =
   | "dataTable"
   | "chart"
   | "personas"
+  | "domains"
+  | "traits"
 
 /**
  * Configuration field types for block settings.
@@ -215,6 +219,34 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
       showAddButton: true,
     },
     defaultContent: {},
+  },
+  {
+    type: "domains",
+    label: "Domains",
+    description: "Display domain expertise areas (general and specific)",
+    icon: Globe,
+    defaultConfig: {
+      showHierarchy: true,
+    },
+    defaultContent: {
+      generalDomain: "",
+      specificDomain: "",
+      generalDomainHigh: "",
+      specificDomainHigh: "",
+    },
+  },
+  {
+    type: "traits",
+    label: "Traits & Qualities",
+    description: "Display personality traits and qualities as badges",
+    icon: Sparkles,
+    defaultConfig: {
+      layout: "badges",
+      maxVisible: 12,
+    },
+    defaultContent: {
+      items: [],
+    },
   },
 ]
 

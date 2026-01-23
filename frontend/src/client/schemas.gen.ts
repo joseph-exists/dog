@@ -901,6 +901,18 @@ export const EventsPublicSchema = {
     description: 'Collection model for Event API responses.'
 } as const;
 
+export const GeneratedSlugResponseSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        }
+    },
+    type: 'object',
+    required: ['slug'],
+    title: 'GeneratedSlugResponse'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -2041,6 +2053,26 @@ export const PagePublicSchema = {
     required: ['entity_type', 'entity_id', 'layout_json', 'id', 'owner_id', 'created_at', 'updated_at'],
     title: 'PagePublic',
     description: 'Public response model for pages.'
+} as const;
+
+export const PagesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PagePublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PagesPublic',
+    description: 'Paginated collection of pages.'
 } as const;
 
 export const ParticipantAddRequestSchema = {

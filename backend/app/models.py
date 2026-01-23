@@ -2942,6 +2942,10 @@ class PagePublic(PageBase):
     created_at: datetime
     updated_at: datetime
 
+class PagesPublic(SQLModel):
+    """Paginated collection of pages."""
+    data: list[PagePublic]
+    count: int
 
 # ============================================================================
 # Message Management Request Models (Phase 5)

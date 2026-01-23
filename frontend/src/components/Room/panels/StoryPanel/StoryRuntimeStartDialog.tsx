@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { RoomRuntimeService } from "@/services/roomRuntimeService"
 import { RoomService } from "@/services/roomService"
 import { handleError } from "@/utils"
@@ -51,8 +51,6 @@ interface StoryRuntimeStartDialogProps {
     storyVersion?: number | null
   }) => Promise<void>
 }
-
-const { showErrorToast, showSuccessToast } = useCustomToast()
 
 export function StoryRuntimeStartDialog({
   open,

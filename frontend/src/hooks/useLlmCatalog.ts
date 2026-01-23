@@ -13,6 +13,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
 
 import {
   CATALOG_QUERY_OPTIONS,
@@ -133,73 +134,101 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
     },
   })
 
-  // Transform grouped data to provider-keyed ModelOption map
-  const modelsByProvider: Record<LLMProviderType, ModelOption[]> = {
-    empty: [],
-    openai: [],
-    anthropic: [],
-    google: [],
-    openai_compatible: [],
-  }
-
-  const providers: CatalogProviderViewModel[] = []
-
-  if (grouped) {
-    for (const provider of grouped.providers) {
-      const providerType = provider.providerType
-      providers.push(provider)
-      modelsByProvider[providerType] = provider.models.map((model) =>
-        modelToOption(model, providerType),
-      )
+  // Memoize derived data — stable when `grouped` is stable (TanStack Query
+  // preserves data reference between renders when data hasn't changed)
+  const { modelsByProvider, allModels, derivedProviders } = useMemo(() => {
+    const byProvider: Record<LLMProviderType, ModelOption[]> = {
+      empty: [],
+      openai: [],
+      anthropic: [],
+      google: [],
+      openai_compatible: [],
     }
-  }
+    const provs: CatalogProviderViewModel[] = []
 
-  // Flatten all models
-  const allModels = Object.values(modelsByProvider).flat()
+    if (grouped) {
+      for (const provider of grouped.providers) {
+        const providerType = provider.providerType
+        provs.push(provider)
+        byProvider[providerType] = provider.models.map((model) =>
+          modelToOption(model, providerType),
+        )
+      }
+    }
 
-  // Utility function to check if a model is in catalog
-  const isInCatalog = (value: string): boolean => {
-    return allModels.some((m) => m.value === value)
-  }
+    return {
+      modelsByProvider: byProvider,
+      allModels: Object.values(byProvider).flat(),
+      derivedProviders: provs,
+    }
+  }, [grouped])
+
+  // Stable utility functions — safe to use in dependency arrays
+  const getModelsForType = useCallback(
+    (type: LLMProviderType) => modelsByProvider[type] ?? [],
+    [modelsByProvider],
+  )
+
+  const getDefaultForType = useCallback(
+    (type: LLMProviderType) => {
+      const models = modelsByProvider[type] ?? []
+      return models.find((m) => m.isDefault) ?? models[0] ?? null
+    },
+    [modelsByProvider],
+  )
+
+  const findModel = useCallback(
+    (value: string) => allModels.find((m) => m.value === value),
+    [allModels],
+  )
+
+  const isInCatalog = useCallback(
+    (value: string) => allModels.some((m) => m.value === value),
+    [allModels],
+  )
+
+  const isCustomModel = useCallback(
+    (value: string) => {
+      const model = allModels.find((m) => m.value === value)
+      return model ? model.isSystem === false : true
+    },
+    [allModels],
+  )
+
+  const getModelDisplayInfo = useCallback(
+    (value: string) => LlmCatalogService.getModelDisplayInfo(value, allModels),
+    [allModels],
+  )
+
+  const createCustomModel = useCallback(
+    (input: CreateCustomModelInput) => createMutation.mutateAsync(input),
+    [createMutation],
+  )
 
   return {
     modelsByProvider,
     allModels,
-    providers,
+    providers: derivedProviders,
     grouped: grouped ?? null,
     totalModels: grouped?.totalModels ?? 0,
     isLoading,
     error: error as Error | null,
-
-    getModelsForType: (type: LLMProviderType) => modelsByProvider[type] ?? [],
-
-    getDefaultForType: (type: LLMProviderType) => {
-      const models = modelsByProvider[type] ?? []
-      return models.find((m) => m.isDefault) ?? models[0] ?? null
-    },
-
-    getProviderLabel: (type: LLMProviderType) =>
-      PROVIDER_TYPE_LABELS[type] || type,
-
-    findModel: (value: string) => allModels.find((m) => m.value === value),
-
+    getModelsForType,
+    getDefaultForType,
+    getProviderLabel,
+    findModel,
     formatModelName: LlmCatalogService.formatModelName,
-
     isInCatalog,
-
-    isCustomModel: (value: string) => {
-      const model = allModels.find((m) => m.value === value)
-      return model ? model.isSystem === false : true
-    },
-
-    getModelDisplayInfo: (value: string) =>
-      LlmCatalogService.getModelDisplayInfo(value, allModels),
-
-    createCustomModel: (input: CreateCustomModelInput) =>
-      createMutation.mutateAsync(input),
-
+    isCustomModel,
+    getModelDisplayInfo,
+    createCustomModel,
     isCreatingCustomModel: createMutation.isPending,
   }
+}
+
+/** Pure lookup — no React state dependencies, always stable */
+function getProviderLabel(type: LLMProviderType): string {
+  return PROVIDER_TYPE_LABELS[type] || type
 }
 
 /**

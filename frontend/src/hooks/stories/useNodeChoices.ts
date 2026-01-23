@@ -7,7 +7,7 @@ import {
   StorynodesService,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 // Query hook for fetching choices from a node
@@ -24,12 +24,9 @@ export const useChoicesForNode = (nodeId: string | null) => {
   })
 }
 
-const { showErrorToast } = useCustomToast()
-
 // Mutation hook for creating a choice from a node (simpler API)
 export const useCreateChoiceFromNode = (nodeId: string) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (data: NodeChoiceBase) =>
@@ -47,7 +44,6 @@ export const useCreateChoiceFromNode = (nodeId: string) => {
 // Mutation hook for creating a choice (full API with from/to node IDs)
 export const useCreateChoice = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (data: NodeChoiceCreate) =>
@@ -67,7 +63,6 @@ export const useCreateChoice = () => {
 // Mutation hook for updating a choice
 export const useUpdateChoice = (fromNodeId: string) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: ({
@@ -92,7 +87,6 @@ export const useUpdateChoice = (fromNodeId: string) => {
 // Mutation hook for deleting a choice
 export const useDeleteChoice = (fromNodeId: string | null) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (choiceId: string) =>

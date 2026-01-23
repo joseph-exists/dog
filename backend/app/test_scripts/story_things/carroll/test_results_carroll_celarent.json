@@ -1,0 +1,36 @@
+{
+  "test_suite": "Carroll Celarent Story (EAE-1)",
+  "start_time": "2026-01-23T13:18:15.770220",
+  "end_time": "2026-01-23T13:18:16.810709",
+  "story_id": "cef77364-0a73-4a43-a576-301257aff03a",
+  "node_ids": {
+    "intro": "03361473-e4a0-4323-a670-ad31dd452456",
+    "major_premise": "b357334b-8cbc-4ee7-896d-7159e370fe3e",
+    "minor_premise": "453e21c6-425d-4dc8-9a04-40821030912a",
+    "conclusion_options": "f1ed16a8-87ba-4cf0-8e2b-9fb62d3b0e24",
+    "valid_conclusion": "7b2542b2-a9d3-4356-b577-7e2712776710",
+    "fallacy_affirmative": "a610d540-cc55-4e10-b2fb-8ffb130aee6b",
+    "fallacy_wrong_term": "9917dfda-6903-480d-8b8b-3809f38eebc0",
+    "fallacy_non_sequitur": "1000a523-c6b0-40a1-911a-84657b2cc5e1",
+    "retry": "4f4ad439-b17f-483c-8cfc-1c39fb6b4a60",
+    "skip_fallacy": "12756da2-a11b-45f9-a621-b8272d52de91"
+  },
+  "choice_ids": [
+    "226a072e-8bf5-4973-93e6-55ae298cc828",
+    "b9f42e62-18cc-43ed-b4c4-391679bd39dd",
+    "52e8be4e-9c2b-4c02-bdef-89db228795a3",
+    "c1e82bae-97e5-4ed7-a67a-f43703da2a03",
+    "e0afe7d5-bc2e-4a38-bd5a-ecfa8732bf32",
+    "399d0cb8-206e-4e22-b298-2c3d1ae4201e",
+    "bbb4e253-c5cc-43b4-9cf4-055d2da8ba4d",
+    "506eeb71-6589-4cd2-88d4-72d5f3a06f6c",
+    "79453e46-9a55-444f-b923-cc39d90e9457",
+    "9dca5081-35a1-4840-96d6-5cd9a957f2f1",
+    "c2cd9f3c-48ce-4f0a-ab37-17da04815251",
+    "52b1748d-e498-4e2f-b789-7332b82dd0f9",
+    "c3d996ac-a1f8-4339-96e2-5ea4f268cd4d"
+  ],
+  "state_variable_ids": {},
+  "success": true,
+  "errors": []
+}

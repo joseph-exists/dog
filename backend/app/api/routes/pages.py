@@ -15,11 +15,42 @@ from app.crud_pages import (
     delete_page_layout,
     get_page_by_entity,
     get_page_by_id,
+    search_pages,
     update_page_layout,
 )
-from app.models import PageLayoutUpdate, PagePublic
+from app.models import PageLayoutUpdate, PagePublic, PagesPublic
 
 router = APIRouter(prefix="/pages", tags=["pages"])
+
+
+@router.get("/", response_model=PagesPublic)
+async def list_pages(
+    *,
+    session: AsyncSessionDep,
+    current_user: CurrentUser,
+    skip: int = 0,
+    limit: int = 100,
+    entity_type: str | None = None,
+    entity_id: str | None = None,
+    entity_type_prefix: str | None = None,
+    entity_id_prefix: str | None = None,
+) -> Any:
+    """Search persisted page layouts."""
+    owner_id = None if current_user.is_superuser else current_user.id
+    pages, count = await search_pages(
+        session,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        entity_type_prefix=entity_type_prefix,
+        entity_id_prefix=entity_id_prefix,
+        owner_id=owner_id,
+        skip=skip,
+        limit=limit,
+    )
+    return PagesPublic(
+        data=[PagePublic.model_validate(page) for page in pages],
+        count=count,
+    )
 
 
 @router.get("/{entity_type}/{entity_id}", response_model=PagePublic | None)

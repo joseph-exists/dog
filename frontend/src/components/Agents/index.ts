@@ -54,11 +54,7 @@ export { default as RoomAgentList } from "./RoomAgentList"
 export { default as AgentCloneButton } from "./AgentCloneButton"
 // Shared Form
 export type { AgentFormData } from "./AgentForm"
-export {
-  default as AgentForm,
-  generateSlug,
-  PARTICIPATION_MODES,
-} from "./AgentForm"
+export { default as AgentForm, PARTICIPATION_MODES } from "./AgentForm"
 // Create Dialog
 export { default as CreateAgentDialog } from "./CreateAgentDialog"
 // Edit Dialog

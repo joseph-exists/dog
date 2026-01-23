@@ -1,5 +1,12 @@
 // src/components/Page/registry/entityTypes.ts
-import { Bot, type LucideIcon, MessageSquare, User, Users } from "lucide-react"
+import {
+  Bot,
+  type LucideIcon,
+  MessageSquare,
+  Smile,
+  User,
+  Users,
+} from "lucide-react"
 
 /**
  * Entity type definition for the registry.
@@ -52,6 +59,14 @@ export const entityTypes: EntityTypeDefinition[] = [
     icon: MessageSquare,
     color: "orange",
     pageRoutePattern: "/r/:id",
+  },
+  {
+    id: "persona",
+    label: "Persona",
+    labelPlural: "Personas",
+    icon: Smile,
+    color: "pink",
+    pageRoutePattern: "/persona/:id",
   },
 ]
 

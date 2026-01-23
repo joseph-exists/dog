@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { StoriesService, type StoryCreate } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 // Query hook for fetching stories
@@ -12,12 +12,9 @@ export const useStories = () => {
   })
 }
 
-const { showErrorToast } = useCustomToast()
-
 // Mutation hook for creating a story
 export const useCreateStory = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (data: StoryCreate) =>
@@ -35,7 +32,6 @@ export const useCreateStory = () => {
 // Mutation hook for deleting a story
 export const useDeleteStory = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (storyId: string) =>
@@ -53,7 +49,6 @@ export const useDeleteStory = () => {
 // Mutation hook for publishing a story
 export const usePublishStory = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (storyId: string) =>
@@ -74,7 +69,6 @@ export const usePublishStory = () => {
 // Mutation hook for unpublishing a story
 export const useUnpublishStory = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (storyId: string) =>
@@ -93,7 +87,6 @@ export const useUnpublishStory = () => {
 // Mutation hook for creating a new version of a published story
 export const useCreateNewVersion = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (storyId: string) =>
@@ -115,7 +108,6 @@ export const useCreateNewVersion = () => {
 // Mutation hook for cloning a story (creates new story with same metadata)
 export const useCloneStory = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: async (sourceStory: {

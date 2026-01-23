@@ -203,6 +203,10 @@ export type EventUpdate = {
     event_type?: (string | null);
 };
 
+export type GeneratedSlugResponse = {
+    slug: string;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -600,6 +604,14 @@ export type PagePublic = {
     owner_id: string;
     created_at: string;
     updated_at: string;
+};
+
+/**
+ * Paginated collection of pages.
+ */
+export type PagesPublic = {
+    data: Array<PagePublic>;
+    count: number;
 };
 
 /**
@@ -1838,6 +1850,8 @@ export type AgentsListAvailableAgentsData = {
 
 export type AgentsListAvailableAgentsResponse = (AgentConfigsPublic);
 
+export type AgentsGenerateAgentSlugResponse = (GeneratedSlugResponse);
+
 export type AgentsGetAgentData = {
     agentId: string;
 };
@@ -2241,6 +2255,17 @@ export type NodeChoicesDeleteNodeChoiceData = {
 };
 
 export type NodeChoicesDeleteNodeChoiceResponse = (Message);
+
+export type PagesListPagesData = {
+    entityId?: (string | null);
+    entityIdPrefix?: (string | null);
+    entityType?: (string | null);
+    entityTypePrefix?: (string | null);
+    limit?: number;
+    skip?: number;
+};
+
+export type PagesListPagesResponse = (PagesPublic);
 
 export type PagesGetPageLayoutData = {
     entityId: string;

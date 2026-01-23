@@ -130,6 +130,66 @@ export function AgentStatusBadge({ isEnabled, className }: StatusBadgeProps) {
   )
 }
 
+type LLMProviderType = "openai" | "anthropic" | "google" | "openai_compatible"
+
+interface ProviderBadgeProps {
+  providerType: LLMProviderType
+  className?: string
+}
+
+const providerConfig: Record<
+  LLMProviderType,
+  { label: string; colorClass: string }
+> = {
+  openai: {
+    label: "OpenAI",
+    colorClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+  },
+  anthropic: {
+    label: "Anthropic",
+    colorClass: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  },
+  google: {
+    label: "Google",
+    colorClass: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  },
+  openai_compatible: {
+    label: "Custom",
+    colorClass: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+  },
+}
+
+/**
+ * Badge showing the LLM provider type for personal/cloned agents.
+ * Parses the provider from a "provider:model" string.
+ */
+export function AgentProviderBadge({ providerType, className }: ProviderBadgeProps) {
+  const config = providerConfig[providerType]
+  if (!config) return null
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn("gap-1 border-0 text-xs font-medium", config.colorClass, className)}
+    >
+      {config.label}
+    </Badge>
+  )
+}
+
+/**
+ * Extracts the provider type from a "provider:model" format string.
+ * Returns null if the format is invalid or provider is unknown.
+ */
+export function parseProviderFromModelName(modelName: string | undefined | null): LLMProviderType | null {
+  if (!modelName) return null
+  const provider = modelName.split(":")[0]
+  if (provider && provider in providerConfig) {
+    return provider as LLMProviderType
+  }
+  return null
+}
+
 interface AgentBadgeProps {
   /** What type of badge to display */
   type: "scope" | "mode" | "status"
@@ -169,4 +229,4 @@ export default function AgentBadge({
 }
 
 // Type exports for consumers
-export type { AgentScope, ParticipationMode }
+export type { AgentScope, ParticipationMode, LLMProviderType }

@@ -11,6 +11,7 @@ import logging
 import uuid
 from typing import Any
 
+from coolname import generate_slug as coolname_generate_slug
 from pydantic_ai import Agent
 from sqlmodel import Session, select
 
@@ -163,6 +164,16 @@ class AgentRegistryService:
          )
          self._invalidate_cache(slug)
          return updated
+
+     def generate_slug(self, session: Session, max_length: int = 50) -> str:
+         """Generate a unique agent slug using coolname."""
+         for _ in range(20):
+             slug = coolname_generate_slug()
+             if len(slug) > max_length:
+                 slug = slug[:max_length].rstrip("-") or slug[:max_length]
+             if not crud.get_agent_config_by_slug(session=session, slug=slug):
+                 return slug
+         raise ValueError("Failed to generate a unique slug")
 
      def _get_config(self, session: Session, slug: str) -> AgentConfig | None:
          if slug in self._config_cache:

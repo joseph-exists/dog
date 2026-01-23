@@ -38,6 +38,13 @@ export type {
 // Data Table Block
 export { DataTableBlock } from "./DataTableBlock"
 export type {
+  DomainsBlockConfig,
+  DomainsBlockProps,
+  DomainsContent,
+} from "./DomainsBlock"
+// Domains Block
+export { DomainsBlock } from "./DomainsBlock"
+export type {
   GalleryBlockConfig,
   GalleryBlockProps,
   GalleryContent,
@@ -81,3 +88,11 @@ export type {
 } from "./RelationshipsBlock"
 // Relationships Block
 export { RelationshipsBlock } from "./RelationshipsBlock"
+export type {
+  TraitItem,
+  TraitsBlockConfig,
+  TraitsBlockProps,
+  TraitsContent,
+} from "./TraitsBlock"
+// Traits Block
+export { TraitsBlock } from "./TraitsBlock"

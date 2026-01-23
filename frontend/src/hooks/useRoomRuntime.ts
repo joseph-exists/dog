@@ -8,7 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
 import type { ApiError } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast } from "@/hooks/useCustomToast"
 import {
   RoomRuntimeService,
   type RoomRuntimeViewModel,
@@ -35,8 +35,6 @@ export interface UseRoomRuntimeResult {
   isResetting: boolean
   pendingChoiceId: string | null
 }
-
-const { showErrorToast } = useCustomToast()
 
 const RUNTIME_QUERY_KEY = (roomId: string) => ["rooms", roomId, "runtime"]
 

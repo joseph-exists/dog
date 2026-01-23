@@ -109,6 +109,10 @@ export interface PaginatedAgents {
   total_count: number
 }
 
+interface GeneratedSlugResponse {
+  slug: string
+}
+
 // ============================================================================
 // Transformation Functions
 // ============================================================================
@@ -267,6 +271,21 @@ export const AgentService = {
     }
     const agent = await __request(OpenAPI, options)
     return transformAgent(agent)
+  },
+
+  /**
+   * Generate a unique agent slug
+   *
+   * @returns Generated slug
+   * @throws ApiError on network or server errors
+   */
+  async generateSlug(): Promise<string> {
+    const options: ApiRequestOptions<GeneratedSlugResponse> = {
+      method: "GET",
+      url: "/api/v1/agents/generate-slug",
+    }
+    const response = await __request(OpenAPI, options)
+    return response.slug
   },
 
   /**

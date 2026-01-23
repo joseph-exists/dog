@@ -4,6 +4,7 @@ import {
   Briefcase,
   Home,
   MessageSquare,
+  Smile,
   User2,
   Users,
 } from "lucide-react"
@@ -25,7 +26,9 @@ const baseItems: Item[] = [
   { icon: BookOpen, title: "Stories", path: "/stories" },
   { icon: MessageSquare, title: "Rooms", path: "/rooms" },
   { icon: Bot, title: "Agents", path: "/agents" },
+  { icon: Smile, title: "Personas", path: "/personas" },
   { icon: Briefcase, title: "Items", path: "/items" },
+  { icon: BookOpen, title: "debug-chatster", path: "/chatster" },
 ]
 
 export function AppSidebar() {

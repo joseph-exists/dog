@@ -6,7 +6,15 @@
  * - "full": Complete card with all details (for agent lists, management)
  * - "compact": Smaller inline display (for room sidebars, selection)
  * - "mini": Minimal display with just avatar and name (for tight spaces)
+ *
+ * Full feature set (from agents page usage):
+ * - slug: Display @slug under name
+ * - href: Link avatar/name to detail page
+ * - description, scope/mode/provider/model badges
+ * - action slot: Edit/Delete buttons, view dialog, etc.
  */
+
+import { Link } from "@tanstack/react-router"
 
 import {
   Card,
@@ -19,13 +27,23 @@ import { cn } from "@/lib/utils"
 
 import AgentAvatar from "./AgentAvatar"
 import type { AgentScope, ParticipationMode } from "./AgentBadge"
-import { AgentModeBadge, AgentScopeBadge, AgentStatusBadge } from "./AgentBadge"
+import {
+  AgentModeBadge,
+  AgentProviderBadge,
+  AgentScopeBadge,
+  AgentStatusBadge,
+  parseProviderFromModelName,
+} from "./AgentBadge"
 
 interface AgentCardProps {
   /** Agent unique identifier */
   id: string
   /** Display name */
   name: string
+  /** Agent slug (displays as @slug under name) */
+  slug?: string
+  /** Link destination for avatar/name (enables client-side navigation) */
+  href?: string
   /** Short description */
   description?: string | null
   /** Agent scope */
@@ -53,10 +71,17 @@ interface AgentCardProps {
  */
 function AgentCardMini({
   name,
+  scope,
+  modelName,
   isSelected,
   onClick,
   className,
-}: Pick<AgentCardProps, "name" | "isSelected" | "onClick" | "className">) {
+}: Pick<
+  AgentCardProps,
+  "name" | "scope" | "modelName" | "isSelected" | "onClick" | "className"
+>) {
+  const providerType = parseProviderFromModelName(modelName)
+
   return (
     <div
       className={cn(
@@ -69,6 +94,9 @@ function AgentCardMini({
     >
       <AgentAvatar name={name} size="sm" />
       <span className="text-sm font-medium truncate">{name}</span>
+      {scope === "personal" && providerType && (
+        <AgentProviderBadge providerType={providerType} className="scale-75" />
+      )}
     </div>
   )
 }
@@ -82,11 +110,13 @@ function AgentCardCompact({
   scope,
   participationMode,
   isEnabled = true,
+  modelName,
   isSelected,
   onClick,
   action,
   className,
-}: Omit<AgentCardProps, "variant" | "id" | "modelName">) {
+}: Omit<AgentCardProps, "variant" | "id">) {
+  const providerType = parseProviderFromModelName(modelName)
   return (
     <div
       className={cn(
@@ -104,6 +134,12 @@ function AgentCardCompact({
         <div className="flex items-center gap-2">
           <span className="font-medium truncate">{name}</span>
           {scope && <AgentScopeBadge scope={scope} className="scale-90" />}
+          {scope === "personal" && providerType && (
+            <AgentProviderBadge
+              providerType={providerType}
+              className="scale-90"
+            />
+          )}
         </div>
         {description && (
           <p className="text-sm text-muted-foreground truncate">
@@ -126,6 +162,8 @@ function AgentCardCompact({
  */
 function AgentCardFull({
   name,
+  slug,
+  href,
   description,
   scope,
   participationMode,
@@ -136,12 +174,16 @@ function AgentCardFull({
   action,
   className,
 }: Omit<AgentCardProps, "variant" | "id">) {
-  // Extract model display name (e.g., "openai:gpt-4o-mini" -> "GPT-4o Mini")
+  // Extract provider type and model display name from "provider:model" format
+  const providerType = parseProviderFromModelName(modelName)
   const displayModel = modelName
     ?.split(":")
     .pop()
     ?.replace(/-/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
+
+  const avatar = <AgentAvatar name={name} size="lg" />
+  const title = <CardTitle className="truncate">{name}</CardTitle>
 
   return (
     <Card
@@ -156,13 +198,35 @@ function AgentCardFull({
     >
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          <AgentAvatar name={name} size="lg" />
+          {href ? (
+            <Link to={href} onClick={(e) => e.stopPropagation()}>
+              {avatar}
+            </Link>
+          ) : (
+            avatar
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <CardTitle className="truncate">{name}</CardTitle>
+              {href ? (
+                <Link
+                  to={href}
+                  className="hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {title}
+                </Link>
+              ) : (
+                title
+              )}
               <AgentStatusBadge isEnabled={isEnabled} />
             </div>
+
+            {slug && (
+              <CardDescription className="font-mono text-xs">
+                @{slug}
+              </CardDescription>
+            )}
 
             {description && (
               <CardDescription className="mt-1 line-clamp-2">
@@ -179,6 +243,9 @@ function AgentCardFull({
         <div className="flex flex-wrap gap-2">
           {scope && <AgentScopeBadge scope={scope} />}
           {participationMode && <AgentModeBadge mode={participationMode} />}
+          {scope === "personal" && providerType && (
+            <AgentProviderBadge providerType={providerType} />
+          )}
           {displayModel && (
             <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
               {displayModel}

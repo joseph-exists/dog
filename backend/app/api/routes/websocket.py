@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from uuid import uuid4
 from typing import Any
 from uuid import UUID
 
@@ -62,7 +63,18 @@ async def websocket_room_session(
     - message.delta: Ephemeral agent token streaming
     - error: Error notification
     """
-    with logfire.span("ws.room_session", room_id=str(room_id)):
+    connection_id = str(uuid4())
+    client_host = getattr(websocket.client, "host", None)
+    origin = websocket.headers.get("origin")
+    user_agent = websocket.headers.get("user-agent")
+    with logfire.span(
+        "ws.room_session",
+        room_id=str(room_id),
+        connection_id=connection_id,
+        client_host=client_host,
+        origin=origin,
+        user_agent=user_agent,
+    ):
         logger.info(f"[WS_ROUTE] ===== WebSocket route handler called for room {room_id} =====")
         logger.info(f"[WS] Connection attempt for room {room_id}")
 
@@ -70,7 +82,7 @@ async def websocket_room_session(
         token = websocket.query_params.get("token")
         if not token:
             logger.warning(f"[WS] No token provided for room {room_id}")
-            logfire.warning("ws.missing_token", room_id=str(room_id))
+            logfire.warning("ws.missing_token", room_id=str(room_id), connection_id=connection_id)
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -78,10 +90,15 @@ async def websocket_room_session(
         try:
             user = await get_current_user_from_token(token)
             logger.info(f"[WS] Authenticated user {user.id} for room {room_id}")
-            logfire.info("ws.authenticated", room_id=str(room_id), user_id=str(user.id))
+            logfire.info(
+                "ws.authenticated",
+                room_id=str(room_id),
+                user_id=str(user.id),
+                connection_id=connection_id,
+            )
         except Exception as e:
             logger.warning(f"[WS] Auth failed for room {room_id}: {e}")
-            logfire.warning("ws.auth_failed", room_id=str(room_id))
+            logfire.warning("ws.auth_failed", room_id=str(room_id), connection_id=connection_id)
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -98,7 +115,12 @@ async def websocket_room_session(
 
         if not is_member:
             logger.warning(f"[WS] User {user.id} is not a member of room {room_id}")
-            logfire.warning("ws.not_member", room_id=str(room_id), user_id=str(user.id))
+            logfire.warning(
+                "ws.not_member",
+                room_id=str(room_id),
+                user_id=str(user.id),
+                connection_id=connection_id,
+            )
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
@@ -113,10 +135,21 @@ async def websocket_room_session(
             # Wait for handshake from client
             logger.info(f"[WS] Waiting for handshake from client for room {room_id}")
             try:
-                handshake_data = await asyncio.wait_for(websocket.receive_json(), timeout=10)
+                with logfire.span(
+                    "ws.handshake",
+                    room_id=str(room_id),
+                    user_id=str(user.id),
+                    connection_id=connection_id,
+                ):
+                    handshake_data = await asyncio.wait_for(websocket.receive_json(), timeout=10)
             except asyncio.TimeoutError:
                 logger.warning(f"[WS] Handshake timeout for room {room_id}")
-                logfire.warning("ws.handshake_timeout", room_id=str(room_id), user_id=str(user.id))
+                logfire.warning(
+                    "ws.handshake_timeout",
+                    room_id=str(room_id),
+                    user_id=str(user.id),
+                    connection_id=connection_id,
+                )
                 await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
                 return
 
@@ -127,13 +160,20 @@ async def websocket_room_session(
             if last_sequence > 0:
                 logger.info(f"[WS] Replaying events since sequence {last_sequence} for room {room_id}")
                 missed_events = []
-                async for session in get_async_session():
-                    missed_events = await replay_events_since(
-                        session=session,
-                        room_id=room_id,
-                        after_sequence=last_sequence,
-                    )
-                    break
+                with logfire.span(
+                    "ws.replay",
+                    room_id=str(room_id),
+                    user_id=str(user.id),
+                    connection_id=connection_id,
+                    last_sequence=last_sequence,
+                ):
+                    async for session in get_async_session():
+                        missed_events = await replay_events_since(
+                            session=session,
+                            room_id=room_id,
+                            after_sequence=last_sequence,
+                        )
+                        break
                 logger.info(f"[WS] Replaying {len(missed_events)} missed events for room {room_id}")
 
                 for event in missed_events:
@@ -164,10 +204,20 @@ async def websocket_room_session(
 
         except WebSocketDisconnect:
             logger.info(f"[WS] Disconnected: user={user.id}, room={room_id}")
-            logfire.info("ws.disconnected", room_id=str(room_id), user_id=str(user.id))
+            logfire.info(
+                "ws.disconnected",
+                room_id=str(room_id),
+                user_id=str(user.id),
+                connection_id=connection_id,
+            )
         except Exception as e:
             logger.error(f"[WS] Error in room {room_id}: {e}", exc_info=True)
-            logfire.exception("ws.error", room_id=str(room_id), user_id=str(user.id))
+            logfire.exception(
+                "ws.error",
+                room_id=str(room_id),
+                user_id=str(user.id),
+                connection_id=connection_id,
+            )
             await websocket.send_json({
                 "type": "error",
                 "message": "Internal server error",

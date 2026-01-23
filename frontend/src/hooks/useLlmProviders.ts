@@ -6,6 +6,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
 import {
   type CreateProviderInput,
@@ -16,7 +17,7 @@ import {
   type UpdateProviderInput,
 } from "@/services/llmProviderService"
 import { handleError } from "@/utils"
-import useCustomToast from "./useCustomToast"
+import { showErrorToast, showSuccessToast } from "./useCustomToast"
 
 export interface UseLlmProvidersReturn {
   /** All providers */
@@ -62,7 +63,6 @@ export interface UseLlmProvidersReturn {
  */
 export function useLlmProviders(): UseLlmProvidersReturn {
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   // Query for providers list
   const { data, isLoading, error, refetch } = useQuery({
@@ -146,6 +146,34 @@ export function useLlmProviders(): UseLlmProvidersReturn {
     ),
   }
 
+  // Stable function references — safe to use in dependency arrays
+  const refresh = useCallback(() => refetch(), [refetch])
+
+  const createProvider = useCallback(
+    (input: CreateProviderInput) => createMutation.mutateAsync(input),
+    [createMutation],
+  )
+
+  const updateProvider = useCallback(
+    (providerId: string, data: UpdateProviderInput) =>
+      updateMutation.mutateAsync({ providerId, data }),
+    [updateMutation],
+  )
+
+  const deleteProvider = useCallback(
+    async (providerId: string) => {
+      await deleteMutation.mutateAsync(providerId)
+    },
+    [deleteMutation],
+  )
+
+  const testProvider = useCallback(
+    async (providerId: string) => {
+      await testMutation.mutateAsync(providerId)
+    },
+    [testMutation],
+  )
+
   return {
     providers,
     enabledProviders,
@@ -156,19 +184,11 @@ export function useLlmProviders(): UseLlmProvidersReturn {
     hasUsableProvider: usableProviders.length > 0,
     isLoading,
     error: error as Error | null,
-    refresh: () => refetch(),
-    createProvider: async (input) => {
-      return createMutation.mutateAsync(input)
-    },
-    updateProvider: async (providerId, data) => {
-      return updateMutation.mutateAsync({ providerId, data })
-    },
-    deleteProvider: async (providerId) => {
-      await deleteMutation.mutateAsync(providerId)
-    },
-    testProvider: async (providerId) => {
-      await testMutation.mutateAsync(providerId)
-    },
+    refresh,
+    createProvider,
+    updateProvider,
+    deleteProvider,
+    testProvider,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,

@@ -3,6 +3,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 
 from datetime import datetime
 
@@ -36,6 +37,10 @@ from starlette.responses import Response
 
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+
+class GeneratedSlugResponse(BaseModel):
+    slug: str
 
 # ============================================================================
 # Available Agents Registry (Task 5)
@@ -97,6 +102,16 @@ def list_available_agents(
         configs = system_configs + personal_configs
         count = len(configs)
     return AgentConfigsPublic(data=configs, count=count)
+
+
+@router.get("/generate-slug", response_model=GeneratedSlugResponse)
+def generate_agent_slug(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> GeneratedSlugResponse:
+    """Generate a unique agent slug."""
+    slug = agent_registry_service.generate_slug(session=session)
+    return GeneratedSlugResponse(slug=slug)
 
 
 @router.get("/{agent_id}", response_model=AgentConfigPublic)

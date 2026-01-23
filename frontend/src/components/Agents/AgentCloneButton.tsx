@@ -7,7 +7,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CopyIcon, Loader2Icon } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
 import { Button } from "@/components/ui/button"
@@ -28,7 +28,6 @@ import {
   type AgentViewModel,
   type CreateAgentInput,
 } from "@/services/agentService"
-import { generateSlug } from "./AgentForm"
 
 interface AgentCloneButtonProps {
   /** The agent to clone */
@@ -52,36 +51,26 @@ export default function AgentCloneButton({
 }: AgentCloneButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [newName, setNewName] = useState(`${agent.name} (Copy)`)
-  const [newSlug, setNewSlug] = useState(`${agent.slug}-copy`)
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
+  const [newSlug, setNewSlug] = useState("")
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
-
-  // Auto-generate slug from name unless manually edited
-  const handleNameChange = (name: string) => {
-    setNewName(name)
-    if (!slugManuallyEdited) {
-      setNewSlug(generateSlug(name))
-    }
-  }
-
-  const handleSlugChange = (slug: string) => {
-    setSlugManuallyEdited(true)
-    setNewSlug(slug.toLowerCase().replace(/[^a-z0-9-]/g, ""))
-  }
-
-  const resetForm = () => {
-    setNewName(`${agent.name} (Copy)`)
-    setNewSlug(`${agent.slug}-copy`)
-    setSlugManuallyEdited(false)
-  }
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     if (open) {
-      resetForm()
+      setNewName(`${agent.name} (Copy)`)
+      setNewSlug("")
     }
   }
+
+  // Auto-generate slug from backend when dialog opens
+  useEffect(() => {
+    if (!isOpen || newSlug) return
+
+    AgentService.generateSlug()
+      .then((generatedSlug) => setNewSlug(generatedSlug))
+      .catch(() => setNewSlug(`${agent.slug}-copy`))
+  }, [isOpen, newSlug, agent.slug])
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -136,20 +125,14 @@ export default function AgentCloneButton({
             <Input
               id="clone-name"
               value={newName}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e) => setNewName(e.target.value)}
               placeholder="My Custom Agent"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="clone-slug">New Slug</Label>
-            <Input
-              id="clone-slug"
-              value={newSlug}
-              onChange={(e) => handleSlugChange(e.target.value)}
-              placeholder="my-custom-agent"
-            />
-            <p className="text-xs text-muted-foreground">
-              Unique identifier for your cloned agent
+            <Label>Slug</Label>
+            <p className="text-sm font-mono text-muted-foreground px-3 py-2 rounded-md bg-muted">
+              {newSlug ? `@${newSlug}` : "Generating..."}
             </p>
           </div>
         </div>

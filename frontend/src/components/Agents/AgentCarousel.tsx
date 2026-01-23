@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { AgentScope, ParticipationMode } from "./AgentBadge"
 import AgentCard from "./AgentCard"
+import AgentDetailDialog from "./AgentDetailDialog"
 
 export interface AgentData {
   id: string
@@ -134,9 +135,13 @@ export default function AgentCarousel({
               scope={agent.scope}
               participationMode={agent.participationMode}
               isEnabled={agent.isEnabled}
+              modelName={agent.modelName}
               variant={cardVariant}
               isSelected={selectedId === agent.id}
               onClick={() => onSelect?.(agent)}
+              action={
+                <AgentDetailDialog agentId={agent.id} className="size-7" />
+              }
               className={cn(
                 cardVariant === "compact" && "w-72",
                 cardVariant === "mini" && "w-40",

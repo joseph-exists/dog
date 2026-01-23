@@ -1,0 +1,48 @@
+{
+  "test_suite": "Carroll Darii Story (AII-1)",
+  "start_time": null,
+  "end_time": null,
+  "story_id": "b271e262-6745-4328-9b4d-a54c2c7d6d94",
+  "node_ids": {
+    "intro": "8578ea1d-5bce-4ffa-b762-a4e75220058b",
+    "major_premise": "590ce096-ede2-4547-bd79-ea1085c4ddf3",
+    "minor_premise": "8b817354-59c6-4df1-9386-35721136abcd",
+    "conclusion_options": "c699ba8f-3cc3-461b-bda9-b023178b0555",
+    "valid_conclusion": "7c68fc3d-ee93-4ef3-b599-56e8ddc705db",
+    "fallacy_universal": "421a3f08-f69f-46a3-8a18-af59bf3ffe8c",
+    "fallacy_negative": "6c13d0fa-f756-4b84-9063-240d98a0bd85",
+    "fallacy_existential": "17d5d8f7-fec3-4266-be95-4ca7c6e4d344",
+    "retry": "d63ed5ed-da28-46b9-b936-6b7946dfe010",
+    "distribution_explained": "eeabd85d-b449-432b-bd2f-6988ac16d768"
+  },
+  "choice_ids": [
+    "3d799053-417f-44bf-97c3-4590fb6c2afc",
+    "c5e63a46-2a77-407c-bc9b-5e6b45e84932",
+    "4c116972-9588-4046-9d4a-2129e32c23d3",
+    "1ebdae88-c584-4026-a3c3-e57277b725ae",
+    "2dd44146-7c07-40ee-b2d6-7cb30ed36cf8",
+    "b188edef-78ee-446f-942e-b0df69c26903",
+    "9a05ac92-9c2a-46fc-a992-aea89889a815",
+    "6118e76f-c83f-4485-87c6-adc22e5f7081",
+    "902c65f9-5fa6-4130-a247-671a6fcfe3b0",
+    "e228399a-bb85-4707-a79b-5fa2c7079106",
+    "bb2eb8fa-3521-4ad7-b84c-98e0b93395da",
+    "a6f4af7c-50af-4c31-9039-5efb7ab45fb0",
+    "c31c8ca5-1e5f-4a3f-8d37-18925f985a05"
+  ],
+  "state_variable_ids": {
+    "major_premise": "3d9b7bac-ed0d-4963-ac0a-6bac95e08f7f",
+    "minor_premise": "0549553c-586a-4e1f-8ca5-2abac365abfd",
+    "understands_particular": "41e5b537-cfcd-4d23-a6f2-bf5d893293fb",
+    "understands_distribution": "2f27eeb5-8eef-4140-be13-8c0f51af409b",
+    "syllogism_figure": "0c252eed-7731-4e35-8cf3-145091e56cb6",
+    "syllogism_mood": "67d43b2c-61ac-4318-aafb-d15f064e2993",
+    "valid_conclusion": "ca720e24-dc93-43cc-b5d0-1a278ad0e7bc",
+    "attempted_universal": "4360d7ee-b00d-4274-85fc-32b5ea2f054e",
+    "fallacy_count": "e8dd4fdf-f8a6-43ef-9534-82cd87068255",
+    "examples_seen": "23bdc1c1-47f6-4a72-ada5-975c24ba88a4",
+    "completed": "775154a2-f0f1-4e11-acaa-537da9643936"
+  },
+  "success": true,
+  "errors": []
+}

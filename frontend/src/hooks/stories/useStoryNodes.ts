@@ -5,15 +5,12 @@ import {
   StorynodesService,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-
-const { showErrorToast } = useCustomToast()
 
 // Mutation hook for creating a node
 export const useCreateNode = (storyId: string) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (data: StoryNodeCreate) =>
@@ -31,7 +28,6 @@ export const useCreateNode = (storyId: string) => {
 // Mutation hook for updating a node
 export const useUpdateNode = (storyId: string, nodeId: string) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (data: StoryNodeUpdate) =>
@@ -50,7 +46,6 @@ export const useUpdateNode = (storyId: string, nodeId: string) => {
 // Mutation hook for deleting a node
 export const useDeleteNode = (storyId: string) => {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   return useMutation({
     mutationFn: (nodeId: string) =>

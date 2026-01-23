@@ -66,7 +66,9 @@ class ConnectionManager:
             logger.info(f"[CONN_MGR] Creating new connection set for room {room_id}")
             self.room_connections[room_id] = set()
         self.room_connections[room_id].add(websocket)
-        logger.info(f"[CONN_MGR] Room {room_id} now has {len(self.room_connections[room_id])} connections")
+        connection_count = len(self.room_connections[room_id])
+        logger.info(f"[CONN_MGR] Room {room_id} now has {connection_count} connections")
+        logfire.info("ws.room_connection_count", room_id=str(room_id), count=connection_count)
 
         # Track websocket -> room mapping
         self.websocket_rooms[websocket] = room_id
@@ -96,6 +98,8 @@ class ConnectionManager:
             self.room_connections[room_id].discard(websocket)
 
             # If no more connections for this room, unsubscribe from Redis
+            connection_count = len(self.room_connections[room_id])
+            logfire.info("ws.room_connection_count", room_id=str(room_id), count=connection_count)
             if not self.room_connections[room_id]:
                 await self._unsubscribe_from_room(room_id)
                 del self.room_connections[room_id]

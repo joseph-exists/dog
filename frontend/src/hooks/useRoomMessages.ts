@@ -18,15 +18,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useRef, useState } from "react"
 import type { ApiError } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast } from "@/hooks/useCustomToast"
 import type { MessageViewModel } from "@/services/roomService"
 import { RoomService } from "@/services/roomService"
 import { handleError } from "@/utils"
 import useAuth from "./useAuth"
 
 // import { Flashlight } from "lucide-react"
-
-const { showErrorToast } = useCustomToast()
 
 export interface UseRoomMessagesOptions {
   pageSize?: number

@@ -9,7 +9,7 @@ import {
   UsersService,
 } from "@/client"
 import { handleError } from "@/utils"
-import useCustomToast from "./useCustomToast"
+import { showErrorToast } from "./useCustomToast"
 
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
@@ -18,7 +18,6 @@ const isLoggedIn = () => {
 const useAuth = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { showErrorToast } = useCustomToast()
 
   const { data: user } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],

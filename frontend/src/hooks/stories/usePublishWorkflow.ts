@@ -8,7 +8,7 @@ import {
   type StoryPublic,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import {
   type ValidationResult,
@@ -18,8 +18,6 @@ import {
 interface UsePublishWorkflowOptions {
   storyId: string
 }
-
-const { showErrorToast } = useCustomToast()
 
 interface PublishWorkflowReturn {
   story: StoryPublic | undefined
@@ -41,7 +39,6 @@ export function usePublishWorkflow({
   storyId,
 }: UsePublishWorkflowOptions): PublishWorkflowReturn {
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
 
   // Fetch story
   const { data: story, isLoading: storyLoading } = useQuery({

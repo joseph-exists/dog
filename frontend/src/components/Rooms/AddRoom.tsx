@@ -25,12 +25,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useStories } from "@/hooks/stories/useStories"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { type CreateRoomInput, RoomService } from "@/services/roomService"
 import { handleError } from "@/utils"
-
-const { showErrorToast } = useCustomToast()
 
 interface AddRoomProps {
   /** Pre-select a story when creating the room */
@@ -49,7 +47,7 @@ export default function AddRoom({
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const { showSuccessToast } = useCustomToast()
+
   const { data: storiesData, isLoading: isLoadingStories } = useStories()
 
   const handleOpenChange = (open: boolean) => {

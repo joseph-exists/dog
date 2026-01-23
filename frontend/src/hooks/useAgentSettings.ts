@@ -6,6 +6,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
 import type { AgentViewModel } from "@/services/agentService"
 import {
@@ -17,7 +18,7 @@ import {
   type UserAgentSettingsViewModel,
 } from "@/services/llmProviderService"
 import { handleError } from "@/utils"
-import useCustomToast from "./useCustomToast"
+import { showErrorToast, showSuccessToast } from "./useCustomToast"
 import { useLlmProviders } from "./useLlmProviders"
 
 export interface UseAgentSettingsReturn {
@@ -63,7 +64,7 @@ export function useAgentSettings({
   enabled = true,
 }: UseAgentSettingsOptions): UseAgentSettingsReturn {
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+
   const { providers } = useLlmProviders()
 
   const agentId = agent?.id ?? ""
@@ -123,6 +124,23 @@ export function useAgentSettings({
   const isUsingSystemDefault = settings?.is_using_system_default ?? true
   const provider = resolution?.provider ?? null
 
+  // Stable function references
+  const updateSettings = useCallback(
+    async (data: Partial<UpdateAgentSettingsInput>) => {
+      await updateMutation.mutateAsync(data)
+    },
+    [updateMutation],
+  )
+
+  const resetToDefaults = useCallback(async () => {
+    await resetMutation.mutateAsync()
+  }, [resetMutation])
+
+  const toggleFavorite = useCallback(async () => {
+    const currentFavorite = settings?.is_favorite ?? false
+    await updateMutation.mutateAsync({ is_favorite: !currentFavorite })
+  }, [settings, updateMutation])
+
   return {
     settings: settings ?? null,
     isLoading,
@@ -132,16 +150,9 @@ export function useAgentSettings({
     isUsingSystemDefault,
     provider,
     resolution,
-    updateSettings: async (data) => {
-      await updateMutation.mutateAsync(data)
-    },
-    resetToDefaults: async () => {
-      await resetMutation.mutateAsync()
-    },
-    toggleFavorite: async () => {
-      const currentFavorite = settings?.is_favorite ?? false
-      await updateMutation.mutateAsync({ is_favorite: !currentFavorite })
-    },
+    updateSettings,
+    resetToDefaults,
+    toggleFavorite,
     isUpdating: updateMutation.isPending,
     isResetting: resetMutation.isPending,
   }

@@ -23,7 +23,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
 
-if settings.ENVIRONMENT != "local":
+if settings.ENVIRONMENT == "local":
     logfire.configure()
 
 app = FastAPI(

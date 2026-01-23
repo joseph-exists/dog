@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query"
  * - Optimistic UI updates
  */
 import { useCallback, useEffect, useRef, useState } from "react"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showWarningToast } from "@/hooks/useCustomToast"
 import type { MessageViewModel } from "@/services/roomService"
 import useAuth from "./useAuth"
 
@@ -78,14 +78,15 @@ export function useRoomStream(
   const shouldLog =
     import.meta.env.DEV && localStorage.getItem("debugRoomLogs") === "1"
   const { user } = useAuth()
-  const { showWarningToast } = useCustomToast()
 
   const [isConnected, setIsConnected] = useState(false)
   const [lastSequence, setLastSequence] = useState(0)
+  const lastSequenceRef = useRef(0)
   const [streamingMessage, setStreamingMessage] = useState<{
     agent_name: string
     content: string
   } | null>(null)
+  const wsInstanceCountRef = useRef(0)
 
   // Buffer for accumulating tokens before UI update (prevents render spam)
   const tokenBufferRef = useRef<{
@@ -187,6 +188,7 @@ export function useRoomStream(
           case "event":
             // Update last sequence
             setLastSequence(message.sequence)
+            lastSequenceRef.current = message.sequence
 
             if (message.event_type === "room_message.user") {
               if (shouldLog) {
@@ -318,6 +320,10 @@ export function useRoomStream(
 
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
+    wsInstanceCountRef.current += 1
+    console.log(
+      `[useRoomStream] WebSocket instances created for room ${roomId}: ${wsInstanceCountRef.current}`,
+    )
 
     ws.onopen = () => {
       console.log("WebSocket connected")
@@ -326,7 +332,9 @@ export function useRoomStream(
       ws.send(
         JSON.stringify({
           type: "session.create",
-          last_sequence: lastSequence,
+          // NOTE: Change: use ref to avoid reconnecting when lastSequence updates.
+          // To revert: send `lastSequence` and add it back to the dependency array.
+          last_sequence: lastSequenceRef.current,
         }),
       )
     }
@@ -346,14 +354,14 @@ export function useRoomStream(
 
     // Cleanup on unmount
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close()
-      }
+      // NOTE: Change: always close to avoid leaving CONNECTING sockets open.
+      // To revert: guard with `if (ws.readyState === WebSocket.OPEN)` again.
+      ws.close()
       if (updateTimerRef.current) {
         clearTimeout(updateTimerRef.current)
       }
     }
-  }, [roomId, enabled, lastSequence, handleMessage, onError])
+  }, [roomId, enabled, handleMessage, onError])
 
   return {
     isConnected,

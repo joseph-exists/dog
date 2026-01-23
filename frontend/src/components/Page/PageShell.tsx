@@ -9,12 +9,14 @@ import {
   ChartBlock,
   ContactBlock,
   DataTableBlock,
+  DomainsBlock,
   GalleryBlock,
   IdentityBlock,
   LinksBlock,
   PersonasBlock,
   ProfileImageBlock,
   RelationshipsBlock,
+  TraitsBlock,
 } from "./blocks"
 import { BlockEditorSheet, BlockPalette } from "./editor"
 import { PageHeader } from "./PageHeader"
@@ -366,6 +368,54 @@ export function PageShell({
               entityType={entityType}
               entityId={entityId}
               isEditing={isEditing}
+            />
+          )
+
+        case "domains":
+          return (
+            <DomainsBlock
+              config={{
+                showHierarchy: (config.showHierarchy as boolean) ?? true,
+              }}
+              content={
+                content
+                  ? {
+                      generalDomain: content.generalDomain as
+                        | string
+                        | undefined,
+                      specificDomain: content.specificDomain as
+                        | string
+                        | undefined,
+                      generalDomainHigh: content.generalDomainHigh as
+                        | string
+                        | undefined,
+                      specificDomainHigh: content.specificDomainHigh as
+                        | string
+                        | undefined,
+                    }
+                  : undefined
+              }
+            />
+          )
+
+        case "traits":
+          return (
+            <TraitsBlock
+              config={{
+                layout: (config.layout as "badges" | "list") ?? "badges",
+                maxVisible: (config.maxVisible as number) ?? 12,
+              }}
+              content={
+                content?.items
+                  ? {
+                      items: content.items as Array<{
+                        id: string
+                        label: string
+                        category?: string
+                      }>,
+                    }
+                  : undefined
+              }
             />
           )
 

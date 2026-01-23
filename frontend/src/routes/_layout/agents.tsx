@@ -10,15 +10,14 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { BotIcon, ExternalLinkIcon, Loader2Icon, TrashIcon } from "lucide-react"
+import { createFileRoute } from "@tanstack/react-router"
+import { BotIcon, Loader2Icon, TrashIcon } from "lucide-react"
 import { Suspense, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
-import AgentAvatar from "@/components/Agents/AgentAvatar"
-import { AgentModeBadge, AgentScopeBadge } from "@/components/Agents/AgentBadge"
+import AgentCard from "@/components/Agents/AgentCard"
+import AgentDetailDialog from "@/components/Agents/AgentDetailDialog"
 import CreateAgentDialog from "@/components/Agents/CreateAgentDialog"
-import EditAgentDialog from "@/components/Agents/EditAgentDialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,15 +29,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { AgentService, type AgentViewModel } from "@/services/agentService"
@@ -149,73 +141,27 @@ function DeleteAgentButton({ agent }: { agent: AgentViewModel }) {
   )
 }
 
-function AgentCard({ agent }: { agent: AgentViewModel }) {
+function AgentCardItem({ agent }: { agent: AgentViewModel }) {
   const isPersonal = agent.scope === "personal"
 
   return (
-    <Card className="flex flex-col group">
-      <CardHeader className="flex flex-row items-start gap-4 pb-2">
-        <Link to="/agent/$agentId" params={{ agentId: agent.id }}>
-          <AgentAvatar
-            name={agent.name}
-            size="lg"
-            className="transition-transform group-hover:scale-105"
-          />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <Link
-              to="/agent/$agentId"
-              params={{ agentId: agent.id }}
-              className="hover:underline"
-            >
-              <CardTitle className="text-lg truncate">{agent.name}</CardTitle>
-            </Link>
-            <AgentScopeBadge scope={agent.scope} className="shrink-0" />
-          </div>
-          <CardDescription className="font-mono text-xs">
-            @{agent.slug}
-          </CardDescription>
+    <AgentCard
+      id={agent.id}
+      name={agent.name}
+      slug={agent.slug}
+      href={`/agent/${agent.id}`}
+      description={agent.description}
+      scope={agent.scope}
+      participationMode={agent.participation_mode}
+      isEnabled={agent.is_enabled}
+      modelName={agent.model_name}
+      action={
+        <div className="flex items-center gap-1">
+          <AgentDetailDialog agentId={agent.id} className="size-7" />
+          {isPersonal && <DeleteAgentButton agent={agent} />}
         </div>
-        <Link
-          to="/agent/$agentId"
-          params={{ agentId: agent.id }}
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <Button variant="ghost" size="icon" className="size-8">
-            <ExternalLinkIcon className="size-4" />
-          </Button>
-        </Link>
-      </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col gap-4">
-        {agent.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {agent.description}
-          </p>
-        )}
-
-        <div className="flex flex-wrap gap-2 mt-auto">
-          <AgentModeBadge mode={agent.participation_mode} />
-          <Badge variant="outline" className="font-mono text-xs">
-            {agent.display_model}
-          </Badge>
-          {!agent.is_enabled && (
-            <Badge variant="secondary" className="text-muted-foreground">
-              Disabled
-            </Badge>
-          )}
-        </div>
-
-        {/* Actions - only show for personal agents */}
-        {isPersonal && (
-          <div className="flex items-center gap-2 pt-2 border-t">
-            <EditAgentDialog agent={agent} className="flex-1" />
-            <DeleteAgentButton agent={agent} />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      }
+    />
   )
 }
 
@@ -247,7 +193,7 @@ function AgentsListContent() {
           <h2 className="text-lg font-semibold mb-4">My Agents</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {personalAgents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
+              <AgentCardItem key={agent.id} agent={agent} />
             ))}
           </div>
         </section>
@@ -261,7 +207,7 @@ function AgentsListContent() {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {systemAgents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
+              <AgentCardItem key={agent.id} agent={agent} />
             ))}
           </div>
         </section>
