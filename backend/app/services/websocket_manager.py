@@ -18,15 +18,26 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+# import logfire
 from typing import Any
 from uuid import UUID
+
+from datetime import data
 
 from fastapi import WebSocket
 from redis.asyncio.client import PubSub
 
 from app.core.redis import get_redis
 
-logger = logging.getLogger(__name__)
+# logfire.configure()
+# logfire.info('Hello, {name}!', name='world')
+
+# with logfire.span('Asking the user their {question}', question='age'):
+#     user_input = input('How old are you [YYYY-mm-dd]? ')
+#     dob = date.fromisoformat(user_input)
+#     logfire.debug('{dob=} {age=!r}', dob=dob, age=date.today() - dob)
+
+# logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
