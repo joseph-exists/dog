@@ -2324,6 +2324,12 @@ export type PersonaQualitiesRemoveQualityFromPersonaData = {
 
 export type PersonaQualitiesRemoveQualityFromPersonaResponse = (Message);
 
+export type PersonaTraitsReadPersonaTraitsData = {
+    personaId: string;
+};
+
+export type PersonaTraitsReadPersonaTraitsResponse = (Array<TraitPublic>);
+
 export type PersonasReadPersonasData = {
     limit?: number;
     skip?: number;

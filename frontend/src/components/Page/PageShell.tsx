@@ -15,6 +15,7 @@ import {
   LinksBlock,
   PersonasBlock,
   ProfileImageBlock,
+  QualitiesBlock,
   RelationshipsBlock,
   TraitsBlock,
 } from "./blocks"
@@ -416,6 +417,29 @@ export function PageShell({
                     }
                   : undefined
               }
+              entityId={entityId}
+            />
+          )
+
+        case "qualities":
+          return (
+            <QualitiesBlock
+              config={{
+                layout: (config.layout as "badges" | "list") ?? "badges",
+                maxVisible: (config.maxVisible as number) ?? 12,
+              }}
+              content={
+                content?.items
+                  ? {
+                      items: content.items as Array<{
+                        id: string
+                        label: string
+                        description?: string
+                      }>,
+                    }
+                  : undefined
+              }
+              entityId={entityId}
             />
           )
 

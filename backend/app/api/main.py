@@ -13,6 +13,7 @@ from app.api.routes import (
     node_choices,
     persona_events,
     persona_qualities,
+    persona_traits,
     personas,
     pages,
     presets,
@@ -50,6 +51,7 @@ api_router.include_router(traits.router)
 api_router.include_router(events.router)
 api_router.include_router(quality_trait_links.router)
 api_router.include_router(persona_qualities.router)
+api_router.include_router(persona_traits.router)
 api_router.include_router(persona_events.router)
 api_router.include_router(storynodes.router)
 api_router.include_router(stories.router)

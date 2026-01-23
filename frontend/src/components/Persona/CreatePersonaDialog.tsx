@@ -1,11 +1,11 @@
 // src/components/Persona/CreatePersonaDialog.tsx
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2Icon, PlusIcon, Smile } from "lucide-react"
 import { useState } from "react"
 
 import type { PersonaCreate, PersonaPublic } from "@/client"
-import { PersonasService } from "@/client"
+import { ArchetypesService, PersonasService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +19,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 
@@ -38,8 +45,15 @@ export default function CreatePersonaDialog({
   const [description, setDescription] = useState("")
   const [generalDomain, setGeneralDomain] = useState("")
   const [specificDomain, setSpecificDomain] = useState("")
+  const [archetypeId, setArchetypeId] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const { data: archetypes } = useQuery({
+    queryKey: ["archetypes"],
+    queryFn: () => ArchetypesService.readArchetypes({ limit: 100 }),
+    enabled: isOpen,
+  })
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
@@ -48,10 +62,11 @@ export default function CreatePersonaDialog({
       setDescription("")
       setGeneralDomain("")
       setSpecificDomain("")
+      setArchetypeId(null)
     }
   }
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: (data: PersonaCreate) =>
       PersonasService.createPersona({ requestBody: data }),
     onSuccess: (created) => {
@@ -69,6 +84,32 @@ export default function CreatePersonaDialog({
     },
   })
 
+  const fromArchetypeMutation = useMutation({
+    mutationFn: (data: { archetypeId: string; body: PersonaCreate }) =>
+      PersonasService.createPersonaFromArchetype({
+        archetypeId: data.archetypeId,
+        requestBody: data.body,
+      }),
+    onSuccess: (created) => {
+      showSuccessToast(
+        `Persona "${created.name}" created from archetype (traits inherited)`,
+      )
+      handleOpenChange(false)
+      onSuccess?.(created)
+    },
+    onError: (err: ApiError) => {
+      const message =
+        (err.body as { detail?: string })?.detail ||
+        "Failed to create persona from archetype"
+      showErrorToast(message)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["personas"] })
+    },
+  })
+
+  const isPending = createMutation.isPending || fromArchetypeMutation.isPending
+
   const handleSubmit = () => {
     if (!name.trim()) {
       showErrorToast("Persona name is required")
@@ -82,10 +123,15 @@ export default function CreatePersonaDialog({
       specific_domain: specificDomain.trim() || null,
     }
 
-    mutation.mutate(payload)
+    if (archetypeId) {
+      fromArchetypeMutation.mutate({ archetypeId, body: payload })
+    } else {
+      createMutation.mutate(payload)
+    }
   }
 
   const isValid = name.trim().length > 0
+  const archetypeList = archetypes?.data ?? []
 
   const defaultTrigger = (
     <Button className={className}>
@@ -105,10 +151,50 @@ export default function CreatePersonaDialog({
           </DialogTitle>
           <DialogDescription>
             Create a new persona with name, description, and domain expertise.
+            Optionally start from an archetype to inherit traits and qualities.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {archetypeList.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="persona-archetype">
+                Start from Archetype{" "}
+                <span className="text-muted-foreground text-xs">
+                  (optional)
+                </span>
+              </Label>
+              <Select
+                value={archetypeId ?? "none"}
+                onValueChange={(v) => setArchetypeId(v === "none" ? null : v)}
+              >
+                <SelectTrigger id="persona-archetype">
+                  <SelectValue placeholder="No archetype (blank persona)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    No archetype (blank persona)
+                  </SelectItem>
+                  {archetypeList.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                      {a.description && (
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          — {a.description}
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {archetypeId && (
+                <p className="text-xs text-muted-foreground">
+                  Traits and qualities from this archetype will be inherited.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="persona-name">
               Name <span className="text-destructive">*</span>
@@ -162,18 +248,13 @@ export default function CreatePersonaDialog({
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            disabled={mutation.isPending}
+            disabled={isPending}
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isValid || mutation.isPending}
-          >
-            {mutation.isPending && (
-              <Loader2Icon className="size-4 animate-spin" />
-            )}
-            Create Persona
+          <Button onClick={handleSubmit} disabled={!isValid || isPending}>
+            {isPending && <Loader2Icon className="size-4 animate-spin" />}
+            {archetypeId ? "Create from Archetype" : "Create Persona"}
           </Button>
         </DialogFooter>
       </DialogContent>

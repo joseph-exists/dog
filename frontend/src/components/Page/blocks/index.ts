@@ -81,6 +81,14 @@ export type {
 // Profile Image Block
 export { ProfileImageBlock } from "./ProfileImageBlock"
 export type {
+  QualitiesBlockConfig,
+  QualitiesBlockProps,
+  QualitiesContent,
+  QualityItem,
+} from "./QualitiesBlock"
+// Qualities Block
+export { QualitiesBlock } from "./QualitiesBlock"
+export type {
   RelationshipItem,
   RelationshipsBlockConfig,
   RelationshipsBlockProps,

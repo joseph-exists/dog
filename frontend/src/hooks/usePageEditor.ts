@@ -61,7 +61,10 @@ export interface UsePageEditorReturn {
   toggleBlockVisibility: (blockId: string) => void
 
   // Page creation
-  createPage: (templateId: string) => Promise<void>
+  createPage: (
+    templateId: string,
+    contentOverrides?: Record<string, Record<string, unknown>>,
+  ) => Promise<void>
 }
 
 // ============================================================================
@@ -327,19 +330,25 @@ export function usePageEditor(
   // ==========================================================================
 
   const createPage = useCallback(
-    async (templateId: string) => {
+    async (
+      templateId: string,
+      contentOverrides?: Record<string, Record<string, unknown>>,
+    ) => {
       const template = getPageTemplate(templateId)
       if (!template) {
         throw new Error(`Template not found: ${templateId}`)
       }
 
-      // Instantiate template blocks with new UUIDs
+      // Instantiate template blocks with new UUIDs, merging any overrides
       const instantiatedBlocks: TemplateBlock[] = template.defaultBlocks.map(
         (block) => ({
           ...block,
           id: crypto.randomUUID(),
           visibility: block.visibility ?? "visible",
-          content: block.content ?? {},
+          content: {
+            ...(block.content ?? {}),
+            ...(contentOverrides?.[block.type] ?? {}),
+          },
         }),
       )
 

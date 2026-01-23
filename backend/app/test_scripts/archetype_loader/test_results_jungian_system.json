@@ -1,8 +1,8 @@
 {
   "test_run": {
-    "start_time": "2026-01-20T14:02:06.719513",
-    "end_time": "2026-01-20T14:02:10.836759",
-    "duration_seconds": 4.117246,
+    "start_time": "2026-01-23T15:04:31.411004",
+    "end_time": "2026-01-23T15:04:37.023373",
+    "duration_seconds": 5.612369,
     "success": true
   },
   "authentication": {
@@ -20,16 +20,16 @@
     "created": 10,
     "failed": 0,
     "entities": {
-      "Strength": "d022761f-b482-453c-a7ad-0841e2450f80",
-      "Intelligence": "955cb565-2f08-4254-95a8-b1949329354b",
-      "Charisma": "3b69481b-1bb2-4963-a863-bd52af04b855",
-      "Wisdom": "e275d241-9ec5-4e69-bf32-0be17a43c7a5",
-      "Agility": "1d7787da-2d98-4b1b-836a-f11c6b70d61a",
-      "Resilience": "c2b0002f-348d-43a7-84e7-34f6b9b7182b",
-      "Creativity": "6dc849de-4125-43de-a6be-a1dbb4257181",
-      "Empathy": "c9f93b73-c302-4c5f-b47a-0701eea2bbd6",
-      "Willpower": "551ecc55-f65e-4841-b377-1ae3498ceb7e",
-      "Perception": "f42dacc6-37c7-4fad-b28e-224f46cff96a"
+      "Strength": "3a0a516d-7a20-4f37-836c-658a1751b496",
+      "Intelligence": "0836ecbe-6e0e-4d52-a282-90e3ca8a22ae",
+      "Charisma": "18f2a95e-f6ae-4ec8-9b67-a0ed7b227241",
+      "Wisdom": "77fcf740-a153-4bf8-a9cc-1133a319fcf1",
+      "Agility": "0ca8badb-8c5b-4a2d-816c-b84ef9b7bcc4",
+      "Resilience": "f127da92-04b1-4e7d-8e23-8ee5dcb01ec3",
+      "Creativity": "b95a7261-52cf-40af-a6c0-bcdff7502091",
+      "Empathy": "75823326-7a18-47d2-9de6-5e62b238ef6e",
+      "Willpower": "fdf79ab2-ee26-453a-b6d6-958fba7578f1",
+      "Perception": "c35a6903-6a18-4ab6-9032-2e76637f903c"
     }
   },
   "traits": {
@@ -37,42 +37,42 @@
     "created": 36,
     "failed": 0,
     "entities": {
-      "Optimism": "64fad36a-0092-49f0-b122-01684f2293b3",
-      "Trusting": "d1c6e8d3-bbb7-4132-a647-e551c314de1a",
-      "Naive": "aa29d41e-6129-4d6d-b3cb-63336f8f1cd7",
-      "Analytical": "a5b12e0c-03ee-4537-b61a-30a6589bce34",
-      "Curious": "85f0cde4-edf7-472d-8ec3-c4b1676d03de",
-      "Detached": "5755b270-1e17-4f6e-ac37-4442ccd94cc2",
-      "Adventurous": "02e38553-b0bb-4e97-8f91-0023b432f4b8",
-      "Independent": "92934f26-8620-473e-aebb-762c535681a4",
-      "Restless": "2a154218-e5d1-498a-9286-92f30e743d7c",
-      "Rebellious": "19267f7d-0844-437e-b353-37a8809388ec",
-      "Bold": "ec2791be-6891-467e-9534-1eb317e461c1",
-      "Disruptive": "c56f57db-635d-4af7-81f8-198e2cac6402",
-      "Visionary": "d46dc00a-0e6b-4a7c-8c2c-3730fdba0818",
-      "Charismatic": "ad8bd90e-bb01-4dcb-9b88-670437ed900c",
-      "Manipulative": "2004f118-4516-4f55-9d67-64b96d348980",
-      "Courageous": "48a3a1c4-8f0f-40f2-a3cc-33743e81f28c",
-      "Determined": "21b7315c-d5aa-42f1-a3aa-a3691d764d94",
-      "Competitive": "55d49f48-b949-42b3-85bf-1a0952392730",
-      "Passionate": "f56f9118-c74b-4c63-812a-ce2fab53d7a6",
-      "Devoted": "a7146f7a-739a-4296-ad53-bd00bcbc436d",
-      "Vulnerable": "a97d7977-22c1-4c5a-b95e-5f48f02ed17a",
-      "Playful": "5cc2f0ba-822d-480c-a16c-d5f170b99be2",
-      "Irreverent": "31ee5665-4961-47d0-ba83-c162faba1599",
-      "Spontaneous": "797f379f-b188-43be-83db-671e3445fa08",
-      "Relatable": "d9b5c154-2528-460d-baeb-825c890dbc7c",
-      "Humble": "6b15c1b7-1bec-4c25-b24f-d1152d258070",
-      "Empathetic": "214813ab-d2e7-4770-bf80-fc5518ff0955",
-      "Nurturing": "e5fb30cd-886d-4a8a-bc1a-b4eeb81d952e",
-      "Self-Sacrificing": "0daaf35a-efa0-4ea9-96ce-82de570aa6a4",
-      "Protective": "fad9ac33-1ab3-407e-b9c5-38adfd4d7075",
-      "Authoritative": "9ba8d285-2dc6-4c94-ab82-c356f866dddb",
-      "Organized": "dfa1eca0-6db1-48d9-b2e3-d3b05e76310c",
-      "Controlling": "3b7086ef-652b-4027-9433-adb61d1b9d81",
-      "Imaginative": "e05bac7a-de42-46b7-98cf-bbea1d769b24",
-      "Perfectionist": "6c12d4c9-1109-4695-b569-b2e876bfa03e",
-      "Non-Conformist": "1721adad-fee9-4fcc-b90a-c83cc9f3507e"
+      "Optimism": "d4ff261d-b8c6-4641-a4ca-1c527999d024",
+      "Trusting": "fd46d595-2a02-4acc-8208-90f83925bd65",
+      "Naive": "f2ffec42-56ee-4dd0-bcd2-6ae6b7ee4fd1",
+      "Analytical": "4ebc77f2-7408-4768-b4c0-6a82f7eab660",
+      "Curious": "85dc48c0-2e02-4f7b-82db-1edd5488ed9e",
+      "Detached": "48ab8e08-0c99-427c-b603-c2b6a49a9181",
+      "Adventurous": "71555bdf-c9af-4772-b2f7-d1af1db06bad",
+      "Independent": "247069a9-f177-443c-916c-69877dfcc34c",
+      "Restless": "8bf0526c-226a-4e6a-a005-e7cbcbe77bae",
+      "Rebellious": "28e2e8fd-27a0-44ad-8a1f-3230ec4c3a6c",
+      "Bold": "b49a802a-1ee3-44c1-a54d-337e401265ab",
+      "Disruptive": "f79ee57d-22a1-41f9-993c-f57d2f927e89",
+      "Visionary": "f3b005fb-98d3-4564-9dce-c8aecf726476",
+      "Charismatic": "b178c04e-540b-4608-a7c7-3944c9c51382",
+      "Manipulative": "3e03cd30-2299-493d-b904-db6d13f03cc8",
+      "Courageous": "4caa49db-a5af-43aa-a797-0a677674a7c6",
+      "Determined": "912d391c-8998-4a20-8d0a-161ca872b921",
+      "Competitive": "1f45c8d8-915d-4312-9436-f8b44f6aa0a8",
+      "Passionate": "72122d97-517d-496c-b862-9656b48a1595",
+      "Devoted": "759e12d6-8ea8-4504-a5a2-98c8f9082b53",
+      "Vulnerable": "dd0fa419-7a7f-471f-bbf2-a2644670b4ed",
+      "Playful": "6163d4ab-316c-47ea-9270-4977965d5eda",
+      "Irreverent": "1473793e-5a85-498d-bfa5-0a8517b89f3a",
+      "Spontaneous": "7d5f4b04-0485-49e2-8ec9-d0e3f8d7b106",
+      "Relatable": "7ff46f18-2d76-4cc7-8b8e-afead14ee3d1",
+      "Humble": "d630e40e-1da5-4675-8e04-72a730b4b4a8",
+      "Empathetic": "eea44b22-de2f-4d3c-9a6d-751d0cc512f1",
+      "Nurturing": "90911303-e54f-42a0-9d39-181beb6413fb",
+      "Self-Sacrificing": "a96a0532-75d7-4eae-87b0-21fa2aab3f38",
+      "Protective": "8b69007b-a2eb-4f99-b6ad-0b6374855d7a",
+      "Authoritative": "514615bf-6362-4e91-a4b2-886625d6ceb3",
+      "Organized": "ac7e381d-102f-4f41-86ab-2a94a1b47b2d",
+      "Controlling": "9ab23249-e980-4c19-a75c-53d3159a1a86",
+      "Imaginative": "1d8a674d-3ac7-4e36-a44f-368ad1d1e370",
+      "Perfectionist": "35c88999-a0f6-4265-834c-9c5357c1ef3c",
+      "Non-Conformist": "55b3bf8e-664b-4a37-b085-cb28923713fd"
     }
   },
   "archetypes": {
@@ -80,18 +80,18 @@
     "created": 12,
     "failed": 0,
     "entities": {
-      "The Innocent": "3dd90304-b03f-46f1-a15a-ceae0d1ceee0",
-      "The Sage": "2b097094-75ed-4eb3-911a-dc12aba358b2",
-      "The Explorer": "a0350ee2-74a3-47b4-ac93-d523eebd7144",
-      "The Outlaw": "1d0a36a7-8c05-4c1e-84c1-4bd63b992acd",
-      "The Magician": "a233b1f7-3591-4564-ad26-4b96de433f2d",
-      "The Hero": "8a252b98-9d32-43d3-a91f-bf92ddf49ddc",
-      "The Lover": "abaeec7f-5173-4d22-b6a1-77620728f902",
-      "The Jester": "098d5d3a-80cb-49b9-be98-ae8414a7cab6",
-      "The Everyman": "5a958680-b862-4a0b-a457-b91d9ff3e380",
-      "The Caregiver": "6a45b23b-4202-440d-99d9-173b70da4b91",
-      "The Ruler": "4d1e08ed-e34f-487f-854b-be51437804f1",
-      "The Creator": "b563c2aa-6f06-46d2-a1a4-b9f6d667329f"
+      "The Innocent": "c606678d-7b07-4e5c-92a1-be737a76a5e1",
+      "The Sage": "cbadd60f-dffc-4696-90c6-f14007508425",
+      "The Explorer": "227768f2-de43-44f5-b015-77e38de46a17",
+      "The Outlaw": "0f453c1f-4300-469d-a72d-85817c71658e",
+      "The Magician": "03d1986d-30cb-49e3-8a99-7cee8dd5fa5d",
+      "The Hero": "d3403d79-aac5-4cb0-8e63-04ee48d32f3b",
+      "The Lover": "d1b620a7-bb79-4d85-8570-cc28cd4fa66a",
+      "The Jester": "0ce5722e-9867-4e8c-9259-a5d558341ac4",
+      "The Everyman": "3c47f453-7597-4b18-82f0-748789daabeb",
+      "The Caregiver": "8f036dd3-367a-4f59-815e-afb26ae87c20",
+      "The Ruler": "25d66471-fb01-4e9c-ad78-00ec35c4c1ab",
+      "The Creator": "e24237bf-b1b2-41d6-a2ea-c06c6ba561ed"
     }
   },
   "personas": {
@@ -99,42 +99,42 @@
     "created": 36,
     "failed": 0,
     "entities": {
-      "The Dreamer": "967d6514-3949-4e22-aeae-b45e4b4ea058",
-      "The Child": "5d55b951-1989-4541-9044-cb066f4540b4",
-      "The Idealist": "88e6e033-aebd-4490-a174-b66d0c103aec",
-      "The Philosopher": "2a212559-0d2c-4bdd-ad97-524d867aa275",
-      "The Scholar": "8bac074b-e008-41c5-9290-46feef18111d",
-      "The Mentor": "e177150f-684b-47e3-a717-2f603c9ac4bb",
-      "The Wanderer": "11e87cd5-0ae6-49df-bfba-6183271f17c4",
-      "The Pioneer": "2f09b822-3e8a-4070-adcc-91a14253bbb8",
-      "The Seeker": "b745e8a3-8b34-4a0f-9ada-c2c146d9f437",
-      "The Revolutionary": "ce6f3619-05d4-47c0-b953-a191b6c90627",
-      "The Maverick": "ef6c56cd-1241-4711-a112-25e9b7342173",
-      "The Iconoclast": "32204f16-3640-4dc9-b4f5-ba65245733b6",
-      "The Wizard": "44637778-e2eb-46ad-ab2a-bd559952b0bd",
-      "The Catalyst": "18d1519c-6f80-4e45-83c4-635354f1c671",
-      "The Shaman": "e3bc3384-4519-4613-a746-7b06541b4be1",
-      "The Warrior": "e0ea85d6-9435-400a-9a9b-8e10038af505",
-      "The Champion": "bc9a4f2d-44ba-450f-b759-144fe151890d",
-      "The Dragon Slayer": "ef514158-eaeb-4f63-b502-bd6cdb5bbf1e",
-      "The Romantic": "cacdfd44-7575-44c6-bf1a-24a65e727df5",
-      "The Sensualist": "3937d2c3-139f-408a-8112-894c0c5777ae",
-      "The Companion": "f9970b50-8be1-47d9-8583-0ce697606d88",
-      "The Trickster": "bae3a620-eac5-4f02-bc06-fa29fcc8da4a",
-      "The Fool": "c1819db5-5ffa-46aa-855e-cda7f41610b4",
-      "The Comedian": "bf9b256c-f5c2-40db-b1ea-1c3cc630aa2a",
-      "The Regular Guy": "6418bdce-cb5b-4316-8d05-683a92f387ba",
-      "The Good Neighbor": "052e761d-82e1-4b77-8131-3f6e3357a4cd",
-      "The Realist": "c232b17f-f0d8-4581-b345-428cf352c3f3",
-      "The Healer": "ed27f743-fbcb-473f-8234-73c963c16394",
-      "The Guardian": "ecbefd27-b49d-4f0b-959f-c64edab5c8da",
-      "The Parent": "edcc1d91-7f28-4966-8da0-6baf73af5cc8",
-      "The Sovereign": "fbcae088-5470-4797-b222-2c251d10881c",
-      "The Executive": "4203a928-8ef2-444e-9a88-d509d6bdde74",
-      "The Patriarch": "8b8b4a4e-b7c3-4c33-99be-e5a853ab22ad",
-      "The Artist": "4b86be27-1f05-47b3-b70e-c9b59c6606c4",
-      "The Inventor": "8ac1a525-b710-45cc-8178-a83dcb0624bb",
-      "The Visionary Leader": "3dda4e2b-985d-4db9-8a4d-fd379b1a6ee8"
+      "The Dreamer": "fc351cac-9c66-4902-870b-7a9154d1f278",
+      "The Child": "d42b304f-0d35-4fc8-97d4-37f45bdd593b",
+      "The Idealist": "6ab0cdda-d323-493d-be48-10580b87ba67",
+      "The Philosopher": "692ef913-b3b4-47bb-bd11-37530675ee64",
+      "The Scholar": "2c280beb-68c5-4c70-8d8f-761b002f54ec",
+      "The Mentor": "e74a3990-1213-429a-8b76-b1174a91980f",
+      "The Wanderer": "2635522e-b167-46d8-b72b-17e72c26a73b",
+      "The Pioneer": "da3ec402-4b9c-494d-ad0e-79f7a80723dc",
+      "The Seeker": "4ec849af-0fc5-4914-92b4-39e954a92965",
+      "The Revolutionary": "38de2241-3ba0-4931-9d33-994458be072b",
+      "The Maverick": "6b05472b-a390-4720-bab8-240ce248618e",
+      "The Iconoclast": "d34e84f5-1c64-4c0a-bf04-ed51dc6c7ac1",
+      "The Wizard": "bb3aa9ce-969b-4d9b-8f35-e2af937c5f7b",
+      "The Catalyst": "e5d797c5-c4bc-4774-9e40-ff0bc7134923",
+      "The Shaman": "ea0c51fe-14d2-4d85-9516-3e5362d430f3",
+      "The Warrior": "bc71d198-eff7-4be5-a923-fe963612de5f",
+      "The Champion": "5fb2ef9d-6353-41f2-99fd-9ddad7639e9c",
+      "The Dragon Slayer": "6c021974-8aac-4d04-99e9-16db664a5940",
+      "The Romantic": "c4f68170-d976-45d4-b1a2-a6f870a082ef",
+      "The Sensualist": "e3ca021d-f1fc-4ae6-a2b2-ddc0080acb34",
+      "The Companion": "fd27c16e-bb95-40d0-bc17-75a6acc6022d",
+      "The Trickster": "c8cf7768-cb0e-4ffc-8386-1ff8f833d356",
+      "The Fool": "aebc8586-7c75-4ebf-8fd8-ed2fb490e0c3",
+      "The Comedian": "d73db35e-b135-4297-8ad6-026482160d88",
+      "The Regular Guy": "69802a2e-95f1-4018-ab8e-2cbac8b9acbd",
+      "The Good Neighbor": "abce06b4-5411-4556-a9ed-3e20ef1de26f",
+      "The Realist": "2ac52948-7040-4a9c-95cd-bd23c808830b",
+      "The Healer": "b014f2f9-290e-4e74-a9dd-cd7050c58b5a",
+      "The Guardian": "24551227-70d9-4554-b18b-8b6e350f6540",
+      "The Parent": "13079580-306f-4c1c-a506-5da3b0dfb477",
+      "The Sovereign": "12b4698e-a432-4d92-8a90-bdb2b0d5f2df",
+      "The Executive": "b3076bd9-8de4-4bfa-8594-90d8b7621417",
+      "The Patriarch": "d5d7d093-3ab7-4dd7-886a-87d86c8e6f80",
+      "The Artist": "6981f921-8faf-4225-8d23-30018b173344",
+      "The Inventor": "4f04b653-0062-480a-9c25-d325b9507f97",
+      "The Visionary Leader": "d8df38e3-5f90-42cd-8150-9cb96586afb5"
     }
   },
   "links": {
@@ -146,192 +146,192 @@
         {
           "quality": "Strength",
           "trait": "Courageous",
-          "link_id": "871d01b3-7943-4442-ae88-6d96c52d9549"
+          "link_id": "2ded9881-7965-4eb8-a41c-75d37a10a165"
         },
         {
           "quality": "Strength",
           "trait": "Determined",
-          "link_id": "93810d39-8eec-4ff5-b875-d90fdf50cd1c"
+          "link_id": "74f3b477-4e28-4293-8314-209cedb8cdcb"
         },
         {
           "quality": "Strength",
           "trait": "Protective",
-          "link_id": "ad3084ae-c1f1-4b28-912b-ed68e8785609"
+          "link_id": "9bd14419-8508-4583-96a3-114b8ce2fc37"
         },
         {
           "quality": "Strength",
           "trait": "Authoritative",
-          "link_id": "d84d28a4-cd7d-46d9-b68d-203db42b65a1"
+          "link_id": "f419c714-d780-4660-b795-38c8baa048c2"
         },
         {
           "quality": "Intelligence",
           "trait": "Analytical",
-          "link_id": "8be448ee-472f-4165-b088-1ad24966f37c"
+          "link_id": "f8ac9bbd-3631-4835-a477-04356d357853"
         },
         {
           "quality": "Intelligence",
           "trait": "Curious",
-          "link_id": "8778c4ef-8591-4748-a915-cc25c889737d"
+          "link_id": "2eece462-af6f-4388-863f-c2c2a500dc0c"
         },
         {
           "quality": "Intelligence",
           "trait": "Organized",
-          "link_id": "4b8e5afd-b3ca-4c3f-aade-faf798bfdc51"
+          "link_id": "5b272f13-b5f1-478c-adc1-2b08c9fc2d33"
         },
         {
           "quality": "Intelligence",
           "trait": "Imaginative",
-          "link_id": "abbeacda-cb96-4e69-862e-93d5af60c5c1"
+          "link_id": "29b9f995-aa24-4ed5-b1dc-3d44830281b3"
         },
         {
           "quality": "Charisma",
           "trait": "Charismatic",
-          "link_id": "8a1b051e-1415-4dfe-852d-aaf789f18d0e"
+          "link_id": "ee94f2c2-2b91-4cf4-bb22-0322a03a4099"
         },
         {
           "quality": "Charisma",
           "trait": "Playful",
-          "link_id": "27549d2b-df7e-4eef-91b8-e14f8f2d9afe"
+          "link_id": "31afc58a-1d44-464d-8565-a7ebb329ccd9"
         },
         {
           "quality": "Charisma",
           "trait": "Relatable",
-          "link_id": "6f319376-0f7c-4d04-8737-ee27b92e3fd6"
+          "link_id": "d9a349dd-9ddc-440c-b1a9-e4ddec2328bd"
         },
         {
           "quality": "Charisma",
           "trait": "Passionate",
-          "link_id": "4909ff35-43bd-426b-899f-1e264fe0a289"
+          "link_id": "5889d025-7816-4cc7-aad0-ed5e434d31df"
         },
         {
           "quality": "Wisdom",
           "trait": "Analytical",
-          "link_id": "a42024e0-96d9-4679-8b9e-456ee5bcac9c"
+          "link_id": "431443f6-9b30-4ad5-83c1-866d6a3be5e9"
         },
         {
           "quality": "Wisdom",
           "trait": "Detached",
-          "link_id": "f42663a8-9352-4841-b984-585103e7d787"
+          "link_id": "0cb5a951-cd97-4031-bac3-68dd09eccd0f"
         },
         {
           "quality": "Wisdom",
           "trait": "Empathetic",
-          "link_id": "4b143d63-8c6d-4641-b1c4-807531f45e8a"
+          "link_id": "273fc406-a107-48b8-8d19-36766ee0a982"
         },
         {
           "quality": "Wisdom",
           "trait": "Perfectionist",
-          "link_id": "7b3523f1-fc4e-4897-8b53-4b9ca8418f9d"
+          "link_id": "9788e502-c0ba-4178-99ad-6d4435b82216"
         },
         {
           "quality": "Agility",
           "trait": "Adventurous",
-          "link_id": "8073efb2-d5ab-459e-a723-08bf49d2fc69"
+          "link_id": "dbced24f-a632-4b06-a95e-dd3c17cb6902"
         },
         {
           "quality": "Agility",
           "trait": "Spontaneous",
-          "link_id": "f501511b-4020-4c32-b59e-99dc6dea0ee4"
+          "link_id": "9f9bee6e-d765-4931-8a19-f7f63643ec01"
         },
         {
           "quality": "Agility",
           "trait": "Restless",
-          "link_id": "04656e61-3c8b-4379-9811-12a9d9f82306"
+          "link_id": "c11843c3-3f94-4cea-a13f-0e486af0b2bc"
         },
         {
           "quality": "Resilience",
           "trait": "Rebellious",
-          "link_id": "1da6106d-521c-4953-a51c-f6809ee56646"
+          "link_id": "10cd4cbf-fda4-4fe5-8974-14fa49be60c9"
         },
         {
           "quality": "Resilience",
           "trait": "Determined",
-          "link_id": "8f38be69-9cf2-4091-b6ee-2957a42a50d2"
+          "link_id": "2041bdc4-b4dd-4d24-af53-3af8eba00a82"
         },
         {
           "quality": "Resilience",
           "trait": "Self-Sacrificing",
-          "link_id": "89bf05ee-301e-45f8-a6fb-ce857bf1ab11"
+          "link_id": "3c750876-d600-4006-a278-538b55c2434b"
         },
         {
           "quality": "Resilience",
           "trait": "Humble",
-          "link_id": "f8bf4fd6-55a7-4364-9477-6cb768ac8da3"
+          "link_id": "871b6122-cf00-45a0-b3f5-f7323ece1111"
         },
         {
           "quality": "Creativity",
           "trait": "Imaginative",
-          "link_id": "a37577a2-575f-435d-bfc7-a83fe74cb39a"
+          "link_id": "90967812-2b6d-43f5-a58a-eebda00bd9f1"
         },
         {
           "quality": "Creativity",
           "trait": "Visionary",
-          "link_id": "fdaaaa5a-1c2e-4f07-b388-fcbff7e4b5c6"
+          "link_id": "d4bf8106-bc63-4c18-a5a8-d0e4ce3e0694"
         },
         {
           "quality": "Creativity",
           "trait": "Non-Conformist",
-          "link_id": "abc5ca8b-e561-4635-a38b-758483c0387a"
+          "link_id": "314aa0f7-2e60-4f61-bb70-ed5c8b9a01cb"
         },
         {
           "quality": "Creativity",
           "trait": "Playful",
-          "link_id": "17eebd9b-7f22-4d9a-a635-ac7d9c3f5f07"
+          "link_id": "7ee76716-995a-4c62-8cad-9535212955b9"
         },
         {
           "quality": "Empathy",
           "trait": "Nurturing",
-          "link_id": "c30b5d7a-5e8f-4aa2-b3e9-28069b6a2b4b"
+          "link_id": "5cece5b6-9132-43ff-87a0-84d6df776ea9"
         },
         {
           "quality": "Empathy",
           "trait": "Empathetic",
-          "link_id": "52ec827c-2377-445e-ad84-5d90d3090195"
+          "link_id": "4acb4d04-3ca8-4dcd-a4fc-02cd0d01f1de"
         },
         {
           "quality": "Empathy",
           "trait": "Vulnerable",
-          "link_id": "20e7d7ef-49aa-45e3-91e2-02072a18e974"
+          "link_id": "36b6b17c-7d5b-4a43-9846-7f40e9aae774"
         },
         {
           "quality": "Empathy",
           "trait": "Devoted",
-          "link_id": "0445c294-5931-4cfc-a9bc-58e0821af16e"
+          "link_id": "51255225-3905-4340-b309-1f4dd1d1a3a8"
         },
         {
           "quality": "Willpower",
           "trait": "Determined",
-          "link_id": "a35b9785-f8c4-4017-b506-ec868d7e08c6"
+          "link_id": "acb618bd-cdbd-4732-8679-c4daf1e370f3"
         },
         {
           "quality": "Willpower",
           "trait": "Controlling",
-          "link_id": "5321233c-f2dd-4578-8966-86e792d09831"
+          "link_id": "8aa47e36-95ae-41a0-85d0-84521aa55288"
         },
         {
           "quality": "Willpower",
           "trait": "Perfectionist",
-          "link_id": "6548b60c-c160-4966-b6e7-44dd9c59f337"
+          "link_id": "6574d7e4-b80a-416d-9544-0aaae32639c9"
         },
         {
           "quality": "Willpower",
           "trait": "Bold",
-          "link_id": "1ae1e398-b654-476c-8a3b-2083faa0421a"
+          "link_id": "64b88bf8-9214-4f5a-a0b3-4bf87bc68571"
         },
         {
           "quality": "Perception",
           "trait": "Curious",
-          "link_id": "1a52457f-edd1-410a-adec-296f838157fa"
+          "link_id": "7e58cf88-7397-451c-a028-60abf4cd42e7"
         },
         {
           "quality": "Perception",
           "trait": "Detached",
-          "link_id": "8210dc82-691c-4d24-90ab-6c533846d395"
+          "link_id": "e321befc-d08d-4845-ba32-132276c17574"
         },
         {
           "quality": "Perception",
           "trait": "Irreverent",
-          "link_id": "9e83ae4f-be5b-4410-b5c1-2a2c051cf713"
+          "link_id": "d0b418bc-09b2-442c-a01c-d2977511b8d8"
         }
       ]
     },
@@ -342,7 +342,7 @@
       "entities": [
         {
           "persona": "The Philosopher",
-          "quality": "Wisdom"
+          "quality": "Perception"
         },
         {
           "persona": "The Philosopher",
@@ -350,11 +350,11 @@
         },
         {
           "persona": "The Philosopher",
-          "quality": "Perception"
+          "quality": "Wisdom"
         },
         {
           "persona": "The Scholar",
-          "quality": "Wisdom"
+          "quality": "Perception"
         },
         {
           "persona": "The Scholar",
@@ -362,11 +362,11 @@
         },
         {
           "persona": "The Scholar",
-          "quality": "Perception"
+          "quality": "Wisdom"
         },
         {
           "persona": "The Mentor",
-          "quality": "Wisdom"
+          "quality": "Perception"
         },
         {
           "persona": "The Mentor",
@@ -374,7 +374,7 @@
         },
         {
           "persona": "The Mentor",
-          "quality": "Perception"
+          "quality": "Wisdom"
         },
         {
           "persona": "The Wanderer",
@@ -390,14 +390,10 @@
         },
         {
           "persona": "The Revolutionary",
-          "quality": "Resilience"
+          "quality": "Willpower"
         },
         {
           "persona": "The Revolutionary",
-          "quality": "Willpower"
-        },
-        {
-          "persona": "The Maverick",
           "quality": "Resilience"
         },
         {
@@ -405,12 +401,16 @@
           "quality": "Willpower"
         },
         {
-          "persona": "The Iconoclast",
+          "persona": "The Maverick",
           "quality": "Resilience"
         },
         {
           "persona": "The Iconoclast",
           "quality": "Willpower"
+        },
+        {
+          "persona": "The Iconoclast",
+          "quality": "Resilience"
         },
         {
           "persona": "The Wizard",
@@ -438,10 +438,6 @@
         },
         {
           "persona": "The Warrior",
-          "quality": "Resilience"
-        },
-        {
-          "persona": "The Warrior",
           "quality": "Willpower"
         },
         {
@@ -449,7 +445,7 @@
           "quality": "Strength"
         },
         {
-          "persona": "The Champion",
+          "persona": "The Warrior",
           "quality": "Resilience"
         },
         {
@@ -461,7 +457,7 @@
           "quality": "Strength"
         },
         {
-          "persona": "The Dragon Slayer",
+          "persona": "The Champion",
           "quality": "Resilience"
         },
         {
@@ -471,13 +467,21 @@
         {
           "persona": "The Dragon Slayer",
           "quality": "Strength"
+        },
+        {
+          "persona": "The Dragon Slayer",
+          "quality": "Resilience"
+        },
+        {
+          "persona": "The Romantic",
+          "quality": "Charisma"
         },
         {
           "persona": "The Romantic",
           "quality": "Empathy"
         },
         {
-          "persona": "The Romantic",
+          "persona": "The Sensualist",
           "quality": "Charisma"
         },
         {
@@ -485,7 +489,7 @@
           "quality": "Empathy"
         },
         {
-          "persona": "The Sensualist",
+          "persona": "The Companion",
           "quality": "Charisma"
         },
         {
@@ -493,8 +497,8 @@
           "quality": "Empathy"
         },
         {
-          "persona": "The Companion",
-          "quality": "Charisma"
+          "persona": "The Trickster",
+          "quality": "Agility"
         },
         {
           "persona": "The Trickster",
@@ -502,14 +506,14 @@
         },
         {
           "persona": "The Trickster",
-          "quality": "Perception"
-        },
-        {
-          "persona": "The Trickster",
           "quality": "Charisma"
         },
         {
           "persona": "The Trickster",
+          "quality": "Perception"
+        },
+        {
+          "persona": "The Fool",
           "quality": "Agility"
         },
         {
@@ -518,14 +522,14 @@
         },
         {
           "persona": "The Fool",
-          "quality": "Perception"
-        },
-        {
-          "persona": "The Fool",
           "quality": "Charisma"
         },
         {
           "persona": "The Fool",
+          "quality": "Perception"
+        },
+        {
+          "persona": "The Comedian",
           "quality": "Agility"
         },
         {
@@ -534,25 +538,13 @@
         },
         {
           "persona": "The Comedian",
+          "quality": "Charisma"
+        },
+        {
+          "persona": "The Comedian",
           "quality": "Perception"
         },
         {
-          "persona": "The Comedian",
-          "quality": "Charisma"
-        },
-        {
-          "persona": "The Comedian",
-          "quality": "Agility"
-        },
-        {
-          "persona": "The Regular Guy",
-          "quality": "Wisdom"
-        },
-        {
-          "persona": "The Regular Guy",
-          "quality": "Empathy"
-        },
-        {
           "persona": "The Regular Guy",
           "quality": "Charisma"
         },
@@ -561,12 +553,12 @@
           "quality": "Resilience"
         },
         {
-          "persona": "The Good Neighbor",
-          "quality": "Wisdom"
+          "persona": "The Regular Guy",
+          "quality": "Empathy"
         },
         {
-          "persona": "The Good Neighbor",
-          "quality": "Empathy"
+          "persona": "The Regular Guy",
+          "quality": "Wisdom"
         },
         {
           "persona": "The Good Neighbor",
@@ -577,12 +569,12 @@
           "quality": "Resilience"
         },
         {
-          "persona": "The Realist",
-          "quality": "Wisdom"
+          "persona": "The Good Neighbor",
+          "quality": "Empathy"
         },
         {
-          "persona": "The Realist",
-          "quality": "Empathy"
+          "persona": "The Good Neighbor",
+          "quality": "Wisdom"
         },
         {
           "persona": "The Realist",
@@ -591,10 +583,18 @@
         {
           "persona": "The Realist",
           "quality": "Resilience"
+        },
+        {
+          "persona": "The Realist",
+          "quality": "Empathy"
+        },
+        {
+          "persona": "The Realist",
+          "quality": "Wisdom"
         },
         {
           "persona": "The Healer",
-          "quality": "Resilience"
+          "quality": "Strength"
         },
         {
           "persona": "The Healer",
@@ -602,11 +602,11 @@
         },
         {
           "persona": "The Healer",
-          "quality": "Strength"
+          "quality": "Resilience"
         },
         {
           "persona": "The Guardian",
-          "quality": "Resilience"
+          "quality": "Strength"
         },
         {
           "persona": "The Guardian",
@@ -614,11 +614,11 @@
         },
         {
           "persona": "The Guardian",
-          "quality": "Strength"
+          "quality": "Resilience"
         },
         {
           "persona": "The Parent",
-          "quality": "Resilience"
+          "quality": "Strength"
         },
         {
           "persona": "The Parent",
@@ -626,11 +626,7 @@
         },
         {
           "persona": "The Parent",
-          "quality": "Strength"
-        },
-        {
-          "persona": "The Sovereign",
-          "quality": "Intelligence"
+          "quality": "Resilience"
         },
         {
           "persona": "The Sovereign",
@@ -641,7 +637,7 @@
           "quality": "Strength"
         },
         {
-          "persona": "The Executive",
+          "persona": "The Sovereign",
           "quality": "Intelligence"
         },
         {
@@ -653,7 +649,7 @@
           "quality": "Strength"
         },
         {
-          "persona": "The Patriarch",
+          "persona": "The Executive",
           "quality": "Intelligence"
         },
         {
@@ -665,8 +661,12 @@
           "quality": "Strength"
         },
         {
+          "persona": "The Patriarch",
+          "quality": "Intelligence"
+        },
+        {
           "persona": "The Artist",
-          "quality": "Wisdom"
+          "quality": "Willpower"
         },
         {
           "persona": "The Artist",
@@ -678,11 +678,11 @@
         },
         {
           "persona": "The Artist",
-          "quality": "Willpower"
+          "quality": "Wisdom"
         },
         {
           "persona": "The Inventor",
-          "quality": "Wisdom"
+          "quality": "Willpower"
         },
         {
           "persona": "The Inventor",
@@ -694,11 +694,11 @@
         },
         {
           "persona": "The Inventor",
-          "quality": "Willpower"
+          "quality": "Wisdom"
         },
         {
           "persona": "The Visionary Leader",
-          "quality": "Wisdom"
+          "quality": "Willpower"
         },
         {
           "persona": "The Visionary Leader",
@@ -710,7 +710,7 @@
         },
         {
           "persona": "The Visionary Leader",
-          "quality": "Willpower"
+          "quality": "Wisdom"
         }
       ]
     }

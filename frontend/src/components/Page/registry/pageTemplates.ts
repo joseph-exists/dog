@@ -322,6 +322,15 @@ export const pageTemplates: PageTemplate[] = [
         visibility: "visible",
       },
       {
+        id: "template-persona-qualities",
+        type: "qualities",
+        column: "primary",
+        order: 5,
+        config: { layout: "badges", maxVisible: 12 },
+        content: { items: [] },
+        visibility: "visible",
+      },
+      {
         id: "template-persona-relationships",
         type: "relationships",
         column: "auxiliary",

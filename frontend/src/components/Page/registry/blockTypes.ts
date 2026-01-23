@@ -5,6 +5,7 @@ import {
   Activity,
   BarChart,
   FileText,
+  Gem,
   Globe,
   Image,
   Link,
@@ -39,6 +40,7 @@ export type BlockType =
   | "personas"
   | "domains"
   | "traits"
+  | "qualities"
 
 /**
  * Configuration field types for block settings.
@@ -237,9 +239,22 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
   },
   {
     type: "traits",
-    label: "Traits & Qualities",
-    description: "Display personality traits and qualities as badges",
+    label: "Traits",
+    description: "Display personality traits as badges (fetched from API)",
     icon: Sparkles,
+    defaultConfig: {
+      layout: "badges",
+      maxVisible: 12,
+    },
+    defaultContent: {
+      items: [],
+    },
+  },
+  {
+    type: "qualities",
+    label: "Qualities",
+    description: "Display enabled qualities as badges (fetched from API)",
+    icon: Gem,
     defaultConfig: {
       layout: "badges",
       maxVisible: 12,

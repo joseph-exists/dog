@@ -1,4 +1,7 @@
 // src/components/Page/blocks/TraitsBlock.tsx
+import { useQuery } from "@tanstack/react-query"
+
+import { PersonaTraitsService } from "@/client"
 import { BlockContainer } from "../primitives"
 
 export interface TraitsBlockConfig {
@@ -19,24 +22,43 @@ export interface TraitsContent {
 export interface TraitsBlockProps {
   config: TraitsBlockConfig
   content?: TraitsContent
+  entityId?: string
   className?: string
 }
 
 /**
- * TraitsBlock - Displays personality traits and qualities as badges
+ * TraitsBlock - Displays personality traits as badges or list items.
  *
- * Shows trait labels grouped by optional category.
- * Supports badge and list layouts with configurable max visible count.
- * Returns null if no traits exist.
+ * When entityId is provided, fetches real trait data from the
+ * persona-traits API. Falls back to static content.items if no
+ * entity context or if the API returns no data.
  */
-export function TraitsBlock({ config, content, className }: TraitsBlockProps) {
-  if (!content?.items?.length) {
+export function TraitsBlock({
+  config,
+  content,
+  entityId,
+  className,
+}: TraitsBlockProps) {
+  const { data: apiTraits } = useQuery({
+    queryKey: ["persona-traits", entityId],
+    queryFn: () =>
+      PersonaTraitsService.readPersonaTraits({ personaId: entityId! }),
+    enabled: !!entityId,
+  })
+
+  // API traits take priority; fall back to static content
+  const items: TraitItem[] =
+    apiTraits && apiTraits.length > 0
+      ? apiTraits.map((t) => ({ id: t.id, label: t.name, category: undefined }))
+      : (content?.items ?? [])
+
+  if (!items.length) {
     return null
   }
 
   const { layout = "badges", maxVisible = 12 } = config
-  const visibleItems = content.items.slice(0, maxVisible)
-  const hiddenCount = content.items.length - visibleItems.length
+  const visibleItems = items.slice(0, maxVisible)
+  const hiddenCount = items.length - visibleItems.length
 
   if (layout === "list") {
     return (

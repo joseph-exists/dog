@@ -34,14 +34,17 @@
 |-------|------|---------|
 | Listing Route | `src/routes/_layout/personas.tsx` | Library + catalog listing with search |
 | Detail Route | `src/routes/_layout/persona.$personaId.tsx` | Block-based detail page |
-| Create Dialog | `src/components/Persona/CreatePersonaDialog.tsx` | Form for new personas |
+| Create Dialog | `src/components/Persona/CreatePersonaDialog.tsx` | Form with archetype picker |
+| Detail Dialog | `src/components/Persona/PersonaDetailDialog.tsx` | Inline view/edit dialog |
 | Entity Type | `src/components/Page/registry/entityTypes.ts` | "persona" entry (pink, Smile icon) |
 | Page Template | `src/components/Page/registry/pageTemplates.ts` | "persona" default blocks |
-| Block Types | `src/components/Page/registry/blockTypes.ts` | "domains" + "traits" entries |
+| Block Types | `src/components/Page/registry/blockTypes.ts` | "domains", "traits", "qualities" entries |
 | DomainsBlock | `src/components/Page/blocks/DomainsBlock.tsx` | Domain expertise display |
-| TraitsBlock | `src/components/Page/blocks/TraitsBlock.tsx` | Trait/quality badges |
-| PageShell | `src/components/Page/PageShell.tsx` | Block renderer (includes domains/traits cases) |
-| Blocks Index | `src/components/Page/blocks/index.ts` | Exports DomainsBlock, TraitsBlock |
+| TraitsBlock | `src/components/Page/blocks/TraitsBlock.tsx` | API-connected trait badges |
+| QualitiesBlock | `src/components/Page/blocks/QualitiesBlock.tsx` | API-connected quality badges |
+| PageShell | `src/components/Page/PageShell.tsx` | Block renderer (domains/traits/qualities cases) |
+| Blocks Index | `src/components/Page/blocks/index.ts` | Exports all block components |
+| Backend Route | `backend/app/api/routes/persona_traits.py` | GET /personas/{id}/traits/ endpoint |
 | Layout Config | `src/routes/_layout.tsx` | Route titles + fullBleedRoutes |
 | Route Tree | `src/routeTree.gen.ts` | Auto-generated (TanStack Router plugin) |
 
@@ -80,6 +83,21 @@
 
 The listing page uses `PersonaLibraryService.getLibrary(owner)` which joins junction entries (UserPersonaPublic) with full PersonaPublic data. Returns `LibraryPersona[]`.
 
+### Traits & Qualities APIs
+
+| Service | Method | Endpoint | Returns |
+|---------|--------|----------|---------|
+| `PersonaTraitsService` | `readPersonaTraits({ personaId })` | `GET /personas/{id}/traits/` | `TraitPublic[]` |
+| `PersonaQualitiesService` | `readPersonaQualities({ personaId })` | `GET /personas/{id}/qualities/` | `QualityPublic[]` |
+| `ArchetypesService` | `readArchetypes({ limit })` | `GET /archetypes/` | `ArchetypesPublic` |
+
+### Archetype Inheritance
+
+When a persona is created via `createPersonaFromArchetype`:
+- All archetype traits are copied with `is_inherited=true`
+- Trait-dependent qualities are auto-enabled
+- Source archetype ID is tracked in `PersonaTraitLink.source_archetype_id`
+
 ---
 
 ## Query Keys
@@ -89,6 +107,9 @@ The listing page uses `PersonaLibraryService.getLibrary(owner)` which joins junc
 | `["personas", "all"]` | Listing page | All personas (catalog) |
 | `["persona-library", userId]` | Listing page | User's library entries |
 | `["pages", "persona", personaId]` | Detail page (via `usePageEditor`) | Block-based page data |
+| `["persona-traits", personaId]` | TraitsBlock | Live trait data for persona |
+| `["persona-qualities", personaId]` | QualitiesBlock | Live quality data for persona |
+| `["archetypes"]` | CreatePersonaDialog | Available archetypes for creation |
 
 ---
 
@@ -110,15 +131,29 @@ Displays domain expertise areas with color-coded hierarchy.
 
 ### TraitsBlock
 
-Displays personality traits/qualities as badges or list items.
+Displays personality traits as badges or list items. **API-connected:** when `entityId` is provided, fetches real trait data from `GET /personas/{id}/traits/`.
 
 | Prop | Type | Description |
 |------|------|-------------|
 | `config.layout` | `"badges" \| "list"` | Visual layout (default: "badges") |
 | `config.maxVisible` | `number` | Max items shown (default: 12) |
-| `content.items` | `TraitItem[]` | Array of `{ id, label, category? }` |
+| `content.items` | `TraitItem[]` | Static fallback: `{ id, label, category? }` |
+| `entityId` | `string?` | When provided, fetches traits from API |
 
-**Color:** Pink badges (consistent with persona entity color).
+**Color:** Pink badges. **Data priority:** API data > static content.
+
+### QualitiesBlock
+
+Displays enabled persona qualities as badges or list items. **API-connected:** fetches from `GET /personas/{id}/qualities/`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `config.layout` | `"badges" \| "list"` | Visual layout (default: "badges") |
+| `config.maxVisible` | `number` | Max items shown (default: 12) |
+| `content.items` | `QualityItem[]` | Static fallback: `{ id, label, description? }` |
+| `entityId` | `string?` | When provided, fetches qualities from API |
+
+**Color:** Purple badges (distinct from pink traits).
 
 ---
 
@@ -131,7 +166,8 @@ Default blocks for new persona pages (defined in `pageTemplates.ts`):
 | 1 | primary | Identity | Name + tagline |
 | 2 | primary | Bio | Description / long description |
 | 3 | primary | Domains | Domain expertise display |
-| 4 | primary | Traits | Personality traits as badges |
+| 4 | primary | Traits | Personality traits (API-fetched) |
+| 5 | primary | Qualities | Enabled qualities (API-fetched) |
 | 1 | auxiliary | Relationships | Linked entities |
 
 ---
@@ -192,10 +228,13 @@ Click **Create Persona** to open the creation dialog:
 
 | Field | Required | Description |
 |-------|----------|-------------|
+| Archetype | No | Optional template to inherit traits and qualities from |
 | Name | Yes | Display name (e.g., "Creative Writer") |
 | Description | No | Short summary (up to 300 chars) |
 | General Domain | No | Broad expertise area (e.g., "Arts") |
 | Specific Domain | No | Narrow specialty (e.g., "Fiction Writing") |
+
+**Creating from an archetype:** When an archetype is selected, the persona inherits all traits and auto-enables trait-dependent qualities. The button changes to "Create from Archetype". Inherited traits are marked with `is_inherited=true` in the database.
 
 After creation, the persona appears in the catalog and you can navigate to its detail page.
 
@@ -206,7 +245,8 @@ The detail page uses a block-based layout:
 - **Identity** — Name and tagline
 - **Bio** — Extended description
 - **Domains** — Color-coded expertise areas
-- **Traits & Qualities** — Personality attributes as badges
+- **Traits** — Inherited personality traits (fetched from API, pink badges)
+- **Qualities** — Enabled qualities (fetched from API, purple badges)
 - **Relationships** — Links to related entities (agents, users, teams)
 
 ### Editing a Persona Page

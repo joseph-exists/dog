@@ -2,13 +2,21 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Globe, Loader2Icon, Search, Smile, TrashIcon } from "lucide-react"
+import {
+  Globe,
+  Loader2Icon,
+  PlusIcon,
+  Search,
+  Smile,
+  TrashIcon,
+} from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
 import type { PersonaPublic } from "@/client"
 import { PersonasService, UserPersonasService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import CreatePersonaDialog from "@/components/Persona/CreatePersonaDialog"
+import PersonaDetailDialog from "@/components/Persona/PersonaDetailDialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,40 +64,168 @@ function getAllPersonasQueryOptions() {
 }
 
 // ============================================================================
-// Persona Card
+// Action Buttons
 // ============================================================================
 
-function PersonaCard({ persona }: { persona: PersonaPublic }) {
+function AddToLibraryButton({ persona }: { persona: PersonaPublic }) {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      UserPersonasService.createUserPersona({
+        requestBody: { persona_id: persona.id },
+      }),
+    onSuccess: () => {
+      showSuccessToast(`Added "${persona.name}" to library`)
+    },
+    onError: (err: ApiError) => {
+      const message =
+        (err.body as { detail?: string })?.detail ||
+        "Failed to add persona to library"
+      showErrorToast(message)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["persona-library", user?.id],
+      })
+    },
+  })
+
   return (
-    <Link to="/persona/$personaId" params={{ personaId: persona.id }}>
-      <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pink-100 dark:bg-pink-900/30">
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => mutation.mutate()}
+      disabled={mutation.isPending}
+      className="text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+      title="Add to library"
+    >
+      {mutation.isPending ? (
+        <Loader2Icon className="size-4 animate-spin" />
+      ) : (
+        <PlusIcon className="size-4" />
+      )}
+    </Button>
+  )
+}
+
+function DeletePersonaButton({ persona }: { persona: PersonaPublic }) {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const [isOpen, setIsOpen] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: () => PersonasService.deletePersona({ id: persona.id }),
+    onSuccess: () => {
+      showSuccessToast(`Deleted "${persona.name}"`)
+      setIsOpen(false)
+    },
+    onError: (err: ApiError) => {
+      const message =
+        (err.body as { detail?: string })?.detail || "Failed to delete persona"
+      showErrorToast(message)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["personas"] })
+      queryClient.invalidateQueries({
+        queryKey: ["persona-library", user?.id],
+      })
+    },
+  })
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+        >
+          <TrashIcon className="size-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Persona</AlertDialogTitle>
+          <AlertDialogDescription>
+            Permanently delete &quot;{persona.name}&quot;? This will also remove
+            it from all libraries. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={mutation.isPending}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {mutation.isPending && (
+              <Loader2Icon className="size-4 animate-spin" />
+            )}
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+// ============================================================================
+// Catalog Persona Card (with add/view/delete actions)
+// ============================================================================
+
+function CatalogPersonaCard({ persona }: { persona: PersonaPublic }) {
+  return (
+    <Card className="h-full">
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-3">
+          <Link
+            to="/persona/$personaId"
+            params={{ personaId: persona.id }}
+            className="shrink-0"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 dark:bg-pink-900/30 hover:ring-2 hover:ring-pink-300 transition-all">
               <Smile className="size-5 text-pink-600 dark:text-pink-300" />
             </div>
-            <div className="flex-1 min-w-0">
+          </Link>
+          <div className="flex-1 min-w-0">
+            <Link
+              to="/persona/$personaId"
+              params={{ personaId: persona.id }}
+              className="hover:underline"
+            >
               <h3 className="font-medium truncate">{persona.name}</h3>
-              {persona.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                  {persona.description}
-                </p>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex flex-wrap gap-1.5">
-            {persona.general_domain && (
-              <DomainTag label={persona.general_domain} />
-            )}
-            {persona.specific_domain && (
-              <DomainTag label={persona.specific_domain} />
+            </Link>
+            {persona.description && (
+              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                {persona.description}
+              </p>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+
+          <div className="flex items-center gap-0.5 shrink-0">
+            <PersonaDetailDialog personaId={persona.id} className="size-7" />
+            <AddToLibraryButton persona={persona} />
+            <DeletePersonaButton persona={persona} />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex flex-wrap gap-1.5">
+          {persona.general_domain && (
+            <DomainTag label={persona.general_domain} />
+          )}
+          {persona.specific_domain && (
+            <DomainTag label={persona.specific_domain} />
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -164,41 +300,44 @@ function LibraryPersonaCard({
             )}
           </div>
 
-          <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
-              >
-                <TrashIcon className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove Persona</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Remove &quot;{persona.name}&quot; from your library? The
-                  persona will still exist in the catalog.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={removeMutation.isPending}>
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => removeMutation.mutate()}
-                  disabled={removeMutation.isPending}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div className="flex items-center gap-0.5 shrink-0">
+            <PersonaDetailDialog personaId={persona.id} className="size-7" />
+            <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 >
-                  {removeMutation.isPending && (
-                    <Loader2Icon className="size-4 animate-spin" />
-                  )}
-                  Remove
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <TrashIcon className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove Persona</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Remove &quot;{persona.name}&quot; from your library? The
+                    persona will still exist in the catalog.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={removeMutation.isPending}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => removeMutation.mutate()}
+                    disabled={removeMutation.isPending}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {removeMutation.isPending && (
+                      <Loader2Icon className="size-4 animate-spin" />
+                    )}
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -349,7 +488,7 @@ function PersonasListContent({ searchQuery }: { searchQuery: string }) {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {catalogPersonas.map((persona) => (
-              <PersonaCard key={persona.id} persona={persona} />
+              <CatalogPersonaCard key={persona.id} persona={persona} />
             ))}
           </div>
         </section>
