@@ -702,6 +702,7 @@ async def handle_ui_action(
         agent_slug=agent_slug,
         trigger_message=trigger_message,
         session=session,
+        user_id=current_user.id,
     )
 
     # Return 200 with status. The agent's response arrives asynchronously

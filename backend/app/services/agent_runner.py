@@ -380,12 +380,14 @@ async def invoke_agent_manually(
     agent_slug: str,
     trigger_message: str,
     session: AsyncSession,
+    user_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     """
     Explicitly invoke an agent regardless of participation mode.
 
     Use this for:
     - Manual mode agents that need explicit invocation
+    - UI action button responses
     - Testing/debugging agents
     - Admin-triggered agent responses
 
@@ -394,6 +396,7 @@ async def invoke_agent_manually(
         agent_slug: Slug of the agent to invoke
         trigger_message: The message/prompt for the agent
         session: Async database session
+        user_id: User ID for resolving API credentials (None = use env vars)
 
     Returns:
         Agent response dict
@@ -447,4 +450,5 @@ async def invoke_agent_manually(
         agent_name=slug,
         trigger_message=trigger_message,
         session=session,
+        user_id=user_id,
     )
