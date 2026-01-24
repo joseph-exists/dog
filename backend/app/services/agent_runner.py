@@ -114,6 +114,7 @@ async def _run_agent_for_a2a(
     trigger_message: str,
     session: AsyncSession,
     a2a_depth: int = 0,
+    user_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     result = await _get_streaming_runner().run(
         req=AgentRunRequest(
@@ -121,6 +122,7 @@ async def _run_agent_for_a2a(
             agent_slug=agent_name,
             trigger_message=trigger_message,
             a2a_depth=a2a_depth,
+            user_id=user_id,
         ),
         session=session,
     )

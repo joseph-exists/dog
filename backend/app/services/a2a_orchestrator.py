@@ -77,6 +77,7 @@ class A2AOrchestrator:
         session: AsyncSession,
         current_depth: int,
         run_agent: Any,
+        user_id: uuid.UUID | None = None,
         emit_internal_message: Any | None = None,
     ) -> list[dict[str, Any]]:
         if current_depth >= self._max_depth:
@@ -139,6 +140,7 @@ class A2AOrchestrator:
                 trigger_message=trigger_message,
                 session=session,
                 a2a_depth=current_depth + 1,
+                user_id=user_id,
             )
             triggered_responses.append(agent_response)
 

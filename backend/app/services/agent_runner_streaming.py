@@ -140,6 +140,7 @@ class StreamingAgentRunner:
                 session=session,
                 current_depth=req.a2a_depth,
                 run_agent=self._run_agent,
+                user_id=req.user_id,
             )
 
             if a2a_responses:

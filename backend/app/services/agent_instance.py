@@ -139,11 +139,27 @@ def create_model_with_credentials(
 ) -> Any:
     """
     Create a PydanticAI model with user credentials.
+
+    For openai_compatible providers, always creates an OpenAIProvider even
+    without an API key — some servers (Ollama, local vLLM) don't need one,
+    and PydanticAI doesn't recognize "openai_compatible" as a provider prefix.
     """
+    model_id = model_name.split(":", 1)[1] if ":" in model_name else model_name
+
+    # OpenAI-compatible providers MUST be handled explicitly — PydanticAI does
+    # not recognize "openai_compatible" as a valid provider prefix. Some servers
+    # (e.g., Ollama, local vLLM) don't require an API key at all.
+    if provider_type == LLMProviderType.OPENAI_COMPATIBLE:
+        compat_provider = OpenAIProvider(
+            api_key=api_key or "not-needed",
+            base_url=base_url,
+        )
+        return OpenAIChatModel(model_id, provider=compat_provider)
+
+    # For standard providers, an API key is required to create a model instance.
+    # Without one, return the raw model string for PydanticAI to resolve via env vars.
     if not api_key:
         return model_name
-
-    model_id = model_name.split(":", 1)[1] if ":" in model_name else model_name
 
     if provider_type == LLMProviderType.OPENAI:
         openai_provider = OpenAIProvider(api_key=api_key, base_url=base_url)
@@ -156,10 +172,6 @@ def create_model_with_credentials(
     if provider_type == LLMProviderType.GOOGLE:
         google_provider = GoogleProvider(api_key=api_key)
         return GoogleModel(model_id, provider=google_provider)
-
-    if provider_type == LLMProviderType.OPENAI_COMPATIBLE:
-        compat_provider = OpenAIProvider(api_key=api_key, base_url=base_url)
-        return OpenAIChatModel(model_id, provider=compat_provider)
 
     logger.warning(f"Unknown provider type {provider_type}, using model name directly")
     return model_name
