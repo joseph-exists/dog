@@ -24,9 +24,17 @@ export interface BioBlockProps {
  * View-only block - no edit functionality.
  */
 export function BioBlock({ config, content, className }: BioBlockProps) {
-  // If no bio content, hide the block entirely
+  // Empty state — show placeholder so block is visible in edit mode
   if (!content?.text) {
-    return null
+    return (
+      <BlockContainer title="About" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">
+            No bio text yet.
+          </p>
+        </div>
+      </BlockContainer>
+    )
   }
 
   const { maxLength } = config

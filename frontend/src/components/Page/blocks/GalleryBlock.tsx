@@ -56,7 +56,13 @@ export function GalleryBlock({
   const images = content?.images || []
 
   if (images.length === 0) {
-    return null
+    return (
+      <BlockContainer title="Gallery" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">No images yet.</p>
+        </div>
+      </BlockContainer>
+    )
   }
 
   const columnClass = gridColumnClasses[config.columns] || "grid-cols-2"

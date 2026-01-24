@@ -37,10 +37,10 @@ def _create_agent_binding(
 
 
 @pytest.mark.asyncio
-async def test_shadow_context_loader_emits_missing_item_when_room_shadow_missing(
+async def test_shadow_context_loader_skips_room_summary_when_missing(
     async_session: AsyncSession,
 ) -> None:
-    """Test that missing room shadow snapshot emits missing_shadow_snapshot item."""
+    """Test that missing room shadow snapshot does not emit a room summary context."""
     # Setup: create user and room without shadow repo
     user_in = UserCreate(email=f"test-{uuid.uuid4()}@example.com", password="password123")
     from app import crud
@@ -67,12 +67,11 @@ async def test_shadow_context_loader_emits_missing_item_when_room_shadow_missing
         agent_slug=None,
     )
 
-    # Assert: should emit missing room shadow item
+    # Assert: no room summary context when the shadow snapshot is missing
     room_items = [
         item for item in items if item.context_type == "shadow.room.summary"
     ]
-    assert len(room_items) > 0
-    assert room_items[0].payload.get("missing_shadow_snapshot") is True
+    assert len(room_items) == 0
 
 
 @pytest.mark.asyncio

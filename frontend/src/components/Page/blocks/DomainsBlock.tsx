@@ -31,23 +31,29 @@ export function DomainsBlock({
   content,
   className,
 }: DomainsBlockProps) {
-  if (!content) return null
-
   const {
     generalDomain,
     specificDomain,
     generalDomainHigh,
     specificDomainHigh,
-  } = content
+  } = content ?? {}
 
-  // Nothing to show
+  // Nothing to show — render empty-state placeholder
   if (
     !generalDomain &&
     !specificDomain &&
     !generalDomainHigh &&
     !specificDomainHigh
   ) {
-    return null
+    return (
+      <BlockContainer title="Domains" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">
+            No domains configured yet.
+          </p>
+        </div>
+      </BlockContainer>
+    )
   }
 
   const showHierarchy = config.showHierarchy ?? true

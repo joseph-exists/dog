@@ -40,9 +40,17 @@ export function ContactBlock({
   const showEmail = config.showEmail && content?.email
   const showPhone = config.showPhone && content?.phone
 
-  // If nothing to show, render nothing
+  // Empty state — show placeholder so block is visible in edit mode
   if (!showEmail && !showPhone) {
-    return null
+    return (
+      <BlockContainer title="Contact" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">
+            No contact info configured yet.
+          </p>
+        </div>
+      </BlockContainer>
+    )
   }
 
   const handleCopy = async (field: string, value: string) => {

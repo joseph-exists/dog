@@ -82,7 +82,15 @@ export function ActivityFeedBlock({
   const activities = content?.activities || []
 
   if (activities.length === 0) {
-    return null
+    return (
+      <BlockContainer title="Activity" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">
+            No activity yet.
+          </p>
+        </div>
+      </BlockContainer>
+    )
   }
 
   const visibleActivities = activities.slice(0, config.maxItems)

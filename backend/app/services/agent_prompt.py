@@ -48,12 +48,17 @@ def build_agent_prompt(
             )
 
     # Add recent messages for conversation continuity
+    # Exclude the trigger message to avoid duplication (it's appended at the end)
     if context.recent_messages:
-        recent = context.recent_messages[-5:]
-        conversation_context += "\nRecent conversation:\n"
-        for msg in recent:
-            sender = msg.get("agent_name") or "User"
-            conversation_context += f"{sender}: {msg.get('content', '')}\n"
+        recent = [
+            msg for msg in context.recent_messages[-5:]
+            if msg.get("content") != trigger_message
+        ]
+        if recent:
+            conversation_context += "\nRecent conversation:\n"
+            for msg in recent:
+                sender = msg.get("agent_name") or "User"
+                conversation_context += f"{sender}: {msg.get('content', '')}\n"
 
     # Add extra contexts if present
     if context.extra_contexts:

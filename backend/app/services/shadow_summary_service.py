@@ -12,7 +12,9 @@ from sqlmodel import Session, select
 from app.core.redis import get_redis
 from app.models import ShadowRepo
 from app.services.shadow_read_service import (
+    ShadowRepoNotFound,
     ShadowSnapshotResult,
+    ShadowVersionNotFound,
     shadow_read_service,
 )
 from app.services.shadow_summaries import SUMMARY_DISPATCH
@@ -51,13 +53,17 @@ class ShadowSummaryService:
         session: Session,
         entity_type: str,
         entity_id: uuid.UUID,
-    ) -> ShadowSummaryResult:
-        snapshot = await self._run_sync(
-            session,
-            shadow_read_service.get_latest_snapshot,
-            entity_type=entity_type,
-            entity_id=entity_id,
-        )
+    ) -> ShadowSummaryResult | None:
+        try:
+            snapshot = await self._run_sync(
+                session,
+                shadow_read_service.get_latest_snapshot,
+                entity_type=entity_type,
+                entity_id=entity_id,
+            )
+        except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
+            logger.warning(f"Missing Shadow snapshot for {entity_type}/{entity_id}: {exc}")
+            return None
         return await self._summarize_with_cache(
             session=session,
             snapshot=snapshot,
@@ -71,14 +77,24 @@ class ShadowSummaryService:
         entity_type: str,
         entity_id: uuid.UUID,
         version_number: int,
-    ) -> ShadowSummaryResult:
-        snapshot = await self._run_sync(
-            session,
-            shadow_read_service.get_snapshot_by_version,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            version_number=version_number,
-        )
+    ) -> ShadowSummaryResult | None:
+        try:
+            snapshot = await self._run_sync(
+                session,
+                shadow_read_service.get_snapshot_by_version,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                version_number=version_number,
+            )
+        except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
+            logger.warning(
+                "Missing Shadow snapshot for %s/%s at version %s: %s",
+                entity_type,
+                entity_id,
+                version_number,
+                exc,
+            )
+            return None
         return await self._summarize_with_cache(
             session=session,
             snapshot=snapshot,
@@ -92,14 +108,24 @@ class ShadowSummaryService:
         entity_type: str,
         entity_id: uuid.UUID,
         commit_sha: str,
-    ) -> ShadowSummaryResult:
-        snapshot = await self._run_sync(
-            session,
-            shadow_read_service.get_snapshot_by_commit,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            commit_sha=commit_sha,
-        )
+    ) -> ShadowSummaryResult | None:
+        try:
+            snapshot = await self._run_sync(
+                session,
+                shadow_read_service.get_snapshot_by_commit,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                commit_sha=commit_sha,
+            )
+        except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
+            logger.warning(
+                "Missing Shadow snapshot for %s/%s at commit %s: %s",
+                entity_type,
+                entity_id,
+                commit_sha,
+                exc,
+            )
+            return None
         return await self._summarize_with_cache(
             session=session,
             snapshot=snapshot,

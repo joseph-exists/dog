@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any, Literal
+from uuid import UUID
 from pydantic import EmailStr, field_validator, BaseModel
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Enum as SAEnum, JSON, UniqueConstraint
@@ -3239,6 +3240,9 @@ class AgentConfigBase(SQLModel):
      # before other agents, acting as an orchestrator that routes to specialists
      is_coordinator: bool = Field(default=False)
 
+     # Maximum number of LLM requests per agent run (prevents runaway tool loops)
+     max_tool_iterations: int = Field(default=10)
+
      # Agent capabilities for discovery and A2A coordination
      # e.g., ["story-structure", "dialogue", "character-development", "plot-twists"]
      capabilities: list[str] = Field(default_factory=list, sa_column=Column(JSON))
@@ -3266,6 +3270,7 @@ class AgentConfigUpdate(SQLModel):
      participation_mode: str | None = None
      is_coordinator: bool | None = None
      capabilities: list[str] | None = None
+     max_tool_iterations: int | None = None
 
 
 class AgentConfig(AgentConfigBase, table=True):

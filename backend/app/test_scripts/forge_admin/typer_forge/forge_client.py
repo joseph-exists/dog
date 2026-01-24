@@ -45,8 +45,8 @@ FORGE_URL = "http://localhost:3000/api/v1"
 # SHADOW_LLM_MODELS_TOKEN="1b1999a941afac74a1db9d42600e307a4e15eb66"
 # SHADOW_USER_LLM_PROVIDERS_TOKEN="b2812c6096cbde3647d2c1016a613da6951f58b1"
 # SHADOW_PROMPTS_TOKEN="ec085a5f80ddcaef323b43d3cd30fe8d3f84d876"
-API_TOKEN="ec085a5f80ddcaef323b43d3cd30fe8d3f84d876"
-
+# API_TOKEN="ec085a5f80ddcaef323b43d3cd30fe8d3f84d876"
+API_TOKEN = "13089e081cd56a305978b7ea885fcd6321d31607"
 
 # =============================================================================
 # Client Factory

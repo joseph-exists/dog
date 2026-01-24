@@ -1,6 +1,7 @@
 // src/components/Page/registry/entityTypes.ts
 import {
   Bot,
+  Crown,
   type LucideIcon,
   MessageSquare,
   Smile,
@@ -67,6 +68,14 @@ export const entityTypes: EntityTypeDefinition[] = [
     icon: Smile,
     color: "pink",
     pageRoutePattern: "/persona/:id",
+  },
+  {
+    id: "archetype",
+    label: "Archetype",
+    labelPlural: "Archetypes",
+    icon: Crown,
+    color: "amber",
+    pageRoutePattern: "/archetype/:id",
   },
 ]
 

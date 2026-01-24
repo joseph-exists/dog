@@ -5,6 +5,8 @@ import type {
   BioContent,
   ContactBlockConfig,
   ContactContent,
+  DomainsBlockConfig,
+  DomainsContent,
   GalleryBlockConfig,
   GalleryContent,
   IdentityBlockConfig,
@@ -13,8 +15,10 @@ import type {
   LinksContent,
   ProfileImageBlockConfig,
   ProfileImageContent,
+  QualitiesBlockConfig,
   RelationshipsBlockConfig,
   RelationshipsContent,
+  TraitsBlockConfig,
 } from "@/components/Page/blocks"
 import { getBlockType, type TemplateBlock } from "@/components/Page/registry"
 import {
@@ -26,15 +30,20 @@ import {
 import {
   BioForm,
   ContactForm,
+  DomainsForm,
   GalleryForm,
   IdentityForm,
   LinksForm,
   ProfileImageForm,
+  QualitiesForm,
   RelationshipsForm,
+  TraitsForm,
 } from "./forms"
 
 interface BlockEditorSheetProps {
   block: TemplateBlock | null
+  entityType: string
+  entityId: string
   onSave: (blockId: string, content: Record<string, unknown>) => void
   onClose: () => void
 }
@@ -47,6 +56,8 @@ interface BlockEditorSheetProps {
  */
 export function BlockEditorSheet({
   block,
+  entityType,
+  entityId,
   onSave,
   onClose,
 }: BlockEditorSheetProps) {
@@ -135,7 +146,33 @@ export function BlockEditorSheet({
             onCancel={onClose}
           />
         )
-      // Note: activityFeed, dataTable, chart don't have forms yet
+      case "domains":
+        return (
+          <DomainsForm
+            content={content as DomainsContent}
+            config={config as DomainsBlockConfig}
+            onSave={createSaveHandler<DomainsContent>(block.id)}
+            onCancel={onClose}
+          />
+        )
+      case "qualities":
+        return (
+          <QualitiesForm
+            config={config as QualitiesBlockConfig}
+            entityType={entityType}
+            entityId={entityId}
+            onClose={onClose}
+          />
+        )
+      case "traits":
+        return (
+          <TraitsForm
+            config={config as TraitsBlockConfig}
+            entityType={entityType}
+            entityId={entityId}
+            onClose={onClose}
+          />
+        )
       default:
         return (
           <div className="p-4 text-center text-muted-foreground">

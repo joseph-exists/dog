@@ -25,6 +25,7 @@ export type AgentConfigCreate = {
     scope?: string;
     participation_mode?: string;
     is_coordinator?: boolean;
+    max_tool_iterations?: number;
     capabilities?: Array<(string)>;
 };
 
@@ -50,6 +51,7 @@ export type AgentConfigPublic = {
     scope?: string;
     participation_mode?: string;
     is_coordinator?: boolean;
+    max_tool_iterations?: number;
     capabilities?: Array<(string)>;
     id: string;
     owner_id: (string | null);
@@ -81,6 +83,7 @@ export type AgentConfigUpdate = {
     participation_mode?: (string | null);
     is_coordinator?: (boolean | null);
     capabilities?: (Array<(string)> | null);
+    max_tool_iterations?: (number | null);
 };
 
 export type AgentPersonaCreate = {
@@ -1511,6 +1514,32 @@ export type TraitUpdate = {
     description?: (string | null);
 };
 
+/**
+ * Request body for AG-UI action button clicks.
+ *
+ * When a user clicks an action button emitted by an agent, the frontend sends
+ * this payload to POST /rooms/{room_id}/ui-action. The backend looks up the
+ * originating agent from the source message and invokes it with the action
+ * string as context, bypassing normal participation mode checks.
+ *
+ * This enables bidirectional agent interaction without polluting the chat
+ * history with raw action strings.
+ */
+export type UIActionRequest = {
+    /**
+     * Action identifier from the button that was clicked
+     */
+    action: string;
+    /**
+     * ID of the agent message that emitted the action button
+     */
+    source_message_id: string;
+    /**
+     * Optional ID of the specific UI component that was clicked
+     */
+    component_id?: (string | null);
+};
+
 export type UpdatePassword = {
     current_password: string;
     new_password: string;
@@ -2324,12 +2353,6 @@ export type PersonaQualitiesRemoveQualityFromPersonaData = {
 
 export type PersonaQualitiesRemoveQualityFromPersonaResponse = (Message);
 
-export type PersonaTraitsReadPersonaTraitsData = {
-    personaId: string;
-};
-
-export type PersonaTraitsReadPersonaTraitsResponse = (Array<TraitPublic>);
-
 export type PersonasReadPersonasData = {
     limit?: number;
     skip?: number;
@@ -2368,6 +2391,12 @@ export type PersonasCreatePersonaFromArchetypeData = {
 };
 
 export type PersonasCreatePersonaFromArchetypeResponse = (PersonaPublic);
+
+export type PersonaTraitsReadPersonaTraitsData = {
+    personaId: string;
+};
+
+export type PersonaTraitsReadPersonaTraitsResponse = (Array<TraitPublic>);
 
 export type PresetsListPresetsResponse = (PresetsListResponse);
 
@@ -2703,6 +2732,13 @@ export type RoomsToggleMessageContextEndpointData = {
 };
 
 export type RoomsToggleMessageContextEndpointResponse = (RoomMessagePublic);
+
+export type RoomsHandleUiActionData = {
+    requestBody: UIActionRequest;
+    roomId: string;
+};
+
+export type RoomsHandleUiActionResponse = (unknown);
 
 export type StoriesReadStoriesData = {
     limit?: number;

@@ -10,7 +10,6 @@ from sqlmodel import select
 
 from app.models import AgentConfig, Room, RoomParticipantBinding
 from app.services.context_store import ContextItem
-from app.services.shadow_read_service import ShadowRepoNotFound, ShadowVersionNotFound
 from app.services.shadow_summary_service import shadow_summary_service
 
 logger = logging.getLogger(__name__)
@@ -68,6 +67,15 @@ def _missing_shadow_snapshot_item(
     )
 
 
+def _missing_shadow_snapshot_reason(
+    *,
+    entity_type: str,
+    entity_id: uuid.UUID | str | None,
+) -> str:
+    entity_id_str = str(entity_id) if entity_id is not None else "unknown"
+    return f"No Shadow snapshot available for {entity_type}/{entity_id_str}"
+
+
 async def build_shadow_context_items(
     *,
     room_id: uuid.UUID,
@@ -90,12 +98,12 @@ async def build_shadow_context_items(
         return items
 
     # Room summary
-    try:
-        room_summary = await shadow_summary_service.get_latest_summary(
-            session=session,
-            entity_type="room",
-            entity_id=room_id,
-        )
+    room_summary = await shadow_summary_service.get_latest_summary(
+        session=session,
+        entity_type="room",
+        entity_id=room_id,
+    )
+    if room_summary:
         items.append(
             _context_item(
                 room_id=room_id,
@@ -107,30 +115,23 @@ async def build_shadow_context_items(
                 item_id=f"shadow:room:{room_id}:latest",
             )
         )
-    except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
-        logger.warning(f"Missing Shadow snapshot for room {room_id}: {exc}")
-        items.append(
-            _missing_shadow_snapshot_item(
-                room_id=room_id,
-                agent_slug=None,
-                context_type="shadow.room.summary",
-                entity_type="room",
-                entity_id=room_id,
-                reason=str(exc),
-                created_at=now,
-                ttl_seconds=120,
-                item_id=f"shadow:room:{room_id}:missing",
-            )
+    else:
+        reason = _missing_shadow_snapshot_reason(
+            entity_type="room", entity_id=room_id
         )
+        logger.warning(reason)
 
     # Story summary (if room has a story)
     if room.story_id:
-        try:
-            story_summary = await shadow_summary_service.get_latest_summary(
-                session=session,
-                entity_type="story",
-                entity_id=room.story_id,
-            )
+        reason = _missing_shadow_snapshot_reason(
+            entity_type="story", entity_id=room.story_id
+        )
+        story_summary = await shadow_summary_service.get_latest_summary(
+            session=session,
+            entity_type="story",
+            entity_id=room.story_id,
+        )
+        if story_summary:
             items.append(
                 _context_item(
                     room_id=room_id,
@@ -142,8 +143,8 @@ async def build_shadow_context_items(
                     item_id=f"shadow:story:{room.story_id}:latest",
                 )
             )
-        except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
-            logger.warning(f"Missing Shadow snapshot for story {room.story_id}: {exc}")
+        else:
+            logger.warning(reason)
             items.append(
                 _missing_shadow_snapshot_item(
                     room_id=room_id,
@@ -151,7 +152,7 @@ async def build_shadow_context_items(
                     context_type="shadow.story.summary",
                     entity_type="story",
                     entity_id=room.story_id,
-                    reason=str(exc),
+                    reason=reason,
                     created_at=now,
                     ttl_seconds=300,
                     item_id=f"shadow:story:{room.story_id}:missing",
@@ -169,12 +170,12 @@ async def build_shadow_context_items(
     if not agent_config:
         return items
 
-    try:
-        agent_summary = await shadow_summary_service.get_latest_summary(
-            session=session,
-            entity_type="agent",
-            entity_id=agent_config.id,
-        )
+    agent_summary = await shadow_summary_service.get_latest_summary(
+        session=session,
+        entity_type="agent",
+        entity_id=agent_config.id,
+    )
+    if agent_summary:
         items.append(
             _context_item(
                 room_id=room_id,
@@ -186,8 +187,11 @@ async def build_shadow_context_items(
                 item_id=f"shadow:agent:{agent_config.id}:latest",
             )
         )
-    except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
-        logger.warning(f"Missing Shadow snapshot for agent {agent_config.id}: {exc}")
+    else:
+        reason = _missing_shadow_snapshot_reason(
+            entity_type="agent", entity_id=agent_config.id
+        )
+        logger.warning(reason)
         items.append(
             _missing_shadow_snapshot_item(
                 room_id=room_id,
@@ -195,7 +199,7 @@ async def build_shadow_context_items(
                 context_type="shadow.agent.summary",
                 entity_type="agent",
                 entity_id=agent_config.id,
-                reason=str(exc),
+                reason=reason,
                 created_at=now,
                 ttl_seconds=300,
                 item_id=f"shadow:agent:{agent_config.id}:missing",
@@ -221,12 +225,12 @@ async def build_shadow_context_items(
         return items
 
     if binding.persona_id:
-        try:
-            persona_summary = await shadow_summary_service.get_latest_summary(
-                session=session,
-                entity_type="persona",
-                entity_id=binding.persona_id,
-            )
+        persona_summary = await shadow_summary_service.get_latest_summary(
+            session=session,
+            entity_type="persona",
+            entity_id=binding.persona_id,
+        )
+        if persona_summary:
             items.append(
                 _context_item(
                     room_id=room_id,
@@ -238,10 +242,11 @@ async def build_shadow_context_items(
                     item_id=f"shadow:persona:{binding.persona_id}:latest",
                 )
             )
-        except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
-            logger.warning(
-                f"Missing Shadow snapshot for persona {binding.persona_id}: {exc}"
+        else:
+            reason = _missing_shadow_snapshot_reason(
+                entity_type="persona", entity_id=binding.persona_id
             )
+            logger.warning(reason)
             items.append(
                 _missing_shadow_snapshot_item(
                     room_id=room_id,
@@ -249,7 +254,7 @@ async def build_shadow_context_items(
                     context_type="shadow.persona.summary",
                     entity_type="persona",
                     entity_id=binding.persona_id,
-                    reason=str(exc),
+                    reason=reason,
                     created_at=now,
                     ttl_seconds=300,
                     item_id=f"shadow:persona:{binding.persona_id}:missing",
@@ -270,22 +275,24 @@ async def build_shadow_context_items(
     }
 
     if binding.user_llm_provider_id:
-        try:
-            provider_summary = await shadow_summary_service.get_latest_summary(
-                session=session,
+        provider_summary = await shadow_summary_service.get_latest_summary(
+            session=session,
+            entity_type="user_llm_provider",
+            entity_id=binding.user_llm_provider_id,
+        )
+        if provider_summary:
+            runtime_payload["user_llm_provider"] = provider_summary.__dict__
+        else:
+            reason = _missing_shadow_snapshot_reason(
                 entity_type="user_llm_provider",
                 entity_id=binding.user_llm_provider_id,
             )
-            runtime_payload["user_llm_provider"] = provider_summary.__dict__
-        except (ShadowRepoNotFound, ShadowVersionNotFound) as exc:
-            logger.warning(
-                f"Missing Shadow snapshot for user_llm_provider {binding.user_llm_provider_id}: {exc}"
-            )
+            logger.warning(reason)
             runtime_payload["user_llm_provider_missing"] = {
                 "missing_shadow_snapshot": True,
                 "entity_type": "user_llm_provider",
                 "entity_id": str(binding.user_llm_provider_id),
-                "reason": str(exc),
+                "reason": reason,
                 "is_stale": True,
             }
 

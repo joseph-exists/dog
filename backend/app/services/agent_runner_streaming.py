@@ -5,11 +5,13 @@ import uuid
 from typing import Any, Awaitable, Callable
 
 from pydantic_ai import ModelAPIError
+from pydantic_ai.usage import UsageLimits
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.services.a2a_orchestrator import A2AOrchestrator
 from app.services.agent_context import RoomContextService
 from app.services.agent_events import AgentEventPublisher
+from app.services.agent_instance import get_agent_config
 from app.services.agent_runner_types import AgentRunRequest, AgentRunResult
 
 logger = logging.getLogger(__name__)
@@ -83,6 +85,12 @@ class StreamingAgentRunner:
 
             deps = self._deps_factory(session, room_id, agent_name, req.a2a_depth)
 
+            # Look up agent config for usage limits
+            agent_config = await get_agent_config(session, agent_name)
+            request_limit = (
+                agent_config.max_tool_iterations if agent_config else 10
+            )
+
             full_prompt = self._build_agent_prompt(
                 trigger_message, context, current_agent_slug=agent_name
             )
@@ -97,7 +105,10 @@ class StreamingAgentRunner:
             full_response = ""
             prev_len = 0
 
-            async with agent.run_stream(full_prompt, deps=deps) as result:
+            usage_limits = UsageLimits(request_limit=request_limit)
+            async with agent.run_stream(
+                full_prompt, deps=deps, usage_limits=usage_limits
+            ) as result:
                 async for chunk in result.stream_text():
                     new_content = chunk[prev_len:]
                     full_response = chunk

@@ -102,9 +102,17 @@ export function RelationshipsBlock({
 
   const hasMore = totalCount > visibleCount
 
-  // Empty state - render nothing
+  // Empty state — show placeholder so block is visible in edit mode
   if (relationships.length === 0) {
-    return null
+    return (
+      <BlockContainer title="Relationships" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">
+            No relationships yet.
+          </p>
+        </div>
+      </BlockContainer>
+    )
   }
 
   return (

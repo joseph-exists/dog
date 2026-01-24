@@ -24,6 +24,7 @@ from app.test_scripts.forge_admin.typer_forge.commands import (
     issues,
     orgs,
     repos,
+    shadow,
     users,
     wiki,
 )
@@ -49,6 +50,7 @@ app.add_typer(repos.app, name="repos", help="Repository management")
 app.add_typer(issues.app, name="issues", help="Issue management")
 app.add_typer(orgs.app, name="orgs", help="Organization management")
 app.add_typer(wiki.app, name="wiki", help="Wiki page management")
+app.add_typer(shadow.app, name="shadow", help="Shadow service validation")
 
 
 # =============================================================================

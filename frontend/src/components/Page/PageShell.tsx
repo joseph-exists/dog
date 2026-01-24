@@ -417,6 +417,7 @@ export function PageShell({
                     }
                   : undefined
               }
+              entityType={entityType}
               entityId={entityId}
             />
           )
@@ -439,6 +440,7 @@ export function PageShell({
                     }
                   : undefined
               }
+              entityType={entityType}
               entityId={entityId}
             />
           )
@@ -515,6 +517,8 @@ export function PageShell({
       {/* Block Editor Sheet */}
       <BlockEditorSheet
         block={selectedBlock}
+        entityType={entityType}
+        entityId={entityId}
         onSave={handleSaveBlock}
         onClose={() => selectBlock(null)}
       />

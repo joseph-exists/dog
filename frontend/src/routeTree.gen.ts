@@ -20,6 +20,7 @@ import { Route as LayoutRoomsRouteImport } from './routes/_layout/rooms'
 import { Route as LayoutPersonasRouteImport } from './routes/_layout/personas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutChatsterRouteImport } from './routes/_layout/chatster'
+import { Route as LayoutArchetypesRouteImport } from './routes/_layout/archetypes'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutStoriesIndexRouteImport } from './routes/_layout/stories/index'
@@ -29,6 +30,7 @@ import { Route as LayoutRoomRoomIdRouteImport } from './routes/_layout/room.$roo
 import { Route as LayoutRoomV2RoomIdRouteImport } from './routes/_layout/room-v2.$roomId'
 import { Route as LayoutRRoomIdRouteImport } from './routes/_layout/r.$roomId'
 import { Route as LayoutPersonaPersonaIdRouteImport } from './routes/_layout/persona.$personaId'
+import { Route as LayoutArchetypeArchetypeIdRouteImport } from './routes/_layout/archetype.$archetypeId'
 import { Route as LayoutAgentAgentIdRouteImport } from './routes/_layout/agent.$agentId'
 import { Route as LayoutStoriesStoryIdEditRouteImport } from './routes/_layout/stories/$storyId/edit'
 
@@ -86,6 +88,11 @@ const LayoutChatsterRoute = LayoutChatsterRouteImport.update({
   path: '/chatster',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutArchetypesRoute = LayoutArchetypesRouteImport.update({
+  id: '/archetypes',
+  path: '/archetypes',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAgentsRoute = LayoutAgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
@@ -131,6 +138,12 @@ const LayoutPersonaPersonaIdRoute = LayoutPersonaPersonaIdRouteImport.update({
   path: '/persona/$personaId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutArchetypeArchetypeIdRoute =
+  LayoutArchetypeArchetypeIdRouteImport.update({
+    id: '/archetype/$archetypeId',
+    path: '/archetype/$archetypeId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutAgentAgentIdRoute = LayoutAgentAgentIdRouteImport.update({
   id: '/agent/$agentId',
   path: '/agent/$agentId',
@@ -150,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/agents': typeof LayoutAgentsRoute
+  '/archetypes': typeof LayoutArchetypesRoute
   '/chatster': typeof LayoutChatsterRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
@@ -157,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
+  '/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
   '/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
   '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
@@ -173,6 +188,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/agents': typeof LayoutAgentsRoute
+  '/archetypes': typeof LayoutArchetypesRoute
   '/chatster': typeof LayoutChatsterRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
@@ -180,6 +196,7 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
+  '/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
   '/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
   '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
@@ -198,6 +215,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/agents': typeof LayoutAgentsRoute
+  '/_layout/archetypes': typeof LayoutArchetypesRoute
   '/_layout/chatster': typeof LayoutChatsterRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/personas': typeof LayoutPersonasRoute
@@ -205,6 +223,7 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/agent/$agentId': typeof LayoutAgentAgentIdRoute
+  '/_layout/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
   '/_layout/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
   '/_layout/r/$roomId': typeof LayoutRRoomIdRoute
   '/_layout/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
@@ -223,6 +242,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/agents'
+    | '/archetypes'
     | '/chatster'
     | '/items'
     | '/personas'
@@ -230,6 +250,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/'
     | '/agent/$agentId'
+    | '/archetype/$archetypeId'
     | '/persona/$personaId'
     | '/r/$roomId'
     | '/room-v2/$roomId'
@@ -246,6 +267,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/agents'
+    | '/archetypes'
     | '/chatster'
     | '/items'
     | '/personas'
@@ -253,6 +275,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/'
     | '/agent/$agentId'
+    | '/archetype/$archetypeId'
     | '/persona/$personaId'
     | '/r/$roomId'
     | '/room-v2/$roomId'
@@ -270,6 +293,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/admin'
     | '/_layout/agents'
+    | '/_layout/archetypes'
     | '/_layout/chatster'
     | '/_layout/items'
     | '/_layout/personas'
@@ -277,6 +301,7 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_layout/'
     | '/_layout/agent/$agentId'
+    | '/_layout/archetype/$archetypeId'
     | '/_layout/persona/$personaId'
     | '/_layout/r/$roomId'
     | '/_layout/room-v2/$roomId'
@@ -374,6 +399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChatsterRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/archetypes': {
+      id: '/_layout/archetypes'
+      path: '/archetypes'
+      fullPath: '/archetypes'
+      preLoaderRoute: typeof LayoutArchetypesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/agents': {
       id: '/_layout/agents'
       path: '/agents'
@@ -437,6 +469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutPersonaPersonaIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/archetype/$archetypeId': {
+      id: '/_layout/archetype/$archetypeId'
+      path: '/archetype/$archetypeId'
+      fullPath: '/archetype/$archetypeId'
+      preLoaderRoute: typeof LayoutArchetypeArchetypeIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/agent/$agentId': {
       id: '/_layout/agent/$agentId'
       path: '/agent/$agentId'
@@ -457,6 +496,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutAgentsRoute: typeof LayoutAgentsRoute
+  LayoutArchetypesRoute: typeof LayoutArchetypesRoute
   LayoutChatsterRoute: typeof LayoutChatsterRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPersonasRoute: typeof LayoutPersonasRoute
@@ -464,6 +504,7 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAgentAgentIdRoute: typeof LayoutAgentAgentIdRoute
+  LayoutArchetypeArchetypeIdRoute: typeof LayoutArchetypeArchetypeIdRoute
   LayoutPersonaPersonaIdRoute: typeof LayoutPersonaPersonaIdRoute
   LayoutRRoomIdRoute: typeof LayoutRRoomIdRoute
   LayoutRoomV2RoomIdRoute: typeof LayoutRoomV2RoomIdRoute
@@ -477,6 +518,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutAgentsRoute: LayoutAgentsRoute,
+  LayoutArchetypesRoute: LayoutArchetypesRoute,
   LayoutChatsterRoute: LayoutChatsterRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPersonasRoute: LayoutPersonasRoute,
@@ -484,6 +526,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAgentAgentIdRoute: LayoutAgentAgentIdRoute,
+  LayoutArchetypeArchetypeIdRoute: LayoutArchetypeArchetypeIdRoute,
   LayoutPersonaPersonaIdRoute: LayoutPersonaPersonaIdRoute,
   LayoutRRoomIdRoute: LayoutRRoomIdRoute,
   LayoutRoomV2RoomIdRoute: LayoutRoomV2RoomIdRoute,

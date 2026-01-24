@@ -63,7 +63,13 @@ export function LinksBlock({ config, content, className }: LinksBlockProps) {
   const links = content?.items || []
 
   if (links.length === 0) {
-    return null
+    return (
+      <BlockContainer title="Links" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">No links yet.</p>
+        </div>
+      </BlockContainer>
+    )
   }
 
   return (

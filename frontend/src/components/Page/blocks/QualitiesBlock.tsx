@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Gem } from "lucide-react"
 
-import { PersonaQualitiesService } from "@/client"
+import { EntityQualitiesService } from "@/services/entityQualitiesService"
 import { BlockContainer } from "../primitives"
 
 export interface QualitiesBlockConfig {
@@ -23,28 +23,29 @@ export interface QualitiesContent {
 export interface QualitiesBlockProps {
   config: QualitiesBlockConfig
   content?: QualitiesContent
+  entityType?: string
   entityId?: string
   className?: string
 }
 
 /**
- * QualitiesBlock - Displays persona qualities as badges or list items.
+ * QualitiesBlock - Displays entity qualities as badges or list items.
  *
- * When entityId is provided, fetches enabled qualities from the
- * persona-qualities API. Falls back to static content.items if
- * no entity context or if the API returns no data.
+ * Uses EntityQualitiesService to fetch quality data for any supported entity type.
+ * Falls back to static content.items if no entity context or API returns empty.
  */
 export function QualitiesBlock({
   config,
   content,
+  entityType,
   entityId,
   className,
 }: QualitiesBlockProps) {
   const { data: apiQualities } = useQuery({
-    queryKey: ["persona-qualities", entityId],
+    queryKey: EntityQualitiesService.queryKey(entityType!, entityId!),
     queryFn: () =>
-      PersonaQualitiesService.readPersonaQualities({ personaId: entityId! }),
-    enabled: !!entityId,
+      EntityQualitiesService.getQualities(entityType!, entityId!),
+    enabled: !!entityType && !!entityId,
   })
 
   // API qualities take priority; fall back to static content
@@ -57,11 +58,19 @@ export function QualitiesBlock({
         }))
       : (content?.items ?? [])
 
-  if (!items.length) {
-    return null
-  }
-
   const { layout = "badges", maxVisible = 12 } = config
+
+  if (!items.length) {
+    return (
+      <BlockContainer title="Qualities" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">
+            No qualities assigned yet.
+          </p>
+        </div>
+      </BlockContainer>
+    )
+  }
   const visibleItems = items.slice(0, maxVisible)
   const hiddenCount = items.length - visibleItems.length
 

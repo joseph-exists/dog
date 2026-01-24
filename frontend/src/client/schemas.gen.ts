@@ -98,6 +98,11 @@ export const AgentConfigCreateSchema = {
             title: 'Is Coordinator',
             default: false
         },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
         capabilities: {
             items: {
                 type: 'string'
@@ -213,6 +218,11 @@ export const AgentConfigPublicSchema = {
             type: 'boolean',
             title: 'Is Coordinator',
             default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
         },
         capabilities: {
             items: {
@@ -393,6 +403,17 @@ export const AgentConfigUpdateSchema = {
                 }
             ],
             title: 'Capabilities'
+        },
+        max_tool_iterations: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Tool Iterations'
         }
     },
     type: 'object',
@@ -5451,6 +5472,46 @@ export const TraitsPublicSchema = {
     required: ['data', 'count'],
     title: 'TraitsPublic',
     description: 'Collection model for Trait API responses.'
+} as const;
+
+export const UIActionRequestSchema = {
+    properties: {
+        action: {
+            type: 'string',
+            title: 'Action',
+            description: 'Action identifier from the button that was clicked'
+        },
+        source_message_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Message Id',
+            description: 'ID of the agent message that emitted the action button'
+        },
+        component_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Id',
+            description: 'Optional ID of the specific UI component that was clicked'
+        }
+    },
+    type: 'object',
+    required: ['action', 'source_message_id'],
+    title: 'UIActionRequest',
+    description: `Request body for AG-UI action button clicks.
+
+When a user clicks an action button emitted by an agent, the frontend sends
+this payload to POST /rooms/{room_id}/ui-action. The backend looks up the
+originating agent from the source message and invokes it with the action
+string as context, bypassing normal participation mode checks.
+
+This enables bidirectional agent interaction without polluting the chat
+history with raw action strings.`
 } as const;
 
 export const UpdatePasswordSchema = {

@@ -2,6 +2,7 @@ import {
   BookOpen,
   Bot,
   Briefcase,
+  Crown,
   Home,
   MessageSquare,
   Smile,
@@ -27,6 +28,7 @@ const baseItems: Item[] = [
   { icon: MessageSquare, title: "Rooms", path: "/rooms" },
   { icon: Bot, title: "Agents", path: "/agents" },
   { icon: Smile, title: "Personas", path: "/personas" },
+  { icon: Crown, title: "Archetypes", path: "/archetypes" },
   { icon: Briefcase, title: "Items", path: "/items" },
   { icon: BookOpen, title: "debug-chatster", path: "/chatster" },
 ]

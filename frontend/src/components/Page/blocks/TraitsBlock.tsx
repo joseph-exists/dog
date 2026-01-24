@@ -1,7 +1,7 @@
 // src/components/Page/blocks/TraitsBlock.tsx
 import { useQuery } from "@tanstack/react-query"
 
-import { PersonaTraitsService } from "@/client"
+import { EntityTraitsService } from "@/services/entityTraitsService"
 import { BlockContainer } from "../primitives"
 
 export interface TraitsBlockConfig {
@@ -22,6 +22,7 @@ export interface TraitsContent {
 export interface TraitsBlockProps {
   config: TraitsBlockConfig
   content?: TraitsContent
+  entityType?: string
   entityId?: string
   className?: string
 }
@@ -29,21 +30,20 @@ export interface TraitsBlockProps {
 /**
  * TraitsBlock - Displays personality traits as badges or list items.
  *
- * When entityId is provided, fetches real trait data from the
- * persona-traits API. Falls back to static content.items if no
- * entity context or if the API returns no data.
+ * Uses EntityTraitsService to fetch trait data for any supported entity type.
+ * Falls back to static content.items if no entity context or API returns empty.
  */
 export function TraitsBlock({
   config,
   content,
+  entityType,
   entityId,
   className,
 }: TraitsBlockProps) {
   const { data: apiTraits } = useQuery({
-    queryKey: ["persona-traits", entityId],
-    queryFn: () =>
-      PersonaTraitsService.readPersonaTraits({ personaId: entityId! }),
-    enabled: !!entityId,
+    queryKey: EntityTraitsService.queryKey(entityType!, entityId!),
+    queryFn: () => EntityTraitsService.getTraits(entityType!, entityId!),
+    enabled: !!entityType && !!entityId,
   })
 
   // API traits take priority; fall back to static content
@@ -52,17 +52,25 @@ export function TraitsBlock({
       ? apiTraits.map((t) => ({ id: t.id, label: t.name, category: undefined }))
       : (content?.items ?? [])
 
-  if (!items.length) {
-    return null
-  }
-
   const { layout = "badges", maxVisible = 12 } = config
+
+  if (!items.length) {
+    return (
+      <BlockContainer title="Traits" className={className}>
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground italic">
+            No traits assigned yet.
+          </p>
+        </div>
+      </BlockContainer>
+    )
+  }
   const visibleItems = items.slice(0, maxVisible)
   const hiddenCount = items.length - visibleItems.length
 
   if (layout === "list") {
     return (
-      <BlockContainer title="Traits & Qualities" className={className}>
+      <BlockContainer title="Traits" className={className}>
         <div className="p-4">
           <ul className="space-y-1.5">
             {visibleItems.map((trait) => (
