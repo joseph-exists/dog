@@ -12,10 +12,21 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import AgentConfig, Room, RoomMessage, RoomParticipant, Story
+from app.models import (
+    AgentConfig,
+    Room,
+    RoomMessage,
+    RoomParticipant,
+    RoomStoryProgress,
+    Story,
+    StoryNode,
+    UserStoryProgress,
+)
+from app.crud import get_available_choices, get_choice_ancestor_chain_async
 from app.services.context_store import ContextItemStore
 from app.services.shadow_context_loader import build_shadow_context_items
 
@@ -39,6 +50,35 @@ class AgentInfo:
 
 
 @dataclass
+class StoryRuntimeContext:
+    """
+    Lightweight runtime projection of the room's story state, designed for agent prompts.
+
+    Unlike RoomRuntimePublic (which serves the UI with full model objects), this
+    provides text-oriented fields that can be directly formatted into a natural
+    language prompt. Agents need to know WHERE the user is in the story, WHAT
+    happened so far, and WHAT options are available — not UUIDs or version numbers.
+
+    Attributes:
+        current_node_title: Title of the node the user is currently on
+        current_node_content: Full text content of the current node
+        current_node_type: Node type (e.g., "scene", "dialogue", "choice_point")
+        is_end_node: Whether this is a terminal node in the story
+        node_chain: Ordered list of node titles representing the path taken
+        available_choices: List of choice texts the user can select next
+        story_state: Accumulated key-value state from choices made
+    """
+
+    current_node_title: str
+    current_node_content: str
+    current_node_type: str | None
+    is_end_node: bool
+    node_chain: list[str]  # Breadcrumb trail of node titles (root → current)
+    available_choices: list[str]  # Choice texts available from current node
+    story_state: dict[str, Any]  # Accumulated state from user's choices
+
+
+@dataclass
 class RoomContext:
     """
     Context object passed to agents for room-aware responses.
@@ -47,6 +87,7 @@ class RoomContext:
         room_id: UUID of the current room
         story_id: Optional UUID of associated story
         story_data: Story details (title, description) if available
+        story_runtime: Live story runtime state (current node, path, choices)
         recent_messages: Last N messages for conversation context
         participants: List of active participants (users and agents)
         room_metadata: Room title, creator, timestamps
@@ -56,6 +97,7 @@ class RoomContext:
     room_id: uuid.UUID
     story_id: uuid.UUID | None
     story_data: dict[str, Any] | None
+    story_runtime: StoryRuntimeContext | None  # Runtime projection of active story state
     recent_messages: list[dict[str, Any]]
     participants: list[dict[str, Any]]
     room_metadata: dict[str, Any]
@@ -117,6 +159,93 @@ async def build_room_context(
                 "description": story.description,
                 "is_published": story.is_published,
             }
+
+    # --- Story Runtime Projection ---
+    # Bridges Surface 1 (Room Runtime API) into the agent context.
+    # Agents need to know the user's current position in the story, the path
+    # they've taken, and what choices are available — so they can respond
+    # appropriately to the narrative state.
+    story_runtime: StoryRuntimeContext | None = None
+    if room.story_id:
+        try:
+            # Step 1: Find the room's shared story progress record
+            rsp_result = await session.exec(
+                select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
+            )
+            rsp_row = rsp_result.one_or_none()
+            room_story_progress = (
+                rsp_row[0] if rsp_row and not isinstance(rsp_row, RoomStoryProgress) else rsp_row
+            )
+
+            if room_story_progress:
+                # Step 2: Load the canonical UserStoryProgress (the actual state)
+                progress_result = await session.exec(
+                    select(UserStoryProgress).where(
+                        UserStoryProgress.id == room_story_progress.active_progress_id
+                    )
+                )
+                progress_row = progress_result.one_or_none()
+                progress = (
+                    progress_row[0]
+                    if progress_row and not isinstance(progress_row, UserStoryProgress)
+                    else progress_row
+                )
+
+                if progress and progress.current_node_id is not None:
+                    # Step 3: Load the current node the user is on
+                    current_node_obj = await session.get(StoryNode, progress.current_node_id)
+
+                    if current_node_obj:
+                        # Step 4: Get available choices from this node,
+                        # filtered by current story_state (conditional branches)
+                        choices = await get_available_choices(
+                            session=session,
+                            node_id=progress.current_node_id,
+                            story_state=progress.story_state or {},
+                        )
+                        choice_texts = [c.text for c in choices]
+
+                        # Step 5: Build node chain (the breadcrumb trail of the path taken)
+                        # Uses the choice ancestor chain to reconstruct traversal order
+                        node_chain_titles: list[str] = []
+                        if progress.head_choice_id:
+                            chain = await get_choice_ancestor_chain_async(
+                                session=session,
+                                choice_id=progress.head_choice_id,
+                            )
+                            if chain:
+                                # Collect node IDs in traversal order: first from_node, then all to_nodes
+                                chain_node_ids = [chain[0].from_node_id] + [
+                                    c.to_node_id for c in chain
+                                ]
+                                # Batch-load all nodes in the chain
+                                chain_nodes_result = await session.exec(
+                                    select(StoryNode).where(
+                                        StoryNode.id.in_([str(nid) for nid in chain_node_ids])
+                                    )
+                                )
+                                chain_nodes = chain_nodes_result.all()
+                                nodes_by_id = {n.id: n for n in chain_nodes}
+                                node_chain_titles = [
+                                    nodes_by_id[nid].title
+                                    for nid in chain_node_ids
+                                    if nid in nodes_by_id
+                                ]
+
+                        story_runtime = StoryRuntimeContext(
+                            current_node_title=current_node_obj.title,
+                            current_node_content=current_node_obj.content or "",
+                            current_node_type=current_node_obj.node_type,
+                            is_end_node=current_node_obj.is_end_node,
+                            node_chain=node_chain_titles,
+                            available_choices=choice_texts,
+                            story_state=progress.story_state or {},
+                        )
+        except Exception as exc:
+            # Non-fatal: if runtime loading fails, agent still gets basic context
+            logger.warning(
+                f"Failed to load story runtime for room {room_id}: {exc}"
+            )
 
     # Load recent messages (ordered by created_at desc, then reversed)
     messages_result = await session.exec(
@@ -235,6 +364,7 @@ async def build_room_context(
         room_id=room_id,
         story_id=room.story_id,
         story_data=story_data,
+        story_runtime=story_runtime,  # Runtime projection of active story state
         recent_messages=recent_messages,
         participants=participants,
         room_metadata=room_metadata,

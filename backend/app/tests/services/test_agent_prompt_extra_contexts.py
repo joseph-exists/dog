@@ -12,6 +12,7 @@ def test_build_agent_prompt_includes_extra_contexts() -> None:
         room_id=uuid.uuid4(),
         story_id=None,
         story_data=None,
+        story_runtime=None,
         recent_messages=[],
         participants=[],
         room_metadata={},

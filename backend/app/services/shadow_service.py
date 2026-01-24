@@ -63,24 +63,28 @@ SERVICE_ACCOUNT_MAP = {
     "agent": "SHADOW_AGENTS_TOKEN",
     "story": "SHADOW_STORIES_TOKEN",
     "room": "SHADOW_ROOMS_TOKEN",
+    "prompts": "SHADOW_PROMPTS_TOKEN",
     "persona": "SHADOW_PERSONAS_TOKEN",
     "quality": "SHADOW_QUALITIES_TOKEN",
     "trait": "SHADOW_TRAITS_TOKEN",
-    "llm_model": "SHADOW_LLM_MODELS_TOKEN",
-    "user_llm_provider": "SHADOW_USER_LLM_PROVIDERS_TOKEN",
+    "archetype": "SHADOW_ARCHETYPES_TOKEN",
+    "llm_model": "SHADOW_LLMMODELS_TOKEN",
+    "user_llm_provider": "SHADOW_USERLLM_PROVIDERS_TOKEN",
 }
 
 # Service account usernames (must match Forgejo accounts)
 SERVICE_ACCOUNT_USERNAMES = {
-    "user": "shadow-users",
-    "agent": "shadow-agents",
-    "story": "shadow-stories",
-    "room": "shadow-rooms",
-    "persona": "shadow-personas",
-    "quality": "shadow-qualities",
-    "trait": "shadow-traits",
-    "llm_model": "shadow-llm-models",
-    "user_llm_provider": "shadow-user-llm-providers",
+    "user": "SHADOW_USERS",
+    "agent": "SHADOW_AGENTS",
+    "story": "SHADOW_STORIES",
+    "room": "SHADOW_ROOMS",
+    "persona": "SHADOW_PERSONAS",
+    "quality": "SHADOW_QUALITIES",
+    "archetypes": "SHADOW_ARCHETYPES",
+    "trait": "SHADOW_TRAITS",
+    "llm_model": "SHADOW_LLMMODELS",
+    "user_llm_provider": "SHADOW_USERLLMPROVIDERS",
+    "prompts": "SHADOW_PROMPTS",
 }
 
 

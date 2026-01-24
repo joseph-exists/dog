@@ -146,7 +146,3 @@ If you need deterministic ordering or replace-by-id, you’ll need to decide whe
 keep Redis list and add removal logic, or
 move to a hash/set keyed by ContextItem.id.
 
-
-
-
-If you want, I can sketch the minimal API endpoints + data model for UI-managed context, or we can trace where the frontend would call into it.

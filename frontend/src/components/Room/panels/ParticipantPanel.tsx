@@ -1,23 +1,44 @@
 /**
  * ParticipantPanel
  *
- * Combined participants panel showing users and agents.
- * Replicates V1 sidebar functionality for "classic" layout.
+ * Unified panel showing all room participants (users and agents).
+ * Agents display real metadata badges and support toggle/add/remove.
  */
 
 import { Loader2 } from "lucide-react"
+import {
+  type AgentData,
+  AgentCoordinatorBadge,
+  AgentModeBadge,
+  AgentQuickAdd,
+} from "@/components/Agents"
+import AgentAvatar from "@/components/Agents/AgentAvatar"
 import AgentToggle from "@/components/Rooms/AgentToggle"
 import RemoveParticipantButton from "@/components/Rooms/RemoveParticipantButton"
 import type { ParticipantViewModel } from "@/services/roomService"
 import { PanelContainer } from "../primitives/PanelContainer"
 
 interface ParticipantPanelProps {
+  /** Human users in the room */
   activeUsers: ParticipantViewModel[]
-  activeAgents: ParticipantViewModel[]
-  isLoading?: boolean
-  currentUserRole: "owner" | "member" | null
+  /** Enriched agent data (with real mode, scope, coordinator) */
+  roomAgents: AgentData[]
+  /** All available agents for quick-add */
+  availableAgents: AgentData[]
+  /** IDs of agents already in room */
+  existingAgentIds: string[]
+  /** Add agent callback */
+  onAddAgent: (agent: AgentData) => Promise<void>
+  /** Remove agent callback */
+  onRemoveAgent: (agent: AgentData) => Promise<void>
+  /** Toggle agent activate/deactivate callback */
+  onToggleAgent: (agentId: string, activate: boolean) => Promise<void>
+  /** Remove user participant callback */
   onRemoveParticipant?: (participantId: string) => Promise<void>
-  onToggleAgent?: (agentId: string, activate: boolean) => Promise<void>
+  /** Whether current user can manage participants */
+  canManage: boolean
+  /** Whether loading */
+  isLoading: boolean
 }
 
 function getInitials(name: string): string {
@@ -31,14 +52,16 @@ function getInitials(name: string): string {
 
 export function ParticipantPanel({
   activeUsers,
-  activeAgents,
-  isLoading,
-  currentUserRole,
-  onRemoveParticipant,
+  roomAgents,
+  availableAgents,
+  existingAgentIds,
+  onAddAgent,
+  onRemoveAgent,
   onToggleAgent,
+  onRemoveParticipant,
+  canManage,
+  isLoading,
 }: ParticipantPanelProps) {
-  const canManage = currentUserRole === "owner"
-
   if (isLoading) {
     return (
       <PanelContainer title="Participants">
@@ -49,80 +72,111 @@ export function ParticipantPanel({
     )
   }
 
+  const headerActions = canManage ? (
+    <AgentQuickAdd
+      availableAgents={availableAgents}
+      existingAgentIds={existingAgentIds}
+      onAdd={onAddAgent}
+      buttonSize="sm"
+    />
+  ) : undefined
+
+  const totalCount = activeUsers.length + roomAgents.length
+
   return (
-    <PanelContainer title="Participants">
-      <div className="flex flex-col h-full overflow-y-auto">
+    <PanelContainer
+      title={`Participants (${totalCount})`}
+      headerActions={headerActions}
+    >
+      <div className="flex flex-col">
         {/* Users Section */}
-        <div className="p-3 border-b">
-          <h3 className="text-xs font-medium text-muted-foreground mb-2">
-            Users ({activeUsers.length})
-          </h3>
-          <div className="space-y-1">
-            {activeUsers.map((user) => (
-              <div
-                key={user.participant_id}
-                className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
-              >
-                <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                  {getInitials(user.display_name)}
+        {activeUsers.length > 0 && (
+          <div className="p-3 border-b">
+            <h3 className="text-xs font-medium text-muted-foreground mb-2">
+              Users ({activeUsers.length})
+            </h3>
+            <div className="space-y-1">
+              {activeUsers.map((user) => (
+                <div
+                  key={user.participant_id}
+                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
+                >
+                  <div className="size-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium shrink-0">
+                    {getInitials(user.display_name)}
+                  </div>
+                  <span className="flex-1 text-sm truncate">
+                    {user.display_name}
+                  </span>
+                  {canManage && user.role !== "owner" && onRemoveParticipant && (
+                    <RemoveParticipantButton
+                      participantId={user.participant_id}
+                      participantName={user.display_name}
+                      participantType="user"
+                      onRemove={onRemoveParticipant}
+                    />
+                  )}
                 </div>
-                <span className="flex-1 text-sm truncate">
-                  {user.display_name}
-                </span>
-                {canManage && user.role !== "owner" && onRemoveParticipant && (
-                  <RemoveParticipantButton
-                    participantId={user.participant_id}
-                    participantName={user.display_name}
-                    participantType="user"
-                    onRemove={onRemoveParticipant}
-                  />
-                )}
-              </div>
-            ))}
-            {activeUsers.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-2">
-                No users
-              </p>
-            )}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Agents Section */}
-        <div className="p-3 flex-1">
+        <div className="p-3">
           <h3 className="text-xs font-medium text-muted-foreground mb-2">
-            Agents ({activeAgents.length})
+            Agents ({roomAgents.length})
           </h3>
-          <div className="space-y-1">
-            {activeAgents.map((agent) => (
-              <div
-                key={agent.participant_id}
-                className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
-              >
-                {canManage && onToggleAgent ? (
-                  <AgentToggle
-                    agentId={agent.participant_id}
-                    agentName={agent.display_name}
-                    isActive={agent.is_active}
-                    onToggle={onToggleAgent}
-                  />
-                ) : (
-                  <>
-                    <div className="size-8 rounded-full bg-accent flex items-center justify-center text-xs">
-                      🤖
+          {roomAgents.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No agents in this room
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {roomAgents.map((agent) => (
+                <div
+                  key={agent.id}
+                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
+                >
+                  <AgentAvatar name={agent.name} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-sm font-medium truncate">
+                        {agent.name}
+                      </span>
+                      {agent.isCoordinator && (
+                        <AgentCoordinatorBadge className="text-[10px] px-1.5 py-0 h-4 scale-90" />
+                      )}
+                      {agent.participationMode && (
+                        <AgentModeBadge
+                          mode={agent.participationMode}
+                          className="text-[10px] px-1.5 py-0 h-4 scale-90"
+                        />
+                      )}
                     </div>
-                    <span className="flex-1 text-sm truncate">
-                      {agent.display_name}
-                    </span>
-                  </>
-                )}
-              </div>
-            ))}
-            {activeAgents.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-2">
-                No agents
-              </p>
-            )}
-          </div>
+                  </div>
+                  {canManage && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <AgentToggle
+                        agentId={agent.id}
+                        agentName={agent.name}
+                        isActive={agent.isEnabled ?? true}
+                        onToggle={onToggleAgent}
+                      />
+                      <RemoveParticipantButton
+                        participantId={agent.id}
+                        participantName={agent.name}
+                        participantType="agent"
+                        onRemove={async (id) => {
+                          const agentData = roomAgents.find((a) => a.id === id)
+                          if (agentData) await onRemoveAgent(agentData)
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </PanelContainer>

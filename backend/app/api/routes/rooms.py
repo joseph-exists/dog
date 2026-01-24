@@ -49,6 +49,7 @@ from app.models import (
     MessageResponse,
     ParticipantAddRequest,
     ParticipantRoleChangeRequest,
+    Room,
     RoomCreate,
     RoomMessage,
     RoomMessagePublic,
@@ -163,6 +164,29 @@ async def update_room(
         session=session,
     )
     return room
+
+
+@router.delete("/{room_id}", response_model=MessageResponse)
+async def delete_room(
+    *,
+    room_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Soft-delete a room (owner-only).
+
+    Sets deleted_at timestamp. Room and all child data (messages, events,
+    participants) remain in the database but are hidden from queries.
+    """
+    room = await session.get(Room, room_id)
+    if not room or room.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.creator_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only room owner can delete")
+    room.deleted_at = datetime.utcnow()
+    session.add(room)
+    return MessageResponse(message="Room deleted successfully")
 
 
 # ============================================================================

@@ -1,0 +1,45 @@
+526:class ArchetypeBase(SQLModel):
+553:class ArchetypeTraitLinkBase(SQLModel):
+564:class ArchetypeQualityLinkBase(SQLModel):
+576:class ArchetypePersonaLinkBase(SQLModel):
+593:class ArchetypeCreate(ArchetypeBase):
+663:class ArchetypeBasePartial(SQLModel):
+670:class ArchetypeUpdate(ArchetypeBasePartial):
+1182:class ArchetypeTraitLink(ArchetypeTraitLinkBase, table=True):
+1184:    Database model for the many-to-many relationship between Archetypes and Traits.
+1192:class ArchetypePersonaLink(ArchetypePersonaLinkBase, table=True):
+1194:    Database model for the one-to-many relationship between Archetypes and Personas.
+1202:class ArchetypeQualityLink(ArchetypeQualityLinkBase, table=True):
+1204:    Database model for the one-to-many relationship between Archetypes and Personas.
+1221:    # If inherited, track which Archetype it came from
+1433:class Archetype(ArchetypeBase, table=True):
+1435:    Database model for Archetype.
+1523:class ArchetypePublic(ArchetypeBase):
+1524:    """Public model for Archetype API responses."""
+1573:class ArchetypesPublic(SQLModel):
+1574:    """Collection model for Archetype API responses."""
+1576:    data: list[ArchetypePublic]
+1907:# Archetype to Trait relationship
+1908:Archetype.traits = Relationship(
+1910:    link_model=ArchetypeTraitLink,
+1914:# Trait to Archetype relationship
+1917:    link_model=ArchetypeTraitLink,
+1921:# Archetype to Persona relationship
+1922:Archetype.personas = Relationship(
+1924:    link_model=ArchetypePersonaLink,
+1928:# Persona to Archetype relationship
+1931:    link_model=ArchetypePersonaLink,
+1935:# Archetype to Quality relationship
+1936:Archetype.qualities = Relationship(
+1938:    link_model=ArchetypeQualityLink,
+1942:# Quality to Archetype relationship
+1945:    link_model=ArchetypeQualityLink,
+2008:ArchetypeTraitLink.archetype = Relationship(back_populates="trait_links")
+2010:ArchetypeTraitLink.trait = Relationship(back_populates="archetype_links")
+2012:ArchetypePersonaLink.archetype = Relationship(back_populates="persona_links")
+2014:ArchetypePersonaLink.persona = Relationship(back_populates="archetype_links")
+2016:ArchetypeQualityLink.archetype = Relationship(back_populates="quality_links")
+2018:ArchetypeQualityLink.quality = Relationship(back_populates="archetype_links")
+2037:Archetype.trait_links = Relationship(back_populates="archetype")
+2041:Archetype.persona_links = Relationship(back_populates="archetype")
+2045:Archetype.quality_links = Relationship(back_populates="archetype")

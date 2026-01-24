@@ -14,7 +14,6 @@ import { useEffect, useState } from "react"
 import EditDrawer from "@/components/Common/EditDrawer"
 import {
   A2UIPanel,
-  AgentPanel,
   CanvasPanel,
   ChatPanel,
   DebugPanel,
@@ -63,6 +62,10 @@ function toAgentData(a: AgentViewModel) {
     id: a.id,
     name: a.name,
     description: a.description,
+    participationMode: a.participation_mode,
+    scope: a.scope,
+    isCoordinator: a.is_coordinator,
+    isEnabled: a.is_enabled,
   }
 }
 
@@ -151,17 +154,32 @@ function RoomView() {
   // Convert data for components
   const roomParticipants: Participant[] = participants.map(toParticipant)
   const activeUsers = participants.filter((p) => p.participant_type === "user")
-  const roomAgentsAsAgentData = activeAgents.map((p) => ({
-    id: p.participant_id,
-    name: p.display_name,
-    description: null,
-    participationMode: "on_mention" as const,
-    isEnabled: p.is_active,
-  }))
   const availableAgentsAsAgentData = (availableAgentsData?.agents || []).map(
     toAgentData,
   )
-  const existingAgentIds = activeAgents.map((a) => a.participant_id)
+  const roomAgentsAsAgentData = activeAgents.map((p) => {
+    // Cross-reference with full agent config for real metadata
+    // participant_id for agents is the agent name, not UUID
+    const agentConfig = availableAgentsAsAgentData.find(
+      (a) => a.id === p.participant_id || a.name === p.participant_id,
+    )
+    return {
+      id: p.participant_id,
+      name: p.display_name,
+      description: agentConfig?.description ?? null,
+      participationMode: agentConfig?.participationMode ?? "on_mention",
+      scope: agentConfig?.scope,
+      isCoordinator: agentConfig?.isCoordinator ?? false,
+      isEnabled: p.is_active,
+    }
+  })
+  const existingAgentIds = activeAgents.map((p) => {
+    // Resolve participant name to agent config UUID for downstream filtering
+    const config = availableAgentsAsAgentData.find(
+      (a) => a.id === p.participant_id || a.name === p.participant_id,
+    )
+    return config?.id ?? p.participant_id
+  })
 
   // Handlers
   const handleAddAgent = async (agent: { id: string; name: string }) => {
@@ -299,18 +317,9 @@ function RoomView() {
         onToggleContext={handleToggleContext}
         onDeleteMessage={handleDeleteMessage}
         onUiAction={handleUiAction}
-      />
-    ),
-    agentPanel: () => (
-      <AgentPanel
-        roomAgents={roomAgentsAsAgentData}
         availableAgents={availableAgentsAsAgentData}
         existingAgentIds={existingAgentIds}
-        onAddAgent={handleAddAgent}
         onAddMultipleAgents={handleAddMultipleAgents}
-        onRemoveAgent={handleRemoveAgent}
-        canManage={canManage}
-        isLoading={isLoadingParticipants || isLoadingAvailable}
       />
     ),
     debug: () => (
@@ -342,10 +351,11 @@ function RoomView() {
     participantPanel: () => (
       <ParticipantPanel
         activeUsers={activeUsers}
-        activeAgents={activeAgents}
-        isLoading={isLoadingParticipants}
-        currentUserRole={currentUserRole}
-        onRemoveParticipant={removeParticipant}
+        roomAgents={roomAgentsAsAgentData}
+        availableAgents={availableAgentsAsAgentData}
+        existingAgentIds={existingAgentIds}
+        onAddAgent={handleAddAgent}
+        onRemoveAgent={handleRemoveAgent}
         onToggleAgent={async (agentId, activate) => {
           if (activate) {
             await addParticipant(agentId, "agent")
@@ -353,6 +363,9 @@ function RoomView() {
             await removeParticipant(agentId)
           }
         }}
+        onRemoveParticipant={removeParticipant}
+        canManage={canManage}
+        isLoading={isLoadingParticipants || isLoadingAvailable}
       />
     ),
   }
@@ -367,7 +380,6 @@ function RoomView() {
         | "chat"
         | "storyEditor"
         | "storyRuntime"
-        | "agentPanel"
         | "debug"
         | "canvas"
         | "a2ui"
@@ -387,11 +399,11 @@ function RoomView() {
         render: panelComponents.chat,
       },
       {
-        id: "agents",
-        kind: "agentPanel",
+        id: "participants",
+        kind: "participantPanel",
         prominence: "auxiliary",
-        title: "Agents",
-        render: panelComponents.agentPanel,
+        title: "Participants",
+        render: panelComponents.participantPanel,
       },
     )
   }

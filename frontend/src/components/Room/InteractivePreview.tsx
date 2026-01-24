@@ -60,7 +60,7 @@ const panelNames: Record<string, string> = {
   chat: "Chat",
   storyEditor: "Story Editor",
   storyRuntime: "Story Runtime",
-  agentPanel: "Agents",
+  participantPanel: "Participants",
   debug: "Debug",
   canvas: "Canvas",
   a2ui: "Agent UI",

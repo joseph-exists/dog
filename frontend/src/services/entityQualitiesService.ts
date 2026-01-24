@@ -17,8 +17,11 @@
  * ```
  */
 
-import { PersonaQualitiesService } from "@/client"
-import { ArchetypesQualitiesService } from "@/client"
+import {
+  ArchetypeQualitiesService,
+  PersonaQualitiesService,
+  QualityTraitLinksService,
+} from "@/client"
 
 // ============================================================================
 // ViewModels
@@ -59,6 +62,16 @@ const fetchers: Record<string, QualityFetcher> = {
       description: q.description ?? undefined,
     }))
   },
+  trait: async (entityId) => {
+    const qualities = await QualityTraitLinksService.readTraitQualities({
+      traitId: entityId,
+    })
+    return qualities.map((q) => ({
+      id: q.id,
+      name: q.name,
+      description: q.description ?? undefined,
+    }))
+  },
 }
 
 const adders: Record<string, QualityMutator> = {
@@ -74,6 +87,11 @@ const adders: Record<string, QualityMutator> = {
       qualityId,
     })
   },
+  trait: async (entityId, qualityId) => {
+    await QualityTraitLinksService.createQualityTraitLink({
+      requestBody: { quality_id: qualityId, trait_id: entityId },
+    })
+  },
 }
 
 const removers: Record<string, QualityMutator> = {
@@ -87,6 +105,12 @@ const removers: Record<string, QualityMutator> = {
     await ArchetypeQualitiesService.removeQualityFromArchetype({
       archetypeId: entityId,
       qualityId,
+    })
+  },
+  trait: async (entityId, qualityId) => {
+    await QualityTraitLinksService.deleteQualityTraitLink({
+      qualityId,
+      traitId: entityId,
     })
   },
 }

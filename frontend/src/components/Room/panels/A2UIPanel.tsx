@@ -35,34 +35,34 @@ export function A2UIPanel({
   }
 
   const content = hasComponents ? (
-    <ScrollArea className="h-full">
-      <div className="p-4 space-y-4">
-        {[...byAgent.entries()].map(([agentName, agentEntries]) => (
-          <div key={agentName}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                {agentName}
-              </span>
-              <Badge variant="secondary" className="text-xs">
-                {agentEntries.length}
-              </Badge>
-            </div>
-            <AgentUIStack
-              components={agentEntries.map((e) => e.component)}
-              onAction={handleAction}
-              spacing="compact"
-            />
-            <Separator className="mt-4" />
+    <div className="p-4 space-y-4">
+      {[...byAgent.entries()].map(([agentName, agentEntries]) => (
+        <div key={agentName}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {agentName}
+            </span>
+            <Badge variant="secondary" className="text-xs">
+              {agentEntries.length}
+            </Badge>
           </div>
-        ))}
-      </div>
-    </ScrollArea>
+          <AgentUIStack
+            components={agentEntries.map((e) => e.component)}
+            onAction={handleAction}
+            spacing="compact"
+          />
+          <Separator className="mt-4" />
+        </div>
+      ))}
+    </div>
   ) : (
     <AgentUIEmpty />
   )
 
   if (hideHeader) {
-    return <div className={cn("h-full", className)}>{content}</div>
+    return (
+      <ScrollArea className={cn("h-full", className)}>{content}</ScrollArea>
+    )
   }
 
   return <PanelContainer title="Agent UI">{content}</PanelContainer>

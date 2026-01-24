@@ -6,6 +6,7 @@
  */
 
 import type * as React from "react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
 interface PanelContainerProps {
@@ -46,8 +47,12 @@ export function PanelContainer({
       )}
 
       {/* Content */}
-      <div className={cn("flex-1 min-h-0", scrollable && "overflow-y-auto")}>
-        {children}
+      <div className="flex-1 min-h-0">
+        {scrollable ? (
+          <ScrollArea className="h-full">{children}</ScrollArea>
+        ) : (
+          children
+        )}
       </div>
 
       {/* Footer */}

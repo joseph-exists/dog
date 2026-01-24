@@ -66,7 +66,7 @@ const AVAILABLE_PANELS: PreviewPanel[] = [
   { id: "runtime", kind: "storyRuntime", prominence: "primary" },
   { id: "canvas", kind: "canvas", prominence: "primary" },
   { id: "a2ui", kind: "a2ui", prominence: "primary" },
-  { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+  { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
   { id: "debug", kind: "debug", prominence: "auxiliary" },
 ]
 
@@ -76,7 +76,7 @@ const panelNames: Record<string, string> = {
   storyRuntime: "Story Runtime",
   canvas: "Canvas",
   a2ui: "Agent UI",
-  agentPanel: "Agents",
+  participantPanel: "Participants",
   debug: "Debug",
 }
 
@@ -101,6 +101,7 @@ export function PanelLayoutDialog({
   // Local state for editing
   const [panels, setPanels] = useState<PreviewPanel[]>([])
   const [source, setSource] = useState<LayoutSource>("user_defaults")
+  const [savedSource, setSavedSource] = useState<LayoutSource>("user_defaults")
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
   const [addPanelOpen, setAddPanelOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -117,14 +118,26 @@ export function PanelLayoutDialog({
           prominence: p.prominence,
         })),
       )
-      setSource((roomPanels.panelSource as LayoutSource) || "user_defaults")
+      const initialSource =
+        (roomPanels.panelSource as LayoutSource) || "user_defaults"
+      setSource(initialSource)
+      setSavedSource(initialSource)
     } else {
       // Default to collaborate preset
       const defaultPreset = SYSTEM_PRESETS.find((p) => p.id === "collaborate")
       setPanels(defaultPreset?.panels || [])
       setSelectedPresetId("collaborate")
+      setSource("user_defaults")
+      setSavedSource("user_defaults")
     }
   }, [open, mode, roomPanels.panels, roomPanels.panelSource])
+
+  // Auto-switch to custom when user modifies panels
+  const switchToCustom = () => {
+    if (source !== "custom" && source !== "room_override") {
+      setSource("custom")
+    }
+  }
 
   // Handle preset selection
   const handlePresetSelect = (presetId: string) => {
@@ -132,19 +145,22 @@ export function PanelLayoutDialog({
     if (preset) {
       setPanels(preset.panels)
       setSelectedPresetId(presetId)
+      switchToCustom()
     }
   }
 
   // Handle panel reorder
   const handleReorder = (newPanels: PreviewPanel[]) => {
     setPanels(newPanels)
-    setSelectedPresetId(null) // Custom layout, no preset
+    setSelectedPresetId(null)
+    switchToCustom()
   }
 
   // Handle panel remove
   const handleRemove = (panelId: string) => {
     setPanels((prev) => prev.filter((p) => p.id !== panelId))
     setSelectedPresetId(null)
+    switchToCustom()
   }
 
   // Handle add panel
@@ -152,6 +168,7 @@ export function PanelLayoutDialog({
     if (panels.some((p) => p.id === panel.id)) return
     setPanels((prev) => [...prev, panel])
     setSelectedPresetId(null)
+    switchToCustom()
     setAddPanelOpen(false)
   }
 
@@ -167,8 +184,9 @@ export function PanelLayoutDialog({
       if (mode === "room" && roomId) {
         if (source === "custom" || source === "room_override") {
           await roomPanels.setCustomPanels(panels as PanelConfig[])
-        } else if (source === "user_defaults") {
-          await roomPanels.setUseRoomDefaults(true)
+        } else if (source === "user_defaults" || source === "room_defaults") {
+          // User chose a default source — clear any custom override
+          await roomPanels.resetToDefaults()
         }
       }
       // TODO: Handle user-defaults mode
@@ -200,6 +218,7 @@ export function PanelLayoutDialog({
               onSourceChange={setSource}
               isRoomOwner={isRoomOwner}
               hasRoomDefaults={!!roomPanels.roomDefaults}
+              savedSource={savedSource}
             />
           )}
 
@@ -222,9 +241,6 @@ export function PanelLayoutDialog({
                 panels={panels}
                 onReorder={handleReorder}
                 onRemove={handleRemove}
-                disabled={
-                  source === "room_defaults" || source === "user_defaults"
-                }
               />
             </div>
           </div>

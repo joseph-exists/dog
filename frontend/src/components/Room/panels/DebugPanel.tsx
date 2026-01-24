@@ -6,6 +6,7 @@
  */
 
 import { RoomDebugPanelContent } from "@/components/Rooms/RoomDebugPanel"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import type {
   MessageViewModel,
@@ -57,7 +58,7 @@ export function DebugPanel({
 
   if (hideHeader) {
     return (
-      <div className={cn("h-full overflow-y-auto", className)}>{content}</div>
+      <ScrollArea className={cn("h-full", className)}>{content}</ScrollArea>
     )
   }
 

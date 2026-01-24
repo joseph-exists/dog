@@ -28,9 +28,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import func
+from sqlmodel import func, select, text
 
 from app.models import (
     AgentConfig,
@@ -141,25 +140,26 @@ async def emit_event(
         payload=payload,
         enrichment_metadata=enrichment_metadata,
         created_at=datetime.utcnow(),
+        # ?? created_at=.now(datetime.timezone.utc),
     )
 
     session.add(event)
-    logger.debug(f"[EMIT] Added event {event_type} to session for room {room_id}")
+    # logger.debug(f"[EMIT] Added event {event_type} to session for room {room_id}")
 
     # Update projections based on event type
     await _update_projections(session, event)
-    logger.debug(f"[EMIT] Updated projections for event {event_type} in room {room_id}")
+    # logger.debug(f"[EMIT] Updated projections for event {event_type} in room {room_id}")
 
     # Flush to make projection changes visible to subsequent queries in this transaction
     # This is required for read-after-write consistency within the same request
-    logger.debug(f"[EMIT] Flushing session for event {event_type} in room {room_id}")
+    # logger.debug(f"[EMIT] Flushing session for event {event_type} in room {room_id}")
     await session.flush()
-    logger.debug(f"[EMIT] Session flushed for event {event_type} in room {room_id}")
+    # logger.debug(f"[EMIT] Session flushed for event {event_type} in room {room_id}")
 
     # Publish to Redis (still within transaction - will be visible after commit)
-    logger.info(f"[EMIT] About to publish to Redis: room={room_id}, event_type={event_type}, sequence={event.room_sequence}")
+    # logger.info(f"[EMIT] About to publish to Redis: room={room_id}, event_type={event_type}, sequence={event.room_sequence}")
     await _publish_to_redis(room_id, event)
-    logger.info(f"[EMIT] Redis publish completed for event {event_type} in room {room_id}")
+    # logger.info(f"[EMIT] Redis publish completed for event {event_type} in room {room_id}")
 
     return event
 
@@ -368,14 +368,14 @@ async def _get_next_room_sequence(
         )
     )
     max_sequence_row = result.one()
+    if max_sequence_row is None:
+        return 1  # First event in room
     max_sequence = (
         max_sequence_row[0]
         if not isinstance(max_sequence_row, int)
         else max_sequence_row
     )
-
-    # First event in room starts at sequence 1
-    return 1 if max_sequence is None else max_sequence + 1
+    return max_sequence + 1
 
 
 # ============================================================================
@@ -492,8 +492,7 @@ async def _handle_room_updated(
         - updated_fields: dict with fields to update (e.g., {"title": "New Title"})
     """
     result = await session.exec(
-        select(Room).where(Room.room_id == event.room_id)
-    )
+        select(Room).where(Room.room_id == event.room_id))
     row = result.one()
     room = row[0] if not isinstance(row, Room) else row
 
@@ -556,7 +555,11 @@ async def _handle_participant_joined(
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
-                agent_config = agent_config_row[0]
+                agent_config = (
+                    agent_config_row[0]
+                    if not isinstance(agent_config_row, AgentConfig)
+                    else agent_config_row
+                )
                 participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
@@ -564,7 +567,11 @@ async def _handle_participant_joined(
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
-                agent_config = agent_config_row[0]
+                agent_config = (
+                    agent_config_row[0]
+                    if not isinstance(agent_config_row, AgentConfig)
+                    else agent_config_row
+                )
                 legacy_uuid_str = str(agent_config.id)
                 participant_id = agent_config.slug
 

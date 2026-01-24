@@ -11,7 +11,8 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Final, Iterable
+from collections.abc import Iterable
+from typing import Final
 
 import typer
 from openapi_client import ApiClient, ApiException, Configuration, UserApi
@@ -24,16 +25,17 @@ TOKEN_PREFIX: Final[str] = "SHADOW_"
 TOKEN_SUFFIX: Final[str] = "_TOKEN"
 
 SERVICE_ACCOUNT_USERNAMES: Final[dict[str, str]] = {
-    "users": "shadow-users",
-    "agents": "shadow-agents",
-    "stories": "shadow-stories",
-    "rooms": "shadow-rooms",
-    "personas": "shadow-personas",
-    "qualities": "shadow-qualities",
-    "traits": "shadow-traits",
-    "llm_models": "shadow-llm-models",
-    "user_llm_providers": "shadow-user-llm-providers",
-    "prompts": "shadow-prompts",
+    "users": "SHADOW_USERS",
+    "agents": "SHADOW_AGENTS",
+    "stories": "SHADOW_STORIES",
+    "rooms": "SHADOW_ROOMS",
+    "archetypes": "SHADOW_ARCHETYPES",
+    "personas": "SHADOW_PERSONAS",
+    "qualities": "SHADOW_QUALITIES",
+    "traits": "SHADOW_TRAITS",
+    "llm_models": "SHADOW_LLMMODELS",
+    "user_llm_providers": "SHADOW_USERLLMPROVIDERS",
+    "prompts": "SHADOW_PROMPTS",
 }
 
 DEFAULT_SHADOW_URL: Final[str] = forge_client.FORGE_URL
@@ -191,6 +193,28 @@ def _symbol_for_status(status: str) -> str:
     return STATUS_SYMBOLS.get(status, "❔")
 
 
+def _normalize_entity_choice(choice: str) -> str:
+    normalized = choice.strip()
+    if not normalized:
+        raise typer.BadParameter("Empty entity name supplied to --entity")
+
+    lower = normalized.lower()
+    if lower in SERVICE_ACCOUNT_USERNAMES:
+        return lower
+
+    upper = normalized.upper()
+    if upper.startswith(TOKEN_PREFIX) and upper.endswith(TOKEN_SUFFIX):
+        entity = _derive_entity_key(upper)
+        if entity in SERVICE_ACCOUNT_USERNAMES:
+            return entity
+
+    raise typer.BadParameter(
+        f"Unknown shadow account `{choice}`; choose from "
+        f"{', '.join(sorted(SERVICE_ACCOUNT_USERNAMES.keys()))} "
+        "or supply the full SHADOW_*_TOKEN env var name"
+    )
+
+
 @app.command("validate")
 def validate(
     env_file: Path | None = typer.Option(
@@ -201,6 +225,12 @@ def validate(
     ),
     json_output: bool = typer.Option(
         False, "--json", help="Emit the validation report as JSON"
+    ),
+    entities: tuple[str, ...] | None = typer.Option(
+        None,
+        "--entity",
+        "-E",
+        help="Restrict validation to the named shadow accounts (entity names or SHADOW_* token names)",
     ),
 ):
     """
@@ -216,8 +246,14 @@ def validate(
 
     results: list[TokenCheckResult] = []
     processed: set[str] = set()
+    selected_entities: set[str] | None = None
+
+    if entities:
+        selected_entities = {_normalize_entity_choice(choice) for choice in entities}
 
     for entity_key, expected_login in SERVICE_ACCOUNT_USERNAMES.items():
+        if selected_entities is not None and entity_key not in selected_entities:
+            continue
         env_var = f"{TOKEN_PREFIX}{entity_key.upper()}{TOKEN_SUFFIX}"
         token_value = shadow_tokens.get(env_var)
         if token_value is None:
@@ -240,7 +276,16 @@ def validate(
         results.append(result)
 
     extra_vars = set(shadow_tokens) - processed
-    for env_var in extra_vars:
+    if selected_entities is None:
+        target_extra = extra_vars
+    else:
+        target_extra = {
+            env_var
+            for env_var in extra_vars
+            if _derive_entity_key(env_var) in selected_entities
+        }
+
+    for env_var in target_extra:
         entity_key = _derive_entity_key(env_var)
         expected_login = _derive_expected_login(entity_key)
         result = _check_token(

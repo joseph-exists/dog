@@ -1,5 +1,4 @@
 export { A2UIPanel } from "./A2UIPanel"
-export { AgentPanel } from "./AgentPanel"
 export { CanvasPanel } from "./CanvasPanel"
 export { ChatPanel } from "./ChatPanel"
 export { DebugPanel } from "./DebugPanel"

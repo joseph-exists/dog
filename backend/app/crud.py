@@ -454,7 +454,13 @@ def delete_story(*, session: Session, story_id: uuid.UUID) -> Message:
     story = session.get(Story, story_id)
     if not story:
         raise ValueError("Story not found")
-    session.delete(story)
+    story.deleted_at = datetime.utcnow()
+    # Detach any rooms referencing this story
+    rooms = session.exec(select(Room).where(Room.story_id == story_id)).all()
+    for room in rooms:
+        room.story_id = None
+        session.add(room)
+    session.add(story)
     session.commit()
     return Message(message="Story deleted successfully")
 
@@ -1558,6 +1564,10 @@ async def _build_room_runtime_public(
     available_choices: list[NodeChoicePublic] = []
 
     if progress.current_node_id is not None:
+        current_node_obj = await session.get(StoryNode, progress.current_node_id)
+        if current_node_obj:
+            current_node = StoryNodePublic.model_validate(current_node_obj)
+
         available_choices_result = await get_available_choices(
             session=session,
             node_id=progress.current_node_id,
@@ -1597,14 +1607,6 @@ async def _build_room_runtime_public(
             for node_id in node_chain_ids
             if node_id in nodes_by_id
         ]
-
-    if progress.current_node_id is not None:
-        available_choices_result = await get_available_choices(
-            session=session,
-            node_id=progress.current_node_id,
-            story_state=progress.story_state or {},
-        )
-        available_choices = [NodeChoicePublic.model_validate(c) for c in available_choices_result]
 
     return RoomRuntimePublic(
         room_id=room_id,
@@ -2756,7 +2758,7 @@ async def list_rooms_for_user(
     Returns:
         RoomsPublic with data and count
     """
-    # Query rooms where user is an active participant
+    # Query rooms where user is an active participant (excluding soft-deleted)
     result = await session.exec(
         select(Room)
         .join(RoomParticipant)
@@ -2764,6 +2766,7 @@ async def list_rooms_for_user(
             RoomParticipant.participant_type == "user",
             RoomParticipant.participant_id == str(user_id),
             RoomParticipant.active == True,  # noqa: E712
+            Room.deleted_at == None,  # noqa: E711
         )
         .order_by(desc(Room.last_activity))
         .offset(skip)
@@ -2779,6 +2782,7 @@ async def list_rooms_for_user(
             RoomParticipant.participant_type == "user",
             RoomParticipant.participant_id == str(user_id),
             RoomParticipant.active == True,  # noqa: E712
+            Room.deleted_at == None,  # noqa: E711
         )
     )
     #total_count = len(count_result.all())
@@ -2818,11 +2822,11 @@ async def get_room_for_user(
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # Fetch room
+    # Fetch room (excluding soft-deleted)
     result = await session.exec(select(Room).where(Room.room_id == room_id))
     room = result.one_or_none()
 
-    if not room:
+    if not room or room.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Room not found")
 
     return room

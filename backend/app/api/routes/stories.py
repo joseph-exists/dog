@@ -90,20 +90,31 @@ def read_stories(
     Regular users see only their own stories.
     """
     if current_user.is_superuser:
-        count_statement = select(func.count()).select_from(Story)
+        count_statement = (
+            select(func.count())
+            .select_from(Story)
+            .where(Story.deleted_at == None)  # noqa: E711
+        )
         count = session.exec(count_statement).one()
-        statement = select(Story).offset(skip).limit(limit)
+        statement = (
+            select(Story)
+            .where(Story.deleted_at == None)  # noqa: E711
+            .offset(skip)
+            .limit(limit)
+        )
         stories = session.exec(statement).all()
     else:
         count_statement = (
             select(func.count())
             .select_from(Story)
             .where(Story.owner_id == current_user.id)
+            .where(Story.deleted_at == None)  # noqa: E711
         )
         count = session.exec(count_statement).one()
         statement = (
             select(Story)
             .where(Story.owner_id == current_user.id)
+            .where(Story.deleted_at == None)  # noqa: E711
             .offset(skip)
             .limit(limit)
         )
@@ -120,7 +131,7 @@ def read_story(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) ->
     Users can only access their own stories unless they are superusers.
     """
     story = session.get(Story, id)
-    if not story:
+    if not story or story.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Story not found")
     if not current_user.is_superuser and (story.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
@@ -767,14 +778,14 @@ def delete_story(
     This cascades to all nodes, choices, and user progresses.
     """
     story = session.get(Story, id)
-    if not story:
+    if not story or story.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Story not found")
     if not current_user.is_superuser and (story.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
 
-    session.delete(story)
-    session.commit()
-    return Message(message="Story deleted successfully")
+    from app.crud import delete_story as crud_delete_story
+
+    return crud_delete_story(session=session, story_id=id)
 
 
 @router.get("/{story_id}/requirements", response_model=StoryRequirementsPublic)

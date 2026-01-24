@@ -104,3 +104,9 @@ export type {
 } from "./TraitsBlock"
 // Traits Block
 export { TraitsBlock } from "./TraitsBlock"
+export type {
+  UsedByBlockConfig,
+  UsedByBlockProps,
+} from "./UsedByBlock"
+// Used By Block
+export { UsedByBlock } from "./UsedByBlock"

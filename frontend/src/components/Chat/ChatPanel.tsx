@@ -1,8 +1,7 @@
 /**
  * ChatPanel
- *
- * Primary panel for chat messages.
- * Wraps existing MessageList and MessageInput components.
+ *  THIS IS NOT MAIN CHAT PANEL, SEE ROOMS/ChatRoomPanel INSTEAD
+ *  THIS IS DEBUG ONLY DO NOT MODIFY OR SOURCE FROM THIS FILE
  */
 
 import { Copy, Download, Search } from "lucide-react"
@@ -141,7 +140,7 @@ export function ChatPanel({
           />
         </div>
       )}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="p-4">
         <MessageList
           roomId={roomId}
           messages={filteredMessages}

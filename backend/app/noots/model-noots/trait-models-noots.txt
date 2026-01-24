@@ -1,0 +1,92 @@
+541:class TraitBase(SQLModel):
+553:class ArchetypeTraitLinkBase(SQLModel):
+558:class PersonaTraitLinkBase(SQLModel):
+581:class QualityTraitLinkBase(SQLModel):
+597:class TraitCreate(TraitBase):
+715:class TraitBasePartial(SQLModel):
+722:class TraitUpdate(TraitBasePartial):
+1182:class ArchetypeTraitLink(ArchetypeTraitLinkBase, table=True):
+1184:    Database model for the many-to-many relationship between Archetypes and Traits.
+1212:class PersonaTraitLink(PersonaTraitLinkBase, table=True):
+1214:    Database model for the many-to-many relationship between Personas and Traits.
+1464:class Trait(TraitBase, table=True):
+1466:    Database model for Trait.
+1474:class QualityTraitLink(QualityTraitLinkBase, table=True):
+1476:    Database model for the many-to-many relationship between Qualities and Traits.
+1477:    Defines which Qualities are automatically associated with which Traits.
+1483:    # Define whether this Quality is automatically enabled when the Trait is present
+1486:    # Define the requirement level of this Quality for the Trait
+1493:class QualityTraitLinkCreate(QualityTraitLinkBase):
+1498:class QualityTraitLinkUpdate(SQLModel):
+1537:class TraitPublic(TraitBase):
+1538:    """Public model for Trait API responses."""
+1587:class TraitsPublic(SQLModel):
+1588:    """Collection model for Trait API responses."""
+1590:    data: list[TraitPublic]
+1603:# ====== QualityTraitLink and QualityEvent classes need to go here after the above class declarations
+1606:class QualityTraitLinkPublic(QualityTraitLinkBase):
+1617:    trait: TraitPublic | None = None
+1907:# Archetype to Trait relationship
+1910:    link_model=ArchetypeTraitLink,
+1914:# Trait to Archetype relationship
+1915:Trait.archetypes = Relationship(
+1917:    link_model=ArchetypeTraitLink,
+1963:# Persona to Trait relationship
+1966:    link_model=PersonaTraitLink,
+1970:# Trait to Persona relationship
+1971:Trait.personas = Relationship(
+1973:    link_model=PersonaTraitLink,
+1977:# Quality to Trait relationship
+1980:    link_model=QualityTraitLink,
+1984:# Trait to Quality relationship
+1985:Trait.qualities = Relationship(
+1987:    link_model=QualityTraitLink,
+2008:ArchetypeTraitLink.archetype = Relationship(back_populates="trait_links")
+2010:ArchetypeTraitLink.trait = Relationship(back_populates="archetype_links")
+2020:PersonaTraitLink.persona = Relationship(back_populates="trait_links")
+2022:PersonaTraitLink.trait = Relationship(back_populates="persona_links")
+2028:QualityTraitLink.quality = Relationship(back_populates="trait_links")
+2030:QualityTraitLink.trait = Relationship(back_populates="quality_links")
+2039:Trait.archetype_links = Relationship(back_populates="trait")
+2051:Trait.persona_links = Relationship(back_populates="trait")
+2059:Trait.quality_links = Relationship(back_populates="trait")
+2123:class TraitConfigBase(SQLModel):
+2129:class TraitConfigBasePartial(SQLModel):
+2137:class TraitConfigCreate(TraitConfigBase):
+2141:class TraitConfigUpdate(TraitConfigBasePartial):
+2145:class TraitConfigPublic(TraitConfigBase):
+2147:    trait: TraitPublic | None = None
+2150:class TraitConfigsPublic(SQLModel):
+2151:    data: list[TraitConfigPublic]
+2158:class TraitConflictGroupBase(SQLModel):
+2159:    """Base model for TraitConflictGroup - shared properties."""
+2173:class TraitConflictGroupCreate(TraitConflictGroupBase):
+2174:    """Input model for creating a TraitConflictGroup."""
+2182:class TraitConflictGroupUpdate(SQLModel):
+2183:    """Update model for TraitConflictGroup - all fields optional."""
+2190:class TraitConflictGroup(TraitConflictGroupBase, table=True):
+2191:    """Database model for TraitConflictGroup."""
+2199:    # members: list["TraitConflictGroupMember"] = Relationship(back_populates="group", cascade_delete=True)
+2202:class TraitConflictGroupPublic(TraitConflictGroupBase):
+2203:    """Public model for TraitConflictGroup API responses."""
+2209:class TraitConflictGroupPublicWithMembers(TraitConflictGroupPublic):
+2211:    members: list["TraitConflictGroupMemberPublic"] = []
+2214:class TraitConflictGroupsPublic(SQLModel):
+2215:    """Collection model for paginated TraitConflictGroup responses."""
+2216:    data: list[TraitConflictGroupPublic]
+2224:class TraitConflictGroupMemberBase(SQLModel):
+2225:    """Base model for TraitConflictGroupMember link."""
+2229:class TraitConflictGroupMemberCreate(SQLModel):
+2234:class TraitConflictGroupMember(SQLModel, table=True):
+2235:    """Database model for TraitConflictGroupMember - links traits to conflict groups."""
+2244:    # group: "TraitConflictGroup" = Relationship(back_populates="members")
+2245:    # trait: "Trait" = Relationship(back_populates="conflict_memberships")
+2248:class TraitConflictGroupMemberPublic(SQLModel):
+2249:    """Public model for TraitConflictGroupMember API responses."""
+2256:class TraitConflictGroupMembersPublic(SQLModel):
+2258:    data: list[TraitConflictGroupMemberPublic]
+3864:TraitConflictGroup.members = Relationship(
+3869:TraitConflictGroupMember.group = Relationship(back_populates="members")
+3870:TraitConflictGroupMember.trait = Relationship(back_populates="conflict_memberships")
+3872:# Also add to Trait model:
+3873:Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(

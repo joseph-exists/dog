@@ -2,9 +2,11 @@
 import {
   Bot,
   Crown,
+  Gem,
   type LucideIcon,
   MessageSquare,
   Smile,
+  Sparkles,
   User,
   Users,
 } from "lucide-react"
@@ -76,6 +78,22 @@ export const entityTypes: EntityTypeDefinition[] = [
     icon: Crown,
     color: "amber",
     pageRoutePattern: "/archetype/:id",
+  },
+  {
+    id: "quality",
+    label: "Quality",
+    labelPlural: "Qualities",
+    icon: Gem,
+    color: "violet",
+    pageRoutePattern: "/quality/:id",
+  },
+  {
+    id: "trait",
+    label: "Trait",
+    labelPlural: "Traits",
+    icon: Sparkles,
+    color: "rose",
+    pageRoutePattern: "/trait/:id",
   },
 ]
 

@@ -24,6 +24,7 @@ export interface AgentData {
   scope?: AgentScope
   participationMode?: ParticipationMode
   isEnabled?: boolean
+  isCoordinator?: boolean
   modelName?: string
 }
 

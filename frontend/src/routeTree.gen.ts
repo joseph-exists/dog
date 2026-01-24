@@ -15,8 +15,10 @@ import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutTraitsRouteImport } from './routes/_layout/traits'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRoomsRouteImport } from './routes/_layout/rooms'
+import { Route as LayoutQualitiesRouteImport } from './routes/_layout/qualities'
 import { Route as LayoutPersonasRouteImport } from './routes/_layout/personas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutChatsterRouteImport } from './routes/_layout/chatster'
@@ -25,11 +27,14 @@ import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutStoriesIndexRouteImport } from './routes/_layout/stories/index'
 import { Route as LayoutUSlugRouteImport } from './routes/_layout/u.$slug'
+import { Route as LayoutTraitTraitIdRouteImport } from './routes/_layout/trait.$traitId'
 import { Route as LayoutTeamSlugRouteImport } from './routes/_layout/team.$slug'
 import { Route as LayoutRoomRoomIdRouteImport } from './routes/_layout/room.$roomId'
 import { Route as LayoutRoomV2RoomIdRouteImport } from './routes/_layout/room-v2.$roomId'
 import { Route as LayoutRRoomIdRouteImport } from './routes/_layout/r.$roomId'
+import { Route as LayoutQualityQualityIdRouteImport } from './routes/_layout/quality.$qualityId'
 import { Route as LayoutPersonaPersonaIdRouteImport } from './routes/_layout/persona.$personaId'
+import { Route as LayoutDemoSlugRouteImport } from './routes/_layout/demo.$slug'
 import { Route as LayoutArchetypeArchetypeIdRouteImport } from './routes/_layout/archetype.$archetypeId'
 import { Route as LayoutAgentAgentIdRouteImport } from './routes/_layout/agent.$agentId'
 import { Route as LayoutStoriesStoryIdEditRouteImport } from './routes/_layout/stories/$storyId/edit'
@@ -63,6 +68,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutTraitsRoute = LayoutTraitsRouteImport.update({
+  id: '/traits',
+  path: '/traits',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -71,6 +81,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
 const LayoutRoomsRoute = LayoutRoomsRouteImport.update({
   id: '/rooms',
   path: '/rooms',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutQualitiesRoute = LayoutQualitiesRouteImport.update({
+  id: '/qualities',
+  path: '/qualities',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutPersonasRoute = LayoutPersonasRouteImport.update({
@@ -113,6 +128,11 @@ const LayoutUSlugRoute = LayoutUSlugRouteImport.update({
   path: '/u/$slug',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutTraitTraitIdRoute = LayoutTraitTraitIdRouteImport.update({
+  id: '/trait/$traitId',
+  path: '/trait/$traitId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutTeamSlugRoute = LayoutTeamSlugRouteImport.update({
   id: '/team/$slug',
   path: '/team/$slug',
@@ -133,9 +153,19 @@ const LayoutRRoomIdRoute = LayoutRRoomIdRouteImport.update({
   path: '/r/$roomId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutQualityQualityIdRoute = LayoutQualityQualityIdRouteImport.update({
+  id: '/quality/$qualityId',
+  path: '/quality/$qualityId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutPersonaPersonaIdRoute = LayoutPersonaPersonaIdRouteImport.update({
   id: '/persona/$personaId',
   path: '/persona/$personaId',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDemoSlugRoute = LayoutDemoSlugRouteImport.update({
+  id: '/demo/$slug',
+  path: '/demo/$slug',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutArchetypeArchetypeIdRoute =
@@ -167,16 +197,21 @@ export interface FileRoutesByFullPath {
   '/chatster': typeof LayoutChatsterRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
+  '/qualities': typeof LayoutQualitiesRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/traits': typeof LayoutTraitsRoute
   '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
+  '/demo/$slug': typeof LayoutDemoSlugRoute
   '/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
+  '/quality/$qualityId': typeof LayoutQualityQualityIdRoute
   '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/team/$slug': typeof LayoutTeamSlugRoute
+  '/trait/$traitId': typeof LayoutTraitTraitIdRoute
   '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
@@ -192,16 +227,21 @@ export interface FileRoutesByTo {
   '/chatster': typeof LayoutChatsterRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
+  '/qualities': typeof LayoutQualitiesRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/traits': typeof LayoutTraitsRoute
   '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
+  '/demo/$slug': typeof LayoutDemoSlugRoute
   '/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
+  '/quality/$qualityId': typeof LayoutQualityQualityIdRoute
   '/r/$roomId': typeof LayoutRRoomIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/team/$slug': typeof LayoutTeamSlugRoute
+  '/trait/$traitId': typeof LayoutTraitTraitIdRoute
   '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
@@ -219,16 +259,21 @@ export interface FileRoutesById {
   '/_layout/chatster': typeof LayoutChatsterRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/personas': typeof LayoutPersonasRoute
+  '/_layout/qualities': typeof LayoutQualitiesRoute
   '/_layout/rooms': typeof LayoutRoomsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/traits': typeof LayoutTraitsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/_layout/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
+  '/_layout/demo/$slug': typeof LayoutDemoSlugRoute
   '/_layout/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
+  '/_layout/quality/$qualityId': typeof LayoutQualityQualityIdRoute
   '/_layout/r/$roomId': typeof LayoutRRoomIdRoute
   '/_layout/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/_layout/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/_layout/team/$slug': typeof LayoutTeamSlugRoute
+  '/_layout/trait/$traitId': typeof LayoutTraitTraitIdRoute
   '/_layout/u/$slug': typeof LayoutUSlugRoute
   '/_layout/stories/': typeof LayoutStoriesIndexRoute
   '/_layout/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
@@ -246,16 +291,21 @@ export interface FileRouteTypes {
     | '/chatster'
     | '/items'
     | '/personas'
+    | '/qualities'
     | '/rooms'
     | '/settings'
+    | '/traits'
     | '/'
     | '/agent/$agentId'
     | '/archetype/$archetypeId'
+    | '/demo/$slug'
     | '/persona/$personaId'
+    | '/quality/$qualityId'
     | '/r/$roomId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
     | '/team/$slug'
+    | '/trait/$traitId'
     | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
@@ -271,16 +321,21 @@ export interface FileRouteTypes {
     | '/chatster'
     | '/items'
     | '/personas'
+    | '/qualities'
     | '/rooms'
     | '/settings'
+    | '/traits'
     | '/'
     | '/agent/$agentId'
     | '/archetype/$archetypeId'
+    | '/demo/$slug'
     | '/persona/$personaId'
+    | '/quality/$qualityId'
     | '/r/$roomId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
     | '/team/$slug'
+    | '/trait/$traitId'
     | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
@@ -297,16 +352,21 @@ export interface FileRouteTypes {
     | '/_layout/chatster'
     | '/_layout/items'
     | '/_layout/personas'
+    | '/_layout/qualities'
     | '/_layout/rooms'
     | '/_layout/settings'
+    | '/_layout/traits'
     | '/_layout/'
     | '/_layout/agent/$agentId'
     | '/_layout/archetype/$archetypeId'
+    | '/_layout/demo/$slug'
     | '/_layout/persona/$personaId'
+    | '/_layout/quality/$qualityId'
     | '/_layout/r/$roomId'
     | '/_layout/room-v2/$roomId'
     | '/_layout/room/$roomId'
     | '/_layout/team/$slug'
+    | '/_layout/trait/$traitId'
     | '/_layout/u/$slug'
     | '/_layout/stories/'
     | '/_layout/stories/$storyId/edit'
@@ -364,6 +424,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/traits': {
+      id: '/_layout/traits'
+      path: '/traits'
+      fullPath: '/traits'
+      preLoaderRoute: typeof LayoutTraitsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
@@ -376,6 +443,13 @@ declare module '@tanstack/react-router' {
       path: '/rooms'
       fullPath: '/rooms'
       preLoaderRoute: typeof LayoutRoomsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/qualities': {
+      id: '/_layout/qualities'
+      path: '/qualities'
+      fullPath: '/qualities'
+      preLoaderRoute: typeof LayoutQualitiesRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/personas': {
@@ -434,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutUSlugRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/trait/$traitId': {
+      id: '/_layout/trait/$traitId'
+      path: '/trait/$traitId'
+      fullPath: '/trait/$traitId'
+      preLoaderRoute: typeof LayoutTraitTraitIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/team/$slug': {
       id: '/_layout/team/$slug'
       path: '/team/$slug'
@@ -462,11 +543,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutRRoomIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/quality/$qualityId': {
+      id: '/_layout/quality/$qualityId'
+      path: '/quality/$qualityId'
+      fullPath: '/quality/$qualityId'
+      preLoaderRoute: typeof LayoutQualityQualityIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/persona/$personaId': {
       id: '/_layout/persona/$personaId'
       path: '/persona/$personaId'
       fullPath: '/persona/$personaId'
       preLoaderRoute: typeof LayoutPersonaPersonaIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/demo/$slug': {
+      id: '/_layout/demo/$slug'
+      path: '/demo/$slug'
+      fullPath: '/demo/$slug'
+      preLoaderRoute: typeof LayoutDemoSlugRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/archetype/$archetypeId': {
@@ -500,16 +595,21 @@ interface LayoutRouteChildren {
   LayoutChatsterRoute: typeof LayoutChatsterRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPersonasRoute: typeof LayoutPersonasRoute
+  LayoutQualitiesRoute: typeof LayoutQualitiesRoute
   LayoutRoomsRoute: typeof LayoutRoomsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutTraitsRoute: typeof LayoutTraitsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAgentAgentIdRoute: typeof LayoutAgentAgentIdRoute
   LayoutArchetypeArchetypeIdRoute: typeof LayoutArchetypeArchetypeIdRoute
+  LayoutDemoSlugRoute: typeof LayoutDemoSlugRoute
   LayoutPersonaPersonaIdRoute: typeof LayoutPersonaPersonaIdRoute
+  LayoutQualityQualityIdRoute: typeof LayoutQualityQualityIdRoute
   LayoutRRoomIdRoute: typeof LayoutRRoomIdRoute
   LayoutRoomV2RoomIdRoute: typeof LayoutRoomV2RoomIdRoute
   LayoutRoomRoomIdRoute: typeof LayoutRoomRoomIdRoute
   LayoutTeamSlugRoute: typeof LayoutTeamSlugRoute
+  LayoutTraitTraitIdRoute: typeof LayoutTraitTraitIdRoute
   LayoutUSlugRoute: typeof LayoutUSlugRoute
   LayoutStoriesIndexRoute: typeof LayoutStoriesIndexRoute
   LayoutStoriesStoryIdEditRoute: typeof LayoutStoriesStoryIdEditRoute
@@ -522,16 +622,21 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutChatsterRoute: LayoutChatsterRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPersonasRoute: LayoutPersonasRoute,
+  LayoutQualitiesRoute: LayoutQualitiesRoute,
   LayoutRoomsRoute: LayoutRoomsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutTraitsRoute: LayoutTraitsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAgentAgentIdRoute: LayoutAgentAgentIdRoute,
   LayoutArchetypeArchetypeIdRoute: LayoutArchetypeArchetypeIdRoute,
+  LayoutDemoSlugRoute: LayoutDemoSlugRoute,
   LayoutPersonaPersonaIdRoute: LayoutPersonaPersonaIdRoute,
+  LayoutQualityQualityIdRoute: LayoutQualityQualityIdRoute,
   LayoutRRoomIdRoute: LayoutRRoomIdRoute,
   LayoutRoomV2RoomIdRoute: LayoutRoomV2RoomIdRoute,
   LayoutRoomRoomIdRoute: LayoutRoomRoomIdRoute,
   LayoutTeamSlugRoute: LayoutTeamSlugRoute,
+  LayoutTraitTraitIdRoute: LayoutTraitTraitIdRoute,
   LayoutUSlugRoute: LayoutUSlugRoute,
   LayoutStoriesIndexRoute: LayoutStoriesIndexRoute,
   LayoutStoriesStoryIdEditRoute: LayoutStoriesStoryIdEditRoute,

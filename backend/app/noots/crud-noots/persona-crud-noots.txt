@@ -1,0 +1,90 @@
+19:    AgentPersona,
+20:    AgentPersonaCreate,
+21:    AgentPersonaUpdate,
+24:    ArchetypePersonaLink,
+38:    Persona,
+39:    PersonaCreate,
+40:    PersonaQualityLink,
+41:    PersonaTraitLink,
+98:    UserPersona,
+99:    UserPersonaCreate,
+100:    UserPersonaUpdate,
+170:    *, session: Session, persona_in: PersonaCreate, owner_id: uuid.UUID
+171:) -> Persona:
+172:    db_persona = Persona.model_validate(persona_in, update={"owner_id": owner_id})
+230:# Enhanced Persona creation with Archetype inheritance
+232:    *, session: Session, persona_in: PersonaCreate, archetype_id: uuid.UUID
+233:) -> Persona:
+235:    db_persona = Persona.model_validate(persona_in)
+240:    archetype_link = ArchetypePersonaLink(
+255:        trait_link = PersonaTraitLink(
+295:        quality_link = PersonaQualityLink(
+315:        quality_link = PersonaQualityLink(
+333:) -> list[PersonaQualityLink]:
+344:        link_stmt = select(PersonaQualityLink).where(
+345:            PersonaQualityLink.persona_id == persona_id,
+346:            PersonaQualityLink.quality_id == trigger.quality_id,
+367:) -> PersonaQualityLink:
+369:    stmt = select(PersonaQualityLink).where(
+370:        PersonaQualityLink.persona_id == persona_id,
+371:        PersonaQualityLink.quality_id == quality_id,
+386:    quality_link = PersonaQualityLink(
+401:) -> PersonaQualityLink:
+403:    stmt = select(PersonaQualityLink).where(
+404:        PersonaQualityLink.persona_id == persona_id,
+405:        PersonaQualityLink.quality_id == quality_id,
+462:# User Persona CRUD functions
+466:    *, session: Session, user_persona_in: UserPersonaCreate, user_id: uuid.UUID
+467:) -> UserPersona:
+469:    db_user_persona = UserPersona.model_validate(
+480:) -> tuple[list[UserPersona], int]:
+484:        .select_from(UserPersona)
+485:        .where(UserPersona.user_id == user_id)
+490:        select(UserPersona)
+491:        .where(UserPersona.user_id == user_id)
+501:) -> UserPersona | None:
+503:    statement = select(UserPersona).where(
+504:        UserPersona.id == id, UserPersona.user_id == user_id
+512:    db_user_persona: UserPersona,
+513:    user_persona_in: UserPersonaUpdate
+514:) -> UserPersona:
+524:def delete_user_persona(*, session: Session, db_user_persona: UserPersona) -> None:
+530:# Agent Persona CRUD functions
+536:    agent_persona_in: AgentPersonaCreate,
+538:) -> AgentPersona:
+540:    db_agent_persona = AgentPersona.model_validate(
+556:) -> tuple[list[AgentPersona], int]:
+560:        .select_from(AgentPersona)
+561:        .where(AgentPersona.agent_id == agent_id)
+566:        select(AgentPersona)
+567:        .where(AgentPersona.agent_id == agent_id)
+580:) -> AgentPersona | None:
+582:    statement = select(AgentPersona).where(
+583:        AgentPersona.id == id,
+584:        AgentPersona.agent_id == agent_id,
+592:    db_agent_persona: AgentPersona,
+593:    agent_persona_in: AgentPersonaUpdate,
+594:) -> AgentPersona:
+604:def delete_agent_persona(*, session: Session, db_agent_persona: AgentPersona) -> None:
+807:    user_persona_stmt = select(UserPersona).where(UserPersona.id == user_persona_id)
+816:            quality_stmt = select(PersonaQualityLink).where(
+817:                PersonaQualityLink.persona_id == user_persona.persona_id,
+818:                PersonaQualityLink.quality_id == req.target_id,
+819:                PersonaQualityLink.state == QualityState.ENABLED,
+826:            trait_stmt = select(PersonaTraitLink).where(
+827:                PersonaTraitLink.persona_id == user_persona.persona_id,
+828:                PersonaTraitLink.trait_id == req.target_id,
+858:            select(PersonaTraitLink)
+859:            .where(PersonaTraitLink.persona_id == persona_id)
+1696:        select(UserPersona).where(
+1697:            UserPersona.id == req.user_persona_id,
+1698:            UserPersona.user_id == user_id,
+3323:    # Persona ownership rule: must exist in participant's library (when persona_id is set).
+3327:                select(UserPersona).where(
+3328:                    UserPersona.user_id == resolved_user_id,
+3329:                    UserPersona.persona_id == persona_id,
+3334:                    status_code=400, detail="Persona not in user's library"
+3338:                select(AgentPersona).where(
+3339:                    AgentPersona.agent_id == resolved_agent_id,
+3340:                    AgentPersona.persona_id == persona_id,
+3345:                    status_code=400, detail="Persona not in agent's library"

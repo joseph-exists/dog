@@ -772,6 +772,7 @@ class Story(StoryBase, table=True):
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    deleted_at: datetime | None = Field(default=None, nullable=True)
 
     # Relationships defined after all models
     # nodes: list["StoryNode"] = Relationship(back_populates="story")
@@ -2308,6 +2309,7 @@ class Room(RoomBase, table=True):
     creator_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     last_activity: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    deleted_at: datetime | None = Field(default=None, nullable=True)
 
     # Relationships (using string forward references)
     participants: list["RoomParticipant"] = Relationship(

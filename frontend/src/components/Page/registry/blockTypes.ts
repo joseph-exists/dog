@@ -10,6 +10,7 @@ import {
   Image,
   Link,
   Mail,
+  Search,
   Smile,
   Sparkles,
   Table,
@@ -41,6 +42,7 @@ export type BlockType =
   | "domains"
   | "traits"
   | "qualities"
+  | "usedBy"
 
 /**
  * Configuration field types for block settings.
@@ -262,6 +264,17 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
     defaultContent: {
       items: [],
     },
+  },
+  {
+    type: "usedBy",
+    label: "Used By",
+    description:
+      "Display archetypes and personas that reference this entity (read-only)",
+    icon: Search,
+    defaultConfig: {
+      maxVisible: 10,
+    },
+    defaultContent: {},
   },
 ]
 

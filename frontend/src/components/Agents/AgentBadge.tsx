@@ -7,6 +7,7 @@
  * - Status badge: Enabled/Disabled
  */
 
+import { Crown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
@@ -126,6 +127,29 @@ export function AgentStatusBadge({ isEnabled, className }: StatusBadgeProps) {
       )}
     >
       {isEnabled ? "Active" : "Inactive"}
+    </Badge>
+  )
+}
+
+interface CoordinatorBadgeProps {
+  className?: string
+}
+
+/**
+ * Badge indicating this agent is an orchestrator (processes messages first)
+ */
+export function AgentCoordinatorBadge({ className }: CoordinatorBadgeProps) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-300",
+        className,
+      )}
+      title="Orchestrator — processes messages before other agents"
+    >
+      <Crown className="h-3 w-3" />
+      <span>Orchestrator</span>
     </Badge>
   )
 }

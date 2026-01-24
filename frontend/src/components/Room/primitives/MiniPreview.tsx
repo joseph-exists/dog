@@ -9,7 +9,7 @@
  * <MiniPreview
  *   panels={[
  *     { id: "chat", kind: "chat", prominence: "primary" },
- *     { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+ *     { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
  *   ]}
  * />
  * ```
@@ -48,7 +48,7 @@ const panelNames: Record<string, string> = {
   chat: "Chat",
   storyEditor: "Story",
   storyRuntime: "Runtime",
-  agentPanel: "Agents",
+  participantPanel: "Participants",
   debug: "Debug",
   canvas: "Canvas",
   a2ui: "A2UI",
@@ -62,7 +62,7 @@ const panelColors: Record<string, string> = {
   chat: "bg-blue-500/20 border-blue-500/30",
   storyEditor: "bg-purple-500/20 border-purple-500/30",
   storyRuntime: "bg-amber-500/20 border-amber-500/30",
-  agentPanel: "bg-green-500/20 border-green-500/30",
+  participantPanel: "bg-green-500/20 border-green-500/30",
   debug: "bg-orange-500/20 border-orange-500/30",
   canvas: "bg-pink-500/20 border-pink-500/30",
   a2ui: "bg-cyan-500/20 border-cyan-500/30",

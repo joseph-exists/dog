@@ -202,7 +202,7 @@ export const SYSTEM_PRESETS: Preset[] = [
     description: "Chat with agents sidebar",
     panels: [
       { id: "chat", kind: "chat", prominence: "primary" },
-      { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+      { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
     ],
   },
   {
@@ -212,7 +212,7 @@ export const SYSTEM_PRESETS: Preset[] = [
     panels: [
       { id: "story", kind: "storyEditor", prominence: "primary" },
       { id: "chat", kind: "chat", prominence: "primary" },
-      { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+      { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
     ],
   },
   {
@@ -222,7 +222,7 @@ export const SYSTEM_PRESETS: Preset[] = [
     panels: [
       { id: "runtime", kind: "storyRuntime", prominence: "primary" },
       { id: "chat", kind: "chat", prominence: "primary" },
-      { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+      { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
     ],
   },
   {
@@ -232,7 +232,7 @@ export const SYSTEM_PRESETS: Preset[] = [
     panels: [
       { id: "chat", kind: "chat", prominence: "primary" },
       { id: "debug", kind: "debug", prominence: "auxiliary" },
-      { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+      { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
     ],
   },
   {
@@ -242,7 +242,7 @@ export const SYSTEM_PRESETS: Preset[] = [
     panels: [
       { id: "canvas", kind: "canvas", prominence: "primary" },
       { id: "chat", kind: "chat", prominence: "primary" },
-      { id: "agents", kind: "agentPanel", prominence: "auxiliary" },
+      { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
     ],
   },
 ]

@@ -22,6 +22,7 @@ from app.api.routes import (
     private,
     qualities,
     quality_trait_links,
+    quality_users,
     room_panels,
     room_participant_bindings,
     room_contexts,
@@ -31,6 +32,7 @@ from app.api.routes import (
     stories,
     storynodes,
     trait_conflicts,
+    trait_users,
     traits,
     user_panels,
     user_personas,
@@ -76,6 +78,8 @@ api_router.include_router(room_participant_bindings.router)
 api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)
 api_router.include_router(trait_conflicts.router)
+api_router.include_router(trait_users.router)
+api_router.include_router(quality_users.router)
 api_router.include_router(user_panels.router, prefix="/users", tags=["user-panels"])
 api_router.include_router(presets.router, prefix="/presets", tags=["presets"])
 

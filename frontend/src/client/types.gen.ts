@@ -1925,6 +1925,26 @@ export type AgentsDeleteMyAgentSettingsData = {
 
 export type AgentsDeleteMyAgentSettingsResponse = (Message);
 
+export type ArchetypeQualitiesReadArchetypeQualitiesData = {
+    archetypeId: string;
+};
+
+export type ArchetypeQualitiesReadArchetypeQualitiesResponse = (Array<QualityPublic>);
+
+export type ArchetypeQualitiesAddQualityToArchetypeData = {
+    archetypeId: string;
+    qualityId: string;
+};
+
+export type ArchetypeQualitiesAddQualityToArchetypeResponse = (Message);
+
+export type ArchetypeQualitiesRemoveQualityFromArchetypeData = {
+    archetypeId: string;
+    qualityId: string;
+};
+
+export type ArchetypeQualitiesRemoveQualityFromArchetypeResponse = (Message);
+
 export type ArchetypesReadArchetypesData = {
     limit?: number;
     skip?: number;
@@ -1956,6 +1976,26 @@ export type ArchetypesDeleteArchetypeData = {
 };
 
 export type ArchetypesDeleteArchetypeResponse = (Message);
+
+export type ArchetypeTraitsReadArchetypeTraitsData = {
+    archetypeId: string;
+};
+
+export type ArchetypeTraitsReadArchetypeTraitsResponse = (Array<TraitPublic>);
+
+export type ArchetypeTraitsAddTraitToArchetypeData = {
+    archetypeId: string;
+    traitId: string;
+};
+
+export type ArchetypeTraitsAddTraitToArchetypeResponse = (Message);
+
+export type ArchetypeTraitsRemoveTraitFromArchetypeData = {
+    archetypeId: string;
+    traitId: string;
+};
+
+export type ArchetypeTraitsRemoveTraitFromArchetypeResponse = (Message);
 
 export type CatalogReadCatalogData = {
     limit?: number;
@@ -2469,6 +2509,18 @@ export type QualityTraitLinksDeleteQualityTraitLinkData = {
 
 export type QualityTraitLinksDeleteQualityTraitLinkResponse = (Message);
 
+export type QualityUsersReadQualityArchetypesData = {
+    qualityId: string;
+};
+
+export type QualityUsersReadQualityArchetypesResponse = (Array<ArchetypePublic>);
+
+export type QualityUsersReadQualityPersonasData = {
+    qualityId: string;
+};
+
+export type QualityUsersReadQualityPersonasResponse = (Array<PersonaPublic>);
+
 export type RoomAgentSettingsReadRoomAgentSettingsData = {
     roomId: string;
 };
@@ -2639,6 +2691,12 @@ export type RoomsUpdateRoomData = {
 };
 
 export type RoomsUpdateRoomResponse = (RoomPublic);
+
+export type RoomsDeleteRoomData = {
+    roomId: string;
+};
+
+export type RoomsDeleteRoomResponse = (MessageResponse);
 
 export type RoomsAddRoomParticipantData = {
     requestBody: ParticipantAddRequest;
@@ -3041,6 +3099,18 @@ export type TraitsDeleteTraitData = {
 };
 
 export type TraitsDeleteTraitResponse = (Message);
+
+export type TraitUsersReadTraitArchetypesData = {
+    traitId: string;
+};
+
+export type TraitUsersReadTraitArchetypesResponse = (Array<ArchetypePublic>);
+
+export type TraitUsersReadTraitPersonasData = {
+    traitId: string;
+};
+
+export type TraitUsersReadTraitPersonasResponse = (Array<PersonaPublic>);
 
 export type UserPanelsGetMyPanelDefaultsResponse = ((UserPanelDefaultsPublic | null));
 

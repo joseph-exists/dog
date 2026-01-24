@@ -18,6 +18,7 @@ import {
   QualitiesBlock,
   RelationshipsBlock,
   TraitsBlock,
+  UsedByBlock,
 } from "./blocks"
 import { BlockEditorSheet, BlockPalette } from "./editor"
 import { PageHeader } from "./PageHeader"
@@ -440,6 +441,17 @@ export function PageShell({
                     }
                   : undefined
               }
+              entityType={entityType}
+              entityId={entityId}
+            />
+          )
+
+        case "usedBy":
+          return (
+            <UsedByBlock
+              config={{
+                maxVisible: (config.maxVisible as number) ?? 10,
+              }}
               entityType={entityType}
               entityId={entityId}
             />

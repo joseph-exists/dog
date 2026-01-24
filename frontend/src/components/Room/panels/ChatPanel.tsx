@@ -5,10 +5,12 @@
  * Wraps existing MessageList and MessageInput components.
  */
 
-import { Copy, Download, Search } from "lucide-react"
+import { Copy, Download, Search, Users } from "lucide-react"
 import * as React from "react"
+import { type AgentData, AgentPartyPicker } from "@/components/Agents"
 import MessageInput from "@/components/Rooms/MessageInput"
 import MessageList from "@/components/Rooms/MessageList"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { MessageViewModel } from "@/services/roomService"
 import { ActionBar, type ActionItem } from "../primitives/ActionBar"
@@ -58,6 +60,12 @@ interface ChatPanelProps {
    *  (e.g. "expand_details", "regenerate") and the message provides context about
    *  which agent emitted it. */
   onUiAction?: (action: string, message: MessageViewModel) => void
+  /** Available agents for the party picker */
+  availableAgents?: AgentData[]
+  /** IDs of agents already in the room */
+  existingAgentIds?: string[]
+  /** Add multiple agents callback */
+  onAddMultipleAgents?: (agents: AgentData[]) => Promise<void>
 }
 
 export function ChatPanel({
@@ -81,6 +89,9 @@ export function ChatPanel({
   onToggleContext,
   onDeleteMessage,
   onUiAction,
+  availableAgents = [],
+  existingAgentIds = [],
+  onAddMultipleAgents,
 }: ChatPanelProps) {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [showSearch, setShowSearch] = React.useState(false)
@@ -126,7 +137,25 @@ export function ChatPanel({
   return (
     <PanelContainer
       title="Chat"
-      headerActions={<ActionBar actions={headerActions} />}
+      headerActions={
+        <div className="flex items-center gap-1">
+          {isRoomOwner && onAddMultipleAgents && (
+            <AgentPartyPicker
+              availableAgents={availableAgents}
+              existingAgentIds={existingAgentIds}
+              onConfirm={onAddMultipleAgents}
+              title="Add Agents to Room"
+              description="Select multiple agents to add at once"
+              trigger={
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Users className="h-4 w-4" />
+                </Button>
+              }
+            />
+          )}
+          <ActionBar actions={headerActions} />
+        </div>
+      }
       footer={
         <MessageInput
           roomId={roomId}
@@ -147,7 +176,7 @@ export function ChatPanel({
           />
         </div>
       )}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="p-4">
         <MessageList
           roomId={roomId}
           messages={filteredMessages}

@@ -5,7 +5,8 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, TypeVar
+from _collections_abc import Callable
+from typing import TypeVar, Any
 
 from sqlmodel import Session, select
 

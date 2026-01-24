@@ -734,18 +734,17 @@ export const RoomService = {
   },
 
   /**
-   * Delete a room (owner-only, hard delete)
+   * Soft-delete a room (owner-only)
+   *
+   * Sets deleted_at on the room. Room and child data remain in the DB
+   * but are hidden from all queries.
    *
    * @param roomId - Room UUID
    * @returns Promise that resolves when deletion is complete
    * @throws ApiError - 403 if not room owner, 404 if room not found
    */
-  async deleteRoom(_roomId: string): Promise<void> {
-    throw new Error(
-      "Room deletion not yet supported. Backend endpoint needs to be created.",
-    )
-    // uncomment once we figure out this endpoint
-    // await RoomsService.deleteRoom({ roomId: _roomId });
+  async deleteRoom(roomId: string): Promise<void> {
+    await RoomsService.deleteRoom({ roomId })
   },
 
   // ==========================================================================

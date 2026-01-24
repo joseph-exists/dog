@@ -17,6 +17,7 @@ export {
 export type { AgentScope, ParticipationMode } from "./AgentBadge"
 // Badges
 export {
+  AgentCoordinatorBadge,
   AgentModeBadge,
   AgentScopeBadge,
   AgentStatusBadge,

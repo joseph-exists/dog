@@ -37,7 +37,6 @@ export interface PanelConfig {
     | "chat"
     | "storyEditor"
     | "storyRuntime"
-    | "agentPanel"
     | "debug"
     | "canvas"
     | "a2ui"
@@ -170,7 +169,6 @@ export function isValidPanelKind(kind: string): kind is PanelConfig["kind"] {
     "chat",
     "storyEditor",
     "storyRuntime",
-    "agentPanel",
     "debug",
     "canvas",
     "a2ui",
@@ -186,7 +184,6 @@ export function getPanelDisplayName(kind: PanelConfig["kind"]): string {
     chat: "Chat",
     storyEditor: "Story Editor",
     storyRuntime: "Story Runtime",
-    agentPanel: "Agents",
     debug: "Debug",
     canvas: "Canvas",
     a2ui: "Agent UI",

@@ -3,9 +3,11 @@ import {
   Bot,
   Briefcase,
   Crown,
+  Gem,
   Home,
   MessageSquare,
   Smile,
+  Sparkles,
   User2,
   Users,
 } from "lucide-react"
@@ -29,6 +31,8 @@ const baseItems: Item[] = [
   { icon: Bot, title: "Agents", path: "/agents" },
   { icon: Smile, title: "Personas", path: "/personas" },
   { icon: Crown, title: "Archetypes", path: "/archetypes" },
+  { icon: Gem, title: "Qualities", path: "/qualities" },
+  { icon: Sparkles, title: "Traits", path: "/traits" },
   { icon: Briefcase, title: "Items", path: "/items" },
   { icon: BookOpen, title: "debug-chatster", path: "/chatster" },
 ]

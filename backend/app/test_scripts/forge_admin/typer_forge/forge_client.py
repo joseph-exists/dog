@@ -35,7 +35,7 @@ FORGE_URL = "http://localhost:3000/api/v1"
 #  Claude's token
 # API_TOKEN = "4b0f449a6dcf184b0ee94a1fcb0c8b768ca8b779"
 # admin token
-# API_TOKEN= "63d42c1df2b231be68209d45739f14732f06eaba"
+API_TOKEN= "63d42c1df2b231be68209d45739f14732f06eaba"
 # shadowusers token
 # API_TOKEN="e735f46ad918c9b9e0d4afc84f8b9191b1e43a23"
 # SHADOW_AGENTS_TOKEN="13089e081cd56a305978b7ea885fcd6321d31607"
@@ -46,7 +46,7 @@ FORGE_URL = "http://localhost:3000/api/v1"
 # SHADOW_USER_LLM_PROVIDERS_TOKEN="b2812c6096cbde3647d2c1016a613da6951f58b1"
 # SHADOW_PROMPTS_TOKEN="ec085a5f80ddcaef323b43d3cd30fe8d3f84d876"
 # API_TOKEN="ec085a5f80ddcaef323b43d3cd30fe8d3f84d876"
-API_TOKEN = "13089e081cd56a305978b7ea885fcd6321d31607"
+# API_TOKEN = "13089e081cd56a305978b7ea885fcd6321d31607"
 
 # =============================================================================
 # Client Factory
