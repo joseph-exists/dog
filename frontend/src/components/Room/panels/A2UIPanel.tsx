@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { useAgentUI } from "@/hooks/useAgentUI"
 import { useRoomMessages } from "@/hooks/useRoomMessages"
 import { cn } from "@/lib/utils"
+import { RoomService } from "@/services/roomService"
 import { PanelContainer } from "../primitives/PanelContainer"
 
 interface A2UIPanelProps {
@@ -20,13 +21,17 @@ export function A2UIPanel({
   className,
 }: A2UIPanelProps) {
   const { messages } = useRoomMessages(roomId)
-  const { byAgent, hasComponents } = useAgentUI({
+  const { entries, byAgent, hasComponents } = useAgentUI({
     messages: messages ?? [],
   })
 
   const handleAction = (action: string, component: UIComponent) => {
-    // TODO: Route actions back to the agent that emitted the component
-    console.log("[A2UIPanel] Action:", action, "Component:", component.id)
+    // Find the entry that owns this component to get the source message ID.
+    // The agent's response will arrive via the normal message stream.
+    const entry = entries.find((e) => e.component === component)
+    if (entry) {
+      RoomService.sendUIAction(roomId, action, entry.messageId)
+    }
   }
 
   const content = hasComponents ? (
