@@ -120,4 +120,4 @@ def build_agent_prompt(
         return f"{conversation_context}\nUser message: {trigger_message}"
         logger.debug(f"[AGENT_PROMPT] Built agent prompt with {conversation_context} for message: {trigger_message}")
     logger.debug(f"[AGENT_PROMPT] No additional context. Using trigger message as prompt: {trigger_message}")
-    return trigger_message 
+    return trigger_message

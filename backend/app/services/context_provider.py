@@ -12,6 +12,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+import logfire
+
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -133,241 +135,260 @@ async def build_room_context(
     Raises:
         ValueError: If room does not exist
     """
-    # Load room
-    result = await session.exec(select(Room).where(Room.room_id == room_id))
-    room_row = result.one_or_none()
-    room = room_row[0] if room_row and not isinstance(room_row, Room) else room_row
-    if not room:
-        raise ValueError(f"Room {room_id} not found")
-
-    # Load story data if associated
-    story_data = None
-    if room.story_id:
-        story_result = await session.exec(
-            select(Story).where(Story.id == room.story_id)
-        )
-        story_row = story_result.one_or_none()
-        story = (
-            story_row[0]
-            if story_row and not isinstance(story_row, Story)
-            else story_row
-        )
-        if story:
-            story_data = {
-                "id": str(story.id),
-                "title": story.title,
-                "description": story.description,
-                "is_published": story.is_published,
-            }
-
-    # --- Story Runtime Projection ---
-    # Bridges Surface 1 (Room Runtime API) into the agent context.
-    # Agents need to know the user's current position in the story, the path
-    # they've taken, and what choices are available — so they can respond
-    # appropriately to the narrative state.
-    story_runtime: StoryRuntimeContext | None = None
-    if room.story_id:
-        try:
-            # Step 1: Find the room's shared story progress record
-            rsp_result = await session.exec(
-                select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
-            )
-            rsp_row = rsp_result.one_or_none()
-            room_story_progress = (
-                rsp_row[0] if rsp_row and not isinstance(rsp_row, RoomStoryProgress) else rsp_row
-            )
-
-            if room_story_progress:
-                # Step 2: Load the canonical UserStoryProgress (the actual state)
-                progress_result = await session.exec(
-                    select(UserStoryProgress).where(
-                        UserStoryProgress.id == room_story_progress.active_progress_id
-                    )
-                )
-                progress_row = progress_result.one_or_none()
-                progress = (
-                    progress_row[0]
-                    if progress_row and not isinstance(progress_row, UserStoryProgress)
-                    else progress_row
-                )
-
-                if progress and progress.current_node_id is not None:
-                    # Step 3: Load the current node the user is on
-                    current_node_obj = await session.get(StoryNode, progress.current_node_id)
-
-                    if current_node_obj:
-                        # Step 4: Get available choices from this node,
-                        # filtered by current story_state (conditional branches)
-                        choices = await get_available_choices(
-                            session=session,
-                            node_id=progress.current_node_id,
-                            story_state=progress.story_state or {},
-                        )
-                        choice_texts = [c.text for c in choices]
-
-                        # Step 5: Build node chain (the breadcrumb trail of the path taken)
-                        # Uses the choice ancestor chain to reconstruct traversal order
-                        node_chain_titles: list[str] = []
-                        if progress.head_choice_id:
-                            chain = await get_choice_ancestor_chain_async(
-                                session=session,
-                                choice_id=progress.head_choice_id,
-                            )
-                            if chain:
-                                # Collect node IDs in traversal order: first from_node, then all to_nodes
-                                chain_node_ids = [chain[0].from_node_id] + [
-                                    c.to_node_id for c in chain
-                                ]
-                                # Batch-load all nodes in the chain
-                                chain_nodes_result = await session.exec(
-                                    select(StoryNode).where(
-                                        StoryNode.id.in_([str(nid) for nid in chain_node_ids])
-                                    )
-                                )
-                                chain_nodes = chain_nodes_result.all()
-                                nodes_by_id = {n.id: n for n in chain_nodes}
-                                node_chain_titles = [
-                                    nodes_by_id[nid].title
-                                    for nid in chain_node_ids
-                                    if nid in nodes_by_id
-                                ]
-
-                        story_runtime = StoryRuntimeContext(
-                            current_node_title=current_node_obj.title,
-                            current_node_content=current_node_obj.content or "",
-                            current_node_type=current_node_obj.node_type,
-                            is_end_node=current_node_obj.is_end_node,
-                            node_chain=node_chain_titles,
-                            available_choices=choice_texts,
-                            story_state=progress.story_state or {},
-                        )
-        except Exception as exc:
-            # Non-fatal: if runtime loading fails, agent still gets basic context
-            logger.warning(
-                f"Failed to load story runtime for room {room_id}: {exc}"
-            )
-
-    # Load recent messages (ordered by created_at desc, then reversed)
-    messages_result = await session.exec(
-        select(RoomMessage)
-        .where(RoomMessage.room_id == room_id)
-        .order_by(RoomMessage.created_at.desc())
-        .limit(message_limit)
-    )
-    messages = messages_result.all()
-
-    recent_messages = [
-        {
-            "message_id": str(msg.message_id),
-            "sender_type": msg.sender_type,
-            "sender_id": str(msg.sender_id) if msg.sender_id else None,
-            "agent_name": msg.agent_name,
-            "content": msg.content,
-            "created_at": msg.created_at.isoformat(),
-        }
-        for msg in reversed(messages)  # Chronological order
-    ]
-
-    # Load active participants
-    participants_result = await session.exec(
-        select(RoomParticipant).where(
-            RoomParticipant.room_id == room_id,
-            RoomParticipant.active == True,  # noqa: E712
-        )
-    )
-    participants_list = participants_result.all()
-
-    participants = [
-        {
-            "participant_id": p.participant_id,
-            "participant_type": p.participant_type,
-            "role": p.role,
-            "joined_at": p.joined_at.isoformat(),
-        }
-        for p in participants_list
-    ]
-
-    # Fetch agent details for agent participants
-    active_agents: list[AgentInfo] = []
-    for p in participants_list:
-        if p.participant_type == "agent":
-            # participant_id is AgentConfig.slug (preferred) with legacy UUID support.
-            agent_config = None
-
-            agent_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == p.participant_id)
-            )
-            agent_config_row = agent_result.one_or_none()
-            agent_config = (
-                agent_config_row[0]
-                if agent_config_row and not isinstance(agent_config_row, AgentConfig)
-                else agent_config_row
-            )
-
-            if not agent_config:
-                try:
-                    agent_uuid = uuid.UUID(p.participant_id)
-                    agent_config = await session.get(AgentConfig, agent_uuid)
-                except ValueError:
-                    agent_config = None
-
-            if agent_config and agent_config.is_enabled:
-                active_agents.append(
-                    AgentInfo(
-                        slug=agent_config.slug,
-                        name=agent_config.name,
-                        description=agent_config.description or "",
-                        participation_mode=agent_config.participation_mode or "on_mention",
-                        capabilities=agent_config.capabilities or [],
-                    )
-                )
-
-    room_metadata = {
-        "room_id": str(room.room_id),
-        "title": room.title,
-        "creator_id": str(room.creator_id),
-        "created_at": room.created_at.isoformat(),
-        "last_activity": room.last_activity.isoformat(),
+    span_tags: dict[str, Any] = {
+        "room_id": str(room_id),
+        "message_limit": message_limit,
     }
+    if agent_slug:
+        span_tags["agent_slug"] = agent_slug
 
-    extra_contexts: list[dict[str, Any]] = []
-    if context_store:
-        try:
-            shadow_items = await build_shadow_context_items(
-                room_id=room_id,
-                agent_slug=agent_slug,
-                session=session,
-            )
-            for item in shadow_items:
-                await context_store.add(item)
-        except Exception as exc:
-            logger.warning(
-                f"Failed to build Shadow context items for room {room_id} (agent_slug={agent_slug}): {exc}"
-            )
+    with logfire.span("agent.build_room_context", **span_tags):
+        # Load room
+        result = await session.exec(select(Room).where(Room.room_id == room_id))
+        room_row = result.one_or_none()
+        room = room_row[0] if room_row and not isinstance(room_row, Room) else room_row
+        if not room:
+            raise ValueError(f"Room {room_id} not found")
 
-        items = await context_store.list(room_id=room_id, agent_slug=agent_slug)
-        source_priority = {"seed": 0, "backend": 1, "frontend": 2}
-        items_sorted = sorted(
-            items,
-            key=lambda item: (source_priority.get(item.source, 99), item.created_at),
+        # Load story data if associated
+        story_data = None
+        if room.story_id:
+            story_result = await session.exec(
+                select(Story).where(Story.id == room.story_id)
+            )
+            story_row = story_result.one_or_none()
+            story = (
+                story_row[0]
+                if story_row and not isinstance(story_row, Story)
+                else story_row
+            )
+            if story:
+                story_data = {
+                    "id": str(story.id),
+                    "title": story.title,
+                    "description": story.description,
+                    "is_published": story.is_published,
+                }
+
+        # --- Story Runtime Projection ---
+        # Bridges Surface 1 (Room Runtime API) into the agent context.
+        # Agents need to know the user's current position in the story, the path
+        # they've taken, and what choices are available — so they can respond
+        # appropriately to the narrative state.
+        story_runtime: StoryRuntimeContext | None = None
+        if room.story_id:
+            try:
+                # Step 1: Find the room's shared story progress record
+                rsp_result = await session.exec(
+                    select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
+                )
+                rsp_row = rsp_result.one_or_none()
+                room_story_progress = (
+                    rsp_row[0]
+                    if rsp_row and not isinstance(rsp_row, RoomStoryProgress)
+                    else rsp_row
+                )
+
+                if room_story_progress:
+                    # Step 2: Load the canonical UserStoryProgress (the actual state)
+                    progress_result = await session.exec(
+                        select(UserStoryProgress).where(
+                            UserStoryProgress.id == room_story_progress.active_progress_id
+                        )
+                    )
+                    progress_row = progress_result.one_or_none()
+                    progress = (
+                        progress_row[0]
+                        if progress_row and not isinstance(progress_row, UserStoryProgress)
+                        else progress_row
+                    )
+
+                    if progress and progress.current_node_id is not None:
+                        # Step 3: Load the current node the user is on
+                        current_node_obj = await session.get(StoryNode, progress.current_node_id)
+
+                        if current_node_obj:
+                            # Step 4: Get available choices from this node,
+                            # filtered by current story_state (conditional branches)
+                            choices = await get_available_choices(
+                                session=session,
+                                node_id=progress.current_node_id,
+                                story_state=progress.story_state or {},
+                            )
+                            choice_texts = [c.text for c in choices]
+
+                            # Step 5: Build node chain (the breadcrumb trail of the path taken)
+                            # Uses the choice ancestor chain to reconstruct traversal order
+                            node_chain_titles: list[str] = []
+                            if progress.head_choice_id:
+                                chain = await get_choice_ancestor_chain_async(
+                                    session=session,
+                                    choice_id=progress.head_choice_id,
+                                )
+                                if chain:
+                                    # Collect node IDs in traversal order: first from_node, then all to_nodes
+                                    chain_node_ids = [chain[0].from_node_id] + [
+                                        c.to_node_id for c in chain
+                                    ]
+                                    # Batch-load all nodes in the chain
+                                    chain_nodes_result = await session.exec(
+                                        select(StoryNode).where(
+                                            StoryNode.id.in_([str(nid) for nid in chain_node_ids])
+                                        )
+                                    )
+                                    chain_nodes = chain_nodes_result.all()
+                                    nodes_by_id = {n.id: n for n in chain_nodes}
+                                    node_chain_titles = [
+                                        nodes_by_id[nid].title
+                                        for nid in chain_node_ids
+                                        if nid in nodes_by_id
+                                    ]
+
+                            story_runtime = StoryRuntimeContext(
+                                current_node_title=current_node_obj.title,
+                                current_node_content=current_node_obj.content or "",
+                                current_node_type=current_node_obj.node_type,
+                                is_end_node=current_node_obj.is_end_node,
+                                node_chain=node_chain_titles,
+                                available_choices=choice_texts,
+                                story_state=progress.story_state or {},
+                            )
+            except Exception as exc:
+                # Non-fatal: if runtime loading fails, agent still gets basic context
+                logger.warning(
+                    f"Failed to load story runtime for room {room_id}: {exc}"
+                )
+
+        # Load recent messages (ordered by created_at desc, then reversed)
+        messages_result = await session.exec(
+            select(RoomMessage)
+            .where(RoomMessage.room_id == room_id)
+            .order_by(RoomMessage.created_at.desc())
+            .limit(message_limit)
         )
-        extra_contexts = [
+        messages = messages_result.all()
+
+        recent_messages = [
             {
-                "context_type": item.context_type,
-                "payload": item.payload,
-                "source": item.source,
+                "message_id": str(msg.message_id),
+                "sender_type": msg.sender_type,
+                "sender_id": str(msg.sender_id) if msg.sender_id else None,
+                "agent_name": msg.agent_name,
+                "content": msg.content,
+                "created_at": msg.created_at.isoformat(),
             }
-            for item in items_sorted
+            for msg in reversed(messages)  # Chronological order
         ]
 
-    return RoomContext(
-        room_id=room_id,
-        story_id=room.story_id,
-        story_data=story_data,
-        story_runtime=story_runtime,  # Runtime projection of active story state
-        recent_messages=recent_messages,
-        participants=participants,
-        room_metadata=room_metadata,
-        active_agents=active_agents,
-        extra_contexts=extra_contexts,
-    )
+        # Load active participants
+        participants_result = await session.exec(
+            select(RoomParticipant).where(
+                RoomParticipant.room_id == room_id,
+                RoomParticipant.active == True,  # noqa: E712
+            )
+        )
+        participants_list = participants_result.all()
+
+        participants = [
+            {
+                "participant_id": p.participant_id,
+                "participant_type": p.participant_type,
+                "role": p.role,
+                "joined_at": p.joined_at.isoformat(),
+            }
+            for p in participants_list
+        ]
+
+        # Fetch agent details for agent participants
+        active_agents: list[AgentInfo] = []
+        for p in participants_list:
+            if p.participant_type == "agent":
+                # participant_id is AgentConfig.slug (preferred) with legacy UUID support.
+                agent_config = None
+
+                agent_result = await session.exec(
+                    select(AgentConfig).where(AgentConfig.slug == p.participant_id)
+                )
+                agent_config_row = agent_result.one_or_none()
+                agent_config = (
+                    agent_config_row[0]
+                    if agent_config_row and not isinstance(agent_config_row, AgentConfig)
+                    else agent_config_row
+                )
+
+                if not agent_config:
+                    try:
+                        agent_uuid = uuid.UUID(p.participant_id)
+                        agent_config = await session.get(AgentConfig, agent_uuid)
+                    except ValueError:
+                        agent_config = None
+
+                if agent_config and agent_config.is_enabled:
+                    active_agents.append(
+                        AgentInfo(
+                            slug=agent_config.slug,
+                            name=agent_config.name,
+                            description=agent_config.description or "",
+                            participation_mode=agent_config.participation_mode or "on_mention",
+                            capabilities=agent_config.capabilities or [],
+                        )
+                    )
+
+        room_metadata = {
+            "room_id": str(room.room_id),
+            "title": room.title,
+            "creator_id": str(room.creator_id),
+            "created_at": room.created_at.isoformat(),
+            "last_activity": room.last_activity.isoformat(),
+        }
+
+        extra_contexts: list[dict[str, Any]] = []
+        if context_store:
+            try:
+                shadow_items = await build_shadow_context_items(
+                    room_id=room_id,
+                    agent_slug=agent_slug,
+                    session=session,
+                )
+                for item in shadow_items:
+                    await context_store.add(item)
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to build Shadow context items for room {room_id} (agent_slug={agent_slug}): {exc}"
+                )
+
+            items = await context_store.list(room_id=room_id, agent_slug=agent_slug)
+            source_priority = {"seed": 0, "backend": 1, "frontend": 2}
+            items_sorted = sorted(
+                items,
+                key=lambda item: (source_priority.get(item.source, 99), item.created_at),
+            )
+            extra_contexts = [
+                {
+                    "context_type": item.context_type,
+                    "payload": item.payload,
+                    "source": item.source,
+                }
+                for item in items_sorted
+            ]
+
+        context = RoomContext(
+            room_id=room_id,
+            story_id=room.story_id,
+            story_data=story_data,
+            story_runtime=story_runtime,  # Runtime projection of active story state
+            recent_messages=recent_messages,
+            participants=participants,
+            room_metadata=room_metadata,
+            active_agents=active_agents,
+            extra_contexts=extra_contexts,
+        )
+
+        logfire.info(
+            "agent.build_room_context_completed",
+            **span_tags,
+            recent_messages=len(recent_messages),
+            participant_count=len(participants),
+            active_agents=len(active_agents),
+        )
+        return context

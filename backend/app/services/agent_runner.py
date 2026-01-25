@@ -33,6 +33,8 @@ import logging
 import uuid
 from typing import Any
 
+import logfire
+
 from dataclasses import asdict
 from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -76,6 +78,10 @@ def _make_agent_deps(
 
 _streaming_runner: StreamingAgentRunner | None = None
 _non_streaming_runner: NonStreamingAgentRunner | None = None
+
+
+def _uuid_to_str(value: uuid.UUID | None) -> str | None:
+    return str(value) if value else None
 
 
 def _get_streaming_runner() -> StreamingAgentRunner:
@@ -176,15 +182,29 @@ async def run_agent_for_room(
         This function does NOT manage transactions. The caller (route handler)
         must use AsyncSessionTransactionDep to ensure atomic operations.
     """
-    result = await _get_non_streaming_runner().run(
-        req=AgentRunRequest(
-            room_id=room_id,
-            agent_slug=agent_name,
-            trigger_message=trigger_message,
-        ),
-        session=session,
-    )
-    return asdict(result)
+    room_id_str = str(room_id)
+    span_tags = {
+        "room_id": room_id_str,
+        "agent_name": agent_name,
+    }
+
+    with logfire.span("agent.run_agent_for_room", **span_tags):
+        logfire.info("agent.run_requested", **span_tags)
+        result = await _get_non_streaming_runner().run(
+            req=AgentRunRequest(
+                room_id=room_id,
+                agent_slug=agent_name,
+                trigger_message=trigger_message,
+            ),
+            session=session,
+        )
+        serialized = asdict(result)
+        logfire.info(
+            "agent.run_completed",
+            **span_tags,
+            success=serialized.get("success"),
+        )
+        return serialized
 
 
 async def should_agent_respond(
@@ -238,6 +258,8 @@ async def run_agent_for_room_streaming(
     session: AsyncSession,
     user_id: uuid.UUID | None = None,
     a2a_depth: int = 0,
+    enable_a2a_tool: bool = False,
+    enable_ag_ui_tool: bool = False,
 ) -> dict[str, Any]:
     """
     Run an agent with token-by-token streaming and A2A support.
@@ -269,17 +291,38 @@ async def run_agent_for_room_streaming(
     Returns:
         Dict with agent response details
     """
-    result = await _get_streaming_runner().run(
-        req=AgentRunRequest(
-            room_id=room_id,
-            agent_slug=agent_name,
-            trigger_message=trigger_message,
-            user_id=user_id,
-            a2a_depth=a2a_depth,
-        ),
-        session=session,
-    )
-    return asdict(result)
+    room_id_str = str(room_id)
+    user_id_str = _uuid_to_str(user_id)
+    span_tags = {
+        "room_id": room_id_str,
+        "agent_name": agent_name,
+        "user_id": user_id_str,
+        "a2a_depth": a2a_depth,
+        "a2a_tool_enabled": enable_a2a_tool,
+        "ag_ui_tool_enabled": enable_ag_ui_tool,
+    }
+
+    with logfire.span("agent.run_agent_for_room_streaming", **span_tags):
+        logfire.info("agent.run_requested", **span_tags)
+        result = await _get_streaming_runner().run(
+            req=AgentRunRequest(
+                room_id=room_id,
+                agent_slug=agent_name,
+                trigger_message=trigger_message,
+                user_id=user_id,
+                a2a_depth=a2a_depth,
+                enable_a2a_tool=enable_a2a_tool,
+                enable_ag_ui_tool=enable_ag_ui_tool,
+            ),
+            session=session,
+        )
+        serialized = asdict(result)
+        logfire.info(
+            "agent.run_completed",
+            **span_tags,
+            success=serialized.get("success"),
+        )
+        return serialized
 
 
 # =============================================================================
@@ -292,6 +335,8 @@ async def run_agents_for_message(
     trigger_message: str,
     session: AsyncSession,
     user_id: uuid.UUID | None = None,
+    enable_a2a_tool: bool = False,
+    enable_ag_ui_tool: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Run agents in a room that should respond to a message based on participation mode.
@@ -319,59 +364,111 @@ async def run_agents_for_message(
     Returns:
         List of agent response dicts (one per agent that ran)
     """
-    coordinators, regular_agents = await _selection_service.select_agents_for_message(
-        session=session,
-        room_id=room_id,
-        trigger_message=trigger_message,
-    )
+    room_id_str = str(room_id)
+    user_id_str = _uuid_to_str(user_id)
+    span_tags = {
+        "room_id": room_id_str,
+        "user_id": user_id_str,
+        "trigger_length": len(trigger_message),
+        "a2a_tool_enabled": enable_a2a_tool,
+        "ag_ui_tool_enabled": enable_ag_ui_tool,
+    }
 
-    responses = []
-
-    # Phase 1: Run coordinator agents first (bypass participation mode)
-    for agent_slug, display_name, _config in coordinators:
-        logger.info(
-            f"Running coordinator agent '{display_name}' (slug: {agent_slug}) "
-            f"in room {room_id}"
-        )
-
-        response = await run_agent_for_room_streaming(
-            room_id=room_id,
-            agent_name=agent_slug,
-            trigger_message=trigger_message,
+    with logfire.span("agent.run_agents_for_message", **span_tags):
+        logfire.info("agent.run_agents_started", **span_tags)
+        coordinators, regular_agents = await _selection_service.select_agents_for_message(
             session=session,
-            user_id=user_id,
-        )
-        responses.append(response)
-
-    # Phase 2: Run regular agents based on participation mode
-    for agent_slug, display_name, config, _ in regular_agents:
-        # Check participation mode
-        should_respond, reason = _selection_service.should_agent_respond_to_message(
-            config=config,
+            room_id=room_id,
             trigger_message=trigger_message,
         )
 
-        if not should_respond:
-            logger.debug(
-                f"Agent '{display_name}' skipped in room {room_id}: {reason}"
+        responses: list[dict[str, Any]] = []
+
+        # Phase 1: Run coordinator agents first (bypass participation mode)
+        for agent_slug, display_name, _config in coordinators:
+            agent_tags = {
+                **span_tags,
+                "agent_slug": agent_slug,
+                "agent_display_name": display_name,
+                "phase": "coordinator",
+            }
+            logger.info(
+                f"Running coordinator agent '{display_name}' (slug: {agent_slug}) "
+                f"in room {room_id}"
             )
-            continue
+            logfire.info("agent.phase_start", **agent_tags)
+            with logfire.span("agent.run_coordinator", **agent_tags):
+                response = await run_agent_for_room_streaming(
+                    room_id=room_id,
+                    agent_name=agent_slug,
+                    trigger_message=trigger_message,
+                    session=session,
+                    user_id=user_id,
+                    enable_a2a_tool=enable_a2a_tool,
+                    enable_ag_ui_tool=enable_ag_ui_tool,
+                )
+            logfire.info(
+                "agent.phase_completed",
+                **agent_tags,
+                success=response.get("success"),
+            )
+            responses.append(response)
 
-        logger.info(
-            f"Running agent '{display_name}' (slug: {agent_slug}) "
-            f"in room {room_id} ({reason})"
+        # Phase 2: Run regular agents based on participation mode
+        for agent_slug, display_name, config, _ in regular_agents:
+            should_respond, reason = _selection_service.should_agent_respond_to_message(
+                config=config,
+                trigger_message=trigger_message,
+            )
+
+            if not should_respond:
+                logger.debug(
+                    f"Agent '{display_name}' skipped in room {room_id}: {reason}"
+                )
+                logfire.info(
+                    "agent.skipped",
+                    **span_tags,
+                    agent_slug=agent_slug,
+                    agent_display_name=display_name,
+                    reason=reason,
+                )
+                continue
+
+            agent_tags = {
+                **span_tags,
+                "agent_slug": agent_slug,
+                "agent_display_name": display_name,
+                "phase": "regular",
+                "reason": reason,
+            }
+            logger.info(
+                f"Running agent '{display_name}' (slug: {agent_slug}) "
+                f"in room {room_id} ({reason})"
+            )
+            logfire.info("agent.phase_start", **agent_tags)
+            with logfire.span("agent.run_regular", **agent_tags):
+                response = await run_agent_for_room_streaming(
+                    room_id=room_id,
+                    agent_name=agent_slug,
+                    trigger_message=trigger_message,
+                    session=session,
+                    user_id=user_id,
+                    enable_a2a_tool=enable_a2a_tool,
+                    enable_ag_ui_tool=enable_ag_ui_tool,
+                )
+            logfire.info(
+                "agent.phase_completed",
+                **agent_tags,
+                success=response.get("success"),
+            )
+            responses.append(response)
+
+        logfire.info(
+            "agent.run_agents_completed",
+            **span_tags,
+            total_responses=len(responses),
         )
-
-        response = await run_agent_for_room_streaming(
-            room_id=room_id,
-            agent_name=agent_slug,
-            trigger_message=trigger_message,
-            session=session,
-            user_id=user_id,
-        )
-        responses.append(response)
-
-    return responses
+        return responses
 
 
 async def invoke_agent_manually(
@@ -381,6 +478,8 @@ async def invoke_agent_manually(
     trigger_message: str,
     session: AsyncSession,
     user_id: uuid.UUID | None = None,
+    enable_a2a_tool: bool = False,
+    enable_ag_ui_tool: bool = False,
 ) -> dict[str, Any]:
     """
     Explicitly invoke an agent regardless of participation mode.
@@ -401,54 +500,90 @@ async def invoke_agent_manually(
     Returns:
         Agent response dict
     """
-    # Verify agent exists and is in the room
-    slug, display_name, config = await _selection_service.resolve_agent_identifier(
-        session=session,
-        participant_id=agent_slug,
-    )
+    room_id_str = str(room_id)
+    user_id_str = _uuid_to_str(user_id)
+    span_tags = {
+        "room_id": room_id_str,
+        "agent_slug": agent_slug,
+        "user_id": user_id_str,
+        "a2a_tool_enabled": enable_a2a_tool,
+        "ag_ui_tool_enabled": enable_ag_ui_tool,
+    }
 
-    if not slug or not config:
-        return {
-            "agent_name": agent_slug,
-            "content": "",
-            "success": False,
-            "error": f"Agent '{agent_slug}' not found",
-        }
-
-    # Check if agent is participant in room
-    rp = RoomParticipant.__table__.c
-    result = await session.exec(
-        select(RoomParticipant).where(
-            rp.room_id == room_id,
-            rp.participant_type == "agent",
-            rp.participant_id.in_([agent_slug, str(config.id)]),
-            rp.active.is_(True),
+    with logfire.span("agent.invoke_manually", **span_tags):
+        logfire.info("agent.invoke_requested", **span_tags)
+        # Verify agent exists and is in the room
+        slug, display_name, config = await _selection_service.resolve_agent_identifier(
+            session=session,
+            participant_id=agent_slug,
         )
-    )
-    participant_row = result.one_or_none()
-    participant = (
-        participant_row[0]
-        if participant_row and not isinstance(participant_row, RoomParticipant)
-        else participant_row
-    )
 
-    if not participant:
-        return {
-            "agent_name": agent_slug,
-            "content": "",
-            "success": False,
-            "error": f"Agent '{display_name}' is not a participant in this room",
-        }
+        if not slug or not config:
+            logfire.warning(
+                "agent.invoke_failed",
+                **span_tags,
+                reason="agent_not_found",
+            )
+            return {
+                "agent_name": agent_slug,
+                "content": "",
+                "success": False,
+                "error": f"Agent '{agent_slug}' not found",
+            }
 
-    logger.info(
-        f"Manually invoking agent '{display_name}' (slug: {slug}) "
-        f"in room {room_id}"
-    )
+        # Check if agent is participant in room
+        rp = RoomParticipant.__table__.c
+        result = await session.exec(
+            select(RoomParticipant).where(
+                rp.room_id == room_id,
+                rp.participant_type == "agent",
+                rp.participant_id.in_([agent_slug, str(config.id)]),
+                rp.active.is_(True),
+            )
+        )
+        participant_row = result.one_or_none()
+        participant = (
+            participant_row[0]
+            if participant_row and not isinstance(participant_row, RoomParticipant)
+            else participant_row
+        )
 
-    return await run_agent_for_room_streaming(
-        room_id=room_id,
-        agent_name=slug,
-        trigger_message=trigger_message,
-        session=session,
-        user_id=user_id,
-    )
+        if not participant:
+            logfire.warning(
+                "agent.invoke_failed",
+                **span_tags,
+                reason="agent_not_in_room",
+            )
+            return {
+                "agent_name": agent_slug,
+                "content": "",
+                "success": False,
+                "error": f"Agent '{display_name}' is not a participant in this room",
+            }
+
+        logger.info(
+            f"Manually invoking agent '{display_name}' (slug: {slug}) "
+            f"in room {room_id}"
+        )
+        logfire.info(
+            "agent.invoke_validated",
+            **span_tags,
+            resolved_agent_slug=slug,
+        )
+
+        response = await run_agent_for_room_streaming(
+            room_id=room_id,
+            agent_name=slug,
+            trigger_message=trigger_message,
+            session=session,
+            user_id=user_id,
+            enable_a2a_tool=enable_a2a_tool,
+            enable_ag_ui_tool=enable_ag_ui_tool,
+        )
+        logfire.info(
+            "agent.invoke_completed",
+            **span_tags,
+            success=response.get("success"),
+            resolved_agent_slug=slug,
+        )
+        return response

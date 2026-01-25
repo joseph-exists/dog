@@ -206,12 +206,20 @@ async def get_agent_instance_with_tools(
     session: AsyncSession,
     slug: str,
     user_id: uuid.UUID | None = None,
-    enable_a2a_tool: bool = True,
-    enable_ag_ui_tool: bool = True,
+    enable_a2a_tool: bool = False,
+    enable_ag_ui_tool: bool = False,
     room_id: uuid.UUID | None = None,
 ) -> Agent[AgentDeps, str] | None:
     """
     Get agent instance with A2A and AG-UI tools enabled.
+    Looks up the agent config,
+    optionally resolves per-user credentials,
+    constructs the PydanticAI Agent with with AgentDeps as deps_type,
+    and registers:
+        request_agent_assistance tool if enable_a2a_tool is True
+        emit_ui_component tool if enable_ag_ui_tool is True
+    TODO: refactor for more specific tool policies
+    TODO: apply room-specific agent settings when available
     """
     config = await get_agent_config(session, slug)
 
