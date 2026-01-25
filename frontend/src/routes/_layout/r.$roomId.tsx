@@ -22,6 +22,7 @@ import {
   RoomShell,
   StoryEditorPanel,
   StoryPanel,
+  StoryPlayerPanel,
 } from "@/components/Room"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
 import RoomDebugPanel from "@/components/Rooms/RoomDebugPanel"
@@ -157,7 +158,11 @@ function RoomView() {
   const availableAgentsAsAgentData = (availableAgentsData?.agents || []).map(
     toAgentData,
   )
-  const roomAgentsAsAgentData = activeAgents.map((p) => {
+  // All agents in the room (active + inactive) for panel display
+  const allRoomAgents = participants.filter(
+    (p) => p.participant_type === "agent",
+  )
+  const roomAgentsAsAgentData = allRoomAgents.map((p) => {
     // Cross-reference with full agent config for real metadata
     // participant_id for agents is the agent name, not UUID
     const agentConfig = availableAgentsAsAgentData.find(
@@ -173,7 +178,7 @@ function RoomView() {
       isEnabled: p.is_active,
     }
   })
-  const existingAgentIds = activeAgents.map((p) => {
+  const existingAgentIds = allRoomAgents.map((p) => {
     // Resolve participant name to agent config UUID for downstream filtering
     const config = availableAgentsAsAgentData.find(
       (a) => a.id === p.participant_id || a.name === p.participant_id,
@@ -346,6 +351,24 @@ function RoomView() {
         canWrite={canManage}
       />
     ),
+    storyPlayer: () => (
+      <StoryPlayerPanel
+        storyId={room?.story_id || ""}
+        onStoryEvent={(event) => {
+          const text =
+            event.type === "choice_made"
+              ? `[Story: chose "${event.choiceText}" → ${event.nodeTitle}]`
+              : event.type === "story_ended"
+                ? `[Story: reached ending "${event.nodeTitle}"]`
+                : event.type === "story_rewound"
+                  ? `[Story: rewound to "${event.nodeTitle}"]`
+                  : event.type === "story_restarted"
+                    ? `[Story: restarted "${event.nodeTitle}"]`
+                    : `[Story: started "${event.nodeTitle}"]`
+          sendViaWebSocket(text)
+        }}
+      />
+    ),
     canvas: () => <CanvasPanel />,
     a2ui: () => <A2UIPanel roomId={roomId} />,
     participantPanel: () => (
@@ -380,6 +403,7 @@ function RoomView() {
         | "chat"
         | "storyEditor"
         | "storyRuntime"
+        | "storyPlayer"
         | "debug"
         | "canvas"
         | "a2ui"

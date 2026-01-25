@@ -12,6 +12,7 @@ import { ThemeProvider } from "./components/theme-provider"
 import { ReduceMotionProvider } from "./components/ui/motion"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
+import "./styles/demo-themes.css"
 import { routeTree } from "./routeTree.gen"
 
 OpenAPI.BASE = import.meta.env.VITE_API_URL

@@ -50,7 +50,10 @@ export function DemoPage({ config }: DemoPageProps) {
   )
 
   return (
-    <div className="flex flex-col h-full">
+    <div
+      className="flex flex-col h-full"
+      {...(config.theme ? { "data-demo-theme": config.theme } : {})}
+    >
       <DemoHeader
         title={config.title}
         description={config.description}

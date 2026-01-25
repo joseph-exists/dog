@@ -253,11 +253,14 @@ async def list_room_participants(
     room_id: UUID,
     session: AsyncSessionDep,
     current_user: CurrentUser,
+    include_inactive: bool = False,
 ) -> Any:
     """
-    List all active participants in a room.
+    List participants in a room.
 
     Only accessible to room participants. Returns both users and agents.
+    By default only active participants are returned. Set include_inactive=true
+    to also return deactivated participants (useful for toggle UI).
     """
     from sqlmodel import select
 
@@ -271,13 +274,11 @@ async def list_room_participants(
     ):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # Query active participants
-    result = await session.exec(
-        select(RoomParticipant).where(
-            RoomParticipant.room_id == room_id,
-            RoomParticipant.active,
-        )
-    )
+    # Query participants (optionally include inactive)
+    query = select(RoomParticipant).where(RoomParticipant.room_id == room_id)
+    if not include_inactive:
+        query = query.where(RoomParticipant.active)
+    result = await session.exec(query)
     participants = result.all()
 
     return RoomParticipantsPublic(

@@ -7,8 +7,8 @@
 
 import { Loader2 } from "lucide-react"
 import {
-  type AgentData,
   AgentCoordinatorBadge,
+  type AgentData,
   AgentModeBadge,
   AgentQuickAdd,
 } from "@/components/Agents"
@@ -107,14 +107,16 @@ export function ParticipantPanel({
                   <span className="flex-1 text-sm truncate">
                     {user.display_name}
                   </span>
-                  {canManage && user.role !== "owner" && onRemoveParticipant && (
-                    <RemoveParticipantButton
-                      participantId={user.participant_id}
-                      participantName={user.display_name}
-                      participantType="user"
-                      onRemove={onRemoveParticipant}
-                    />
-                  )}
+                  {canManage &&
+                    user.role !== "owner" &&
+                    onRemoveParticipant && (
+                      <RemoveParticipantButton
+                        participantId={user.participant_id}
+                        participantName={user.display_name}
+                        participantType="user"
+                        onRemove={onRemoveParticipant}
+                      />
+                    )}
                 </div>
               ))}
             </div>
@@ -132,49 +134,54 @@ export function ParticipantPanel({
             </p>
           ) : (
             <div className="space-y-1">
-              {roomAgents.map((agent) => (
-                <div
-                  key={agent.id}
-                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
-                >
-                  <AgentAvatar name={agent.name} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-medium truncate">
-                        {agent.name}
-                      </span>
-                      {agent.isCoordinator && (
-                        <AgentCoordinatorBadge className="text-[10px] px-1.5 py-0 h-4 scale-90" />
-                      )}
-                      {agent.participationMode && (
-                        <AgentModeBadge
-                          mode={agent.participationMode}
-                          className="text-[10px] px-1.5 py-0 h-4 scale-90"
+              {roomAgents.map((agent) => {
+                const isInactive = agent.isEnabled === false
+                return (
+                  <div
+                    key={agent.id}
+                    className={`flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 ${isInactive ? "opacity-50" : ""}`}
+                  >
+                    <AgentAvatar name={agent.name} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-medium truncate">
+                          {agent.name}
+                        </span>
+                        {agent.isCoordinator && (
+                          <AgentCoordinatorBadge className="text-[10px] px-1.5 py-0 h-4 scale-90" />
+                        )}
+                        {agent.participationMode && (
+                          <AgentModeBadge
+                            mode={agent.participationMode}
+                            className="text-[10px] px-1.5 py-0 h-4 scale-90"
+                          />
+                        )}
+                      </div>
+                    </div>
+                    {canManage && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <AgentToggle
+                          agentId={agent.id}
+                          agentName={agent.name}
+                          isActive={agent.isEnabled ?? true}
+                          onToggle={onToggleAgent}
                         />
-                      )}
-                    </div>
+                        <RemoveParticipantButton
+                          participantId={agent.id}
+                          participantName={agent.name}
+                          participantType="agent"
+                          onRemove={async (id) => {
+                            const agentData = roomAgents.find(
+                              (a) => a.id === id,
+                            )
+                            if (agentData) await onRemoveAgent(agentData)
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                  {canManage && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <AgentToggle
-                        agentId={agent.id}
-                        agentName={agent.name}
-                        isActive={agent.isEnabled ?? true}
-                        onToggle={onToggleAgent}
-                      />
-                      <RemoveParticipantButton
-                        participantId={agent.id}
-                        participantName={agent.name}
-                        participantType="agent"
-                        onRemove={async (id) => {
-                          const agentData = roomAgents.find((a) => a.id === id)
-                          if (agentData) await onRemoveAgent(agentData)
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

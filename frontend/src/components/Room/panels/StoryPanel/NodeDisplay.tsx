@@ -71,7 +71,7 @@ export function NodeDisplay({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card p-4 shadow-sm space-y-3",
+        "demo-node rounded-lg border bg-card p-4 shadow-sm space-y-3",
         onNodeClick && "cursor-pointer hover:border-primary/60",
         className,
       )}
@@ -79,7 +79,9 @@ export function NodeDisplay({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold">{node.title}</h3>
+          <h3 className="demo-node-title text-lg font-semibold">
+            {node.title}
+          </h3>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             {node.isStartNode && (
               <Badge variant="secondary" className="text-xs">
@@ -95,7 +97,7 @@ export function NodeDisplay({
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
-      <div className="text-sm text-foreground/90">
+      <div className="demo-node-content text-sm text-foreground/90">
         {contentRenderer(node.content, node.contentFormat)}
       </div>
     </div>

@@ -38,8 +38,7 @@ export function QualitiesForm({
   /** Qualities currently assigned to this entity */
   const { data: assignedQualities, isLoading: loadingAssigned } = useQuery({
     queryKey: EntityQualitiesService.queryKey(entityType, entityId),
-    queryFn: () =>
-      EntityQualitiesService.getQualities(entityType, entityId),
+    queryFn: () => EntityQualitiesService.getQualities(entityType, entityId),
   })
 
   const addMutation = useMutation({
@@ -67,7 +66,11 @@ export function QualitiesForm({
   const assignedIds = new Set(assignedQualities?.map((q) => q.id) ?? [])
 
   /** Toggle a quality on or off for this entity */
-  const handleToggle = (quality: { id: string; name: string; description?: string | null }) => {
+  const handleToggle = (quality: {
+    id: string
+    name: string
+    description?: string | null
+  }) => {
     if (assignedIds.has(quality.id)) {
       removeMutation.mutate(quality.id)
     } else {

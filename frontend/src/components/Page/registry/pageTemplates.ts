@@ -456,8 +456,7 @@ export const pageTemplates: PageTemplate[] = [
   {
     id: "trait",
     label: "Trait Profile",
-    description:
-      "A profile layout for traits with linked qualities and usage",
+    description: "A profile layout for traits with linked qualities and usage",
     forEntityTypes: ["trait"],
     defaultBlocks: [
       {

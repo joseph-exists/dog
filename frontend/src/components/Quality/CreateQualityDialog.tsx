@@ -65,8 +65,7 @@ export default function CreateQualityDialog({
     },
     onError: (err: ApiError) => {
       const message =
-        (err.body as { detail?: string })?.detail ||
-        "Failed to create quality"
+        (err.body as { detail?: string })?.detail || "Failed to create quality"
       showErrorToast(message)
     },
     onSettled: () => {

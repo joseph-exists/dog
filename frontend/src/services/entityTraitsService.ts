@@ -131,9 +131,7 @@ export const EntityTraitsService = {
   ): Promise<void> {
     const adder = adders[entityType]
     if (!adder) {
-      throw new Error(
-        `addTrait not supported for entity type: ${entityType}`,
-      )
+      throw new Error(`addTrait not supported for entity type: ${entityType}`)
     }
     return adder(entityId, traitId)
   },

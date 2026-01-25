@@ -290,14 +290,7 @@ export function useRoomStream(
         console.error("Error parsing WebSocket message:", error)
       }
     },
-    [
-      queryClient,
-      roomId,
-      onError,
-      appendUserMessageFromEvent,
-      shouldLog,
-      showWarningToast,
-    ],
+    [queryClient, roomId, onError, appendUserMessageFromEvent, shouldLog],
   )
 
   // Connect to WebSocket

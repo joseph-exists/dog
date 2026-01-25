@@ -48,13 +48,7 @@ function QualityPage() {
 
   // Auto-create page with hydrated content when quality is loaded but page doesn't exist
   useEffect(() => {
-    if (
-      pageLoading ||
-      qualityLoading ||
-      pageExists ||
-      !quality ||
-      !isOwner
-    ) {
+    if (pageLoading || qualityLoading || pageExists || !quality || !isOwner) {
       return
     }
     if (creatingRef.current) return
@@ -71,14 +65,7 @@ function QualityPage() {
     }).catch(() => {
       creatingRef.current = false
     })
-  }, [
-    pageLoading,
-    qualityLoading,
-    pageExists,
-    quality,
-    isOwner,
-    createPage,
-  ])
+  }, [pageLoading, qualityLoading, pageExists, quality, isOwner, createPage])
 
   const isLoading = pageLoading || qualityLoading
 

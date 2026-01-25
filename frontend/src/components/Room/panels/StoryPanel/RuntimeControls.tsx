@@ -28,11 +28,11 @@ export function RuntimeControls({
   isReadOnly = false,
 }: RuntimeControlsProps) {
   return (
-    <div className="space-y-2">
+    <div className="demo-controls space-y-2">
       <Button
         type="button"
         variant="outline"
-        className={cn("w-full justify-start gap-2")}
+        className={cn("demo-control w-full justify-start gap-2")}
         disabled={!canRewind || isRewinding || isReadOnly}
         onClick={onRewind}
       >
@@ -42,7 +42,7 @@ export function RuntimeControls({
       <Button
         type="button"
         variant="outline"
-        className={cn("w-full justify-start gap-2")}
+        className={cn("demo-control w-full justify-start gap-2")}
         disabled={!canReset || isResetting || isReadOnly}
         onClick={onReset}
       >

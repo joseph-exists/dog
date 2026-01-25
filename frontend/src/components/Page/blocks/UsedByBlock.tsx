@@ -1,7 +1,7 @@
 // src/components/Page/blocks/UsedByBlock.tsx
 import { useQuery } from "@tanstack/react-query"
-import { Crown, Smile } from "lucide-react"
 import { Link } from "@tanstack/react-router"
+import { Crown, Smile } from "lucide-react"
 
 import { UsedByService } from "@/services/usedByService"
 import { BlockContainer } from "../primitives"
@@ -32,7 +32,8 @@ export function UsedByBlock({
   const { data, isLoading } = useQuery({
     queryKey: UsedByService.queryKey(entityType!, entityId!),
     queryFn: () => UsedByService.getUsedBy(entityType!, entityId!),
-    enabled: !!entityType && !!entityId && UsedByService.isSupported(entityType!),
+    enabled:
+      !!entityType && !!entityId && UsedByService.isSupported(entityType!),
   })
 
   const { maxVisible = 10 } = config

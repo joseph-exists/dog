@@ -16,7 +16,7 @@
  * ```
  */
 
-import { TraitUsersService, QualityUsersService } from "@/client"
+import { QualityUsersService, TraitUsersService } from "@/client"
 
 // ============================================================================
 // ViewModels
@@ -94,10 +94,7 @@ export const UsedByService = {
    * Fetch archetypes and personas that reference this entity.
    * Returns empty result if entityType is unsupported.
    */
-  async getUsedBy(
-    entityType: string,
-    entityId: string,
-  ): Promise<UsedByResult> {
+  async getUsedBy(entityType: string, entityId: string): Promise<UsedByResult> {
     const fetcher = fetchers[entityType]
     if (!fetcher) return { archetypes: [], personas: [] }
     return fetcher(entityId)

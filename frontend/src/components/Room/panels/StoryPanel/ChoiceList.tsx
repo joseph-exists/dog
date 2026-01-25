@@ -22,14 +22,14 @@ export function ChoiceList({
 }: ChoiceListProps) {
   if (choices.length === 0) {
     return (
-      <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+      <div className="demo-choice-empty rounded-md border border-dashed p-4 text-sm text-muted-foreground">
         No available choices.
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="demo-choice-list flex flex-col gap-2">
       {choices.map((choice) => (
         // Future: support hidden vs disabled choice states from backend rule evaluation.
         <ChoiceItem

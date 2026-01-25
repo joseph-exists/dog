@@ -50,7 +50,7 @@ export function NodeChainCollapsible({
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="space-y-1 rounded-md border bg-muted/30 p-2">
+        <div className="demo-chain space-y-1 rounded-md border bg-muted/30 p-2">
           {visibleNodes.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               No node history available.
@@ -64,7 +64,7 @@ export function NodeChainCollapsible({
                 className={cn(
                   "w-full rounded-md px-2 py-1 text-left text-xs transition-colors",
                   node.id === currentNodeId
-                    ? "bg-primary/10 text-primary"
+                    ? "demo-chain-active bg-primary/10 text-primary"
                     : "hover:bg-muted",
                   onNodeClick ? "cursor-pointer" : "cursor-default",
                 )}

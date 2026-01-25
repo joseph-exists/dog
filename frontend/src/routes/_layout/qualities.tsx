@@ -61,8 +61,7 @@ function DeleteQualityButton({ quality }: { quality: QualityPublic }) {
     },
     onError: (err: ApiError) => {
       const message =
-        (err.body as { detail?: string })?.detail ||
-        "Failed to delete quality"
+        (err.body as { detail?: string })?.detail || "Failed to delete quality"
       showErrorToast(message)
     },
     onSettled: () => {

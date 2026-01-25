@@ -752,23 +752,25 @@ export const RoomService = {
   // ==========================================================================
 
   /**
-   * Get all participants in a room
+   * Get all participants in a room (active and inactive)
    *
    * Returns both user and agent participants.
-   * Only includes active participants (left_at is null).
+   * Includes inactive participants so the UI can show toggled-off agents.
    *
    * @param roomId - Room UUID
    * @returns Array of ParticipantViewModel objects
    * @throws ApiError - 403 if not a room participant, 404 if room not found
    */
   async getParticipants(roomId: string): Promise<ParticipantViewModel[]> {
-    const response: RoomParticipantsPublic =
-      await RoomsService.listRoomParticipants({ roomId })
+    const options: ApiRequestOptions<RoomParticipantsPublic> = {
+      method: "GET",
+      url: `/api/v1/rooms/${roomId}/participants`,
+      query: { include_inactive: true },
+    }
+    const response: RoomParticipantsPublic = await __request(OpenAPI, options)
 
-    // Transform participants first
-    const participants = response.data
-      .filter((p) => p.active) // Only active participants
-      .map(transformParticipant)
+    // Transform all participants (active and inactive)
+    const participants = response.data.map(transformParticipant)
 
     // Collect unique user IDs and agent IDs from participants
     const userIds = new Set<string>()

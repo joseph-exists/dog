@@ -1,0 +1,1523 @@
+/**
+ * Demo Themes
+ *
+ * Theme overrides for demo pages. Each theme is scoped to
+ * [data-demo-theme="<name>"] and targets semantic class names
+ * in StoryPanel sub-components.
+ *
+ * Semantic classes (added to components for theme targeting):
+ *   .demo-header          — DemoHeader bar
+ *   .demo-story-content   — StoryPanel content wrapper
+ *   .demo-node            — NodeDisplay card
+ *   .demo-node-title      — NodeDisplay title text
+ *   .demo-node-content    — NodeDisplay content text
+ *   .demo-choice          — ChoiceItem button/card (all variants)
+ *   .demo-choice-list     — ChoiceList wrapper
+ *   .demo-choice-empty    — ChoiceList empty state
+ *   .demo-controls        — RuntimeControls wrapper
+ *   .demo-control         — Individual control button
+ *   .demo-chain           — NodeChainCollapsible content
+ *   .demo-chain-active    — NodeChainCollapsible active node
+ *   .demo-state           — StoryStateCollapsible content
+ *
+ * To create a new theme:
+ *   1. Add a new [data-demo-theme="your-theme"] block below
+ *   2. Override any of the semantic classes
+ *   3. Set theme: "your-theme" in the DemoConfig entry
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: enchanted-rose
+   A warm, romantic theme with rose/pink tones and soft shadows.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="enchanted-rose"] .demo-header {
+  background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+  border-bottom-color: #f9a8d4;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-node {
+  background: linear-gradient(145deg, #fdf2f8, #fff1f2);
+  border-color: #f9a8d4;
+  box-shadow:
+    0 2px 8px rgba(244, 114, 182, 0.12),
+    0 1px 3px rgba(244, 114, 182, 0.08);
+}
+
+[data-demo-theme="enchanted-rose"] .demo-node-title {
+  color: #9d174d;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-node-content {
+  color: #831843;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-choice {
+  background: #fff1f2;
+  border-color: #fda4af;
+  color: #881337;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-choice:hover:not(:disabled) {
+  background: #ffe4e6;
+  border-color: #f43f5e;
+  box-shadow: 0 2px 6px rgba(244, 63, 94, 0.15);
+}
+
+[data-demo-theme="enchanted-rose"] .demo-choice:disabled {
+  background: #fce7f3;
+  border-color: #fbcfe8;
+  color: #9d174d;
+  opacity: 0.6;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-choice-empty {
+  border-color: #f9a8d4;
+  color: #9d174d;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-control {
+  border-color: #f9a8d4;
+  color: #9d174d;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-control:hover:not(:disabled) {
+  background: #fce7f3;
+  border-color: #f472b6;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-chain {
+  background: rgba(251, 207, 232, 0.3);
+  border-color: #f9a8d4;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-chain-active {
+  background: rgba(244, 114, 182, 0.15);
+  color: #be185d;
+}
+
+[data-demo-theme="enchanted-rose"] .demo-state {
+  background: rgba(251, 207, 232, 0.2);
+  border-color: #f9a8d4;
+  color: #9d174d;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: dark-forest
+   A moody, nature-inspired dark theme with emerald and amber accents.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="dark-forest"] .demo-header {
+  background: linear-gradient(135deg, #022c22, #064e3b);
+  border-bottom-color: #059669;
+}
+
+[data-demo-theme="dark-forest"] .demo-header h1 {
+  color: #d1fae5;
+}
+
+[data-demo-theme="dark-forest"] .demo-header p {
+  color: #6ee7b7;
+}
+
+[data-demo-theme="dark-forest"] .demo-story-content {
+  background: #022c22;
+}
+
+[data-demo-theme="dark-forest"] .demo-node {
+  background: linear-gradient(145deg, #064e3b, #065f46);
+  border-color: #059669;
+  box-shadow:
+    0 2px 8px rgba(5, 150, 105, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-demo-theme="dark-forest"] .demo-node-title {
+  color: #ecfdf5;
+}
+
+[data-demo-theme="dark-forest"] .demo-node-content {
+  color: #a7f3d0;
+}
+
+[data-demo-theme="dark-forest"] .demo-choice {
+  background: #064e3b;
+  border-color: #047857;
+  color: #d1fae5;
+}
+
+[data-demo-theme="dark-forest"] .demo-choice:hover:not(:disabled) {
+  background: #065f46;
+  border-color: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+[data-demo-theme="dark-forest"] .demo-choice:disabled {
+  background: #022c22;
+  border-color: #064e3b;
+  color: #6ee7b7;
+  opacity: 0.5;
+}
+
+[data-demo-theme="dark-forest"] .demo-choice-empty {
+  border-color: #059669;
+  color: #6ee7b7;
+  background: #022c22;
+}
+
+[data-demo-theme="dark-forest"] .demo-control {
+  border-color: #059669;
+  color: #d1fae5;
+  background: #064e3b;
+}
+
+[data-demo-theme="dark-forest"] .demo-control:hover:not(:disabled) {
+  background: #065f46;
+  border-color: #10b981;
+}
+
+[data-demo-theme="dark-forest"] .demo-chain {
+  background: rgba(6, 78, 59, 0.5);
+  border-color: #047857;
+}
+
+[data-demo-theme="dark-forest"] .demo-chain button {
+  color: #a7f3d0;
+}
+
+[data-demo-theme="dark-forest"] .demo-chain button:hover {
+  background: rgba(5, 150, 105, 0.2);
+}
+
+[data-demo-theme="dark-forest"] .demo-chain-active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+[data-demo-theme="dark-forest"] .demo-state {
+  background: rgba(6, 78, 59, 0.4);
+  border-color: #047857;
+  color: #6ee7b7;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: ancient-tome
+   Parchment-inspired warm sepia tones with antique typography feel.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="ancient-tome"] .demo-header {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-bottom-color: #d97706;
+}
+
+[data-demo-theme="ancient-tome"] .demo-header h1 {
+  color: #78350f;
+  font-style: italic;
+}
+
+[data-demo-theme="ancient-tome"] .demo-header p {
+  color: #92400e;
+}
+
+[data-demo-theme="ancient-tome"] .demo-story-content {
+  background: #fffbeb;
+}
+
+[data-demo-theme="ancient-tome"] .demo-node {
+  background: linear-gradient(145deg, #fffbeb, #fef3c7);
+  border-color: #d97706;
+  border-width: 2px;
+  box-shadow:
+    0 2px 8px rgba(217, 119, 6, 0.1),
+    inset 0 1px 2px rgba(254, 243, 199, 0.5);
+  border-radius: 4px;
+}
+
+[data-demo-theme="ancient-tome"] .demo-node-title {
+  color: #78350f;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+}
+
+[data-demo-theme="ancient-tome"] .demo-node-content {
+  color: #451a03;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.7;
+}
+
+[data-demo-theme="ancient-tome"] .demo-choice {
+  background: #fef3c7;
+  border-color: #b45309;
+  color: #78350f;
+  border-radius: 4px;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+[data-demo-theme="ancient-tome"] .demo-choice:hover:not(:disabled) {
+  background: #fde68a;
+  border-color: #d97706;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);
+}
+
+[data-demo-theme="ancient-tome"] .demo-choice:disabled {
+  background: #fef9e7;
+  border-color: #fcd34d;
+  color: #92400e;
+  opacity: 0.6;
+}
+
+[data-demo-theme="ancient-tome"] .demo-choice-empty {
+  border-color: #d97706;
+  color: #92400e;
+  background: #fffbeb;
+  font-style: italic;
+}
+
+[data-demo-theme="ancient-tome"] .demo-control {
+  border-color: #b45309;
+  color: #78350f;
+  background: #fef3c7;
+  border-radius: 4px;
+}
+
+[data-demo-theme="ancient-tome"] .demo-control:hover:not(:disabled) {
+  background: #fde68a;
+  border-color: #d97706;
+}
+
+[data-demo-theme="ancient-tome"] .demo-chain {
+  background: rgba(254, 243, 199, 0.5);
+  border-color: #d97706;
+}
+
+[data-demo-theme="ancient-tome"] .demo-chain-active {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+
+[data-demo-theme="ancient-tome"] .demo-state {
+  background: rgba(254, 243, 199, 0.4);
+  border-color: #d97706;
+  color: #78350f;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: gruvbox
+   The classic warm retro palette — earthy browns, creamy foreground,
+   orange/yellow accents. Inspired by the gruvbox color scheme.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="gruvbox"] .demo-header {
+  background: #282828;
+  border-bottom-color: #d65d0e;
+}
+
+[data-demo-theme="gruvbox"] .demo-header h1 {
+  color: #ebdbb2;
+}
+
+[data-demo-theme="gruvbox"] .demo-header p {
+  color: #a89984;
+}
+
+[data-demo-theme="gruvbox"] .demo-story-content {
+  background: #282828;
+}
+
+[data-demo-theme="gruvbox"] .demo-node {
+  background: #3c3836;
+  border-color: #504945;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-demo-theme="gruvbox"] .demo-node-title {
+  color: #fabd2f;
+}
+
+[data-demo-theme="gruvbox"] .demo-node-content {
+  color: #ebdbb2;
+}
+
+[data-demo-theme="gruvbox"] .demo-choice {
+  background: #504945;
+  border-color: #665c54;
+  color: #ebdbb2;
+}
+
+[data-demo-theme="gruvbox"] .demo-choice:hover:not(:disabled) {
+  background: #665c54;
+  border-color: #fe8019;
+  box-shadow: 0 0 8px rgba(254, 128, 25, 0.2);
+}
+
+[data-demo-theme="gruvbox"] .demo-choice:disabled {
+  background: #3c3836;
+  border-color: #504945;
+  color: #928374;
+  opacity: 0.6;
+}
+
+[data-demo-theme="gruvbox"] .demo-choice-empty {
+  border-color: #665c54;
+  color: #928374;
+  background: #3c3836;
+}
+
+[data-demo-theme="gruvbox"] .demo-control {
+  border-color: #665c54;
+  color: #d5c4a1;
+  background: #3c3836;
+}
+
+[data-demo-theme="gruvbox"] .demo-control:hover:not(:disabled) {
+  background: #504945;
+  border-color: #83a598;
+}
+
+[data-demo-theme="gruvbox"] .demo-chain {
+  background: rgba(60, 56, 54, 0.8);
+  border-color: #504945;
+}
+
+[data-demo-theme="gruvbox"] .demo-chain button {
+  color: #d5c4a1;
+}
+
+[data-demo-theme="gruvbox"] .demo-chain button:hover {
+  background: rgba(80, 73, 69, 0.8);
+}
+
+[data-demo-theme="gruvbox"] .demo-chain-active {
+  background: rgba(214, 93, 14, 0.2);
+  color: #fe8019;
+}
+
+[data-demo-theme="gruvbox"] .demo-state {
+  background: rgba(60, 56, 54, 0.8);
+  border-color: #504945;
+  color: #8ec07c;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: dracula
+   The beloved dark theme — rich purples, soft pinks, and glowing cyans
+   on a cool dark background.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="dracula"] .demo-header {
+  background: linear-gradient(135deg, #282a36, #44475a);
+  border-bottom-color: #bd93f9;
+}
+
+[data-demo-theme="dracula"] .demo-header h1 {
+  color: #f8f8f2;
+}
+
+[data-demo-theme="dracula"] .demo-header p {
+  color: #6272a4;
+}
+
+[data-demo-theme="dracula"] .demo-story-content {
+  background: #282a36;
+}
+
+[data-demo-theme="dracula"] .demo-node {
+  background: #44475a;
+  border-color: #6272a4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-demo-theme="dracula"] .demo-node-title {
+  color: #bd93f9;
+}
+
+[data-demo-theme="dracula"] .demo-node-content {
+  color: #f8f8f2;
+}
+
+[data-demo-theme="dracula"] .demo-choice {
+  background: #44475a;
+  border-color: #6272a4;
+  color: #f8f8f2;
+}
+
+[data-demo-theme="dracula"] .demo-choice:hover:not(:disabled) {
+  background: #6272a4;
+  border-color: #ff79c6;
+  box-shadow: 0 0 10px rgba(255, 121, 198, 0.2);
+}
+
+[data-demo-theme="dracula"] .demo-choice:disabled {
+  background: #282a36;
+  border-color: #44475a;
+  color: #6272a4;
+  opacity: 0.6;
+}
+
+[data-demo-theme="dracula"] .demo-choice-empty {
+  border-color: #6272a4;
+  color: #6272a4;
+  background: #282a36;
+}
+
+[data-demo-theme="dracula"] .demo-control {
+  border-color: #6272a4;
+  color: #f8f8f2;
+  background: #44475a;
+}
+
+[data-demo-theme="dracula"] .demo-control:hover:not(:disabled) {
+  background: #6272a4;
+  border-color: #8be9fd;
+}
+
+[data-demo-theme="dracula"] .demo-chain {
+  background: rgba(68, 71, 90, 0.6);
+  border-color: #6272a4;
+}
+
+[data-demo-theme="dracula"] .demo-chain button {
+  color: #f8f8f2;
+}
+
+[data-demo-theme="dracula"] .demo-chain button:hover {
+  background: rgba(98, 114, 164, 0.3);
+}
+
+[data-demo-theme="dracula"] .demo-chain-active {
+  background: rgba(189, 147, 249, 0.2);
+  color: #bd93f9;
+}
+
+[data-demo-theme="dracula"] .demo-state {
+  background: rgba(68, 71, 90, 0.6);
+  border-color: #6272a4;
+  color: #50fa7b;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: bauhaus
+   Bold primary colors, geometric precision, clean modernist design.
+   Inspired by the Bauhaus movement — red, blue, yellow on white/black.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="bauhaus"] .demo-header {
+  background: #1a1a1a;
+  border-bottom: 4px solid #e60012;
+}
+
+[data-demo-theme="bauhaus"] .demo-header h1 {
+  color: #ffffff;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+[data-demo-theme="bauhaus"] .demo-header p {
+  color: #cccccc;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+[data-demo-theme="bauhaus"] .demo-story-content {
+  background: #f5f5f5;
+}
+
+[data-demo-theme="bauhaus"] .demo-node {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 0;
+  box-shadow: 6px 6px 0 #1a1a1a;
+}
+
+[data-demo-theme="bauhaus"] .demo-node-title {
+  color: #0057a8;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+[data-demo-theme="bauhaus"] .demo-node-content {
+  color: #1a1a1a;
+  font-weight: 400;
+}
+
+[data-demo-theme="bauhaus"] .demo-choice {
+  background: #ffd700;
+  border: 3px solid #1a1a1a;
+  border-radius: 0;
+  color: #1a1a1a;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[data-demo-theme="bauhaus"] .demo-choice:hover:not(:disabled) {
+  background: #e60012;
+  color: #ffffff;
+  border-color: #1a1a1a;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  transform: translate(-2px, -2px);
+}
+
+[data-demo-theme="bauhaus"] .demo-choice:disabled {
+  background: #e0e0e0;
+  border-color: #999999;
+  color: #999999;
+  opacity: 0.7;
+}
+
+[data-demo-theme="bauhaus"] .demo-choice-empty {
+  border: 3px dashed #1a1a1a;
+  border-radius: 0;
+  color: #1a1a1a;
+  background: #ffffff;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+[data-demo-theme="bauhaus"] .demo-control {
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  color: #1a1a1a;
+  background: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+[data-demo-theme="bauhaus"] .demo-control:hover:not(:disabled) {
+  background: #0057a8;
+  color: #ffffff;
+  border-color: #1a1a1a;
+}
+
+[data-demo-theme="bauhaus"] .demo-chain {
+  background: #f0f0f0;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+}
+
+[data-demo-theme="bauhaus"] .demo-chain-active {
+  background: #e60012;
+  color: #ffffff;
+  border-radius: 0;
+}
+
+[data-demo-theme="bauhaus"] .demo-state {
+  background: #ffffff;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  color: #0057a8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: dekonstruct
+   Deconstructivist aesthetic — fragmented, raw, angular. Offset shadows,
+   broken grid feel, brutalist typography. Controlled chaos.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="dekonstruct"] .demo-header {
+  background: #0a0a0a;
+  border-bottom: 2px solid #ff3333;
+  position: relative;
+}
+
+[data-demo-theme="dekonstruct"] .demo-header h1 {
+  color: #ffffff;
+  font-family: "Courier New", monospace;
+  font-weight: 400;
+  text-decoration: line-through;
+  letter-spacing: 0.2em;
+}
+
+[data-demo-theme="dekonstruct"] .demo-header p {
+  color: #ff3333;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+[data-demo-theme="dekonstruct"] .demo-story-content {
+  background: #f0f0f0;
+}
+
+[data-demo-theme="dekonstruct"] .demo-node {
+  background: #ffffff;
+  border: 2px solid #0a0a0a;
+  border-radius: 0;
+  box-shadow:
+    8px 8px 0 #0a0a0a,
+    -2px -2px 0 #ff3333;
+  transform: rotate(-0.5deg);
+}
+
+[data-demo-theme="dekonstruct"] .demo-node-title {
+  color: #0a0a0a;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 2px solid #ff3333;
+  padding-bottom: 4px;
+}
+
+[data-demo-theme="dekonstruct"] .demo-node-content {
+  color: #333333;
+  font-family: "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+[data-demo-theme="dekonstruct"] .demo-choice {
+  background: #0a0a0a;
+  border: 2px solid #0a0a0a;
+  border-radius: 0;
+  color: #ffffff;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+[data-demo-theme="dekonstruct"] .demo-choice:hover:not(:disabled) {
+  background: #ff3333;
+  border-color: #0a0a0a;
+  color: #ffffff;
+  transform: rotate(1deg) scale(1.02);
+  box-shadow: 4px 4px 0 #0a0a0a;
+}
+
+[data-demo-theme="dekonstruct"] .demo-choice:disabled {
+  background: #cccccc;
+  border-color: #999999;
+  color: #666666;
+  opacity: 0.7;
+}
+
+[data-demo-theme="dekonstruct"] .demo-choice-empty {
+  border: 2px dashed #0a0a0a;
+  border-radius: 0;
+  color: #666666;
+  background: transparent;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+}
+
+[data-demo-theme="dekonstruct"] .demo-control {
+  border: 2px solid #0a0a0a;
+  border-radius: 0;
+  color: #0a0a0a;
+  background: transparent;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+}
+
+[data-demo-theme="dekonstruct"] .demo-control:hover:not(:disabled) {
+  background: #0a0a0a;
+  color: #ffffff;
+}
+
+[data-demo-theme="dekonstruct"] .demo-chain {
+  background: transparent;
+  border: 2px solid #0a0a0a;
+  border-radius: 0;
+}
+
+[data-demo-theme="dekonstruct"] .demo-chain button {
+  color: #333333;
+  font-family: "Courier New", monospace;
+}
+
+[data-demo-theme="dekonstruct"] .demo-chain-active {
+  background: #ff3333;
+  color: #ffffff;
+  border-radius: 0;
+}
+
+[data-demo-theme="dekonstruct"] .demo-state {
+  background: transparent;
+  border: 2px solid #0a0a0a;
+  border-radius: 0;
+  color: #0a0a0a;
+  font-family: "Courier New", monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: medieval
+   Illuminated manuscript — deep crimsons, burnished golds, royal navy.
+   Ornate borders, blackletter-inspired weight, parchment textures.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="medieval"] .demo-header {
+  background: linear-gradient(135deg, #1a1a40, #2d1b4e);
+  border-bottom: 3px solid #b8860b;
+}
+
+[data-demo-theme="medieval"] .demo-header h1 {
+  color: #f0c040;
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+}
+
+[data-demo-theme="medieval"] .demo-header p {
+  color: #c0a070;
+  font-style: italic;
+}
+
+[data-demo-theme="medieval"] .demo-story-content {
+  background: linear-gradient(180deg, #f5e6c8, #ede0c8);
+}
+
+[data-demo-theme="medieval"] .demo-node {
+  background: linear-gradient(145deg, #fdf5e6, #f5e6c8);
+  border: 3px double #8b0000;
+  border-radius: 2px;
+  box-shadow:
+    0 2px 8px rgba(139, 0, 0, 0.15),
+    inset 0 0 20px rgba(184, 134, 11, 0.05);
+}
+
+[data-demo-theme="medieval"] .demo-node-title {
+  color: #8b0000;
+  font-variant: small-caps;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: 1.2em;
+}
+
+[data-demo-theme="medieval"] .demo-node-content {
+  color: #2d1b00;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+
+[data-demo-theme="medieval"] .demo-choice {
+  background: linear-gradient(135deg, #1a1a40, #2d1b4e);
+  border: 2px solid #b8860b;
+  border-radius: 2px;
+  color: #f0c040;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+}
+
+[data-demo-theme="medieval"] .demo-choice:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b0000, #a0102e);
+  border-color: #f0c040;
+  color: #fdf5e6;
+  box-shadow: 0 0 12px rgba(240, 192, 64, 0.2);
+}
+
+[data-demo-theme="medieval"] .demo-choice:disabled {
+  background: #d4c5a0;
+  border-color: #a09070;
+  color: #6b5b3a;
+  opacity: 0.6;
+}
+
+[data-demo-theme="medieval"] .demo-choice-empty {
+  border: 2px dashed #8b0000;
+  color: #8b0000;
+  background: rgba(253, 245, 230, 0.5);
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+
+[data-demo-theme="medieval"] .demo-control {
+  border: 2px solid #b8860b;
+  color: #2d1b00;
+  background: #f5e6c8;
+  border-radius: 2px;
+  font-variant: small-caps;
+}
+
+[data-demo-theme="medieval"] .demo-control:hover:not(:disabled) {
+  background: #1a1a40;
+  color: #f0c040;
+  border-color: #b8860b;
+}
+
+[data-demo-theme="medieval"] .demo-chain {
+  background: rgba(245, 230, 200, 0.5);
+  border: 2px solid #b8860b;
+  border-radius: 2px;
+}
+
+[data-demo-theme="medieval"] .demo-chain button {
+  color: #2d1b00;
+  font-family: Georgia, serif;
+}
+
+[data-demo-theme="medieval"] .demo-chain-active {
+  background: rgba(139, 0, 0, 0.15);
+  color: #8b0000;
+  font-weight: 700;
+}
+
+[data-demo-theme="medieval"] .demo-state {
+  background: rgba(26, 26, 64, 0.05);
+  border: 2px solid #b8860b;
+  border-radius: 2px;
+  color: #2d1b00;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: math
+   Clean mathematical aesthetic — LaTeX-inspired, monospace precision,
+   graph-paper backgrounds, blue "variable" accents. Academic and minimal.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="math"] .demo-header {
+  background: #fafafa;
+  border-bottom: 1px solid #333333;
+}
+
+[data-demo-theme="math"] .demo-header h1 {
+  color: #1a1a1a;
+  font-family: "Computer Modern", "Latin Modern", Georgia, serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+[data-demo-theme="math"] .demo-header p {
+  color: #555555;
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+}
+
+[data-demo-theme="math"] .demo-story-content {
+  background:
+    linear-gradient(rgba(200, 220, 240, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 220, 240, 0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-color: #ffffff;
+}
+
+[data-demo-theme="math"] .demo-node {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-left: 3px solid #2563eb;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+[data-demo-theme="math"] .demo-node-title {
+  color: #1a1a1a;
+  font-family: "Computer Modern", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+}
+
+[data-demo-theme="math"] .demo-node-content {
+  color: #333333;
+  font-family: "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+[data-demo-theme="math"] .demo-choice {
+  background: #f8fafc;
+  border: 1px solid #2563eb;
+  border-radius: 0;
+  color: #1e40af;
+  font-family: "Courier New", monospace;
+  font-size: 0.85rem;
+}
+
+[data-demo-theme="math"] .demo-choice::before {
+  content: "→ ";
+  color: #2563eb;
+}
+
+[data-demo-theme="math"] .demo-choice:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #1d4ed8;
+  color: #1e3a8a;
+}
+
+[data-demo-theme="math"] .demo-choice:disabled {
+  background: #f5f5f5;
+  border-color: #d1d5db;
+  color: #9ca3af;
+  opacity: 0.7;
+}
+
+[data-demo-theme="math"] .demo-choice-empty {
+  border: 1px dashed #9ca3af;
+  border-radius: 0;
+  color: #6b7280;
+  background: #fafafa;
+  font-family: "Courier New", monospace;
+  font-style: italic;
+}
+
+[data-demo-theme="math"] .demo-control {
+  border: 1px solid #d1d5db;
+  border-radius: 0;
+  color: #374151;
+  background: #ffffff;
+  font-family: "Courier New", monospace;
+  font-size: 0.8rem;
+}
+
+[data-demo-theme="math"] .demo-control:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #6b7280;
+}
+
+[data-demo-theme="math"] .demo-chain {
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 0;
+}
+
+[data-demo-theme="math"] .demo-chain button {
+  font-family: "Courier New", monospace;
+  color: #374151;
+}
+
+[data-demo-theme="math"] .demo-chain-active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-left: 2px solid #2563eb;
+  border-radius: 0;
+}
+
+[data-demo-theme="math"] .demo-state {
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 0;
+  color: #2563eb;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: technorave
+   Cyberpunk neon — black void, electric cyan, hot magenta, acid lime.
+   Glowing borders, sharp edges, high energy.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="technorave"] .demo-header {
+  background: #0a0a0a;
+  border-bottom: 2px solid #00ffff;
+  box-shadow: 0 2px 10px rgba(0, 255, 255, 0.3);
+}
+
+[data-demo-theme="technorave"] .demo-header h1 {
+  color: #00ffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+[data-demo-theme="technorave"] .demo-header p {
+  color: #ff00ff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+}
+
+[data-demo-theme="technorave"] .demo-story-content {
+  background: #0a0a0a;
+}
+
+[data-demo-theme="technorave"] .demo-node {
+  background: rgba(10, 10, 10, 0.9);
+  border: 1px solid #00ffff;
+  border-radius: 0;
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.3),
+    inset 0 0 20px rgba(0, 255, 255, 0.05);
+}
+
+[data-demo-theme="technorave"] .demo-node-title {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+[data-demo-theme="technorave"] .demo-node-content {
+  color: #e0e0e0;
+}
+
+[data-demo-theme="technorave"] .demo-choice {
+  background: transparent;
+  border: 1px solid #ff00ff;
+  border-radius: 0;
+  color: #ff00ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+[data-demo-theme="technorave"] .demo-choice:hover:not(:disabled) {
+  background: rgba(255, 0, 255, 0.15);
+  border-color: #ff00ff;
+  color: #ffffff;
+  box-shadow:
+    0 0 15px rgba(255, 0, 255, 0.4),
+    inset 0 0 15px rgba(255, 0, 255, 0.1);
+  text-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
+}
+
+[data-demo-theme="technorave"] .demo-choice:disabled {
+  background: transparent;
+  border-color: #333333;
+  color: #555555;
+  opacity: 0.5;
+}
+
+[data-demo-theme="technorave"] .demo-choice-empty {
+  border: 1px dashed #333333;
+  border-radius: 0;
+  color: #555555;
+  background: transparent;
+  text-transform: uppercase;
+}
+
+[data-demo-theme="technorave"] .demo-control {
+  border: 1px solid #00ff88;
+  border-radius: 0;
+  color: #00ff88;
+  background: transparent;
+  text-transform: uppercase;
+}
+
+[data-demo-theme="technorave"] .demo-control:hover:not(:disabled) {
+  background: rgba(0, 255, 136, 0.1);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+[data-demo-theme="technorave"] .demo-chain {
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid #333333;
+  border-radius: 0;
+}
+
+[data-demo-theme="technorave"] .demo-chain button {
+  color: #aaaaaa;
+}
+
+[data-demo-theme="technorave"] .demo-chain button:hover {
+  background: rgba(0, 255, 255, 0.1);
+  color: #00ffff;
+}
+
+[data-demo-theme="technorave"] .demo-chain-active {
+  background: rgba(0, 255, 255, 0.15);
+  color: #00ffff;
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+  border-radius: 0;
+}
+
+[data-demo-theme="technorave"] .demo-state {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #00ff88;
+  border-radius: 0;
+  color: #00ff88;
+  text-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: spiritual-math
+   Sacred geometry meets mathematics — deep indigo base, golden ratio
+   accents, mystical yet precise. Circles, soft glows, transcendent.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="spiritual-math"] .demo-header {
+  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  border-bottom: 2px solid #c9a227;
+}
+
+[data-demo-theme="spiritual-math"] .demo-header h1 {
+  color: #e9d5a0;
+  letter-spacing: 0.15em;
+  font-weight: 300;
+}
+
+[data-demo-theme="spiritual-math"] .demo-header p {
+  color: #a5b4fc;
+  font-style: italic;
+  letter-spacing: 0.05em;
+}
+
+[data-demo-theme="spiritual-math"] .demo-story-content {
+  background: linear-gradient(180deg, #1e1b4b, #0f0d2e);
+}
+
+[data-demo-theme="spiritual-math"] .demo-node {
+  background: linear-gradient(
+    145deg,
+    rgba(49, 46, 129, 0.8),
+    rgba(30, 27, 75, 0.9)
+  );
+  border: 1px solid #c9a227;
+  border-radius: 50% / 10%;
+  box-shadow:
+    0 4px 15px rgba(201, 162, 39, 0.1),
+    0 0 30px rgba(99, 102, 241, 0.05);
+}
+
+[data-demo-theme="spiritual-math"] .demo-node-title {
+  color: #c9a227;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+[data-demo-theme="spiritual-math"] .demo-node-content {
+  color: #c7d2fe;
+  font-style: italic;
+  line-height: 1.8;
+  text-align: center;
+}
+
+[data-demo-theme="spiritual-math"] .demo-choice {
+  background: rgba(49, 46, 129, 0.6);
+  border: 1px solid rgba(201, 162, 39, 0.6);
+  border-radius: 24px;
+  color: #e9d5a0;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+[data-demo-theme="spiritual-math"] .demo-choice:hover:not(:disabled) {
+  background: rgba(201, 162, 39, 0.15);
+  border-color: #c9a227;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(201, 162, 39, 0.2);
+}
+
+[data-demo-theme="spiritual-math"] .demo-choice:disabled {
+  background: rgba(30, 27, 75, 0.6);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #6366f1;
+  opacity: 0.5;
+}
+
+[data-demo-theme="spiritual-math"] .demo-choice-empty {
+  border: 1px dashed rgba(201, 162, 39, 0.4);
+  border-radius: 24px;
+  color: #a5b4fc;
+  background: transparent;
+  text-align: center;
+  font-style: italic;
+}
+
+[data-demo-theme="spiritual-math"] .demo-control {
+  border: 1px solid rgba(165, 180, 252, 0.4);
+  border-radius: 24px;
+  color: #a5b4fc;
+  background: transparent;
+}
+
+[data-demo-theme="spiritual-math"] .demo-control:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: #a5b4fc;
+}
+
+[data-demo-theme="spiritual-math"] .demo-chain {
+  background: rgba(49, 46, 129, 0.4);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-radius: 12px;
+}
+
+[data-demo-theme="spiritual-math"] .demo-chain button {
+  color: #c7d2fe;
+}
+
+[data-demo-theme="spiritual-math"] .demo-chain button:hover {
+  background: rgba(201, 162, 39, 0.1);
+}
+
+[data-demo-theme="spiritual-math"] .demo-chain-active {
+  background: rgba(201, 162, 39, 0.2);
+  color: #c9a227;
+  border-radius: 8px;
+}
+
+[data-demo-theme="spiritual-math"] .demo-state {
+  background: rgba(49, 46, 129, 0.4);
+  border: 1px solid rgba(165, 180, 252, 0.3);
+  border-radius: 12px;
+  color: #a5b4fc;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: terminal
+   Green-on-black CRT aesthetic — phosphor glow, monospace everything,
+   scanline texture, retro computing vibes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="terminal"] .demo-header {
+  background: #0a0a0a;
+  border-bottom: 1px solid #33ff33;
+  box-shadow: 0 1px 4px rgba(51, 255, 51, 0.2);
+}
+
+[data-demo-theme="terminal"] .demo-header h1 {
+  color: #33ff33;
+  font-family: "Courier New", monospace;
+  font-weight: 400;
+  text-shadow: 0 0 6px rgba(51, 255, 51, 0.4);
+}
+
+[data-demo-theme="terminal"] .demo-header h1::before {
+  content: "> ";
+}
+
+[data-demo-theme="terminal"] .demo-header p {
+  color: #1a991a;
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+}
+
+[data-demo-theme="terminal"] .demo-story-content {
+  background: #0a0a0a;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(51, 255, 51, 0.03) 0px,
+    rgba(51, 255, 51, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+[data-demo-theme="terminal"] .demo-node {
+  background: rgba(0, 20, 0, 0.8);
+  border: 1px solid #1a661a;
+  border-radius: 0;
+  box-shadow: 0 0 8px rgba(51, 255, 51, 0.1);
+}
+
+[data-demo-theme="terminal"] .demo-node-title {
+  color: #33ff33;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(51, 255, 51, 0.3);
+}
+
+[data-demo-theme="terminal"] .demo-node-title::before {
+  content: "[ ";
+  color: #1a991a;
+}
+
+[data-demo-theme="terminal"] .demo-node-title::after {
+  content: " ]";
+  color: #1a991a;
+}
+
+[data-demo-theme="terminal"] .demo-node-content {
+  color: #22cc22;
+  font-family: "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+[data-demo-theme="terminal"] .demo-choice {
+  background: transparent;
+  border: 1px solid #1a661a;
+  border-radius: 0;
+  color: #33ff33;
+  font-family: "Courier New", monospace;
+}
+
+[data-demo-theme="terminal"] .demo-choice::before {
+  content: "$ ";
+  color: #1a991a;
+}
+
+[data-demo-theme="terminal"] .demo-choice:hover:not(:disabled) {
+  background: rgba(51, 255, 51, 0.08);
+  border-color: #33ff33;
+  text-shadow: 0 0 6px rgba(51, 255, 51, 0.4);
+  box-shadow: 0 0 10px rgba(51, 255, 51, 0.15);
+}
+
+[data-demo-theme="terminal"] .demo-choice:disabled {
+  border-color: #0d330d;
+  color: #1a661a;
+  opacity: 0.5;
+}
+
+[data-demo-theme="terminal"] .demo-choice-empty {
+  border: 1px dashed #1a661a;
+  border-radius: 0;
+  color: #1a661a;
+  background: transparent;
+  font-family: "Courier New", monospace;
+}
+
+[data-demo-theme="terminal"] .demo-control {
+  border: 1px solid #1a661a;
+  border-radius: 0;
+  color: #22cc22;
+  background: transparent;
+  font-family: "Courier New", monospace;
+}
+
+[data-demo-theme="terminal"] .demo-control:hover:not(:disabled) {
+  background: rgba(51, 255, 51, 0.08);
+  border-color: #33ff33;
+}
+
+[data-demo-theme="terminal"] .demo-chain {
+  background: rgba(0, 20, 0, 0.5);
+  border: 1px solid #1a661a;
+  border-radius: 0;
+}
+
+[data-demo-theme="terminal"] .demo-chain button {
+  color: #22cc22;
+  font-family: "Courier New", monospace;
+}
+
+[data-demo-theme="terminal"] .demo-chain button:hover {
+  background: rgba(51, 255, 51, 0.08);
+}
+
+[data-demo-theme="terminal"] .demo-chain-active {
+  background: rgba(51, 255, 51, 0.1);
+  color: #33ff33;
+  text-shadow: 0 0 4px rgba(51, 255, 51, 0.3);
+  border-radius: 0;
+}
+
+[data-demo-theme="terminal"] .demo-state {
+  background: rgba(0, 20, 0, 0.5);
+  border: 1px solid #1a661a;
+  border-radius: 0;
+  color: #33ff33;
+  text-shadow: 0 0 3px rgba(51, 255, 51, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Theme: vaporwave
+   Retro-futurist pastels — hot pink, electric blue, lavender, sunset
+   gradients. Rounded and dreamy, 80s/90s nostalgic aesthetic.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-demo-theme="vaporwave"] .demo-header {
+  background: linear-gradient(135deg, #1a0033, #330066, #1a0033);
+  border-bottom: 2px solid #ff71ce;
+}
+
+[data-demo-theme="vaporwave"] .demo-header h1 {
+  color: #ff71ce;
+  text-shadow: 0 0 10px rgba(255, 113, 206, 0.5);
+  letter-spacing: 0.15em;
+}
+
+[data-demo-theme="vaporwave"] .demo-header p {
+  color: #01cdfe;
+  letter-spacing: 0.08em;
+}
+
+[data-demo-theme="vaporwave"] .demo-story-content {
+  background: linear-gradient(180deg, #1a0033, #0d001a);
+}
+
+[data-demo-theme="vaporwave"] .demo-node {
+  background: linear-gradient(
+    145deg,
+    rgba(51, 0, 102, 0.8),
+    rgba(26, 0, 51, 0.9)
+  );
+  border: 1px solid #b967ff;
+  border-radius: 16px;
+  box-shadow:
+    0 4px 20px rgba(185, 103, 255, 0.15),
+    0 0 40px rgba(255, 113, 206, 0.05);
+}
+
+[data-demo-theme="vaporwave"] .demo-node-title {
+  color: #01cdfe;
+  text-shadow: 0 0 8px rgba(1, 205, 254, 0.4);
+  letter-spacing: 0.08em;
+}
+
+[data-demo-theme="vaporwave"] .demo-node-content {
+  color: #e0d0ff;
+  line-height: 1.7;
+}
+
+[data-demo-theme="vaporwave"] .demo-choice {
+  background: linear-gradient(
+    135deg,
+    rgba(185, 103, 255, 0.2),
+    rgba(255, 113, 206, 0.2)
+  );
+  border: 1px solid #ff71ce;
+  border-radius: 24px;
+  color: #ff71ce;
+  letter-spacing: 0.05em;
+}
+
+[data-demo-theme="vaporwave"] .demo-choice:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 113, 206, 0.3),
+    rgba(1, 205, 254, 0.3)
+  );
+  border-color: #01cdfe;
+  color: #ffffff;
+  box-shadow:
+    0 0 15px rgba(255, 113, 206, 0.3),
+    0 0 30px rgba(1, 205, 254, 0.15);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+[data-demo-theme="vaporwave"] .demo-choice:disabled {
+  background: rgba(26, 0, 51, 0.5);
+  border-color: rgba(185, 103, 255, 0.3);
+  color: #b967ff;
+  opacity: 0.5;
+}
+
+[data-demo-theme="vaporwave"] .demo-choice-empty {
+  border: 1px dashed #b967ff;
+  border-radius: 24px;
+  color: #b967ff;
+  background: transparent;
+}
+
+[data-demo-theme="vaporwave"] .demo-control {
+  border: 1px solid #01cdfe;
+  border-radius: 24px;
+  color: #01cdfe;
+  background: transparent;
+}
+
+[data-demo-theme="vaporwave"] .demo-control:hover:not(:disabled) {
+  background: rgba(1, 205, 254, 0.1);
+  box-shadow: 0 0 10px rgba(1, 205, 254, 0.2);
+}
+
+[data-demo-theme="vaporwave"] .demo-chain {
+  background: rgba(51, 0, 102, 0.4);
+  border: 1px solid rgba(185, 103, 255, 0.4);
+  border-radius: 12px;
+}
+
+[data-demo-theme="vaporwave"] .demo-chain button {
+  color: #e0d0ff;
+}
+
+[data-demo-theme="vaporwave"] .demo-chain button:hover {
+  background: rgba(255, 113, 206, 0.1);
+  color: #ff71ce;
+}
+
+[data-demo-theme="vaporwave"] .demo-chain-active {
+  background: rgba(255, 113, 206, 0.2);
+  color: #ff71ce;
+  border-radius: 8px;
+}
+
+[data-demo-theme="vaporwave"] .demo-state {
+  background: rgba(51, 0, 102, 0.4);
+  border: 1px solid rgba(1, 205, 254, 0.4);
+  border-radius: 12px;
+  color: #01cdfe;
+}

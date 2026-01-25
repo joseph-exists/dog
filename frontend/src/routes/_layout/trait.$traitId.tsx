@@ -48,13 +48,7 @@ function TraitPage() {
 
   // Auto-create page with hydrated content when trait is loaded but page doesn't exist
   useEffect(() => {
-    if (
-      pageLoading ||
-      traitLoading ||
-      pageExists ||
-      !trait ||
-      !isOwner
-    ) {
+    if (pageLoading || traitLoading || pageExists || !trait || !isOwner) {
       return
     }
     if (creatingRef.current) return
@@ -71,14 +65,7 @@ function TraitPage() {
     }).catch(() => {
       creatingRef.current = false
     })
-  }, [
-    pageLoading,
-    traitLoading,
-    pageExists,
-    trait,
-    isOwner,
-    createPage,
-  ])
+  }, [pageLoading, traitLoading, pageExists, trait, isOwner, createPage])
 
   const isLoading = pageLoading || traitLoading
 
@@ -109,10 +96,7 @@ function TraitPage() {
           <p className="text-muted-foreground">
             This trait doesn't have a profile page yet.
           </p>
-          <Button
-            variant="outline"
-            onClick={() => navigate({ to: "/traits" })}
-          >
+          <Button variant="outline" onClick={() => navigate({ to: "/traits" })}>
             Back to Traits
           </Button>
         </div>

@@ -12,11 +12,11 @@
  */
 
 import { AgentUIRenderer } from "@/components/AgentUI"
+import MessageActionMenu from "@/components/Rooms/MessageActionMenu"
 import { Badge } from "@/components/ui/badge"
 import { MessageBadge } from "@/components/ui/message-badge"
 import { cn } from "@/lib/utils"
 import type { MessageViewModel } from "@/services/roomService"
-import MessageActionMenu from "@/components/Rooms/MessageActionMenu"
 
 interface MessageProps {
   message: MessageViewModel

@@ -144,9 +144,7 @@ export const EntityQualitiesService = {
   ): Promise<void> {
     const adder = adders[entityType]
     if (!adder) {
-      throw new Error(
-        `addQuality not supported for entity type: ${entityType}`,
-      )
+      throw new Error(`addQuality not supported for entity type: ${entityType}`)
     }
     return adder(entityId, qualityId)
   },

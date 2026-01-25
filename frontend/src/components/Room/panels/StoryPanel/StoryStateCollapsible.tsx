@@ -35,7 +35,7 @@ export function StoryStateCollapsible({
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="rounded-md border bg-muted/30 p-3 text-xs font-mono whitespace-pre-wrap">
+        <div className="demo-state rounded-md border bg-muted/30 p-3 text-xs font-mono whitespace-pre-wrap">
           {storyState ? (
             JSON.stringify(storyState, null, 2)
           ) : (

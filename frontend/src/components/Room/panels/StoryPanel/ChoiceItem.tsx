@@ -36,7 +36,7 @@ export function ChoiceItem({
         <button
           type="button"
           className={cn(
-            "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
+            "demo-choice w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
             isDisabled
               ? "cursor-not-allowed bg-muted text-muted-foreground"
               : "hover:border-primary hover:bg-muted/60",
@@ -62,7 +62,7 @@ export function ChoiceItem({
     return (
       <div
         className={cn(
-          "rounded-md border p-3 transition-colors",
+          "demo-choice rounded-md border p-3 transition-colors",
           isDisabled
             ? "cursor-not-allowed bg-muted text-muted-foreground"
             : "hover:border-primary hover:bg-muted/60",
@@ -104,7 +104,7 @@ export function ChoiceItem({
       <Button
         type="button"
         variant="secondary"
-        className="w-full justify-start gap-2"
+        className="demo-choice w-full justify-start gap-2"
         disabled={isDisabled}
         onClick={() => onSelect(choice)}
         title={unavailableReason || undefined}

@@ -43,8 +43,7 @@ export function QualitiesBlock({
 }: QualitiesBlockProps) {
   const { data: apiQualities } = useQuery({
     queryKey: EntityQualitiesService.queryKey(entityType!, entityId!),
-    queryFn: () =>
-      EntityQualitiesService.getQualities(entityType!, entityId!),
+    queryFn: () => EntityQualitiesService.getQualities(entityType!, entityId!),
     enabled: !!entityType && !!entityId,
   })
 
