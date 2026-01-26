@@ -29,6 +29,25 @@ import {
 import AgentAvatar from "./AgentAvatar"
 import AgentForm, { type AgentFormData } from "./AgentForm"
 
+/**
+ * Validate provider/model consistency before submission
+ */
+function validateProviderModelConsistency(
+  formData: AgentFormData,
+): string | null {
+  // Rule: If provider_type is not "empty", user_provider must be set
+  if (formData.provider_type !== "empty" && !formData.user_provider) {
+    return "Provider type is set but no provider selected"
+  }
+
+  // Rule: If user_provider is set, provider_type must not be "empty"
+  if (formData.user_provider && formData.provider_type === "empty") {
+    return "Provider selected but provider type is empty"
+  }
+
+  return null // No errors
+}
+
 interface EditAgentDialogProps {
   /** The agent to edit */
   agent: AgentViewModel
@@ -91,6 +110,13 @@ export default function EditAgentDialog({
     // Validate required fields
     if (!formData.name.trim()) {
       showErrorToast("Agent name is required")
+      return
+    }
+
+    // Validate provider/model consistency
+    const validationError = validateProviderModelConsistency(formData)
+    if (validationError) {
+      showErrorToast(validationError)
       return
     }
 
