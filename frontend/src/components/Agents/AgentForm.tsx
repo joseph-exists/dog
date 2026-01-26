@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import type { LLMProviderType } from "@/client"
 import {
   AgentService,
   type AgentViewModel,
@@ -66,6 +67,9 @@ export interface AgentFormData {
   model_name: string
   system_prompt: string
   participation_mode: ParticipationMode
+  // Provider selection fields
+  provider_type: LLMProviderType // "openai" | "anthropic" | "google" | "openai_compatible" | "empty"
+  user_provider: string | null // UUID of user's provider, or null
 }
 
 interface AgentFormProps {
