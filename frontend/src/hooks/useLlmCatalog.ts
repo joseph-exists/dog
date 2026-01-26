@@ -102,10 +102,27 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
   // Custom model creation mutation - connected to backend
   const createMutation = useMutation({
     mutationFn: async (input: CreateCustomModelInput): Promise<ModelOption> => {
+      // DEBUG: Log input and provider lookup
+      console.log("[useLlmCatalog] createCustomModel input:", input)
+      console.log("[useLlmCatalog] grouped providers:", grouped?.providers.map(p => ({
+        id: p.id,
+        name: p.name,
+        providerType: p.providerType,
+      })))
+
       // Find the provider ID for the given provider type
+      // Fall back to openai_compatible if exact match not found
       const provider = grouped?.providers.find(
         (p) => p.providerType === input.providerType,
+      ) ?? grouped?.providers.find(
+        (p) => p.providerType === "openai_compatible",
       )
+
+      console.log("[useLlmCatalog] Found provider:", provider ? {
+        id: provider.id,
+        providerType: provider.providerType,
+      } : "NOT FOUND")
+
       if (!provider) {
         throw new Error(`No provider found for type: ${input.providerType}`)
       }
