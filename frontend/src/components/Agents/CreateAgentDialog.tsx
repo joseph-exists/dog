@@ -97,8 +97,9 @@ export default function CreateAgentDialog({
       name: formData.name.trim(),
       slug: formData.slug.trim(),
       description: formData.description.trim() || null,
-      provider_config_id: formData.provider_config_id,
-      model_name: formData.model_name,
+      model_name: formData.model_name || undefined,
+      provider_type: formData.provider_type,
+      user_provider: formData.user_provider,
       system_prompt: formData.system_prompt.trim() || null,
       participation_mode: formData.participation_mode,
       scope: "personal", // Personal agents only from this dialog
