@@ -83,6 +83,10 @@ export default function AgentCloneButton({
         participation_mode: agent.participation_mode,
         scope: "personal",
         is_enabled: true,
+        // Explicitly set empty provider - user must configure their own
+        // (don't copy source provider as it may not be accessible to the cloning user)
+        provider_type: "empty",
+        user_provider: null,
       }
       return AgentService.createAgent(payload)
     },
