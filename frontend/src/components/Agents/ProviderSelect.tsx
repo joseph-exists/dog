@@ -29,7 +29,10 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import type { ProviderViewModel } from "@/services/llmProviderService"
-import { AgentProviderBadge, type LLMProviderType as AgentBadgeLLMProviderType } from "./AgentBadge"
+import {
+  type LLMProviderType as AgentBadgeLLMProviderType,
+  AgentProviderBadge,
+} from "./AgentBadge"
 import { ProviderStatusBadge } from "./ProviderStatusBadge"
 
 /** Special value for "no provider selected" */
@@ -47,7 +50,10 @@ interface ProviderSelectProps {
    * @param providerId - UUID or null
    * @param provider - Full ProviderViewModel or null
    */
-  onChange: (providerId: string | null, provider: ProviderViewModel | null) => void
+  onChange: (
+    providerId: string | null,
+    provider: ProviderViewModel | null,
+  ) => void
   /** Disable the dropdown */
   disabled?: boolean
   /** Additional CSS classes */
@@ -84,7 +90,11 @@ export function ProviderSelect({
       disabled={disabled || isLoading}
     >
       <SelectTrigger className={cn("w-full", className)}>
-        <SelectValue placeholder={isLoading ? "Loading providers..." : "Select a provider..."}>
+        <SelectValue
+          placeholder={
+            isLoading ? "Loading providers..." : "Select a provider..."
+          }
+        >
           {currentProvider ? (
             <span className="flex items-center gap-2">
               <ProviderStatusBadge status={currentProvider.status} />
@@ -98,7 +108,9 @@ export function ProviderSelect({
       <SelectContent>
         {/* None option */}
         <SelectItem value={NONE_VALUE}>
-          <span className="text-muted-foreground">None (use system default)</span>
+          <span className="text-muted-foreground">
+            None (use system default)
+          </span>
         </SelectItem>
 
         {/* Separator if there are providers */}
@@ -112,9 +124,11 @@ export function ProviderSelect({
                 <ProviderStatusBadge status={provider.status} />
                 <span className="truncate">{provider.name}</span>
               </div>
-{/* Cast provider_type - AgentProviderBadge handles unknown types gracefully */}
+              {/* Cast provider_type - AgentProviderBadge handles unknown types gracefully */}
               <AgentProviderBadge
-                providerType={provider.provider_type as AgentBadgeLLMProviderType}
+                providerType={
+                  provider.provider_type as AgentBadgeLLMProviderType
+                }
                 className="shrink-0"
               />
             </div>

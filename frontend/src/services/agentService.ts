@@ -21,8 +21,8 @@ import {
   type AgentConfigPublic,
   type AgentConfigsPublic,
   type AgentConfigUpdate,
-  type LLMProviderType,
   AgentsService,
+  type LLMProviderType,
   OpenAPI,
 } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"

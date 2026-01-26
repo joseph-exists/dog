@@ -15,7 +15,10 @@ interface ProviderStatusBadgeProps {
   className?: string
 }
 
-const statusConfig: Record<ProviderStatus, { icon: string; label: string; colorClass: string }> = {
+const statusConfig: Record<
+  ProviderStatus,
+  { icon: string; label: string; colorClass: string }
+> = {
   verified: {
     icon: "🟢",
     label: "Verified",
@@ -33,11 +36,15 @@ const statusConfig: Record<ProviderStatus, { icon: string; label: string; colorC
   },
 }
 
-export function ProviderStatusBadge({ status, className }: ProviderStatusBadgeProps) {
+export function ProviderStatusBadge({
+  status,
+  className,
+}: ProviderStatusBadgeProps) {
   const config = statusConfig[status]
 
   return (
     <span
+      role="img"
       className={cn("text-sm", config.colorClass, className)}
       title={config.label}
       aria-label={config.label}

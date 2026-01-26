@@ -13,13 +13,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDownIcon } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-
+import type { LLMProviderType } from "@/client"
 import {
+  type LLMProviderType as AgentBadgeLLMProviderType,
   AgentProviderBadge,
   parseProviderFromModelName,
-  type LLMProviderType as AgentBadgeLLMProviderType,
 } from "@/components/Agents/AgentBadge"
-import { ProviderSelect } from "./ProviderSelect"
 import ModelCombobox from "@/components/Agents/providers/ModelCombobox"
 import {
   Collapsible,
@@ -37,17 +36,17 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import type { LLMProviderType } from "@/client"
 import {
   AgentService,
   type AgentViewModel,
   type ParticipationMode,
 } from "@/services/agentService"
 import {
-  LlmProviderService,
   LLM_PROVIDER_QUERY_KEYS,
+  LlmProviderService,
   type ProviderViewModel,
 } from "@/services/llmProviderService"
+import { ProviderSelect } from "./ProviderSelect"
 
 // Participation modes
 const PARTICIPATION_MODES = [
@@ -112,7 +111,7 @@ export default function AgentForm({
 
   // Provider selection state
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
-    initialData?.user_provider ?? null
+    initialData?.user_provider ?? null,
   )
 
   // Fetch user's configured providers
@@ -124,10 +123,12 @@ export default function AgentForm({
   const providers = providersData?.providers ?? []
 
   // Find selected provider object for derived values
-  const selectedProvider = providers.find((p) => p.id === selectedProviderId) ?? null
+  const selectedProvider =
+    providers.find((p) => p.id === selectedProviderId) ?? null
 
   // Derive provider_type from selection (or "empty" if none)
-  const derivedProviderType: LLMProviderType = selectedProvider?.provider_type ?? "empty"
+  const derivedProviderType: LLMProviderType =
+    selectedProvider?.provider_type ?? "empty"
 
   /**
    * Handle provider selection change.
@@ -140,13 +141,16 @@ export default function AgentForm({
       // Reset model if incompatible with new provider
       if (provider) {
         const currentModelProviderType = parseProviderFromModelName(modelName)
-        if (currentModelProviderType && currentModelProviderType !== provider.provider_type) {
+        if (
+          currentModelProviderType &&
+          currentModelProviderType !== provider.provider_type
+        ) {
           setModelName("") // Reset - user must re-select
         }
       }
       // If provider cleared (null), keep model (aspirational selection)
     },
-    [modelName]
+    [modelName],
   )
 
   // Auto-generate slug from backend (only in create mode)
@@ -254,7 +258,11 @@ export default function AgentForm({
         {selectedProvider && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Filtered to:</span>
-            <AgentProviderBadge providerType={selectedProvider.provider_type as AgentBadgeLLMProviderType} />
+            <AgentProviderBadge
+              providerType={
+                selectedProvider.provider_type as AgentBadgeLLMProviderType
+              }
+            />
           </div>
         )}
         <ModelCombobox
