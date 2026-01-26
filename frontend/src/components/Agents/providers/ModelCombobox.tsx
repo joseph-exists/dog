@@ -121,22 +121,10 @@ export default function ModelCombobox({
     isCreatingCustomModel,
   } = useLlmCatalog()
 
-  // DEBUG: Log filtering state
-  console.log("[ModelCombobox] Filter state:", {
-    providerType,
-    providerTypeIsUndefined: providerType === undefined,
-    modelsByProviderKeys: Object.keys(modelsByProvider),
-    modelsForProvider: providerType ? modelsByProvider[providerType]?.length : "N/A",
-    allModelsCount: allModels.length,
-    catalogLoading,
-  })
-
   // Filter models by provider type if specified
   const filteredModels = providerType
     ? modelsByProvider[providerType] || []
     : allModels
-
-  console.log("[ModelCombobox] filteredModels count:", filteredModels.length)
 
   // Find selected model info
   const selectedModel = findModel(value)

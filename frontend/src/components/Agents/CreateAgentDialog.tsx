@@ -83,13 +83,6 @@ export default function CreateAgentDialog({
   const handleSubmit = () => {
     if (!formData) return
 
-    // DEBUG: Trace submitted form data
-    console.log("[CreateAgentDialog] formData received:", {
-      provider_type: formData.provider_type,
-      user_provider: formData.user_provider,
-      model_name: formData.model_name,
-    })
-
     // Validate required fields
     if (!formData.name.trim()) {
       showErrorToast("Agent name is required")
@@ -112,13 +105,6 @@ export default function CreateAgentDialog({
       scope: "personal", // Personal agents only from this dialog
       is_enabled: true,
     }
-
-    // DEBUG: Trace API payload
-    console.log("[CreateAgentDialog] API payload:", {
-      provider_type: payload.provider_type,
-      user_provider: payload.user_provider,
-      model_name: payload.model_name,
-    })
 
     mutation.mutate(payload)
   }
