@@ -171,7 +171,7 @@ export default function AgentForm({
 
   // Notify parent of changes
   useEffect(() => {
-    onChange({
+    const formData = {
       name,
       slug,
       description,
@@ -180,7 +180,17 @@ export default function AgentForm({
       participation_mode: participationMode,
       provider_type: derivedProviderType,
       user_provider: selectedProviderId,
+    }
+
+    // DEBUG: Trace form data flow
+    console.log("[AgentForm] onChange called with:", {
+      selectedProviderId,
+      derivedProviderType,
+      selectedProvider: selectedProvider?.name,
+      modelName,
     })
+
+    onChange(formData)
   }, [
     name,
     slug,
@@ -190,6 +200,7 @@ export default function AgentForm({
     participationMode,
     derivedProviderType,
     selectedProviderId,
+    selectedProvider?.name,
     onChange,
   ])
 
