@@ -176,6 +176,9 @@ function AgentCardFull({
 }: Omit<AgentCardProps, "variant" | "id">) {
   // Extract provider type and model display name from "provider:model" format
   const providerType = parseProviderFromModelName(modelName)
+ 
+  // TODO PRI A: as soon as we touch this file again, this needs to be refactored.
+  // this is awfully unnecessary when we already have it.
   const displayModel = modelName
     ?.split(":")
     .pop()

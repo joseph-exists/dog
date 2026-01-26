@@ -155,7 +155,7 @@ class AgentConfig(AgentConfigBase, table=True):
      updated_at: datetime | None = Field(default=None, sa_column_kwargs={"onupdate": datetime.now})
      version: int = Field(default=1)
 
-     # Relationships
+     # Relationship defined at end of file
      # owner: "User" = Relationship(back_populates="agent_configs")
 
 
@@ -173,16 +173,15 @@ class AgentConfigsPublic(SQLModel):
      count: int
 ```
 
- File: backend/app/models.py
- Location: Add after line ~2328 (after AvailableAgent models)
-
- Also add User relationship (in post-definition section at end of file):
+ File: in backend/app/models.py
+ (post definition relationship binding)
+```python
  # User → AgentConfig relationship
  User.agent_configs = Relationship(
      back_populates="owner",
      sa_relationship_kwargs={"cascade": "all, delete-orphan"}
  )
-
+```
 
 [X] Complete  Phase 3: Repository Layer (crud.py)
 
@@ -191,7 +190,7 @@ class AgentConfigsPublic(SQLModel):
  # ═══════════════════════════════════════════════════════════════════════════════
  # Agent Config CRUD
  # ═══════════════════════════════════════════════════════════════════════════════
-
+```python
  def create_agent_config(
      *,
      session: Session,
@@ -259,6 +258,7 @@ class AgentConfigsPublic(SQLModel):
  def delete_agent_config(*, session: Session, db_agent: AgentConfig) -> None:
      session.delete(db_agent)
      session.commit()
+```
 
  File: backend/app/crud.py
  Location: Add at end of file
@@ -268,6 +268,8 @@ class AgentConfigsPublic(SQLModel):
  Create a tool registry for the hybrid approach:
 
  # backend/app/agents/tool_registry.py
+
+```python
  """
  Tool Registry - Maps agent slugs to their available tools.
 
@@ -319,6 +321,7 @@ class AgentConfigsPublic(SQLModel):
  def list_tools() -> list[str]:
      """List all registered tool names."""
      return list(TOOL_REGISTRY.keys())
+```
 
  File: backend/app/agents/tool_registry.py (NEW)
 
@@ -327,6 +330,7 @@ class AgentConfigsPublic(SQLModel):
  Create the service layer:
 
  # backend/app/services/agent_registry_service.py
+ ```python
  """
  Agent Registry Service
 
@@ -426,47 +430,6 @@ class AgentConfigsPublic(SQLModel):
          self._invalidate_cache(slug)
          return updated
 
-     def bootstrap_system_agents(self, session: Session) -> None:
-         """Ensure system agents exist. Called on startup."""
-         system_agents = [
-             AgentConfigCreate(
-                 slug="StoryAdvisor",
-                 name="Story Advisor",
-                 description="Helps with story structure, pacing, and narrative flow",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="CharacterForge",
-                 name="Character Forge",
-                 description="Character development, motivations, and arcs",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="SymbolWeaver",
-                 name="Symbol Weaver",
-                 description="Explores themes, symbolism, and deeper meanings",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="PlotTwistArchitect",
-                 name="Plot Twist Architect",
-                 description="Crafts plot twists and narrative surprises",
-                 scope="system",
-             ),
-             AgentConfigCreate(
-                 slug="DialogueCoach",
-                 name="Dialogue Coach",
-                 description="Refines character voice and conversation flow",
-                 scope="system",
-             ),
-         ]
-
-         for agent_def in system_agents:
-             existing = crud.get_agent_config_by_slug(session=session, slug=agent_def.slug)
-             if not existing:
-                 crud.create_agent_config(session=session, agent_in=agent_def)
-                 logger.info(f"Bootstrapped system agent: {agent_def.slug}")
-
      def _get_config(self, session: Session, slug: str) -> AgentConfig | None:
          if slug in self._config_cache:
              return self._config_cache[slug]
@@ -489,6 +452,7 @@ class AgentConfigsPublic(SQLModel):
 
  # Singleton
  agent_registry_service = AgentRegistryService()
+```
 
  File: backend/app/services/agent_registry_service.py (NEW)
 
@@ -497,7 +461,7 @@ class AgentConfigsPublic(SQLModel):
  Update routes with full CRUD:
 
  # Updated agent_routes.py
-
+```python
  from fastapi import APIRouter, HTTPException, Depends
  from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
  from app.models import (
@@ -650,7 +614,7 @@ class AgentConfigsPublic(SQLModel):
 
      crud.delete_agent_config(session=session, db_agent=config)
      return Message(message="Agent deleted successfully")
-
+```
  File: backend/app/api/routes/agent_routes.py
 
  Phase 7: Startup Bootstrap
@@ -658,7 +622,7 @@ class AgentConfigsPublic(SQLModel):
  Add bootstrap using lifespan context manager (FastAPI's modern approach):
 
  # In backend/app/main.py
-
+```python
  from contextlib import asynccontextmanager
  from sqlmodel import Session
  from app.services.agent_registry_service import agent_registry_service
@@ -679,7 +643,7 @@ class AgentConfigsPublic(SQLModel):
      generate_unique_id_function=custom_generate_unique_id,
      lifespan=lifespan,  # Add lifespan parameter
  )
-
+```
  File: backend/app/main.py
 
  Phase 8: Integration with agent_runner.py
@@ -687,7 +651,7 @@ class AgentConfigsPublic(SQLModel):
  Update agent_runner to use registry service:
 
  # In backend/app/services/agent_runner.py
-
+```python
  from app.services.agent_registry_service import agent_registry_service
  from app.agents.agent_registry import get_agent as legacy_get_agent
 
@@ -703,7 +667,7 @@ class AgentConfigsPublic(SQLModel):
          return legacy_get_agent(slug)
      except KeyError:
          return None
-
+```
  File: backend/app/services/agent_runner.py
 
  Files to Create/Modify

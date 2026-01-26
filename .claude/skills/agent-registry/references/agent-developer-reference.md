@@ -53,7 +53,8 @@ class AgentConfigBase(SQLModel):
 
 ### AgentConfig (Database Table)
 
-```python
+```python 
+# NOTE: ACTUAL CLASS SIGNIFICANTLY EXPANDED
 class AgentConfig(AgentConfigBase, table=True):
     __tablename__ = "agent_configs"
 
@@ -582,31 +583,7 @@ async def get_agent_instance_with_tools(
 
 ### Bootstrap Pattern
 
-```python
-# In agent_registry_service.py
-
-async def bootstrap_system_agents(session: AsyncSession) -> None:
-    """Ensure system agents exist."""
-
-    system_agents = [
-        AgentConfigCreate(
-            name="StoryAdvisor",
-            slug="StoryAdvisor",
-            description="Expert in story structure and narrative pacing",
-            model_name="openai:gpt-4o-mini",
-            system_prompt="You are StoryAdvisor, an expert in...",
-            scope="system",
-            participation_mode="on_mention",
-            capabilities=["story-structure", "pacing", "narrative"],
-        ),
-        # ... more agents
-    ]
-
-    for agent_data in system_agents:
-        existing = await get_agent_config(session, agent_data.slug)
-        if not existing:
-            await create_agent_config(session, agent_data, owner_id=None)
-```
+see Joseph for guidance.
 
 ---
 

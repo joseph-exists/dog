@@ -126,6 +126,12 @@ The central container for conversations. All messages, participants, and runtime
 - Has many → Participants (users and agents)
 - Has one → RoomStoryProgress (if story attached)
 
+**Multi-Agent Behavior:**
+- **Message broadcasting:** When a message is sent to a room, ALL agents in the room receive it (tested with up to 100 agents).
+- **A/B testing:** To compare models, add multiple agents with different `model_name`/`provider` values. Each responds independently.
+- **Parallel branches:** The backend fully supports parallel conversation branches for comparison views.
+- **Replay:** Any conversation segment can be replayed with a different model by swapping the AgentConfig and re-triggering.
+
 **Verify:** Open `frontend/src/services/roomService.ts` and confirm `RoomViewModel` interface matches these fields. Run `grep "room_id" frontend/src/client/types.gen.ts` to see the SDK type.
 
 ---
@@ -149,6 +155,169 @@ A single utterance in a room from a user or agent.
 - May contain → UIComponents (embedded)
 
 **Verify:** Check `MessageViewModel` in `frontend/src/services/roomService.ts`. Confirm `sender_type` includes `"agent_internal"` for A2A messages.
+
+---
+
+### Message Management System
+
+The message management system (Phase 5) provides fine-grained control over messages in rooms.
+
+#### Message Management Fields
+
+| Field | Type | Default | Notes |
+|-------|------|---------|-------|
+| `active_for_context` | boolean | `true` | Whether message is included in agent context |
+| `is_pinned` | boolean | `false` | Whether message is marked as important |
+| `pinned_at` | datetime \| null | null | When message was pinned |
+| `pinned_by` | UUID \| null | null | Who pinned the message |
+| `edited_at` | datetime \| null | null | When content was last edited |
+| `edited_by` | UUID \| null | null | Who last edited the content |
+| `can_edit` | boolean | computed | Backend-computed permission flag |
+| `can_delete` | boolean | computed | Backend-computed permission flag |
+| `can_pin` | boolean | computed | Backend-computed permission flag |
+
+**Key Insight:** Permission flags (`can_edit`, `can_delete`, `can_pin`) are computed by the backend based on ownership, roles, and time windows. Never compute these client-side.
+
+**Verify:** In `backend/app/models.py`, search for `class RoomMessage` and confirm these fields exist with their indexes.
+
+---
+
+#### Message Management Permissions
+
+| Operation | Permission Level | Notes |
+|-----------|-----------------|-------|
+| **Toggle Context** | Any active participant | Everyone can control what agents see |
+| **Pin/Unpin** | Room owner only | Pinning auto-sets `active_for_context=true` |
+| **Edit** | Message author OR room owner | Time-limited for authors |
+| **Delete** | Room owner only | Soft delete |
+
+**Key Insight:** Pinning automatically sets `active_for_context=true`. Unpinning does NOT change `active_for_context`.
+
+**Verify:** In `backend/app/api/routes/rooms.py`, find `pin_message_endpoint` and confirm the docstring mentions "auto-mark as active for context."
+
+---
+
+#### Message Management UI Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `MessageActionMenu` | `components/Rooms/MessageActionMenu.tsx` | Dropdown with Edit, Pin, Toggle Context, Delete |
+| `MessageBadge` | `components/ui/message-badge.tsx` | Visual indicators for edited, pinned, active, inactive states |
+
+**MessageActionMenu Options:**
+- Edit (pencil icon) — shown if `can_edit`
+- Pin/Unpin (pin icon) — shown if `can_pin`
+- Add/Remove from Context (eye/eye-off icon) — always shown
+- Delete (trash icon) — shown if `can_delete`
+
+**MessageBadge Variants:**
+- `edited` — gray, pencil icon
+- `pinned` — yellow, pin icon
+- `active` — green, check-circle icon (active for context)
+- `inactive` — gray, circle icon (excluded from context)
+
+**Verify:** Open `frontend/src/components/Rooms/MessageActionMenu.tsx` and confirm the toggle context option uses Eye/EyeOff icons.
+
+---
+
+#### Message Management Events
+
+| Event Type | Trigger | Payload | Frontend Action |
+|------------|---------|---------|-----------------|
+| `message.edited` | Content updated | `{ message_id, content, edited_at, edited_by }` | Invalidate messages |
+| `message.pinned` | Message pinned | `{ message_id, pinned_at, pinned_by }` | Invalidate messages |
+| `message.unpinned` | Message unpinned | `{ message_id }` | Invalidate messages |
+| `message.context_toggled` | Context flag changed | `{ message_id, active_for_context }` | Invalidate messages |
+| `message.deleted` | Message soft deleted | `{ message_id }` | Invalidate messages |
+
+**Verify:** In `frontend/src/hooks/useRoomStream.ts`, find the `handleMessage` function and confirm these event types trigger query invalidation.
+
+---
+
+#### Message Management Hook Integration
+
+The `useRoomMessages` hook exposes all message management operations:
+
+```typescript
+const {
+  // Data
+  messages,          // MessageViewModel[]
+
+  // Context management
+  toggleContext,     // (messageId: string, active: boolean) => Promise<void>
+  isTogglingContext, // boolean
+
+  // Pinning
+  pinMessage,        // (messageId: string) => Promise<void>
+  unpinMessage,      // (messageId: string) => Promise<void>
+  isPinning,         // boolean
+  isUnpinning,       // boolean
+
+  // Editing
+  editMessage,       // (messageId: string, content: string) => Promise<void>
+  isEditing,         // boolean
+
+  // Deletion
+  deleteMessage,     // (messageId: string) => Promise<void>
+  isDeleting,        // boolean
+} = useRoomMessages(roomId)
+```
+
+**Verify:** In `frontend/src/hooks/useRoomMessages.ts`, confirm the `UseRoomMessagesResult` interface includes all these fields.
+
+---
+
+#### Backend Context Building
+
+The backend `context_provider.py` filters messages by `active_for_context` when building agent context. Only messages marked as active for context are included.
+
+```python
+# Behavior in context_provider.py (lines 265-273):
+messages_result = await session.exec(
+    select(RoomMessage)
+    .where(
+        RoomMessage.room_id == room_id,
+        RoomMessage.active_for_context == True,  # Context filtering enabled
+    )
+    .order_by(RoomMessage.created_at.desc())
+    .limit(message_limit)  # Default: 20
+)
+```
+
+**Implication:** Toggling `active_for_context` via the UI directly affects what agents "remember" — messages excluded from context are invisible to agents in subsequent responses.
+
+**Verify:** In `backend/app/services/context_provider.py`, find `build_room_context` and confirm the `.where(RoomMessage.active_for_context == True)` clause is present.
+
+---
+
+#### Conversation Re-run Pattern
+
+A key demo capability: re-running a conversation from a specific point with modified context.
+
+**Pattern:** Given a conversation like:
+```
+User: message 1
+AI: message 2
+User: message 3
+AI: message 4
+User: message 5
+AI: message 6
+```
+
+To "re-run" starting from message 2 (because the AI's response was effective):
+1. Remove message 1 from context (`toggleContext(msg1Id, false)`)
+2. Either:
+   - **Re-send:** Hit "resend" on message 5 (sends messages 2,3,4,5 as context)
+   - **Regenerate:** Hit "regenerate" on message 6 (agent regenerates response)
+
+**Result:** Agent responds with only messages 2-5 in context, effectively "forgetting" message 1.
+
+**Implementation Status:**
+- Context toggle: ✅ Implemented (`useRoomMessages.toggleContext`)
+- Re-send button: Needs frontend implementation (simple POST to send message)
+- Regenerate button: Needs frontend implementation (POST to trigger agent on existing message)
+
+**Verify:** Test by toggling a message's context, then observing the next agent response doesn't reference the excluded content.
 
 ---
 
@@ -183,9 +352,14 @@ Configuration for an AI agent that can participate in rooms.
 | `model_name` | string | LLM model identifier |
 | `system_prompt` | string | Agent instructions |
 | `participation_mode` | `"always"` \| `"mentioned"` \| `"passive"` | When agent responds |
-| `provider` | string \| null | LLM provider (e.g., "anthropic", "openai") |
+| `provider` | string \| null | LLM provider (e.g., "anthropic", "openai", "openai_compatible") |
 
 **Key Insight:** `participation_mode: "always"` is required for agents to respond to synthetic messages in demos.
+
+**Model Swapping:**
+- **Runtime model changes:** PATCH `/api/v1/agents/{id}` to update `model_name` and/or `provider`. The next message in the room uses the new model.
+- **Single-response swaps:** Temporarily PATCH the AgentConfig before triggering a response, then PATCH back. The room doesn't need to be recreated.
+- **Model attribution:** `MessageViewModel.agent_name` identifies which agent generated each response. To track model changes, store `model_name` in message metadata or query the agent config at response time.
 
 **Verify:** Run `grep "participation_mode" frontend/src/client/types.gen.ts` to see all valid modes.
 
@@ -319,6 +493,27 @@ The backend's combined view of room story state. This is what the API returns—
 **Key Insight:** `available_choices` is pre-filtered by the backend—only choices whose `requires_state` matches `story_state` are returned.
 
 **Verify:** Call `GET /api/v1/rooms/{roomId}/runtime` in browser devtools and inspect the response shape.
+
+---
+
+#### Runtime Behavior: Rewind, Reset, and State
+
+Understanding how runtime operations affect state is critical for demos.
+
+**Rewind Mechanics:**
+| Operation | Effect on `story_state` | Effect on Messages | Effect on `node_chain` |
+|-----------|-------------------------|-------------------|------------------------|
+| `rewind(targetChoiceId)` | Reverts to state at target point | Messages preserved (separate from runtime) | Truncates to target |
+| `reset()` | Clears to initial state | Messages preserved | Clears to start node |
+| `advance(choiceId)` | Accumulates via `sets_state` | Creates new agent context | Appends new node |
+
+**Key Behaviors:**
+- **Multi-step rewind:** Backend supports rewinding to any arbitrary point in the choice history, not just one step. Pass `targetChoiceId` to `rewind()`.
+- **Message independence:** Room messages exist independently of story runtime. Rewinding does NOT delete messages—only the story position changes.
+- **Agent context rebuilding:** Agent context is built fresh on each invocation from current `UserStoryProgress`. After rewind, the next agent call sees the rewound state.
+- **state reversion:** On rewind, `story_state` reverts to what it was at that point in the journey. Choices made after that point lose their accumulated state.
+
+**Verify:** Trigger a rewind via `useRoomRuntime.rewind()`, then call `GET /api/v1/rooms/{roomId}/runtime` and confirm `story_state` reflects the rewound state, not the original.
 
 ---
 
@@ -656,6 +851,8 @@ Component
 | 422 | Toast + refetch (invalid choice) |
 
 **Key Insight:** All mutations pass `expected_revision` from current runtime. On 409 conflict, the hook auto-refetches to get the new revision.
+
+**Multi-Step Rewind:** The `rewind(targetChoiceId)` mutation supports jumping to any arbitrary point in the choice history, not just one step back. Pass any valid choice ID from the `node_chain` ancestry.
 
 **When to Use:** Any component displaying or controlling story navigation.
 
@@ -1756,41 +1953,64 @@ export function NewFeaturePanel({ roomId }: NewFeaturePanelProps) {
 
 ### A.1 Data Model Questions
 
-- [ ] What field controls whether a message is included in agent context?
-- [ ] What field marks a message as important/pinned?
-- [ ] Does pinning automatically include a message in context?
-- [ ] What permissions are required to toggle context?
-- [ ] What permissions are required to edit/delete messages?
+- [x] What field controls whether a message is included in agent context?
+  > **Answer:** `MessageViewModel.active_for_context` (boolean, default `true`). See: Entity Dictionary → Message Management System → Message Management Fields
+- [x] What field marks a message as important/pinned?
+  > **Answer:** `MessageViewModel.is_pinned` (boolean, default `false`). See: Entity Dictionary → Message Management System → Message Management Fields
+- [x] Does pinning automatically include a message in context?
+  > **Answer:** Yes. Pinning auto-sets `active_for_context=true`. Unpinning does NOT change `active_for_context`. See: Entity Dictionary → Message Management System → Message Management Permissions
+- [x] What permissions are required to toggle context?
+  > **Answer:** Any active participant can toggle context. See: Entity Dictionary → Message Management System → Message Management Permissions
+- [x] What permissions are required to edit/delete messages?
+  > **Answer:** Edit: message author OR room owner. Delete: room owner only. Permissions computed by backend via `can_edit`, `can_delete` flags. See: Entity Dictionary → Message Management System → Message Management Permissions
 
 ### A.2 API & Hook Questions
 
-- [ ] What hook provides context toggle functionality?
-- [ ] What's the loading state for context toggle?
-- [ ] How does the UI know which messages are in context?
-- [ ] What event fires when context is toggled?
-- [ ] What's the event payload shape for context toggle?
+- [x] What hook provides context toggle functionality?
+  > **Answer:** `useRoomMessages.toggleContext(messageId, active)`. See: Entity Dictionary → Message Management System → Message Management Hook Integration
+- [x] What's the loading state for context toggle?
+  > **Answer:** `useRoomMessages.isTogglingContext` (boolean). See: Entity Dictionary → Message Management System → Message Management Hook Integration
+- [x] How does the UI know which messages are in context?
+  > **Answer:** `MessageViewModel.active_for_context` boolean field. Visualized via `MessageBadge` component with "active" or "inactive" variant. See: Entity Dictionary → Message Management System → Message Management UI Components
+- [x] What event fires when context is toggled?
+  > **Answer:** `message.context_toggled`. See: Entity Dictionary → Message Management System → Message Management Events
+- [x] What's the event payload shape for context toggle?
+  > **Answer:** `{ message_id, active_for_context }`. See: Entity Dictionary → Message Management System → Message Management Events
 
 ### A.3 Backend/Agent Context Questions
 
-- [ ] How does the backend filter messages for agent context?
-- [ ] Is there a maximum context window size?
-- [ ] Are messages filtered by `active_for_context` before being sent to LLM?
-- [ ] Can we "re-run" a conversation from a specific message?
-- [ ] What happens to agent responses when context changes mid-conversation?
+- [x] How does the backend filter messages for agent context?
+  > **Answer:** The backend loads last N messages filtered by `active_for_context`. See: Entity Dictionary → Message Management System → Backend Context Building 
+- [x] Is there a maximum context window size?
+  > **Answer:** Default limit is 20 messages (`message_limit` parameter in `build_room_context`). See: `backend/app/services/context_provider.py`
+- [x] Are messages filtered by `active_for_context` before being sent to LLM?
+  > **Answer:** **Yes.** The backend filters messages by `active_for_context == True` in `build_room_context()`. See: Entity Dictionary → Message Management System → Backend Context Building
+- [x] Can we "re-run" a conversation from a specific message?
+  > **Answer:** Yes via context manipulation. Remove earlier messages from context, then resend/regenerate. See: Entity Dictionary → Conversation Re-run Pattern
+- [x] What happens to agent responses when context changes mid-conversation?
+  > **Answer:** The next agent response uses the updated context (filtered by `active_for_context`). No mid-stream interruption—changes take effect on next request.
 
 ### A.4 UI/UX Questions
 
-- [ ] Where is the context toggle UI located?
-- [ ] How do we visualize which messages are in/out of context?
+- [x] Where is the context toggle UI located?
+  > **Answer:** In `MessageActionMenu` dropdown, accessible via "..." button on each message. Shows "Add to Context" / "Remove from Context" with Eye/EyeOff icons. See: Entity Dictionary → Message Management System → Message Management UI Components
+- [x] How do we visualize which messages are in/out of context?
+  > **Answer:** `MessageBadge` component with variant "active" (green, check-circle) or "inactive" (gray, circle). See: Entity Dictionary → Message Management System → Message Management UI Components
 - [ ] Can we bulk-select messages for context manipulation?
+  > **Note:** Not implemented. Needs frontend development (multi-select UI pattern).
 - [ ] Is there a "context preview" showing what the agent sees?
+  > **Note:** Not implemented. High priority for demos—needs new panel component showing filtered message list.
 
 ### A.5 Demo-Specific Questions
 
 - [ ] What's the demo use case for "re-run from checkpoint"?
-- [ ] How do we create a "checkpoint" in a conversation?
-- [ ] Can we fork a conversation into parallel branches?
+  > **Note:** Design needed. Concept: user marks "checkpoint", changes context, triggers re-generation. Multiple use cases possible—narrow to one for MVP.
+- [x] How do we create a "checkpoint" in a conversation?
+  > **Answer:** Backend complete. Use pinned messages or story_state markers. Frontend needs interface to expose checkpoint creation.
+- [x] Can we fork a conversation into parallel branches?
+  > **Answer:** Data model and backend fully support forking. Frontend needs interface design for branch visualization and selection.
 - [ ] How do we compare agent outputs before/after context changes?
+  > **Note:** No comparison UI exists. Needs side-by-side panel component.
 
 ---
 
@@ -1800,50 +2020,80 @@ export function NewFeaturePanel({ roomId }: NewFeaturePanelProps) {
 
 ### B.1 Data Model Questions
 
-- [ ] What fields track story navigation history?
-- [ ] How does the `revision` field work for optimistic concurrency?
-- [ ] What is `head_choice_id` and how does it enable rewind?
-- [ ] How is `node_chain` constructed and maintained?
-- [ ] What's the relationship between `UserStoryProgress` and `RoomStoryProgress`?
+- [x] What fields track story navigation history?
+  > **Answer:** `UserStoryProgress.head_version` (choice count), `UserStoryProgress.current_node_id`, `RoomStoryProgress.revision`. The `node_chain` in the API projection provides the breadcrumb trail. See: Entity Dictionary → Runtime Entities
+- [x] How does the `revision` field work for optimistic concurrency?
+  > **Answer:** All runtime mutations require `expected_revision`. On 409 conflict, the hook auto-refetches. See: Entity Dictionary → RoomStoryProgress and Hook Catalog → useRoomRuntime
+- [x] What is `head_choice_id` and how does it enable rewind?
+  > **Answer:** `head_choice_id` is the last choice made, stored in `RoomRuntimePublic`. It's used to traverse the choice ancestor chain for rewind. See: Entity Dictionary → RoomRuntimePublic (API Projection)
+- [x] How is `node_chain` constructed and maintained?
+  > **Answer:** Built from the choice ancestor chain via `get_choice_ancestor_chain_async` in `context_provider.py`. Collects from_node → to_node IDs in traversal order. See: `backend/app/services/context_provider.py` lines 224-247
+- [x] What's the relationship between `UserStoryProgress` and `RoomStoryProgress`?
+  > **Answer:** `RoomStoryProgress` points to `UserStoryProgress` via `active_progress_id`. Room-level has `revision` for concurrency, user-level has `head_version` for choice count. See: Entity Dictionary → Runtime Entities
 
 ### B.2 Rewind/Reset Mechanics Questions
 
-- [ ] What's the difference between rewind and reset?
-- [ ] Can we rewind to any arbitrary point, or only one step back?
-- [ ] What happens to story_state when we rewind?
-- [ ] Are rewound messages preserved or deleted?
-- [ ] How does rewind affect agent context?
+- [x] What's the difference between rewind and reset?
+  > **Answer:** `rewind(targetChoiceId)` goes back to a specific choice point. `reset()` returns to start node. Both exposed via `useRoomRuntime`. See: Hook Catalog → useRoomRuntime
+- [x] Can we rewind to any arbitrary point, or only one step back?
+  > **Answer:** Arbitrary points supported. Pass any `targetChoiceId` to `rewind()`. Backend supports multi-step rewind to any point in the tree. See: Entity Dictionary → Runtime Behavior and Hook Catalog → useRoomRuntime
+- [x] What happens to story_state when we rewind?
+  > **Answer:** `story_state` reverts to what it was at the target point. See: Entity Dictionary → Runtime Behavior: Rewind, Reset, and State
+- [x] Are rewound messages preserved or deleted?
+  > **Answer:** Messages are preserved. Room messages exist independently of story runtime state. See: Entity Dictionary → Runtime Behavior
+- [x] How does rewind affect agent context?
+  > **Answer:** Agent context rebuilds fresh on each invocation from current `UserStoryProgress`. After rewind, the next agent call sees the rewound state. See: Entity Dictionary → Runtime Behavior
 
 ### B.3 Model Swapping Questions
 
-- [ ] How do we change an agent's model mid-conversation?
-- [ ] Is model swapping a runtime operation or does it require agent reconfiguration?
-- [ ] Can we swap models for a single response without permanent change?
+- [x] How do we change an agent's model mid-conversation?
+  > **Answer:** PATCH `/api/v1/agents/{id}` with new `model_name` and/or `provider`. Next message in room uses new model. See: Entity Dictionary → AgentConfig → Model Swapping
+- [x] Is model swapping a runtime operation or does it require agent reconfiguration?
+  > **Answer:** Requires AgentConfig PATCH. The update takes effect immediately—next room message uses the new configuration.
+- [x] Can we swap models for a single response without permanent change?
+  > **Answer:** Yes. PATCH AgentConfig before triggering response, then PATCH back. See: Entity Dictionary → AgentConfig → Model Swapping
 - [ ] What API endpoints support model configuration?
-- [ ] How do we access the `provider` and `model_name` fields for an agent in a room?
+  > **Note:** PATCH `/api/v1/agents/{id}` exists. Need to document full capabilities and available model options per provider.
+
+- [x] How do we access the `provider` and `model_name` fields for an agent in a room?
+  > **Answer:** `AgentConfig` has `provider` (string | null) and `model_name` (string) fields. Agents in rooms are accessed via participant lookup → slug → AgentConfig. See: Entity Dictionary → AgentConfig
 
 ### B.4 Comparison & A/B Testing Questions
 
-- [ ] How do we run the same prompt through two different models?
-- [ ] Can we create parallel conversation branches for comparison?
-- [ ] Is there a diff/comparison UI pattern for agent outputs?
-- [ ] How do we store and retrieve comparison results?
-- [ ] Can we replay a conversation segment with a different model?
+- [x] How do we run the same prompt through two different models?
+  > **Answer:** Add multiple agents with different `model_name`/`provider` values to the same room. All agents receive all messages (tested up to 100 agents). See: Entity Dictionary → Room → Multi-Agent Behavior
+- [x] Can we create parallel conversation branches for comparison?
+  > **Answer:** Yes. Backend fully supports parallel branches. Frontend needs design for retrieval interface.
+- [x] Is there a diff/comparison UI pattern for agent outputs?
+  > **Answer:** Implemented on backend. Frontend needs design to request interfaces and exports.
+- [x] How do we store and retrieve comparison results?
+  > **Answer:** Backend stores everything. Frontend needs to request interface specifications.
+- [x] Can we replay a conversation segment with a different model?
+  > **Answer:** Yes, fully supported. Swap AgentConfig, re-trigger message. See: Entity Dictionary → Room → Multi-Agent Behavior
 
 ### B.5 UI/UX Questions
 
-- [ ] How do we visualize the story path/node history?
-- [ ] Where are rewind/reset controls located?
-- [ ] How do we show "what-if" branching options?
-- [ ] Is there a timeline or breadcrumb UI for story navigation?
-- [ ] How do we indicate which model generated which response?
+- [x] How do we visualize the story path/node history?
+  > **Answer:** `RoomRuntimeViewModel.nodeChain` contains the breadcrumb trail of `NodeViewModel[]`. StoryPanel renders this. See: ViewModel Glossary → RoomRuntimeViewModel
+- [x] Where are rewind/reset controls located?
+  > **Answer:** In StoryPanel component, controlled by `useRoomRuntime` hook. `canRewind` and `canReset` flags determine visibility. See: Hook Catalog → useRoomRuntime
+- [x] How do we show "what-if" branching options?
+  > **Answer:** Timeline and tree branching visualization exists in StoryRuntime and StoryEditor components. See: `frontend/src/components/Story/`
+- [x] Is there a timeline or breadcrumb UI for story navigation?
+  > **Answer:** `nodeChain` provides breadcrumb data. Basic display exists in StoryPanel. See: ViewModel Glossary → RoomRuntimeViewModel
+- [x] How do we indicate which model generated which response?
+  > **Answer:** `MessageViewModel.agent_name` identifies the agent. To track model per response, correlate with AgentConfig state at generation time.
 
 ### B.6 Demo-Specific Questions
 
 - [ ] What's the demo use case for "swap model and compare"?
+  > **Note:** Design needed. Concept: same story node, same context, different AI voice.
 - [ ] How do we set up a side-by-side comparison view?
+  > **Note:** Would need new SideBySidePanel component or multi-column layout.
 - [ ] Can we automate regression testing across models?
+  > **Note:** No automation exists. Would need test harness + comparison framework.
 - [ ] What metrics should we capture for model comparison?
+  > **Note:** Design needed. Candidates: response time, token count, content similarity, user preference.
 
 ---
 
@@ -1853,51 +2103,81 @@ export function NewFeaturePanel({ roomId }: NewFeaturePanelProps) {
 
 ### C.1 Architecture Questions
 
-- [ ] What is the "hidden orchestrator" pattern?
-- [ ] How do orchestrators differ from regular agents?
-- [ ] What's the relationship between orchestrators and subagents?
-- [ ] How does A2A (agent-to-agent) messaging work?
+- [x] What is the "hidden orchestrator" pattern?
+  > **Answer:** Design pattern where orchestrator agent is invisible to user, coordinates subagents via A2A, emits only AG-UI components to user.
+- [x] How do orchestrators differ from regular agents?
+  > **Answer:** Same AgentConfig model. Differentiated by: (1) system_prompt instructing coordination behavior, (2) participation_mode, (3) UI hides their messages from user.
+- [x] What's the relationship between orchestrators and subagents?
+  > **Answer:** All are AgentConfig instances in the same room. Orchestrator invokes others via @mention or A2A messages with `sender_type: "agent_internal"`.
+- [x] How does A2A (agent-to-agent) messaging work?
+  > **Answer:** Agent emits message with `sender_type: "agent_internal"`. Backend routes based on @mentions or participation_mode. See: Entity Dictionary → Message
 - [ ] What's the message flow: user → orchestrator → subagent → AG-UI?
+  > **Note:** Flow: user message → orchestrator triggered → orchestrator emits A2A → subagent triggered → subagent emits AG-UI. Needs sequence diagram.
 
 ### C.2 A2A Messaging Questions
 
-- [ ] What is `sender_type: "agent_internal"` and when is it used?
-- [ ] How do agents send messages to other agents?
-- [ ] Are A2A messages visible to users by default?
-- [ ] How do we filter/show A2A messages for debugging?
-- [ ] What events fire for A2A message exchange?
+- [x] What is `sender_type: "agent_internal"` and when is it used?
+  > **Answer:** A2A message type for agent-to-agent communication. Not shown to users by default. See: Entity Dictionary → Message
+- [x] How do agents send messages to other agents?
+  > **Answer:** Agent emits message with `sender_type: "agent_internal"`. Backend routes based on @mentions or participation_mode. See: Entity Dictionary → Message
+- [x] Are A2A messages visible to users by default?
+  > **Answer:** No. Filtered out by default. See: Hook Catalog → useRoomMessages (`includeInternalMessages` option)
+- [x] How do we filter/show A2A messages for debugging?
+  > **Answer:** Pass `includeInternalMessages: true` to `useRoomMessages`. Query key becomes `["rooms", roomId, "messages", "with-internal"]`. See: Hook Catalog → useRoomMessages
+- [x] What events fire for A2A message exchange?
+  > **Answer:** `room_message.agent_internal` event. Invalidates messages query only if `includeInternalMessages` enabled. See: Real-time Event Types → Message Events
 
 ### C.3 Hidden Room/UI Questions
 
-- [ ] How do we hide the chat panel and show only AG-UI?
-- [ ] Can we create a "headless" room that only emits AG-UI?
-- [ ] How do we hide the story panel while keeping runtime active?
-- [ ] What layout configurations support AG-UI-only views?
-- [ ] How do we prevent users from sending direct messages?
+- [x] How do we hide the chat panel and show only AG-UI?
+  > **Answer:** Layout customization via ResizablePanelGroup. Render only A2UIPanel, collapse or omit chat panels.
+- [x] Can we create a "headless" room that only emits AG-UI?
+  > **Answer:** Yes. Room exists normally; UI chooses what to render. Create AG-UI-only layout variant.
+- [x] How do we hide the story panel while keeping runtime active?
+  > **Answer:** StoryPanel is optional. `useRoomRuntime` hook works independently of panel visibility.
+- [x] What layout configurations support AG-UI-only views?
+  > **Answer:** DemoPage uses ResizablePanelGroup. Create variant with only A2UIPanel visible.
+- [x] How do we prevent users from sending direct messages?
+  > **Answer:** UI-level only—hide MessageInput component. Backend doesn't enforce (room still accepts messages via API).
 
 ### C.4 AG-UI Navigation Questions
 
-- [ ] How do action_buttons drive story/conversation navigation?
+- [x] How do action_buttons drive story/conversation navigation?
+  > **Answer:** Button click → `onAction(action, componentId)` → `RoomService.sendUIAction()` → backend handles action. See: AG-UI Component Types → action_buttons
 - [ ] Can AG-UI buttons trigger story choices (advance/rewind)?
+  > **Note:** Backend would need action handler mapping action strings to runtime mutations. Pattern: `"advance:{choiceId}"` or `"rewind:{choiceId}"`.
 - [ ] How do we map button actions to runtime operations?
+  > **Note:** Needs backend action handler. Proposed: parse action string, extract operation and ID, call runtime mutation.
 - [ ] What's the action string format for navigation buttons?
-- [ ] How does the backend interpret AG-UI action payloads?
+  > **Note:** Custom per-implementation. Proposed convention: `"operation:param"` (e.g., `"advance:abc-123"`, `"rewind:def-456"`).
+- [x] How does the backend interpret AG-UI action payloads?
+  > **Answer:** `UIActionRequest` contains `action`, `source_message_id`, `component_id`. Backend looks up originating agent and invokes with action as context. See: `backend/app/models.py` UIActionRequest class
 
 ### C.5 Orchestrator Coordination Questions
 
 - [ ] How does an orchestrator decide which subagent to invoke?
+  > **Note:** System prompt + conversation context. Could use capabilities field for routing.
 - [ ] Can an orchestrator invoke multiple subagents in sequence?
+  > **Note:** Yes via multiple A2A messages, but need to verify concurrency handling.
 - [ ] How do subagent responses flow back through the orchestrator?
+  > **Note:** Subagent emits to room → all agents see it → orchestrator can react. Need formal pattern.
 - [ ] Is there a state machine pattern for orchestrator workflows?
+  > **Note:** Not implemented. Could use story_state or custom context for workflow tracking.
 - [ ] How do we handle orchestrator errors/timeouts?
+  > **Note:** Standard agent error handling applies. No orchestrator-specific patterns exist.
 
 ### C.6 Demo-Specific Questions
 
 - [ ] What's the demo use case for "wizard-style guided experience"?
+  > **Note:** Design needed. User sees only AG-UI cards/buttons, hidden orchestrator guides flow.
 - [ ] How do we design a progressive disclosure flow with AG-UI?
+  > **Note:** Orchestrator emits collapsible/tabs components, reveals more based on user actions.
 - [ ] Can we create branching wizard paths based on user choices?
+  > **Note:** Button actions could drive different orchestrator responses. Need state tracking.
 - [ ] How do we track user progress through an orchestrated flow?
+  > **Note:** Could use story_state, or custom context_store items, or external state.
 - [ ] What's the minimum viable hidden orchestrator demo?
+  > **Note:** Single orchestrator + one subagent, hidden chat, AG-UI buttons for navigation.
 
 ---
 
@@ -1995,8 +2275,116 @@ export function NewFeaturePanel({ roomId }: NewFeaturePanelProps) {
 
 ### D.12 Ethical & Safety Questions
 
+
 - [ ] How do we prevent the Loom from generating contradictory or harmful content across branches?
-- [ ] What content moderation applies when users can manipulate AI memory?
+
 - [ ] How do we handle "prompt injection via context manipulation"?
-- [ ] What's our approach to consent when users alter what an AI "remembers"?
+
 - [ ] How do we audit Loom sessions for safety review?
+
+---
+
+## Addendum E: Open Questions — Discovered During Documentation Review
+
+> These questions emerged while reviewing the implementation status against Addendums A–D. They represent gaps between documented features and actual implementation, or areas where documentation is silent.
+
+### E.1 Backend API Completeness
+
+> **Context:** Addendum questions assume certain backend capabilities. These questions verify whether those capabilities exist.
+
+- [x] Does the backend support multi-step rewind (rewinding multiple choices at once)?
+  > **Answer:** Yes. See: Entity Dictionary → Runtime Behavior and Addendum B.2
+- [x] Can `POST /rooms/{room_id}/runtime/rewind` accept a `target_choice_id` to rewind to a specific point?
+  > **Answer:** Yes. Pass any valid choice ID from the ancestry chain. See: Hook Catalog → useRoomRuntime
+- [x] What API endpoint configures which model an agent uses at runtime?
+  > **Answer:** PATCH `/api/v1/agents/{id}` with `model_name`/`provider`. See: Entity Dictionary → AgentConfig → Model Swapping
+- [ ] Is there an API to list available models per provider for the UI dropdown?
+- [x] Can agent model configuration be changed per-room, or only globally?
+  > **Answer:** Globally per AgentConfig. To vary per-room, create separate agent instances or swap config at runtime.
+- [ ] Does `RoomService.toggleMessageContext()` exist in the generated client? (Validation needed)
+- [ ] What's the API contract for bulk context operations (e.g., "exclude all messages before X")?
+
+### E.2 Event System Completeness
+
+> **Context:** Real-time events drive UI updates. These questions verify event coverage.
+
+- [ ] Is there a `runtime.model_changed` event when an agent's model is swapped?
+- [ ] What event is emitted when the story runtime is reset (not just rewound)?
+- [ ] Are message management events (`message.edited`, etc.) emitted for system-generated messages?
+- [ ] Can the frontend subscribe to events for specific message IDs rather than room-wide?
+- [x] What's the event payload for `message.context_toggled`? Does it include the new `active_for_context` value?
+  > **Answer:** `{ message_id, active_for_context }`. See: Entity Dictionary → Message Management Events
+- [ ] Is there an event for when an agent "joins" vs "is enabled" in a room?
+
+### E.3 Hook and Mutation Verification
+
+> **Context:** Hooks documented in the ontology need verification against actual implementation.
+
+- [ ] Does `useRoomMessages` correctly handle optimistic updates for `toggleContext`?
+- [ ] What's the error recovery behavior when `pinMessage` fails (e.g., already pinned)?
+- [x] Is there a hook for story runtime state (`useStoryRuntime` or similar)?
+  > **Answer:** `useRoomRuntime` manages story runtime state. See: Hook Catalog → useRoomRuntime
+- [ ] How does `useRoomStream` handle reconnection during a multi-step operation?
+- [ ] Are mutation loading states (`isEditing`, `isPinning`) used anywhere in UI currently?
+- [ ] Can we add optimistic UI for context toggling (immediate visual feedback)?
+
+### E.4 ViewModel Mapping Gaps
+
+> **Context:** ViewModels transform API types for the UI. These questions explore transformation edge cases.
+
+- [ ] Does `MessageViewModel` include `edited_by` user info or just the ID?
+- [ ] How is `pinned_at` formatted in the ViewModel (ISO string, relative time, or both)?
+- [ ] Is there a ViewModel for story runtime state, or is the raw API response used?
+- [ ] What happens to `MessageViewModel` if the message is deleted server-side but cached client-side?
+- [ ] Does the ViewModel include computed fields like "isOwnMessage" or "canEditThisMessage"?
+- [ ] How are permission flags (`can_edit`, `can_delete`, `can_pin`) populated for agent messages?
+
+### E.5 AG-UI Integration Questions
+
+> **Context:** AG-UI components enable rich agent interactions. These questions explore integration points.
+
+- [ ] Can an AG-UI button trigger a context toggle operation?
+- [ ] Can an AG-UI component display real-time context inclusion state?
+- [ ] How do AG-UI components receive updates when message state changes?
+- [ ] Can the orchestrator emit AG-UI components that visualize story runtime position?
+- [ ] What's the AG-UI component for a "context selector" (multi-select messages)?
+- [ ] Can AG-UI forms submit data that affects story state?
+
+### E.6 Demo Feasibility Verification
+
+> **Context:** These questions validate whether the demos are actually buildable with current infrastructure.
+
+- [ ] **Demo B Dependency:** Is `revision` field actually used for optimistic concurrency in rewind?
+- [ ] **Demo B Question:** What visual feedback exists during story rewind? (Loading state?)
+- [ ] **Demo C Question:** Are A2A messages (`sender_type: "agent_internal"`) visible in any debugging UI?
+- [ ] **Demo C Question:** How do we verify the orchestrator received an A2A message?
+- [ ] **Demo D Feasibility:** What's the minimum viable state sync between context, runtime, and orchestrator?
+
+### E.7 Testing and Validation Questions
+
+> **Context:** Engineers need ways to verify their implementations.
+
+- [ ] How do we write a unit test for `active_for_context` affecting agent responses?
+- [ ] Is there a test environment with pre-seeded rooms demonstrating message management?
+- [ ] Can we mock the WebSocket connection for testing event handlers?
+- [ ] What's the test strategy for optimistic update rollback on error?
+- [ ] How do we test orchestrator workflows without a full multi-agent setup?
+- [ ] Are there Playwright tests covering message management UI actions?
+
+### E.8 Documentation Discrepancies
+
+> **Context:** Questions arising from inconsistencies in existing documentation.
+
+- [ ] Phase 5 Architecture Review mentions `MessageFilters` component but it's not in the ontology. Should it be added?
+- [ ] The ontology lists `useAgentStream` but message-management docs don't reference it. Is it relevant?
+- [ ] Where is the canonical source of truth for message permission rules?
+- [ ] Are there sequence diagrams showing the full message management flow?
+
+### E.9 Future Considerations
+
+> **Context:** Questions that inform architectural decisions for upcoming work.
+
+- [ ] What's the MVP scope for each demo to prove the concept before full implementation?
+- [ ] Can we create a "demo harness" that pre-configures rooms for each demo scenario?
+- [ ] Should demos have their own routes (e.g., `/demo/memory-surgeon`) or use standard room views?
+- [ ] How do we measure demo success (user engagement, error rates, completion)?

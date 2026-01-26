@@ -264,7 +264,10 @@ async def build_room_context(
         # Load recent messages (ordered by created_at desc, then reversed)
         messages_result = await session.exec(
             select(RoomMessage)
-            .where(RoomMessage.room_id == room_id)
+            .where(
+                RoomMessage.room_id == room_id,
+                RoomMessage.active_for_context == True,  # noqa: E712
+            )
             .order_by(RoomMessage.created_at.desc())
             .limit(message_limit)
         )

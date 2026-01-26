@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-import tomllib
+import tomli
 from pydantic import BaseModel, Field
 
 LOGGER = logging.getLogger(__name__)
@@ -134,8 +134,8 @@ def load_logfire_config() -> LogfireConfig:
 
     try:
         with CONFIG_PATH.open("rb") as handle:
-            raw = tomllib.load(handle)
-    except tomllib.TOMLDecodeError as error:
+            raw = tomli.load(handle)
+    except tomli.TOMLDecodeError as error:
         LOGGER.error("Failed to parse %s: %s", CONFIG_PATH, error)
         raise
 

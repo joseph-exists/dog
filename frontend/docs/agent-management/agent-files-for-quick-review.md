@@ -1,5 +1,5 @@
 
-  Files Requiring Changes (2 total)
+Agent File Reference Table (may not be complete) as of 1/26/26
   ┌───────────────────────────┬───────┬───────────┬────────────┬──────────────────┐
   │           File            │ Lines │ SDK Calls │ Type Props │    Complexity    │
   ├───────────────────────────┼───────┼───────────┼────────────┼─
@@ -8,7 +8,6 @@
   ├───────────────────────────┼───────┼───────────┼────────────┼──────────────────┤
   │ AgentProviderSelector.tsx │ 227   │ 2         │ No         │ Medium           │
   └───────────────────────────┴───────┴───────────┴────────────┴──────────────────┘
-  Files Using AgentData (no changes needed)
   ┌──────────────────────┬──────────────────────────────┐
   │         File         │            Notes             │
   ├──────────────────────┼──────────────────────────────┤
@@ -41,7 +40,4 @@
   grep -n "split.*pop.*replace" src/components/Agents/*.tsx
 
   ---
-  Suggested Migration Order
 
-  7. AgentModelSettings.tsx - Uses settings endpoints (separate concern)
-  8. AgentProviderSelector.tsx - Uses settings endpoints (separate concern)

@@ -1,4 +1,10 @@
-● Phase 5: Coordinator Pattern - Complete! 🎯
+
+
+references: see backend/src/services/a2aorchestrator
+
+
+
+Phase 5: Coordinator Pattern - Complete! 🎯
 
   ★ Insight ─────────────────────────────────────
   - Coordinator Pattern enables orchestration: one agent (the coordinator) analyzes user intent and routes to specialists
