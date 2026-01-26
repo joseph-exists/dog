@@ -1,6 +1,3 @@
-need to review this ..
-some fucking day...
-
 
 ● ★ Insight ─────────────────────────────────────
   - PageShell renders blocks directly via switch statement, not through registry
@@ -9,8 +6,6 @@ some fucking day...
   - This is actually the correct architecture for type safety
   ─────────────────────────────────────────────────
 
-  The registry component field is not used - PageShell renders blocks directly for type safety. I'll update the registry to document this
-   and remove dead code:
 
 ● Update(src/components/Page/registry/blockTypes.ts)
   ⎿  Added 5 lines, removed 1 line
