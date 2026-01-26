@@ -48,6 +48,9 @@ class ConnectionManager:
         # Map: WebSocket -> room_id (for cleanup on disconnect)
         self.websocket_rooms: dict[WebSocket, UUID] = {}
 
+        # Map: room_id -> background listener task
+        self.listener_tasks: dict[UUID, asyncio.Task[None]] = {}
+
     async def connect(self, websocket: WebSocket, room_id: UUID) -> None:
         """
         Register a new WebSocket connection for a room.
@@ -156,6 +159,7 @@ class ConnectionManager:
             # Start background listener
             # logger.info(f"[REDIS] Creating background task for _listen_to_room for room {room_id}")
             task = asyncio.create_task(self._listen_to_room(room_id, pubsub))
+            self.listener_tasks[room_id] = task
             # logger.info(f"[REDIS] Background task created: {task}")
 
             # logger.info(f"[REDIS] Successfully subscribed to Redis channel: {channel}")
@@ -168,6 +172,15 @@ class ConnectionManager:
         """
         Unsubscribe from Redis pub/sub channel when no clients remain.
         """
+        # Cancel listener task first
+        task = self.listener_tasks.pop(room_id, None)
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
         pubsub = self.room_subscriptions.pop(room_id, None)
         if pubsub:
             try:
@@ -212,6 +225,12 @@ class ConnectionManager:
                 if room_id not in self.room_subscriptions:
                     # logger.info(f"[LISTENER] Room {room_id} no longer in subscriptions, exiting listener")
                     break
+        except asyncio.CancelledError:
+            # Task was cancelled - this is expected during cleanup
+            pass
+        except ConnectionError:
+            # Redis connection closed - expected during normal disconnection
+            pass
         except Exception as e:
             logger.error(f"[LISTENER] Error in Redis listener for room {room_id}: {e}", exc_info=True)
 

@@ -1,9 +1,6 @@
 # Shadow Services Reference
 
-The attached files define eight Python modules implementing shadow versioning services for entity persistence via database and Forgejo git repositories. These services handle snapshot creation, outbox processing, reading, summarizing, and context loading with async/sync distinctions visible in function definitions.[^1][^2][^3][^4][^5][^6][^7][^8]
-
 ## Services Overview
-
 
 ```
 | Service | Primary Role | Key Classes/Functions | Sync/Async Mix | DB Dependencies | External (Forgejo/Redis) |

@@ -21,6 +21,7 @@ import {
   type AgentConfigPublic,
   type AgentConfigsPublic,
   type AgentConfigUpdate,
+  type LLMProviderType,
   AgentsService,
   OpenAPI,
 } from "@/client"
@@ -37,7 +38,7 @@ import { request as __request } from "@/client/core/request"
 export type AgentScope = "system" | "personal"
 
 /**
- * Agent participation mode - how the agent engages in rooms
+ * Agent participation mode - how the agent engages in rooms by default
  * - "always": Agent responds to all messages
  * - "on_mention": Agent responds when mentioned
  * - "manual": Agent only responds when explicitly invoked
@@ -60,6 +61,8 @@ export interface AgentViewModel {
   description: string | null
   model_name: string
   display_model: string
+  provider_type: LLMProviderType
+  user_provider: string | null
   system_prompt: string | null
   tool_config: Record<string, unknown> | null
   deps_config: Record<string, unknown> | null
@@ -83,6 +86,8 @@ export interface CreateAgentInput {
   slug: string
   description?: string | null
   model_name?: string
+  provider_type?: LLMProviderType
+  user_provider?: string | null
   system_prompt?: string | null
   participation_mode?: ParticipationMode
   scope?: AgentScope
@@ -96,6 +101,8 @@ export interface UpdateAgentInput {
   name?: string | null
   description?: string | null
   model_name?: string | null
+  provider_type?: LLMProviderType | null
+  user_provider?: string | null
   system_prompt?: string | null
   participation_mode?: ParticipationMode | null
   is_enabled?: boolean | null
@@ -155,6 +162,8 @@ function transformAgent(agent: AgentConfigPublic): AgentViewModel {
     description: agent.description ?? null,
     model_name: agent.model_name ?? "openai:gpt-4o-mini",
     display_model: formatModelName(agent.model_name),
+    provider_type: agent.provider_type ?? "openai",
+    user_provider: agent.user_provider ?? null,
     system_prompt: agent.system_prompt ?? null,
     tool_config: agent.tool_config ?? null,
     deps_config: agent.deps_config ?? null,
@@ -304,6 +313,8 @@ export const AgentService = {
       slug: data.slug,
       description: data.description,
       model_name: data.model_name,
+      provider_type: data.provider_type,
+      user_provider: data.user_provider,
       system_prompt: data.system_prompt,
       participation_mode: data.participation_mode,
       scope: data.scope ?? "personal",
@@ -336,6 +347,8 @@ export const AgentService = {
       name: data.name,
       description: data.description,
       model_name: data.model_name,
+      provider_type: data.provider_type,
+      user_provider: data.user_provider,
       system_prompt: data.system_prompt,
       participation_mode: data.participation_mode,
       is_enabled: data.is_enabled,

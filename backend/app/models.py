@@ -3225,6 +3225,15 @@ class AgentConfigBase(SQLModel):
      name: str = Field(max_length=100, description="Display name")
      slug: str = Field(max_length=50, description="Unique identifier/registry key")
      description: str | None = Field(default=None, max_length=500)
+     user_provider: uuid.UUID | None = Field(
+         default=None,
+         foreign_key="userllmprovider.id",
+         description="User-selected provider tied to this agent"
+     )
+     provider_type: LLMProviderType = Field(
+         default=LLMProviderType.EMPTY,
+         description="Default provider type (e.g., openai, anthropic)"
+     )
      model_name: str = Field(default="openai:gpt-4o-mini")
      system_prompt: str | None = None
 
@@ -3265,6 +3274,8 @@ class AgentConfigUpdate(SQLModel):
      description: str | None = None
      model_name: str | None = None
      system_prompt: str | None = None
+     user_provider: uuid.UUID | None = None
+     provider_type: LLMProviderType | None = None
      tool_config: dict | None = None
      deps_config: dict | None = None
      agent_metadata: dict | None = None

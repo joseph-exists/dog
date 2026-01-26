@@ -28,12 +28,7 @@
 
   1. Verify participation_mode — Run this in psql:
   SELECT name, participation_mode FROM agent_configs ORDER BY name;
-  1. If they're all "on_mention" or NULL, that's the source of
-  truth. Update agents that should have different modes.
-  2. Optional: Regenerate OpenAPI client — If you want the generated
-   types to reflect the new include_inactive param:
-  cd frontend && npm run generate-client
-
+ 
 
   3. Smoke test these scenarios:
     - Toggle an agent OFF → should dim but stay visible
@@ -43,6 +38,4 @@
   appear in chat
     - Undo/restart → verify events emit
 
-    
-  4. Commit when satisfied — All changes are staged in your working
-  tree
+  

@@ -2918,11 +2918,14 @@ export class RoomsService {
     
     /**
      * List Room Participants
-     * List all active participants in a room.
+     * List participants in a room.
      *
      * Only accessible to room participants. Returns both users and agents.
+     * By default only active participants are returned. Set include_inactive=true
+     * to also return deactivated participants (useful for toggle UI).
      * @param data The data for the request.
      * @param data.roomId
+     * @param data.includeInactive
      * @returns RoomParticipantsPublic Successful Response
      * @throws ApiError
      */
@@ -2932,6 +2935,9 @@ export class RoomsService {
             url: '/api/v1/rooms/{room_id}/participants',
             path: {
                 room_id: data.roomId
+            },
+            query: {
+                include_inactive: data.includeInactive
             },
             errors: {
                 422: 'Validation Error'

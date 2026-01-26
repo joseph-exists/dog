@@ -10,7 +10,7 @@ from pydantic_ai import RunContext
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.schemas.ag_ui import UIComponent, UIComponentType
-from app.services.a2a_orchestrator import A2AOrchestrator, DEFAULT_MAX_A2A_DEPTH
+from app.services.a2a_orchestrator import DEFAULT_MAX_A2A_DEPTH, A2AOrchestrator
 from app.services.agent_prompt import build_agent_prompt
 from app.services.context_provider import build_room_context
 from app.services.context_store import RedisContextStore
@@ -60,7 +60,7 @@ class AgentDeps:
 async def request_agent_assistance(
     ctx: RunContext[AgentDeps],
     target_agent: str,
-    request: str,
+    request: str, 
 ) -> str:
     """
     Request another agent's expertise on a specific topic.
@@ -260,16 +260,38 @@ def emit_ui_component(
     # -------------------------------------------------------------------------
     from app.schemas.ag_ui import (
         UIActionButtons as UIActionButtonsModel,
+    )
+    from app.schemas.ag_ui import (
         UIAlert as UIAlertModel,
+    )
+    from app.schemas.ag_ui import (
         UICard as UICardModel,
+    )
+    from app.schemas.ag_ui import (
         UICodeBlock as UICodeBlockModel,
+    )
+    from app.schemas.ag_ui import (
         UICollapsible as UICollapsibleModel,
+    )
+    from app.schemas.ag_ui import (
         UIDivider as UIDividerModel,
+    )
+    from app.schemas.ag_ui import (
         UIList as UIListModel,
+    )
+    from app.schemas.ag_ui import (
         UIPageLayoutPreview as UIPageLayoutPreviewModel,
+    )
+    from app.schemas.ag_ui import (
         UIProgress as UIProgressModel,
+    )
+    from app.schemas.ag_ui import (
         UIQuote as UIQuoteModel,
+    )
+    from app.schemas.ag_ui import (
         UITable as UITableModel,
+    )
+    from app.schemas.ag_ui import (
         UITabs as UITabsModel,
     )
 

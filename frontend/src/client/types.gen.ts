@@ -10,6 +10,14 @@ export type AgentConfigCreate = {
      */
     slug: string;
     description?: (string | null);
+    /**
+     * User-selected provider tied to this agent
+     */
+    user_provider?: (string | null);
+    /**
+     * Default provider type (e.g., openai, anthropic)
+     */
+    provider_type?: LLMProviderType;
     model_name?: string;
     system_prompt?: (string | null);
     tool_config?: ({
@@ -36,6 +44,14 @@ export type AgentConfigPublic = {
     name: string;
     slug: (string | null);
     description?: (string | null);
+    /**
+     * User-selected provider tied to this agent
+     */
+    user_provider?: (string | null);
+    /**
+     * Default provider type (e.g., openai, anthropic)
+     */
+    provider_type?: LLMProviderType;
     model_name?: string;
     system_prompt?: (string | null);
     tool_config?: ({
@@ -70,6 +86,8 @@ export type AgentConfigUpdate = {
     description?: (string | null);
     model_name?: (string | null);
     system_prompt?: (string | null);
+    user_provider?: (string | null);
+    provider_type?: (LLMProviderType | null);
     tool_config?: ({
     [key: string]: unknown;
 } | null);
@@ -2706,6 +2724,7 @@ export type RoomsAddRoomParticipantData = {
 export type RoomsAddRoomParticipantResponse = (RoomParticipantPublic);
 
 export type RoomsListRoomParticipantsData = {
+    includeInactive?: boolean;
     roomId: string;
 };
 

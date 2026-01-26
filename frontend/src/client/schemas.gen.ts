@@ -26,6 +26,24 @@ export const AgentConfigCreateSchema = {
             ],
             title: 'Description'
         },
+        user_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Provider',
+            description: 'User-selected provider tied to this agent'
+        },
+        provider_type: {
+            '$ref': '#/components/schemas/LLMProviderType',
+            description: 'Default provider type (e.g., openai, anthropic)',
+            default: 'empty'
+        },
         model_name: {
             type: 'string',
             title: 'Model Name',
@@ -146,6 +164,24 @@ export const AgentConfigPublicSchema = {
                 }
             ],
             title: 'Description'
+        },
+        user_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Provider',
+            description: 'User-selected provider tied to this agent'
+        },
+        provider_type: {
+            '$ref': '#/components/schemas/LLMProviderType',
+            description: 'Default provider type (e.g., openai, anthropic)',
+            default: 'empty'
         },
         model_name: {
             type: 'string',
@@ -320,6 +356,28 @@ export const AgentConfigUpdateSchema = {
                 }
             ],
             title: 'System Prompt'
+        },
+        user_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Provider'
+        },
+        provider_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/LLMProviderType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         tool_config: {
             anyOf: [
