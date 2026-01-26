@@ -10,6 +10,7 @@
  * - Participation mode selector
  */
 
+import { useQuery } from "@tanstack/react-query"
 import { ChevronDownIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -40,6 +41,11 @@ import {
   type AgentViewModel,
   type ParticipationMode,
 } from "@/services/agentService"
+import {
+  LlmProviderService,
+  LLM_PROVIDER_QUERY_KEYS,
+  type ProviderViewModel,
+} from "@/services/llmProviderService"
 
 // Participation modes
 const PARTICIPATION_MODES = [
@@ -102,6 +108,25 @@ export default function AgentForm({
     initialData?.participation_mode || "on_mention",
   )
 
+  // Provider selection state
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
+    initialData?.user_provider ?? null
+  )
+
+  // Fetch user's configured providers
+  const { data: providersData, isLoading: providersLoading } = useQuery({
+    queryKey: LLM_PROVIDER_QUERY_KEYS.providers,
+    queryFn: () => LlmProviderService.listProviders(),
+  })
+
+  const providers = providersData?.providers ?? []
+
+  // Find selected provider object for derived values
+  const selectedProvider = providers.find((p) => p.id === selectedProviderId) ?? null
+
+  // Derive provider_type from selection (or "empty" if none)
+  const derivedProviderType: LLMProviderType = selectedProvider?.provider_type ?? "empty"
+
   // Derive provider type from model (used for display and filtering in edit mode)
   const providerType = parseProviderFromModelName(modelName)
 
@@ -130,6 +155,8 @@ export default function AgentForm({
       model_name: modelName,
       system_prompt: systemPrompt,
       participation_mode: participationMode,
+      provider_type: derivedProviderType,
+      user_provider: selectedProviderId,
     })
   }, [
     name,
@@ -138,6 +165,8 @@ export default function AgentForm({
     modelName,
     systemPrompt,
     participationMode,
+    derivedProviderType,
+    selectedProviderId,
     onChange,
   ])
 
