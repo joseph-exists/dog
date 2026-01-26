@@ -12,12 +12,14 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDownIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import {
   AgentProviderBadge,
   parseProviderFromModelName,
+  type LLMProviderType as AgentBadgeLLMProviderType,
 } from "@/components/Agents/AgentBadge"
+import { ProviderSelect } from "./ProviderSelect"
 import ModelCombobox from "@/components/Agents/providers/ModelCombobox"
 import {
   Collapsible,
@@ -127,8 +129,25 @@ export default function AgentForm({
   // Derive provider_type from selection (or "empty" if none)
   const derivedProviderType: LLMProviderType = selectedProvider?.provider_type ?? "empty"
 
-  // Derive provider type from model (used for display and filtering in edit mode)
-  const providerType = parseProviderFromModelName(modelName)
+  /**
+   * Handle provider selection change.
+   * Resets model if incompatible with new provider type.
+   */
+  const handleProviderChange = useCallback(
+    (providerId: string | null, provider: ProviderViewModel | null) => {
+      setSelectedProviderId(providerId)
+
+      // Reset model if incompatible with new provider
+      if (provider) {
+        const currentModelProviderType = parseProviderFromModelName(modelName)
+        if (currentModelProviderType && currentModelProviderType !== provider.provider_type) {
+          setModelName("") // Reset - user must re-select
+        }
+      }
+      // If provider cleared (null), keep model (aspirational selection)
+    },
+    [modelName]
+  )
 
   // Auto-generate slug from backend (only in create mode)
   useEffect(() => {
@@ -213,25 +232,41 @@ export default function AgentForm({
         </p>
       </div>
 
+      {/* Provider Selector */}
+      <div className="space-y-2">
+        <Label htmlFor="agent-provider">Provider</Label>
+        <ProviderSelect
+          value={selectedProviderId}
+          providers={providers}
+          isLoading={providersLoading}
+          onChange={handleProviderChange}
+        />
+        <p className="text-xs text-muted-foreground">
+          {selectedProvider
+            ? `Using your "${selectedProvider.name}" credentials`
+            : "Select a provider to use your own API credentials"}
+        </p>
+      </div>
+
       {/* Model Selector */}
       <div className="space-y-2">
         <Label htmlFor="agent-model">Model</Label>
-        {isEditMode && providerType && (
+        {selectedProvider && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Provider:</span>
-            <AgentProviderBadge providerType={providerType} />
+            <span className="text-xs text-muted-foreground">Filtered to:</span>
+            <AgentProviderBadge providerType={selectedProvider.provider_type as AgentBadgeLLMProviderType} />
           </div>
         )}
         <ModelCombobox
           value={modelName}
           onChange={setModelName}
-          providerType={isEditMode ? (providerType ?? undefined) : undefined}
+          providerType={selectedProvider?.provider_type}
           placeholder="Select a model..."
         />
         <p className="text-xs text-muted-foreground">
-          {isEditMode
-            ? "Available models for this provider"
-            : "Search catalog models or add a custom model"}
+          {selectedProvider
+            ? `Models compatible with ${selectedProvider.display_type}`
+            : "All catalog models (select a provider to filter)"}
         </p>
       </div>
 
