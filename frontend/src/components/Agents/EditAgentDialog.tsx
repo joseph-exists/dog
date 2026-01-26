@@ -114,6 +114,12 @@ export default function EditAgentDialog({
     if (formData.participation_mode !== agent.participation_mode) {
       payload.participation_mode = formData.participation_mode
     }
+    if (formData.provider_type !== agent.provider_type) {
+      payload.provider_type = formData.provider_type
+    }
+    if (formData.user_provider !== agent.user_provider) {
+      payload.user_provider = formData.user_provider
+    }
 
     // Check if anything changed
     if (Object.keys(payload).length === 0) {
