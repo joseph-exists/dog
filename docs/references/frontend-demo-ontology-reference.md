@@ -32,8 +32,77 @@ This ontology is the foundation. The following guides build upon it:
 - Guide A: Context Manipulation Demos
 - Guide B: Story Runtime Navigation Demos
 - Guide C: Hidden Orchestrator Demos
+- Guide D: The Massive Mystery
 
 Each guide assumes familiarity with the ontology and will reference terms defined here without re-explaining them.
+
+---
+
+## Demo Synopses
+
+### Demo A: Context Manipulation — "The Memory Surgeon"
+
+Imagine giving users a scalpel for AI memory. Demo A transforms the opaque "context window" into something tangible and manipulable—a visual tapestry where every message glows with its inclusion state, where users can surgically remove a single exchange and watch the AI reconstruct its understanding in real-time. This isn't just about toggling flags; it's about revealing the profound truth that AI responses are shaped entirely by what they're allowed to remember. Users will checkpoint conversations like save points in a game, fork timelines to explore "what if I'd never mentioned the budget constraint?", and witness side-by-side how the same AI produces radically different solutions when its memory is sculpted differently. The demo exposes context as the invisible hand it truly is—and puts that hand under user control.
+
+### Demo B: Story Runtime Navigation — "The Quantum Narrator"
+
+What if you could rewind reality? Demo B gives users a time machine for narrative AI, letting them scrub backward through a branching story to any decision point and then—here's where it gets magical—swap the storyteller mid-scene. The same narrative moment, the same accumulated context, but suddenly rendered through a different model's voice and reasoning. Users will watch Claude become GPT-4 become Gemini, observing how each AI interprets the same story state with its own personality and capabilities. This is A/B testing elevated to art: not just comparing outputs, but experiencing the uncanny valley between AI minds. The story becomes a laboratory where users can isolate the variable of "which intelligence is speaking" while holding everything else constant. It's not just navigation—it's comparative consciousness exploration.
+
+### Demo C: Hidden Orchestrator — "The Invisible Conductor"
+
+The most powerful interfaces hide their complexity. Demo C strips away every visible trace of rooms, messages, and chat—leaving only crystalline AG-UI components floating in space, responding to user intent through elegant buttons and cards. Behind this serene surface, an invisible orchestrator coordinates a symphony of specialized subagents through A2A messaging, each contributing their expertise without ever appearing directly. Users experience a wizard-like guided journey, making choices through beautifully rendered UI components, never suspecting that their clicks are triggering cascades of agent-to-agent deliberation. This is the magic trick: the user sees a seamless, almost game-like interface while underneath, a distributed AI system collaborates in whispers. Demo C proves that the most sophisticated AI experiences are the ones where the AI disappears entirely into the experience.
+
+### Demo D: The Loom of Infinite Stories — "Where Memory, Time, and Voice Converge"
+
+---
+
+**The Vision**
+
+Demo D is not merely a combination—it is an *emergence*. When context manipulation, temporal navigation, and hidden orchestration interweave, something unprecedented becomes possible: an experience where users don't just consume AI-generated narrative, but become weavers of possibility itself.
+
+Imagine entering what appears to be a simple, elegant interface—perhaps a glowing tapestry, perhaps a constellation map, perhaps something that defies easy metaphor. There are no chat windows. No visible messages. Only luminous threads representing story moments, model voices, and memory states, all rendered as interactive AG-UI elements that respond to touch and intention.
+
+**The Core Experience**
+
+The user begins a story. But this story isn't linear—it's a living probability space. An invisible orchestrator (C) guides them through narrative beats using only visual components: cards that reveal story moments, buttons that represent choices, progress indicators that show how deep into the tale they've ventured.
+
+But here's where it transcends: at any point, the user can reach into the tapestry and *alter what the story remembers* (A). They can dim certain threads—make the AI "forget" that the protagonist found the key, or that the villain revealed their motivation. The orchestrator seamlessly reweaves the narrative around these holes, consulting subagents specialized in continuity, tension, and surprise.
+
+And they can *change who tells the story* (B). Mid-scene, mid-breath, the user can summon a different narrative voice. The orchestrator doesn't just swap models—it coordinates between them, having Claude hand off to GPT-4 with a hidden A2A message that says "continue from here, but make it darker." The user sees only the seamless transition, the subtle shift in tone, as if the story itself learned a new way to speak.
+
+**The Profound Interaction**
+
+The true magic emerges from the intersection:
+
+- **Memory + Time**: Rewind to a past moment, alter what was remembered, and branch into an entirely new timeline that the AI generates fresh, informed by the surgically modified context.
+
+- **Time + Voice**: Navigate to any story node and experience that same moment told by three different AI voices, displayed side-by-side in elegant AG-UI cards, each interpretation highlighting how model architecture shapes narrative soul.
+
+- **Voice + Memory**: Have one AI tell the story while another AI secretly curates what it remembers—a hidden subagent that dynamically manages context based on dramatic principles, ensuring the storyteller always has exactly the right memories to create maximum impact.
+
+- **All Three Together**: The ultimate mode. An orchestrator coordinates multiple AIs in real-time, each with different memory states and model capabilities, weaving a story that no single AI could produce. One model excels at dialogue; give it only conversation context. Another excels at world-building; let it remember every environmental detail. A third masters emotional beats; grant it access to all character development. The orchestrator braids their outputs into a unified narrative, presented through AG-UI components that make the user feel like they're conducting an orchestra of imagination.
+
+**The Interface Philosophy**
+
+The user never sees the machinery. They see only the Loom: threads of light representing narrative possibilities, bright where memory is strong, dim where it's been suppressed, colored by the voice currently speaking. They interact by touching threads, by pulling them together or apart, by invoking different weavers to contribute their talents.
+
+The AG-UI renders everything: choice points as glowing knots in the tapestry, model options as different colored threads to weave in, memory states as brightness and shadow. Action buttons don't say "toggle context" or "swap model"—they say "remember this moment" or "hear it differently" or "let another voice speak."
+
+**Why It Matters**
+
+Demo D proves that the constraints we accept in AI interaction are artificial. We act as if context is fixed, as if we must speak to one model at a time, as if the interface must be conversational. The Loom shatters these assumptions and reveals what becomes possible when we treat AI capabilities as composable primitives rather than monolithic products.
+
+This is a demo that will make engineers *feel something*—not just understand a capability, but experience wonder at what becomes possible when the pieces we've built combine into something greater than their sum.
+
+**The Challenge**
+
+Building Demo D requires perfect coordination across every system in our architecture. It demands that context manipulation be instant and visual. That runtime navigation be smooth and unlimited. That orchestration be so reliable it becomes invisible. It requires AG-UI components we haven't imagined yet—ones that render probability spaces and memory states and multi-voice harmonies.
+
+But that's exactly why we document. That's why we question. That's why we build the ontology before the implementation.
+
+Because Demo D isn't just a demo. It's a proof that our architecture was designed for emergence.
+
+---
 
 ---
 
@@ -1829,3 +1898,105 @@ export function NewFeaturePanel({ roomId }: NewFeaturePanelProps) {
 - [ ] Can we create branching wizard paths based on user choices?
 - [ ] How do we track user progress through an orchestrated flow?
 - [ ] What's the minimum viable hidden orchestrator demo?
+
+---
+
+## Addendum D: Open Questions — The Loom of Infinite Stories
+
+> These questions must be answered before writing Guide D. Demo D synthesizes capabilities from A, B, and C into an emergent experience. Questions are organized by the intersections that create magic.
+
+### D.1 Foundation Integration Questions
+
+- [ ] Can all three systems (context manipulation, runtime navigation, hidden orchestration) operate simultaneously in a single room?
+- [ ] What's the initialization sequence for a room with context controls, runtime, AND hidden orchestration?
+- [ ] How do we ensure the three systems don't conflict (e.g., orchestrator changing context while user is manipulating it)?
+- [ ] What's the unified state model that tracks context state + runtime position + orchestrator workflow state?
+- [ ] Can we create a "meta-ViewModel" that exposes the combined state of all three systems?
+
+### D.2 Memory × Time Questions (Context + Runtime)
+
+- [ ] When rewinding runtime, should context exclusions also rewind, or persist as "meta-memory"?
+- [ ] Can we create a "context checkpoint" tied to a specific runtime revision?
+- [ ] How do we branch both context AND runtime simultaneously into parallel timelines?
+- [ ] What happens to `active_for_context` flags on messages that get "rewound past"?
+- [ ] Can the story runtime's `story_state` influence which messages are auto-included in context?
+
+### D.3 Time × Voice Questions (Runtime + Model Swapping)
+
+- [ ] Can we store multiple model outputs for the same runtime position?
+- [ ] How do we render the same story node content from different models side-by-side?
+- [ ] Is model selection per-room, per-agent, or can it be per-response?
+- [ ] Can we "replay" a runtime segment with a different model without affecting the canonical timeline?
+- [ ] How do we attribute which model generated which historical response?
+
+### D.4 Voice × Memory Questions (Model Swapping + Context)
+
+- [ ] Can different models in the same room see different context subsets?
+- [ ] How do we coordinate context windows when models have different context limits?
+- [ ] Can an agent's system prompt dynamically adjust based on context inclusion state?
+- [ ] Is it possible to have "model-specific memories" (Claude remembers X, GPT sees Y)?
+- [ ] How do we visualize the delta between what different models would "see" given the same context flags?
+
+### D.5 Orchestrator × Memory Questions (Hidden Orchestration + Context)
+
+- [ ] Can the orchestrator programmatically toggle `active_for_context` on messages?
+- [ ] How does the orchestrator make context decisions without user visibility?
+- [ ] Can subagents have different context views than the orchestrator?
+- [ ] What's the A2A message format for instructing context manipulation?
+- [ ] How do we audit/log orchestrator context decisions for debugging?
+
+### D.6 Orchestrator × Time Questions (Hidden Orchestration + Runtime)
+
+- [ ] Can the orchestrator trigger advance/rewind/reset without user interaction?
+- [ ] How do we synchronize orchestrator workflow state with runtime revision?
+- [ ] Can AG-UI buttons directly invoke runtime operations (advance, rewind)?
+- [ ] What happens if the orchestrator rewinds while a subagent is mid-response?
+- [ ] How do we prevent infinite loops (orchestrator rewinds → triggers event → orchestrator rewinds)?
+
+### D.7 Orchestrator × Voice Questions (Hidden Orchestration + Model Selection)
+
+- [ ] Can the orchestrator dynamically select which model handles each subagent response?
+- [ ] How does the orchestrator coordinate handoffs between different models?
+- [ ] Can A2A messages include model routing hints?
+- [ ] How do we handle model-specific capabilities in orchestrated workflows (e.g., Claude for reasoning, GPT for creativity)?
+- [ ] Can the orchestrator spawn temporary "ephemeral" agents with specific model configurations?
+
+### D.8 The Triple Intersection Questions (All Three Systems)
+
+- [ ] What's the data structure that represents a "moment" in the Loom (context state + runtime position + active model + orchestrator state)?
+- [ ] Can we serialize and restore a complete Loom state for "save points"?
+- [ ] How do we visualize the three-dimensional possibility space (memory × time × voice)?
+- [ ] What AG-UI components are needed to represent threads, brightness, and color in the tapestry metaphor?
+- [ ] How do we prevent combinatorial explosion (N context states × M runtime positions × K model options)?
+
+### D.9 Novel AG-UI Component Questions
+
+- [ ] What does a "thread" component look like (representing a story-moment-with-memory-state)?
+- [ ] How do we render "brightness" (memory strength) visually in AG-UI?
+- [ ] What's the interaction model for "pulling threads together" (merging timelines)?
+- [ ] Can AG-UI components have continuous state (not just discrete actions)?
+- [ ] How do we animate transitions between Loom states?
+
+### D.10 Performance & Architecture Questions
+
+- [ ] What's the latency budget for a Loom state change (context + runtime + model)?
+- [ ] How do we cache/precompute alternative timeline branches?
+- [ ] Can we use optimistic UI for Loom interactions (show predicted state before confirmation)?
+- [ ] What's the WebSocket event model for coordinated state changes?
+- [ ] How do we handle partial failures (e.g., context toggle succeeds but model swap fails)?
+
+### D.11 Experience Design Questions
+
+- [ ] What's the onboarding experience for users encountering the Loom?
+- [ ] How do we teach the metaphor without breaking immersion?
+- [ ] What are the "undo" semantics when everything is already about time manipulation?
+- [ ] How do we prevent overwhelm from too many possibilities?
+- [ ] What's the "default" mode that feels simple but reveals depth on demand?
+
+### D.12 Ethical & Safety Questions
+
+- [ ] How do we prevent the Loom from generating contradictory or harmful content across branches?
+- [ ] What content moderation applies when users can manipulate AI memory?
+- [ ] How do we handle "prompt injection via context manipulation"?
+- [ ] What's our approach to consent when users alter what an AI "remembers"?
+- [ ] How do we audit Loom sessions for safety review?
