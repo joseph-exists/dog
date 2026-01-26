@@ -1678,3 +1678,154 @@ export function NewFeaturePanel({ roomId }: NewFeaturePanelProps) {
 | Modify shadcn component | — | **Never** (use CLI) |
 
 **Verify:** Before starting any extension, check this table to confirm you're in the right location.
+
+---
+
+## Addendum A: Open Questions — Context Manipulation Demos
+
+> These questions must be answered before writing Guide A. Check off questions as they are resolved and add answers to the ontology.
+
+### A.1 Data Model Questions
+
+- [ ] What field controls whether a message is included in agent context?
+- [ ] What field marks a message as important/pinned?
+- [ ] Does pinning automatically include a message in context?
+- [ ] What permissions are required to toggle context?
+- [ ] What permissions are required to edit/delete messages?
+
+### A.2 API & Hook Questions
+
+- [ ] What hook provides context toggle functionality?
+- [ ] What's the loading state for context toggle?
+- [ ] How does the UI know which messages are in context?
+- [ ] What event fires when context is toggled?
+- [ ] What's the event payload shape for context toggle?
+
+### A.3 Backend/Agent Context Questions
+
+- [ ] How does the backend filter messages for agent context?
+- [ ] Is there a maximum context window size?
+- [ ] Are messages filtered by `active_for_context` before being sent to LLM?
+- [ ] Can we "re-run" a conversation from a specific message?
+- [ ] What happens to agent responses when context changes mid-conversation?
+
+### A.4 UI/UX Questions
+
+- [ ] Where is the context toggle UI located?
+- [ ] How do we visualize which messages are in/out of context?
+- [ ] Can we bulk-select messages for context manipulation?
+- [ ] Is there a "context preview" showing what the agent sees?
+
+### A.5 Demo-Specific Questions
+
+- [ ] What's the demo use case for "re-run from checkpoint"?
+- [ ] How do we create a "checkpoint" in a conversation?
+- [ ] Can we fork a conversation into parallel branches?
+- [ ] How do we compare agent outputs before/after context changes?
+
+---
+
+## Addendum B: Open Questions — Story Runtime Navigation Demos
+
+> These questions must be answered before writing Guide B. Check off questions as they are resolved and add answers to the ontology.
+
+### B.1 Data Model Questions
+
+- [ ] What fields track story navigation history?
+- [ ] How does the `revision` field work for optimistic concurrency?
+- [ ] What is `head_choice_id` and how does it enable rewind?
+- [ ] How is `node_chain` constructed and maintained?
+- [ ] What's the relationship between `UserStoryProgress` and `RoomStoryProgress`?
+
+### B.2 Rewind/Reset Mechanics Questions
+
+- [ ] What's the difference between rewind and reset?
+- [ ] Can we rewind to any arbitrary point, or only one step back?
+- [ ] What happens to story_state when we rewind?
+- [ ] Are rewound messages preserved or deleted?
+- [ ] How does rewind affect agent context?
+
+### B.3 Model Swapping Questions
+
+- [ ] How do we change an agent's model mid-conversation?
+- [ ] Is model swapping a runtime operation or does it require agent reconfiguration?
+- [ ] Can we swap models for a single response without permanent change?
+- [ ] What API endpoints support model configuration?
+- [ ] How do we access the `provider` and `model_name` fields for an agent in a room?
+
+### B.4 Comparison & A/B Testing Questions
+
+- [ ] How do we run the same prompt through two different models?
+- [ ] Can we create parallel conversation branches for comparison?
+- [ ] Is there a diff/comparison UI pattern for agent outputs?
+- [ ] How do we store and retrieve comparison results?
+- [ ] Can we replay a conversation segment with a different model?
+
+### B.5 UI/UX Questions
+
+- [ ] How do we visualize the story path/node history?
+- [ ] Where are rewind/reset controls located?
+- [ ] How do we show "what-if" branching options?
+- [ ] Is there a timeline or breadcrumb UI for story navigation?
+- [ ] How do we indicate which model generated which response?
+
+### B.6 Demo-Specific Questions
+
+- [ ] What's the demo use case for "swap model and compare"?
+- [ ] How do we set up a side-by-side comparison view?
+- [ ] Can we automate regression testing across models?
+- [ ] What metrics should we capture for model comparison?
+
+---
+
+## Addendum C: Open Questions — Hidden Orchestrator Demos
+
+> These questions must be answered before writing Guide C. Check off questions as they are resolved and add answers to the ontology.
+
+### C.1 Architecture Questions
+
+- [ ] What is the "hidden orchestrator" pattern?
+- [ ] How do orchestrators differ from regular agents?
+- [ ] What's the relationship between orchestrators and subagents?
+- [ ] How does A2A (agent-to-agent) messaging work?
+- [ ] What's the message flow: user → orchestrator → subagent → AG-UI?
+
+### C.2 A2A Messaging Questions
+
+- [ ] What is `sender_type: "agent_internal"` and when is it used?
+- [ ] How do agents send messages to other agents?
+- [ ] Are A2A messages visible to users by default?
+- [ ] How do we filter/show A2A messages for debugging?
+- [ ] What events fire for A2A message exchange?
+
+### C.3 Hidden Room/UI Questions
+
+- [ ] How do we hide the chat panel and show only AG-UI?
+- [ ] Can we create a "headless" room that only emits AG-UI?
+- [ ] How do we hide the story panel while keeping runtime active?
+- [ ] What layout configurations support AG-UI-only views?
+- [ ] How do we prevent users from sending direct messages?
+
+### C.4 AG-UI Navigation Questions
+
+- [ ] How do action_buttons drive story/conversation navigation?
+- [ ] Can AG-UI buttons trigger story choices (advance/rewind)?
+- [ ] How do we map button actions to runtime operations?
+- [ ] What's the action string format for navigation buttons?
+- [ ] How does the backend interpret AG-UI action payloads?
+
+### C.5 Orchestrator Coordination Questions
+
+- [ ] How does an orchestrator decide which subagent to invoke?
+- [ ] Can an orchestrator invoke multiple subagents in sequence?
+- [ ] How do subagent responses flow back through the orchestrator?
+- [ ] Is there a state machine pattern for orchestrator workflows?
+- [ ] How do we handle orchestrator errors/timeouts?
+
+### C.6 Demo-Specific Questions
+
+- [ ] What's the demo use case for "wizard-style guided experience"?
+- [ ] How do we design a progressive disclosure flow with AG-UI?
+- [ ] Can we create branching wizard paths based on user choices?
+- [ ] How do we track user progress through an orchestrated flow?
+- [ ] What's the minimum viable hidden orchestrator demo?
