@@ -33,7 +33,7 @@ import logging
 import uuid
 from typing import Any
 
-import logfire
+from app.services.logfire_client import ServiceLogfire
 
 from dataclasses import asdict
 from sqlalchemy import select
@@ -54,6 +54,9 @@ from app.services.agent_runner_types import AgentRunRequest
 from app.services.agent_tools import AgentDeps, emit_ui_component, request_agent_assistance
 
 logger = logging.getLogger(__name__)
+
+SERVICE_ID = "agent_runner"
+logfire = ServiceLogfire(SERVICE_ID)
 
 # Service singletons (thin wrappers for future modularization)
 _context_service = RoomContextService()

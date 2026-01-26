@@ -3,11 +3,11 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Any, Literal
 from uuid import UUID
-from pydantic import EmailStr, field_validator, BaseModel
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Enum as SAEnum, JSON, UniqueConstraint
-from sqlmodel import SQLModel, Field, Relationship, Column, Enum as SMEnum
 
+from pydantic import BaseModel, EmailStr, field_validator
+from sqlalchemy import JSON, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import Column, Field, Relationship, SQLModel
 
 # ===== Model Overview for Relational References Ordering
 #
@@ -2020,7 +2020,7 @@ ArchetypeQualityLink.quality = Relationship(back_populates="archetype_links")
 
 PersonaTraitLink.persona = Relationship(back_populates="trait_links")
 
-PersonaTraitLink.trait = Relationship(back_populates="persona_links")
+PersonaTraitLink.trait = Relationship(back_populates="persona_links")  # ty:ignore[unresolved-attribute]
 
 PersonaQualityLink.persona = Relationship(back_populates="quality_links")
 

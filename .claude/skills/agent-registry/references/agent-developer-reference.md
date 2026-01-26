@@ -694,8 +694,8 @@ When adding agent features:
 
 1. [ ] Add field to `AgentConfigBase` in `models.py`
 2. [ ] Add optional version to `AgentConfigUpdate`
-3. [ ] Create migration: `alembic revision --autogenerate -m "Add field"`
-4. [ ] Apply migration: `alembic upgrade head`
+3. [ ] human users create migration (has to happen in different system): `alembic revision --autogenerate -m "Add field"`
+4. [ ] human engineers apply migration (happens in different system): `alembic upgrade head`
 5. [ ] Update API if needed in `agent_routes.py`
 6. [ ] Update `agent_runner.py` for execution changes
 7. [ ] Add tests

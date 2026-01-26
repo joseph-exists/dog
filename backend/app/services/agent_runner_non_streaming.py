@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Awaitable, Callable
 
-import logfire
+from app.services.logfire_client import ServiceLogfire
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.services.agent_context import RoomContextService
@@ -11,6 +11,9 @@ from app.services.agent_events import AgentEventPublisher
 from app.services.agent_runner_types import AgentRunRequest, AgentRunResult
 
 logger = logging.getLogger(__name__)
+
+SERVICE_ID = "agent_runner_non_streaming"
+logfire = ServiceLogfire(SERVICE_ID)
 
 
 class NonStreamingAgentRunner:

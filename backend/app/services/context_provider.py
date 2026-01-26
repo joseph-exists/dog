@@ -12,8 +12,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-import logfire
-
+from app.services.logfire_client import ServiceLogfire
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -33,6 +32,9 @@ from app.services.context_store import ContextItemStore
 from app.services.shadow_context_loader import build_shadow_context_items
 
 logger = logging.getLogger(__name__)
+
+SERVICE_ID = "context_provider"
+logfire = ServiceLogfire(SERVICE_ID)
 
 
 @dataclass

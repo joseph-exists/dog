@@ -72,42 +72,81 @@
  # Agent Configuration Models
  # ═══════════════════════════════════════════════════════════════════════════════
 
- class AgentConfigBase(SQLModel):
+## note: agentconfig has been extended with several other properties since this implementation
+
+ # ═══════════════════════════════════════════════════════════════════════════════
+ # Agent Configuration Models
+ # ═══════════════════════════════════════════════════════════════════════════════
+
+ From backend/app/models.py, actual code as of 1/26 (this will be updated if changed)
+```python 
+class AgentConfigBase(SQLModel):
      """Base properties shared by all agent config representations."""
      name: str = Field(max_length=100, description="Display name")
      slug: str = Field(max_length=50, description="Unique identifier/registry key")
      description: str | None = Field(default=None, max_length=500)
+     user_provider: uuid.UUID | None = Field(
+         default=None,
+         foreign_key="userllmprovider.id",
+         description="User-selected provider tied to this agent"
+     )
+     provider_type: LLMProviderType = Field(
+         default=LLMProviderType.EMPTY,
+         description="Default provider type (e.g., openai, anthropic)"
+     )
      model_name: str = Field(default="openai:gpt-4o-mini")
      system_prompt: str | None = None
 
      # JSON configuration fields
      tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
      deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
-     metadata: dict | None = Field(default=None, sa_column=Column(JSON))
+     agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
 
      # Behavior flags
      is_enabled: bool = Field(default=True)
      scope: str = Field(default="personal")  # "personal" | "system"
      participation_mode: str = Field(default="on_mention")  # "always" | "on_mention" | "manual"
 
+     # Coordinator mode: if True, this agent processes messages FIRST
+     # before other agents, acting as an orchestrator that routes to specialists
+     is_coordinator: bool = Field(default=False)
 
- class AgentConfigCreate(AgentConfigBase):
+     # Maximum number of LLM requests per agent run (prevents runaway tool loops)
+     max_tool_iterations: int = Field(default=10)
+
+     # Agent capabilities for discovery and A2A coordination
+     # e.g., ["story-structure", "dialogue", "character-development", "plot-twists"]
+     capabilities: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+     @field_validator("capabilities", mode="before")
+     @classmethod
+     def capabilities_none_to_list(cls, v: list[str] | None) -> list[str]:
+        """Convert NULL from database to empty list."""
+        return v if v is not None else []
+
+
+class AgentConfigCreate(AgentConfigBase):
      pass
 
 
- class AgentConfigUpdate(SQLModel):
+class AgentConfigUpdate(SQLModel):
      name: str | None = None
      description: str | None = None
      model_name: str | None = None
      system_prompt: str | None = None
+     user_provider: uuid.UUID | None = None
+     provider_type: LLMProviderType | None = None
      tool_config: dict | None = None
      deps_config: dict | None = None
-     metadata: dict | None = None
+     agent_metadata: dict | None = None
      is_enabled: bool | None = None
      participation_mode: str | None = None
+     is_coordinator: bool | None = None
+     capabilities: list[str] | None = None
+     max_tool_iterations: int | None = None
 
 
- class AgentConfig(AgentConfigBase, table=True):
+class AgentConfig(AgentConfigBase, table=True):
      __tablename__ = "agent_configs"
 
      id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -120,17 +159,19 @@
      # owner: "User" = Relationship(back_populates="agent_configs")
 
 
- class AgentConfigPublic(AgentConfigBase):
+class AgentConfigPublic(AgentConfigBase):
      id: uuid.UUID
+     slug: str | None
      owner_id: uuid.UUID | None
      created_at: datetime
      updated_at: datetime | None
      version: int
 
 
- class AgentConfigsPublic(SQLModel):
+class AgentConfigsPublic(SQLModel):
      data: list[AgentConfigPublic]
      count: int
+```
 
  File: backend/app/models.py
  Location: Add after line ~2328 (after AvailableAgent models)
@@ -142,9 +183,6 @@
      sa_relationship_kwargs={"cascade": "all, delete-orphan"}
  )
 
- [X] Phase 2: Database Migration
-
- Create Alembic migration for the new table.
 
 [X] Complete  Phase 3: Repository Layer (crud.py)
 
@@ -686,14 +724,7 @@
  ├────────────────────────────────────────────────┼────────┼─────────────────────────────────────────┤
  │ backend/app/services/agent_runner.py           │ MODIFY │ Integrate with registry service         │
  └────────────────────────────────────────────────┴────────┴─────────────────────────────────────────┘
- Database Migration Required
 
- After adding models:
- cd backend
- alembic revision --autogenerate -m "Add agent_configs table"
- alembic upgrade head
-
- Verification Plan
 
  1. Unit Tests: Create tests in backend/app/tests/api/routes/test_agent_routes.py
    - Test CRUD operations

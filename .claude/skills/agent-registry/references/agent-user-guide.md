@@ -54,15 +54,6 @@ Some agents are marked as **coordinators**. These special agents:
 
 ---
 
-## Available System Agents
-
-| Agent | Specialty | Capabilities |
-|-------|-----------|--------------|
-| **StoryAdvisor** | Story structure & pacing | Narrative flow, plot development |
-| **CharacterForge** | Character development | Motivations, arcs, personalities |
-| **SymbolWeaver** | Themes & symbolism | Deeper meanings, metaphors |
-| **PlotTwistArchitect** | Surprising plot turns | Twists, reveals, misdirection |
-| **DialogueCoach** | Conversation & voice | Character speech, dialogue flow |
 
 ---
 
@@ -76,9 +67,9 @@ You can create agents customized for your needs:
 2. Click **Create Agent**
 3. Fill in the details:
    - **Name**: Display name (e.g., "My Writing Coach")
-   - **Slug**: Unique ID for @mentions (e.g., "my-writing-coach")
    - **Description**: What the agent does
    - **System Prompt**: Instructions for how the agent behaves
+   - **Provider** - the access gateway, user fills in.
    - **Model**: Which AI model powers it (e.g., GPT-4o-mini)
 
 ### Agent Settings

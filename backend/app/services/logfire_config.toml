@@ -1,0 +1,39 @@
+version = 1
+
+[defaults]
+enabled = false
+level = "info"
+
+[defaults.telemetry]
+traces = false
+events = false
+
+# Agent runner bundle: debug traces across all runner variants.
+[bundles.agent_runners]
+services = ["agent_runner", "agent_runner_streaming", "agent_runner_non_streaming"]
+enabled = true
+level = "debug"
+
+[bundles.agent_runners.telemetry]
+traces = true
+events = false
+
+# Realtime event bundle: enable events and traces for publisher services.
+[bundles.realtime_events]
+services = ["event_emitter", "event_replay", "realtime_publisher"]
+enabled = true
+level = "info"
+
+[bundles.realtime_events.telemetry]
+traces = true
+events = true
+
+[services.event_emitter]
+level = "debug"
+
+[services.event_emitter.telemetry]
+events = true
+traces = true
+
+[services.shadow_outbox_worker]
+enabled = false

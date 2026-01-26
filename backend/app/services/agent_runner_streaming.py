@@ -5,7 +5,7 @@ import uuid
 from typing import Any
 from collections.abc import Awaitable, Callable
 
-import logfire
+from app.services.logfire_client import ServiceLogfire
 from pydantic_ai import ModelAPIError
 from pydantic_ai.usage import UsageLimits
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -17,6 +17,9 @@ from app.services.agent_instance import get_agent_config
 from app.services.agent_runner_types import AgentRunRequest, AgentRunResult
 
 logger = logging.getLogger(__name__)
+
+SERVICE_ID = "agent_runner_streaming"
+logfire = ServiceLogfire(SERVICE_ID)
 
 
 class StreamingAgentRunner:
