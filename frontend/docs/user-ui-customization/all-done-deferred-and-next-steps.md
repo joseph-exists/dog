@@ -182,7 +182,7 @@ Extends Panel Settings Dialog for room owners:
 - Sets configuration for all participants who use defaults
 - Triggers `updateRoomDefaults`
 
-### 3.3 Panel Picker (Add Panel Flow)
+### 3.3 Panel Picker (Add Panel Flow) (COMPLETE)
 
 **Priority:** Medium
 **Blocking:** Workspace rooms not usable without panel adding
@@ -226,7 +226,7 @@ These features would improve the experience but are not blocking:
 - Move between primary ↔ auxiliary
 - Auto-save on drop
 
-**Libraries:** `@dnd-kit/core` or `react-beautiful-dnd`
+**Libraries:** needs significant review - current options not allowed
 
 ### 4.2 Panel Collapse/Minimize
 
@@ -283,15 +283,7 @@ Pre-defined configurations:
 
 ### 5.1 Route Consolidation
 
-After transition period, remove deprecated routes:
-- `room.$roomId.tsx` (V1)
-- `room-v2.$roomId.tsx` (V2)
-
-Rename `r.$roomId.tsx` → `room.$roomId.tsx` if desired.
-
 ### 5.2 Sidebar Cleanup
-
-Remove temporary "Rooms (V2)" link from sidebar.
 
 ### 5.3 Type Refinement
 

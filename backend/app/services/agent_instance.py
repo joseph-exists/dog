@@ -87,6 +87,7 @@ async def resolve_user_credentials(
         )
         return effective_model_name, None, None, None
     provider_type_name = provider_type.name
+    provider_type_id = provider_type.id
 
     provider: UserLLMProvider | None = None
 
@@ -107,12 +108,18 @@ async def resolve_user_credentials(
             logger.debug(
                 f"Using explicit provider '{provider.name}' for agent {agent_config.slug}"
             )
+            if not provider.provider_type_id:
+                # Legacy payloads used provider_type name; fail fast and log loudly.
+                logger.error(
+                    "provider_type_id missing on UserLLMProvider %s during agent resolution",
+                    provider.id,
+                )
 
     if not provider:
         default_result = await session.exec(
             select(UserLLMProvider).where(
                 UserLLMProvider.user_id == user_id,
-                UserLLMProvider.provider_type == provider_type_name,
+                UserLLMProvider.provider_type_id == provider_type_id,
                 UserLLMProvider.is_default,
                 UserLLMProvider.is_enabled,
             )
@@ -127,6 +134,12 @@ async def resolve_user_credentials(
             logger.debug(
                 f"Using default provider '{provider.name}' for agent {agent_config.slug}"
             )
+            if not provider.provider_type_id:
+                # Legacy payloads used provider_type name; fail fast and log loudly.
+                logger.error(
+                    "provider_type_id missing on UserLLMProvider %s during agent resolution",
+                    provider.id,
+                )
 
     if not provider:
         logger.debug(

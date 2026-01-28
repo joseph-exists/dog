@@ -16,7 +16,6 @@ import {
   type LLMModelPublic,
   type LLMModelsGrouped,
   type LLMProviderPublic,
-  type LLMProviderType,
   type LLMProviderWithModels,
 } from "@/client"
 
@@ -25,9 +24,9 @@ import {
 // ============================================================================
 
 /**
- * Re-export LLMProviderType for convenience
+ * Provider type name (dynamic, sourced from catalog)
  */
-export type { LLMProviderType } from "@/client"
+export type LLMProviderType = string
 
 /**
  * Model option for dropdowns - maintains backwards compatibility
@@ -142,30 +141,22 @@ export const PROVIDER_TYPE_LABELS: Record<LLMProviderType, string> = {
 function normalizeProviderType(
   providerType: string | null | undefined
 ): LLMProviderType {
-  if (!providerType) return "openai_compatible"
-
-  const normalized = providerType.toLowerCase()
-
-  // Validate it's a known type
-  if (
-    normalized === "openai" ||
-    normalized === "anthropic" ||
-    normalized === "google" ||
-    normalized === "openai_compatible" ||
-    normalized === "empty"
-  ) {
-    return normalized as LLMProviderType
-  }
-
-  // Fallback for unknown types
-  return "openai_compatible"
+  const normalized = providerType?.trim().toLowerCase()
+  return normalized || "unknown"
 }
 
 /**
  * Get display label for provider type
  */
-export function getProviderTypeLabel(type: LLMProviderType): string {
-  return PROVIDER_TYPE_LABELS[type] || type
+export function getProviderTypeLabel(type: LLMProviderType | null | undefined): string {
+  if (!type) return "Unknown"
+  const normalized = type.toLowerCase()
+  if (PROVIDER_TYPE_LABELS[normalized]) {
+    return PROVIDER_TYPE_LABELS[normalized]
+  }
+  return normalized
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 /**
@@ -364,18 +355,12 @@ export const LlmCatalogService = {
   async getModelOptions(): Promise<Record<LLMProviderType, ModelOption[]>> {
     const grouped = await this.listModelsGrouped({ isEnabled: true })
 
-    const result: Record<LLMProviderType, ModelOption[]> = {
-      empty: [],
-      openai: [],
-      anthropic: [],
-      google: [],
-      openai_compatible: [],
-    }
+    const result: Record<LLMProviderType, ModelOption[]> = {}
 
     for (const provider of grouped.providers) {
       const providerType = provider.providerType
-      result[providerType] = provider.models.map((model) =>
-        modelToOption(model, providerType),
+      result[providerType] = (result[providerType] ?? []).concat(
+        provider.models.map((model) => modelToOption(model, providerType)),
       )
     }
 
@@ -427,15 +412,7 @@ export const LlmCatalogService = {
    */
   extractProviderType(modelValue: string): LLMProviderType | null {
     const prefix = modelValue.split(":")[0]
-    if (
-      prefix === "openai" ||
-      prefix === "anthropic" ||
-      prefix === "google" ||
-      prefix === "openai_compatible"
-    ) {
-      return prefix as LLMProviderType
-    }
-    return null
+    return prefix ? normalizeProviderType(prefix) : null
   },
 
   /**

@@ -20,12 +20,12 @@ import {
   type CatalogGroupedViewModel,
   type CatalogModelViewModel,
   type CatalogProviderViewModel,
+  getProviderTypeLabel,
   LLM_CATALOG_QUERY_KEYS,
-  type LLMProviderType,
   LlmCatalogService,
+  type LLMProviderType,
   type ModelDisplayInfo,
   type ModelOption,
-  PROVIDER_TYPE_LABELS,
 } from "@/services/llmCatalogService"
 
 /**
@@ -62,7 +62,7 @@ export interface UseLlmCatalogReturn {
   /** Get default model for a provider type */
   getDefaultForType: (type: LLMProviderType) => ModelOption | null
   /** Get provider type label */
-  getProviderLabel: (type: LLMProviderType) => string
+  getProviderTypeLabel: (type: LLMProviderType) => string
   /** Find model option by value */
   findModel: (value: string) => ModelOption | undefined
   /** Format model name for display */
@@ -103,10 +103,9 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
   const createMutation = useMutation({
     mutationFn: async (input: CreateCustomModelInput): Promise<ModelOption> => {
       // Find the provider ID for the given provider type
-      // Fall back to openai_compatible if exact match not found
-      const provider =
-        grouped?.providers.find((p) => p.providerType === input.providerType) ??
-        grouped?.providers.find((p) => p.providerType === "openai_compatible")
+      const provider = grouped?.providers.find(
+        (p) => p.providerType === input.providerType,
+      )
 
       if (!provider) {
         throw new Error(`No provider found for type: ${input.providerType}`)
@@ -139,21 +138,15 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
   // Memoize derived data — stable when `grouped` is stable (TanStack Query
   // preserves data reference between renders when data hasn't changed)
   const { modelsByProvider, allModels, derivedProviders } = useMemo(() => {
-    const byProvider: Record<LLMProviderType, ModelOption[]> = {
-      empty: [],
-      openai: [],
-      anthropic: [],
-      google: [],
-      openai_compatible: [],
-    }
+    const byProvider: Record<LLMProviderType, ModelOption[]> = {}
     const provs: CatalogProviderViewModel[] = []
 
     if (grouped) {
       for (const provider of grouped.providers) {
         const providerType = provider.providerType
         provs.push(provider)
-        byProvider[providerType] = provider.models.map((model) =>
-          modelToOption(model, providerType),
+        byProvider[providerType] = (byProvider[providerType] ?? []).concat(
+          provider.models.map((model) => modelToOption(model, providerType)),
         )
       }
     }
@@ -217,7 +210,7 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
     error: error as Error | null,
     getModelsForType,
     getDefaultForType,
-    getProviderLabel,
+    getProviderTypeLabel,
     findModel,
     formatModelName: LlmCatalogService.formatModelName,
     isInCatalog,
@@ -228,10 +221,6 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
   }
 }
 
-/** Pure lookup — no React state dependencies, always stable */
-function getProviderLabel(type: LLMProviderType): string {
-  return PROVIDER_TYPE_LABELS[type] || type
-}
 
 /**
  * Transform CatalogModelViewModel to ModelOption

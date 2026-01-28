@@ -965,7 +965,7 @@ export class LlmCatalogService {
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit
-     * @param data.providerType
+     * @param data.providerType Filter by provider type name
      * @param data.isEnabled Filter by enabled status
      * @param data.isSystem Filter by system vs user-created
      * @param data.includeDeleted Include soft-deleted providers
@@ -1110,7 +1110,7 @@ export class LlmCatalogService {
      * @param data.skip
      * @param data.limit
      * @param data.providerId Filter by provider ID
-     * @param data.providerType Filter by provider type
+     * @param data.providerType Filter by provider type name
      * @param data.isEnabled Filter by enabled status
      * @param data.isDeprecated Filter by deprecation status
      * @param data.isDefault Filter by default model flag
@@ -1153,7 +1153,7 @@ export class LlmCatalogService {
      * Useful for UI dropdowns showing models organized by provider.
      * If authenticated, includes the user's custom models alongside system models.
      * @param data The data for the request.
-     * @param data.providerType Filter by provider type
+     * @param data.providerType Filter by provider type name
      * @param data.isEnabled Filter by enabled status
      * @param data.includeDeleted Include soft-deleted
      * @returns LLMModelsGrouped Successful Response

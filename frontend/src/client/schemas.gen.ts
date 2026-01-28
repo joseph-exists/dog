@@ -40,9 +40,10 @@ export const AgentConfigCreateSchema = {
             description: 'User-selected provider tied to this agent'
         },
         provider_type: {
-            '$ref': '#/components/schemas/LLMProviderType',
-            description: 'Default provider type (e.g., openai, anthropic)',
-            default: 'empty'
+            type: 'string',
+            maxLength: 30,
+            title: 'Provider Type',
+            description: 'why not here too'
         },
         model_name: {
             type: 'string',
@@ -130,7 +131,7 @@ export const AgentConfigCreateSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'slug'],
+    required: ['name', 'slug', 'provider_type'],
     title: 'AgentConfigCreate'
 } as const;
 
@@ -179,9 +180,10 @@ export const AgentConfigPublicSchema = {
             description: 'User-selected provider tied to this agent'
         },
         provider_type: {
-            '$ref': '#/components/schemas/LLMProviderType',
-            description: 'Default provider type (e.g., openai, anthropic)',
-            default: 'empty'
+            type: 'string',
+            maxLength: 30,
+            title: 'Provider Type',
+            description: 'why not here too'
         },
         model_name: {
             type: 'string',
@@ -307,7 +309,7 @@ export const AgentConfigPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'slug', 'id', 'owner_id', 'created_at', 'updated_at', 'version'],
+    required: ['name', 'slug', 'provider_type', 'id', 'owner_id', 'created_at', 'updated_at', 'version'],
     title: 'AgentConfigPublic'
 } as const;
 
@@ -372,12 +374,13 @@ export const AgentConfigUpdateSchema = {
         provider_type: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/LLMProviderType'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
-            ]
+            ],
+            title: 'Provider Type'
         },
         tool_config: {
             anyOf: [
@@ -1473,12 +1476,13 @@ export const LLMModelPublicSchema = {
         provider_type: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/LLMProviderType'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
-            ]
+            ],
+            title: 'Provider Type'
         },
         provider_name: {
             anyOf: [
@@ -1544,12 +1548,20 @@ export const LLMProviderPublicSchema = {
             type: 'string',
             maxLength: 100,
             title: 'Name',
-            description: "Display name like 'OpenAI', 'Anthropic'"
+            description: "Friendly display name like 'OpenAI', 'Anthropic'"
         },
-        provider_type: {
-            '$ref': '#/components/schemas/LLMProviderType',
-            description: 'Provider type enum value',
-            default: 'empty'
+        provider_type_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type Id',
+            description: 'FK to provider type reference table'
         },
         base_url: {
             anyOf: [
@@ -1562,7 +1574,7 @@ export const LLMProviderPublicSchema = {
                 }
             ],
             title: 'Base Url',
-            description: 'Default base URL (for openai_compatible)'
+            description: 'Default base URL'
         },
         description: {
             anyOf: [
@@ -1579,13 +1591,13 @@ export const LLMProviderPublicSchema = {
         is_enabled: {
             type: 'boolean',
             title: 'Is Enabled',
-            description: 'Whether this provider is available',
+            description: 'Whether this provider is available in the system',
             default: true
         },
         is_system: {
             type: 'boolean',
             title: 'Is System',
-            description: 'True for built-in, False for user-created (future)',
+            description: 'True for built-in, False for user-created',
             default: true
         },
         id: {
@@ -1612,6 +1624,18 @@ export const LLMProviderPublicSchema = {
             title: 'Model Count',
             description: 'Number of active models for this provider',
             default: 0
+        },
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type',
+            description: 'Denormalized provider type name'
         }
     },
     type: 'object',
@@ -1620,25 +1644,26 @@ export const LLMProviderPublicSchema = {
     description: 'Public API response for a provider catalog entry.'
 } as const;
 
-export const LLMProviderTypeSchema = {
-    type: 'string',
-    enum: ['empty', 'openai', 'anthropic', 'google', 'openai_compatible'],
-    title: 'LLMProviderType',
-    description: 'Supported LLM provider types.'
-} as const;
-
 export const LLMProviderWithModelsSchema = {
     properties: {
         name: {
             type: 'string',
             maxLength: 100,
             title: 'Name',
-            description: "Display name like 'OpenAI', 'Anthropic'"
+            description: "Friendly display name like 'OpenAI', 'Anthropic'"
         },
-        provider_type: {
-            '$ref': '#/components/schemas/LLMProviderType',
-            description: 'Provider type enum value',
-            default: 'empty'
+        provider_type_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type Id',
+            description: 'FK to provider type reference table'
         },
         base_url: {
             anyOf: [
@@ -1651,7 +1676,7 @@ export const LLMProviderWithModelsSchema = {
                 }
             ],
             title: 'Base Url',
-            description: 'Default base URL (for openai_compatible)'
+            description: 'Default base URL'
         },
         description: {
             anyOf: [
@@ -1668,13 +1693,13 @@ export const LLMProviderWithModelsSchema = {
         is_enabled: {
             type: 'boolean',
             title: 'Is Enabled',
-            description: 'Whether this provider is available',
+            description: 'Whether this provider is available in the system',
             default: true
         },
         is_system: {
             type: 'boolean',
             title: 'Is System',
-            description: 'True for built-in, False for user-created (future)',
+            description: 'True for built-in, False for user-created',
             default: true
         },
         id: {
@@ -1701,6 +1726,18 @@ export const LLMProviderWithModelsSchema = {
             title: 'Model Count',
             description: 'Number of active models for this provider',
             default: 0
+        },
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type',
+            description: 'Denormalized provider type name'
         },
         models: {
             items: {
@@ -5766,16 +5803,18 @@ export const UserCreateSchema = {
 
 export const UserLLMProviderCreateSchema = {
     properties: {
-        provider_type: {
+        provider_type_id: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/LLMProviderType'
+                    type: 'string',
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            default: 'empty'
+            title: 'Provider Type Id',
+            description: 'FK to provider type reference table'
         },
         name: {
             type: 'string',
@@ -5835,16 +5874,18 @@ export const UserLLMProviderCreateSchema = {
 
 export const UserLLMProviderPublicSchema = {
     properties: {
-        provider_type: {
+        provider_type_id: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/LLMProviderType'
+                    type: 'string',
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            default: 'empty'
+            title: 'Provider Type Id',
+            description: 'FK to provider type reference table'
         },
         name: {
             type: 'string',
@@ -5931,6 +5972,18 @@ export const UserLLMProviderPublicSchema = {
                 }
             ],
             title: 'Last Test Success'
+        },
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type',
+            description: 'Denormalized provider type name (from provider_type relationship)'
         }
     },
     type: 'object',
@@ -5941,6 +5994,19 @@ export const UserLLMProviderPublicSchema = {
 
 export const UserLLMProviderUpdateSchema = {
     properties: {
+        provider_type_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type Id',
+            description: 'FK to provider type reference table'
+        },
         name: {
             anyOf: [
                 {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any
 
@@ -26,6 +27,7 @@ from app.models import (
     UserLLMProvider,
 )
 
+logger = logging.getLogger(__name__)
 
 def build_room_snapshot(*, session: Session, room_id: uuid.UUID) -> dict[str, Any]:
     room = session.get(Room, room_id)
@@ -261,13 +263,16 @@ def build_user_llm_provider_snapshot(
 
     # Non-negotiable: never commit plaintext secrets to Shadow.
     # We also avoid committing encrypted secrets; store only an indicator.
+    if not provider.provider_type_id:
+        # Legacy payloads used provider_type name; fail fast and log loudly.
+        logger.error("provider_type_id missing on UserLLMProvider %s during snapshot", provider.id)
     return {
         "schema_version": 1,
         "entity_type": "user_llm_provider",
         "user_llm_provider": {
             "id": str(provider.id),
             "user_id": str(provider.user_id),
-            "provider_type": provider.provider_type,
+            "provider_type_id": str(provider.provider_type_id) if provider.provider_type_id else None,
             "name": provider.name,
             "is_enabled": provider.is_enabled,
             "is_default": provider.is_default,

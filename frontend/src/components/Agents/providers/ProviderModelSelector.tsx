@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils"
 import type { LLMProviderType } from "@/services/llmCatalogService"
 import {
   LlmProviderService,
-  PROVIDER_TYPE_LABELS,
+  getProviderTypeLabel,
   type ProviderViewModel,
 } from "@/services/llmProviderService"
 import ModelCombobox from "./ModelCombobox"
@@ -206,7 +206,7 @@ export function ProviderModelSelector({
                   return (
                     <SelectGroup key={type}>
                       <SelectLabel className="text-xs">
-                        {PROVIDER_TYPE_LABELS[type]}
+                        {getProviderTypeLabel(type)}
                       </SelectLabel>
                       {typeProviders.map((provider) => (
                         <SelectItem

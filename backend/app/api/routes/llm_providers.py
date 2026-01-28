@@ -4,6 +4,7 @@ LLM Provider configuration routes.
 Users can manage their own LLM provider configurations including
 API keys and custom endpoints. API keys are encrypted at rest.
 """
+import logging
 import uuid
 from datetime import datetime
 from typing import Any
@@ -12,10 +13,10 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Session, select
 
-from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.core.security import encrypt_api_key, decrypt_api_key
 from app.models import (
+    LLMProviderType,
     Message,
     UserLLMProvider,
     UserLLMProviderCreate,
@@ -25,6 +26,7 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/llm-providers", tags=["llm-providers"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=UserLLMProvidersPublic)
@@ -54,16 +56,20 @@ def create_provider(
     provider_in: UserLLMProviderCreate,
 ) -> Any:
     """Create a new LLM provider configuration."""
-    canonical_type = _canonical_provider_type_name(session, provider_in.provider_type)
-    if not canonical_type:
+    if not provider_in.provider_type_id:
+        # Legacy payloads used provider_type name; fail fast and log loudly.
+        logger.error("provider_type_id missing on UserLLMProviderCreate payload")
+        raise HTTPException(status_code=400, detail="provider_type_id is required")
+
+    provider_type = session.get(LLMProviderType, provider_in.provider_type_id)
+    if not provider_type:
         raise HTTPException(status_code=400, detail="Unknown provider type")
 
     # If setting as default, unset other defaults of same type
     if provider_in.is_default:
-        _unset_defaults(session, current_user.id, canonical_type)
+        _unset_defaults(session, current_user.id, provider_in.provider_type_id)
 
     provider_data = provider_in.model_dump(exclude={"api_key"})
-    provider_data["provider_type"] = canonical_type
     provider = UserLLMProvider(
         **provider_data,
         user_id=current_user.id,
@@ -105,7 +111,12 @@ def update_provider(
 
     # Handle default flag - unset others if setting this as default
     if update_data.get("is_default"):
-        _unset_defaults(session, current_user.id, provider.provider_type)
+        target_type_id = update_data.get("provider_type_id", provider.provider_type_id)
+        if not target_type_id:
+            # Legacy payloads used provider_type name; fail fast and log loudly.
+            logger.error("provider_type_id missing while setting default on UserLLMProviderUpdate")
+            raise HTTPException(status_code=400, detail="provider_type_id is required to set default")
+        _unset_defaults(session, current_user.id, target_type_id)
 
     # Handle API key update - encrypt new key
     if "api_key" in update_data:
@@ -155,12 +166,15 @@ async def test_provider(
     api_key = decrypt_api_key(provider.api_key_encrypted)
 
     try:
-        provider_type_name = _canonical_provider_type_name(session, provider.provider_type)
-        if not provider_type_name:
+        if not provider.provider_type_id:
+            logger.error("provider_type_id missing on UserLLMProvider %s", provider.id)
+            raise HTTPException(status_code=400, detail="Unknown provider type")
+        if not provider.provider_type:
+            logger.error("provider_type relationship missing for UserLLMProvider %s", provider.id)
             raise HTTPException(status_code=400, detail="Unknown provider type")
 
         success = await _test_provider_connection(
-            provider_type=provider_type_name,
+            provider_type=provider.provider_type.name,
             api_key=api_key,
             base_url=provider.base_url,
         )
@@ -185,13 +199,13 @@ async def test_provider(
         raise HTTPException(status_code=400, detail=f"Connection test failed: {str(e)}")
 
 
-def _unset_defaults(session: SessionDep, user_id: uuid.UUID, provider_type: str) -> None:
+def _unset_defaults(session: SessionDep, user_id: uuid.UUID, provider_type_id: uuid.UUID) -> None:
     """Unset default flag on all providers of a type for a user."""
-    if not provider_type:
+    if not provider_type_id:
         return
     statement = select(UserLLMProvider).where(
         UserLLMProvider.user_id == user_id,
-        UserLLMProvider.provider_type == provider_type,
+        UserLLMProvider.provider_type_id == provider_type_id,
         UserLLMProvider.is_default == True,
     )
     for provider in session.exec(statement).all():
@@ -246,13 +260,3 @@ async def _test_provider_connection(
             return response.status_code == 200
 
         return False
-
-
-def _canonical_provider_type_name(session: Session, raw_provider_type: str | None) -> str | None:
-    """Return the canonical provider type name, or None if the type is unknown."""
-    if not raw_provider_type:
-        return None
-    type_obj = crud.get_llm_provider_type_by_name(
-        session=session, name=raw_provider_type
-    )
-    return type_obj.name if type_obj else None

@@ -15,9 +15,9 @@ export type AgentConfigCreate = {
      */
     user_provider?: (string | null);
     /**
-     * Default provider type (e.g., openai, anthropic)
+     * why not here too
      */
-    provider_type?: LLMProviderType;
+    provider_type: string;
     model_name?: string;
     system_prompt?: (string | null);
     tool_config?: ({
@@ -49,9 +49,9 @@ export type AgentConfigPublic = {
      */
     user_provider?: (string | null);
     /**
-     * Default provider type (e.g., openai, anthropic)
+     * why not here too
      */
-    provider_type?: LLMProviderType;
+    provider_type: string;
     model_name?: string;
     system_prompt?: (string | null);
     tool_config?: ({
@@ -87,7 +87,7 @@ export type AgentConfigUpdate = {
     model_name?: (string | null);
     system_prompt?: (string | null);
     user_provider?: (string | null);
-    provider_type?: (LLMProviderType | null);
+    provider_type?: (string | null);
     tool_config?: ({
     [key: string]: unknown;
 } | null);
@@ -392,7 +392,7 @@ export type LLMModelPublic = {
     is_deleted: boolean;
     created_at: string;
     updated_at: string;
-    provider_type?: (LLMProviderType | null);
+    provider_type?: (string | null);
     provider_name?: (string | null);
 };
 
@@ -417,24 +417,24 @@ export type LLMModelsPublic = {
  */
 export type LLMProviderPublic = {
     /**
-     * Display name like 'OpenAI', 'Anthropic'
+     * Friendly display name like 'OpenAI', 'Anthropic'
      */
     name: string;
     /**
-     * Provider type enum value
+     * FK to provider type reference table
      */
-    provider_type?: LLMProviderType;
+    provider_type_id?: (string | null);
     /**
-     * Default base URL (for openai_compatible)
+     * Default base URL
      */
     base_url?: (string | null);
     description?: (string | null);
     /**
-     * Whether this provider is available
+     * Whether this provider is available in the system
      */
     is_enabled?: boolean;
     /**
-     * True for built-in, False for user-created (future)
+     * True for built-in, False for user-created
      */
     is_system?: boolean;
     id: string;
@@ -445,6 +445,10 @@ export type LLMProviderPublic = {
      * Number of active models for this provider
      */
     model_count?: number;
+    /**
+     * Denormalized provider type name
+     */
+    provider_type?: (string | null);
 };
 
 /**
@@ -456,33 +460,28 @@ export type LLMProvidersPublic = {
 };
 
 /**
- * Supported LLM provider types.
- */
-export type LLMProviderType = 'empty' | 'openai' | 'anthropic' | 'google' | 'openai_compatible';
-
-/**
  * Provider with nested list of its models.
  */
 export type LLMProviderWithModels = {
     /**
-     * Display name like 'OpenAI', 'Anthropic'
+     * Friendly display name like 'OpenAI', 'Anthropic'
      */
     name: string;
     /**
-     * Provider type enum value
+     * FK to provider type reference table
      */
-    provider_type?: LLMProviderType;
+    provider_type_id?: (string | null);
     /**
-     * Default base URL (for openai_compatible)
+     * Default base URL
      */
     base_url?: (string | null);
     description?: (string | null);
     /**
-     * Whether this provider is available
+     * Whether this provider is available in the system
      */
     is_enabled?: boolean;
     /**
-     * True for built-in, False for user-created (future)
+     * True for built-in, False for user-created
      */
     is_system?: boolean;
     id: string;
@@ -493,6 +492,10 @@ export type LLMProviderWithModels = {
      * Number of active models for this provider
      */
     model_count?: number;
+    /**
+     * Denormalized provider type name
+     */
+    provider_type?: (string | null);
     models?: Array<LLMModelPublic>;
 };
 
@@ -1609,7 +1612,10 @@ export type UserCreate = {
  * Input model for creating provider - accepts plain API key.
  */
 export type UserLLMProviderCreate = {
-    provider_type?: (LLMProviderType | null);
+    /**
+     * FK to provider type reference table
+     */
+    provider_type_id?: (string | null);
     /**
      * User-friendly name like 'My OpenAI' or 'Work Azure'
      */
@@ -1637,7 +1643,10 @@ export type UserLLMProviderCreate = {
  * Public API response - NEVER includes API key.
  */
 export type UserLLMProviderPublic = {
-    provider_type?: (LLMProviderType | null);
+    /**
+     * FK to provider type reference table
+     */
+    provider_type_id?: (string | null);
     /**
      * User-friendly name like 'My OpenAI' or 'Work Azure'
      */
@@ -1661,6 +1670,10 @@ export type UserLLMProviderPublic = {
     updated_at: string;
     last_tested_at: (string | null);
     last_test_success: (boolean | null);
+    /**
+     * Denormalized provider type name (from provider_type relationship)
+     */
+    provider_type?: (string | null);
 };
 
 /**
@@ -1675,6 +1688,10 @@ export type UserLLMProvidersPublic = {
  * Update model - all fields optional.
  */
 export type UserLLMProviderUpdate = {
+    /**
+     * FK to provider type reference table
+     */
+    provider_type_id?: (string | null);
     name?: (string | null);
     is_enabled?: (boolean | null);
     is_default?: (boolean | null);
@@ -2120,7 +2137,10 @@ export type LlmCatalogListProvidersData = {
      */
     isSystem?: (boolean | null);
     limit?: number;
-    providerType?: (LLMProviderType | null);
+    /**
+     * Filter by provider type name
+     */
+    providerType?: (string | null);
     skip?: number;
 };
 
@@ -2166,7 +2186,7 @@ export type LlmCatalogListCustomModelsData = {
     /**
      * Filter by provider type
      */
-    providerType?: (LLMProviderType | null);
+    providerType?: (string | null);
 };
 
 export type LlmCatalogListCustomModelsResponse = (LLMModelsPublic);
@@ -2210,9 +2230,9 @@ export type LlmCatalogListModelsData = {
      */
     providerId?: (string | null);
     /**
-     * Filter by provider type
+     * Filter by provider type name
      */
-    providerType?: (LLMProviderType | null);
+    providerType?: (string | null);
     skip?: number;
 };
 
@@ -2228,9 +2248,9 @@ export type LlmCatalogListModelsGroupedData = {
      */
     isEnabled?: (boolean | null);
     /**
-     * Filter by provider type
+     * Filter by provider type name
      */
-    providerType?: (LLMProviderType | null);
+    providerType?: (string | null);
 };
 
 export type LlmCatalogListModelsGroupedResponse = (LLMModelsGrouped);

@@ -15,7 +15,6 @@
 
 import {
   AgentsService,
-  type LLMProviderType,
   LlmProvidersService,
   type UserAgentSettingsPublic,
   type UserAgentSettingsUpdate,
@@ -25,7 +24,10 @@ import {
   type UserLLMProviderUpdate,
 } from "@/client"
 import type { AgentViewModel } from "@/services/agentService"
-import { getProviderTypeLabel } from "@/services/llmCatalogService"
+import {
+  getProviderTypeLabel,
+  type LLMProviderType,
+} from "@/services/llmCatalogService"
 
 // ============================================================================
 // Re-exports from Catalog Service
@@ -34,12 +36,10 @@ import { getProviderTypeLabel } from "@/services/llmCatalogService"
 /**
  * Re-export types and utilities from catalog service for convenience
  */
-export type { LLMProviderType } from "@/client"
+export type { LLMProviderType } from "@/services/llmCatalogService"
 export type { ModelOption } from "@/services/llmCatalogService"
-export {
-  getProviderTypeLabel,
-  PROVIDER_TYPE_LABELS,
-} from "@/services/llmCatalogService"
+export { getProviderTypeLabel, PROVIDER_TYPE_LABELS } from "@/services/llmCatalogService"
+
 
 // ============================================================================
 // Type Definitions - ViewModels
@@ -55,7 +55,6 @@ export type ProviderStatus = "verified" | "failed" | "unknown"
  *
  * Transformations from backend UserLLMProviderPublic:
  * - Parses ISO timestamps to Date objects
- * - Computes display_type from provider_type
  * - Computes status from last_test_success
  * - Computes is_usable from is_enabled and status
  */
@@ -149,15 +148,7 @@ export interface TestResult {
  */
 export function extractProviderType(modelName: string): LLMProviderType | null {
   const prefix = modelName.split(":")[0]
-  if (
-    prefix === "openai" ||
-    prefix === "anthropic" ||
-    prefix === "google" ||
-    prefix === "openai_compatible"
-  ) {
-    return prefix as LLMProviderType
-  }
-  return null
+  return prefix ? normalizeProviderType(prefix) : null
 }
 
 /**
@@ -191,29 +182,13 @@ function computeStatus(
 }
 
 /**
- * Normalize provider type string to lowercase LLMProviderType
- * Handles case-insensitive backend data (e.g., "OPENAI" -> "openai")
+ * Normalize provider type name to lowercase for consistent UI grouping.
  */
 function normalizeProviderType(
-  providerType: string | null | undefined
+  providerType: string | null | undefined,
 ): LLMProviderType {
-  if (!providerType) return "openai_compatible"
-
-  const normalized = providerType.toLowerCase()
-
-  // Validate it's a known type
-  if (
-    normalized === "openai" ||
-    normalized === "anthropic" ||
-    normalized === "google" ||
-    normalized === "openai_compatible" ||
-    normalized === "empty"
-  ) {
-    return normalized as LLMProviderType
-  }
-
-  // Fallback for unknown types
-  return "openai_compatible"
+  const normalized = providerType?.trim().toLowerCase()
+  return normalized || "unknown"
 }
 
 /**
@@ -225,7 +200,6 @@ function transformProvider(provider: UserLLMProviderPublic): ProviderViewModel {
     provider.last_tested_at ?? null,
   )
 
-  // Normalize provider type to lowercase
   const providerType = normalizeProviderType(provider.provider_type)
 
   return {
@@ -495,15 +469,12 @@ export const LlmProviderService = {
   groupByType(
     providers: ProviderViewModel[],
   ): Record<LLMProviderType, ProviderViewModel[]> {
-    const result: Record<LLMProviderType, ProviderViewModel[]> = {
-      empty: [],
-      openai: [],
-      anthropic: [],
-      google: [],
-      openai_compatible: [],
-    }
+    const result: Record<LLMProviderType, ProviderViewModel[]> = {}
 
     for (const provider of providers) {
+      if (!result[provider.provider_type]) {
+        result[provider.provider_type] = []
+      }
       result[provider.provider_type].push(provider)
     }
 

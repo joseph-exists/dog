@@ -116,7 +116,7 @@ export default function ModelCombobox({
     isLoading: catalogLoading,
     findModel,
     formatModelName,
-    getProviderLabel,
+    getProviderTypeLabel,
     createCustomModel,
     isCreatingCustomModel,
   } = useLlmCatalog()
@@ -348,7 +348,7 @@ export default function ModelCombobox({
                     if (filtered.length === 0) return null
 
                     return (
-                      <CommandGroup key={type} heading={getProviderLabel(type)}>
+                      <CommandGroup key={type} heading={getProviderTypeLabel(type)}>
                         {filtered.map((model) => (
                           <CommandItem
                             key={model.value}

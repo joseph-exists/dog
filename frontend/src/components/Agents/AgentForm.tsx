@@ -13,7 +13,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDownIcon } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import type { LLMProviderType } from "@/client"
+import type { LLMProviderType } from "@/services/llmCatalogService"
 import {
   type LLMProviderType as AgentBadgeLLMProviderType,
   AgentProviderBadge,

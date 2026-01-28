@@ -16,7 +16,7 @@ def test_summarize_user_llm_provider_redacts_keys() -> None:
         "user_llm_provider": {
             "id": "provider-id",
             "user_id": "user-id",
-            "provider_type": "openai",
+            "provider_type_id": "provider-type-id",
             "name": "My OpenAI",
             "is_enabled": True,
             "is_default": False,
@@ -142,7 +142,7 @@ async def test_shadow_summary_service_returns_summary_dispatch_result(async_sess
         "entity_type": "provider",
         "user_llm_provider": {
             "id": str(entity_id),
-            "provider_type": "openai",
+            "provider_type_id": str(uuid.uuid4()),
             "api_key_encrypted": "secret",
             "api_key_present": True,
         },

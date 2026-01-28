@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def summarize_room(snapshot_json: dict[str, Any]) -> dict[str, Any]:
@@ -107,11 +110,14 @@ def summarize_llm_model(snapshot_json: dict[str, Any]) -> dict[str, Any]:
 def summarize_user_llm_provider(snapshot_json: dict[str, Any]) -> dict[str, Any]:
     provider = snapshot_json.get("user_llm_provider") or snapshot_json
     # Non-negotiable: never surface api_key / api_key_encrypted in summaries.
+    if provider.get("provider_type") is not None:
+        # Legacy payloads used provider_type name; fail fast and log loudly.
+        logger.error("Legacy provider_type found in user_llm_provider snapshot payload")
     return {
         "user_llm_provider": {
             "id": provider.get("id"),
             "user_id": provider.get("user_id"),
-            "provider_type": provider.get("provider_type"),
+            "provider_type_id": provider.get("provider_type_id"),
             "name": provider.get("name"),
             "is_enabled": provider.get("is_enabled"),
             "is_default": provider.get("is_default"),
@@ -132,4 +138,3 @@ SUMMARY_DISPATCH = {
     "llm_model": summarize_llm_model,
     "user_llm_provider": summarize_user_llm_provider,
 }
-

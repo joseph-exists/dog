@@ -1,48 +1,162 @@
 
+We have replaced the LLMProvider.provider_type string with a provider_type_id FK and introduced the provider_type reference table plus canonical lookup helpers (see models.py:171‑235).
+
+-> alembic revision, autogenerate, and upgrade are complete, and manual seeding has been completed.
+
+
+tables look as follows:
+
+
+```sql
+tinyfoot=# \d provider_type
+tinyfoot=# \d provider_type
+                    Table "public.provider_type"
+  Column   |          Type          | Collation | Nullable | Default
+-----------+------------------------+-----------+----------+---------
+ name      | character varying(30)  |           | not null |
+ details   | character varying(500) |           |          |
+ validated | boolean                |           | not null |
+ is_system | boolean                |           | not null |
+ id        | uuid                   |           | not null |
+Indexes:
+    "provider_type_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "llmprovider" CONSTRAINT "llmprovider_provider_type_id_fkey" FOREIGN KEY (provider_type_id) REFERENCES provider_type(id)
+    TABLE "userllmprovider" CONSTRAINT "userllmprovider_provider_type_id_fkey" FOREIGN KEY (provider_type_id) REFERENCES provider_type(id)
+
+
+tinyfoot=# \d llmprovider
+                            Table "public.llmprovider"
+       Column       |            Type             | Collation | Nullable | Default
+--------------------+-----------------------------+-----------+----------+---------
+ name               | character varying(100)      |           | not null |
+ base_url           | character varying(500)      |           |          |
+ description        | character varying(500)      |           |          |
+ is_enabled         | boolean                     |           | not null |
+ is_system          | boolean                     |           | not null |
+ id                 | uuid                        |           | not null |
+ is_deleted         | boolean                     |           | not null |
+ deleted_at         | timestamp without time zone |           |          |
+ created_at         | timestamp without time zone |           | not null |
+ updated_at         | timestamp without time zone |           | not null |
+ created_by_user_id | uuid                        |           |          |
+ provider_type_id   | uuid                        |           |          |
+Indexes:
+    "llmprovider_pkey" PRIMARY KEY, btree (id)
+    "ix_llmprovider_is_deleted" btree (is_deleted)
+Foreign-key constraints:
+    "llmprovider_created_by_user_id_fkey" FOREIGN KEY (created_by_user_id) REFERENCES "user"(id)
+    "llmprovider_provider_type_id_fkey" FOREIGN KEY (provider_type_id) REFERENCES provider_type(id)
+Referenced by:
+    TABLE "llmmodel" CONSTRAINT "llmmodel_provider_id_fkey" FOREIGN KEY (provider_id) REFERENCES llmprovider(id)
+
+
+tinyfoot=# \d userllmprovider
+                          Table "public.userllmprovider"
+      Column       |            Type             | Collation | Nullable | Default
+-------------------+-----------------------------+-----------+----------+---------
+ name              | character varying(100)      |           | not null |
+ is_enabled        | boolean                     |           | not null |
+ is_default        | boolean                     |           | not null |
+ base_url          | character varying(500)      |           |          |
+ description       | character varying(500)      |           |          |
+ id                | uuid                        |           | not null |
+ user_id           | uuid                        |           | not null |
+ api_key_encrypted | character varying(1000)     |           | not null |
+ created_at        | timestamp without time zone |           | not null |
+ updated_at        | timestamp without time zone |           | not null |
+ last_tested_at    | timestamp without time zone |           |          |
+ last_test_success | boolean                     |           |          |
+ provider_type_id  | uuid                        |           |          |
+Indexes:
+    "userllmprovider_pkey" PRIMARY KEY, btree (id)
+    "ix_userllmprovider_user_id" btree (user_id)
+Foreign-key constraints:
+    "userllmprovider_provider_type_id_fkey" FOREIGN KEY (provider_type_id) REFERENCES provider_type(id)
+    "userllmprovider_user_id_fkey" FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "agent_configs" CONSTRAINT "agent_configs_user_provider_fkey" FOREIGN KEY (user_provider) REFERENCES userllmprovider(id)
+    TABLE "room_participant_bindings" CONSTRAINT "room_participant_bindings_user_llm_provider_id_fkey" FOREIGN KEY (user_llm_provider_id) REFERENCES userllmprovider(id)
+
+```
+
+done: bound Relationship attributes after every class so providers/models can eagerly load their type row instead of re-querying by name.
+
+all models changes, including bound relationship attributes follow patterns listed in backend/docs/DATA_MODEL_RULES.md
+
+## current status
+
+all models should mirror the catalog pattern introduced for LLMProviderBase (FK) and LLMProviderPublic (denormalized string).
+
+provider_type in responses, is only on public/response models, not in base/table fields.
+
+B) Reference example: post‑definition relationships (UserLLMProvider + ProviderType)
+Per DATA_MODEL_RULES.md, bind after all classes exist:
+
+# backend/app/models.py (post-definition section)
+
+# LLMProviderType <-> UserLLMProvider relationship
+LLMProviderType.user_providers = Relationship(
+    back_populates="provider_type",
+    sa_relationship_kwargs={"lazy": "selectin"},
+)
+
+UserLLMProvider.provider_type = Relationship(
+    back_populates="user_providers",
+    sa_relationship_kwargs={"lazy": "selectin"},
+)
+This matches the pattern already used for LLMProviderType <-> LLMProvider in models.py (line 3906).
+
+
+
+Details
+
+Replaced provider_type: str with provider_type_id: uuid.UUID | None in UserLLMProviderBase and added the same FK field to UserLLMProviderUpdate.
+Added denormalized provider_type: str | None to UserLLMProviderPublic for response convenience.
+Bound LLMProviderType.user_providers ↔ UserLLMProvider.provider_type in the post‑definition relationships block.
+
+### REFERENCE NOTES BELOW - NOT PART OF RUNBOOK
 Catalog/Provider Refactor Plan
 
-1. Strengthen the type table link. Replace the string provider_type columns in models.py (lines 177-230) with a provider_type_id foreign key to LLMProviderType ( (lines 140-170)), expose the new relationship there, and bind Relationship attributes after every class so providers/models can eagerly load their type row instead of re-querying by name.
-2. Align CRUD filters/serializers. Update crud.py so get_llm_providers, get_llm_models, and get_llm_models_grouped accept either a type ID or use a single join against LLMProviderType (and user models join providers to pull type info in one go), then have the routes in llm_catalog.py (lines 36-393) pass along those IDs and emit provider_type.name in LLMProviderPublic/LLMModelPublic so the frontend still sees the same label without the redundant lookups we currently do per row.
-3. Streamline custom-model endpoints. When create_custom_model and list_custom_models call crud.get_llm_provider/get_user_models, load the provider/ type in one query (e.g., selectinload or explicit joins) so you can populate provider_type + provider_name in the response without hitting the DB repeatedly for each model.
-4. Keep llm_providers routes in sync. Any route in llm_providers.py that filters by provider type should look up the LLMProviderType row first (so switching to the table-based structure is seamless) and continue to respect the new relationships when encrypting/validating API keys.
-This gives you a sequential refactor path: first adjust the schema model, then update CRUD helpers/routes to rely on it, and finally optimize the custom-model helpers so catalog responses stay efficient. Let me know if you’d like a branch-ready set of commits for each step.
+done:
+bind Relationship attributes after every class so providers/models can eagerly load their type row instead of re-querying by name.
+
+done:   CRUD filters/serializers - updated crud.py so get_llm_providers, get_llm_models, and get_llm_models_grouped accept either a type ID or use a single join against LLMProviderType (and user models join providers to pull type info in one go), then have the routes in llm_catalog.py (lines 36-393) pass along those IDs and emit provider_type.name in LLMProviderPublic/LLMModelPublic so the frontend still sees the same label without the redundant lookups we currently do per row.
+
+believe this is done - need to validate.  Streamlined custom-model endpoints. When create_custom_model and list_custom_models call crud.get_llm_provider/get_user_models, loads the provider/ type in one query (e.g., selectinload or explicit joins) so we can populate provider_type + provider_name in the response without hitting the DB repeatedly for each model.
+
+need to verify/review.
+llm_providers routes in sync. Any route in llm_providers.py that filters by provider type should be respecting the new relationships when encrypting/validating API keys.
+
+
+We adjusted the schema model, then updated CRUD helpers/routes to rely on it, and finally optimized the custom-model helpers so catalog responses stay efficient. 
 
 
 refactor requirements:
 
 
-update llm_providers.py
-update llm_catalog.py
-update crud.py
-review relationship bindings for existing LLMProviderType table (if any) - review in both db and in models.py file
-
-services review:
-agent_instance.py
-agent_registry_service.py
+done: llm_providers.py
+done: llm_catalog.py
+done: crud.py
+done: relationship bindings  
 
 
-operational:
-build & then alembic:
-    alembic ->
-        should drop the LLMProviderType table/indexes
-        will need to review all schemas
 
-update backend/app/test_scripts/llm_catalog_loader/load_catalog.py
 
-may need to drop all existing agents - will pull down for recreating first - then re-seed.
+we'll need to do a deeper dive on:
 
-will need to update the provider-model-reference-card.md (will want to do a deep review of all docs to make sure the old pattern is scrubbed)
+useLlmCatalog.ts hook
+useLlmProviders.ts hook
+llmCatalogService.ts 
+llmProviderService.ts 
 
-then frontend:
-review/test:
+then and review/test:
 ModelBadge.tsx
 ModelCombobox.tsx
 ProviderModelSelector.tsx
-useLlmCatalog.ts hook (do we need this hook?)
-useLlmProviders.ts hook
-llmCatalogService.ts (service and multiple hooks?)
-llmProviderService.ts (another service - this one with downcase?)
 
+
+will need to update the provider-model-reference-card.md (will want to do a deep review of all docs to make sure the old pattern is scrubbed) - anything that references LLMProviderType or provider_type should be updated.
 
 
 as a user, I have an account with an llm access provider. i have 34 models available to me in my account, across 13 different llm providers.  not all accounts with this llm access provider will have this level of access. additionally, i have multiple API keys with this LLM access provider account, and those access keys give me access to different subsets of models and llm providers for those models.

@@ -7,12 +7,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Plus, TestTube, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { Resolver } from "react-hook-form"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { LlmProvidersService } from "@/client"
+import { LlmCatalogService, LlmProvidersService } from "@/client"
 import type {
   UserLLMProviderCreate,
   UserLLMProviderPublic,
@@ -94,6 +94,31 @@ const LLMProviders = () => {
     null,
   )
 
+  const { data: catalogProvidersData } = useQuery({
+    queryKey: ["llm-catalog-providers"],
+    queryFn: () => LlmCatalogService.listProviders({ limit: 200 }),
+  })
+
+  const providerTypeIdByName = useMemo(() => {
+    const mapping: Record<string, string> = {}
+    for (const provider of catalogProvidersData?.data ?? []) {
+      if (provider.provider_type && provider.provider_type_id) {
+        mapping[provider.provider_type] = provider.provider_type_id
+      }
+    }
+    return mapping
+  }, [catalogProvidersData])
+
+  const providerTypeNameById = useMemo(() => {
+    const mapping: Record<string, string> = {}
+    for (const provider of catalogProvidersData?.data ?? []) {
+      if (provider.provider_type && provider.provider_type_id) {
+        mapping[provider.provider_type_id] = provider.provider_type
+      }
+    }
+    return mapping
+  }, [catalogProvidersData])
+
   // Fetch existing providers
   const { data: providersData, isLoading } = useQuery({
     queryKey: ["llm-providers"],
@@ -156,9 +181,14 @@ const LLMProviders = () => {
   })
 
   const onSubmit = (data: FormData) => {
+    const providerTypeId = providerTypeIdByName[data.provider_type]
+    if (!providerTypeId) {
+      showErrorToast("Provider type is not available yet. Please try again.")
+      return
+    }
     const payload: UserLLMProviderCreate = {
       name: data.name,
-      provider_type: data.provider_type,
+      provider_type_id: providerTypeId,
       api_key: data.api_key,
       base_url: data.base_url || undefined,
       description: data.description || undefined,
@@ -179,7 +209,10 @@ const LLMProviders = () => {
     }
   }
 
-  const getProviderLabel = (type: string) => {
+  const getProviderLabel = (type: string | null | undefined) => {
+    if (!type) {
+      return "Unknown"
+    }
     return providerTypes.find((p) => p.value === type)?.label ?? type
   }
 
@@ -233,7 +266,11 @@ const LLMProviders = () => {
                         </FormControl>
                         <SelectContent>
                           {providerTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
+                            <SelectItem
+                              key={type.value}
+                              value={type.value}
+                              disabled={!providerTypeIdByName[type.value]}
+                            >
                               <div className="flex flex-col">
                                 <span>{type.label}</span>
                                 <span className="text-xs text-muted-foreground">
@@ -416,7 +453,10 @@ const LLMProviders = () => {
                   </CardTitle>
                   <CardDescription className="mt-1">
                     {getProviderLabel(
-                      provider.provider_type ?? "openai_compatible",
+                      provider.provider_type ??
+                        (provider.provider_type_id
+                          ? providerTypeNameById[provider.provider_type_id]
+                          : null),
                     )}
                     {provider.base_url && (
                       <span className="ml-2 text-xs font-mono">

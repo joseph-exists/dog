@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
     AgentConfig,
+    LLMProviderType,
     Room,
     RoomParticipantBinding,
     ShadowRepo,
@@ -141,6 +142,7 @@ async def test_shadow_context_loader_agent_scoped_items_use_binding_row(
         slug=agent_slug,
         owner_id=user.id,
         name="Test Agent",
+        provider_type="openai",
     )
     async_session.add(agent_config)
     await async_session.commit()
@@ -217,9 +219,19 @@ async def test_shadow_context_loader_runtime_provider_missing_is_embedded(
         lambda session: crud.create_user(session=session, user_create=user_in)
     )
 
+    provider_type = LLMProviderType(
+        name="openai",
+        details=None,
+        validated=True,
+        is_system=True,
+    )
+    async_session.add(provider_type)
+    await async_session.commit()
+    await async_session.refresh(provider_type)
+
     provider = UserLLMProvider(
         user_id=user.id,
-        provider_type="openai",
+        provider_type_id=provider_type.id,
         name="Test Provider",
         is_enabled=True,
         api_key_encrypted="test-key",
@@ -233,6 +245,7 @@ async def test_shadow_context_loader_runtime_provider_missing_is_embedded(
         slug=agent_slug,
         owner_id=user.id,
         name="Test Agent",
+        provider_type="openai",
     )
     async_session.add(agent_config)
     await async_session.commit()

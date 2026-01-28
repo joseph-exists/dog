@@ -1277,7 +1277,11 @@ class Item(ItemBase, table=True):
 
 class UserLLMProviderBase(SQLModel):
     """Base model for user LLM provider configurations."""
-    provider_type: str = Field(description="Type of LLM provider")
+    provider_type_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="provider_type.id",
+        description="FK to provider type reference table",
+    )
     name: str = Field(max_length=100, description="User-friendly name like 'My OpenAI' or 'Work Azure'")
     is_enabled: bool = Field(default=True, description="Whether this provider is active")
     is_default: bool = Field(default=False, description="Default provider for this type")
@@ -1292,6 +1296,11 @@ class UserLLMProviderCreate(UserLLMProviderBase):
 
 class UserLLMProviderUpdate(SQLModel):
     """Update model - all fields optional."""
+    provider_type_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="provider_type.id",
+        description="FK to provider type reference table",
+    )
     name: str | None = Field(default=None, max_length=100)
     is_enabled: bool | None = None
     is_default: bool | None = None
@@ -1339,6 +1348,10 @@ class UserLLMProviderPublic(UserLLMProviderBase):
     updated_at: datetime
     last_tested_at: datetime | None
     last_test_success: bool | None
+    provider_type: str | None = Field(
+        default=None,
+        description="Denormalized provider type name (from provider_type relationship)",
+    )
     # Note: api_key_encrypted is intentionally excluded for security
 
 
@@ -3910,6 +3923,16 @@ LLMProviderType.providers = Relationship(
 )
 LLMProvider.provider_type = Relationship(
     back_populates="providers",
+    sa_relationship_kwargs={"lazy": "selectin"},
+)
+
+# LLMProviderType <-> UserLLMProvider relationship
+LLMProviderType.user_providers = Relationship(
+    back_populates="provider_type",
+    sa_relationship_kwargs={"lazy": "selectin"},
+)
+UserLLMProvider.provider_type = Relationship(
+    back_populates="user_providers",
     sa_relationship_kwargs={"lazy": "selectin"},
 )
 

@@ -22,11 +22,11 @@ import {
   type AgentConfigsPublic,
   type AgentConfigUpdate,
   AgentsService,
-  type LLMProviderType,
   OpenAPI,
 } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
+import type { LLMProviderType } from "@/services/llmCatalogService"
 
 // ============================================================================
 // Type Definitions - ViewModels

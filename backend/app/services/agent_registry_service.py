@@ -225,7 +225,7 @@ class AgentRegistryService:
              # TODO: Implement proper provider config injection when PydanticAI supports it
              logger.debug(
                  f"Instantiated agent {config.slug} with model={effective_model}, "
-                 f"provider=(type={provider_config.provider_type.value}, "
+                 f"provider=(type={provider_config.provider_type}, "
                  f"base_url={provider_config.base_url or 'default'})"
              )
          else:
@@ -266,6 +266,7 @@ class AgentRegistryService:
             )
             return None
         provider_type = provider_type_obj.name.lower()
+        provider_type_id = provider_type_obj.id
 
         provider: UserLLMProvider | None = None
 
@@ -281,7 +282,7 @@ class AgentRegistryService:
         if not provider:
             default_stmt = select(UserLLMProvider).where(
                 UserLLMProvider.user_id == user_id,
-                UserLLMProvider.provider_type == provider_type,
+                UserLLMProvider.provider_type_id == provider_type_id,
                 UserLLMProvider.is_default,
                 UserLLMProvider.is_enabled,
             )
@@ -293,10 +294,16 @@ class AgentRegistryService:
 
         if not provider:
             return None
+        if not provider.provider_type_id:
+            # Legacy payloads used provider_type name; fail fast and log loudly.
+            logger.error(
+                "provider_type_id missing on UserLLMProvider %s during agent resolution",
+                provider.id,
+            )
 
         return ProviderConfig(
             api_key=decrypt_api_key(provider.api_key_encrypted),
-            provider_type=provider.provider_type,
+            provider_type=provider_type,
             base_url=provider.base_url,
         )
 
