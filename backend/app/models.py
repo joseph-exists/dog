@@ -128,41 +128,6 @@ class ContentFormat(str, PyEnum):
     JSON = "json"
 
 
-class LLMProviderType(str, PyEnum):
-    """Supported LLM provider types."""
-    EMPTY = "empty"  # Placeholder/no provider
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GOOGLE = "google"
-    OPENAI_COMPATIBLE = "openai_compatible"  # For Ollama, vLLM, Azure, proxies
-
-
-# Supported models organized by provider
-# Format: "provider:model" as used by PydanticAI
-SUPPORTED_MODELS: dict[str, list[dict[str, str]]] = {
-    "openai": [
-        {"value": "openai:gpt-4o", "label": "GPT-4o", "description": "Latest multimodal flagship"},
-        {"value": "openai:gpt-4o-mini", "label": "GPT-4o Mini", "description": "Fast and affordable"},
-        {"value": "openai:gpt-4-turbo", "label": "GPT-4 Turbo", "description": "Previous generation flagship"},
-        {"value": "openai:gpt-3.5-turbo", "label": "GPT-3.5 Turbo", "description": "Fast, economical"},
-        {"value": "openai:o1", "label": "o1", "description": "Advanced reasoning"},
-        {"value": "openai:o1-mini", "label": "o1 Mini", "description": "Faster reasoning"},
-    ],
-    "anthropic": [
-        {"value": "anthropic:claude-sonnet-4-20250514", "label": "Claude Sonnet 4", "description": "Latest balanced model"},
-        {"value": "anthropic:claude-3-5-sonnet-latest", "label": "Claude 3.5 Sonnet", "description": "Previous Sonnet"},
-        {"value": "anthropic:claude-3-5-haiku-latest", "label": "Claude 3.5 Haiku", "description": "Fast and affordable"},
-        {"value": "anthropic:claude-3-opus-latest", "label": "Claude 3 Opus", "description": "Most capable"},
-    ],
-    "google": [
-        {"value": "google:gemini-2.0-flash", "label": "Gemini 2.0 Flash", "description": "Latest fast model"},
-        {"value": "google:gemini-1.5-pro", "label": "Gemini 1.5 Pro", "description": "Long context flagship"},
-        {"value": "google:gemini-1.5-flash", "label": "Gemini 1.5 Flash", "description": "Fast and capable"},
-    ],
-    "openai_compatible": [
-        {"value": "openai:custom", "label": "Custom Model", "description": "Enter model name manually"},
-    ],
-}
 
 
 # =============================================================================
@@ -172,15 +137,49 @@ SUPPORTED_MODELS: dict[str, list[dict[str, str]]] = {
 # Unlike UserLLMProvider (user's API keys), these are system-level entries
 # that define what providers/models exist and their capabilities.
 
+class LLMProviderTypeBase(SQLModel):
+    """Table that holds all the different provider types for:
+       expandability and fk many to one relationships
+       this provider table will be an exhaustive reference for different provider types"""
+    name: str = Field(max_length=30, description="LLM Provider type")
+    details: str | None  = Field(default=None, max_length=500, description="notes if necessary")
+    validated: bool = Field(default=False, description="updated when proven valid at least once")
+    is_system: bool = Field(default=False, description="is this a built in LLM provider type at the system level")
+
+class LLMProviderType(LLMProviderTypeBase, table=True):
+    __tablename__ = "provider_type"
+    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+class LLMProviderTypeCreate(LLMProviderTypeBase):
+    """Input model for creating an LLMProviderType"""
+    pass
+
+class LLMProviderTypeUpdate(SQLModel):
+    """Update model for LLM Provider types"""
+    name: str | None = Field(max_length=30, description="LLM Provider type", default=None)
+    details: str | None = Field(default=None, max_length=500, description="notes if necessary")
+    validated: bool | None = Field(
+        default=None,
+        description="updated when proven valid at least once",
+    )
+    is_system: bool | None = Field(
+        default=None,
+        description="is this a built in LLM provider type at the system level",
+    )
+
 
 class LLMProviderBase(SQLModel):
     """Base model for system LLM provider catalog entries."""
-    name: str = Field(max_length=100, description="Display name like 'OpenAI', 'Anthropic'")
-    provider_type: LLMProviderType = Field(default=LLMProviderType.EMPTY, description="Provider type enum value")
-    base_url: str | None = Field(default=None, max_length=500, description="Default base URL (for openai_compatible)")
+    name: str = Field(max_length=100, description="Friendly display name like 'OpenAI', 'Anthropic'")
+    provider_type_id: UUID | None = Field(
+        default=None,
+        foreign_key="provider_type.id",
+        description="FK to provider type reference table",
+    )
+    base_url: str | None = Field(default=None, max_length=500, description="Default base URL")
     description: str | None = Field(default=None, max_length=500)
-    is_enabled: bool = Field(default=True, description="Whether this provider is available")
-    is_system: bool = Field(default=True, description="True for built-in, False for user-created (future)")
+    is_enabled: bool = Field(default=True, description="Whether this provider is available in the system")
+    is_system: bool = Field(default=True, description="True for built-in, False for user-created")
 
 
 class LLMProviderCreate(LLMProviderBase):
@@ -191,15 +190,31 @@ class LLMProviderCreate(LLMProviderBase):
 class LLMProviderUpdate(SQLModel):
     """Update model for provider catalog entries - all fields optional."""
     name: str | None = Field(default=None, max_length=100)
+    provider_type_id: UUID | None = Field(
+        default=None,
+        foreign_key="provider_type.id",
+        description="FK to provider type reference table",
+    )
     base_url: str | None = Field(default=None, max_length=500)
     description: str | None = Field(default=None, max_length=500)
     is_enabled: bool | None = None
+    created_by_user_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        nullable=True,
+    )
+    # Soft delete support
+    is_deleted: bool = Field(default=False, index=True)
+    deleted_at: datetime | None = Field(default=None)
 
+    # Audit timestamps
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 class LLMProvider(LLMProviderBase, table=True):
     """
     Database model for system LLM provider catalog.
-
+    (this may not be relevant/necessary/anything?)
+    TODO: find out what is using this, if anything.
     Stores available providers (OpenAI, Anthropic, etc.) and their
     configurations. This is system-level data, not user-specific.
     """
@@ -207,10 +222,7 @@ class LLMProvider(LLMProviderBase, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 
-    # Override provider_type to reuse existing enum (don't recreate it)
-    # old - provider_type: LLMProviderType = Field(sa_column=Column(PyEnum(LLMProviderType),))
-    provider_type: LLMProviderType | None = Field(default=LLMProviderType.EMPTY)
-    
+
     created_by_user_id: uuid.UUID | None = Field(
           default=None, foreign_key="user.id", nullable=True
       )
@@ -233,6 +245,7 @@ class LLMProviderPublic(LLMProviderBase):
     created_at: datetime
     updated_at: datetime
     model_count: int = Field(default=0, description="Number of active models for this provider")
+    provider_type: str | None = Field(default=None, description="Denormalized provider type name")
 
 
 class LLMProvidersPublic(SQLModel):
@@ -348,7 +361,7 @@ class LLMModelPublic(LLMModelBase):
     created_at: datetime
     updated_at: datetime
     # Denormalized provider info for convenience
-    provider_type: LLMProviderType | None = None
+    provider_type: str | None = None
     provider_name: str | None = None
 
 
@@ -372,7 +385,7 @@ class LLMModelsGrouped(BaseModel):
 # Query models (Pydantic, not SQLModel table) for API filtering
 class LLMProviderQuery(BaseModel):
     """Query parameters for filtering providers."""
-    provider_type: LLMProviderType | None = None
+    provider_type: str | None = None
     is_enabled: bool | None = None
     is_system: bool | None = None
     include_deleted: bool = False
@@ -381,7 +394,7 @@ class LLMProviderQuery(BaseModel):
 class LLMModelQuery(BaseModel):
     """Query parameters for filtering models."""
     provider_id: uuid.UUID | None = None
-    provider_type: LLMProviderType | None = None
+    provider_type: str | None = None
     is_enabled: bool | None = None
     is_deprecated: bool | None = None
     is_default: bool | None = None
@@ -1264,8 +1277,7 @@ class Item(ItemBase, table=True):
 
 class UserLLMProviderBase(SQLModel):
     """Base model for user LLM provider configurations."""
-    provider_type: LLMProviderType | None = Field(default=LLMProviderType.EMPTY)
-    # provider_type: LLMProviderType = Field(description="Type of LLM provider")
+    provider_type: str = Field(description="Type of LLM provider")
     name: str = Field(max_length=100, description="User-friendly name like 'My OpenAI' or 'Work Azure'")
     is_enabled: bool = Field(default=True, description="Whether this provider is active")
     is_default: bool = Field(default=False, description="Default provider for this type")
@@ -3230,10 +3242,8 @@ class AgentConfigBase(SQLModel):
          foreign_key="userllmprovider.id",
          description="User-selected provider tied to this agent"
      )
-     provider_type: LLMProviderType = Field(
-         default=LLMProviderType.EMPTY,
-         description="Default provider type (e.g., openai, anthropic)"
-     )
+     provider_type: str = Field(max_length=30, description="why not here too")
+
      model_name: str = Field(default="openai:gpt-4o-mini")
      system_prompt: str | None = None
 
@@ -3275,7 +3285,7 @@ class AgentConfigUpdate(SQLModel):
      model_name: str | None = None
      system_prompt: str | None = None
      user_provider: uuid.UUID | None = None
-     provider_type: LLMProviderType | None = None
+     provider_type: str | None = None
      tool_config: dict | None = None
      deps_config: dict | None = None
      agent_metadata: dict | None = None
@@ -3891,6 +3901,16 @@ Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(
 User.agent_configs = Relationship(
     back_populates="owner",
     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+)
+
+# LLMProviderType <-> LLMProvider relationship
+LLMProviderType.providers = Relationship(
+    back_populates="provider_type",
+    sa_relationship_kwargs={"lazy": "selectin"},
+)
+LLMProvider.provider_type = Relationship(
+    back_populates="providers",
+    sa_relationship_kwargs={"lazy": "selectin"},
 )
 
 # User <-> UserLLMProvider relationship (both sides must be defined together)

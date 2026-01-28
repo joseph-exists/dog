@@ -191,6 +191,32 @@ function computeStatus(
 }
 
 /**
+ * Normalize provider type string to lowercase LLMProviderType
+ * Handles case-insensitive backend data (e.g., "OPENAI" -> "openai")
+ */
+function normalizeProviderType(
+  providerType: string | null | undefined
+): LLMProviderType {
+  if (!providerType) return "openai_compatible"
+
+  const normalized = providerType.toLowerCase()
+
+  // Validate it's a known type
+  if (
+    normalized === "openai" ||
+    normalized === "anthropic" ||
+    normalized === "google" ||
+    normalized === "openai_compatible" ||
+    normalized === "empty"
+  ) {
+    return normalized as LLMProviderType
+  }
+
+  // Fallback for unknown types
+  return "openai_compatible"
+}
+
+/**
  * Transform backend UserLLMProviderPublic to ProviderViewModel
  */
 function transformProvider(provider: UserLLMProviderPublic): ProviderViewModel {
@@ -199,8 +225,8 @@ function transformProvider(provider: UserLLMProviderPublic): ProviderViewModel {
     provider.last_tested_at ?? null,
   )
 
-  // Default to openai_compatible if provider_type is missing
-  const providerType = provider.provider_type ?? "openai_compatible"
+  // Normalize provider type to lowercase
+  const providerType = normalizeProviderType(provider.provider_type)
 
   return {
     id: provider.id,

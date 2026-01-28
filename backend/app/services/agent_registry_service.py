@@ -21,7 +21,6 @@ from app.models import (
     AgentConfig,
     AgentConfigCreate,
     AgentConfigUpdate,
-    LLMProviderType,
     UserAgentSettings,
     UserLLMProvider,
 )
@@ -35,7 +34,7 @@ class ProviderConfig:
     def __init__(
         self,
         api_key: str,
-        provider_type: LLMProviderType,
+        provider_type: str,
         base_url: str | None = None,
     ):
         self.api_key = api_key
@@ -244,59 +243,62 @@ class AgentRegistryService:
          settings: UserAgentSettings | None,
          effective_model_name: str,
      ) -> ProviderConfig | None:
-         """Resolve user's provider for an agent with fallback chain.
+        """Resolve user's provider for an agent with fallback chain.
 
-         Fallback order:
-         1. User's explicit provider_id in UserAgentSettings for this agent
-         2. User's default provider for the effective model's provider type
-         3. None (use system environment variables)
+        Fallback order:
+        1. User's explicit provider_id in UserAgentSettings for this agent
+        2. User's default provider for the effective model's provider type
+        3. None (use system environment variables)
 
-         Args:
-             settings: Pre-fetched user settings (to avoid duplicate query)
-             effective_model_name: The model that will be used (may be overridden)
-         """
-         # Extract provider type from effective model_name (e.g., "openai:gpt-4o-mini" -> "openai")
-         provider_type_str = effective_model_name.split(":")[0] if ":" in effective_model_name else "openai"
-         try:
-             provider_type = LLMProviderType(provider_type_str)
-         except ValueError:
-             # Unknown provider type, fall back to system defaults
-             logger.warning(f"Unknown provider type '{provider_type_str}' in model_name '{effective_model_name}'")
-             return None
+        Args:
+            settings: Pre-fetched user settings (to avoid duplicate query)
+            effective_model_name: The model that will be used (may be overridden)
+        """
+        provider_type_str = (
+            effective_model_name.split(":")[0] if ":" in effective_model_name else "openai"
+        )
+        provider_type_obj = crud.get_llm_provider_type_by_name(
+            session=session, name=provider_type_str
+        )
+        if not provider_type_obj:
+            logger.warning(
+                f"Unknown provider type '{provider_type_str}' in model_name '{effective_model_name}'"
+            )
+            return None
+        provider_type = provider_type_obj.name.lower()
 
-         provider: UserLLMProvider | None = None
+        provider: UserLLMProvider | None = None
 
-         # 1. Check UserAgentSettings for explicit provider_id
-         if settings and settings.provider_id:
-             # User has explicitly set a provider for this agent
-             provider = session.get(UserLLMProvider, settings.provider_id)
-             if provider and provider.is_enabled:
-                 logger.debug(f"Using user's explicit provider '{provider.name}' for agent {config.slug}")
-             else:
-                 provider = None
+        if settings and settings.provider_id:
+            provider = session.get(UserLLMProvider, settings.provider_id)
+            if provider and provider.is_enabled:
+                logger.debug(
+                    f"Using user's explicit provider '{provider.name}' for agent {config.slug}"
+                )
+            else:
+                provider = None
 
-         # 2. Fall back to user's default provider for this type
-         if not provider:
-             default_stmt = select(UserLLMProvider).where(
-                 UserLLMProvider.user_id == user_id,
-                 UserLLMProvider.provider_type == provider_type,
-                 UserLLMProvider.is_default,
-                 UserLLMProvider.is_enabled,
-             )
-             provider = session.exec(default_stmt).first()
-             if provider:
-                 logger.debug(f"Using user's default provider '{provider.name}' for agent {config.slug}")
+        if not provider:
+            default_stmt = select(UserLLMProvider).where(
+                UserLLMProvider.user_id == user_id,
+                UserLLMProvider.provider_type == provider_type,
+                UserLLMProvider.is_default,
+                UserLLMProvider.is_enabled,
+            )
+            provider = session.exec(default_stmt).first()
+            if provider:
+                logger.debug(
+                    f"Using user's default provider '{provider.name}' for agent {config.slug}"
+                )
 
-         # 3. No user provider found - return None to use system defaults
-         if not provider:
-             return None
+        if not provider:
+            return None
 
-         # Decrypt API key and return config
-         return ProviderConfig(
-             api_key=decrypt_api_key(provider.api_key_encrypted),
-             provider_type=provider.provider_type,
-             base_url=provider.base_url,
-         )
+        return ProviderConfig(
+            api_key=decrypt_api_key(provider.api_key_encrypted),
+            provider_type=provider.provider_type,
+            base_url=provider.base_url,
+        )
 
      def _invalidate_cache(self, slug: str) -> None:
          self._config_cache.pop(slug, None)

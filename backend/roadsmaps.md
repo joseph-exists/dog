@@ -2,7 +2,7 @@ Topics	Issues	Discord Channel
 Context Engineering	- Prompt caching
 - System prompt optimize
 - Toolkit docstring optimize
-- Context compression	Join Discord →
+- Context compression	
 Multi-modal Enhancement	- More accurate image understanding when using browser
 - Advanced video generation	Join Discord →
 Multi-agent system	- Workforce support fixed workflow
@@ -13,7 +13,7 @@ Browser Toolkit	- BrowseComp integration
 - Automatic cache button clicking	Join Discord →
 Document Toolkit	- Support dynamic file editing	Join Discord →
 Terminal Toolkit	- Benchmark improvement
-- Terminal-Bench integration	Join Discord →
+- Terminal-Bench integration	
 Environment & RL	- Environment design
 - Data-generation
-- RL framework integration (VERL, TRL, OpenRLHF)	Join Discord →
+- RL framework integration (VERL, TRL, OpenRLHF)	

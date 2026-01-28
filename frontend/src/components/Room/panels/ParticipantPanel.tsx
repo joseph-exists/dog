@@ -104,7 +104,7 @@ export function ParticipantPanel({
                   <div className="size-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium shrink-0">
                     {getInitials(user.display_name)}
                   </div>
-                  <span className="flex-1 text-sm truncate">
+                  <span className="flex-1 text-xl truncate">
                     {user.display_name}
                   </span>
                   {canManage &&

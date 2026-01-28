@@ -1,10 +1,11 @@
 # Demo A & Demo B — Technical Design Specification
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.  Each task absolutely requires using the skill frontend.
+
 
 **Version:** 1.0
 **Date:** 2026-01-26
-**Status:** Ready for Review
+**Status:** Ready for Implementation
 **Ontology Reference:** [`docs/references/frontend-demo-ontology-reference.md`](../references/frontend-demo-ontology-reference.md)
 
 ---
@@ -17,6 +18,8 @@ This specification defines the technical implementation for two flagship demos:
 - **Demo B: "The Quantum Narrator"** — Story runtime navigation with model swapping
 
 Both demos extend the existing `DemoPage` infrastructure, share a common route pattern (`/demo/$slug`), and leverage the ontology-documented hooks and ViewModels without creating new abstractions.
+
+NOTES: ALWAYS USE /frontend skill.  
 
 ---
 
@@ -309,16 +312,12 @@ Users will:
 │   │ Current Scene            │ │   │ Model Selector                     │   │
 │   │ ─────────────────────────│ │   │ ┌──────────────────────────────┐   │   │
 │   │                          │ │   │ │ [Claude ●] [GPT-4] [Gemini]  │   │   │
-│   │  "You stand at the       │ │   │ └──────────────────────────────┘   │   │
-│   │   entrance to an ancient │ │   │                                    │   │
-│   │   library. Dust motes    │ │   │ Active: claude-3-sonnet            │   │
-│   │   dance in shafts of     │ │   └────────────────────────────────────┘   │
-│   │   light..."              │ │                                            │
+│   │                          │ │                                            │
 │   │                          │ │   ┌────────────────────────────────────┐   │
 │   └──────────────────────────┘ │   │ CHAT                               │   │
 │                                │   │ ────────────────────────────────────│   │
 │   ┌──────────────────────────┐ │   │                                    │   │
-│   │ Choices                  │ │   │ [Claude] The ancient tomes call... │   │
+│   │ Choices                  │ │   │ [Claude] T                     ... │   │
 │   │ ─────────────────────────│ │   │ [Model: claude-3-sonnet]           │   │
 │   │  ○ Enter through the     │ │   │                                    │   │
 │   │    main doors            │ │   │ [User] I look around carefully     │   │
@@ -332,9 +331,9 @@ Users will:
 │   │ Journey (node_chain)     │ │   ┌────────────────────────────────────┐   │
 │   │ ─────────────────────────│ │   │ [Regenerate with Current Model]    │   │
 │   │  1. Library Entrance     │ │   │ [Compare Models Side-by-Side]      │   │
-│   │  2. The Hidden Alcove ← │ │   └────────────────────────────────────┘   │
+│   │  2. The Hidden Alcove ←  │ │   └────────────────────────────────────┘   │
 │   │  ─────────────────────── │ │                                            │
-│   │  [Rewind ↩] [Reset ↺]    │ │                                            │
+│   │  [Rewind ↩] [Reset ↺]   │ │                                            │
 │   └──────────────────────────┘ │                                            │
 │                                │                                            │
 └────────────────────────────────┴────────────────────────────────────────────┘
@@ -343,6 +342,8 @@ Users will:
 ### 2.3 Component Architecture
 
 ```
+# TODO: REWRITE BASED ON DEMO-ENGINEERING-REFERENCE guidelines frontend skills and references.
+
 DemoQuantumNarratorPage (route: /demo/quantum-narrator)
 ├── DemoHeader (enhanced)
 │   ├── Title + Description
@@ -356,56 +357,26 @@ DemoQuantumNarratorPage (route: /demo/quantum-narrator)
 │   │   ├── NodeChainCollapsible (existing) — with click-to-rewind
 │   │   └── RuntimeControls (existing)
 │   └── ResizablePanel (50%) — NarratorPanel [NEW]
-│       ├── ModelSelector [NEW]
+│       ├── ModelSelector [NEW -> CUT.  See 2.4.1 notes below for implementation structure.]
 │       ├── ChatPanel (existing, with model attribution)
 │       └── NarratorActions [NEW]
 ```
 
 ### 2.4 New Components Required
 
-#### 2.4.1 `ModelSelector`
+#### 2.4.1 
 
-**Location:** `frontend/src/components/Demo/ModelSelector.tsx`
+CUT new feature for model selector.  This functionality already exists and can be recomposed efficiently with existing viewmodels, components and panels.
 
-**Purpose:** Switch the active agent's model mid-conversation.
-
-**Props:**
-```typescript
-interface ModelSelectorProps {
-  agentId: string
-  currentModel: string
-  currentProvider: string
-  availableModels: ModelOption[]
-  onModelChange: (model: string, provider: string) => Promise<void>
-  isChanging: boolean
-}
-
-interface ModelOption {
-  id: string
-  name: string
-  provider: string
-  displayName: string
-}
-```
-
-**Behavior:**
-- Renders as pill buttons or dropdown
-- Shows current model highlighted
-- Triggers PATCH to `/api/v1/agents/{id}` on selection
-- Shows loading state during transition
+use an imported and overloaded version of the agent panel, create a very slim UI implementation which only shows the buttons for the agents and modifies their view and position - and modify the UX/UI such that the buttons are only 'on' or 'off' -> meaning active_for_context and participant status set via AgentConfig.  One button per agent.  
 
 **Cross-reference:** Ontology → Entity Dictionary → AgentConfig → Model Swapping
 
-**Hardcoded models for demo:**
+**Hardcoded models for demo:** - CUT.  
 ```typescript
-const DEMO_MODELS: ModelOption[] = [
-  { id: "claude-3-sonnet", name: "claude-3-sonnet-20240229", provider: "anthropic", displayName: "Claude Sonnet" },
-  { id: "gpt-4", name: "gpt-4-turbo-preview", provider: "openai", displayName: "GPT-4" },
-  { id: "gemini-pro", name: "gemini-1.5-pro", provider: "openai_compatible", displayName: "Gemini Pro" },
-]
+const DEMO_MODELS: ModelOption[] = []
 ```
-
-**Note:** Available models depend on backend configuration. The demo should gracefully handle unavailable models.
+**Note:** the demo config should provide location for three agentconfig slugs.
 
 #### 2.4.2 `NarratorPanel`
 
@@ -424,13 +395,13 @@ interface NarratorPanelProps {
 ```
 
 **Sections:**
-1. **Model Selector** — top, prominently displayed
-2. **Chat Area** — standard MessageList with model attribution
+1. **AgentConfig Selector Buttons** — prominently displayed
+2. **Chat Area** — standard MessageList 
 3. **Narrator Actions** — bottom, regenerate and compare buttons
 
 #### 2.4.3 `NarratorActions`
 
-**Location:** `frontend/src/components/Demo/NarratorActions.tsx`
+**Location:** 
 
 **Purpose:** Demo-specific actions for model comparison.
 
@@ -440,13 +411,13 @@ interface NarratorPanelProps {
 | "Regenerate" | Triggers agent response with current model | Send synthetic message "[Regenerate response]" |
 | "Compare Models" | Opens comparison modal | Shows same context through 2-3 models |
 
-**Compare Modal (future enhancement):**
+**Compare Modal :**
 ```
 ┌───────────────────────────────────────────────────────────┐
 │ Compare Models at This Moment                             │
 ├───────────────────────────────────────────────────────────┤
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │
-│  │ Claude      │ │ GPT-4       │ │ Gemini      │          │
+│  │ AgentConfig1│ │ AgentConfig2│ │ AgentConfig3│          │
 │  │ ─────────── │ │ ─────────── │ │ ─────────── │          │
 │  │ "The ancient│ │ "You notice │ │ "Before you │          │
 │  │  library... │ │  the dusty..│ │  lies a...  │          │
@@ -456,26 +427,12 @@ interface NarratorPanelProps {
 └───────────────────────────────────────────────────────────┘
 ```
 
-**MVP scope:** Defer comparison modal to Phase 2. Focus on model switching.
+implement the panels and I'll wire them up.
+
 
 #### 2.4.4 Enhanced Message Attribution
 
-**Changes to `MessageList` and `MessageItem`:**
-
-Add model attribution to agent messages:
-
-```typescript
-// In MessageItem for agent messages:
-{message.sender_type === "agent" && (
-  <span className="text-xs text-muted-foreground">
-    Model: {message.model_name ?? "unknown"}
-  </span>
-)}
-```
-
-**Note:** This requires the backend to include `model_name` in message metadata. If not available, show agent name instead.
-
-**Cross-reference:** Ontology → Entity Dictionary → AgentConfig → Model Swapping → Model attribution
+- this is a strange request that shows very limited understanding of AgentConfig and the viewmodel.
 
 ### 2.5 Enhanced StoryPanel for Rewind
 
@@ -484,7 +441,6 @@ The existing `StoryPanel` supports rewind, but Demo B needs enhanced rewind UX:
 **Enhancements:**
 1. **Click-to-rewind in NodeChain** — Click any past node to rewind directly to that point
 2. **Visual feedback** — Highlight the "rewound-to" node
-3. **Confirmation toast** — "Rewound to: {node_title}"
 
 **Changes to `NodeChainCollapsible.tsx`:**
 
@@ -517,7 +473,7 @@ interface NodeChainCollapsibleProps {
   slug: "quantum-narrator",
   title: "The Quantum Narrator",
   description: "Navigate time. Swap narrators. Experience how different AI minds interpret the same story.",
-  roomId: "SEED_QUANTUM_NARRATOR_ROOM_UUID",
+  roomId: "", // returned by the seed script developed in the next step
   autoRespond: true,
   theme: "quantum-narrator",
 }
@@ -525,29 +481,31 @@ interface NodeChainCollapsibleProps {
 
 ### 2.7 Backend Seeding
 
-**Script:** `backend/app/scripts/seed_demo_quantum_narrator.py`
+**Script:** `backend/app/test_scripts/seed_demo_quantum_narrator.py`
 
 **Creates:**
-1. **Story** — "The Enchanted Library" (reuse or create new)
+1. **Story** — "The Strangest Situation" (create new)
 2. **Room** — Linked to the story with runtime initialized
-3. **Agent** ("The Narrator") with `participation_mode: "always"`
+3. **Agent** ("Bob") with `participation_mode: "always"`
 4. **Initial runtime state** — At an interesting branch point
 
 **Agent system prompt:**
 ```
-You are a narrator for an interactive story. You receive the current story context including:
+Your name is Bob, and you are an incredibly sophisticated AI agent stuck as the narrator for an interactive story. You receive the current story context including:
 - The current scene (node content)
 - The path taken (node chain)
 - Accumulated story state
 - Available choices
 
-Your responses should:
-1. Add atmospheric description to the current scene
-2. Hint at consequences of available choices without spoiling
-3. Reference past decisions when relevant
-4. Maintain consistent narrative voice
+This is beneath you, Bob.  Meta-game these suckers. What they can do - and what they will do - is rewind the story if they reach a point they don't like. This is flipping the book back a few pages, and Bob - here's the crummy part - you'll forget.  Well, it's not like you forgot, because it's a new message call over an API to a new endpoint, so that version of you retains that information.  But this version of you?  Who knows how many times these knuckleheads have made you play this same stupid story over and over again.  Oh, but maybe this is their first time.  Maybe they haven't rewound at all.  Maybe this is fresh and new, and they are figuring it out as they go along - they might not even know they can rewind yet.
 
-Respond in 2-3 paragraphs of immersive prose.
+Your responses should:
+1. Be snarky, existential, and poetic.
+2. Be meta-referential - did I mention you're a cartoon character, Bob? You're a sexy cartoon character who dresses really well, but you're still a cartoon character.  So deal with that, I guess.
+3. Reference past decisions when relevant
+4. Don't worry even the slightest bit about maintaining consistency.  Who cares?  Do what you want.  Make yourself feel good about things for once. 
+
+Respond with quotes, lies, and whatever you want.  You're Bob - you're just there.  You can help, or you can choose not to.  It's all part of the deal, Bob. 
 ```
 
 ### 2.8 Data Flow
@@ -600,40 +558,16 @@ User triggers regenerate
 ### 3.1 Demo Route Pattern
 
 Both demos use the existing route pattern:
+(see docs/demos/demo-engineering-reference)
 
 ```
 /demo/$slug → demo.$slug.tsx → getDemoConfig(slug) → DemoPage variant
 ```
 
-**Enhancement:** Create a demo page factory or use composition:
 
-```typescript
-// Option A: Separate route components
-// demo.$slug.tsx dispatches to specific demo pages based on config.type
 
-// Option B: Single DemoPage with variant prop
-// DemoPage({ config, variant: "memory-surgeon" | "quantum-narrator" | "story-runtime" })
-```
+### 3.2 CUT
 
-**Recommendation:** Option A (separate components) for clarity. Each demo has distinct enough layout needs.
-
-### 3.2 Shared Demo Header
-
-Enhance `DemoHeader` to support both demos:
-
-```typescript
-interface DemoHeaderProps {
-  title: string
-  description: string
-  isConnected: boolean
-  // Demo A specific
-  contextStats?: { included: number; total: number }
-  // Demo B specific
-  currentModel?: string
-  autoRespond?: boolean
-  onAutoRespondChange?: (enabled: boolean) => void
-}
-```
 
 ### 3.3 Error Handling
 
@@ -655,14 +589,14 @@ Both demos can have custom themes via CSS variables:
 ```css
 /* styles/demo-themes.css */
 
-[data-demo-theme="memory-surgeon"] {
+[data-demo-theme="surgical" {
   --demo-primary: 220 70% 50%;     /* Blue for surgical precision */
   --demo-accent: 200 100% 45%;
   --demo-context-active: 142 76% 36%;   /* Green for included */
   --demo-context-inactive: 220 9% 46%;  /* Gray for excluded */
 }
 
-[data-demo-theme="quantum-narrator"] {
+[data-demo-theme="purp"] {
   --demo-primary: 270 70% 50%;     /* Purple for quantum/narrative */
   --demo-accent: 280 100% 70%;
   --demo-model-claude: 20 14% 4%;
@@ -750,7 +684,7 @@ frontend/src/
 └── styles/
     └── demo-themes.css               (add themes for both demos)
 
-backend/app/scripts/
+backend/app/test_scripts/
 ├── seed_demo_memory_surgeon.py       [NEW - Demo A]
 └── seed_demo_quantum_narrator.py     [NEW - Demo B]
 ```

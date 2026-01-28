@@ -10,12 +10,12 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from sqlmodel import select
+from sqlmodel import Session, select
 
+from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.core.security import encrypt_api_key, decrypt_api_key
 from app.models import (
-    LLMProviderType,
     Message,
     UserLLMProvider,
     UserLLMProviderCreate,
@@ -54,12 +54,18 @@ def create_provider(
     provider_in: UserLLMProviderCreate,
 ) -> Any:
     """Create a new LLM provider configuration."""
+    canonical_type = _canonical_provider_type_name(session, provider_in.provider_type)
+    if not canonical_type:
+        raise HTTPException(status_code=400, detail="Unknown provider type")
+
     # If setting as default, unset other defaults of same type
     if provider_in.is_default:
-        _unset_defaults(session, current_user.id, provider_in.provider_type)
+        _unset_defaults(session, current_user.id, canonical_type)
 
+    provider_data = provider_in.model_dump(exclude={"api_key"})
+    provider_data["provider_type"] = canonical_type
     provider = UserLLMProvider(
-        **provider_in.model_dump(exclude={"api_key"}),
+        **provider_data,
         user_id=current_user.id,
         api_key_encrypted=encrypt_api_key(provider_in.api_key),
     )
@@ -149,8 +155,12 @@ async def test_provider(
     api_key = decrypt_api_key(provider.api_key_encrypted)
 
     try:
+        provider_type_name = _canonical_provider_type_name(session, provider.provider_type)
+        if not provider_type_name:
+            raise HTTPException(status_code=400, detail="Unknown provider type")
+
         success = await _test_provider_connection(
-            provider_type=provider.provider_type,
+            provider_type=provider_type_name,
             api_key=api_key,
             base_url=provider.base_url,
         )
@@ -175,8 +185,10 @@ async def test_provider(
         raise HTTPException(status_code=400, detail=f"Connection test failed: {str(e)}")
 
 
-def _unset_defaults(session: SessionDep, user_id: uuid.UUID, provider_type: LLMProviderType) -> None:
+def _unset_defaults(session: SessionDep, user_id: uuid.UUID, provider_type: str) -> None:
     """Unset default flag on all providers of a type for a user."""
+    if not provider_type:
+        return
     statement = select(UserLLMProvider).where(
         UserLLMProvider.user_id == user_id,
         UserLLMProvider.provider_type == provider_type,
@@ -188,7 +200,7 @@ def _unset_defaults(session: SessionDep, user_id: uuid.UUID, provider_type: LLMP
 
 
 async def _test_provider_connection(
-    provider_type: LLMProviderType,
+    provider_type: str,
     api_key: str,
     base_url: str | None,
 ) -> bool:
@@ -198,25 +210,23 @@ async def _test_provider_connection(
     Makes minimal API calls to validate credentials without incurring
     significant costs. Each provider has a different validation approach.
     """
+    normalized = provider_type.lower() if provider_type else ""
     async with httpx.AsyncClient(timeout=15.0) as client:
-        if provider_type in (LLMProviderType.OPENAI, LLMProviderType.OPENAI_COMPATIBLE):
-            # List models endpoint - lightweight, validates API key
+        if normalized in ("openai", "openai_compatible"):
+            if not api_key:
+                return False
             url = (base_url.rstrip("/") if base_url else "https://api.openai.com/v1") + "/models"
             headers = {"Authorization": f"Bearer {api_key}"}
             response = await client.get(url, headers=headers)
             return response.status_code == 200
 
-        elif provider_type == LLMProviderType.ANTHROPIC:
-            # Anthropic doesn't have a models list endpoint, so we check with a minimal message
-            # Using /v1/messages endpoint with tiny max_tokens
+        if normalized == "anthropic":
             url = (base_url.rstrip("/") if base_url else "https://api.anthropic.com/v1") + "/messages"
             headers = {
                 "x-api-key": api_key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
             }
-            # This will return 400 with valid key (bad request due to empty content)
-            # but 401 with invalid key
             response = await client.post(
                 url,
                 headers=headers,
@@ -226,14 +236,23 @@ async def _test_provider_connection(
                     "messages": [{"role": "user", "content": "hi"}],
                 },
             )
-            # 200 = success, 400 = valid key but request issue (still means key works)
             return response.status_code in (200, 400)
 
-        elif provider_type == LLMProviderType.GOOGLE:
-            # Google AI - list models endpoint
+        if normalized == "google":
+            if not api_key:
+                return False
             url = f"https://generativelanguage.googleapis.com/v1/models?key={api_key}"
             response = await client.get(url)
             return response.status_code == 200
 
-        else:
-            return False
+        return False
+
+
+def _canonical_provider_type_name(session: Session, raw_provider_type: str | None) -> str | None:
+    """Return the canonical provider type name, or None if the type is unknown."""
+    if not raw_provider_type:
+        return None
+    type_obj = crud.get_llm_provider_type_by_name(
+        session=session, name=raw_provider_type
+    )
+    return type_obj.name if type_obj else None

@@ -11,7 +11,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import decrypt_api_key
@@ -24,6 +24,11 @@ from app.models import (
 from app.services.agent_tools import AgentDeps, emit_ui_component, request_agent_assistance
 
 logger = logging.getLogger(__name__)
+
+OPENAI = "openai"
+OPENAI_COMPATIBLE = "openai_compatible"
+ANTHROPIC = "anthropic"
+GOOGLE = "google"
 
 
 async def get_agent_config(session: AsyncSession, slug: str) -> AgentConfig | None:
@@ -39,7 +44,7 @@ async def resolve_user_credentials(
     session: AsyncSession,
     user_id: uuid.UUID,
     agent_config: AgentConfig,
-) -> tuple[str, str | None, LLMProviderType | None, str | None]:
+) -> tuple[str, str | None, str | None, str | None]:
     """
     Resolve user's credentials for an agent.
 
@@ -69,13 +74,19 @@ async def resolve_user_credentials(
     provider_type_str = (
         effective_model_name.split(":")[0] if ":" in effective_model_name else "openai"
     )
-    try:
-        provider_type = LLMProviderType(provider_type_str)
-    except ValueError:
+    normalized_type = provider_type_str.lower()
+    provider_type_stmt = await session.exec(
+        select(LLMProviderType).where(
+            func.lower(LLMProviderType.name) == normalized_type
+        )
+    )
+    provider_type = provider_type_stmt.one_or_none()
+    if not provider_type:
         logger.warning(
             f"Unknown provider type '{provider_type_str}' in model '{effective_model_name}'"
         )
         return effective_model_name, None, None, None
+    provider_type_name = provider_type.name
 
     provider: UserLLMProvider | None = None
 
@@ -101,7 +112,7 @@ async def resolve_user_credentials(
         default_result = await session.exec(
             select(UserLLMProvider).where(
                 UserLLMProvider.user_id == user_id,
-                UserLLMProvider.provider_type == provider_type,
+                UserLLMProvider.provider_type == provider_type_name,
                 UserLLMProvider.is_default,
                 UserLLMProvider.is_enabled,
             )
@@ -121,20 +132,20 @@ async def resolve_user_credentials(
         logger.debug(
             f"No user provider for agent {agent_config.slug}, using env vars"
         )
-        return effective_model_name, None, provider_type, None
+        return effective_model_name, None, provider_type_name, None
 
     api_key = decrypt_api_key(provider.api_key_encrypted)
     base_url = provider.base_url
     logger.debug(
         f"Resolved credentials: api_key=***{api_key[-4:] if api_key else 'None'}, base_url={base_url}"
     )
-    return effective_model_name, api_key, provider_type, base_url
+    return effective_model_name, api_key, provider_type_name, base_url
 
 
 def create_model_with_credentials(
     model_name: str,
     api_key: str | None,
-    provider_type: LLMProviderType | None,
+    provider_type: str | None,
     base_url: str | None = None,
 ) -> Any:
     """
@@ -145,35 +156,31 @@ def create_model_with_credentials(
     and PydanticAI doesn't recognize "openai_compatible" as a provider prefix.
     """
     model_id = model_name.split(":", 1)[1] if ":" in model_name else model_name
+    normalized_type = provider_type.lower() if provider_type else ""
 
-    # OpenAI-compatible providers MUST be handled explicitly — PydanticAI does
-    # not recognize "openai_compatible" as a valid provider prefix. Some servers
-    # (e.g., Ollama, local vLLM) don't require an API key at all.
-    if provider_type == LLMProviderType.OPENAI_COMPATIBLE:
+    if normalized_type == OPENAI_COMPATIBLE:
         compat_provider = OpenAIProvider(
             api_key=api_key or "not-needed",
             base_url=base_url,
         )
         return OpenAIChatModel(model_id, provider=compat_provider)
 
-    # For standard providers, an API key is required to create a model instance.
-    # Without one, return the raw model string for PydanticAI to resolve via env vars.
     if not api_key:
         return model_name
 
-    if provider_type == LLMProviderType.OPENAI:
+    if normalized_type == OPENAI:
         openai_provider = OpenAIProvider(api_key=api_key, base_url=base_url)
         return OpenAIChatModel(model_id, provider=openai_provider)
 
-    if provider_type == LLMProviderType.ANTHROPIC:
+    if normalized_type == ANTHROPIC:
         anthropic_provider = AnthropicProvider(api_key=api_key, base_url=base_url)
         return AnthropicModel(model_id, provider=anthropic_provider)
 
-    if provider_type == LLMProviderType.GOOGLE:
+    if normalized_type == GOOGLE:
         google_provider = GoogleProvider(api_key=api_key)
         return GoogleModel(model_id, provider=google_provider)
 
-    logger.warning(f"Unknown provider type {provider_type}, using model name directly")
+    logger.warning(f"Unknown provider type '{provider_type}', using model name directly")
     return model_name
 
 

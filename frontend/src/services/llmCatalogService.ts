@@ -136,6 +136,32 @@ export const PROVIDER_TYPE_LABELS: Record<LLMProviderType, string> = {
 // ============================================================================
 
 /**
+ * Normalize provider type string to lowercase LLMProviderType
+ * Handles case-insensitive backend data (e.g., "OPENAI" -> "openai")
+ */
+function normalizeProviderType(
+  providerType: string | null | undefined
+): LLMProviderType {
+  if (!providerType) return "openai_compatible"
+
+  const normalized = providerType.toLowerCase()
+
+  // Validate it's a known type
+  if (
+    normalized === "openai" ||
+    normalized === "anthropic" ||
+    normalized === "google" ||
+    normalized === "openai_compatible" ||
+    normalized === "empty"
+  ) {
+    return normalized as LLMProviderType
+  }
+
+  // Fallback for unknown types
+  return "openai_compatible"
+}
+
+/**
  * Get display label for provider type
  */
 export function getProviderTypeLabel(type: LLMProviderType): string {
@@ -151,7 +177,7 @@ function transformProvider(
   return {
     id: provider.id,
     name: provider.name,
-    providerType: provider.provider_type ?? "openai_compatible",
+    providerType: normalizeProviderType(provider.provider_type),
     description: provider.description ?? null,
     baseUrl: provider.base_url ?? null,
     isEnabled: provider.is_enabled ?? true,
@@ -182,7 +208,7 @@ function transformModel(model: LLMModelPublic): CatalogModelViewModel {
     hasFunctionCalling: model.has_function_calling ?? null,
     hasStreaming: model.has_streaming ?? null,
     hasJsonMode: model.has_json_mode ?? null,
-    providerType: model.provider_type ?? null,
+    providerType: model.provider_type ? normalizeProviderType(model.provider_type) : null,
     providerName: model.provider_name ?? null,
     createdAt: new Date(model.created_at),
     updatedAt: new Date(model.updated_at),
@@ -198,7 +224,7 @@ function transformProviderWithModels(
   return {
     id: provider.id,
     name: provider.name,
-    providerType: provider.provider_type ?? "openai_compatible",
+    providerType: normalizeProviderType(provider.provider_type),
     description: provider.description ?? null,
     baseUrl: provider.base_url ?? null,
     isEnabled: provider.is_enabled ?? true,
@@ -534,9 +560,12 @@ export const LLM_CATALOG_QUERY_KEYS = {
 /**
  * Default query options for catalog data
  * Catalog is essentially static - use very long cache times
+ *
+ * NOTE: Changed staleTime to 1 hour to allow cache refresh after bug fixes.
+ * If catalog becomes truly static, can increase back to Infinity.
  */
 export const CATALOG_QUERY_OPTIONS = {
-  staleTime: Infinity,
+  staleTime: 1000 * 60 * 60, // 1 hour (was Infinity - reduced to allow cache refresh)
   gcTime: 1000 * 60 * 60 * 24, // 24 hours
   refetchOnWindowFocus: false,
   refetchOnMount: false,

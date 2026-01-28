@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, and_, desc, func, or_, select, true
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -4551,7 +4552,7 @@ def get_user_models(
     *,
     session: Session,
     user_id: uuid.UUID,
-    provider_type: LLMProviderType | None = None,
+    provider_type_id: UUID | None = None,
 ) -> list[LLMModel]:
     """Get all custom models for a user."""
     filters = [
@@ -4559,14 +4560,19 @@ def get_user_models(
         not LLMModel.is_deleted,
     ]
 
-    stmt = select(LLMModel).where(*filters).order_by(LLMModel.display_name)
+    stmt = (
+        select(LLMModel)
+        .where(*filters)
+        .options(
+            selectinload(LLMModel.provider).selectinload(LLMProvider.provider_type)
+        )
+        .order_by(LLMModel.display_name)
+    )
 
-    # Filter by provider_type requires join to LLMProvider
-    if provider_type is not None:
+    if provider_type_id is not None:
         stmt = (
-            select(LLMModel)
-            .join(LLMProvider)
-            .where(*filters, LLMProvider.provider_type == provider_type)
+            stmt.join(LLMProvider)
+            .where(LLMProvider.provider_type_id == provider_type_id)
             .order_by(LLMModel.display_name)
         )
 
@@ -4601,7 +4607,7 @@ def get_llm_providers(
     session: Session,
     skip: int = 0,
     limit: int = 100,
-    provider_type: LLMProviderType | None = None,
+    provider_type_id: UUID | None = None,
     is_enabled: bool | None = None,
     is_system: bool | None = None,
     include_deleted: bool = False,
@@ -4610,8 +4616,8 @@ def get_llm_providers(
     filters = []
     if not include_deleted:
         filters.append(not LLMProvider.is_deleted)
-    if provider_type is not None:
-        filters.append(LLMProvider.provider_type == provider_type)
+    if provider_type_id is not None:
+        filters.append(LLMProvider.provider_type_id == provider_type_id)
     if is_enabled is not None:
         filters.append(LLMProvider.is_enabled == is_enabled)
     if is_system is not None:
@@ -4623,6 +4629,7 @@ def get_llm_providers(
     stmt = (
         select(LLMProvider)
         .where(*filters)
+        .options(selectinload(LLMProvider.provider_type))
         .order_by(LLMProvider.name)
         .offset(skip)
         .limit(limit)
@@ -4638,10 +4645,31 @@ def get_llm_provider(
     include_deleted: bool = False,
 ) -> LLMProvider | None:
     """Get a single LLM provider by ID."""
-    provider = session.get(LLMProvider, provider_id)
+    stmt = (
+        select(LLMProvider)
+        .where(LLMProvider.id == provider_id)
+        .options(selectinload(LLMProvider.provider_type))
+    )
+    provider = session.exec(stmt).one_or_none()
     if provider and not include_deleted and provider.is_deleted:
         return None
     return provider
+
+
+def get_llm_provider_type_by_name(
+    *,
+    session: Session,
+    name: str,
+) -> LLMProviderType | None:
+    """Look up an LLM provider type by name (case-insensitive)."""
+    normalized = name.strip().lower()
+    if not normalized:
+        return None
+
+    stmt = select(LLMProviderType).where(
+        func.lower(LLMProviderType.name) == normalized
+    )
+    return session.exec(stmt).first()
 
 
 def get_llm_provider_model_count(
@@ -4667,7 +4695,7 @@ def get_llm_models(
     skip: int = 0,
     limit: int = 100,
     provider_id: uuid.UUID | None = None,
-    provider_type: LLMProviderType | None = None,
+    provider_type_id: UUID | None = None,
     is_enabled: bool | None = None,
     is_deprecated: bool | None = None,
     is_default: bool | None = None,
@@ -4701,8 +4729,8 @@ def get_llm_models(
 
     if provider_id is not None:
         filters.append(LLMModel.provider_id == provider_id)
-    if provider_type is not None:
-        filters.append(LLMProvider.provider_type == provider_type)
+    if provider_type_id is not None:
+        filters.append(LLMProvider.provider_type_id == provider_type_id)
     if is_enabled is not None:
         filters.append(LLMModel.is_enabled == is_enabled)
     if is_deprecated is not None:
@@ -4727,15 +4755,19 @@ def get_llm_models(
     count = session.exec(count_stmt).one()
 
     stmt = (
-        select(LLMModel, LLMProvider)
+        select(LLMModel)
         .join(LLMProvider)
+        .options(
+            selectinload(LLMModel.provider).selectinload(LLMProvider.provider_type)
+        )
         .where(*filters)
         .order_by(LLMProvider.name, LLMModel.sort_order, LLMModel.display_name)
         .offset(skip)
         .limit(limit)
     )
-    results = session.exec(stmt).all()
-    return list(results), count
+    models = session.exec(stmt).all()
+    results = [(model, model.provider) for model in models]
+    return results, count
 
 
 def get_llm_model(
@@ -4764,7 +4796,7 @@ def get_llm_models_grouped(
     *,
     session: Session,
     user_id: uuid.UUID | None = None,
-    provider_type: LLMProviderType | None = None,
+    provider_type_id: UUID | None = None,
     is_enabled: bool | None = None,
     include_deleted: bool = False,
 ) -> list[tuple[LLMProvider, list[LLMModel]]]:
@@ -4777,8 +4809,8 @@ def get_llm_models_grouped(
     provider_filters = []
     if not include_deleted:
         provider_filters.append(not LLMProvider.is_deleted)
-    if provider_type is not None:
-        provider_filters.append(LLMProvider.provider_type == provider_type)
+    if provider_type_id is not None:
+        provider_filters.append(LLMProvider.provider_type_id == provider_type_id)
     if is_enabled is not None:
         provider_filters.append(LLMProvider.is_enabled == is_enabled)
 
@@ -4786,6 +4818,7 @@ def get_llm_models_grouped(
         select(LLMProvider)
         .where(*provider_filters)
         .order_by(LLMProvider.name)
+        .options(selectinload(LLMProvider.provider_type))
     )
     providers = session.exec(provider_stmt).all()
 
@@ -4815,7 +4848,6 @@ def get_llm_models_grouped(
             .order_by(LLMModel.sort_order, LLMModel.display_name)
         )
         models = list(session.exec(model_stmt).all())
-        if models:  # Only include providers with models
-            result.append((provider, models))
+        result.append((provider, models))
 
     return result

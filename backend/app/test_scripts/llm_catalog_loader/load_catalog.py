@@ -74,7 +74,7 @@ def load_providers(
 
         for row in reader:
             name = row["name"].strip()
-            provider_type_str = row["provider_type"].strip().upper()
+            provider_type_name = row["provider_type"].strip()
 
             # Check if provider already exists
             existing = session.exec(
@@ -90,14 +90,19 @@ def load_providers(
                 continue
 
             try:
-                provider_type = LLMProviderType[provider_type_str]
-            except KeyError:
-                print(f"  ❌ Invalid provider_type '{provider_type_str}' for '{name}'")
+                provider_type = session.exec(
+                    select(LLMProviderType).where(LLMProviderType.name == provider_type_name)
+                ).first()
+            except Exception:
+                provider_type = None
+
+            if not provider_type:
+                print(f"  ❌ Provider type '{provider_type_name}' not found for '{name}'")
                 continue
 
             provider = LLMProvider(
                 name=name,
-                provider_type=provider_type,
+                provider_type_id=provider_type.id,
                 description=row.get("description", "").strip() or None,
                 base_url=row.get("base_url", "").strip() or None,
                 is_enabled=parse_bool(row.get("is_enabled", "true")),

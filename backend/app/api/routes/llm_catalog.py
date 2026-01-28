@@ -3,6 +3,10 @@ LLM Catalog routes.
 
 Public API for browsing available LLM providers and models.
 Most endpoints are public (no auth required).
+TODO: shift to authentication required.
+TODO: only superuser can see/access/add system model default provider or assign it to an agent.
+
+
 Custom model endpoints require authentication.
 """
 
@@ -10,6 +14,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
+from sqlmodel import Session
 
 from app import crud
 from app.api.deps import CurrentUser, OptionalUser, SessionDep
@@ -18,9 +23,9 @@ from app.models import (
     LLMModelPublic,
     LLMModelsGrouped,
     LLMModelsPublic,
+    LLMProvider,
     LLMProviderPublic,
     LLMProvidersPublic,
-    LLMProviderType,
     LLMProviderWithModels,
 )
 
@@ -37,7 +42,9 @@ def list_providers(
     session: SessionDep,
     skip: int = 0,
     limit: int = 100,
-    provider_type: LLMProviderType | None = None,
+    provider_type: str | None = Query(
+        default=None, description="Filter by provider type name"
+    ),
     is_enabled: bool | None = Query(
         default=None, description="Filter by enabled status"
     ),
@@ -53,11 +60,12 @@ def list_providers(
 
     No authentication required. Returns providers with their model counts.
     """
+    provider_type_id = _resolve_provider_type_id(session=session, provider_type=provider_type)
     providers, count = crud.get_llm_providers(
         session=session,
         skip=skip,
         limit=limit,
-        provider_type=provider_type,
+        provider_type_id=provider_type_id,
         is_enabled=is_enabled,
         is_system=is_system,
         include_deleted=include_deleted,
@@ -75,6 +83,7 @@ def list_providers(
             LLMProviderPublic(
                 **provider.model_dump(),
                 model_count=model_count,
+                provider_type=_get_provider_type_name(provider),
             )
         )
 
@@ -106,7 +115,11 @@ def get_provider(
         include_deleted=include_deleted,
     )
 
-    return LLMProviderPublic(**provider.model_dump(), model_count=model_count)
+    return LLMProviderPublic(
+        **provider.model_dump(),
+        model_count=model_count,
+        provider_type=_get_provider_type_name(provider),
+    )
 
 
 @router.get("/providers/{provider_id}/models", response_model=LLMModelsPublic)
@@ -152,7 +165,7 @@ def list_provider_models(
     data = [
         LLMModelPublic(
             **model.model_dump(),
-            provider_type=prov.provider_type,
+            provider_type=_get_provider_type_name(prov),
             provider_name=prov.name,
         )
         for model, prov in results
@@ -193,7 +206,7 @@ def create_custom_model(
 
     return LLMModelPublic(
         **model.model_dump(),
-        provider_type=provider.provider_type,
+        provider_type=_get_provider_type_name(provider),
         provider_name=provider.name,
     )
 
@@ -202,7 +215,7 @@ def create_custom_model(
 def list_custom_models(
     session: SessionDep,
     current_user: CurrentUser,
-    provider_type: LLMProviderType | None = Query(
+    provider_type: str | None = Query(
         default=None, description="Filter by provider type"
     ),
 ) -> Any:
@@ -214,17 +227,17 @@ def list_custom_models(
     models = crud.get_user_models(
         session=session,
         user_id=current_user.id,
-        provider_type=provider_type,
+        provider_type_id=_resolve_provider_type_id(session=session, provider_type=provider_type),
     )
 
     # Enrich with provider info
     data = []
     for model in models:
-        provider = crud.get_llm_provider(session=session, provider_id=model.provider_id)
+        provider = model.provider
         data.append(
             LLMModelPublic(
                 **model.model_dump(),
-                provider_type=provider.provider_type if provider else None,
+                provider_type=_get_provider_type_name(provider),
                 provider_name=provider.name if provider else None,
             )
         )
@@ -246,8 +259,8 @@ def list_models(
     provider_id: uuid.UUID | None = Query(
         default=None, description="Filter by provider ID"
     ),
-    provider_type: LLMProviderType | None = Query(
-        default=None, description="Filter by provider type"
+    provider_type: str | None = Query(
+        default=None, description="Filter by provider type name"
     ),
     is_enabled: bool | None = Query(
         default=None, description="Filter by enabled status"
@@ -286,7 +299,7 @@ def list_models(
         skip=skip,
         limit=limit,
         provider_id=provider_id,
-        provider_type=provider_type,
+        provider_type_id=_resolve_provider_type_id(session=session, provider_type=provider_type),
         is_enabled=is_enabled,
         is_deprecated=is_deprecated,
         is_default=is_default,
@@ -300,7 +313,7 @@ def list_models(
     data = [
         LLMModelPublic(
             **model.model_dump(),
-            provider_type=provider.provider_type,
+            provider_type=_get_provider_type_name(provider),
             provider_name=provider.name,
         )
         for model, provider in results
@@ -313,8 +326,8 @@ def list_models(
 def list_models_grouped(
     session: SessionDep,
     current_user: OptionalUser,
-    provider_type: LLMProviderType | None = Query(
-        default=None, description="Filter by provider type"
+    provider_type: str | None = Query(
+        default=None, description="Filter by provider type name"
     ),
     is_enabled: bool | None = Query(
         default=None, description="Filter by enabled status"
@@ -330,7 +343,7 @@ def list_models_grouped(
     grouped = crud.get_llm_models_grouped(
         session=session,
         user_id=current_user.id if current_user else None,
-        provider_type=provider_type,
+        provider_type_id=_resolve_provider_type_id(session=session, provider_type=provider_type),
         is_enabled=is_enabled,
         include_deleted=include_deleted,
     )
@@ -345,7 +358,7 @@ def list_models_grouped(
         model_public_list = [
             LLMModelPublic(
                 **m.model_dump(),
-                provider_type=provider.provider_type,
+                provider_type=_get_provider_type_name(provider),
                 provider_name=provider.name,
             )
             for m in models
@@ -356,6 +369,7 @@ def list_models_grouped(
                 **provider.model_dump(),
                 model_count=model_count,
                 models=model_public_list,
+                provider_type=_get_provider_type_name(provider),
             )
         )
 
@@ -387,6 +401,22 @@ def get_model(
     model, provider = result
     return LLMModelPublic(
         **model.model_dump(),
-        provider_type=provider.provider_type,
+        provider_type=_get_provider_type_name(provider),
         provider_name=provider.name,
     )
+
+
+def _resolve_provider_type_id(
+    session: Session,
+    provider_type: str | None,
+) -> uuid.UUID | None:
+    if not provider_type:
+        return None
+    type_obj = crud.get_llm_provider_type_by_name(session=session, name=provider_type)
+    return type_obj.id if type_obj else None
+
+
+def _get_provider_type_name(provider: LLMProvider | None) -> str | None:
+    if not provider or not provider.provider_type:
+        return None
+    return provider.provider_type.name

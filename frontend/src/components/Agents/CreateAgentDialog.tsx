@@ -154,7 +154,7 @@ export default function CreateAgentDialog({
             Create New Agent
           </DialogTitle>
           <DialogDescription>
-            Create a personal AI agent with custom instructions and behavior.
+            CreateAgentDialog - make you an agent, bud.
           </DialogDescription>
         </DialogHeader>
 
