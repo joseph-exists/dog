@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.models import AgentConfig
+from app.models import UserUserAgentConfig
 from app.services.agent_selection import AgentSelectionService
 
 
@@ -18,7 +18,7 @@ from app.services.agent_selection import AgentSelectionService
 )
 def test_on_mention_participation_modes(trigger_message: str, expected: bool) -> None:
     service = AgentSelectionService()
-    config = AgentConfig(
+    config = UserAgentConfig(
         name="Story Advisor",
         slug="story-advisor",
         participation_mode="on_mention",
@@ -46,7 +46,7 @@ def test_on_mention_participation_modes(trigger_message: str, expected: bool) ->
 )
 def test_participation_modes(participation_mode: str, expected: bool, reason: str) -> None:
     service = AgentSelectionService()
-    config = AgentConfig(
+    config = UserAgentConfig(
         name="Story Advisor",
         slug="story-advisor",
         participation_mode=participation_mode,

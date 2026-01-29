@@ -2176,7 +2176,7 @@ class RoomParticipantBase(SQLModel):
 
     participant_id: str = Field(
         max_length=255,
-        description="UUID string for users, AgentConfig.slug for agents",
+        description="UUID string for users, UserAgentConfig.slug for agents",
     )
     participant_type: str = Field(
         max_length=10,
@@ -2253,7 +2253,7 @@ class ParticipantAddRequest(SQLModel):
     participant_id: str = Field(
         ...,
         max_length=255,
-        description="UUID string for users, AgentConfig.slug for agents",
+        description="UUID string for users, UserAgentConfig.slug for agents",
         # examples=["550e8400-e29b-41d4-a716-446655440000", "StoryAdvisor"],
     )
     participant_type: Literal["user", "agent"] = Field(
@@ -2303,7 +2303,7 @@ class RoomParticipantBindingBase(SQLModel):
     )
     participant_id: str = Field(
         max_length=255,
-        description="UUID string for users; AgentConfig.slug for agents",
+        description="UUID string for users; UserAgentConfig.slug for agents",
     )
 
     persona_id: uuid.UUID | None = Field(default=None, foreign_key="persona.id")
@@ -2311,7 +2311,7 @@ class RoomParticipantBindingBase(SQLModel):
     model_name: str | None = Field(
         default=None,
         max_length=100,
-        description="Same format as AgentConfig.model_name (e.g., 'openai:gpt-4o-mini')",
+        description="Same format as UserAgentConfig.model_name (e.g., 'openai:gpt-4o-mini')",
     )
     user_access_provider_id: uuid.UUID | None = Field(
         default=None,
@@ -3024,7 +3024,7 @@ class StoryNodeTree(SQLModel):
 
 # class AvailableAgent(SQLModel):
 # class AvailableAgentsPublic(SQLModel):
-# ->  UserAgentConfigPublic
+# ->  UserAgentConfigPublic (joined with two other merged classes)
 
  # ═══════════════════════════════════════════════════════════════════════════════
  # Agent Configuration Models

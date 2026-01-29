@@ -18,7 +18,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
-    AgentConfig,
+    UserAgentConfig,
     Room,
     RoomMessage,
     RoomParticipant,
@@ -308,23 +308,23 @@ async def build_room_context(
         active_agents: list[AgentInfo] = []
         for p in participants_list:
             if p.participant_type == "agent":
-                # participant_id is AgentConfig.slug (preferred) with legacy UUID support.
+                # participant_id is UserAgentConfig.slug (preferred) with legacy UUID support.
                 agent_config = None
 
                 agent_result = await session.exec(
-                    select(AgentConfig).where(AgentConfig.slug == p.participant_id)
+                    select(UserAgentConfig).where(UserAgentConfig.slug == p.participant_id)
                 )
                 agent_config_row = agent_result.one_or_none()
                 agent_config = (
                     agent_config_row[0]
-                    if agent_config_row and not isinstance(agent_config_row, AgentConfig)
+                    if agent_config_row and not isinstance(agent_config_row, UserAgentConfig)
                     else agent_config_row
                 )
 
                 if not agent_config:
                     try:
                         agent_uuid = uuid.UUID(p.participant_id)
-                        agent_config = await session.get(AgentConfig, agent_uuid)
+                        agent_config = await session.get(UserAgentConfig, agent_uuid)
                     except ValueError:
                         agent_config = None
 

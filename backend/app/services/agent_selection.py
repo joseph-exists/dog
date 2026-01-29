@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import AgentConfig, RoomParticipant
+from app.models import UserAgentConfig, RoomParticipant
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +68,10 @@ class AgentSelectionService:
         *,
         session: AsyncSession,
         participant_id: str,
-    ) -> tuple[str | None, str | None, AgentConfig | None]:
+    ) -> tuple[str | None, str | None, UserAgentConfig | None]:
         try:
             agent_uuid = uuid.UUID(participant_id)
-            agent_config = await session.get(AgentConfig, agent_uuid)
+            agent_config = await session.get(UserAgentConfig, agent_uuid)
 
             if agent_config and agent_config.is_enabled:
                 logger.debug(
@@ -88,7 +88,7 @@ class AgentSelectionService:
             pass
 
         result = await session.exec(
-            select(AgentConfig).where(AgentConfig.slug == participant_id)
+            select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
         )
         row = result.one_or_none()
         agent_config = row[0] if row else None
@@ -115,7 +115,7 @@ class AgentSelectionService:
     def should_agent_respond_to_message(
         self,
         *,
-        config: AgentConfig,
+        config: UserAgentConfig,
         trigger_message: str,
     ) -> tuple[bool, str]:
         mode = config.participation_mode or "on_mention"
@@ -141,16 +141,16 @@ class AgentSelectionService:
         room_id: uuid.UUID,
         trigger_message: str,
     ) -> tuple[
-        list[tuple[str, str, AgentConfig]],
-        list[tuple[str, str, AgentConfig, str]],
+        list[tuple[str, str, UserAgentConfig]],
+        list[tuple[str, str, UserAgentConfig, str]],
     ]:
         participants = await self.resolve_participants(
             session=session,
             room_id=room_id,
         )
 
-        coordinators: list[tuple[str, str, AgentConfig]] = []
-        regular_agents: list[tuple[str, str, AgentConfig, str]] = []
+        coordinators: list[tuple[str, str, UserAgentConfig]] = []
+        regular_agents: list[tuple[str, str, UserAgentConfig, str]] = []
 
         for participant in participants:
             participant_id = participant.participant_id

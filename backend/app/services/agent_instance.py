@@ -16,10 +16,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import decrypt_api_key
 from app.models import (
-    AgentConfig,
+    UserAgentConfig,
     LLMProviderType,
-    UserAgentSettings,
-    UserLLMProvider,
+    UserAccessProvider,
 )
 from app.services.agent_tools import AgentDeps, emit_ui_component, request_agent_assistance
 
@@ -31,19 +30,19 @@ ANTHROPIC = "anthropic"
 GOOGLE = "google"
 
 
-async def get_agent_config(session: AsyncSession, slug: str) -> AgentConfig | None:
+async def get_agent_config(session: AsyncSession, slug: str) -> UserAgentConfig | None:
     """Get agent configuration from database by slug."""
     result = await session.exec(
-        select(AgentConfig).where(AgentConfig.slug == slug)
+        select(UserAgentConfig).where(UserAgentConfig.slug == slug)
     )
     row = result.one_or_none()
-    return row[0] if row and not isinstance(row, AgentConfig) else row
+    return row[0] if row and not isinstance(row, UserAgentConfig) else row
 
 
 async def resolve_user_credentials(
     session: AsyncSession,
     user_id: uuid.UUID,
-    agent_config: AgentConfig,
+    agent_config: UserAgentConfig,
 ) -> tuple[str, str | None, str | None, str | None]:
     """
     Resolve user's credentials for an agent.
@@ -52,15 +51,15 @@ async def resolve_user_credentials(
         Tuple of (effective_model_name, decrypted_api_key, provider_type, base_url)
     """
     settings_result = await session.exec(
-        select(UserAgentSettings).where(
-            UserAgentSettings.user_id == user_id,
-            UserAgentSettings.agent_config_id == agent_config.id,
+        select(UserAgentConfig).where(
+            UserAgentConfig.user_id == user_id,
+            UserAgentConfig.agent_config_id == agent_config.id,
         )
     )
     settings_row = settings_result.one_or_none()
     settings = (
         settings_row[0]
-        if settings_row and not isinstance(settings_row, UserAgentSettings)
+        if settings_row and not isinstance(settings_row, UserAgentConfig)
         else settings_row
     )
 
@@ -89,19 +88,19 @@ async def resolve_user_credentials(
     provider_type_name = provider_type.name
     provider_type_id = provider_type.id
 
-    provider: UserLLMProvider | None = None
+    provider: UserAccessProvider | None = None
 
     if settings and settings.provider_id:
         provider_result = await session.exec(
-            select(UserLLMProvider).where(
-                UserLLMProvider.id == settings.provider_id,
-                UserLLMProvider.is_enabled,
+            select(UserAccessProvider).where(
+                UserAccessProvider.id == settings.provider_id,
+                UserAccessProvider.is_enabled,
             )
         )
         provider_row = provider_result.one_or_none()
         provider = (
             provider_row[0]
-            if provider_row and not isinstance(provider_row, UserLLMProvider)
+            if provider_row and not isinstance(provider_row, UserAccessProvider)
             else provider_row
         )
         if provider:
@@ -111,23 +110,23 @@ async def resolve_user_credentials(
             if not provider.provider_type_id:
                 # Legacy payloads used provider_type name; fail fast and log loudly.
                 logger.error(
-                    "provider_type_id missing on UserLLMProvider %s during agent resolution",
+                    "provider_type_id missing on UserAccessProvider %s during agent resolution",
                     provider.id,
                 )
 
     if not provider:
         default_result = await session.exec(
-            select(UserLLMProvider).where(
-                UserLLMProvider.user_id == user_id,
-                UserLLMProvider.provider_type_id == provider_type_id,
-                UserLLMProvider.is_default,
-                UserLLMProvider.is_enabled,
+            select(UserAccessProvider).where(
+                UserAccessProvider.user_id == user_id,
+                UserAccessProvider.provider_type_id == provider_type_id,
+                UserAccessProvider.is_default,
+                UserAccessProvider.is_enabled,
             )
         )
         provider_row = default_result.one_or_none()
         provider = (
             provider_row[0]
-            if provider_row and not isinstance(provider_row, UserLLMProvider)
+            if provider_row and not isinstance(provider_row, UserAccessProvider)
             else provider_row
         )
         if provider:
@@ -137,7 +136,7 @@ async def resolve_user_credentials(
             if not provider.provider_type_id:
                 # Legacy payloads used provider_type name; fail fast and log loudly.
                 logger.error(
-                    "provider_type_id missing on UserLLMProvider %s during agent resolution",
+                    "provider_type_id missing on UserAccessProvider %s during agent resolution",
                     provider.id,
                 )
 
@@ -202,10 +201,10 @@ async def get_agent_instance(
     slug: str,
 ) -> Agent[Any, Any] | None:
     """
-    Get basic agent instance from database AgentConfig (no tools).
+    Get basic agent instance from database UserAgentConfig (no tools).
 
     Instantiates a PydanticAI Agent using the configuration stored in the database.
-    Uses the model_name and system_prompt from AgentConfig.
+    Uses the model_name and system_prompt from UserAgentConfig.
 
     For agents with A2A tools, use get_agent_instance_with_tools() instead.
     """

@@ -9,27 +9,25 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-import httpx
 from fastapi import APIRouter, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.core.security import encrypt_api_key, decrypt_api_key
+from app.core.security import encrypt_api_key
 from app.models import (
-    LLMProviderType,
     Message,
-    UserLLMProvider,
-    UserLLMProviderCreate,
-    UserLLMProviderPublic,
-    UserLLMProviderUpdate,
-    UserLLMProvidersPublic,
+    UserAccessProvider,
+    UserAccessProviderCreate,
+    UserAccessProviderPublic,
+    UserAccessProviderUpdate,
+    UserAccessProvidersPublic,
 )
 
 router = APIRouter(prefix="/llm-providers", tags=["llm-providers"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", response_model=UserLLMProvidersPublic)
+@router.get("/", response_model=UserAccessProvidersPublic)
 def list_providers(
     session: SessionDep,
     current_user: CurrentUser,
@@ -38,47 +36,33 @@ def list_providers(
 ) -> Any:
     """List user's LLM provider configurations."""
     statement = (
-        select(UserLLMProvider, LLMProviderType)
-        .join(
-            LLMProviderType,
-            UserLLMProvider.provider_type_id == LLMProviderType.id,
-            isouter=True,
-        )
-        .where(UserLLMProvider.user_id == current_user.id)
+        select(UserAccessProvider)
+        .where(UserAccessProvider.user_id == current_user.id)
         .offset(skip)
         .limit(limit)
     )
-    rows = session.exec(statement).all()
+    providers = session.exec(statement).all()
     data = [
-        _user_provider_public(provider, provider_type)
-        for provider, provider_type in rows
+        UserAccessProviderPublic(**provider.model_dump())
+        for provider in providers
     ]
-    return UserLLMProvidersPublic(data=data, count=len(data))
+    return UserAccessProvidersPublic(data=data, count=len(data))
 
 
-@router.post("/", response_model=UserLLMProviderPublic)
+@router.post("/", response_model=UserAccessProviderPublic)
 def create_provider(
     *,
     session: SessionDep,
     current_user: CurrentUser,
-    provider_in: UserLLMProviderCreate,
+    provider_in: UserAccessProviderCreate,
 ) -> Any:
-    """Create a new LLM provider configuration."""
-    if not provider_in.provider_type_id:
-        # Legacy payloads used provider_type name; fail fast and log loudly.
-        logger.error("provider_type_id missing on UserLLMProviderCreate payload")
-        raise HTTPException(status_code=400, detail="provider_type_id is required")
-
-    provider_type = session.get(LLMProviderType, provider_in.provider_type_id)
-    if not provider_type:
-        raise HTTPException(status_code=400, detail="Unknown provider type")
-
-    # If setting as default, unset other defaults of same type
+    """Create a new access provider configuration."""
+    # If setting as default, unset other defaults for this user
     if provider_in.is_default:
-        _unset_defaults(session, current_user.id, provider_in.provider_type_id)
+        _unset_defaults(session, current_user.id)
 
     provider_data = provider_in.model_dump(exclude={"api_key"})
-    provider = UserLLMProvider(
+    provider = UserAccessProvider(
         **provider_data,
         user_id=current_user.id,
         api_key_encrypted=encrypt_api_key(provider_in.api_key),
@@ -86,45 +70,32 @@ def create_provider(
     session.add(provider)
     session.commit()
     session.refresh(provider)
-    row = _get_user_provider_with_type(
-        session=session,
-        provider_id=provider.id,
-        user_id=current_user.id,
-    )
-    if not row:
-        return _user_provider_public(provider, None)
-    provider_row, provider_type = row
-    return _user_provider_public(provider_row, provider_type)
+    return UserAccessProviderPublic(**provider.model_dump())
 
 
-@router.get("/{provider_id}", response_model=UserLLMProviderPublic)
+@router.get("/{provider_id}", response_model=UserAccessProviderPublic)
 def get_provider(
     provider_id: uuid.UUID,
     session: SessionDep,
     current_user: CurrentUser,
 ) -> Any:
     """Get a specific LLM provider configuration."""
-    row = _get_user_provider_with_type(
-        session=session,
-        provider_id=provider_id,
-        user_id=current_user.id,
-    )
-    if not row:
+    provider = session.get(UserAccessProvider, provider_id)
+    if not provider or provider.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Provider not found")
-    provider, provider_type = row
-    return _user_provider_public(provider, provider_type)
+    return UserAccessProviderPublic(**provider.model_dump())
 
 
-@router.patch("/{provider_id}", response_model=UserLLMProviderPublic)
+@router.patch("/{provider_id}", response_model=UserAccessProviderPublic)
 def update_provider(
     *,
     provider_id: uuid.UUID,
     session: SessionDep,
     current_user: CurrentUser,
-    provider_in: UserLLMProviderUpdate,
+    provider_in: UserAccessProviderUpdate,
 ) -> Any:
     """Update an LLM provider configuration."""
-    provider = session.get(UserLLMProvider, provider_id)
+    provider = session.get(UserAccessProvider, provider_id)
     if not provider or provider.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Provider not found")
 
@@ -132,12 +103,7 @@ def update_provider(
 
     # Handle default flag - unset others if setting this as default
     if update_data.get("is_default"):
-        target_type_id = update_data.get("provider_type_id", provider.provider_type_id)
-        if not target_type_id:
-            # Legacy payloads used provider_type name; fail fast and log loudly.
-            logger.error("provider_type_id missing while setting default on UserLLMProviderUpdate")
-            raise HTTPException(status_code=400, detail="provider_type_id is required to set default")
-        _unset_defaults(session, current_user.id, target_type_id)
+        _unset_defaults(session, current_user.id)
 
     # Handle API key update - encrypt new key
     if "api_key" in update_data:
@@ -151,15 +117,7 @@ def update_provider(
     session.add(provider)
     session.commit()
     session.refresh(provider)
-    row = _get_user_provider_with_type(
-        session=session,
-        provider_id=provider.id,
-        user_id=current_user.id,
-    )
-    if not row:
-        return _user_provider_public(provider, None)
-    provider_row, provider_type = row
-    return _user_provider_public(provider_row, provider_type)
+    return UserAccessProviderPublic(**provider.model_dump())
 
 
 @router.delete("/{provider_id}", response_model=Message)
@@ -169,7 +127,7 @@ def delete_provider(
     current_user: CurrentUser,
 ) -> Any:
     """Delete an LLM provider configuration."""
-    provider = session.get(UserLLMProvider, provider_id)
+    provider = session.get(UserAccessProvider, provider_id)
     if not provider or provider.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Provider not found")
     session.delete(provider)
@@ -177,146 +135,33 @@ def delete_provider(
     return Message(message="Provider deleted successfully")
 
 
-@router.post("/{provider_id}/test", response_model=Message)
-async def test_provider(
-    provider_id: uuid.UUID,
-    session: SessionDep,
-    current_user: CurrentUser,
-) -> Any:
-    """
-    Test LLM provider connection.
-
-    Makes a minimal API call to verify credentials work.
-    """
-    provider = session.get(UserLLMProvider, provider_id)
-    if not provider or provider.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Provider not found")
-
-    api_key = decrypt_api_key(provider.api_key_encrypted)
-
-    try:
-        if not provider.provider_type_id:
-            logger.error("provider_type_id missing on UserLLMProvider %s", provider.id)
-            raise HTTPException(status_code=400, detail="Unknown provider type")
-        provider_type = session.get(LLMProviderType, provider.provider_type_id)
-        if not provider_type:
-            logger.error("provider_type lookup missing for UserLLMProvider %s", provider.id)
-            raise HTTPException(status_code=400, detail="Unknown provider type")
-
-        success = await _test_provider_connection(
-            provider_type=provider_type.name,
-            api_key=api_key,
-            base_url=provider.base_url,
-        )
-
-        provider.last_tested_at = datetime.now()
-        provider.last_test_success = success
-        session.add(provider)
-        session.commit()
-
-        if success:
-            return Message(message="Connection successful")
-        else:
-            raise HTTPException(status_code=400, detail="Connection test failed")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        provider.last_tested_at = datetime.now()
-        provider.last_test_success = False
-        session.add(provider)
-        session.commit()
-        raise HTTPException(status_code=400, detail=f"Connection test failed: {str(e)}")
+# TODO: Redesign test endpoint - need model_id to know which API protocol to test
+# @router.post("/{provider_id}/test", response_model=Message)
+# async def test_provider(
+#     provider_id: uuid.UUID,
+#     session: SessionDep,
+#     current_user: CurrentUser,
+#     model_id: uuid.UUID,  # Need this to determine API protocol
+# ) -> Any:
+#     """
+#     Test LLM provider connection with a specific model.
+#
+#     Since provider can serve multiple API types (OpenAI + Google),
+#     we need to know which model to test against.
+#     """
+#     pass
 
 
-def _unset_defaults(session: SessionDep, user_id: uuid.UUID, provider_type_id: uuid.UUID) -> None:
-    """Unset default flag on all providers of a type for a user."""
-    if not provider_type_id:
-        return
-    statement = select(UserLLMProvider).where(
-        UserLLMProvider.user_id == user_id,
-        UserLLMProvider.provider_type_id == provider_type_id,
-        UserLLMProvider.is_default == True,
+def _unset_defaults(session: SessionDep, user_id: uuid.UUID) -> None:
+    """Unset default flag on all providers for a user."""
+    statement = select(UserAccessProvider).where(
+        UserAccessProvider.user_id == user_id,
+        UserAccessProvider.is_default == True,
     )
     for provider in session.exec(statement).all():
         provider.is_default = False
         session.add(provider)
 
 
-def _get_user_provider_with_type(
-    *,
-    session: Session,
-    provider_id: uuid.UUID,
-    user_id: uuid.UUID,
-) -> tuple[UserLLMProvider, LLMProviderType | None] | None:
-    statement = (
-        select(UserLLMProvider, LLMProviderType)
-        .join(
-            LLMProviderType,
-            UserLLMProvider.provider_type_id == LLMProviderType.id,
-            isouter=True,
-        )
-        .where(
-            UserLLMProvider.id == provider_id,
-            UserLLMProvider.user_id == user_id,
-        )
-    )
-    return session.exec(statement).one_or_none()
-
-
-def _user_provider_public(
-    provider: UserLLMProvider, provider_type: LLMProviderType | None
-) -> UserLLMProviderPublic:
-    return UserLLMProviderPublic(
-        **provider.model_dump(),
-        provider_type=provider_type.name if provider_type else None,
-    )
-
-
-async def _test_provider_connection(
-    provider_type: str,
-    api_key: str,
-    base_url: str | None,
-) -> bool:
-    """
-    Test connection to an LLM provider.
-
-    Makes minimal API calls to validate credentials without incurring
-    significant costs. Each provider has a different validation approach.
-    """
-    normalized = provider_type.lower() if provider_type else ""
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        if normalized in ("openai", "openai_compatible"):
-            if not api_key:
-                return False
-            url = (base_url.rstrip("/") if base_url else "https://api.openai.com/v1") + "/models"
-            headers = {"Authorization": f"Bearer {api_key}"}
-            response = await client.get(url, headers=headers)
-            return response.status_code == 200
-
-        if normalized == "anthropic":
-            url = (base_url.rstrip("/") if base_url else "https://api.anthropic.com/v1") + "/messages"
-            headers = {
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            }
-            response = await client.post(
-                url,
-                headers=headers,
-                json={
-                    "model": "claude-3-haiku-20240307",
-                    "max_tokens": 1,
-                    "messages": [{"role": "user", "content": "hi"}],
-                },
-            )
-            return response.status_code in (200, 400)
-
-        if normalized == "google":
-            if not api_key:
-                return False
-            url = f"https://generativelanguage.googleapis.com/v1/models?key={api_key}"
-            response = await client.get(url)
-            return response.status_code == 200
-
-        return False
+# TODO: Add back test connection helpers when test endpoint is redesigned
+# Will need to test specific model + provider combinations

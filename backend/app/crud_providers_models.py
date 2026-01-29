@@ -71,26 +71,26 @@ def delete_user_model(
 # =============================================================================
 
 
-def get_llm_providers(
+def get_access_providers(
     *,
     session: Session,
     validated: bool | None = None,
     is_system: bool | None = None,
     provider_id: UUID | None = None,
-    """Get list of LLM providers."""
+    """Get list of users LLM providers."""
 
-    return list(set of providers) 
-    # TODO: return of provider_type table.
+    # return list(set of user_access_providers) 
+    # return of user_access_providers
     # can filter by validated.
 
 
 
-def get_llm_provider(
+def get_access_provider(
     *,
     session: Session,
     provider_id: uuid.UUID,
 ) -> UUID | None:
-    """Get a single LLM provider by ID."""
+    """Get a single access provider by ID."""
     )
 
     return # all details from provider_type table for that id (name, details, validated, is_system, id)

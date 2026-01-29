@@ -8,7 +8,7 @@ from typing import Any
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import AgentConfig, RoomParticipant
+from app.models import UserAgentConfig, RoomParticipant
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class A2AOrchestrator:
         session: AsyncSession,
         room_id: uuid.UUID,
         agent_identifier: str,
-    ) -> tuple[bool, str | None, AgentConfig | None]:
+    ) -> tuple[bool, str | None, UserAgentConfig | None]:
         result = await session.exec(
             select(RoomParticipant).where(
                 RoomParticipant.room_id == room_id,
@@ -151,10 +151,10 @@ class A2AOrchestrator:
         *,
         session: AsyncSession,
         participant_id: str,
-    ) -> tuple[str | None, str | None, AgentConfig | None]:
+    ) -> tuple[str | None, str | None, UserAgentConfig | None]:
         try:
             agent_uuid = uuid.UUID(participant_id)
-            agent_config = await session.get(AgentConfig, agent_uuid)
+            agent_config = await session.get(UserAgentConfig, agent_uuid)
 
             if agent_config and agent_config.is_enabled:
                 logger.debug(
@@ -171,11 +171,11 @@ class A2AOrchestrator:
             pass
 
         result = await session.exec(
-            select(AgentConfig).where(AgentConfig.slug == participant_id)
+            select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
         )
         row = result.one_or_none()
         agent_config = (
-            row[0] if row and not isinstance(row, AgentConfig) else row
+            row[0] if row and not isinstance(row, UserAgentConfig) else row
         )
 
         if agent_config and agent_config.is_enabled:

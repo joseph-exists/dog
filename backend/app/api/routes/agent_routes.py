@@ -59,13 +59,13 @@ def list_agents(
     Admins see: all agents
     """
     if current_user.is_superuser:
-        configs, count = crud.get_agent_configs(session=session, skip=skip, limit=limit, scope=scope)
+        configs, count = crud.get_user_agent_configs(session=session, skip=skip, limit=limit, scope=scope)
     else:
         # Get system agents + user's personal agents
-        system_configs, _ = crud.get_agent_configs(
+        system_configs, _ = crud.get_user_agent_configs(
             session=session, scope="system", enabled_only=True
         )
-        personal_configs, _ = crud.get_agent_configs(
+        personal_configs, _ = crud.get_user_agent_configs(
             session=session, scope="personal", owner_id=current_user.id
         )
         configs = system_configs + personal_configs
@@ -74,7 +74,7 @@ def list_agents(
     return UserAgentConfigsPublic(data=configs, count=count)
 
 
-@router.get("/available", response_model=AgentConfigsPublic)
+@router.get("/available", response_model=UserAgentConfigsPublic)
 def list_available_agents(
     session: SessionDep,
     current_user: CurrentUser,
@@ -84,15 +84,15 @@ def list_available_agents(
 ) -> Any:
     """List agents available for room participation (enabled system agents and enabled personal agents)."""
     if current_user.is_superuser:
-        configs, count = crud.get_agent_configs(
+        configs, count = crud.get_user_agent_configs(
             session=session, skip=skip, limit=limit, scope=scope
         )
     else:
         # Get system agents + user's personal agents
-        system_configs, _ = crud.get_agent_configs(
+        system_configs, _ = crud.get_user_agent_configs(
             session=session, scope="system", enabled_only=True
         )
-        personal_configs, _ = crud.get_agent_configs(
+        personal_configs, _ = crud.get_user_agent_configs(
             session=session, scope="personal", owner_id=current_user.id
         )
         configs = system_configs + personal_configs
@@ -117,7 +117,7 @@ def get_agent(
     agent_id: uuid.UUID,
 ) -> Any:
     """Get agent configuration by ID."""
-    config = crud.get_agent_config(session=session, agent_id=agent_id)
+    config = crud.get_user_agent_config(session=session, agent_id=agent_id)
     if not config:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -136,7 +136,7 @@ def get_agent_by_slug(
     slug: str,
 ) -> Any:
     """Get agent configuration by slug."""
-    config = crud.get_agent_config_by_slug(session=session, slug=slug)
+    config = crud.get_user_agent_config_by_slug(session=session, slug=slug)
     if not config:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -207,7 +207,7 @@ def update_agent(
     agent_in: UserAgentConfigUpdate,
 ) -> Any:
     """Update an agent configuration."""
-    config = crud.get_agent_config(session=session, agent_id=agent_id)
+    config = crud.get_user_agent_config(session=session, agent_id=agent_id)
     if not config:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -217,6 +217,9 @@ def update_agent(
     if config.scope == "personal" and config.owner_id != current_user.id:
         if not current_user.is_superuser:
             raise HTTPException(status_code=403, detail="Access denied")
+
+    if not config.slug:
+        raise HTTPException(status_code=500, detail="Agent config has no slug")
 
     updated = agent_registry_service.update_agent(
         session=session,
@@ -251,7 +254,7 @@ def delete_agent(
     agent_id: uuid.UUID,
 ) -> Message:
     """Delete an agent configuration."""
-    config = crud.get_agent_config(session=session, agent_id=agent_id)
+    config = crud.get_user_agent_config(session=session, agent_id=agent_id)
     if not config:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -262,7 +265,7 @@ def delete_agent(
         if not current_user.is_superuser:
             raise HTTPException(status_code=403, detail="Access denied")
 
-    crud.delete_agent_config(session=session, db_agent=config)
+    crud.delete_user_agent_config(session=session, db_agent=config)
     return Message(message="Agent deleted successfully")
 
 
@@ -288,7 +291,7 @@ def get_my_agent_settings(
     Settings include chosen access provider and optional custom system prompt.
     """
     # Verify agent exists and user has access
-    config = crud.get_agent_config(session=session, agent_id=agent_id)
+    config = crud.get_user_agent_config(session=session, agent_id=agent_id)
     if not config:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -314,7 +317,7 @@ def update_my_agent_settings(
     - For system agents: use your own API key without affecting others
     """
     # Verify agent exists and user has access
-    config = crud.get_agent_config(session=session, agent_id=agent_id)
+    config = crud.get_user_agent_config(session=session, agent_id=agent_id)
     if not config:
         raise HTTPException(status_code=404, detail="Agent not found")
 

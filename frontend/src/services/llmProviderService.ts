@@ -1,8 +1,8 @@
 /**
  * LLM Provider Service - User Provider Configuration Layer
  *
- * Purpose: Manage user's LLM provider configurations (API keys, custom endpoints).
- * This service handles UserLLMProvider entities - the user's configured providers.
+ * Purpose: Manage user's access provider configurations (API keys, custom endpoints).
+ * This service handles UserAccessProvider entities - the user's configured access providers.
  *
  * For the system-wide model catalog (available models, capabilities), use llmCatalogService.
  *
@@ -13,21 +13,42 @@
  * - Provides filtering and resolution utilities
  */
 
+
+// # deleted classes
+// # class UserAgentSettingsBase(SQLModel):
+// # ->  into UserAgentConfigBase
+// # class UserAgentSettingsCreate(UserAgentSettingsBase):
+// # ->  into UserAgentConfigCreate(UserAgentConfigBase)
+// # class UserAgentSettingsUpdate(SQLModel):
+// # ->  into UserAgentConfigUpdate(SQLModel):
+// # class UserAgentConfigSettings(UserAgentSettingsBase, table=True):
+// # ->  into UserAgentConfig(UserAgentConfigBase, table=True) tablename "user_agent_configs"
+// # class UserAgentConfigSettingsPublic(UserAgentSettingsBase):
+// # ->  into UserAgentConfigPublic(UserAgentConfigBase)
+// #  class UserAgentSettingsListPublic(SQLModel):
+// # -> into UserAgentConfigsPublic(SQLModel):
+
+
 import {
   AgentsService,
   LlmProvidersService,
-  type UserAgentSettingsPublic,
-  type UserAgentSettingsUpdate,
-  type UserLLMProviderCreate,
-  type UserLLMProviderPublic,
-  type UserLLMProvidersPublic,
-  type UserLLMProviderUpdate,
+  type UserAgentConfigsPublic,
+  type UserAgentConfigPublic,
+  type UserAgentConfigUpdate,
+  type UserAccessProviderCreate,
+  type UserAccessProviderPublic,
+  type UserAccessProvidersPublic,
+  type UserAccessProviderUpdate,
 } from "@/client"
 import type { AgentViewModel } from "@/services/agentService"
 import {
   getProviderTypeLabel,
   type LLMProviderType,
 } from "@/services/llmCatalogService"
+
+// TODO: REMOVE THIS COMMENT ONLY AFTER LLMCATALOGSERVICE IS REFACTORED AND VALIDATED -
+// TODO: REMEMBER THAT EVERYTHING IS SHIFTING TO THIE 
+
 
 // ============================================================================
 // Re-exports from Catalog Service
@@ -96,8 +117,13 @@ export interface UserAgentSettingsViewModel {
 }
 
 /**
- * Resolution result for "what provider/model is this agent actually using?"
- */
+ * Resolution result for "what access provider/API provider type /model is this agentconfig actually using?"
+ # TODO: add access provider association.
+ # Remember: LLMProviderType is API Type - what kind of API does this model support?
+ # Remember: UserAccessProvider is the access provider to that API.
+ # Remember: Model is the model that the agent will be talking to at the other end of that API.
+ # Remember: AgentConfig is not the Agent - it's the config that is used to structure the conversation 
+*/
 export interface ProviderResolution {
   mode: "system_default" | "user_provider"
   provider: ProviderViewModel | null
@@ -117,17 +143,17 @@ export interface PaginatedProviders {
 /**
  * Create provider input (wraps backend type)
  */
-export type CreateProviderInput = UserLLMProviderCreate
+export type CreateProviderInput = UserAccessProviderCreate
 
 /**
  * Update provider input (wraps backend type)
  */
-export type UpdateProviderInput = UserLLMProviderUpdate
+export type UpdateProviderInput = UserAccessProviderUpdate
 
 /**
  * Update agent settings input
  */
-export type UpdateAgentSettingsInput = UserAgentSettingsUpdate
+export type UpdateAgentSettingsInput = UserAgentConfigUpdate
 
 /**
  * Test result from provider test endpoint

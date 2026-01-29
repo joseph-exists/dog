@@ -1,13 +1,15 @@
 /**
  * LLM Catalog Service - System Provider & Model Catalog
  *
- * Purpose: Provide read-only access to the system-wide LLM provider and model catalog.
- * This is the source of truth for available models and their capabilities.
+ * Purpose: Provide read-only access to the system-wide LLMProviderType and model catalog.
+ * This is a source of truth for LLMProviderType:model associations for known UserAccessProviders.
+ * For example: there is a known set of LLMProviderType and Model associations for OpenAI, Anthropic, and Google when they are both the UserAccessProvider && the LLMProviderType.  
+ * However, there are many LLMProviderType <> Model associations which are unknown. 
  *
  * Architecture:
  * - Wraps OpenAPI client methods for /llm-catalog endpoints
  * - Transforms backend types to ViewModels optimized for UI
- * - No authentication required (public catalog)
+ * - authentication needed (public catalog but only for authenticated users)
  * - Long cache times (staleTime: Infinity) since catalog rarely changes
  */
 
@@ -15,8 +17,8 @@ import {
   LlmCatalogService as ApiCatalogService,
   type LLMModelPublic,
   type LLMModelsGrouped,
-  type LLMProviderPublic,
-  type LLMProviderWithModels,
+  type LLMProviderTypePublic,
+  type LLMProviderWithModels, // not sure how we are going to manage this particular case right now.
 } from "@/client"
 
 // ============================================================================
@@ -120,7 +122,7 @@ export interface CatalogGroupedViewModel {
 }
 
 /**
- * Display labels for provider types
+ * Display labels for provider types (i dislike this many)
  */
 export const PROVIDER_TYPE_LABELS: Record<LLMProviderType, string> = {
   empty: "",
@@ -295,6 +297,8 @@ export const LlmCatalogService = {
     })
     return response.data.map(transformModel)
   },
+}
+}
 
   // ==========================================================================
   // Model Operations
@@ -398,153 +402,15 @@ export const LlmCatalogService = {
   },
 
   // ==========================================================================
-  // Static Utilities (No API calls)
-  // ==========================================================================
-
-  /**
-   * Get provider type label
-   */
-  getProviderTypeLabel,
-
-  /**
-   * Extract provider type from composite model value
-   * "openai:gpt-4o" -> "openai"
-   */
-  extractProviderType(modelValue: string): LLMProviderType | null {
-    const prefix = modelValue.split(":")[0]
-    return prefix ? normalizeProviderType(prefix) : null
-  },
-
-  /**
-   * Extract model ID from composite value
-   * "openai:gpt-4o" -> "gpt-4o"
-   */
-  extractModelId(modelValue: string): string {
-    return modelValue.split(":").slice(1).join(":") || modelValue
-  },
-
-  /**
-   * Format model value for display (fallback when model not in catalog)
-   * "openai:gpt-4o-mini" -> "GPT 4o Mini"
-   */
-  formatModelName(modelValue: string | null | undefined): string {
-    if (!modelValue) return "Default"
-
-    // Extract model part after provider prefix
-    const modelPart = modelValue.split(":").pop() || modelValue
-
-    // Convert kebab-case to Title Case
-    return modelPart
-      .replace(/-/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase())
-  },
-
-  // ==========================================================================
   // Custom Model Operations (Authenticated)
   // ==========================================================================
 
   /**
    * Create a custom model for the current user
    */
-  async createCustomModel(data: {
-    modelId: string
-    displayName?: string
-    providerId: string
-    description?: string
-  }): Promise<CatalogModelViewModel> {
-    const response = await ApiCatalogService.createCustomModel({
-      requestBody: {
-        model_id: data.modelId,
-        display_name: data.displayName || data.modelId,
-        provider_id: data.providerId,
-        description: data.description,
-      },
-    })
-    return transformModel(response)
-  },
+  async createCustomModel(data: {  })
 
   /**
    * List current user's custom models
    */
-  async listCustomModels(options?: {
-    providerType?: LLMProviderType
-  }): Promise<CatalogModelViewModel[]> {
-    const response = await ApiCatalogService.listCustomModels({
-      providerType: options?.providerType,
-    })
-    return response.data.map(transformModel)
-  },
-
-  // ==========================================================================
-  // Display Helpers
-  // ==========================================================================
-
-  /**
-   * Get display info for a model value, with graceful fallback
-   * Returns label, isCustom, and isDeprecated for UI rendering
-   */
-  getModelDisplayInfo(
-    modelValue: string,
-    catalog: ModelOption[],
-  ): ModelDisplayInfo {
-    const match = catalog.find((m) => m.value === modelValue)
-    if (match) {
-      return {
-        label: match.label,
-        isCustom: match.isSystem === false,
-        isDeprecated: false, // TODO: add isDeprecated to ModelOption when needed
-      }
-    }
-    // Fallback for completely unknown models
-    return {
-      label: this.formatModelName(modelValue),
-      isCustom: true,
-      isDeprecated: false,
-    }
-  },
-}
-
-// ============================================================================
-// Query Keys for TanStack Query
-// ============================================================================
-
-export const LLM_CATALOG_QUERY_KEYS = {
-  /** All catalog data */
-  all: ["llm-catalog"] as const,
-  /** Provider list */
-  providers: ["llm-catalog", "providers"] as const,
-  /** Single provider */
-  provider: (id: string) => ["llm-catalog", "providers", id] as const,
-  /** Provider's models */
-  providerModels: (id: string) =>
-    ["llm-catalog", "providers", id, "models"] as const,
-  /** Model list (flat) */
-  models: ["llm-catalog", "models"] as const,
-  /** Models grouped by provider */
-  modelsGrouped: ["llm-catalog", "models", "grouped"] as const,
-  /** Single model */
-  model: (id: string) => ["llm-catalog", "models", id] as const,
-  /** Model options (for dropdowns) */
-  modelOptions: ["llm-catalog", "model-options"] as const,
-  /** User's custom models */
-  customModels: ["llm-catalog", "custom-models"] as const,
-}
-
-// ============================================================================
-// Recommended Query Options
-// ============================================================================
-
-/**
- * Default query options for catalog data
- * Catalog is essentially static - use very long cache times
- *
- * NOTE: Changed staleTime to 1 hour to allow cache refresh after bug fixes.
- * If catalog becomes truly static, can increase back to Infinity.
- */
-export const CATALOG_QUERY_OPTIONS = {
-  staleTime: 1000 * 60 * 60, // 1 hour (was Infinity - reduced to allow cache refresh)
-  gcTime: 1000 * 60 * 60 * 24, // 24 hours
-  refetchOnWindowFocus: false,
-  refetchOnMount: false,
-  refetchOnReconnect: false,
-}
+  // async listCustomModels();

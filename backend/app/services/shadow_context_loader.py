@@ -8,7 +8,7 @@ from typing import Any
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from app.models import AgentConfig, Room, RoomParticipantBinding
+from app.models import UserAgentConfig, Room, RoomParticipantBinding
 from app.services.context_store import ContextItem
 from app.services.shadow_summary_service import shadow_summary_service
 
@@ -164,7 +164,7 @@ async def build_shadow_context_items(
 
     # Agent summary (agent-scoped)
     agent_result = await session.exec(
-        select(AgentConfig).where(AgentConfig.slug == agent_slug)
+        select(UserAgentConfig).where(UserAgentConfig.slug == agent_slug)
     )
     agent_config = agent_result.first()
     if not agent_config:
