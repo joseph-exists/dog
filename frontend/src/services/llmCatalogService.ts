@@ -2,10 +2,11 @@
  * LLM Catalog Service - System Provider & Model Catalog
  *
  * Purpose: Provide read-only access to the system-wide LLMProviderType and model catalog.
- * This is a source of truth for LLMProviderType:model associations for known UserAccessProviders.
+ * This is 'a' source of truth for LLMProviderType:model associations for known UserAccessProviders.
  * For example: there is a known set of LLMProviderType and Model associations for OpenAI, Anthropic, and Google when they are both the UserAccessProvider && the LLMProviderType.  
  * However, there are many LLMProviderType <> Model associations which are unknown. 
  *
+ * 
  * Architecture:
  * - Wraps OpenAPI client methods for /llm-catalog endpoints
  * - Transforms backend types to ViewModels optimized for UI
@@ -13,12 +14,20 @@
  * - Long cache times (staleTime: Infinity) since catalog rarely changes
  */
 
+// these need to be list and aggregation functions ONLY.
+// they don't block anything, they don't fail - if there's not a return, send back a 'nothing'
+// we need to manage the empty case on the frontend and the backend at all times.
+// a user may have their own local/handrolled system, which has no providertype, and they are their own user access provider.
+// we need to allow that case -
+// this is to help users, not break or block them.
+
+
+
 import {
   LlmCatalogService as ApiCatalogService,
   type LLMModelPublic,
   type LLMModelsGrouped,
-  type LLMProviderTypePublic,
-  type LLMProviderWithModels, // not sure how we are going to manage this particular case right now.
+  type LLMProviderWithModels,
 } from "@/client"
 
 // ============================================================================
@@ -31,18 +40,38 @@ import {
 export type LLMProviderType = string
 
 /**
+ * Human-readable labels for known LLMProviderType values
+ * Graceful fallback: If type not in this map, display the type as-is
+ */
+export const PROVIDER_TYPE_LABELS: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  google: "Google AI",
+  azure_openai: "Azure OpenAI",
+  ollama: "Ollama",
+}
+
+/**
+ * Get display label for a provider type
+ * Returns the type itself if not found in labels (graceful fallback for custom types)
+ *
+ * @param providerType - The LLMProviderType to get a label for
+ * @returns Human-readable label
+ */
+export function getProviderTypeLabel(providerType: LLMProviderType): string {
+  return PROVIDER_TYPE_LABELS[providerType] || providerType
+}
+
+/**
  * Model option for dropdowns - maintains backwards compatibility
  * with existing components using value format "provider:model_id"
  */
 export interface ModelOption {
-  /** Composite value: "openai:gpt-4o" */
+
   value: string
-  /** Human-readable: "GPT-4o" */
   label: string
-  /** Short description */
   description: string
-  /** Provider type this model belongs to */
-  provider: LLMProviderType
+  provider: LLMProviderType // this is the API spec provider
   /** Whether this is the default model for the provider */
   isDefault?: boolean
   /** Whether this is a system (catalog) model vs user-created */
@@ -121,56 +150,24 @@ export interface CatalogGroupedViewModel {
   totalModels: number
 }
 
-/**
- * Display labels for provider types (i dislike this many)
- */
-export const PROVIDER_TYPE_LABELS: Record<LLMProviderType, string> = {
-  empty: "",
-  openai: "OpenAI",
-  anthropic: "Anthropic",
-  google: "Google",
-  openai_compatible: "OpenAI Compatible",
-}
 
 // ============================================================================
 // Transformation Functions
 // ============================================================================
 
 /**
- * Normalize provider type string to lowercase LLMProviderType
- * Handles case-insensitive backend data (e.g., "OPENAI" -> "openai")
- */
-function normalizeProviderType(
-  providerType: string | null | undefined
-): LLMProviderType {
-  const normalized = providerType?.trim().toLowerCase()
-  return normalized || "unknown"
-}
-
-/**
- * Get display label for provider type
- */
-export function getProviderTypeLabel(type: LLMProviderType | null | undefined): string {
-  if (!type) return "Unknown"
-  const normalized = type.toLowerCase()
-  if (PROVIDER_TYPE_LABELS[normalized]) {
-    return PROVIDER_TYPE_LABELS[normalized]
-  }
-  return normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-/**
- * Transform backend LLMProviderPublic to CatalogProviderViewModel
+ * Transform backend UserAccessProviderPublic to CatalogProviderViewModel
+ *
+ * Note: Currently using UserAccessProviderPublic until backend catalog types are fully implemented.
+ * TODO: Update to use LLMProviderTypePublic when backend catalog endpoints are ready.
  */
 function transformProvider(
-  provider: LLMProviderPublic,
+  provider: UserAccessProviderPublic,
 ): CatalogProviderViewModel {
   return {
     id: provider.id,
     name: provider.name,
-    providerType: normalizeProviderType(provider.provider_type),
+    providerType: provider.provider_type ?? "unknown",
     description: provider.description ?? null,
     baseUrl: provider.base_url ?? null,
     isEnabled: provider.is_enabled ?? true,
@@ -211,15 +208,15 @@ function transformModel(model: LLMModelPublic): CatalogModelViewModel {
 /**
  * Transform backend LLMProviderWithModels to grouped view model
  */
-function transformProviderWithModels(
-  provider: LLMProviderWithModels,
+function transformLLMProviderTypeWithModels(
+  provider: LLMProviderTypeWithModels,
 ): CatalogProviderViewModel & { models: CatalogModelViewModel[] } {
   return {
     id: provider.id,
     name: provider.name,
-    providerType: normalizeProviderType(provider.provider_type),
+    providerType: provider.provider_type // this is the API spec provider
     description: provider.description ?? null,
-    baseUrl: provider.base_url ?? null,
+    baseUrl: provider.base_url ?? null, // 
     isEnabled: provider.is_enabled ?? true,
     isSystem: provider.is_system ?? true,
     modelCount: provider.model_count ?? provider.models?.length ?? 0,
@@ -298,9 +295,8 @@ export const LlmCatalogService = {
     return response.data.map(transformModel)
   },
 }
-}
 
-  // ==========================================================================
+ // ==========================================================================
   // Model Operations
   // ==========================================================================
 
@@ -328,7 +324,7 @@ export const LlmCatalogService = {
   async listModelsGrouped(options?: {
     providerType?: LLMProviderType
     isEnabled?: boolean
-  }): Promise<CatalogGroupedViewModel> {
+    }): Promise<CatalogGroupedViewModel> {
     const response: LLMModelsGrouped =
       await ApiCatalogService.listModelsGrouped({
         providerType: options?.providerType,
@@ -337,9 +333,9 @@ export const LlmCatalogService = {
     return {
       providers: response.providers.map(transformProviderWithModels),
       totalModels: response.total_models,
-    }
+    },
   },
-
+},
   /**
    * Get a single model by ID
    */
@@ -400,17 +396,3 @@ export const LlmCatalogService = {
     if (!defaultModel) return null
     return modelToOption(defaultModel, providerType)
   },
-
-  // ==========================================================================
-  // Custom Model Operations (Authenticated)
-  // ==========================================================================
-
-  /**
-   * Create a custom model for the current user
-   */
-  async createCustomModel(data: {  })
-
-  /**
-   * List current user's custom models
-   */
-  // async listCustomModels();

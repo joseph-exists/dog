@@ -1,17 +1,6 @@
-/**
- * LLM Provider Service - User Provider Configuration Layer
- *
- * Purpose: Manage user's access provider configurations (API keys, custom endpoints).
- * This service handles UserAccessProvider entities - the user's configured access providers.
- *
- * For the system-wide model catalog (available models, capabilities), use llmCatalogService.
- *
- * Architecture:
- * - Wraps OpenAPI client methods for /llm-providers endpoints
- * - Transforms backend types to ViewModels
- * - Computes derived fields (status, display_type, is_usable)
- * - Provides filtering and resolution utilities
- */
+
+
+// let's change this to userAccessProviderService.ts
 
 
 // # deleted classes
@@ -29,17 +18,7 @@
 // # -> into UserAgentConfigsPublic(SQLModel):
 
 
-import {
-  AgentsService,
-  LlmProvidersService,
-  type UserAgentConfigsPublic,
-  type UserAgentConfigPublic,
-  type UserAgentConfigUpdate,
-  type UserAccessProviderCreate,
-  type UserAccessProviderPublic,
-  type UserAccessProvidersPublic,
-  type UserAccessProviderUpdate,
-} from "@/client"
+
 import type { AgentViewModel } from "@/services/agentService"
 import {
   getProviderTypeLabel,
@@ -47,7 +26,8 @@ import {
 } from "@/services/llmCatalogService"
 
 // TODO: REMOVE THIS COMMENT ONLY AFTER LLMCATALOGSERVICE IS REFACTORED AND VALIDATED -
-// TODO: REMEMBER THAT EVERYTHING IS SHIFTING TO THIE 
+// TODO: REMEMBER THAT EVERYTHING IS SHIFTING AND THAT WE MUST STICK TO THE NEW DEFINITIONS
+// UPDATE OLD ONTOLOGY REFERENCES AND MARK THEM FOR REVIEW
 
 
 // ============================================================================
@@ -72,48 +52,26 @@ export { getProviderTypeLabel, PROVIDER_TYPE_LABELS } from "@/services/llmCatalo
 export type ProviderStatus = "verified" | "failed" | "unknown"
 
 /**
- * ProviderViewModel - User's configured provider optimized for UI display
+ * ProviderViewModel - User's configured access provider(s) optimized for UI display
  *
- * Transformations from backend UserLLMProviderPublic:
+ * Transformations from backend UserAccessProviderPublic:
  * - Parses ISO timestamps to Date objects
  * - Computes status from last_test_success
  * - Computes is_usable from is_enabled and status
  */
-export interface ProviderViewModel {
-  id: string
-  name: string
-  provider_type: LLMProviderType
-  base_url: string | null
-  is_enabled: boolean
-  is_default: boolean
-  description: string | null
-  created_at: Date
-  updated_at: Date
-  last_tested_at: Date | null
-  last_test_success: boolean | null
-
-  // Computed fields
-  display_type: string // "OpenAI", "Anthropic", etc.
-  status: ProviderStatus
-  is_usable: boolean // is_enabled && status !== "failed"
-}
 
 /**
- * UserAgentSettingsViewModel - Optimized for UI display
+ * UserAgentConfigViewModel - Optimized for UI display
  */
-export interface UserAgentSettingsViewModel {
+
+export interface UserAgentConfigViewModel {
   id: string
   user_id: string
   agent_config_id: string
-  model_name_override: string | null
-  provider_id: string | null
   custom_system_prompt: string | null
   is_favorite: boolean
   created_at: Date
   updated_at: Date
-
-  // Computed fields
-  is_using_system_default: boolean
 }
 
 /**
@@ -167,34 +125,14 @@ export interface TestResult {
 // Transformation Functions
 // ============================================================================
 
-/**
- * Extract provider type from model name
- * "openai:gpt-4o" -> "openai"
- * "anthropic:claude-3-sonnet" -> "anthropic"
- */
-export function extractProviderType(modelName: string): LLMProviderType | null {
-  const prefix = modelName.split(":")[0]
-  return prefix ? normalizeProviderType(prefix) : null
-}
 
 /**
- * Format model name for display (fallback when catalog not available)
- * "openai:gpt-4o-mini" -> "GPT 4o Mini"
- *
  * For richer formatting with catalog data, use LlmCatalogService.formatModelName
  * or the useLlmCatalog hook's formatModelName method.
- */
-export function formatModelName(modelName: string | null | undefined): string {
-  if (!modelName) return "Default"
+ * J: I cut this.  don't rewrite it. it wastes time.
+*/
 
-  // Extract model part after provider prefix
-  const modelPart = modelName.split(":").pop() || modelName
 
-  // Convert kebab-case to Title Case
-  return modelPart
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
 
 /**
  * Compute provider status from test results
@@ -208,31 +146,26 @@ function computeStatus(
 }
 
 /**
- * Normalize provider type name to lowercase for consistent UI grouping.
- */
-function normalizeProviderType(
-  providerType: string | null | undefined,
-): LLMProviderType {
-  const normalized = providerType?.trim().toLowerCase()
-  return normalized || "unknown"
-}
-
-/**
  * Transform backend UserLLMProviderPublic to ProviderViewModel
  */
-function transformProvider(provider: UserLLMProviderPublic): ProviderViewModel {
+function transformProvider(provider: UserAccessProviderPublic): ProviderViewModel {
   const status = computeStatus(
     provider.last_test_success ?? null,
     provider.last_tested_at ?? null,
   )
 
-  const providerType = normalizeProviderType(provider.provider_type)
+  // this is mixing shit up again. what is provider_type here?
+  // is it the user_access_provider, or is it the API specification provider?
+  const providerType = (provider.provider_type)
+  // TODO: get this function correct ASAP.
+  // base_url is user access provider.
+  // it looks like that's what these all might be - let's review against that.
 
   return {
     id: provider.id,
     name: provider.name,
-    provider_type: providerType,
-    base_url: provider.base_url ?? null,
+    provider_type: providerType,  
+    base_url: provider.base_url ?? null, 
     is_enabled: provider.is_enabled ?? true,
     is_default: provider.is_default ?? false,
     description: provider.description ?? null,
