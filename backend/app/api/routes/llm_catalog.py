@@ -57,7 +57,7 @@ def list_providers(
 ) -> Any:
     """
     List all LLM providers in the catalog.
-
+    TODO: ENRICHMENT AND MODEL COUNT FUNCTION BROKEN
     No authentication required. Returns providers with their model counts.
     """
     provider_type_id = _resolve_provider_type_id(session=session, provider_type=provider_type)

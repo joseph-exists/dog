@@ -308,12 +308,14 @@ export const AgentService = {
    * @throws ApiError on validation or server errors
    */
   async createAgent(data: CreateAgentInput): Promise<AgentViewModel> {
+    const providerType = data.provider_type ?? "openai"
+
     const createData: AgentConfigCreate = {
       name: data.name,
       slug: data.slug,
       description: data.description,
       model_name: data.model_name,
-      provider_type: data.provider_type,
+      provider_type: providerType,
       user_provider: data.user_provider,
       system_prompt: data.system_prompt,
       participation_mode: data.participation_mode,

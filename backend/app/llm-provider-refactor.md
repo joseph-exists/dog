@@ -121,7 +121,7 @@ Catalog/Provider Refactor Plan
 done:
 bind Relationship attributes after every class so providers/models can eagerly load their type row instead of re-querying by name.
 
-done:   CRUD filters/serializers - updated crud.py so get_llm_providers, get_llm_models, and get_llm_models_grouped accept either a type ID or use a single join against LLMProviderType (and user models join providers to pull type info in one go), then have the routes in llm_catalog.py (lines 36-393) pass along those IDs and emit provider_type.name in LLMProviderPublic/LLMModelPublic so the frontend still sees the same label without the redundant lookups we currently do per row.
+active:   CRUD filters/serializers - update crud.py so get_llm_providers, get_llm_models, and get_llm_models_grouped accept either a type ID or use a single join (and user models join providers to pull type info in one go), then have the routes in llm_catalog.py (lines 36-393) pass along those IDs and emit provider_type.name in LLMProviderPublic/LLMModelPublic so the frontend still sees the same label without the redundant lookups we currently do per row.
 
 believe this is done - need to validate.  Streamlined custom-model endpoints. When create_custom_model and list_custom_models call crud.get_llm_provider/get_user_models, loads the provider/ type in one query (e.g., selectinload or explicit joins) so we can populate provider_type + provider_name in the response without hitting the DB repeatedly for each model.
 

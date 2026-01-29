@@ -38,14 +38,22 @@ def list_providers(
 ) -> Any:
     """List user's LLM provider configurations."""
     statement = (
-        select(UserLLMProvider)
+        select(UserLLMProvider, LLMProviderType)
+        .join(
+            LLMProviderType,
+            UserLLMProvider.provider_type_id == LLMProviderType.id,
+            isouter=True,
+        )
         .where(UserLLMProvider.user_id == current_user.id)
         .offset(skip)
         .limit(limit)
     )
-    providers = session.exec(statement).all()
-    count = len(providers)
-    return UserLLMProvidersPublic(data=providers, count=count)
+    rows = session.exec(statement).all()
+    data = [
+        _user_provider_public(provider, provider_type)
+        for provider, provider_type in rows
+    ]
+    return UserLLMProvidersPublic(data=data, count=len(data))
 
 
 @router.post("/", response_model=UserLLMProviderPublic)
@@ -78,7 +86,15 @@ def create_provider(
     session.add(provider)
     session.commit()
     session.refresh(provider)
-    return provider
+    row = _get_user_provider_with_type(
+        session=session,
+        provider_id=provider.id,
+        user_id=current_user.id,
+    )
+    if not row:
+        return _user_provider_public(provider, None)
+    provider_row, provider_type = row
+    return _user_provider_public(provider_row, provider_type)
 
 
 @router.get("/{provider_id}", response_model=UserLLMProviderPublic)
@@ -88,10 +104,15 @@ def get_provider(
     current_user: CurrentUser,
 ) -> Any:
     """Get a specific LLM provider configuration."""
-    provider = session.get(UserLLMProvider, provider_id)
-    if not provider or provider.user_id != current_user.id:
+    row = _get_user_provider_with_type(
+        session=session,
+        provider_id=provider_id,
+        user_id=current_user.id,
+    )
+    if not row:
         raise HTTPException(status_code=404, detail="Provider not found")
-    return provider
+    provider, provider_type = row
+    return _user_provider_public(provider, provider_type)
 
 
 @router.patch("/{provider_id}", response_model=UserLLMProviderPublic)
@@ -130,7 +151,15 @@ def update_provider(
     session.add(provider)
     session.commit()
     session.refresh(provider)
-    return provider
+    row = _get_user_provider_with_type(
+        session=session,
+        provider_id=provider.id,
+        user_id=current_user.id,
+    )
+    if not row:
+        return _user_provider_public(provider, None)
+    provider_row, provider_type = row
+    return _user_provider_public(provider_row, provider_type)
 
 
 @router.delete("/{provider_id}", response_model=Message)
@@ -169,12 +198,13 @@ async def test_provider(
         if not provider.provider_type_id:
             logger.error("provider_type_id missing on UserLLMProvider %s", provider.id)
             raise HTTPException(status_code=400, detail="Unknown provider type")
-        if not provider.provider_type:
-            logger.error("provider_type relationship missing for UserLLMProvider %s", provider.id)
+        provider_type = session.get(LLMProviderType, provider.provider_type_id)
+        if not provider_type:
+            logger.error("provider_type lookup missing for UserLLMProvider %s", provider.id)
             raise HTTPException(status_code=400, detail="Unknown provider type")
 
         success = await _test_provider_connection(
-            provider_type=provider.provider_type.name,
+            provider_type=provider_type.name,
             api_key=api_key,
             base_url=provider.base_url,
         )
@@ -211,6 +241,36 @@ def _unset_defaults(session: SessionDep, user_id: uuid.UUID, provider_type_id: u
     for provider in session.exec(statement).all():
         provider.is_default = False
         session.add(provider)
+
+
+def _get_user_provider_with_type(
+    *,
+    session: Session,
+    provider_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> tuple[UserLLMProvider, LLMProviderType | None] | None:
+    statement = (
+        select(UserLLMProvider, LLMProviderType)
+        .join(
+            LLMProviderType,
+            UserLLMProvider.provider_type_id == LLMProviderType.id,
+            isouter=True,
+        )
+        .where(
+            UserLLMProvider.id == provider_id,
+            UserLLMProvider.user_id == user_id,
+        )
+    )
+    return session.exec(statement).one_or_none()
+
+
+def _user_provider_public(
+    provider: UserLLMProvider, provider_type: LLMProviderType | None
+) -> UserLLMProviderPublic:
+    return UserLLMProviderPublic(
+        **provider.model_dump(),
+        provider_type=provider_type.name if provider_type else None,
+    )
 
 
 async def _test_provider_connection(

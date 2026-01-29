@@ -4,7 +4,7 @@ from enum import Enum as PyEnum
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import EmailStr, field_validator
 from sqlalchemy import JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, Relationship, SQLModel
@@ -126,283 +126,6 @@ class ContentFormat(str, PyEnum):
     HTML = "html"
     MARKDOWN = "markdown"
     JSON = "json"
-
-
-
-
-# =============================================================================
-# LLM Catalog Models (System-level provider and model registry)
-# =============================================================================
-# These models define the catalog of available LLM providers and models.
-# Unlike UserLLMProvider (user's API keys), these are system-level entries
-# that define what providers/models exist and their capabilities.
-
-class LLMProviderTypeBase(SQLModel):
-    """Table that holds all the different provider types for:
-       expandability and fk many to one relationships
-       this provider table will be an exhaustive reference for different provider types"""
-    name: str = Field(max_length=30, description="LLM Provider type")
-    details: str | None  = Field(default=None, max_length=500, description="notes if necessary")
-    validated: bool = Field(default=False, description="updated when proven valid at least once")
-    is_system: bool = Field(default=False, description="is this a built in LLM provider type at the system level")
-
-class LLMProviderType(LLMProviderTypeBase, table=True):
-    __tablename__ = "provider_type"
-    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-
-class LLMProviderTypeCreate(LLMProviderTypeBase):
-    """Input model for creating an LLMProviderType"""
-    pass
-
-class LLMProviderTypeUpdate(SQLModel):
-    """Update model for LLM Provider types"""
-    name: str | None = Field(max_length=30, description="LLM Provider type", default=None)
-    details: str | None = Field(default=None, max_length=500, description="notes if necessary")
-    validated: bool | None = Field(
-        default=None,
-        description="updated when proven valid at least once",
-    )
-    is_system: bool | None = Field(
-        default=None,
-        description="is this a built in LLM provider type at the system level",
-    )
-
-
-class LLMProviderBase(SQLModel):
-    """Base model for system LLM provider catalog entries."""
-    name: str = Field(max_length=100, description="Friendly display name like 'OpenAI', 'Anthropic'")
-    provider_type_id: UUID | None = Field(
-        default=None,
-        foreign_key="provider_type.id",
-        description="FK to provider type reference table",
-    )
-    base_url: str | None = Field(default=None, max_length=500, description="Default base URL")
-    description: str | None = Field(default=None, max_length=500)
-    is_enabled: bool = Field(default=True, description="Whether this provider is available in the system")
-    is_system: bool = Field(default=True, description="True for built-in, False for user-created")
-
-
-class LLMProviderCreate(LLMProviderBase):
-    """Input model for creating a provider catalog entry."""
-    pass
-
-
-class LLMProviderUpdate(SQLModel):
-    """Update model for provider catalog entries - all fields optional."""
-    name: str | None = Field(default=None, max_length=100)
-    provider_type_id: UUID | None = Field(
-        default=None,
-        foreign_key="provider_type.id",
-        description="FK to provider type reference table",
-    )
-    base_url: str | None = Field(default=None, max_length=500)
-    description: str | None = Field(default=None, max_length=500)
-    is_enabled: bool | None = None
-    created_by_user_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="user.id",
-        nullable=True,
-    )
-    # Soft delete support
-    is_deleted: bool = Field(default=False, index=True)
-    deleted_at: datetime | None = Field(default=None)
-
-    # Audit timestamps
-    updated_at: datetime = Field(default_factory=datetime.now)
-
-class LLMProvider(LLMProviderBase, table=True):
-    """
-    Database model for system LLM provider catalog.
-    (this may not be relevant/necessary/anything?)
-    TODO: find out what is using this, if anything.
-    Stores available providers (OpenAI, Anthropic, etc.) and their
-    configurations. This is system-level data, not user-specific.
-    """
-    __tablename__ = "llmprovider"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-
-
-    created_by_user_id: uuid.UUID | None = Field(
-          default=None, foreign_key="user.id", nullable=True
-      )
-
-    # Soft delete support
-    is_deleted: bool = Field(default=False, index=True)
-    deleted_at: datetime | None = Field(default=None)
-
-    # Audit timestamps
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-
-    # Relationship to models defined in post-definition section
-
-
-class LLMProviderPublic(LLMProviderBase):
-    """Public API response for a provider catalog entry."""
-    id: uuid.UUID
-    is_deleted: bool
-    created_at: datetime
-    updated_at: datetime
-    model_count: int = Field(default=0, description="Number of active models for this provider")
-    provider_type: str | None = Field(default=None, description="Denormalized provider type name")
-
-
-class LLMProvidersPublic(SQLModel):
-    """Collection response for LLMProviders."""
-    data: list[LLMProviderPublic]
-    count: int
-
-
-class LLMModelBase(SQLModel):
-    """Base model for LLM model catalog entries."""
-    model_id: str = Field(max_length=100, description="Model identifier (e.g., 'gpt-4o', no provider prefix)")
-    display_name: str = Field(max_length=100, description="Human-friendly name (e.g., 'GPT-4o')")
-    description: str | None = Field(default=None, max_length=500)
-    context_window: int | None = Field(default=None, description="Max tokens in context window")
-    is_system: bool = Field(default=False, description="system model")
-    is_default: bool = Field(default=False, description="Default/cheapest model for this provider")
-    is_enabled: bool = Field(default=True, description="Whether model is available for use")
-    is_deprecated: bool = Field(default=False, description="Model is deprecated (still works)")
-    sort_order: int = Field(default=0, description="Display ordering within provider")
-
-    # Known capabilities (nullable = unknown)
-    has_vision: bool | None = Field(default=None, description="Supports image input")
-    has_function_calling: bool | None = Field(default=None, description="Supports function/tool calling")
-    has_streaming: bool | None = Field(default=None, description="Supports streaming responses")
-    has_json_mode: bool | None = Field(default=None, description="Supports JSON output mode")
-
-    # Additional capabilities as JSON for extensibility
-    secondary_capabilities: dict[str, Any] | None = Field(
-        default=None,
-        description="Additional capability flags as JSON"
-    )
-
-
-
-
-class LLMModelCreate(LLMModelBase):
-    """Input model for creating a model catalog entry."""
-    provider_id: uuid.UUID
-    # Override to make optional for user-created models (auto-generated from model_id)
-    display_name: str | None = Field(default=None, max_length=100)
-
-
-class LLMModelUpdate(SQLModel):
-    """Update model for model catalog entries - all fields optional."""
-    display_name: str | None = Field(default=None, max_length=100)
-    description: str | None = Field(default=None, max_length=500)
-    context_window: int | None = None
-    is_default: bool | None = None
-    is_enabled: bool | None = None
-    is_deprecated: bool | None = None
-    sort_order: int | None = None
-    has_vision: bool | None = None
-    has_function_calling: bool | None = None
-    has_streaming: bool | None = None
-    has_json_mode: bool | None = None
-    secondary_capabilities: dict[str, Any] | None = None
-
-
-class LLMModel(LLMModelBase, table=True):
-    """
-    Database model for LLM model catalog.
-
-    Stores available models per provider with their capabilities.
-    model_id is the normalized name without provider prefix (e.g., 'gpt-4o').
-    """
-    __tablename__ = "llmmodel"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    provider_id: uuid.UUID = Field(
-        foreign_key="llmprovider.id",
-        nullable=True,
-        index=True,
-        description="Parent provider"
-    )
-    is_system: bool = Field(default=False, index=True)
-    # Deprecation tracking
-    deprecated_at: datetime | None = Field(default=None, description="When model was deprecated")
-    sunset_at: datetime | None = Field(default=None, description="When model will stop working")
-
-    # Soft delete support
-    is_deleted: bool = Field(default=False, index=True)
-    deleted_at: datetime | None = Field(default=None)
-
-    # Audit timestamps
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-
-    secondary_capabilities: dict[str, Any] | None = Field(
-        default=None,
-        description="Additional capability flags as JSONB",
-        sa_column=Column(JSONB),
-    )
-
-    created_by_user_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="user.id",
-        nullable=True,
-    )
-    # Unique constraint: one model_id per provider
-    __table_args__ = (
-        UniqueConstraint("provider_id", "model_id", "created_by_user_id", name="uq_provider_model"),
-    )
-
-
-class LLMModelPublic(LLMModelBase):
-    """Public API response for a model catalog entry."""
-    id: uuid.UUID
-    provider_id: uuid.UUID
-    deprecated_at: datetime | None
-    sunset_at: datetime | None
-    is_deleted: bool
-    is_system: bool
-    created_at: datetime
-    updated_at: datetime
-    # Denormalized provider info for convenience
-    provider_type: str | None = None
-    provider_name: str | None = None
-
-
-class LLMModelsPublic(SQLModel):
-    """Collection response for LLMModels."""
-    data: list[LLMModelPublic]
-    count: int
-
-
-class LLMProviderWithModels(LLMProviderPublic):
-    """Provider with nested list of its models."""
-    models: list[LLMModelPublic] = []
-
-
-class LLMModelsGrouped(BaseModel):
-    """Models grouped by provider for UI display."""
-    providers: list[LLMProviderWithModels]
-    total_models: int
-
-
-# Query models (Pydantic, not SQLModel table) for API filtering
-class LLMProviderQuery(BaseModel):
-    """Query parameters for filtering providers."""
-    provider_type: str | None = None
-    is_enabled: bool | None = None
-    is_system: bool | None = None
-    include_deleted: bool = False
-
-
-class LLMModelQuery(BaseModel):
-    """Query parameters for filtering models."""
-    provider_id: uuid.UUID | None = None
-    provider_type: str | None = None
-    is_enabled: bool | None = None
-    is_deprecated: bool | None = None
-    is_default: bool | None = None
-    has_vision: bool | None = None
-    has_function_calling: bool | None = None
-    has_streaming: bool | None = None
-    has_json_mode: bool | None = None
-    include_deleted: bool = False
 
 
 # ============ Base Models ++++++++
@@ -1268,55 +991,60 @@ class Item(ItemBase, table=True):
     owner: User | None = Relationship(back_populates="items")
 
 
-# =============================================================================
-# User LLM Provider Models
-# =============================================================================
-# Allows users to configure their own API keys and custom endpoints
-# for various LLM providers. API keys are encrypted at rest.
+# ==================== UserAgentSettings Models ====================
+# Per-user settings for agents - allows users to associate their LLM access providers
+# with any agent (system or personal) without modifying the agent config itself.
 
+# deleted classes
+# class UserAgentSettingsBase(SQLModel):
+# ->  into UserAgentConfigBase
+# class UserAgentSettingsCreate(UserAgentSettingsBase):
+# ->  into UserAgentConfigCreate(UserAgentConfigBase)
+# class UserAgentSettingsUpdate(SQLModel):
+# ->  into UserAgentConfigUpdate(SQLModel):
+# class UserAgentConfigSettings(UserAgentSettingsBase, table=True):
+# ->  into UserAgentConfig(UserAgentConfigBase, table=True) tablename "user_agent_configs"
+# class UserAgentConfigSettingsPublic(UserAgentSettingsBase):
+# ->  into UserAgentConfigPublic(UserAgentConfigBase)
+#  class UserAgentSettingsListPublic(SQLModel):
+# -> into UserAgentConfigsPublic(SQLModel):
 
-class UserLLMProviderBase(SQLModel):
-    """Base model for user LLM provider configurations."""
-    provider_type_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="provider_type.id",
-        description="FK to provider type reference table",
-    )
+class UserAccessProviderBase(SQLModel):
+    """Base model for user LLM access provider and API key configurations."""
+    base_url: str | None = Field(default=None, max_length=100, description="Endpoint URL")
     name: str = Field(max_length=100, description="User-friendly name like 'My OpenAI' or 'Work Azure'")
     is_enabled: bool = Field(default=True, description="Whether this provider is active")
-    is_default: bool = Field(default=False, description="Default provider for this type")
-    base_url: str | None = Field(default=None, max_length=500, description="Custom endpoint URL for Azure, Ollama, etc.")
+    is_default: bool = Field(default=False, description="is this the user's default access provider?")
+    is_validated: bool =Field(default=False, description="has this api key and url been tested?")
     description: str | None = Field(default=None, max_length=500)
 
-
-class UserLLMProviderCreate(UserLLMProviderBase):
+class UserAccessProviderCreate(UserAccessProviderBase):
     """Input model for creating provider - accepts plain API key."""
     api_key: str = Field(min_length=1, description="Plain text API key (will be encrypted)")
+    base_url: str | None = Field(default=None, max_length=100, description="Endpoint URL")
+    # we'll give a helper function on the frontend that allows users to add the default main access providers - no need to add that shit here
 
 
-class UserLLMProviderUpdate(SQLModel):
+class UserAccessProviderUpdate(UserAccessProviderBase):
     """Update model - all fields optional."""
-    provider_type_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="provider_type.id",
-        description="FK to provider type reference table",
-    )
     name: str | None = Field(default=None, max_length=100)
     is_enabled: bool | None = None
     is_default: bool | None = None
+    is_validated: bool | None = None
+    # users validate an access provider by pushing the 'Test' button on the front end
     base_url: str | None = Field(default=None, max_length=500)
     description: str | None = Field(default=None, max_length=500)
     api_key: str | None = Field(default=None, description="New API key to encrypt, if changing")
 
 
-class UserLLMProvider(UserLLMProviderBase, table=True):
+class UserAccessProvider(UserAccessProviderBase, table=True):
     """
-    Database model for user LLM provider configurations.
+    Database model for user access provider configurations.
 
     Stores encrypted API keys per-user. Each user can have multiple
     providers of the same type (e.g., personal and work OpenAI keys).
     """
-    __tablename__ = "userllmprovider"
+    __tablename__ = "user_access_provider"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
@@ -1337,10 +1065,7 @@ class UserLLMProvider(UserLLMProviderBase, table=True):
     last_tested_at: datetime | None = Field(default=None)
     last_test_success: bool | None = Field(default=None)
 
-    # Relationship defined in post-definition section at end of file
-
-
-class UserLLMProviderPublic(UserLLMProviderBase):
+class UserAccessProviderPublic(UserAccessProviderBase):
     """Public API response - NEVER includes API key."""
     id: uuid.UUID
     user_id: uuid.UUID
@@ -1348,104 +1073,177 @@ class UserLLMProviderPublic(UserLLMProviderBase):
     updated_at: datetime
     last_tested_at: datetime | None
     last_test_success: bool | None
-    provider_type: str | None = Field(
-        default=None,
-        description="Denormalized provider type name (from provider_type relationship)",
-    )
     # Note: api_key_encrypted is intentionally excluded for security
 
 
-class UserLLMProvidersPublic(SQLModel):
-    """Collection response for UserLLMProviders."""
-    data: list[UserLLMProviderPublic]
+class UserAccessProvidersPublic(SQLModel):
+    """Collection response for UserAccessProviders."""
+    data: list[UserAccessProviderPublic]
     count: int
 
 
-# ==================== UserAgentSettings Models ====================
-# Per-user settings for agents - allows users to associate their LLM providers
-# with any agent (system or personal) without modifying the agent config itself.
+class LLMProviderTypeBase(SQLModel):
+    """Table that holds all the different provider types for:
+       expandability and fk many to one relationships
+       this provider table will be an exhaustive reference for different provider types"""
+    name: str = Field(max_length=30, description="LLM Provider type")
+    details: str | None  = Field(default=None, max_length=500, description="notes if necessary")
+    validated: bool = Field(default=False, description="updated when proven valid at least once")
+    is_system: bool = Field(default=False, description="is this a built in LLM provider type at the system level")
 
+class LLMProviderTypeCreate(LLMProviderTypeBase):
+    """Input model for creating an LLMProviderType"""
+    pass
 
-class UserAgentSettingsBase(SQLModel):
-    """Per-user settings for an agent (system or personal)."""
-    model_name_override: str | None = Field(
+class LLMProviderTypeUpdate(LLMProviderTypeBase):
+    """Update model for LLM Provider types"""
+    name: str | None = Field(max_length=30, description="LLM Provider type", default=None)
+    details: str | None = Field(default=None, max_length=500, description="notes if necessary")
+    validated: bool | None = Field(default=None, description="updated when proven valid at least once",)
+    is_system: bool | None = Field(default=None, description="is this a validated LLM API provider we're exposing to everyone" )
+
+class LLMProviderType(LLMProviderTypeBase, table=True):
+    __tablename__ = "provider_type"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+class LLMProviderTypePublic(LLMProviderTypeBase):
+    """public api response"""
+    id: uuid.UUID
+    name: str
+    details: str | None
+    validated: bool
+    is_system: bool
+
+class LLMProviderTypesPublic(SQLModel):
+    """collection response"""
+    data: list[LLMProviderTypePublic]
+    count: int
+
+class LLMModelBase(SQLModel):
+    """Base model for LLM model catalog entries."""
+    model_id: str = Field(max_length=100, description="Model identifier (e.g., 'gpt-4o', no provider prefix)")
+    display_name: str = Field(max_length=100, description="Human-friendly name (e.g., 'GPT-4o')")
+    description: str | None = Field(default=None, max_length=500)
+    context_window: int | None = Field(default=None, description="Max tokens in context window")
+    is_system: bool = Field(default=False, description="system model")
+    is_default: bool = Field(default=False, description="Default/cheapest model for this provider")
+    is_enabled: bool = Field(default=True, description="Whether model is available for use")
+    is_deprecated: bool = Field(default=False, description="Model is deprecated (still works)")
+    sort_order: int = Field(default=0, description="Display ordering within provider")
+
+    # Known capabilities (nullable = unknown)
+    has_vision: bool | None = Field(default=None, description="Supports image input")
+    has_function_calling: bool | None = Field(default=None, description="Supports function/tool calling")
+    has_streaming: bool | None = Field(default=None, description="Supports streaming responses")
+    has_json_mode: bool | None = Field(default=None, description="Supports JSON output mode")
+
+    # Additional capabilities as JSON for extensibility
+    secondary_capabilities: dict[str, Any] | None = Field(
+        default=None,
+        description="Additional capability flags as JSON"
+    )
+
+class LLMModelCreate(LLMModelBase):
+    """Input model for creating a model catalog entry."""
+    provider_id: uuid.UUID = Field(
+        description="Owner provider for this catalog entry"
+    )
+    display_name: str | None = Field(
         default=None,
         max_length=100,
-        description="Override the agent's default model (e.g., 'openai:gpt-4o' or 'anthropic:claude-3-5-sonnet')"
+        description="Optional override for human-friendly name (defaults to normalized model_id)"
     )
-    provider_id: uuid.UUID | None = Field(
+
+
+class LLMModelUpdate(LLMModelBase):
+    """Update model for model catalog entries - all fields optional."""
+    display_name: str | None = Field(
         default=None,
-        description="User's chosen LLM provider for this agent (must match model's provider type)"
+        max_length=100,
+        description="Optional human-friendly name during updates"
     )
-    custom_system_prompt: str | None = Field(
+    description: str | None = Field(default=None, max_length=500)
+    context_window: int | None = Field(default=None, description="Max tokens in context window")
+    is_default: bool | None = Field(default=None, description="Default/cheapest model for this provider")
+    is_enabled: bool | None = Field(default=None, description="Whether model is available for use")
+    is_deprecated: bool | None = Field(default=None, description="Model is deprecated (still works)")
+    sort_order: int | None = Field(default=None, description="Display ordering within provider")
+    has_vision: bool | None = Field(default=None, description="Supports image input")
+    has_function_calling: bool | None = Field(default=None, description="Supports function/tool calling")
+    has_streaming: bool | None = Field(default=None, description="Supports streaming responses")
+    has_json_mode: bool | None = Field(default=None, description="Supports JSON output mode")
+    secondary_capabilities: dict[str, Any] | None = Field(
         default=None,
-        description="Optional user override for system prompt"
+        description="Additional capability flags as JSON"
     )
-    is_favorite: bool = Field(default=False)
 
 
-class UserAgentSettingsCreate(UserAgentSettingsBase):
-    """Input model for creating user agent settings."""
-    agent_config_id: uuid.UUID
-
-
-class UserAgentSettingsUpdate(SQLModel):
-    """Update model for user agent settings - all fields optional."""
-    model_name_override: str | None = None
-    provider_id: uuid.UUID | None = None
-    custom_system_prompt: str | None = None
-    is_favorite: bool | None = None
-
-
-class UserAgentSettings(UserAgentSettingsBase, table=True):
+class LLMModel(LLMModelBase, table=True):
     """
-    User-specific settings for agents.
+    Database model for LLM model catalog.
 
-    Allows users to associate their LLM providers with any agent without
-    modifying the agent config itself. Key behaviors:
-    - User A can configure System Agent "StoryAdvisor" to use their OpenAI key
-    - This only affects User A; User B sees the same agent with default provider
-    - Cloning an agent doesn't copy another user's settings
+    Stores available models per provider with their capabilities.
+    model_id is the normalized name without provider prefix (e.g., 'gpt-4o').
     """
-    __tablename__ = "user_agent_settings"
+    __tablename__ = "llmmodel"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(
-        foreign_key="user.id",
+    provider_id: uuid.UUID = Field(
+        foreign_key="provider_type.id",
         nullable=False,
-        ondelete="CASCADE",
-        index=True
+        index=True,
+        description="API base provider (anthropic, google, openai, openai_compatible, custom, empty)"
     )
-    agent_config_id: uuid.UUID = Field(
-        foreign_key="agent_configs.id",
-        nullable=False,
-        ondelete="CASCADE",
-        index=True
-    )
-    # provider_id FK defined in base model description, actual FK constraint added here
-    # Note: provider_id can be null (use default), but when set it references userllmprovider
+    is_system: bool = Field(default=False, index=True)
+    # Deprecation tracking
+    deprecated_at: datetime | None = Field(default=None, description="When model was deprecated")
+    sunset_at: datetime | None = Field(default=None, description="When model will stop working")
 
+    # Soft delete support
+    is_deleted: bool = Field(default=False, index=True)
+    deleted_at: datetime | None = Field(default=None)
+
+    # Audit timestamps
     created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(
+        default_factory=datetime.now,
+        sa_column_kwargs={"onupdate": datetime.now},
+    )
 
-    # Composite unique constraint: one settings row per user per agent
-    __table_args__ = (
-        UniqueConstraint("user_id", "agent_config_id", name="uq_user_agent_settings"),
+    secondary_capabilities: dict[str, Any] | None = Field(
+        default=None,
+        description="Additional capability flags as JSONB",
+        sa_column=Column(JSONB),
+    )
+
+    created_by_user_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        nullable=True,
     )
 
 
-class UserAgentSettingsPublic(UserAgentSettingsBase):
-    """Public API response for user agent settings."""
+# Relationship wiring for LLM providers and models is defined in backend/app/model-relationships.py
+
+
+class LLMModelPublic(LLMModelBase):
+    """Public API response for a model catalog entry."""
     id: uuid.UUID
-    user_id: uuid.UUID
-    agent_config_id: uuid.UUID
+    provider_id: uuid.UUID
+    deprecated_at: datetime | None
+    sunset_at: datetime | None
+    is_deleted: bool
+    is_system: bool
     created_at: datetime
     updated_at: datetime
+    # Denormalized provider info for convenience
+    provider_type: str | None = None
+    provider_name: str | None = None
 
 
-class UserAgentSettingsListPublic(SQLModel):
-    """Collection response for user agent settings."""
-    data: list[UserAgentSettingsPublic]
+class LLMModelsPublic(SQLModel):
+    """Collection response for LLMModels."""
+    data: list[LLMModelPublic]
     count: int
 
 
@@ -2515,9 +2313,9 @@ class RoomParticipantBindingBase(SQLModel):
         max_length=100,
         description="Same format as AgentConfig.model_name (e.g., 'openai:gpt-4o-mini')",
     )
-    user_llm_provider_id: uuid.UUID | None = Field(
+    user_access_provider_id: uuid.UUID | None = Field(
         default=None,
-        foreign_key="userllmprovider.id",
+        foreign_key="user_access_provider.id",
         description="User-owned provider config to use (must belong to current user)",
     )
 
@@ -2598,7 +2396,7 @@ class ParticipantBindingChangeRequest(SQLModel):
         max_length=100,
         description="Model identifier (e.g., 'openai:gpt-4o-mini').",
     )
-    user_llm_provider_id: uuid.UUID | None = Field(
+    user_access_provider_id: uuid.UUID | None = Field(
         default=None,
         description="User-owned provider config to use (must belong to current user).",
     )
@@ -3224,116 +3022,143 @@ class StoryNodeTree(SQLModel):
     reachable_nodes: int
 
 
-# ============================================================================
-# Available Agents Models
-# ============================================================================
-
-
-class AvailableAgent(SQLModel):
-    """An agent available for room participation."""
-    id: str  # Agent identifier (e.g., "StoryAdvisor")
-    name: str  # Display name (e.g., "Story Advisor")
-    description: str | None = None
-
-
-class AvailableAgentsPublic(SQLModel):
-    """List of available agents."""
-    data: list[AvailableAgent]
-    count: int
+# class AvailableAgent(SQLModel):
+# class AvailableAgentsPublic(SQLModel):
+# ->  UserAgentConfigPublic
 
  # ═══════════════════════════════════════════════════════════════════════════════
  # Agent Configuration Models
  # ═══════════════════════════════════════════════════════════════════════════════
 
-class AgentConfigBase(SQLModel):
-     """Base properties shared by all agent config representations."""
-     name: str = Field(max_length=100, description="Display name")
-     slug: str = Field(max_length=50, description="Unique identifier/registry key")
-     description: str | None = Field(default=None, max_length=500)
-     user_provider: uuid.UUID | None = Field(
-         default=None,
-         foreign_key="userllmprovider.id",
-         description="User-selected provider tied to this agent"
-     )
-     provider_type: str = Field(max_length=30, description="why not here too")
+class UserAgentConfigBase(SQLModel):
+    """Base properties shared by all agent config representations."""
+    name: str = Field(max_length=100, description="Display name")
+    slug: str = Field(max_length=50, description="Unique identifier/registry key")
+    description: str | None = Field(default=None, max_length=500)
+    user_access_provider: uuid.UUID | None = Field(default=None, foreign_key="user_access_provider.id", description="User-selected provider associated with this agent config")
+    provider_type: str = Field(max_length=30, description="why not here too")
+    model_id: uuid.UUID | None = Field(default=None, foreign_key="user_access_provider.id", description="model associated with this agent config")
+    # LLMModels table
+    model_name: str = Field(default="friendly model name")
+    system_prompt: str | None = None
+    custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
+    instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
+    # JSON configuration fields
+    tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
+    deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
+    agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
 
-     model_name: str = Field(default="openai:gpt-4o-mini")
-     system_prompt: str | None = None
+    # Behavior flags
+    is_enabled: bool = Field(default=True)
+    is_clonable: bool = Field(default=False)
+    is_visible: bool = Field(default=False)
+    scope: str = Field(default="personal")  # "personal" | "system"
+    participation_mode: str = Field(default="on_mention")  # "always" | "on_mention" | "manual"
 
-     # JSON configuration fields
-     tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
-     deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
-     agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
+    # Coordinator mode: if True, this agent processes messages FIRST
+    # before other agents, acting as an orchestrator that routes to specialists
+    is_coordinator: bool = Field(default=False)
 
-     # Behavior flags
-     is_enabled: bool = Field(default=True)
-     scope: str = Field(default="personal")  # "personal" | "system"
-     participation_mode: str = Field(default="on_mention")  # "always" | "on_mention" | "manual"
+    # Maximum number of LLM requests per agent run (prevents runaway tool loops)
+    max_tool_iterations: int = Field(default=10)
 
-     # Coordinator mode: if True, this agent processes messages FIRST
-     # before other agents, acting as an orchestrator that routes to specialists
-     is_coordinator: bool = Field(default=False)
+    # Agent capabilities for discovery and A2A coordination
+    # e.g., ["story-structure", "dialogue", "character-development", "plot-twists"]
+    capabilities: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
-     # Maximum number of LLM requests per agent run (prevents runaway tool loops)
-     max_tool_iterations: int = Field(default=10)
-
-     # Agent capabilities for discovery and A2A coordination
-     # e.g., ["story-structure", "dialogue", "character-development", "plot-twists"]
-     capabilities: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-
-     @field_validator("capabilities", mode="before")
-     @classmethod
-     def capabilities_none_to_list(cls, v: list[str] | None) -> list[str]:
+    @field_validator("capabilities", mode="before")
+    @classmethod
+    def capabilities_none_to_list(cls, v: list[str] | None) -> list[str]:
         """Convert NULL from database to empty list."""
         return v if v is not None else []
 
+class UserAgentConfigCreate(UserAgentConfigBase):
+    pass
 
-class AgentConfigCreate(AgentConfigBase):
-     pass
+class UserAgentConfigUpdate(UserAgentConfigBase):
+    name: str | None = Field(default=None, max_length=100, description="Display name")
+    slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
+    description: str | None = Field(default=None, max_length=500)
+    user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
+    provider_type: str | None = Field(default=None, max_length=30, description="why not here too")
+    model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
+    model_name: str | None = Field(default=None)
+    system_prompt: str | None = Field(default=None)
+    custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
+    instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
+    tool_config: dict | None = Field(default=None)
+    deps_config: dict | None = Field(default=None)
+    agent_metadata: dict | None = Field(default=None)
+    is_enabled: bool | None = Field(default=None)
+    is_clonable: bool | None = Field(default=None)
+    is_visible: bool | None = Field(default=None)
+    scope: str | None = Field(default=None)
+    participation_mode: str | None = Field(default=None)
+    is_coordinator: bool | None = Field(default=None)
+    max_tool_iterations: int | None = Field(default=None)
+    capabilities: list[str] | None = Field(default=None)
 
+class UserAgentConfig(UserAgentConfigBase, table=True):
+    __tablename__ = "user_agent_configs"
 
-class AgentConfigUpdate(SQLModel):
-     name: str | None = None
-     description: str | None = None
-     model_name: str | None = None
-     system_prompt: str | None = None
-     user_provider: uuid.UUID | None = None
-     provider_type: str | None = None
-     tool_config: dict | None = None
-     deps_config: dict | None = None
-     agent_metadata: dict | None = None
-     is_enabled: bool | None = None
-     participation_mode: str | None = None
-     is_coordinator: bool | None = None
-     capabilities: list[str] | None = None
-     max_tool_iterations: int | None = None
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = Field(default=None, sa_column_kwargs={"onupdate": datetime.now})
+    version: int = Field(default=1)
+    name: str | None = Field(default=None, max_length=100, description="Display name")
+    slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
+    description: str | None = Field(default=None, max_length=500)
+    user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
+    provider_type: str | None = Field(default=None, max_length=30, description="why not here too")
+    model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
+    model_name: str | None = Field(default=None)
+    system_prompt: str | None = Field(default=None)
+    custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
+    instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
+    tool_config: dict | None = Field(default=None)
+    deps_config: dict | None = Field(default=None)
+    agent_metadata: dict | None = Field(default=None)
+    is_enabled: bool | None = Field(default=None)
+    is_clonable: bool | None = Field(default=None)
+    is_visible: bool | None = Field(default=None)
+    scope: str | None = Field(default=None)
+    participation_mode: str | None = Field(default=None)
+    is_coordinator: bool | None = Field(default=None)
+    max_tool_iterations: int | None = Field(default=None)
+    capabilities: list[str] | None = Field(default=None)
 
+class UserAgentConfigPublic(UserAgentConfigBase):
+    id: uuid.UUID
+    owner_id: uuid.UUID | None
+    created_at: datetime
+    updated_at: datetime | None
+    version: int
+    name: str | None = Field(default=None, max_length=100, description="Display name")
+    slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
+    description: str | None = Field(default=None, max_length=500)
+    user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
+    provider_type: str | None = Field(default=None, max_length=30, description="why not here too")
+    model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
+    model_name: str | None = Field(default=None)
+    system_prompt: str | None = Field(default=None)
+    custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
+    instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
+    tool_config: dict | None = Field(default=None)
+    deps_config: dict | None = Field(default=None)
+    agent_metadata: dict | None = Field(default=None)
+    is_enabled: bool | None = Field(default=None)
+    is_clonable: bool | None = Field(default=None)
+    is_visible: bool | None = Field(default=None)
+    scope: str | None = Field(default=None)
+    participation_mode: str | None = Field(default=None)
+    is_coordinator: bool | None = Field(default=None)
+    max_tool_iterations: int | None = Field(default=None)
+    capabilities: list[str] | None = Field(default=None)
 
-class AgentConfig(AgentConfigBase, table=True):
-     __tablename__ = "agent_configs"
-
-     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-     owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
-     created_at: datetime = Field(default_factory=datetime.now)
-     updated_at: datetime | None = Field(default=None, sa_column_kwargs={"onupdate": datetime.now})
-     version: int = Field(default=1)
-
-     # Relationships
-     # owner: "User" = Relationship(back_populates="agent_configs")
-
-
-class AgentConfigPublic(AgentConfigBase):
-     id: uuid.UUID
-     slug: str | None
-     owner_id: uuid.UUID | None
-     created_at: datetime
-     updated_at: datetime | None
-     version: int
-
-
-class AgentConfigsPublic(SQLModel):
-     data: list[AgentConfigPublic]
-     count: int
+class UserAgentConfigsPublic(SQLModel):
+    data: list[UserAgentConfigPublic]
+    count: int
 
 # ==================== ShadowUser Models ====================
 
@@ -3910,49 +3735,16 @@ Trait.conflict_memberships: list["TraitConflictGroupMember"] = Relationship(
     back_populates="trait"
 )
 
-# User → AgentConfig relationship
-User.agent_configs = Relationship(
+# User → UserAgentConfig relationship
+User.user_agent_configs = Relationship(
     back_populates="owner",
     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
 )
 
-# LLMProviderType <-> LLMProvider relationship
-LLMProviderType.providers = Relationship(
-    back_populates="provider_type",
-    sa_relationship_kwargs={"lazy": "selectin"},
-)
-LLMProvider.provider_type = Relationship(
-    back_populates="providers",
-    sa_relationship_kwargs={"lazy": "selectin"},
-)
 
-# LLMProviderType <-> UserLLMProvider relationship
-LLMProviderType.user_providers = Relationship(
-    back_populates="provider_type",
-    sa_relationship_kwargs={"lazy": "selectin"},
-)
-UserLLMProvider.provider_type = Relationship(
-    back_populates="user_providers",
-    sa_relationship_kwargs={"lazy": "selectin"},
-)
-
-# User <-> UserLLMProvider relationship (both sides must be defined together)
-User.llm_providers = Relationship(
-    back_populates="owner",
-    sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-)
-UserLLMProvider.owner = Relationship(back_populates="llm_providers")
-
-# LLMProvider <-> LLMModel relationship (catalog models)
-LLMProvider.models = Relationship(
-    back_populates="provider",
-    sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
-)
-LLMModel.provider = Relationship(back_populates="models")
-
-# AgentConfig <-> AgentPersona (agent persona library)
-AgentConfig.agent_personas = Relationship(
-    back_populates="agent_config",
+# UserAgentConfig <-> AgentPersona (agent persona library)
+UserAgentConfig.agent_personas = Relationship(
+    back_populates="user_agent_config",
     sa_relationship_kwargs={"cascade": "all, delete-orphan"},
 )
 AgentPersona.agent_config = Relationship(back_populates="agent_personas")

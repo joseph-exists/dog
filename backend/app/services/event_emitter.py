@@ -32,7 +32,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import func, select, text
 
 from app.models import (
-    AgentConfig,
+    UserAgentConfig,
     Room,
     RoomEvent,
     RoomMessage,
@@ -536,7 +536,7 @@ async def _handle_participant_joined(
     Supports both initial join and re-join (reactivation).
 
     Payload:
-        - participant_id: str (UUID string for users; AgentConfig.slug for agents)
+        - participant_id: str (UUID string for users; UserAgentConfig.slug for agents)
         - participant_type: "user" | "agent" (required)
         - role: "owner" | "member" (required)
     """
@@ -544,32 +544,32 @@ async def _handle_participant_joined(
 
     participant_id = payload["participant_id"]
     if payload.get("participant_type") == "agent":
-        # Normalize agent participant_id to AgentConfig.slug.
+        # Normalize agent participant_id to UserAgentConfig.slug.
         # Note: events are immutable; normalization happens in projections only.
         legacy_uuid_str: str | None = None
         try:
             agent_uuid = uuid.UUID(participant_id)
             legacy_uuid_str = str(agent_uuid)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
                 agent_config = (
                     agent_config_row[0]
-                    if not isinstance(agent_config_row, AgentConfig)
+                    if not isinstance(agent_config_row, UserAgentConfig)
                     else agent_config_row
                 )
                 participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
                 agent_config = (
                     agent_config_row[0]
-                    if not isinstance(agent_config_row, AgentConfig)
+                    if not isinstance(agent_config_row, UserAgentConfig)
                     else agent_config_row
                 )
                 legacy_uuid_str = str(agent_config.id)
@@ -637,7 +637,7 @@ async def _handle_participant_left(
     Handle participant.left event (soft delete).
 
     Payload:
-        - participant_id: str (UUID string for users; AgentConfig.slug for agents)
+        - participant_id: str (UUID string for users; UserAgentConfig.slug for agents)
     """
     payload = event.payload
 
@@ -661,13 +661,13 @@ async def _handle_participant_left(
         try:
             agent_uuid = uuid.UUID(participant_id)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
                 agent_config = (
                     agent_config_row[0]
-                    if not isinstance(agent_config_row, AgentConfig)
+                    if not isinstance(agent_config_row, UserAgentConfig)
                     else agent_config_row
                 )
                 result = await session.exec(
@@ -684,13 +684,13 @@ async def _handle_participant_left(
                 )
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
                 agent_config = (
                     agent_config_row[0]
-                    if not isinstance(agent_config_row, AgentConfig)
+                    if not isinstance(agent_config_row, UserAgentConfig)
                     else agent_config_row
                 )
                 result = await session.exec(
@@ -725,7 +725,7 @@ async def _handle_participant_role_changed(
     Handle participant.role_changed event.
 
     Payload:
-        - participant_id: str (UUID string for users; AgentConfig.slug for agents)
+        - participant_id: str (UUID string for users; UserAgentConfig.slug for agents)
         - new_role: "owner" | "member" (required)
     """
     payload = event.payload
@@ -749,13 +749,13 @@ async def _handle_participant_role_changed(
         try:
             agent_uuid = uuid.UUID(participant_id)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
                 agent_config = (
                     agent_config_row[0]
-                    if not isinstance(agent_config_row, AgentConfig)
+                    if not isinstance(agent_config_row, UserAgentConfig)
                     else agent_config_row
                 )
                 result = await session.exec(
@@ -772,13 +772,13 @@ async def _handle_participant_role_changed(
                 )
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config_row = agent_config_result.one_or_none()
             if agent_config_row:
                 agent_config = (
                     agent_config_row[0]
-                    if not isinstance(agent_config_row, AgentConfig)
+                    if not isinstance(agent_config_row, UserAgentConfig)
                     else agent_config_row
                 )
                 result = await session.exec(
@@ -813,7 +813,7 @@ async def _handle_participant_binding_changed(
 
     Payload:
         - participant_type: "user" | "agent" (required)
-        - participant_id: str (UUID string for users; AgentConfig.slug for agents; UUID accepted as legacy)
+        - participant_id: str (UUID string for users; UserAgentConfig.slug for agents; UUID accepted as legacy)
         - persona_id: uuid str | null
         - model_name: str | null
         - user_llm_provider_id: uuid str | null
@@ -838,28 +838,28 @@ async def _handle_participant_binding_changed(
         try:
             agent_uuid = uuid.UUID(participant_id)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config_row = agent_config_result.one_or_none()
             if not agent_config_row:
                 raise ValueError("Agent not found for binding change")
             agent_config = (
                 agent_config_row[0]
-                if not isinstance(agent_config_row, AgentConfig)
+                if not isinstance(agent_config_row, UserAgentConfig)
                 else agent_config_row
             )
             resolved_agent_id = agent_config.id
             participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config_row = agent_config_result.one_or_none()
             if not agent_config_row:
                 raise ValueError("Agent not found for binding change")
             agent_config = (
                 agent_config_row[0]
-                if not isinstance(agent_config_row, AgentConfig)
+                if not isinstance(agent_config_row, UserAgentConfig)
                 else agent_config_row
             )
             resolved_agent_id = agent_config.id
