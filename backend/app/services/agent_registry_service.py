@@ -18,19 +18,18 @@ from sqlmodel import Session, select
 from app import crud
 from app.core.security import decrypt_api_key
 from app.models import (
-    AgentConfig,
-    AgentConfigCreate,
-    AgentConfigUpdate,
-    UserAgentSettings,
-    UserLLMProvider,
+    UserAgentConfig,
+    UserAgentConfigCreate,
+    UserAgentConfigUpdate,
+    UserAccessProvider,
 )
 
 logger = logging.getLogger(__name__)
 
 
-# Provider configuration for user-specific LLM settings
+# Provider configuration for user-specific access provider (UserAccessProvider)
 class ProviderConfig:
-    """Configuration for a user's LLM provider."""
+    """Configuration for a user's access provider."""
     def __init__(
         self,
         api_key: str,
@@ -38,7 +37,6 @@ class ProviderConfig:
         base_url: str | None = None,
     ):
         self.api_key = api_key
-        self.provider_type = provider_type
         self.base_url = base_url
 
 
@@ -47,14 +45,14 @@ class AgentRegistryService:
 
      def __init__(self):
          self._runtime_agents: dict[str, Agent[Any, Any]] = {}
-         self._config_cache: dict[str, AgentConfig] = {}
+         self._config_cache: dict[str, UserAgentConfig] = {}
 
      def register_agent(
          self,
          session: Session,
-         agent_in: AgentConfigCreate,
+         agent_in: UserAgentConfigCreate,
          owner_id: uuid.UUID | None = None,
-     ) -> AgentConfig:
+     ) -> UserAgentConfig:
          """Register a new agent configuration."""
          existing = crud.get_agent_config_by_slug(session=session, slug=agent_in.slug)
          if existing:
@@ -69,65 +67,38 @@ class AgentRegistryService:
          logger.info(f"Registered agent: {config.slug}")
          return config
 
-     def get_agent(self, session: Session, slug: str) -> Agent[Any, Any] | None:
-         """Get runtime Agent instance by slug, instantiating if needed.
-
-         Uses system defaults for LLM provider (environment variables).
-         For user-specific providers, use get_agent_for_user() instead.
-         """
-         if slug in self._runtime_agents:
-             return self._runtime_agents[slug]
-
-         config = self._get_config(session, slug)
-         if not config or not config.is_enabled:
-             return None
-
-         agent = self._instantiate_agent(config)
-         self._runtime_agents[slug] = agent
-         return agent
-
-     def get_agent_for_user(
+     def get_agent_config_for_user(
          self,
          session: Session,
          slug: str,
          user_id: uuid.UUID,
      ) -> Agent[Any, Any] | None:
-         """Get agent with user-specific model and provider configuration.
+         """Get agent config with  model, api provider type, and access provider configuration.
 
          Resolution order:
-         1. Model: User's model_name_override in UserAgentSettings, else config.model_name
-         2. Provider: User's explicit provider_id, else default for model type, else system env
-
-         Note: User-specific agents are NOT cached as they may have
-         different model/provider configurations per user.
+         1. Model: User's model_name from UserAgentConfig
+         2: Model provider API type: (openai, anthropic, openai_compatible, etc) - so we know which API structure to use.
+         3. Access Provider: User's explicit access provider (from UserAccessProvider) - so we know where to send it
          """
          config = self._get_config(session, slug)
          if not config or not config.is_enabled:
              return None
 
-         # Get user settings to check for model override
+         # Get user settings - may need refactored
          settings = self._get_user_settings(session, user_id, config.id)
 
-         # Determine effective model name
-         effective_model_name = config.model_name
-         if settings and settings.model_name_override:
-             effective_model_name = settings.model_name_override
-             logger.debug(
-                 f"Using model override '{effective_model_name}' for agent {slug} "
-                 f"(default: {config.model_name})"
-             )
+         # Determine effective model name TODO
 
-         # Resolve user's provider configuration based on effective model
-         provider_config = self._resolve_user_provider(
-             session, user_id, config, settings, effective_model_name
-         )
+         # Resolve user's provider configuration based on effective model TODO needs refactor
+         provider_config = self._resolve_user_provider(session, user_id, config, settings)
 
-         # Always instantiate fresh for user-specific configs
-         return self._instantiate_agent(config, provider_config, effective_model_name)
+         # Always instantiate fresh for user-specific configs TODO: refactor
+         return self._instantiate_agent(e)
 
-     def get_config(self, session: Session, slug: str) -> AgentConfig | None:
+     def get_config(self, session: Session, slug: str) -> UserAgentConfig | None:
          return self._get_config(session, slug)
 
+    # TODO : these needs refactored to use UserAgentConfig classes
      def list_agents(
          self,
          session: Session,
@@ -136,7 +107,7 @@ class AgentRegistryService:
          enabled_only: bool = True,
          scope: str | None = None,
          owner_id: uuid.UUID | None = None,
-     ) -> tuple[list[AgentConfig], int]:
+     ) -> tuple[list[UserAgentConfig], int]:
          return crud.get_agent_configs(
              session=session,
              skip=skip,
@@ -150,13 +121,13 @@ class AgentRegistryService:
          self,
          session: Session,
          slug: str,
-         agent_in: AgentConfigUpdate,
-     ) -> AgentConfig | None:
-         config = crud.get_agent_config_by_slug(session=session, slug=slug)
+         agent_in: UserAgentConfigUpdate,
+     ) -> UserAgentConfig | None:
+         config = crud.get_user_agent_config_by_slug(session=session, slug=slug)
          if not config:
              return None
 
-         updated = crud.update_agent_config(
+         updated = crud.update_user_agent_config(
              session=session,
              db_agent=config,
              agent_in=agent_in,
@@ -174,7 +145,7 @@ class AgentRegistryService:
                  return slug
          raise ValueError("Failed to generate a unique slug")
 
-     def _get_config(self, session: Session, slug: str) -> AgentConfig | None:
+     def _get_config(self, session: Session, slug: str) -> UserAgentConfig | None:
          if slug in self._config_cache:
              return self._config_cache[slug]
          config = crud.get_agent_config_by_slug(session=session, slug=slug)
@@ -187,25 +158,21 @@ class AgentRegistryService:
          session: Session,
          user_id: uuid.UUID,
          agent_config_id: uuid.UUID,
-     ) -> UserAgentSettings | None:
+     ) -> UserAgentConfig | None:
          """Get user's settings for a specific agent."""
-         stmt = select(UserAgentSettings).where(
-             UserAgentSettings.user_id == user_id,
-             UserAgentSettings.agent_config_id == agent_config_id,
-         )
-         return session.exec(stmt).first()
+
 
      def _instantiate_agent(
          self,
-         config: AgentConfig,
+         config: UserAgentConfig,
          provider_config: ProviderConfig | None = None,
          model_name: str | None = None,
      ) -> Agent[Any, Any]:
-         """Create PydanticAI Agent from config with optional user provider.
+         """Create PydanticAI Agent from config with user access provider and other AgentConfig parameters.
 
          Args:
-             config: Agent configuration from database
-             provider_config: Optional user-specific provider settings (API key, base URL)
+             user_agent_config: Agent configuration from database
+             access_provider_config: Optional user-specific provider settings (API key, base URL)
              model_name: Optional model override (defaults to config.model_name)
 
          When provider_config is provided, PydanticAI will use the custom API key
@@ -214,20 +181,16 @@ class AgentRegistryService:
          effective_model = model_name or config.model_name
          system_prompt = config.system_prompt or f"You are {config.name}. {config.description}"
 
+        # TODO : all new UserAgentConfigs (which is how we'll manage all user agents are required to have this)
+        # TODO : we don't care about back compat at this point.
          if provider_config:
              # Create agent with user's custom provider settings
-             # The model_name format is "provider:model" e.g., "openai:gpt-4o-mini"
              agent = Agent(
-                 effective_model,
+                 effective_model, # model is in UserAgentConfig
                  system_prompt=system_prompt,
              )
              # Note: PydanticAI's Agent doesn't directly accept api_key in constructor.
              # TODO: Implement proper provider config injection when PydanticAI supports it
-             logger.debug(
-                 f"Instantiated agent {config.slug} with model={effective_model}, "
-                 f"provider=(type={provider_config.provider_type}, "
-                 f"base_url={provider_config.base_url or 'default'})"
-             )
          else:
              # Use system defaults (environment variables)
              agent = Agent(effective_model, system_prompt=system_prompt)
@@ -235,71 +198,26 @@ class AgentRegistryService:
 
          return agent
 
-     def _resolve_user_provider(
+     def _resolve_user_access_provider(
          self,
          session: Session,
          user_id: uuid.UUID,
-         config: AgentConfig,
-         settings: UserAgentSettings | None,
-         effective_model_name: str,
+         config: UserAgentConfig,
+         settings: UserAgentConfig | None,
+         effective_model_name: str, # needs to be from UserAgentConfig
      ) -> ProviderConfig | None:
-        """Resolve user's provider for an agent with fallback chain.
+        """Resolve user access provider for an agent.
 
-        Fallback order:
-        1. User's explicit provider_id in UserAgentSettings for this agent
-        2. User's default provider for the effective model's provider type
-        3. None (use system environment variables)
+         User's explicit config in UserAgentConfig for this agent
 
         Args:
             settings: Pre-fetched user settings (to avoid duplicate query)
             effective_model_name: The model that will be used (may be overridden)
         """
-        provider_type_str = (
-            effective_model_name.split(":")[0] if ":" in effective_model_name else "openai"
+        provider_type_obj = crud.get_access_provider(
         )
-        provider_type_obj = crud.get_llm_provider_type_by_name(
-            session=session, name=provider_type_str
-        )
-        if not provider_type_obj:
-            logger.warning(
-                f"Unknown provider type '{provider_type_str}' in model_name '{effective_model_name}'"
-            )
-            return None
-        provider_type = provider_type_obj.name.lower()
-        provider_type_id = provider_type_obj.id
 
-        provider: UserLLMProvider | None = None
-
-        if settings and settings.provider_id:
-            provider = session.get(UserLLMProvider, settings.provider_id)
-            if provider and provider.is_enabled:
-                logger.debug(
-                    f"Using user's explicit provider '{provider.name}' for agent {config.slug}"
-                )
-            else:
-                provider = None
-
-        if not provider:
-            default_stmt = select(UserLLMProvider).where(
-                UserLLMProvider.user_id == user_id,
-                UserLLMProvider.provider_type_id == provider_type_id,
-                UserLLMProvider.is_default,
-                UserLLMProvider.is_enabled,
-            )
-            provider = session.exec(default_stmt).first()
-            if provider:
-                logger.debug(
-                    f"Using user's default provider '{provider.name}' for agent {config.slug}"
-                )
-
-        if not provider:
-            return None
-        if not provider.provider_type_id:
-            # Legacy payloads used provider_type name; fail fast and log loudly.
-            logger.error(
-                "provider_type_id missing on UserLLMProvider %s during agent resolution",
-                provider.id,
-            )
+        provider: UserAccessProvider | None = None
 
         return ProviderConfig(
             api_key=decrypt_api_key(provider.api_key_encrypted),

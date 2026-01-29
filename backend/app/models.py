@@ -3100,7 +3100,6 @@ class UserAgentConfigUpdate(UserAgentConfigBase):
 
 class UserAgentConfig(UserAgentConfigBase, table=True):
     __tablename__ = "user_agent_configs"
-
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=datetime.now)
@@ -3116,9 +3115,9 @@ class UserAgentConfig(UserAgentConfigBase, table=True):
     system_prompt: str | None = Field(default=None)
     custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
     instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
-    tool_config: dict | None = Field(default=None)
-    deps_config: dict | None = Field(default=None)
-    agent_metadata: dict | None = Field(default=None)
+    tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
+    deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
+    agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
     is_enabled: bool | None = Field(default=None)
     is_clonable: bool | None = Field(default=None)
     is_visible: bool | None = Field(default=None)
@@ -3126,7 +3125,7 @@ class UserAgentConfig(UserAgentConfigBase, table=True):
     participation_mode: str | None = Field(default=None)
     is_coordinator: bool | None = Field(default=None)
     max_tool_iterations: int | None = Field(default=None)
-    capabilities: list[str] | None = Field(default=None)
+    capabilities: list[str] | None = Field(default=None, sa_column=Column(JSON))
 
 class UserAgentConfigPublic(UserAgentConfigBase):
     id: uuid.UUID

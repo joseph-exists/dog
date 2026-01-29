@@ -11,17 +11,13 @@ from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
 from app.models import (
-    AgentConfig,
-    AgentConfigCreate,
-    AgentConfigPublic,
-    AgentConfigsPublic,
-    AgentConfigUpdate,
+    UserAgentConfig,
+    UserAgentConfigCreate,
+    UserAgentConfigPublic,
+    UserAgentConfigsPublic,
+    UserAgentConfigUpdate,
     Message,
-    UserAgentSettings,
-    UserAgentSettingsCreate,
-    UserAgentSettingsPublic,
-    UserAgentSettingsUpdate,
-    UserLLMProvider,
+    UserAccessProvider,
 )
 from app.services.agent_registry_service import agent_registry_service
 from app.services.shadow_service import shadow_service
@@ -49,7 +45,7 @@ class GeneratedSlugResponse(BaseModel):
 # Previously hardcoded in frontend as AVAILABLE_AGENTS array.
 
 
-@router.get("/", response_model=AgentConfigsPublic)
+@router.get("/", response_model=UserAgentConfigsPublic)
 def list_agents(
     session: SessionDep,
     current_user: CurrentUser,
@@ -75,7 +71,7 @@ def list_agents(
         configs = system_configs + personal_configs
         count = len(configs)
 
-    return AgentConfigsPublic(data=configs, count=count)
+    return UserAgentConfigsPublic(data=configs, count=count)
 
 
 @router.get("/available", response_model=AgentConfigsPublic)
@@ -101,7 +97,7 @@ def list_available_agents(
         )
         configs = system_configs + personal_configs
         count = len(configs)
-    return AgentConfigsPublic(data=configs, count=count)
+    return UserAgentConfigsPublic(data=configs, count=count)
 
 
 @router.get("/generate-slug", response_model=GeneratedSlugResponse)
@@ -114,7 +110,7 @@ def generate_agent_slug(
     return GeneratedSlugResponse(slug=slug)
 
 
-@router.get("/{agent_id}", response_model=AgentConfigPublic)
+@router.get("/{agent_id}", response_model=UserAgentConfigPublic)
 def get_agent(
     session: SessionDep,
     current_user: CurrentUser,
@@ -133,7 +129,7 @@ def get_agent(
     return config
 
 
-@router.get("/slug/{slug}", response_model=AgentConfigPublic)
+@router.get("/slug/{slug}", response_model=UserAgentConfigPublic)
 def get_agent_by_slug(
     session: SessionDep,
     current_user: CurrentUser,
@@ -152,12 +148,12 @@ def get_agent_by_slug(
     return config
 
 
-@router.post("/", response_model=AgentConfigPublic)
+@router.post("/", response_model=UserAgentConfigPublic)
 def create_agent(
     *,
     session: SessionDep,
     current_user: CurrentUser,
-    agent_in: AgentConfigCreate,
+    agent_in: UserAgentConfigCreate,
 ) -> Any:
     """Create a new agent configuration.
 
@@ -202,13 +198,13 @@ def create_agent(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{agent_id}", response_model=AgentConfigPublic)
+@router.put("/{agent_id}", response_model=UserAgentConfigPublic)
 def update_agent(
     *,
     session: SessionDep,
     current_user: CurrentUser,
     agent_id: uuid.UUID,
-    agent_in: AgentConfigUpdate,
+    agent_in: UserAgentConfigUpdate,
 ) -> Any:
     """Update an agent configuration."""
     config = crud.get_agent_config(session=session, agent_id=agent_id)
@@ -280,7 +276,7 @@ def delete_agent(
 # ============================================================================
 
 
-@router.get("/{agent_id}/my-settings", response_model=UserAgentSettingsPublic | None)
+@router.get("/{agent_id}/my_settings", response_model=UserAgentConfigPublic | None)
 def get_my_agent_settings(
     session: SessionDep,
     current_user: CurrentUser,
@@ -289,7 +285,7 @@ def get_my_agent_settings(
     """Get user's personal settings for an agent (provider, etc.).
 
     Returns the user's settings for this agent, or null if none configured.
-    Settings include chosen LLM provider and optional custom system prompt.
+    Settings include chosen access provider and optional custom system prompt.
     """
     # Verify agent exists and user has access
     config = crud.get_agent_config(session=session, agent_id=agent_id)
@@ -299,27 +295,21 @@ def get_my_agent_settings(
     if config.scope == "personal" and config.owner_id != current_user.id:
         if not current_user.is_superuser:
             raise HTTPException(status_code=403, detail="Access denied")
-
-    # Get user's settings for this agent
-    statement = select(UserAgentSettings).where(
-        UserAgentSettings.user_id == current_user.id,
-        UserAgentSettings.agent_config_id == agent_id,
-    )
-    settings = session.exec(statement).first()
+    # TODO : 
     return settings
 
 
-@router.put("/{agent_id}/my-settings", response_model=UserAgentSettingsPublic)
+@router.put("/{agent_id}/my-settings", response_model=UserAgentConfigsPublic)
 def update_my_agent_settings(
     *,
     session: SessionDep,
     current_user: CurrentUser,
     agent_id: uuid.UUID,
-    settings_in: UserAgentSettingsUpdate,
+    settings_in: UserAgentConfigUpdate,
 ) -> Any:
     """Create or update user's personal settings for an agent.
 
-    Allows user to associate their LLM provider with any agent:
+    Allows user to associate their UserAccessProvider with any agent:
     - For personal agents: customize your own agent
     - For system agents: use your own API key without affecting others
     """
@@ -334,14 +324,14 @@ def update_my_agent_settings(
 
     # Validate provider_id if provided
     if settings_in.provider_id:
-        provider = session.get(UserLLMProvider, settings_in.provider_id)
+        provider = session.get(UserAccessProvider, settings_in.provider_id)
         if not provider or provider.user_id != current_user.id:
             raise HTTPException(status_code=400, detail="Invalid provider ID")
 
     # Get or create settings
-    statement = select(UserAgentSettings).where(
-        UserAgentSettings.user_id == current_user.id,
-        UserAgentSettings.agent_config_id == agent_id,
+    statement = select(UserAgentConfigs).where(
+        UserAgentConfigs.user_id == current_user.id,
+        UserAgentConfigs.agent_config_id == agent_id,
     )
     settings = session.exec(statement).first()
 
@@ -352,7 +342,7 @@ def update_my_agent_settings(
         settings.updated_at = datetime.now()
     else:
         # Create new
-        settings = UserAgentSettings(
+        settings = UserAgentConfigs(
             user_id=current_user.id,
             agent_config_id=agent_id,
             **settings_in.model_dump(exclude_unset=True),
@@ -374,9 +364,9 @@ def delete_my_agent_settings(
 
     After deletion, agent will use system defaults.
     """
-    statement = select(UserAgentSettings).where(
-        UserAgentSettings.user_id == current_user.id,
-        UserAgentSettings.agent_config_id == agent_id,
+    statement = select(UserAgentConfig).where(
+        UserAgentConfig.user_id == current_user.id,
+        UserAgentConfig.agent_config_id == agent_id,
     )
     settings = session.exec(statement).first()
 

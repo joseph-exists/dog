@@ -13,6 +13,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
+    UserAccessProvider,
+    UserAccessProviderCreate,
+    UserAccessProviderUpdate,
     AgentPersona,
     AgentPersonaCreate,
     AgentPersonaUpdate,
@@ -138,6 +141,92 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
     if not verify_password(password, db_user.hashed_password):
         return None
     return db_user
+
+
+# =============================================================================
+# USER ACCESS PROVIDER CRUD
+# =============================================================================
+
+def get_access_providers(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+    is_validated: bool | None = None,
+    is_enabled: bool | None = None,
+    is_default: bool | None = None,
+) -> tuple[list[UserAccessProvider], int]:
+    """
+    Get list of user's LLM access providers with optional filtering.
+
+    Args:
+        session: Database session
+        user_id: User UUID to filter by
+        skip: Number of records to skip (pagination)
+        limit: Maximum number of records to return
+        is_validated: Optional filter for validated providers
+        is_enabled: Optional filter for enabled providers
+        is_default: Optional filter for default provider
+
+    Returns:
+        Tuple of (list of providers, total count)
+    """
+    # Build filters
+    filters = [UserAccessProvider.user_id == user_id]
+
+    if is_validated is not None:
+        filters.append(UserAccessProvider.is_validated == is_validated)
+    if is_enabled is not None:
+        filters.append(UserAccessProvider.is_enabled == is_enabled)
+    if is_default is not None:
+        filters.append(UserAccessProvider.is_default == is_default)
+
+    # Count query
+    count_statement = (
+        select(func.count())
+        .select_from(UserAccessProvider)
+        .where(*filters)
+    )
+    count = session.exec(count_statement).one()
+
+    # Data query
+    statement = (
+        select(UserAccessProvider)
+        .where(*filters)
+        .offset(skip)
+        .limit(limit)
+        .order_by(desc(UserAccessProvider.created_at))
+    )
+    providers = list(session.exec(statement).all())
+
+    return providers, count
+
+
+def get_access_provider(
+    *,
+    session: Session,
+    provider_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
+) -> UserAccessProvider | None:
+    """
+    Get a single access provider by ID.
+
+    Args:
+        session: Database session
+        provider_id: UUID of the provider
+        user_id: Optional user UUID for security check (ensures user owns the provider)
+
+    Returns:
+        UserAccessProvider if found and user matches (if provided), None otherwise
+    """
+    provider = session.get(UserAccessProvider, provider_id)
+
+    # Security check: if user_id provided, verify ownership
+    if provider and user_id is not None and provider.user_id != user_id:
+        return None
+
+    return provider
 
 
 def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -> Item:
