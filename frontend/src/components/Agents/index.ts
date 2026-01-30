@@ -13,7 +13,7 @@ export {
   default as AgentAvatar,
   getColorForName,
   getInitials,
-} from "./AgentAvatar"
+} from "./Display/AgentAvatar"
 export type { AgentScope, ParticipationMode } from "./AgentBadge"
 // Badges
 export {
@@ -52,23 +52,23 @@ export { default as RoomAgentList } from "./RoomAgentList"
 // ============================================================================
 
 // Clone Button
-export { default as AgentCloneButton } from "./AgentCloneButton"
+export { default as AgentCloneButton } from "./Dialogs/AgentCloneButton"
 // Shared Form
-export type { AgentFormData } from "./AgentForm"
-export { default as AgentForm, PARTICIPATION_MODES } from "./AgentForm"
+export type { AgentFormData } from "./Forms/AgentForm"
+export { default as AgentForm, PARTICIPATION_MODES } from "./Forms/AgentForm"
 // Create Dialog
-export { default as CreateAgentDialog } from "./CreateAgentDialog"
+export { default as CreateAgentDialog } from "./Dialogs/CreateAgentDialog"
 // Edit Dialog
-export { default as EditAgentDialog } from "./EditAgentDialog"
+export { default as EditAgentDialog } from "./Dialogs/EditAgentDialog"
 
 // ============================================================================
 // Provider Configuration Components (Sprint 4)
 // ============================================================================
 
 // Model Settings - allows users to customize model and provider for an agent
-export { default as AgentModelSettings } from "./AgentModelSettings"
+export { default as AgentModelSettings } from "./Settings/AgentModelSettings"
 // Provider Selector - lightweight inline selector
-export { default as AgentProviderSelector } from "./AgentProviderSelector"
+export { default as AgentProviderSelector } from "./Selectors/AgentProviderSelector"
 // Provider components (reusable building blocks)
 export {
   ProviderModelSelector,

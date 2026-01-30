@@ -3,32 +3,30 @@
  *
  * Purpose: Provide read-only access to the system-wide LLMProviderType and model catalog.
  * This is 'a' source of truth for LLMProviderType:model associations for known UserAccessProviders.
- * For example: there is a known set of LLMProviderType and Model associations for OpenAI, Anthropic, and Google when they are both the UserAccessProvider && the LLMProviderType.  
- * However, there are many LLMProviderType <> Model associations which are unknown. 
+ * For example: there is a known set of LLMProviderType and Model associations for OpenAI, Anthropic,
+ * and Google when they are both the UserAccessProvider && the LLMProviderType.
+ * However, there are many LLMProviderType <> Model associations which are unknown.
  *
- * 
  * Architecture:
- * - Wraps OpenAPI client methods for /llm-catalog endpoints
+ * - Wraps OpenAPI client methods for /llm-catalog endpoints (TODO: when backend implements them)
  * - Transforms backend types to ViewModels optimized for UI
- * - authentication needed (public catalog but only for authenticated users)
+ * - Authentication needed (public catalog but only for authenticated users)
  * - Long cache times (staleTime: Infinity) since catalog rarely changes
+ *
+ * Design Principles (CRITICAL):
+ * - List and aggregation functions ONLY
+ * - Never blocks or fails - returns empty arrays/null for unknown data
+ * - Allows custom/unknown provider types (returns graceful fallbacks)
+ * - Read-only - no create/update/delete operations
+ * - Helps users, doesn't break or block them
+ *
+ * A user may have their own local/hand-rolled system with no providertype,
+ * and they are their own user access provider. We need to allow that case.
+ *
+ * CURRENT STATUS: Minimal implementation with hardcoded labels.
+ * Backend /llm-catalog endpoints are not yet fully implemented.
+ * TODO: Expand when backend endpoints are ready.
  */
-
-// these need to be list and aggregation functions ONLY.
-// they don't block anything, they don't fail - if there's not a return, send back a 'nothing'
-// we need to manage the empty case on the frontend and the backend at all times.
-// a user may have their own local/handrolled system, which has no providertype, and they are their own user access provider.
-// we need to allow that case -
-// this is to help users, not break or block them.
-
-
-
-import {
-  LlmCatalogService as ApiCatalogService,
-  type LLMModelPublic,
-  type LLMModelsGrouped,
-  type LLMProviderWithModels,
-} from "@/client"
 
 // ============================================================================
 // Type Definitions - ViewModels
@@ -63,11 +61,13 @@ export function getProviderTypeLabel(providerType: LLMProviderType): string {
 }
 
 /**
- * Model option for dropdowns - maintains backwards compatibility
- * with existing components using value format "provider:model_id"
+ * Model option for dropdowns - simplified format
+ * Maintains backwards compatibility with existing UI components
+ * Use value format "provider:model_id" for consistency
+ *
+ * For complete model data, use CatalogModelViewModel (TODO: when backend ready)
  */
 export interface ModelOption {
-
   value: string
   label: string
   description: string
@@ -100,23 +100,9 @@ export interface ModelDisplayInfo {
 }
 
 /**
- * CatalogProviderViewModel - Provider with model count
- */
-export interface CatalogProviderViewModel {
-  id: string
-  name: string
-  providerType: LLMProviderType
-  description: string | null
-  baseUrl: string | null
-  isEnabled: boolean
-  isSystem: boolean
-  modelCount: number
-  createdAt: Date
-  updatedAt: Date
-}
-
-/**
- * CatalogModelViewModel - Model with full capabilities
+ * Complete model data from catalog
+ * Use this for detailed model information
+ * TODO: Implement when backend catalog endpoints are ready
  */
 export interface CatalogModelViewModel {
   id: string
@@ -141,7 +127,25 @@ export interface CatalogModelViewModel {
 }
 
 /**
+ * CatalogProviderViewModel - Provider with model count
+ * TODO: Implement when backend catalog endpoints are ready
+ */
+export interface CatalogProviderViewModel {
+  id: string
+  name: string
+  providerType: LLMProviderType
+  description: string | null
+  baseUrl: string | null
+  isEnabled: boolean
+  isSystem: boolean
+  modelCount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
  * CatalogGroupedViewModel - Providers with nested models
+ * TODO: Implement when backend catalog endpoints are ready
  */
 export interface CatalogGroupedViewModel {
   providers: Array<
@@ -150,249 +154,147 @@ export interface CatalogGroupedViewModel {
   totalModels: number
 }
 
-
-// ============================================================================
-// Transformation Functions
-// ============================================================================
-
-/**
- * Transform backend UserAccessProviderPublic to CatalogProviderViewModel
- *
- * Note: Currently using UserAccessProviderPublic until backend catalog types are fully implemented.
- * TODO: Update to use LLMProviderTypePublic when backend catalog endpoints are ready.
- */
-function transformProvider(
-  provider: UserAccessProviderPublic,
-): CatalogProviderViewModel {
-  return {
-    id: provider.id,
-    name: provider.name,
-    providerType: provider.provider_type ?? "unknown",
-    description: provider.description ?? null,
-    baseUrl: provider.base_url ?? null,
-    isEnabled: provider.is_enabled ?? true,
-    isSystem: provider.is_system ?? true,
-    modelCount: provider.model_count ?? 0,
-    createdAt: new Date(provider.created_at),
-    updatedAt: new Date(provider.updated_at),
-  }
-}
-
-/**
- * Transform backend LLMModelPublic to CatalogModelViewModel
- */
-function transformModel(model: LLMModelPublic): CatalogModelViewModel {
-  return {
-    id: model.id,
-    providerId: model.provider_id,
-    modelId: model.model_id,
-    displayName: model.display_name,
-    description: model.description ?? null,
-    contextWindow: model.context_window ?? null,
-    isDefault: model.is_default ?? false,
-    isEnabled: model.is_enabled ?? true,
-    isDeprecated: model.is_deprecated ?? false,
-    isSystem: model.is_system ?? true,
-    sortOrder: model.sort_order ?? 0,
-    hasVision: model.has_vision ?? null,
-    hasFunctionCalling: model.has_function_calling ?? null,
-    hasStreaming: model.has_streaming ?? null,
-    hasJsonMode: model.has_json_mode ?? null,
-    providerType: model.provider_type ? normalizeProviderType(model.provider_type) : null,
-    providerName: model.provider_name ?? null,
-    createdAt: new Date(model.created_at),
-    updatedAt: new Date(model.updated_at),
-  }
-}
-
-/**
- * Transform backend LLMProviderWithModels to grouped view model
- */
-function transformLLMProviderTypeWithModels(
-  provider: LLMProviderTypeWithModels,
-): CatalogProviderViewModel & { models: CatalogModelViewModel[] } {
-  return {
-    id: provider.id,
-    name: provider.name,
-    providerType: provider.provider_type // this is the API spec provider
-    description: provider.description ?? null,
-    baseUrl: provider.base_url ?? null, // 
-    isEnabled: provider.is_enabled ?? true,
-    isSystem: provider.is_system ?? true,
-    modelCount: provider.model_count ?? provider.models?.length ?? 0,
-    createdAt: new Date(provider.created_at),
-    updatedAt: new Date(provider.updated_at),
-    models: (provider.models ?? []).map(transformModel),
-  }
-}
-
-/**
- * Transform CatalogModelViewModel to ModelOption for dropdown compatibility
- */
-function modelToOption(
-  model: CatalogModelViewModel,
-  providerType: LLMProviderType,
-): ModelOption {
-  return {
-    value: `${providerType}:${model.modelId}`,
-    label: model.displayName,
-    description: model.description || "",
-    provider: providerType,
-    isDefault: model.isDefault,
-    isSystem: model.isSystem,
-    capabilities: {
-      vision: model.hasVision,
-      functionCalling: model.hasFunctionCalling,
-      streaming: model.hasStreaming,
-      jsonMode: model.hasJsonMode,
-    },
-    contextWindow: model.contextWindow,
-  }
-}
-
 // ============================================================================
 // LLM Catalog Service - Public API
 // ============================================================================
 
+/**
+ * LLM Catalog Service (Minimal Implementation)
+ *
+ * Provides read-only access to known LLM provider types with hardcoded labels.
+ * Backend /llm-catalog endpoints are not yet fully implemented, so this service
+ * currently only provides utility functions and returns empty results gracefully.
+ *
+ * Design principle: This service helps users, never blocks them.
+ * Unknown/custom provider types and models are allowed - we provide fallbacks.
+ *
+ * TODO: Expand with full backend catalog integration when endpoints are ready:
+ * - listProviders(options)
+ * - listModels(options)
+ * - listModelsGrouped(options)
+ * - getModel(modelId)
+ * - getModelOptionsForType(providerType)
+ * - getDefaultModel(providerType)
+ */
 export const LlmCatalogService = {
   // ==========================================================================
-  // Provider Operations
+  // Utility Methods (Always Available)
   // ==========================================================================
 
   /**
-   * List all catalog providers
+   * Get display label for a provider type
+   * Graceful: Returns the type itself if not in labels
    */
-  async listProviders(options?: {
-    providerType?: LLMProviderType
-    isEnabled?: boolean
-  }): Promise<CatalogProviderViewModel[]> {
-    const response = await ApiCatalogService.listProviders({
-      providerType: options?.providerType,
-      isEnabled: options?.isEnabled,
-    })
-    return response.data.map(transformProvider)
+  getProviderTypeLabel,
+
+  /**
+   * Get list of known provider types
+   * Returns hardcoded list until backend catalog is ready
+   */
+  getKnownProviderTypes(): LLMProviderType[] {
+    return Object.keys(PROVIDER_TYPE_LABELS)
   },
 
   /**
-   * Get a single provider by ID
+   * Check if a provider type is known in the catalog
+   * Returns false for custom/unknown types (doesn't block them)
    */
-  async getProvider(providerId: string): Promise<CatalogProviderViewModel> {
-    const provider = await ApiCatalogService.getProvider({ providerId })
-    return transformProvider(provider)
+  isKnownProviderType(providerType: LLMProviderType): boolean {
+    return providerType in PROVIDER_TYPE_LABELS
   },
 
-  /**
-   * Get models for a specific provider
-   */
-  async getProviderModels(
-    providerId: string,
-    options?: { isEnabled?: boolean },
-  ): Promise<CatalogModelViewModel[]> {
-    const response = await ApiCatalogService.listProviderModels({
-      providerId,
-      isEnabled: options?.isEnabled,
-    })
-    return response.data.map(transformModel)
-  },
-}
-
- // ==========================================================================
-  // Model Operations
+  // ==========================================================================
+  // Placeholder Methods (TODO: Implement when backend ready)
   // ==========================================================================
 
   /**
    * List all models (flat list)
+   * TODO: Implement when backend /llm-catalog/models endpoint is ready
+   * Currently returns empty array gracefully
    */
-  async listModels(options?: {
+  async listModels(_options?: {
     providerType?: LLMProviderType
     isEnabled?: boolean
     hasVision?: boolean
     hasFunctionCalling?: boolean
   }): Promise<CatalogModelViewModel[]> {
-    const response = await ApiCatalogService.listModels({
-      providerType: options?.providerType,
-      isEnabled: options?.isEnabled,
-      hasVision: options?.hasVision,
-      hasFunctionCalling: options?.hasFunctionCalling,
-    })
-    return response.data.map(transformModel)
+    console.warn("LlmCatalogService.listModels: Backend catalog not yet implemented, returning empty list")
+    return []
   },
 
   /**
    * List models grouped by provider
+   * TODO: Implement when backend /llm-catalog/models/grouped endpoint is ready
+   * Currently returns empty result gracefully
    */
-  async listModelsGrouped(options?: {
+  async listModelsGrouped(_options?: {
     providerType?: LLMProviderType
     isEnabled?: boolean
-    }): Promise<CatalogGroupedViewModel> {
-    const response: LLMModelsGrouped =
-      await ApiCatalogService.listModelsGrouped({
-        providerType: options?.providerType,
-        isEnabled: options?.isEnabled,
-      })
-    return {
-      providers: response.providers.map(transformProviderWithModels),
-      totalModels: response.total_models,
-    },
-  },
-},
-  /**
-   * Get a single model by ID
-   */
-  async getModel(modelId: string): Promise<CatalogModelViewModel> {
-    const model = await ApiCatalogService.getModel({ modelId })
-    return transformModel(model)
+  }): Promise<CatalogGroupedViewModel> {
+    console.warn("LlmCatalogService.listModelsGrouped: Backend catalog not yet implemented, returning empty result")
+    return { providers: [], totalModels: 0 }
   },
 
-  // ==========================================================================
-  // Utility Methods - ModelOption Format (Backwards Compatible)
-  // ==========================================================================
+  /**
+   * Get a single model by ID
+   * TODO: Implement when backend /llm-catalog/models/{id} endpoint is ready
+   * Currently returns null gracefully
+   */
+  async getModel(_modelId: string): Promise<CatalogModelViewModel | null> {
+    console.warn("LlmCatalogService.getModel: Backend catalog not yet implemented, returning null")
+    return null
+  },
 
   /**
    * Get all models as ModelOption array (for dropdowns)
-   * Returns models grouped by provider type
+   * TODO: Implement when backend catalog is ready
+   * Currently returns empty object gracefully
    */
   async getModelOptions(): Promise<Record<LLMProviderType, ModelOption[]>> {
-    const grouped = await this.listModelsGrouped({ isEnabled: true })
-
-    const result: Record<LLMProviderType, ModelOption[]> = {}
-
-    for (const provider of grouped.providers) {
-      const providerType = provider.providerType
-      result[providerType] = (result[providerType] ?? []).concat(
-        provider.models.map((model) => modelToOption(model, providerType)),
-      )
-    }
-
-    return result
+    console.warn("LlmCatalogService.getModelOptions: Backend catalog not yet implemented, returning empty object")
+    return {}
   },
 
   /**
    * Get all models as flat ModelOption array
+   * TODO: Implement when backend catalog is ready
+   * Currently returns empty array gracefully
    */
   async getAllModelOptions(): Promise<ModelOption[]> {
-    const byProvider = await this.getModelOptions()
-    return Object.values(byProvider).flat()
+    console.warn("LlmCatalogService.getAllModelOptions: Backend catalog not yet implemented, returning empty array")
+    return []
   },
 
   /**
    * Get models for a specific provider type as ModelOption array
+   * TODO: Implement when backend catalog is ready
+   * Currently returns empty array gracefully
    */
   async getModelOptionsForType(
-    providerType: LLMProviderType,
+    _providerType: LLMProviderType,
   ): Promise<ModelOption[]> {
-    const models = await this.listModels({ providerType, isEnabled: true })
-    return models.map((model) => modelToOption(model, providerType))
+    console.warn("LlmCatalogService.getModelOptionsForType: Backend catalog not yet implemented, returning empty array")
+    return []
   },
 
   /**
    * Get the default model for a provider type
+   * TODO: Implement when backend catalog is ready
+   * Currently returns null gracefully
    */
   async getDefaultModel(
-    providerType: LLMProviderType,
+    _providerType: LLMProviderType,
   ): Promise<ModelOption | null> {
-    const models = await this.listModels({ providerType, isEnabled: true })
-    const defaultModel = models.find((m) => m.isDefault)
-    if (!defaultModel) return null
-    return modelToOption(defaultModel, providerType)
+    console.warn("LlmCatalogService.getDefaultModel: Backend catalog not yet implemented, returning null")
+    return null
   },
+
+  /**
+   * Format a model name for display
+   * Graceful: Returns model name as-is since catalog not yet available
+   */
+  async formatModelName(modelName: string): Promise<string> {
+    // Return as-is until catalog is available
+    return modelName
+  },
+}

@@ -27,14 +27,14 @@ import {
   type AgentViewModel,
   type UpdateAgentInput,
 } from "@/services/agentService"
-import AgentAvatar from "./AgentAvatar"
+import AgentAvatar from "../Display/AgentAvatar"
 import {
   AgentModeBadge,
   AgentProviderBadge,
   AgentScopeBadge,
   parseProviderFromModelName,
 } from "./AgentBadge"
-import AgentForm, { type AgentFormData } from "./AgentForm"
+import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
 
 interface AgentDetailDialogProps {
   /** Agent ID to display */

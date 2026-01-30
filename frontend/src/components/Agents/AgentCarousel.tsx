@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { AgentScope, ParticipationMode } from "./AgentBadge"
 import AgentCard from "./AgentCard"
-import AgentDetailDialog from "./AgentDetailDialog"
+import AgentDetailDialog from "./Settings/AgentDetailDialog"
 
 export interface AgentData {
   id: string

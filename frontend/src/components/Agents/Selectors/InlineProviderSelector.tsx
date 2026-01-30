@@ -1,5 +1,5 @@
 /**
- * Agent Provider Selector
+ * Agent Provider Selector FOR INLINE USE
  *
  * Lightweight provider-only selector for inline use (e.g., room settings).
  * Shows current provider/model status without full settings UI.
@@ -20,8 +20,8 @@ import { useAgentSettings } from "@/hooks/useAgentSettings"
 import { cn } from "@/lib/utils"
 import type { AgentViewModel } from "@/services/agentService"
 import type { UserAgentSettingsViewModel } from "@/services/llmProviderService"
-import { ProviderModelSelector } from "./providers"
-import { ProviderStatusBadge } from "./providers/ProviderStatusBadge"
+import { ProviderModelSelector } 
+import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 interface AgentProviderSelectorProps {
   /** The agent to configure */

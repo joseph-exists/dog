@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import AgentAvatar from "./AgentAvatar"
+import AgentAvatar from "./Display/AgentAvatar"
 import type { AgentData } from "./AgentCarousel"
 
 interface AgentQuickAddProps {

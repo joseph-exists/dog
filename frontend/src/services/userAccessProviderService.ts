@@ -227,10 +227,10 @@ export const UserAccessProviderService = {
    * Test a provider connection
    * TODO: Backend endpoint needed - /api/v1/llm-providers/{provider_id}/test
    */
-  async testProvider(providerId: string): Promise<TestResult> {
+  async testProvider(_providerId: string): Promise<TestResult> {
     // NOTE: This endpoint doesn't exist yet in the generated client
     // When implemented, it should:
-    // 1. Make a test request to the provider's base_url with api_key
+    // 1. Make a test request to the provider's base_url with _providerId
     // 2. Update last_tested_at and last_test_success
     // 3. Return success status and message
     throw new Error("testProvider not yet implemented - backend endpoint needed")

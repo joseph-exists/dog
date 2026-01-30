@@ -148,7 +148,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
           <div className="flex items-center gap-2 mt-4 flex-wrap">
             <AgentModeBadge mode={agent.participation_mode} />
             <span className="text-xs px-2 py-1 rounded-md bg-muted font-mono">
-              {agent.display_model}
+              {agent.model_name}
             </span>
           </div>
         </div>
@@ -289,7 +289,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
                     <p className="text-sm font-medium text-muted-foreground">
                       Model
                     </p>
-                    <p className="font-mono">{agent.display_model}</p>
+                    <p className="font-mono">{agent.model_name}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">

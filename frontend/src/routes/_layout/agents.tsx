@@ -16,8 +16,8 @@ import { Suspense, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
 import AgentCard from "@/components/Agents/AgentCard"
-import AgentDetailDialog from "@/components/Agents/AgentDetailDialog"
-import CreateAgentDialog from "@/components/Agents/CreateAgentDialog"
+import AgentDetailDialog from "@/components/Agents/Settings/AgentDetailDialog"
+import CreateAgentDialog from "@/components/Agents/Dialogs/CreateAgentDialog"
 import {
   AlertDialog,
   AlertDialogAction,

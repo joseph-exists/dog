@@ -16,17 +16,33 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 
 import {
-  CATALOG_QUERY_OPTIONS,
   type CatalogGroupedViewModel,
   type CatalogModelViewModel,
   type CatalogProviderViewModel,
   getProviderTypeLabel,
-  LLM_CATALOG_QUERY_KEYS,
   LlmCatalogService,
   type LLMProviderType,
   type ModelDisplayInfo,
   type ModelOption,
 } from "@/services/llmCatalogService"
+
+// ============================================================================
+// Query Keys - Local to this hook
+// ============================================================================
+
+const LLM_CATALOG_QUERY_KEYS = {
+  all: ["llm-catalog"] as const,
+  modelsGrouped: ["llm-catalog", "models-grouped"] as const,
+}
+
+// ============================================================================
+// Query Options - Infinite cache for catalog (rarely changes)
+// ============================================================================
+
+const CATALOG_QUERY_OPTIONS = {
+  staleTime: Infinity,
+  gcTime: Infinity,
+}
 
 /**
  * Input for creating a custom model
@@ -99,35 +115,21 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
     ...CATALOG_QUERY_OPTIONS,
   })
 
-  // Custom model creation mutation - connected to backend
+  // Custom model creation mutation
+  // TODO: Backend endpoint not yet implemented
   const createMutation = useMutation({
-    mutationFn: async (input: CreateCustomModelInput): Promise<ModelOption> => {
-      // Find the provider ID for the given provider type
-      const provider = grouped?.providers.find(
-        (p) => p.providerType === input.providerType,
-      )
+    mutationFn: async (_input: CreateCustomModelInput): Promise<ModelOption> => {
+      // Backend /llm-catalog/models endpoint not yet implemented
+      console.warn("useLlmCatalog: createCustomModel not yet implemented - backend endpoint needed")
 
-      if (!provider) {
-        throw new Error(`No provider found for type: ${input.providerType}`)
-      }
+      // For now, throw an error
+      throw new Error("Custom model creation not yet available - backend catalog not implemented")
 
-      // Create the model via backend
-      const model = await LlmCatalogService.createCustomModel({
-        modelId: input.modelId,
-        displayName: input.displayName,
-        providerId: provider.id,
-        description: input.description,
-      })
-
-      // Transform to ModelOption format
-      return {
-        value: `${input.providerType}:${model.modelId}`,
-        label: model.displayName,
-        description: model.description || "",
-        provider: input.providerType,
-        isDefault: false,
-        isSystem: false,
-      }
+      // TODO: When backend ready, implement:
+      // 1. Find provider by _input.providerType in grouped.providers
+      // 2. Call LlmCatalogService.createCustomModel()
+      // 3. Transform to ModelOption format
+      // 4. Return result
     },
     onSuccess: () => {
       // Invalidate catalog cache to include new custom model
@@ -191,13 +193,46 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
   )
 
   const getModelDisplayInfo = useCallback(
-    (value: string) => LlmCatalogService.getModelDisplayInfo(value, allModels),
+    (value: string): ModelDisplayInfo => {
+      // Check if model is in catalog
+      const model = allModels.find((m) => m.value === value)
+
+      if (model) {
+        return {
+          label: model.label,
+          isCustom: !model.isSystem,
+          isDeprecated: false, // TODO: Add deprecated flag when backend supports it
+        }
+      }
+
+      // Graceful fallback for unknown models
+      return {
+        label: value,
+        isCustom: true,
+        isDeprecated: false,
+      }
+    },
     [allModels],
   )
 
   const createCustomModel = useCallback(
     (input: CreateCustomModelInput) => createMutation.mutateAsync(input),
     [createMutation],
+  )
+
+  const formatModelName = useCallback(
+    (value: string | null | undefined): string => {
+      if (!value) return ""
+
+      // Check if model is in catalog - if so, use catalog label
+      const model = allModels.find((m) => m.value === value)
+      if (model) return model.label
+
+      // Graceful fallback: return the value as-is
+      // (catalog service would do the same since it's not yet implemented)
+      return value
+    },
+    [allModels],
   )
 
   return {
@@ -212,7 +247,7 @@ export function useLlmCatalog(): UseLlmCatalogReturn {
     getDefaultForType,
     getProviderTypeLabel,
     findModel,
-    formatModelName: LlmCatalogService.formatModelName,
+    formatModelName,
     isInCatalog,
     isCustomModel,
     getModelDisplayInfo,

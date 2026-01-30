@@ -32,8 +32,8 @@ import type { ProviderViewModel } from "@/services/llmProviderService"
 import {
   type LLMProviderType as AgentBadgeLLMProviderType,
   AgentProviderBadge,
-} from "./AgentBadge"
-import { ProviderStatusBadge } from "./ProviderStatusBadge"
+} from "../AgentBadge"
+import { ProviderStatusBadge } from "../ProviderStatusBadge"
 
 /** Special value for "no provider selected" */
 const NONE_VALUE = "__none__"

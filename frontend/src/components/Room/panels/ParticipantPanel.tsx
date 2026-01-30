@@ -12,7 +12,7 @@ import {
   AgentModeBadge,
   AgentQuickAdd,
 } from "@/components/Agents"
-import AgentAvatar from "@/components/Agents/AgentAvatar"
+import AgentAvatar from "@/components/Agents/Display/AgentAvatar"
 import AgentToggle from "@/components/Rooms/AgentToggle"
 import RemoveParticipantButton from "@/components/Rooms/RemoveParticipantButton"
 import type { ParticipantViewModel } from "@/services/roomService"

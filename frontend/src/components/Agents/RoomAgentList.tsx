@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import AgentAvatar from "./AgentAvatar"
+import AgentAvatar from "./Display/AgentAvatar"
 import { AgentModeBadge } from "./AgentBadge"
 import type { AgentData } from "./AgentCarousel"
 

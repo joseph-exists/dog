@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import AgentAvatar from "./AgentAvatar"
+import AgentAvatar from "./Display/AgentAvatar"
 import { AgentModeBadge, AgentScopeBadge } from "./AgentBadge"
 import type { AgentData } from "./AgentCarousel"
 

@@ -26,14 +26,10 @@ import {
 import useLlmCatalog from "@/hooks/useLlmCatalog"
 import { useLlmProviders } from "@/hooks/useLlmProviders"
 import { cn } from "@/lib/utils"
-import type { LLMProviderType } from "@/services/llmCatalogService"
-import {
-  LlmProviderService,
-  getProviderTypeLabel,
-  type ProviderViewModel,
-} from "@/services/llmProviderService"
+import type { UserAccessProviderViewModel } from "@/services/userAccessProviderService"
+import { parseProviderFromModelName } from "@/components/Agents/utils/modelParsing"
 import ModelCombobox from "./ModelCombobox"
-import { ProviderStatusBadge } from "./ProviderStatusBadge"
+import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 interface ProviderModelSelectorProps {
   /** Selected provider ID (null = system default) */
@@ -84,7 +80,7 @@ function UserProviderIndicator({
   provider,
   className,
 }: {
-  provider: ProviderViewModel
+  provider: UserAccessProviderViewModel
   className?: string
 }) {
   return (
@@ -120,40 +116,39 @@ export function ProviderModelSelector({
   } = useLlmProviders()
   const {
     isLoading: catalogLoading,
-    getModelsForType,
     formatModelName,
   } = useLlmCatalog()
-
-  // Group providers by type
-  const providersByType = LlmProviderService.groupByType(providers)
 
   // Get effective model (override or agent default)
   const effectiveModel = modelName || agentDefaultModel
 
-  // Get provider type from effective model or selected provider
+  // Get selected provider
   const selectedProvider = providerId
     ? providers.find((p) => p.id === providerId)
     : null
 
-  const effectiveProviderType =
-    selectedProvider?.provider_type ||
-    LlmProviderService.extractProviderType(effectiveModel)
+  /**
+   * Extract provider type from model name.
+   *
+   * Three-Way Binding Note:
+   * UserAccessProvider doesn't store provider_type - it only has credentials.
+   * The provider type comes from parsing the model name (e.g., "openai:gpt-4" → "openai").
+   */
+  const effectiveProviderType = parseProviderFromModelName(effectiveModel)
 
-  // Handle provider change - may need to reset model if type changes
+  /**
+   * Handle provider change.
+   *
+   * Three-Way Binding Note:
+   * UserAccessProvider only provides credentials, not provider type.
+   * Model compatibility is determined by the model_name, not by the provider.
+   * Users are responsible for ensuring their credentials work with their selected model.
+   */
   const handleProviderChange = (value: string) => {
     if (value === "system") {
       onProviderChange(null)
     } else {
-      const newProvider = providers.find((p) => p.id === value)
       onProviderChange(value)
-
-      // If provider type changed, reset model to first available for new type
-      if (newProvider && effectiveProviderType !== newProvider.provider_type) {
-        const newModels = getModelsForType(newProvider.provider_type)
-        if (newModels && newModels.length > 0) {
-          onModelChange(newModels[0].value)
-        }
-      }
     }
   }
 
@@ -196,39 +191,27 @@ export function ProviderModelSelector({
             {hasAnyProvider && (
               <>
                 <SelectSeparator />
-                {(
-                  Object.entries(providersByType) as [
-                    LLMProviderType,
-                    ProviderViewModel[],
-                  ][]
-                ).map(([type, typeProviders]) => {
-                  if (typeProviders.length === 0) return null
-                  return (
-                    <SelectGroup key={type}>
-                      <SelectLabel className="text-xs">
-                        {getProviderTypeLabel(type)}
-                      </SelectLabel>
-                      {typeProviders.map((provider) => (
-                        <SelectItem
-                          key={provider.id}
-                          value={provider.id}
-                          disabled={!provider.is_usable}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Key className="size-4 text-green-500" />
-                            <span>{provider.name}</span>
-                            {showProviderStatus && (
-                              <ProviderStatusBadge
-                                status={provider.status}
-                                size="sm"
-                              />
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )
-                })}
+                <SelectGroup>
+                  <SelectLabel className="text-xs">Your API Keys</SelectLabel>
+                  {providers.map((provider) => (
+                    <SelectItem
+                      key={provider.id}
+                      value={provider.id}
+                      disabled={!provider.is_usable}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Key className="size-4 text-green-500" />
+                        <span>{provider.name}</span>
+                        {showProviderStatus && (
+                          <ProviderStatusBadge
+                            status={provider.status}
+                            size="sm"
+                          />
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </>
             )}
           </SelectContent>

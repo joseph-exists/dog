@@ -1,12 +1,12 @@
 /**
- * EditAgentDialog Component
+ * CreateAgentDialog Component
  *
- * Dialog for editing an existing agent configuration.
- * Uses AgentForm with initial data and handles update API.
+ * Dialog for creating a new personal agent.
+ * Uses AgentForm for the form fields and handles API submission.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Loader2Icon, PencilIcon } from "lucide-react"
+import { BotIcon, Loader2Icon, PlusIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
@@ -24,10 +24,9 @@ import useCustomToast from "@/hooks/useCustomToast"
 import {
   AgentService,
   type AgentViewModel,
-  type UpdateAgentInput,
+  type CreateAgentInput,
 } from "@/services/agentService"
-import AgentAvatar from "./AgentAvatar"
-import AgentForm, { type AgentFormData } from "./AgentForm"
+import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
 
 /**
  * Validate provider/model consistency before submission
@@ -48,26 +47,23 @@ function validateProviderModelConsistency(
   return null // No errors
 }
 
-interface EditAgentDialogProps {
-  /** The agent to edit */
-  agent: AgentViewModel
-  /** Custom trigger element (defaults to "Edit" button) */
+interface CreateAgentDialogProps {
+  /** Custom trigger element (defaults to "Create Agent" button) */
   trigger?: React.ReactNode
   /** Callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void
-  /** Callback when agent is updated successfully */
+  /** Callback when agent is created successfully */
   onSuccess?: (agent: AgentViewModel) => void
   /** Additional classes for the trigger */
   className?: string
 }
 
-export default function EditAgentDialog({
-  agent,
+export default function CreateAgentDialog({
   trigger,
   onOpenChange,
   onSuccess,
   className,
-}: EditAgentDialogProps) {
+}: CreateAgentDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState<AgentFormData | null>(null)
   const queryClient = useQueryClient()
@@ -77,26 +73,25 @@ export default function EditAgentDialog({
     setIsOpen(open)
     onOpenChange?.(open)
     if (!open) {
+      // Reset form data when closing
       setFormData(null)
     }
   }
 
   const mutation = useMutation({
-    mutationFn: (data: UpdateAgentInput) =>
-      AgentService.updateAgent(agent.id, data),
-    onSuccess: (updatedAgent) => {
-      showSuccessToast(`Agent "${updatedAgent.name}" updated successfully.`)
+    mutationFn: (data: CreateAgentInput) => AgentService.createAgent(data),
+    onSuccess: (createdAgent) => {
+      showSuccessToast(`Agent "${createdAgent.name}" created successfully.`)
       handleOpenChange(false)
-      onSuccess?.(updatedAgent)
+      onSuccess?.(createdAgent)
     },
     onError: (err: ApiError) => {
       const message =
-        (err.body as { detail?: string })?.detail || "Failed to update agent"
+        (err.body as { detail?: string })?.detail || "Failed to create agent"
       showErrorToast(message)
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["agents"] })
-      queryClient.invalidateQueries({ queryKey: ["agent", agent.id] })
     },
   })
 
@@ -112,6 +107,10 @@ export default function EditAgentDialog({
       showErrorToast("Agent name is required")
       return
     }
+    if (!formData.slug.trim()) {
+      showErrorToast("Agent slug is required")
+      return
+    }
 
     // Validate provider/model consistency
     const validationError = validateProviderModelConsistency(formData)
@@ -120,48 +119,28 @@ export default function EditAgentDialog({
       return
     }
 
-    // Only send fields that changed
-    const payload: UpdateAgentInput = {}
-
-    if (formData.name.trim() !== agent.name) {
-      payload.name = formData.name.trim()
-    }
-    if ((formData.description.trim() || null) !== (agent.description || null)) {
-      payload.description = formData.description.trim() || null
-    }
-    if (formData.model_name !== agent.model_name) {
-      payload.model_name = formData.model_name
-    }
-    if (
-      (formData.system_prompt.trim() || null) !== (agent.system_prompt || null)
-    ) {
-      payload.system_prompt = formData.system_prompt.trim() || null
-    }
-    if (formData.participation_mode !== agent.participation_mode) {
-      payload.participation_mode = formData.participation_mode
-    }
-    if (formData.provider_type !== agent.provider_type) {
-      payload.provider_type = formData.provider_type
-    }
-    if (formData.user_provider !== agent.user_provider) {
-      payload.user_provider = formData.user_provider
-    }
-
-    // Check if anything changed
-    if (Object.keys(payload).length === 0) {
-      showErrorToast("No changes to save")
-      return
+    const payload: CreateAgentInput = {
+      name: formData.name.trim(),
+      slug: formData.slug.trim(),
+      description: formData.description.trim() || null,
+      model_name: formData.model_name || undefined,
+      provider_type: formData.provider_type,
+      user_provider: formData.user_provider,
+      system_prompt: formData.system_prompt.trim() || null,
+      participation_mode: formData.participation_mode,
+      scope: "personal", // Personal agents only from this dialog
+      is_enabled: true,
     }
 
     mutation.mutate(payload)
   }
 
-  const isValid = formData?.name.trim()
+  const isValid = formData?.name.trim() && formData?.slug.trim()
 
   const defaultTrigger = (
-    <Button variant="outline" size="sm" className={className}>
-      <PencilIcon className="size-4" />
-      Edit
+    <Button className={className}>
+      <PlusIcon className="size-4" />
+      Create Agent
     </Button>
   )
 
@@ -171,19 +150,15 @@ export default function EditAgentDialog({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AgentAvatar name={agent.name} size="sm" />
-            Edit Agent
+            <BotIcon className="size-5" />
+            Create New Agent
           </DialogTitle>
           <DialogDescription>
-            Update your agent's configuration and behavior.
+            CreateAgentDialog - make you an agent, bud.
           </DialogDescription>
         </DialogHeader>
 
-        <AgentForm
-          initialData={agent}
-          onChange={handleFormChange}
-          isEditMode={true}
-        />
+        <AgentForm onChange={handleFormChange} isEditMode={false} />
 
         <DialogFooter>
           <Button
@@ -201,7 +176,7 @@ export default function EditAgentDialog({
             {mutation.isPending && (
               <Loader2Icon className="size-4 animate-spin" />
             )}
-            Save Changes
+            Create Agent
           </Button>
         </DialogFooter>
       </DialogContent>

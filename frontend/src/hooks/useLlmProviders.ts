@@ -1,35 +1,36 @@
 /**
  * useLlmProviders Hook
  *
- * Provides access to the user's LLM providers with computed helpers.
+ * Provides access to the user's access providers (API credentials) with computed helpers.
  * Uses TanStack Query for caching and automatic refetching.
+ *
+ * Note: This hook wraps userAccessProviderService for managing user's API access credentials.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 
 import {
-  type CreateProviderInput,
-  LLM_PROVIDER_QUERY_KEYS,
-  type LLMProviderType,
-  LlmProviderService,
-  type ProviderViewModel,
-  type UpdateProviderInput,
-} from "@/services/llmProviderService"
+  type CreateUserAccessProviderInput,
+  type UpdateUserAccessProviderInput,
+  type UserAccessProviderViewModel,
+  UserAccessProviderService,
+  USER_ACCESS_PROVIDER_QUERY_KEYS,
+} from "@/services/userAccessProviderService"
 import { handleError } from "@/utils"
 import { showErrorToast, showSuccessToast } from "./useCustomToast"
 
 export interface UseLlmProvidersReturn {
   /** All providers */
-  providers: ProviderViewModel[]
+  providers: UserAccessProviderViewModel[]
   /** Only enabled providers */
-  enabledProviders: ProviderViewModel[]
+  enabledProviders: UserAccessProviderViewModel[]
   /** Only usable providers (enabled and not failed) */
-  usableProviders: ProviderViewModel[]
-  /** Default provider for each type */
-  defaultByType: Record<LLMProviderType, ProviderViewModel | null>
-  /** Providers grouped by type */
-  providersByType: Record<LLMProviderType, ProviderViewModel[]>
+  usableProviders: UserAccessProviderViewModel[]
+  /** Only validated providers */
+  validatedProviders: UserAccessProviderViewModel[]
+  /** Default provider */
+  defaultProvider: UserAccessProviderViewModel | null
   /** Whether user has any providers configured */
   hasAnyProvider: boolean
   /** Whether user has any usable providers */
@@ -41,16 +42,18 @@ export interface UseLlmProvidersReturn {
   /** Refresh providers list */
   refresh: () => void
   /** Create a new provider */
-  createProvider: (data: CreateProviderInput) => Promise<ProviderViewModel>
+  createProvider: (data: CreateUserAccessProviderInput) => Promise<UserAccessProviderViewModel>
   /** Update an existing provider */
   updateProvider: (
     providerId: string,
-    data: UpdateProviderInput,
-  ) => Promise<ProviderViewModel>
+    data: UpdateUserAccessProviderInput,
+  ) => Promise<UserAccessProviderViewModel>
   /** Delete a provider */
   deleteProvider: (providerId: string) => Promise<void>
   /** Test a provider */
   testProvider: (providerId: string) => Promise<void>
+  /** Set as default provider */
+  setDefaultProvider: (providerId: string) => Promise<void>
   /** Mutation states */
   isCreating: boolean
   isUpdating: boolean
@@ -59,15 +62,15 @@ export interface UseLlmProvidersReturn {
 }
 
 /**
- * Hook for managing user's LLM providers
+ * Hook for managing user's access providers (API credentials)
  */
 export function useLlmProviders(): UseLlmProvidersReturn {
   const queryClient = useQueryClient()
 
   // Query for providers list
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: LLM_PROVIDER_QUERY_KEYS.providers,
-    queryFn: () => LlmProviderService.listProviders(),
+    queryKey: USER_ACCESS_PROVIDER_QUERY_KEYS.providers,
+    queryFn: () => UserAccessProviderService.listUserAccessProviders(),
     staleTime: 30000, // 30 seconds
   })
 
@@ -75,13 +78,13 @@ export function useLlmProviders(): UseLlmProvidersReturn {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (input: CreateProviderInput) =>
-      LlmProviderService.createProvider(input),
+    mutationFn: (input: CreateUserAccessProviderInput) =>
+      UserAccessProviderService.createProvider(input),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: LLM_PROVIDER_QUERY_KEYS.providers,
+        queryKey: USER_ACCESS_PROVIDER_QUERY_KEYS.providers,
       })
-      showSuccessToast("Provider created successfully")
+      showSuccessToast("Access provider created successfully")
     },
     onError: handleError.bind(showErrorToast),
   })
@@ -93,13 +96,13 @@ export function useLlmProviders(): UseLlmProvidersReturn {
       data,
     }: {
       providerId: string
-      data: UpdateProviderInput
-    }) => LlmProviderService.updateProvider(providerId, data),
+      data: UpdateUserAccessProviderInput
+    }) => UserAccessProviderService.updateProvider(providerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: LLM_PROVIDER_QUERY_KEYS.providers,
+        queryKey: USER_ACCESS_PROVIDER_QUERY_KEYS.providers,
       })
-      showSuccessToast("Provider updated successfully")
+      showSuccessToast("Access provider updated successfully")
     },
     onError: handleError.bind(showErrorToast),
   })
@@ -107,55 +110,65 @@ export function useLlmProviders(): UseLlmProvidersReturn {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (providerId: string) =>
-      LlmProviderService.deleteProvider(providerId),
+      UserAccessProviderService.deleteProvider(providerId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: LLM_PROVIDER_QUERY_KEYS.providers,
+        queryKey: USER_ACCESS_PROVIDER_QUERY_KEYS.providers,
       })
-      showSuccessToast("Provider deleted successfully")
+      showSuccessToast("Access provider deleted successfully")
     },
     onError: handleError.bind(showErrorToast),
   })
 
-  // Test mutation
+  // Test mutation (not yet implemented in backend)
   const testMutation = useMutation({
-    mutationFn: (providerId: string) =>
-      LlmProviderService.testProvider(providerId),
+    mutationFn: async (providerId: string) => {
+      try {
+        await UserAccessProviderService.testProvider(providerId)
+      } catch (error) {
+        // Backend endpoint not implemented yet, just log for now
+        console.warn("Test provider endpoint not yet implemented:", error)
+        throw new Error("Test provider functionality not yet available")
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: LLM_PROVIDER_QUERY_KEYS.providers,
+        queryKey: USER_ACCESS_PROVIDER_QUERY_KEYS.providers,
       })
-      showSuccessToast("Provider test successful")
+      showSuccessToast("Access provider test successful")
     },
     onError: handleError.bind(showErrorToast),
   })
 
-  // Compute derived values
-  const enabledProviders = LlmProviderService.filterEnabled(providers)
-  const usableProviders = LlmProviderService.filterUsable(providers)
-  const providersByType = LlmProviderService.groupByType(providers)
+  // Set default mutation
+  const setDefaultMutation = useMutation({
+    mutationFn: (providerId: string) =>
+      UserAccessProviderService.setDefault(providerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: USER_ACCESS_PROVIDER_QUERY_KEYS.providers,
+      })
+      showSuccessToast("Default provider updated")
+    },
+    onError: handleError.bind(showErrorToast),
+  })
 
-  const defaultByType: Record<LLMProviderType, ProviderViewModel | null> = {
-    empty: null,
-    openai: LlmProviderService.getDefaultForType(providers, "openai"),
-    anthropic: LlmProviderService.getDefaultForType(providers, "anthropic"),
-    google: LlmProviderService.getDefaultForType(providers, "google"),
-    openai_compatible: LlmProviderService.getDefaultForType(
-      providers,
-      "openai_compatible",
-    ),
-  }
+  // Compute derived values using service utilities
+  const enabledProviders = UserAccessProviderService.filterEnabled(providers)
+  const usableProviders = UserAccessProviderService.filterUsable(providers)
+  const validatedProviders = UserAccessProviderService.filterValidated(providers)
+  const defaultProvider = UserAccessProviderService.getDefaultProvider(providers)
 
   // Stable function references — safe to use in dependency arrays
   const refresh = useCallback(() => refetch(), [refetch])
 
   const createProvider = useCallback(
-    (input: CreateProviderInput) => createMutation.mutateAsync(input),
+    (input: CreateUserAccessProviderInput) => createMutation.mutateAsync(input),
     [createMutation],
   )
 
   const updateProvider = useCallback(
-    (providerId: string, data: UpdateProviderInput) =>
+    (providerId: string, data: UpdateUserAccessProviderInput) =>
       updateMutation.mutateAsync({ providerId, data }),
     [updateMutation],
   )
@@ -174,12 +187,19 @@ export function useLlmProviders(): UseLlmProvidersReturn {
     [testMutation],
   )
 
+  const setDefaultProvider = useCallback(
+    async (providerId: string) => {
+      await setDefaultMutation.mutateAsync(providerId)
+    },
+    [setDefaultMutation],
+  )
+
   return {
     providers,
     enabledProviders,
     usableProviders,
-    defaultByType,
-    providersByType,
+    validatedProviders,
+    defaultProvider,
     hasAnyProvider: providers.length > 0,
     hasUsableProvider: usableProviders.length > 0,
     isLoading,
@@ -189,6 +209,7 @@ export function useLlmProviders(): UseLlmProvidersReturn {
     updateProvider,
     deleteProvider,
     testProvider,
+    setDefaultProvider,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
