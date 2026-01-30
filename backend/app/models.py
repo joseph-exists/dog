@@ -211,7 +211,7 @@ class AgentPersona(AgentPersonaBase, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     agent_id: uuid.UUID = Field(
-        foreign_key="agent_configs.id", nullable=False, ondelete="CASCADE"
+        foreign_key="user_agent_configs.id", nullable=False, ondelete="CASCADE"
     )
     persona_id: uuid.UUID = Field(
         foreign_key="persona.id", nullable=False, ondelete="CASCADE"
@@ -2323,7 +2323,7 @@ class RoomParticipantBindingBase(SQLModel):
 class RoomParticipantBindingCreate(RoomParticipantBindingBase):
     room_id: uuid.UUID
     user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
-    agent_id: uuid.UUID | None = Field(default=None, foreign_key="agent_configs.id")
+    agent_id: uuid.UUID | None = Field(default=None, foreign_key="user_agent_configs.id")
     effective_at: datetime
     ended_at: datetime | None = None
 
@@ -2354,7 +2354,7 @@ class RoomParticipantBinding(RoomParticipantBindingBase, table=True):
 
     user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", nullable=True)
     agent_id: uuid.UUID | None = Field(
-        default=None, foreign_key="agent_configs.id", nullable=True
+        default=None, foreign_key="user_agent_configs.id", nullable=True
     )
 
     effective_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

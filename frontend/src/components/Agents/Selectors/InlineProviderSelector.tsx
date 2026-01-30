@@ -16,12 +16,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useAgentSettings } from "@/hooks/useAgentSettings"
 import { cn } from "@/lib/utils"
 import type { AgentViewModel } from "@/services/agentService"
-import type { UserAgentSettingsViewModel } from "@/services/llmProviderService"
-import { ProviderModelSelector } 
+import { useAgentSettings } from "@/hooks/useAgentSettings"
+import { ProviderModelSelector } from "./ProviderModelSelector"
 import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
+import type { UserAgentConfigPublic } from "@/client"
 
 interface AgentProviderSelectorProps {
   /** The agent to configure */
@@ -98,8 +98,8 @@ export function AgentProviderSelector({
     modelName: string | null,
   ) => {
     await updateSettings({
-      provider_id: providerId,
-      model_name_override: modelName,
+      user_access_provider: providerId,
+      model_name: modelName,
     })
     onSettingsSaved?.()
   }
@@ -122,7 +122,7 @@ export function AgentProviderSelector({
         <PopoverContent className="w-80 p-4" align="start">
           <ProviderModelSelectorWithSave
             agent={agent}
-            settings={settings}
+            settings={settings ?? null}
             onSave={handleSave}
             isSaving={isUpdating}
           />
@@ -150,7 +150,7 @@ export function AgentProviderSelector({
       <PopoverContent className="w-80 p-4" align="start">
         <ProviderModelSelectorWithSave
           agent={agent}
-          settings={settings}
+          settings={settings ?? null}
           onSave={handleSave}
           isSaving={isUpdating}
         />
@@ -169,29 +169,29 @@ function ProviderModelSelectorWithSave({
   isSaving,
 }: {
   agent: AgentViewModel
-  settings: UserAgentSettingsViewModel | null
+  settings: UserAgentConfigPublic | null
   onSave: (providerId: string | null, modelName: string | null) => Promise<void>
   isSaving: boolean
 }) {
   const [providerId, setProviderId] = useState<string | null>(
-    settings?.provider_id ?? null,
+    settings?.user_access_provider ?? null,
   )
   const [modelName, setModelName] = useState<string | null>(
-    settings?.model_name_override ?? null,
+    settings?.model_name ?? null,
   )
   const [hasChanges, setHasChanges] = useState(false)
 
   // Sync with settings
   useEffect(() => {
-    setProviderId(settings?.provider_id ?? null)
-    setModelName(settings?.model_name_override ?? null)
+    setProviderId(settings?.user_access_provider ?? null)
+    setModelName(settings?.model_name ?? null)
     setHasChanges(false)
   }, [settings])
 
   // Track changes
   useEffect(() => {
-    const currentProviderId = settings?.provider_id ?? null
-    const currentModelName = settings?.model_name_override ?? null
+    const currentProviderId = settings?.user_access_provider ?? null
+    const currentModelName = settings?.model_name ?? null
     setHasChanges(
       providerId !== currentProviderId || modelName !== currentModelName,
     )

@@ -86,7 +86,7 @@ export default function AgentCloneButton({
         // Explicitly set empty provider - user must configure their own
         // (don't copy source provider as it may not be accessible to the cloning user)
         provider_type: "empty",
-        user_provider: null,
+        user_access_provider: null,
       }
       return AgentService.createAgent(payload)
     },

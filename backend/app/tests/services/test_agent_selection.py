@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.models import UserUserAgentConfig
+from app.models import UserAgentConfig
 from app.services.agent_selection import AgentSelectionService
 
 

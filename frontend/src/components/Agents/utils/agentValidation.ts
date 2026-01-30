@@ -19,10 +19,7 @@
  */
 
 import type { AgentFormData } from "@/components/Agents/Forms/AgentForm"
-import {
-  parseProviderFromModelName,
-  isValidModelName,
-} from "./modelParsing"
+import { isValidModelName } from "./modelParsing"
 
 // ============================================================================
 // Type Definitions
@@ -133,7 +130,7 @@ function validateUserAccessProvider(
 /**
  * Validates system_prompt field
  */
-function validateSystemPrompt(systemPrompt: string): string | null {
+function validateSystemPrompt(_systemPrompt: string): string | null {
   // System prompt is optional, so empty is valid
   // Could add max length validation if backend has limits
   return null

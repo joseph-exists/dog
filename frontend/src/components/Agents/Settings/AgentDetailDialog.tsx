@@ -33,7 +33,7 @@ import {
   AgentProviderBadge,
   AgentScopeBadge,
   parseProviderFromModelName,
-} from "./AgentBadge"
+} from "../Display/AgentBadge"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
 
 interface AgentDetailDialogProps {
@@ -66,7 +66,7 @@ function AgentViewContent({ agent }: { agent: AgentViewModel }) {
         <p className="text-sm font-medium text-muted-foreground">Model</p>
         <div className="flex items-center gap-2">
           {providerType && <AgentProviderBadge providerType={providerType} />}
-          <span className="text-sm font-mono">{agent.display_model}</span>
+          <span className="text-sm font-mono">{agent.model_name}</span>
         </div>
       </div>
 

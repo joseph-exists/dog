@@ -13,8 +13,8 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { AgentScope, ParticipationMode } from "./AgentBadge"
-import AgentCard from "./AgentCard"
+import type { AgentScope, ParticipationMode } from "./Display/AgentBadge"
+import AgentCard from "./Display/AgentCard"
 import AgentDetailDialog from "./Settings/AgentDetailDialog"
 
 export interface AgentData {

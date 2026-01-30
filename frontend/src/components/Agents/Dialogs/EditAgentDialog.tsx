@@ -28,25 +28,7 @@ import {
 } from "@/services/agentService"
 import AgentAvatar from "../Display/AgentAvatar"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
-
-/**
- * Validate provider/model consistency before submission
- */
-function validateProviderModelConsistency(
-  formData: AgentFormData,
-): string | null {
-  // Rule: If provider_type is not "empty", user_provider must be set
-  if (formData.provider_type !== "empty" && !formData.user_provider) {
-    return "Provider type is set but no provider selected"
-  }
-
-  // Rule: If user_provider is set, provider_type must not be "empty"
-  if (formData.user_provider && formData.provider_type === "empty") {
-    return "Provider selected but provider type is empty"
-  }
-
-  return null // No errors
-}
+import { validateAgentFormData } from "../utils/agentValidation"
 
 interface EditAgentDialogProps {
   /** The agent to edit */
@@ -107,18 +89,17 @@ export default function EditAgentDialog({
   const handleSubmit = () => {
     if (!formData) return
 
-    // Validate required fields
-    if (!formData.name.trim()) {
-      showErrorToast("Agent name is required")
+    // Validate form data
+    const validation = validateAgentFormData(formData)
+    if (!validation.isValid) {
+      validation.errors.forEach((error) => showErrorToast(error))
       return
     }
 
-    // Validate provider/model consistency
-    const validationError = validateProviderModelConsistency(formData)
-    if (validationError) {
-      showErrorToast(validationError)
-      return
-    }
+    // Show warnings (non-blocking)
+    validation.warnings.forEach((warning) => {
+      console.warn("Agent update warning:", warning)
+    })
 
     // Only send fields that changed
     const payload: UpdateAgentInput = {}
@@ -143,8 +124,8 @@ export default function EditAgentDialog({
     if (formData.provider_type !== agent.provider_type) {
       payload.provider_type = formData.provider_type
     }
-    if (formData.user_provider !== agent.user_provider) {
-      payload.user_provider = formData.user_provider
+    if (formData.user_access_provider !== agent.user_access_provider) {
+      payload.user_access_provider = formData.user_access_provider
     }
 
     // Check if anything changed

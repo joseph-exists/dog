@@ -27,25 +27,7 @@ import {
   type CreateAgentInput,
 } from "@/services/agentService"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
-
-/**
- * Validate provider/model consistency before submission
- */
-function validateProviderModelConsistency(
-  formData: AgentFormData,
-): string | null {
-  // Rule: If provider_type is not "empty", user_provider must be set
-  if (formData.provider_type !== "empty" && !formData.user_provider) {
-    return "Provider type is set but no provider selected"
-  }
-
-  // Rule: If user_provider is set, provider_type must not be "empty"
-  if (formData.user_provider && formData.provider_type === "empty") {
-    return "Provider selected but provider type is empty"
-  }
-
-  return null // No errors
-}
+import { validateAgentFormData } from "../utils/agentValidation"
 
 interface CreateAgentDialogProps {
   /** Custom trigger element (defaults to "Create Agent" button) */
@@ -102,22 +84,17 @@ export default function CreateAgentDialog({
   const handleSubmit = () => {
     if (!formData) return
 
-    // Validate required fields
-    if (!formData.name.trim()) {
-      showErrorToast("Agent name is required")
-      return
-    }
-    if (!formData.slug.trim()) {
-      showErrorToast("Agent slug is required")
+    // Validate form data
+    const validation = validateAgentFormData(formData)
+    if (!validation.isValid) {
+      validation.errors.forEach((error) => showErrorToast(error))
       return
     }
 
-    // Validate provider/model consistency
-    const validationError = validateProviderModelConsistency(formData)
-    if (validationError) {
-      showErrorToast(validationError)
-      return
-    }
+    // Show warnings (non-blocking)
+    validation.warnings.forEach((warning) => {
+      console.warn("Agent creation warning:", warning)
+    })
 
     const payload: CreateAgentInput = {
       name: formData.name.trim(),
@@ -125,7 +102,7 @@ export default function CreateAgentDialog({
       description: formData.description.trim() || null,
       model_name: formData.model_name || undefined,
       provider_type: formData.provider_type,
-      user_provider: formData.user_provider,
+      user_access_provider: formData.user_access_provider,
       system_prompt: formData.system_prompt.trim() || null,
       participation_mode: formData.participation_mode,
       scope: "personal", // Personal agents only from this dialog

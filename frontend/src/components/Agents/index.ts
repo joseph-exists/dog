@@ -14,7 +14,7 @@ export {
   getColorForName,
   getInitials,
 } from "./Display/AgentAvatar"
-export type { AgentScope, ParticipationMode } from "./AgentBadge"
+export type { AgentScope, ParticipationMode } from "./Display/AgentBadge"
 // Badges
 export {
   AgentCoordinatorBadge,
@@ -22,7 +22,7 @@ export {
   AgentScopeBadge,
   AgentStatusBadge,
   default as AgentBadge,
-} from "./AgentBadge"
+} from "./Display/AgentBadge"
 
 // Card
 export {
@@ -30,7 +30,7 @@ export {
   AgentCardFull,
   AgentCardMini,
   default as AgentCard,
-} from "./AgentCard"
+} from "./Display/AgentCard"
 
 // ============================================================================
 // Room Integration Components (Sprint 2)
@@ -68,9 +68,7 @@ export { default as EditAgentDialog } from "./Dialogs/EditAgentDialog"
 // Model Settings - allows users to customize model and provider for an agent
 export { default as AgentModelSettings } from "./Settings/AgentModelSettings"
 // Provider Selector - lightweight inline selector
-export { default as AgentProviderSelector } from "./Selectors/AgentProviderSelector"
+export { default as AgentProviderSelector } from "./Selectors/InlineProviderSelector"
 // Provider components (reusable building blocks)
-export {
-  ProviderModelSelector,
-  ProviderStatusBadge,
-} from "./providers"
+export { ProviderModelSelector } from "./Selectors/ProviderModelSelector"
+export { ProviderStatusBadge } from "./Display/ProviderStatusBadge"

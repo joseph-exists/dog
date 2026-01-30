@@ -28,12 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import type { ProviderViewModel } from "@/services/llmProviderService"
-import {
-  type LLMProviderType as AgentBadgeLLMProviderType,
-  AgentProviderBadge,
-} from "../AgentBadge"
-import { ProviderStatusBadge } from "../ProviderStatusBadge"
+import type { UserAccessProviderViewModel } from "@/services/userAccessProviderService"
+import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 /** Special value for "no provider selected" */
 const NONE_VALUE = "__none__"
@@ -42,17 +38,17 @@ interface ProviderSelectProps {
   /** Currently selected provider UUID, or null for "None" */
   value: string | null
   /** List of user's configured providers */
-  providers: ProviderViewModel[]
+  providers: UserAccessProviderViewModel[]
   /** Whether providers are still loading */
   isLoading?: boolean
   /**
    * Called when selection changes
    * @param providerId - UUID or null
-   * @param provider - Full ProviderViewModel or null
+   * @param provider - Full UserAccessProviderViewModel or null
    */
   onChange: (
     providerId: string | null,
-    provider: ProviderViewModel | null,
+    provider: UserAccessProviderViewModel | null,
   ) => void
   /** Disable the dropdown */
   disabled?: boolean
@@ -119,18 +115,9 @@ export function ProviderSelect({
         {/* Provider options */}
         {providers.map((provider) => (
           <SelectItem key={provider.id} value={provider.id}>
-            <div className="flex items-center justify-between gap-3 w-full min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <ProviderStatusBadge status={provider.status} />
-                <span className="truncate">{provider.name}</span>
-              </div>
-              {/* Cast provider_type - AgentProviderBadge handles unknown types gracefully */}
-              <AgentProviderBadge
-                providerType={
-                  provider.provider_type as AgentBadgeLLMProviderType
-                }
-                className="shrink-0"
-              />
+            <div className="flex items-center gap-2 min-w-0">
+              <ProviderStatusBadge status={provider.status} />
+              <span className="truncate">{provider.name}</span>
             </div>
           </SelectItem>
         ))}

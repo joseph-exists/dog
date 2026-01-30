@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import AgentAvatar from "./Display/AgentAvatar"
-import { AgentModeBadge } from "./AgentBadge"
+import { AgentModeBadge } from "./Display/AgentBadge"
 import type { AgentData } from "./AgentCarousel"
 
 interface RoomAgentListProps {

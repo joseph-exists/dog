@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import AgentAvatar from "./Display/AgentAvatar"
-import { AgentModeBadge, AgentScopeBadge } from "./AgentBadge"
+import { AgentModeBadge, AgentScopeBadge } from "./Display/AgentBadge"
 import type { AgentData } from "./AgentCarousel"
 
 interface AgentPartyPickerProps {

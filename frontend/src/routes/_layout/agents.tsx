@@ -15,7 +15,7 @@ import { BotIcon, Loader2Icon, TrashIcon } from "lucide-react"
 import { Suspense, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
-import AgentCard from "@/components/Agents/AgentCard"
+import AgentCard from "@/components/Agents/Display/AgentCard"
 import AgentDetailDialog from "@/components/Agents/Settings/AgentDetailDialog"
 import CreateAgentDialog from "@/components/Agents/Dialogs/CreateAgentDialog"
 import {

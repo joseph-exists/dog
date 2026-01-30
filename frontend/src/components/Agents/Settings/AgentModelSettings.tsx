@@ -12,7 +12,7 @@
  * - Save/Reset buttons
  */
 
-import { Heart, Loader2, RotateCcw, Save } from "lucide-react"
+import { Loader2, RotateCcw, Save } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -29,9 +29,8 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { useAgentSettings } from "@/hooks/useAgentSettings"
-import { cn } from "@/lib/utils"
 import type { AgentViewModel } from "@/services/agentService"
-import { ProviderModelSelector } from "./providers"
+import { ProviderModelSelector } from "../Selectors/ProviderModelSelector"
 
 interface AgentModelSettingsProps {
   /** The agent to configure settings for */
@@ -48,64 +47,58 @@ export function AgentModelSettings({
     settings,
     isLoading,
     isUpdating,
-    isResetting,
+    isDeleting,
     updateSettings,
-    resetToDefaults,
+    deleteSettings,
   } = useAgentSettings({ agent })
 
   // Local state for form
   const [providerId, setProviderId] = useState<string | null>(null)
   const [modelName, setModelName] = useState<string | null>(null)
   const [customPrompt, setCustomPrompt] = useState<string>("")
-  const [isFavorite, setIsFavorite] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
   // Sync local state with settings
   useEffect(() => {
     if (settings) {
-      setProviderId(settings.provider_id)
-      setModelName(settings.model_name_override)
+      setProviderId(settings.user_access_provider ?? null)
+      setModelName(settings.model_name ?? null)
       setCustomPrompt(settings.custom_system_prompt || "")
-      setIsFavorite(settings.is_favorite)
     } else {
       // Reset to defaults if no settings
       setProviderId(null)
       setModelName(null)
       setCustomPrompt("")
-      setIsFavorite(false)
     }
     setHasChanges(false)
   }, [settings])
 
   // Track changes
   useEffect(() => {
-    const currentProviderId = settings?.provider_id ?? null
-    const currentModelName = settings?.model_name_override ?? null
+    const currentProviderId = settings?.user_access_provider ?? null
+    const currentModelName = settings?.model_name ?? null
     const currentPrompt = settings?.custom_system_prompt || ""
-    const currentFavorite = settings?.is_favorite ?? false
 
     const changed =
       providerId !== currentProviderId ||
       modelName !== currentModelName ||
-      customPrompt !== currentPrompt ||
-      isFavorite !== currentFavorite
+      customPrompt !== currentPrompt
 
     setHasChanges(changed)
-  }, [providerId, modelName, customPrompt, isFavorite, settings])
+  }, [providerId, modelName, customPrompt, settings])
 
   // Handle save
   const handleSave = async () => {
     await updateSettings({
-      provider_id: providerId,
-      model_name_override: modelName,
+      user_access_provider: providerId,
+      model_name: modelName,
       custom_system_prompt: customPrompt || null,
-      is_favorite: isFavorite,
     })
   }
 
-  // Handle reset
-  const handleReset = async () => {
-    await resetToDefaults()
+  // Handle delete (revert to agent defaults)
+  const handleDelete = async () => {
+    await deleteSettings()
   }
 
   if (isLoading) {
@@ -127,28 +120,10 @@ export function AgentModelSettings({
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>My Settings</CardTitle>
-            <CardDescription>
-              Customize how this agent works for you
-            </CardDescription>
-          </div>
-          <Button
-            variant={isFavorite ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsFavorite(!isFavorite)}
-            className="gap-1"
-          >
-            <Heart
-              className={cn(
-                "size-4",
-                isFavorite && "fill-current text-red-500",
-              )}
-            />
-            {isFavorite ? "Favorited" : "Favorite"}
-          </Button>
-        </div>
+        <CardTitle>My Settings</CardTitle>
+        <CardDescription>
+          Customize how this agent works for you
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -185,16 +160,16 @@ export function AgentModelSettings({
       <CardFooter className="flex justify-between">
         <Button
           variant="outline"
-          onClick={handleReset}
-          disabled={isResetting || (!settings && !hasChanges)}
+          onClick={handleDelete}
+          disabled={isDeleting || !settings}
           className="gap-1"
         >
-          {isResetting ? (
+          {isDeleting ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
             <RotateCcw className="size-4" />
           )}
-          Reset to Defaults
+          Delete My Settings
         </Button>
 
         <Button

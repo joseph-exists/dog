@@ -7,7 +7,7 @@ import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
-    AgentConfig,
+    UserAgentConfig,
     LLMProviderType,
     Room,
     RoomParticipantBinding,
@@ -16,7 +16,7 @@ from app.models import (
     Story,
     User,
     UserCreate,
-    UserLLMProvider,
+    UserAccessProvider,
 )
 from app.services.shadow_context_loader import build_shadow_context_items
 
@@ -138,7 +138,7 @@ async def test_shadow_context_loader_agent_scoped_items_use_binding_row(
     )
 
     agent_slug = "test-agent"
-    agent_config = AgentConfig(
+    agent_config = UserAgentConfig(
         slug=agent_slug,
         owner_id=user.id,
         name="Test Agent",
@@ -229,7 +229,7 @@ async def test_shadow_context_loader_runtime_provider_missing_is_embedded(
     await async_session.commit()
     await async_session.refresh(provider_type)
 
-    provider = UserLLMProvider(
+    provider = UserAccessProvider(
         user_id=user.id,
         provider_type_id=provider_type.id,
         name="Test Provider",
@@ -241,7 +241,7 @@ async def test_shadow_context_loader_runtime_provider_missing_is_embedded(
     await async_session.refresh(provider)
 
     agent_slug = "test-agent"
-    agent_config = AgentConfig(
+    agent_config = UserAgentConfig(
         slug=agent_slug,
         owner_id=user.id,
         name="Test Agent",
