@@ -161,7 +161,6 @@ export interface CatalogGroupedViewModel {
 /**
  * LLM Catalog Service (Minimal Implementation)
  *
- * Provides read-only access to known LLM provider types with hardcoded labels.
  * Backend /llm-catalog endpoints are not yet fully implemented, so this service
  * currently only provides utility functions and returns empty results gracefully.
  *

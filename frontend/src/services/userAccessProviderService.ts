@@ -19,8 +19,8 @@
  * Three-Way Binding Context:
  * UserAgentConfig requires three aligned components:
  *   1. user_access_provider (UUID) → UserAccessProvider (THIS SERVICE)
- *   2. provider_type (string)      → LLMProviderType (llmCatalogService)
- *   3. model_name (string)         → Model identifier
+ *   2. provider_type (string)      → on every UserAgentConfig as a required field, LLMProviderType (llmCatalogService)
+ *   3. model_name (string)         → Model identifier (ie gpt-4o-mini, hermes-405-b, etc)
  *
  * Dependencies:
  * - OpenAPI auto-generated client (@/client)

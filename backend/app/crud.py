@@ -31,6 +31,9 @@ from app.models import (
     EventCreate,
     Item,
     ItemCreate,
+    LLMProviderType,
+    LLMProviderTypeCreate,
+    LLMModel,
     Message,
     NodeChoice,
     NodeChoicePublic,
@@ -99,7 +102,7 @@ from app.models import (
     UserStoryProgress,
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
-    UserUpdate,
+    UserUpdate, LLMModelsPublic,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,11 +149,86 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
     return db_user
 
 
+def create_llm_provider_type(*, session: Session, llm_provider_type_in: LLMProviderTypeCreate ) -> LLMProviderType:
+    db_llm_provider_type = LLMProviderType.model_validate(llm_provider_type_in)
+    session.add(db_llm_provider_type)
+    session.commit()
+    session.refresh(db_llm_provider_type)
+    return db_llm_provider_type
+
+def get_llm_models (
+    *,
+    session: Session,
+    primary_provider_type_id: uuid.UUID | None,
+    skip=0,
+    limit=100,
+    is_default: bool | None = None,
+    is_deleted: bool | None = None,
+    has_vision: bool | None = None,
+    has_function_calling: bool | None = None,
+    has_streaming: bool | None = None,
+    has_json_mode: bool | None = None,
+    model_id: str | None = None,
+) -> tuple[list[LLMModel], int]:
+    """
+    Get list of LLM Models with optional filtering by provider_id.
+
+    Args:
+        session: database session
+        provider_type_id maps to LLMModel.primary_provider_type_id.
+        skip, limit
+        model_id for search
+        primary_provider_type_id enables both direct search by id and reverse lookup.
+
+    Returns:
+        tuple (list of models, total count)
+    """
+ 
+    # Build filters
+    filters = [UserAccessProvider.user_id == user_id]
+
+    if is_deleted is not None:
+        filters.append(LLMModel.is_deleted == is_deleted)
+    if has_vision is not None:
+        filters.append(LLMModel.has_vision == has_vision)
+    if has_streaming is not None:
+        filters.append(LLMModel.has_streaming == has_streaming)
+    if has_function_calling is not None:
+        filters.append(LLMModel.has_function_calling == has_function_calling)
+    if has_json_mode is not None:
+        filters.append(LLMModel.has_json_mode == has_json_mode)
+    if is_default is not None:
+        filters.append(LLMModel.is_default == is_default)
+    if primary_provider_type_id is not None:
+        filters.append(LLMModel.primary_provider_type_id == primary_provider_type_id)
+    if model_id is not None:
+        filters.append(LLMModel.model_id == model_id)
+
+    # Count query
+    count_statement = (
+        select(func.count())
+        .select_from(LLMModel)
+        .where(*filters)
+    )
+    count = session.exec(count_statement).one()
+
+    # Data query
+    statement = (
+        select(LLMModel)
+        .where(*filters)
+        .offset(skip)
+        .limit(limit)
+        .order_by(desc(LLMModel.created_at))
+    )
+    models = list(session.exec(statement).all())
+
+    return models, count
+
 # =============================================================================
 # USER ACCESS PROVIDER CRUD
 # =============================================================================
 
-def get_access_providers(
+def get_user_access_providers(
     *,
     session: Session,
     user_id: uuid.UUID,
@@ -159,9 +237,10 @@ def get_access_providers(
     is_validated: bool | None = None,
     is_enabled: bool | None = None,
     is_default: bool | None = None,
+    alpha_provider_type_id: uuid.UUID | None = None,
 ) -> tuple[list[UserAccessProvider], int]:
     """
-    Get list of user's LLM access providers with optional filtering.
+    Get list of user's access providers with optional filtering.
 
     Args:
         session: Database session
@@ -171,6 +250,7 @@ def get_access_providers(
         is_validated: Optional filter for validated providers
         is_enabled: Optional filter for enabled providers
         is_default: Optional filter for default provider
+        alpha_provider_type_id will allow for reverse lookup
 
     Returns:
         Tuple of (list of providers, total count)
@@ -184,6 +264,8 @@ def get_access_providers(
         filters.append(UserAccessProvider.is_enabled == is_enabled)
     if is_default is not None:
         filters.append(UserAccessProvider.is_default == is_default)
+    if alpha_provider_type_id is not None:
+        filters.append(alpha_provider_type_id)
 
     # Count query
     count_statement = (
@@ -206,30 +288,30 @@ def get_access_providers(
     return providers, count
 
 
-def get_access_provider(
+def get_user_access_provider(
     *,
     session: Session,
-    provider_id: uuid.UUID,
-    user_id: uuid.UUID | None = None,
+    user_access_provider_id: uuid.UUID,
+    user_id: uuid.UUID,
 ) -> UserAccessProvider | None:
     """
     Get a single access provider by ID.
 
     Args:
         session: Database session
-        provider_id: UUID of the provider
+        user_access_provider_id: UUID of the user_access_provider
         user_id: Optional user UUID for security check (ensures user owns the provider)
 
     Returns:
         UserAccessProvider if found and user matches (if provided), None otherwise
     """
-    provider = session.get(UserAccessProvider, provider_id)
+    user_access_provider = session.get(UserAccessProvider, user_access_provider_id)
 
     # Security check: if user_id provided, verify ownership
-    if provider and user_id is not None and provider.user_id != user_id:
+    if user_access_provider and user_id is not None and user_access_provider.user_id != user_id:
         return None
 
-    return provider
+    return user_access_provider
 
 
 def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -> Item:
@@ -3032,7 +3114,7 @@ async def add_participant(
             detail="role must be 'owner' or 'member'",
         )
 
-    # Standardize agent participant_id to AgentConfig.slug (preferred addressing key).
+    # Standardize agent participant_id to UserAgentConfig.slug (preferred addressing key).
     # PRI-1 TODO: Remove agent UUID participant_id support once Milestone 1.1 tasks
     # 2, 3, and 4 are complete and validated (bindings table + binding event flow + APIs).
     normalized_participant_id = participant_id
@@ -3041,7 +3123,7 @@ async def add_participant(
         try:
             agent_uuid = UUID(participant_id)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.one_or_none()
             if not agent_config:
@@ -3049,7 +3131,7 @@ async def add_participant(
             normalized_participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.one_or_none()
             if not agent_config:
@@ -3127,14 +3209,14 @@ async def remove_participant(
         try:
             agent_uuid = UUID(participant_id)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.one_or_none()
             if agent_config:
@@ -3224,14 +3306,14 @@ async def change_participant_role(
         try:
             agent_uuid = UUID(participant_id)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.one_or_none()
             if agent_config:
                 normalized_participant_id = agent_config.slug
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.one_or_none()
             if agent_config:
@@ -3333,7 +3415,7 @@ async def set_participant_binding(
     resolved_user_id: UUID | None = None
     resolved_agent_id: UUID | None = None
     normalized_participant_id = participant_id
-    agent_config: AgentConfig | None = None
+    agent_config: UserAgentConfig | None = None
 
     if participant_type == "user":
         try:
@@ -3350,12 +3432,12 @@ async def set_participant_binding(
         try:
             agent_uuid = UUID(participant_id)
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.id == agent_uuid)
+                select(UserAgentConfig).where(UserAgentConfig.id == agent_uuid)
             )
             agent_config = agent_config_result.one_or_none()
         except ValueError:
             agent_config_result = await session.exec(
-                select(AgentConfig).where(AgentConfig.slug == participant_id)
+                select(UserAgentConfig).where(UserAgentConfig.slug == participant_id)
             )
             agent_config = agent_config_result.one_or_none()
 

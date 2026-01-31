@@ -63,7 +63,7 @@ import {
 } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
-import type { LLMProviderType } from "@/services/llmCatalogService"
+// import type { LLMProviderType } from "@/services/llmCatalogService"
 
 // ============================================================================
 // Type Definitions - ViewModels
@@ -90,7 +90,7 @@ export type ParticipationMode = "always" | "on_mention" | "manual"
  *
  * Critical Associations:
  * - user_access_provider: UUID reference to UserAccessProvider (the access channel)
- * - provider_type: LLMProviderType (the API message format)
+ * - provider_type: the API message format
  * - model_name: string (the model identifier)
  *
  * ⚠️  VALIDATION: When using this config to create an Agent, validate:
@@ -114,7 +114,7 @@ export interface AgentViewModel {
   // Model Configuration
   model_id: string | null              // Model UUID reference (for catalog models)
   model_name: string                   // Model identifier string (e.g., "gpt-4o-mini")
-  provider_type: LLMProviderType       // API specification type (e.g., "openai", "anthropic")
+  provider_type: string       // API specification type (e.g., "openai", "anthropic")
   user_access_provider: string | null  // UUID reference to UserAccessProvider
 
   // Prompts and Instructions
@@ -149,8 +149,8 @@ export interface AgentViewModel {
  *
  * ⚠️  THREE-WAY BINDING: When creating an agent, ensure:
  *     - user_access_provider references a valid, enabled UserAccessProvider
- *     - provider_type matches what that UserAccessProvider supports
- *     - model_name is available at that UserAccessProvider
+ *     - ?? (not sure on this one) provider_type matches what that UserAccessProvider supports
+ *     - ?? (not sure on this one) model_name is available at that UserAccessProvider
  *
  * Validation should happen:
  *     - Client-side: Before calling createAgent (via userAccessProviderService utilities)
@@ -161,7 +161,7 @@ export interface CreateAgentInput {
   slug: string
   description?: string | null
   model_name?: string
-  provider_type?: LLMProviderType
+  provider_type?: string
   user_access_provider?: string | null  // UUID of UserAccessProvider entity
   system_prompt?: string | null
   participation_mode?: ParticipationMode
@@ -176,7 +176,7 @@ export interface UpdateAgentInput {
   name?: string | null
   description?: string | null
   model_name?: string | null
-  provider_type?: LLMProviderType | null
+  provider_type?: string | null
   user_access_provider?: string | null
   system_prompt?: string | null
   participation_mode?: ParticipationMode | null
@@ -221,7 +221,7 @@ function transformAgent(agent: UserAgentConfigPublic): AgentViewModel {
 
     // Model Configuration
     model_id: agent.model_id ?? null,
-    model_name: agent.model_name ?? "openai:gpt-4o-mini",
+    model_name: agent.model_name ?? "gpt-4o-mini",
     provider_type: agent.provider_type ?? "openai",
     user_access_provider: agent.user_access_provider ?? null,
 

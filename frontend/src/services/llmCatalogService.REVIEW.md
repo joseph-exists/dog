@@ -24,12 +24,6 @@ LlmCatalogService (System Catalog - Read-Only)
 └── Model Capabilities  → Vision, function calling, streaming, etc.
 ```
 
-**Key Design Principle (from lines 17-22):**
-> "these need to be list and aggregation functions ONLY.
-> they don't block anything, they don't fail - if there's not a return, send back a 'nothing'
-> we need to manage the empty case on the frontend and the backend at all times.
-> a user may have their own local/handrolled system, which has no providertype, and they are their own user access provider.
-> we need to allow that case - this is to help users, not break or block them."
 
 **This is NOT:**
 - ❌ User's personal API credentials (that's userAccessProviderService)
@@ -37,7 +31,7 @@ LlmCatalogService (System Catalog - Read-Only)
 - ❌ A blocking/validating service - it's purely informational
 
 **This IS:**
-- ✅ Read-only catalog of known LLMProviderTypes and Models
+- ✅ Read-only catalog of known LLMProviderTypes and LLMModels
 - ✅ Helper service for UI dropdowns and model selection
 - ✅ Source of truth for model capabilities (vision, function calling, etc.)
 - ✅ Graceful fallback system (unknown types/models return "nothing", not errors)
@@ -59,124 +53,13 @@ This service provides:
 4. Graceful handling of unknown/custom provider types and models
 ```
 
----
-
-## CURRENT STATE ASSESSMENT
-
-### File Status: ❌ DOES NOT COMPILE - Critical Structural Issues
-
-**What Exists:**
-- ✅ File header documentation (good, clear purpose)
-- ✅ ViewModels defined (ModelOption, CatalogProviderViewModel, CatalogModelViewModel)
-- ✅ Some transformation functions
-- ⚠️  Partial service implementation (incomplete)
-
-**What's Broken:**
-- ❌ Lines 280-281: Service object prematurely closed with `}`
-- ❌ Lines 283-397: Methods exist OUTSIDE the service object (unreachable)
-- ❌ Lines 153, 184, 200: Calls to `normalizeProviderType()` which doesn't exist
-- ❌ Line 391: Incomplete function signature
-- ❌ transformProvider uses wrong type (UserAccessProviderPublic instead of catalog types)
-
-**Compilation Status:** ❌ FAILS - multiple syntax and type errors
-
----
-
 ## CRITICAL ISSUES
 
-### 🔴 PRIORITY 1: Service Object Prematurely Closed (Lines 280-281)
 
-**Problem:** Service object ends too early, orphaning 100+ lines of methods
 
-**Current Structure (BROKEN):**
-```typescript
-export const LlmCatalogService = {
-  // Provider Operations
-  async listProviders(...) { ... },
-  async getProvider(...) { ... },
-  async getProviderModels(...) { ... },
-}  // ← CLOSED HERE at line 280-281
-}  // ← Extra closing brace
 
-  // Model Operations - THESE ARE OUTSIDE THE OBJECT! (lines 283-397)
-  async listModels(...) { ... },           // ← UNREACHABLE
-  async listModelsGrouped(...) { ... },    // ← UNREACHABLE
-  async getModel(...) { ... },             // ← UNREACHABLE
-  async getModelOptions(...) { ... },      // ← UNREACHABLE
-  async getAllModelOptions(...) { ... },   // ← UNREACHABLE
-  async getModelOptionsForType(...) { ... }, // ← UNREACHABLE
-  async getDefaultModel(...) { ... },      // ← UNREACHABLE
-  async createCustomModel(...) { },        // ← INCOMPLETE & UNREACHABLE
-```
 
-**Fix Required:**
-```typescript
-export const LlmCatalogService = {
-  // ==========================================================================
-  // Provider Operations
-  // ==========================================================================
-  async listProviders(...) { ... },
-  async getProvider(...) { ... },
-  async getProviderModels(...) { ... },
-
-  // ==========================================================================
-  // Model Operations
-  // ==========================================================================
-  async listModels(...) { ... },
-  async listModelsGrouped(...) { ... },
-  async getModel(...) { ... },
-
-  // ==========================================================================
-  // Utility Methods - ModelOption Format
-  // ==========================================================================
-  async getModelOptions(...) { ... },
-  async getAllModelOptions(...) { ... },
-  async getModelOptionsForType(...) { ... },
-  async getDefaultModel(...) { ... },
-
-  // Remove createCustomModel - catalog is read-only
-  // Remove listCustomModels - catalog is read-only
-}  // ← SINGLE CLOSING BRACE HERE
-```
-
----
-
-### 🔴 PRIORITY 1: Missing `normalizeProviderType()` Function
-
-**Problem:** Lines 153, 184, 200 call `normalizeProviderType()` but it doesn't exist
-
-**Comment on line 140 says:** "DO NOT DO THIS. DESIGN WILL REQUEST THIS WHEN THEY WANT IT."
-
-**Current Code:**
-```typescript
-// Line 137-141: Comment says don't create this function
-/**
- * Normalize provider type string to lowercase LLMProviderType
- * Handles case-insensitive backend data (e.g., "OPENAI" -> "openai")
- * DO NOT DO THIS.  DESIGN WILL REQUEST THIS WHEN THEY WANT IT.
-*/
-
-// But then it's called on lines 153, 184, 200:
-providerType: normalizeProviderType(provider.provider_type),  // ← UNDEFINED!
-```
-
-**Fix Required:**
-
-**Option A (Recommended): Remove normalization entirely**
-```typescript
-// Remove all calls to normalizeProviderType()
-// Use provider_type as-is from backend
-
-function transformProvider(provider: UserAccessProviderPublic): CatalogProviderViewModel {
-  return {
-    // ...
-    providerType: provider.provider_type,  // Use as-is, no normalization
-    // ...
-  }
-}
-```
-
-**Option B: Add the function (only if design team requests it)**
+**normalization function for weird shit**
 ```typescript
 /**
  * Normalize provider type string to consistent format
@@ -188,7 +71,6 @@ function normalizeProviderType(providerType: string | null): LLMProviderType {
 }
 ```
 
-**Decision:** Use Option A unless design team explicitly requests case normalization.
 
 ---
 
@@ -248,24 +130,6 @@ export const LlmCatalogService = {
     return ["openai", "anthropic", "google", "azure_openai", "ollama"]
   },
 
-  // TODO: Implement full catalog methods when backend endpoints are ready
-}
-```
-
----
-
-### 🔴 PRIORITY 1: Incomplete Function (Line 391)
-
-**Problem:** createCustomModel function has no implementation
-
-```typescript
-/**
- * Create a custom model for the current user
- */
-async createCustomModel(data: {  })  // ← Empty parameter, no implementation
-```
-
-**Fix:** Remove this entirely - catalog service is read-only. Custom models don't belong here.
 
 ---
 
@@ -330,58 +194,24 @@ export function getProviderTypeLabel(providerType: LLMProviderType): string {
 
 ---
 
-### 🟡 PRIORITY 2: ModelOption vs CatalogModelViewModel Duplication
-
-**Problem:** Two similar but different model representations
-
-**ModelOption (lines 48-67):**
-```typescript
-export interface ModelOption {
-  value: string              // "provider:model_id"
-  label: string
-  description: string
-  provider: LLMProviderType
-  isDefault?: boolean
-  isSystem?: boolean
-  capabilities?: { ... }
-  contextWindow?: number | null
-}
-```
-
-**CatalogModelViewModel (lines 100-120):**
-```typescript
-export interface CatalogModelViewModel {
-  id: string
-  providerId: string
-  modelId: string
-  displayName: string
-  description: string | null
-  // ... all the same fields as ModelOption but different names
-}
-```
-
-**Fix:** Keep both, but document their purposes:
-- `CatalogModelViewModel` - Complete model data from backend
-- `ModelOption` - Simplified format for UI dropdowns (backward compatible)
-
 **Add comments:**
 ```typescript
 /**
- * Model option for dropdowns - simplified format
- * Maintains backwards compatibility with existing UI components
- * Use value format "provider:model_id" for consistency
- *
- * For complete model data, use CatalogModelViewModel
- */
-export interface ModelOption { ... }
+ *  * Model option for dropdowns - simplified format
+  * Maintains backwards compatibility with existing UI components
+   * Use value format "provider:model_id" for consistency
+    *
+     * For complete model data, use CatalogModelViewModel
+      */
+      export interface ModelOption { ... }
 
-/**
- * Complete model data from catalog
- * Use this for detailed model information
- * Transform to ModelOption for dropdown compatibility via modelToOption()
- */
-export interface CatalogModelViewModel { ... }
-```
+      /**
+       * Complete model data from catalog
+        * Use this for detailed model information
+         * Transform to ModelOption for dropdown compatibility via modelToOption()
+          */
+          export interface CatalogModelViewModel { ... }
+          ```
 
 ---
 

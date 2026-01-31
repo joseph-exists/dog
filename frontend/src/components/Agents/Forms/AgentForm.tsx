@@ -15,7 +15,7 @@
  * ================================
  * UserAgentConfig requires three aligned components:
  *   1. user_access_provider (UUID) → WHERE + WITH WHAT (endpoint + credentials)
- *   2. provider_type (string)      → HOW (API format, derived from model_name)
+ *   2. provider_type (string)      → HOW (API format - necessary)
  *   3. model_name (string)         → WHAT (model identifier)
  *
  * This form manages all three, deriving provider_type from model_name.
@@ -73,18 +73,18 @@ import type { UserAccessProviderViewModel } from "@/services/userAccessProviderS
 const PARTICIPATION_MODES = [
   {
     value: "on_mention",
-    label: "On Mention",
-    description: "Responds when @mentioned",
+    label: "say my name, sucker",
+    description: "responds when @mentioned, this makes naming agents an interesting pain in the ass and this mechanic sucks",
   },
   {
     value: "always",
-    label: "Always Active",
-    description: "Responds to all messages",
+    label: "always talks",
+    description: "responds to everything",
   },
   {
     value: "manual",
-    label: "Manual",
-    description: "Only responds when explicitly triggered",
+    label: "manual intervention required",
+    description: "this might not work yet, but give it a shot and let me know",
   },
 ] as const
 
@@ -109,11 +109,11 @@ const PARTICIPATION_MODES = [
 const agentFormSchema = z.object({
   name: z
     .string()
-    .min(1, "Name is required")
-    .max(100, "Name must be 100 characters or less"),
+    .min(1, "gimme a name, pal")
+    .max(100, "you're going to have to type this, you know."),
   slug: z.string().min(1, "Slug is required"),
-  description: z.string().max(500, "Description must be 500 characters or less"),
-  model_name: z.string().min(1, "Model is required"),
+  description: z.string().max(500, "Description must be 500 characters or less, you should complain about it, please"),
+  model_name: z.string().min(1, "Model IS REQUIRED???"),
   system_prompt: z.string(),
   participation_mode: z.enum(["on_mention", "always", "manual"]),
   user_access_provider: z.string().nullable(),
@@ -168,7 +168,7 @@ export default function AgentForm({
       name: initialData?.name || "",
       slug: initialData?.slug || "",
       description: initialData?.description || "",
-      model_name: initialData?.model_name || "openai:gpt-4o-mini",
+      model_name: initialData?.model_name || "gpt-4o-mini",
       system_prompt: initialData?.system_prompt || "",
       participation_mode: initialData?.participation_mode || "on_mention",
       user_access_provider: initialData?.user_access_provider ?? null,
@@ -194,10 +194,10 @@ export default function AgentForm({
     providers.find((p) => p.id === selectedProviderId) ?? null
 
   /**
-   * Derive provider_type from model_name.
+   * Derive provider_type from ??? 
    *
    * Three-Way Binding Note:
-   * The provider_type is extracted from the model_name (e.g., "openai:gpt-4" → "openai").
+   * The provider_type "openai"
    * It does NOT come from UserAccessProvider, which only stores credentials.
    */
   const derivedProviderType: LLMProviderType =
@@ -284,11 +284,11 @@ export default function AgentForm({
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="My Helpful Agent"
+                  placeholder="Crankypants"
                   maxLength={100}
                 />
               </FormControl>
-              <FormDescription>Display name for your agent</FormDescription>
+              <FormDescription>display Name</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -315,7 +315,7 @@ export default function AgentForm({
               <FormControl>
                 <Textarea
                   {...field}
-                  placeholder="Describe what this agent does..."
+                  placeholder="this is mostly display at this point, you can use this for notes... might change."
                   maxLength={500}
                   className="min-h-[80px]"
                 />
@@ -383,7 +383,7 @@ export default function AgentForm({
               <FormControl>
                 <Textarea
                   {...field}
-                  placeholder="You are a helpful assistant that..."
+                  placeholder="You are a thing that things things.  Enjoy your existence, you thing-thinging thing."
                   className="min-h-[150px] font-mono text-sm"
                 />
               </FormControl>
@@ -404,7 +404,7 @@ export default function AgentForm({
               )}
 
               <FormDescription>
-                Instructions that define your agent's personality and behavior
+                these are important later. but you can change them later, too.  don't sweat it too much. unless you want. if you understand them better than i do, you should write me a letter that tells me how smart you are.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -421,7 +421,7 @@ export default function AgentForm({
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select mode" />
+                    <SelectValue placeholder="MODUS OPERANDI (default state for your little buddy. you can change it later.)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

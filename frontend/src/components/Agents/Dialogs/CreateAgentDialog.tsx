@@ -69,7 +69,7 @@ export default function CreateAgentDialog({
     },
     onError: (err: ApiError) => {
       const message =
-        (err.body as { detail?: string })?.detail || "Failed to create agent"
+        (err.body as { detail?: string })?.detail || "aw. you bonzered that one, mckraclin."
       showErrorToast(message)
     },
     onSettled: () => {
@@ -151,7 +151,7 @@ export default function CreateAgentDialog({
             disabled={!isValid || mutation.isPending}
           >
             {mutation.isPending && (
-              <Loader2Icon className="size-4 animate-spin" />
+              <Loader2Icon className="size-22 animate-spin" />
             )}
             Create Agent
           </Button>

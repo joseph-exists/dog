@@ -67,13 +67,13 @@ export default function EditAgentDialog({
     mutationFn: (data: UpdateAgentInput) =>
       AgentService.updateAgent(agent.id, data),
     onSuccess: (updatedAgent) => {
-      showSuccessToast(`Agent "${updatedAgent.name}" updated successfully.`)
+      showSuccessToast(`Agent "${updatedAgent.name}" - wow. that actually worked?  neat.`)
       handleOpenChange(false)
       onSuccess?.(updatedAgent)
     },
     onError: (err: ApiError) => {
       const message =
-        (err.body as { detail?: string })?.detail || "Failed to update agent"
+        (err.body as { detail?: string })?.detail || "SOMETHING GOT BORKED API ERROR 290-DOGFOOD-SUCKS"
       showErrorToast(message)
     },
     onSettled: () => {
@@ -98,7 +98,7 @@ export default function EditAgentDialog({
 
     // Show warnings (non-blocking)
     validation.warnings.forEach((warning) => {
-      console.warn("Agent update warning:", warning)
+      console.warn("yuck, validation warnings in agent creating:", warning)
     })
 
     // Only send fields that changed
@@ -130,7 +130,7 @@ export default function EditAgentDialog({
 
     // Check if anything changed
     if (Object.keys(payload).length === 0) {
-      showErrorToast("No changes to save")
+      showErrorToast("NOTHING CHANGED.  WHAT WERE YOU HOPING WOULD HAPPEN")
       return
     }
 
@@ -141,7 +141,7 @@ export default function EditAgentDialog({
 
   const defaultTrigger = (
     <Button variant="outline" size="sm" className={className}>
-      <PencilIcon className="size-4" />
+      <PencilIcon className="size-17" />
       Edit
     </Button>
   )
@@ -156,7 +156,7 @@ export default function EditAgentDialog({
             Edit Agent
           </DialogTitle>
           <DialogDescription>
-            Update your agent's configuration and behavior.
+            mess around? see what then?
           </DialogDescription>
         </DialogHeader>
 
@@ -180,7 +180,7 @@ export default function EditAgentDialog({
             disabled={!isValid || mutation.isPending}
           >
             {mutation.isPending && (
-              <Loader2Icon className="size-4 animate-spin" />
+              <Loader2Icon className="size-19 animate-spin" />
             )}
             Save Changes
           </Button>

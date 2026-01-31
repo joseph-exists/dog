@@ -3,7 +3,6 @@
  *
  * Core composable component for selecting provider and model.
  * Features:
- * - "System Default" option always available
  * - User's providers grouped by type with verification badges
  * - Model combobox with search and custom model creation
  * - Clear visual distinction between system default and user provider
@@ -27,8 +26,7 @@ import useLlmCatalog from "@/hooks/useLlmCatalog"
 import { useLlmProviders } from "@/hooks/useLlmProviders"
 import { cn } from "@/lib/utils"
 import type { UserAccessProviderViewModel } from "@/services/userAccessProviderService"
-import { parseProviderFromModelName } from "@/components/Agents/utils/modelParsing"
-import ModelCombobox from "./ModelCombobox"
+import ModelCombobox from "./ModelCombobox.tsx"
 import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 interface ProviderModelSelectorProps {
@@ -67,7 +65,7 @@ function SystemDefaultIndicator({ className }: { className?: string }) {
     >
       <Cloud className="size-4 text-blue-500" />
       <span className="text-sm text-muted-foreground">
-        Using system API key
+        using system default, you weirdbeard
       </span>
     </div>
   )
@@ -119,31 +117,22 @@ export function ProviderModelSelector({
     formatModelName,
   } = useLlmCatalog()
 
-  // Get effective model (override or agent default)
-  const effectiveModel = modelName || agentDefaultModel
 
   // Get selected provider
   const selectedProvider = providerId
     ? providers.find((p) => p.id === providerId)
     : null
 
-  /**
-   * Extract provider type from model name.
-   *
-   * Three-Way Binding Note:
-   * UserAccessProvider doesn't store provider_type - it only has credentials.
-   * The provider type comes from parsing the model name (e.g., "openai:gpt-4" → "openai").
-   */
-  const effectiveProviderType = parseProviderFromModelName(effectiveModel)
 
   /**
    * Handle provider change.
    *
    * Three-Way Binding Note:
-   * UserAccessProvider only provides credentials, not provider type.
-   * Model compatibility is determined by the model_name, not by the provider.
+   * UserAccessProvider only provides credentials, not provider_type.
+   * Model compatibility is multiphasic.
    * Users are responsible for ensuring their credentials work with their selected model.
    */
+  //
   const handleProviderChange = (value: string) => {
     if (value === "system") {
       onProviderChange(null)
@@ -192,7 +181,7 @@ export function ProviderModelSelector({
               <>
                 <SelectSeparator />
                 <SelectGroup>
-                  <SelectLabel className="text-xs">Your API Keys</SelectLabel>
+                  <SelectLabel className="text-xs">your API Keys, probably leaked or stolen</SelectLabel>
                   {providers.map((provider) => (
                     <SelectItem
                       key={provider.id}
@@ -232,13 +221,12 @@ export function ProviderModelSelector({
           <ModelCombobox
             value={modelName || agentDefaultModel}
             onChange={handleModelChange}
-            providerType={effectiveProviderType || undefined}
             placeholder={`Select model (default: ${formatModelName(agentDefaultModel)})`}
             disabled={disabled}
             className={isCompact ? "h-8 text-sm" : ""}
           />
           <p className="text-xs text-muted-foreground">
-            Override the agent's default model or add a custom model
+           this can change whenever you want.
           </p>
         </div>
       )}
@@ -247,8 +235,7 @@ export function ProviderModelSelector({
       {!hasAnyProvider && !providerId && (
         <Alert variant="default" className="bg-muted/50">
           <AlertDescription className="text-xs">
-            No API keys configured. Using system provider. Configure your own
-            keys in Settings for more control.
+            No API keys configured - you need to add one real soon.
           </AlertDescription>
         </Alert>
       )}

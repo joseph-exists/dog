@@ -1730,25 +1730,6 @@ export type AgentsGetAgentBySlugData = {
 
 export type AgentsGetAgentBySlugResponse = (UserAgentConfigPublic);
 
-export type AgentsGetMyAgentSettingsData = {
-    agentId: string;
-};
-
-export type AgentsGetMyAgentSettingsResponse = ((UserAgentConfigPublic | null));
-
-export type AgentsUpdateMyAgentSettingsData = {
-    agentId: string;
-    requestBody: UserAgentConfigUpdate;
-};
-
-export type AgentsUpdateMyAgentSettingsResponse = (UserAgentConfigsPublic);
-
-export type AgentsDeleteMyAgentSettingsData = {
-    agentId: string;
-};
-
-export type AgentsDeleteMyAgentSettingsResponse = (Message);
-
 export type ArchetypeQualitiesReadArchetypeQualitiesData = {
     archetypeId: string;
 };

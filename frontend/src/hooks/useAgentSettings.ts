@@ -4,21 +4,22 @@
  * Manages user's personal settings for an agent (my_settings endpoint).
  *
  * Purpose:
- * - Fetch user's override settings for any agent (personal or system)
- * - Update provider/model overrides
+ * - Fetch user agent config settings for any agent that the user has access to
+ * - Do lots of kinds of updates
  * - Delete overrides (revert to agent defaults)
  *
  * Use Cases:
  * - Personal agents: Customize your own agent configuration
- * - System agents: Use your own API key without affecting other users
+ * - Clone a System agent or other user agents: 
+ * - Use your own API key without affecting other users (or letting them see it)
  *
  * Three-Way Binding Context:
  * ==========================
- * User settings can override:
- *   1. user_access_provider → Use your own API credentials instead of system default
- *   2. model_name → Use a different model than the agent's default
+ * User settings:
+ *   1. user_access_provider → switch between different API keys and credentials
+ *   2. model_name 
  *
- * The provider_type is still derived from model_name, maintaining the three-way binding.
+ * 
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -96,7 +97,7 @@ export function useAgentSettings({ agent }: UseAgentSettingsParams) {
   } = useQuery<UserAgentConfigPublic | null>({
     queryKey: AGENT_SETTINGS_QUERY_KEYS.byAgent(agent.id),
     queryFn: async () => {
-      const response = await AgentsService.getMyAgentSettings({
+      const response = await AgentsService.getAgent({
         agentId: agent.id,
       })
       return response || null
@@ -116,7 +117,7 @@ export function useAgentSettings({ agent }: UseAgentSettingsParams) {
         custom_system_prompt: input.custom_system_prompt,
       }
 
-      return await AgentsService.updateMyAgentSettings({
+      return await AgentsService.updateAgent({
         agentId: agent.id,
         requestBody: updateData,
       })
@@ -138,7 +139,7 @@ export function useAgentSettings({ agent }: UseAgentSettingsParams) {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      return await AgentsService.deleteMyAgentSettings({
+      return await AgentsService.deleteAgent({
         agentId: agent.id,
       })
     },
