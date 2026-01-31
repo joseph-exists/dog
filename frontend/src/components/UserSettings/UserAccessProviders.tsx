@@ -12,23 +12,52 @@
  *     1. user_access_provider (UUID) → UserAccessProvider (WHERE + WITH WHAT)
  *     2. provider_type (string)      → LLMProviderType (HOW - API format)
  *     3. model_name (string)         → Model identifier (WHAT)
- *
- * THIS COMPONENT manages #1 only:
- *   - WHERE: base_url (the API endpoint to connect to)
- *   - WITH WHAT: api_key (user's encrypted credentials)
- *
- * Components #2 and #3 (provider_type and model_name) are configured at the
- * AgentConfig level, NOT here. The same UserAccessProvider can be used by
- * multiple agents with different provider types and models.
- *
- * Example: A user's OpenAI API key (UserAccessProvider) can be used by:
- *   - Agent A: provider_type="openai", model_name="gpt-4"
- *   - Agent B: provider_type="openai", model_name="gpt-3.5-turbo"
- *   - Agent C: provider_type="custom", model_name="custom-model-id"
- *
- * See: agentService.ts lines 40-54 for complete three-way binding documentation
- *
- * API keys are encrypted at rest and over the wire.
+
+
+
+tinyfoot=# \d user_access_provider
+                       Table "public.user_access_provider"
+         Column         |          Type          | Collation | Nullable | Default 
+------------------------+------------------------+-----------+----------+---------
+ base_url               | character varying(100) |           |          | 
+ this is the url used to connect to the user access provider's API (beans-ai.com/api/v1/)
+
+ name                   | character varying(100) |           | not null | 
+friendly name of the UAP given by the user to identify it - does not need to map to anything, user-only
+ is_enabled             | boolean                |           | not null | 
+users can enable and disable access providers - we can also disable user access providers if we need to.
+ is_default             | boolean                |           | not null | 
+is this the first one in the list when the user creates an agent? is this the default user access provider for that user?
+ is_validated           | boolean                |           | not null | 
+has the user run a test with the api?
+ description            | character varying(500) |           |          | 
+user description - we/system don't care about it.
+ id                     | uuid                   |           | not null | 
+uuid on create
+ user_id                | uuid                   |           | not null | 
+who made/owns the UAP
+ provider_type_multiple | boolean                |           | not null | 
+currently not used - here for test purposes
+ alpha_provider_type_id | uuid                   |           | not null | 
+this UUID is a FK reference on provider_type(id).
+
+where provider_type is:
+  name  | details   | validated | is_system |  id                  
+-------------------------+-------------------------------------------------
+ openai   | OpenAI models  | t | t | 673f1787-8474-4e1c-986c-8e19f14c989c
+
+
+
+Indexes (for user access provider)
+    "user_access_provider_pkey" PRIMARY KEY, btree (id)
+    "ix_user_access_provider_alpha_provider_type_id" btree (alpha_provider_type_id)
+    "ix_user_access_provider_user_id" btree (user_id)
+Foreign-key constraints:
+    "user_access_provider_alpha_provider_type_id_fkey" FOREIGN KEY (alpha_provider_type_id) REFERENCES provider_type(id)
+    "user_access_provider_user_id_fkey" FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "room_participant_bindings" CONSTRAINT "room_participant_bindings_user_access_provider_id_fkey" FOREIGN KEY (user_access_provider_id) REFERENCES user_access_provider(id
+
  */
 
 import { zodResolver } from "@hookform/resolvers/zod"

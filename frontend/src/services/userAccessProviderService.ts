@@ -26,14 +26,15 @@
  * - OpenAPI auto-generated client (@/client)
  * - UserAccessProvidersService from generated client (CRUD operations)
  */
-
-import {
+import { LlmProvidersService } from "@/client"
+import type {
   UserAccessProviderCreate,
   UserAccessProviderPublic,
-  UserAccessProvidersPublic,
   UserAccessProviderUpdate,
-  LlmProvidersService
+  UserAccessProvidersPublic,
 } from "@/client"
+
+
 
 
 

@@ -651,6 +651,180 @@ export const JumpRequestSchema = {
 Used by jump endpoint to specify target and optimistic concurrency check.`
 } as const;
 
+export const LLMModelPublicSchema = {
+    properties: {
+        model_id: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Model Id',
+            description: "Model identifier (e.g., 'gpt-4o', no provider prefix)"
+        },
+        display_name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Display Name',
+            description: "Human-friendly name (e.g., 'GPT 4o')"
+        },
+        primary_provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Primary Provider Type Id'
+        },
+        multiple_provider_type_support: {
+            type: 'boolean',
+            title: 'Multiple Provider Type Support',
+            description: 'this overload might be neat in the future for swapping?',
+            default: false
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        context_window: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Window',
+            description: 'Max tokens in context window'
+        },
+        is_default: {
+            type: 'boolean',
+            title: 'Is Default',
+            description: 'Default/cheapest model for this provider',
+            default: false
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether model is available for use',
+            default: true
+        },
+        is_deprecated: {
+            type: 'boolean',
+            title: 'Is Deprecated',
+            description: 'Model is deprecated (still works)',
+            default: false
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Display ordering within provider',
+            default: 0
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System',
+            description: 'system level model',
+            default: false
+        },
+        has_vision: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Vision',
+            description: 'Supports image input'
+        },
+        has_function_calling: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Function Calling',
+            description: 'Supports function/tool calling'
+        },
+        has_streaming: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Streaming',
+            description: 'Supports streaming responses'
+        },
+        has_json_mode: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Json Mode',
+            description: 'Supports JSON output mode'
+        },
+        secondary_capabilities: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Secondary Capabilities'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['model_id', 'display_name', 'primary_provider_type_id', 'id'],
+    title: 'LLMModelPublic',
+    description: 'Public API response for a model catalog entry.'
+} as const;
+
+export const LLMModelsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/LLMModelPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'LLMModelsPublic',
+    description: 'Collection response for LLMModels.'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
@@ -4527,6 +4701,17 @@ export const UserAccessProviderCreateSchema = {
             title: 'Name',
             description: "User-friendly name like 'My OpenAI' or 'Work Azure'"
         },
+        provider_type_multiple: {
+            type: 'boolean',
+            title: 'Provider Type Multiple',
+            description: "if there's more than one provider type.",
+            default: false
+        },
+        alpha_provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Alpha Provider Type Id'
+        },
         is_enabled: {
             type: 'boolean',
             title: 'Is Enabled',
@@ -4556,18 +4741,12 @@ export const UserAccessProviderCreateSchema = {
                 }
             ],
             title: 'Description'
-        },
-        api_key: {
-            type: 'string',
-            minLength: 1,
-            title: 'Api Key',
-            description: 'Plain text API key (will be encrypted)'
         }
     },
     type: 'object',
-    required: ['name', 'api_key'],
+    required: ['name', 'alpha_provider_type_id'],
     title: 'UserAccessProviderCreate',
-    description: 'Input model for creating provider - accepts plain API key.'
+    description: 'Input model for creating provider'
 } as const;
 
 export const UserAccessProviderPublicSchema = {
@@ -4590,6 +4769,17 @@ export const UserAccessProviderPublicSchema = {
             maxLength: 100,
             title: 'Name',
             description: "User-friendly name like 'My OpenAI' or 'Work Azure'"
+        },
+        provider_type_multiple: {
+            type: 'boolean',
+            title: 'Provider Type Multiple',
+            description: "if there's more than one provider type.",
+            default: false
+        },
+        alpha_provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Alpha Provider Type Id'
         },
         is_enabled: {
             type: 'boolean',
@@ -4626,65 +4816,20 @@ export const UserAccessProviderPublicSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        user_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'User Id'
-        },
         created_at: {
             type: 'string',
             format: 'date-time',
             title: 'Created At'
-        },
-        updated_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Updated At'
-        },
-        last_tested_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Last Tested At'
-        },
-        last_test_success: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Last Test Success'
         }
     },
     type: 'object',
-    required: ['name', 'id', 'user_id', 'created_at', 'updated_at', 'last_tested_at', 'last_test_success'],
+    required: ['name', 'alpha_provider_type_id', 'id', 'created_at'],
     title: 'UserAccessProviderPublic',
     description: 'Public API response - NEVER includes API key.'
 } as const;
 
 export const UserAccessProviderUpdateSchema = {
     properties: {
-        base_url: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 500
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Base Url'
-        },
         name: {
             anyOf: [
                 {
@@ -4730,6 +4875,18 @@ export const UserAccessProviderUpdateSchema = {
             ],
             title: 'Is Validated'
         },
+        base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Url'
+        },
         description: {
             anyOf: [
                 {
@@ -4753,11 +4910,16 @@ export const UserAccessProviderUpdateSchema = {
             ],
             title: 'Api Key',
             description: 'New API key to encrypt, if changing'
+        },
+        alpha_provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Alpha Provider Type Id'
         }
     },
     type: 'object',
-    title: 'UserAccessProviderUpdate',
-    description: 'Update model - all fields optional.'
+    required: ['alpha_provider_type_id'],
+    title: 'UserAccessProviderUpdate'
 } as const;
 
 export const UserAccessProvidersPublicSchema = {
@@ -4819,11 +4981,10 @@ export const UserAgentConfigCreateSchema = {
             title: 'User Access Provider',
             description: 'User-selected provider associated with this agent config'
         },
-        provider_type: {
+        provider_type_id: {
             type: 'string',
-            maxLength: 30,
-            title: 'Provider Type',
-            description: 'why not here too'
+            format: 'uuid',
+            title: 'Provider Type Id'
         },
         model_id: {
             anyOf: [
@@ -4958,7 +5119,7 @@ export const UserAgentConfigCreateSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'slug', 'provider_type'],
+    required: ['name', 'slug', 'provider_type_id'],
     title: 'UserAgentConfigCreate'
 } as const;
 
@@ -5015,18 +5176,10 @@ export const UserAgentConfigPublicSchema = {
             title: 'User Access Provider',
             description: 'User-selected provider associated with this agent config'
         },
-        provider_type: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 30
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provider Type',
-            description: 'why not here too'
+        provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Provider Type Id'
         },
         model_id: {
             anyOf: [
@@ -5251,10 +5404,23 @@ export const UserAgentConfigPublicSchema = {
         version: {
             type: 'integer',
             title: 'Version'
+        },
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 30
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type',
+            description: 'why not here too'
         }
     },
     type: 'object',
-    required: ['id', 'owner_id', 'created_at', 'updated_at', 'version'],
+    required: ['provider_type_id', 'id', 'owner_id', 'created_at', 'updated_at', 'version'],
     title: 'UserAgentConfigPublic'
 } as const;
 
@@ -5311,18 +5477,10 @@ export const UserAgentConfigUpdateSchema = {
             title: 'User Access Provider',
             description: 'User-selected provider associated with this agent config'
         },
-        provider_type: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 30
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provider Type',
-            description: 'why not here too'
+        provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Provider Type Id'
         },
         model_id: {
             anyOf: [
@@ -5509,9 +5667,23 @@ export const UserAgentConfigUpdateSchema = {
                 }
             ],
             title: 'Capabilities'
+        },
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 30
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type',
+            description: 'why not here too'
         }
     },
     type: 'object',
+    required: ['provider_type_id'],
     title: 'UserAgentConfigUpdate'
 } as const;
 

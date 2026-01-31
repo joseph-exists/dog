@@ -166,6 +166,78 @@ export type JumpRequest = {
     expected_head_version: number;
 };
 
+/**
+ * Public API response for a model catalog entry.
+ */
+export type LLMModelPublic = {
+    /**
+     * Model identifier (e.g., 'gpt-4o', no provider prefix)
+     */
+    model_id: string;
+    /**
+     * Human-friendly name (e.g., 'GPT 4o')
+     */
+    display_name: string;
+    primary_provider_type_id: string;
+    /**
+     * this overload might be neat in the future for swapping?
+     */
+    multiple_provider_type_support?: boolean;
+    description?: (string | null);
+    /**
+     * Max tokens in context window
+     */
+    context_window?: (number | null);
+    /**
+     * Default/cheapest model for this provider
+     */
+    is_default?: boolean;
+    /**
+     * Whether model is available for use
+     */
+    is_enabled?: boolean;
+    /**
+     * Model is deprecated (still works)
+     */
+    is_deprecated?: boolean;
+    /**
+     * Display ordering within provider
+     */
+    sort_order?: number;
+    /**
+     * system level model
+     */
+    is_system?: boolean;
+    /**
+     * Supports image input
+     */
+    has_vision?: (boolean | null);
+    /**
+     * Supports function/tool calling
+     */
+    has_function_calling?: (boolean | null);
+    /**
+     * Supports streaming responses
+     */
+    has_streaming?: (boolean | null);
+    /**
+     * Supports JSON output mode
+     */
+    has_json_mode?: (boolean | null);
+    secondary_capabilities?: (Array<{
+    [key: string]: unknown;
+}> | null);
+    id: string;
+};
+
+/**
+ * Collection response for LLMModels.
+ */
+export type LLMModelsPublic = {
+    data: Array<LLMModelPublic>;
+    count: number;
+};
+
 export type Message = {
     message: string;
 };
@@ -1234,7 +1306,7 @@ export type UpdatePassword = {
 };
 
 /**
- * Input model for creating provider - accepts plain API key.
+ * Input model for creating provider
  */
 export type UserAccessProviderCreate = {
     /**
@@ -1245,6 +1317,11 @@ export type UserAccessProviderCreate = {
      * User-friendly name like 'My OpenAI' or 'Work Azure'
      */
     name: string;
+    /**
+     * if there's more than one provider type.
+     */
+    provider_type_multiple?: boolean;
+    alpha_provider_type_id: string;
     /**
      * Whether this provider is active
      */
@@ -1258,10 +1335,6 @@ export type UserAccessProviderCreate = {
      */
     is_validated?: boolean;
     description?: (string | null);
-    /**
-     * Plain text API key (will be encrypted)
-     */
-    api_key: string;
 };
 
 /**
@@ -1277,6 +1350,11 @@ export type UserAccessProviderPublic = {
      */
     name: string;
     /**
+     * if there's more than one provider type.
+     */
+    provider_type_multiple?: boolean;
+    alpha_provider_type_id: string;
+    /**
      * Whether this provider is active
      */
     is_enabled?: boolean;
@@ -1290,11 +1368,7 @@ export type UserAccessProviderPublic = {
     is_validated?: boolean;
     description?: (string | null);
     id: string;
-    user_id: string;
     created_at: string;
-    updated_at: string;
-    last_tested_at: (string | null);
-    last_test_success: (boolean | null);
 };
 
 /**
@@ -1305,20 +1379,18 @@ export type UserAccessProvidersPublic = {
     count: number;
 };
 
-/**
- * Update model - all fields optional.
- */
 export type UserAccessProviderUpdate = {
-    base_url?: (string | null);
     name?: (string | null);
     is_enabled?: (boolean | null);
     is_default?: (boolean | null);
     is_validated?: (boolean | null);
+    base_url?: (string | null);
     description?: (string | null);
     /**
      * New API key to encrypt, if changing
      */
     api_key?: (string | null);
+    alpha_provider_type_id: string;
 };
 
 export type UserAgentConfigCreate = {
@@ -1335,10 +1407,7 @@ export type UserAgentConfigCreate = {
      * User-selected provider associated with this agent config
      */
     user_access_provider?: (string | null);
-    /**
-     * why not here too
-     */
-    provider_type: string;
+    provider_type_id: string;
     /**
      * model associated with this agent config
      */
@@ -1386,10 +1455,7 @@ export type UserAgentConfigPublic = {
      * User-selected provider associated with this agent config
      */
     user_access_provider?: (string | null);
-    /**
-     * why not here too
-     */
-    provider_type?: (string | null);
+    provider_type_id: string;
     /**
      * model associated with this agent config
      */
@@ -1426,6 +1492,10 @@ export type UserAgentConfigPublic = {
     created_at: string;
     updated_at: (string | null);
     version: number;
+    /**
+     * why not here too
+     */
+    provider_type?: (string | null);
 };
 
 export type UserAgentConfigsPublic = {
@@ -1447,10 +1517,7 @@ export type UserAgentConfigUpdate = {
      * User-selected provider associated with this agent config
      */
     user_access_provider?: (string | null);
-    /**
-     * why not here too
-     */
-    provider_type?: (string | null);
+    provider_type_id: string;
     /**
      * model associated with this agent config
      */
@@ -1482,6 +1549,10 @@ export type UserAgentConfigUpdate = {
     is_coordinator?: (boolean | null);
     max_tool_iterations?: (number | null);
     capabilities?: (Array<(string)> | null);
+    /**
+     * why not here too
+     */
+    provider_type?: (string | null);
 };
 
 export type UserCreate = {
@@ -1893,15 +1964,34 @@ export type ItemsDeleteItemData = {
 
 export type ItemsDeleteItemResponse = (Message);
 
-export type LlmCatalogGetProviderData = {
+export type LlmCatalogListProvidersData = {
     /**
-     * Include if soft-deleted
+     * Filter by enabled status
      */
-    includeDeleted?: boolean;
+    isEnabled?: (boolean | null);
+    /**
+     * Filter by validated status
+     */
+    isValidated?: (boolean | null);
+    limit?: number;
+    skip?: number;
+};
+
+export type LlmCatalogListProvidersResponse = (UserAccessProvidersPublic);
+
+export type LlmCatalogListProviderModelsData = {
     providerId: string;
 };
 
-export type LlmCatalogGetProviderResponse = (UserAccessProviderPublic);
+export type LlmCatalogListProviderModelsResponse = (LLMModelsPublic);
+
+export type LlmCatalogListModelsResponse = (LLMModelsPublic);
+
+export type LlmCatalogListModelsForUapData = {
+    userAccessProviderId: string;
+};
+
+export type LlmCatalogListModelsForUapResponse = (LLMModelsPublic);
 
 export type LlmProvidersListProvidersData = {
     limit?: number;

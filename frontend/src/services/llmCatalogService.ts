@@ -64,8 +64,8 @@ export function getProviderTypeLabel(providerType: LLMProviderType): string {
  * Model option for dropdowns - simplified format
  * Maintains backwards compatibility with existing UI components
  * Use value format "provider:model_id" for consistency
- *
- * For complete model data, use CatalogModelViewModel (TODO: when backend ready)
+ * # TODO FIX NOW THAT WE CAN
+ * 
  */
 export interface ModelOption {
   value: string
