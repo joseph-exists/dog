@@ -653,11 +653,6 @@ Used by jump endpoint to specify target and optimistic concurrency check.`
 
 export const LLMModelPublicSchema = {
     properties: {
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
         owner_id: {
             type: 'string',
             format: 'uuid',
@@ -802,10 +797,15 @@ export const LLMModelPublicSchema = {
                 }
             ],
             title: 'Secondary Capabilities'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
         }
     },
     type: 'object',
-    required: ['id', 'owner_id', 'model_id', 'display_name', 'primary_provider_type_id'],
+    required: ['owner_id', 'model_id', 'display_name', 'primary_provider_type_id', 'id'],
     title: 'LLMModelPublic',
     description: 'Public API response for a model catalog entry.'
 } as const;
@@ -4687,10 +4687,17 @@ export const UpdatePasswordSchema = {
 
 export const UserAccessProviderCreateSchema = {
     properties: {
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
+        api_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Api Key',
+            description: 'New API key to encrypt, if changing'
         },
         owner_id: {
             type: 'string',
@@ -4759,17 +4766,24 @@ export const UserAccessProviderCreateSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'name'],
+    required: ['name'],
     title: 'UserAccessProviderCreate',
     description: 'Input model for creating provider'
 } as const;
 
 export const UserAccessProviderPublicSchema = {
     properties: {
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
+        api_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Api Key',
+            description: 'New API key to encrypt, if changing'
         },
         owner_id: {
             type: 'string',
@@ -4835,6 +4849,11 @@ export const UserAccessProviderPublicSchema = {
                 }
             ],
             title: 'Description'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
         },
         created_at: {
             type: 'string',
@@ -4843,7 +4862,7 @@ export const UserAccessProviderPublicSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'name', 'created_at'],
+    required: ['name', 'id', 'created_at'],
     title: 'UserAccessProviderPublic',
     description: 'Public API response - NEVER includes API key.'
 } as const;
