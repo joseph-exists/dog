@@ -22,9 +22,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
-import {
-  AgentsService
-} from "@/client"
+import { AgentsService } from "@/client/sdk.gen"
+import type {
+  UserAgentConfigPublic,
+  UserAgentConfigUpdate,
+} from "@/client/types.gen"
 import AgentAvatar from "../Display/AgentAvatar"
 import {
   AgentModeBadge,
@@ -44,8 +46,8 @@ interface AgentDetailDialogProps {
 }
 
 /** Read-only view of agent details */
-function AgentViewContent({ agent }: { agent: AgentViewModel }) {
-  const providerType = parseProviderFromModelName(agent.model_name)
+function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
+  const providerType = parseProviderFromModelName(agent.model_name ?? "")
 
   return (
     <div className="space-y-4">
@@ -73,7 +75,9 @@ function AgentViewContent({ agent }: { agent: AgentViewModel }) {
         <p className="text-sm font-medium text-muted-foreground">
           Participation Mode
         </p>
-        <AgentModeBadge mode={agent.participation_mode} />
+        <AgentModeBadge
+          mode={(agent.participation_mode ?? "on_mention") as any}
+        />
       </div>
 
       {/* Slug */}
@@ -111,7 +115,7 @@ export default function AgentDetailDialog({
   // Fetch full agent data when dialog opens
   const { data: agent, isLoading } = useQuery({
     queryKey: ["agent", agentId],
-    queryFn: () => AgentsService.getAgent(agentId),
+    queryFn: () => AgentsService.getAgent({ agentId }),
     enabled: isOpen,
   })
 
@@ -124,8 +128,8 @@ export default function AgentDetailDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: UpdateAgentInput) =>
-      AgentService.updateAgent(agentId, data),
+    mutationFn: (data: UserAgentConfigUpdate) =>
+      AgentsService.updateAgent({ agentId, requestBody: data }),
     onSuccess: (updatedAgent) => {
       showSuccessToast(`Agent "${updatedAgent.name}" updated successfully.`)
       setMode("view")
@@ -155,7 +159,9 @@ export default function AgentDetailDialog({
     }
 
     // Only send fields that changed
-    const payload: UpdateAgentInput = {}
+    const payload: UserAgentConfigUpdate = {
+      provider_type_id: agent.provider_type_id,
+    }
 
     if (formData.name.trim() !== agent.name) {
       payload.name = formData.name.trim()
@@ -204,9 +210,12 @@ export default function AgentDetailDialog({
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AgentAvatar name={agent.name} size="sm" />
-                <span className="truncate">{agent.name}</span>
-                <AgentScopeBadge scope={agent.scope} className="shrink-0" />
+                <AgentAvatar name={agent.name ?? "Agent"} size="sm" />
+                <span className="truncate">{agent.name ?? "Agent"}</span>
+                <AgentScopeBadge
+                  scope={(agent.scope ?? "system") as any}
+                  className="shrink-0"
+                />
               </DialogTitle>
               <DialogDescription>
                 {mode === "view"
@@ -219,7 +228,16 @@ export default function AgentDetailDialog({
               <AgentViewContent agent={agent} />
             ) : (
               <AgentForm
-                initialData={agent}
+                initialData={{
+                  name: agent.name ?? "",
+                  slug: agent.slug ?? "",
+                  description: agent.description ?? "",
+                  model_name: agent.model_name ?? "",
+                  system_prompt: agent.system_prompt ?? "",
+                  participation_mode: agent.participation_mode ?? "on_mention",
+                  provider_type_id: agent.provider_type_id,
+                  user_access_provider: agent.user_access_provider ?? undefined,
+                }}
                 onChange={handleFormChange}
                 isEditMode={true}
               />

@@ -39,7 +39,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AgentService } from "@/services/agentService"
+import { AgentsService } from "@/client/sdk.gen"
 
 export const Route = createFileRoute("/_layout/agent/$agentId")({
   component: AgentDetailPage,
@@ -79,7 +79,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
     error,
   } = useQuery({
     queryKey: ["agent", agentId],
-    queryFn: () => AgentService.getAgent(agentId),
+    queryFn: () => AgentsService.getAgent({ agentId }),
   })
 
   if (isLoading) {
@@ -126,17 +126,19 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
 
       {/* Agent Header */}
       <div className="flex items-start gap-6">
-        <AgentAvatar name={agent.name} size="xl" />
+        <AgentAvatar name={agent.name ?? "Agent"} size="xl" />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight">{agent.name}</h1>
-            <AgentScopeBadge scope={agent.scope} />
-            <AgentStatusBadge isEnabled={agent.is_enabled} />
+            <h1 className="text-2xl font-bold tracking-tight">
+              {agent.name ?? "Agent"}
+            </h1>
+            <AgentScopeBadge scope={(agent.scope ?? "system") as any} />
+            <AgentStatusBadge isEnabled={!!agent.is_enabled} />
           </div>
 
           <p className="text-muted-foreground font-mono text-sm mt-1">
-            @{agent.slug}
+            @{agent.slug ?? ""}
           </p>
 
           {agent.description && (
@@ -146,7 +148,9 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
           )}
 
           <div className="flex items-center gap-2 mt-4 flex-wrap">
-            <AgentModeBadge mode={agent.participation_mode} />
+            <AgentModeBadge
+              mode={(agent.participation_mode ?? "on_mention") as any}
+            />
             <span className="text-xs px-2 py-1 rounded-md bg-muted font-mono">
               {agent.model_name}
             </span>
@@ -201,7 +205,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-semibold">
-                  {agent.created_at.toLocaleDateString()}
+                  {new Date(agent.created_at).toLocaleDateString()}
                 </p>
               </CardContent>
             </Card>
@@ -214,7 +218,9 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-semibold">
-                  {agent.updated_at?.toLocaleDateString() ?? "Never"}
+                  {agent.updated_at
+                    ? new Date(agent.updated_at).toLocaleDateString()
+                    : "Never"}
                 </p>
               </CardContent>
             </Card>
@@ -295,7 +301,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
                     <p className="text-sm font-medium text-muted-foreground">
                       Participation Mode
                     </p>
-                    <p>{agent.participation_mode}</p>
+                    <p>{agent.participation_mode ?? "on_mention"}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">

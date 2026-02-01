@@ -353,7 +353,9 @@ const isCreating = createMutation.isPending
 
 ### Gotcha 1: Missing API Key Field
 
-**Problem:**
+**Problem:** : FIXED.
+ TODO: make sure that all temporary usages of ANY have been cleaned and we're passing the provider key
+
 ```typescript
 // TypeScript error: Property 'api_key' missing from UserAccessProviderCreate
 ```
@@ -369,7 +371,10 @@ const createMutation = useMutation({
 
 ### Gotcha 2: UUID Generation Required
 
-**Problem:**
+**Problem:** : FIXED - it shouldn't expect this anymore. 
+That was a bug.
+
+
 ```typescript
 // Backend expects 'id' field in create request
 ```

@@ -33,11 +33,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useCustomToast from "@/hooks/useCustomToast"
-import { AgentService, type AgentViewModel } from "@/services/agentService"
+import { AgentsService } from "@/client/sdk.gen"
+import type { UserAgentConfigPublic } from "@/client/types.gen"
 
 function getAgentsQueryOptions() {
   return {
-    queryFn: () => AgentService.listAgents(),
+    queryFn: () => AgentsService.listAgents(),
     queryKey: ["agents"],
   }
 }
@@ -81,13 +82,13 @@ function PendingAgents() {
   )
 }
 
-function DeleteAgentButton({ agent }: { agent: AgentViewModel }) {
+function DeleteAgentButton({ agent }: { agent: UserAgentConfigPublic }) {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const mutation = useMutation({
-    mutationFn: () => AgentService.deleteAgent(agent.id),
+    mutationFn: () => AgentsService.deleteAgent({ agentId: agent.id }),
     onSuccess: () => {
       showSuccessToast(`Agent "${agent.name}" deleted successfully.`)
       setIsOpen(false)
@@ -141,20 +142,20 @@ function DeleteAgentButton({ agent }: { agent: AgentViewModel }) {
   )
 }
 
-function AgentCardItem({ agent }: { agent: AgentViewModel }) {
+function AgentCardItem({ agent }: { agent: UserAgentConfigPublic }) {
   const isPersonal = agent.scope === "personal"
 
   return (
     <AgentCard
       id={agent.id}
-      name={agent.name}
-      slug={agent.slug}
+      name={agent.name ?? "Agent"}
+      slug={agent.slug ?? ""}
       href={`/agent/${agent.id}`}
-      description={agent.description}
-      scope={agent.scope}
-      participationMode={agent.participation_mode}
-      isEnabled={agent.is_enabled}
-      modelName={agent.model_name}
+      description={agent.description ?? ""}
+      scope={(agent.scope ?? "system") as "system" | "personal"}
+      participationMode={(agent.participation_mode ?? "on_mention") as any}
+      isEnabled={!!agent.is_enabled}
+      modelName={agent.model_name ?? ""}
       action={
         <div className="flex items-center gap-1">
           <AgentDetailDialog agentId={agent.id} className="size-7" />
@@ -167,10 +168,11 @@ function AgentCardItem({ agent }: { agent: AgentViewModel }) {
 
 function AgentsListContent() {
   const { data } = useSuspenseQuery(getAgentsQueryOptions())
-  const { personal: personalAgents, system: systemAgents } =
-    AgentService.groupByScope(data.agents)
+  const allAgents: UserAgentConfigPublic[] = data.data || []
+  const personalAgents = allAgents.filter((a) => a.scope === "personal")
+  const systemAgents = allAgents.filter((a) => a.scope === "system")
 
-  if (data.agents.length === 0) {
+  if (allAgents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-12">
         <div className="rounded-full bg-muted p-4 mb-4">

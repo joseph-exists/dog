@@ -37,7 +37,7 @@ import {
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
 import type { UIComponent } from "@/components/AgentUI/types"
-import { AgentService } from "./agentService"
+import { AgentsService } from "@/client/sdk.gen"
 
 // ============================================================================
 // Type Definitions - ViewModels
@@ -328,10 +328,10 @@ async function getAgentDetails(
 
   try {
     const agent = isUuidValue
-      ? await AgentService.getAgent(agentId)
-      : await AgentService.getAgentBySlug(agentId)
+      ? await AgentsService.getAgent({ agentId })
+      : await AgentsService.getAgentBySlug({ slug: agentId })
     const details = {
-      name: agent.name,
+      name: agent.name ?? "Agent",
       description: agent.description ?? null,
     }
     agentCache.set(cacheKey, details)

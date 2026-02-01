@@ -30,7 +30,8 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
 import { useRoomStream } from "@/hooks/useRoomStream"
-import { AgentService, type AgentViewModel } from "@/services/agentService"
+import { AgentsService } from "@/client/sdk.gen"
+import type { UserAgentConfigPublic } from "@/client/types.gen"
 import { getPanelDisplayName } from "@/services/panelService"
 import {
   type MessageViewModel,
@@ -58,15 +59,16 @@ function toParticipant(p: ParticipantViewModel): Participant {
 /**
  * Convert AgentViewModel to AgentData format
  */
-function toAgentData(a: AgentViewModel) {
+function toAgentData(a: UserAgentConfigPublic) {
   return {
     id: a.id,
-    name: a.name,
-    description: a.description,
-    participationMode: a.participation_mode,
-    scope: a.scope,
-    isCoordinator: a.is_coordinator,
-    isEnabled: a.is_enabled,
+    name: a.name ?? "Agent",
+    description: a.description ?? null,
+    participationMode: (a.participation_mode ?? "on_mention") as any,
+    scope: (a.scope ?? "system") as any,
+    isCoordinator: !!a.is_coordinator,
+    isEnabled: !!a.is_enabled,
+    modelName: a.model_name ?? "",
   }
 }
 
@@ -89,7 +91,7 @@ function RoomView() {
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
     {
       queryKey: ["agents", "available"],
-      queryFn: () => AgentService.listAvailableAgents(),
+      queryFn: () => AgentsService.listAvailableAgents(),
     },
   )
 
@@ -155,9 +157,9 @@ function RoomView() {
   // Convert data for components
   const roomParticipants: Participant[] = participants.map(toParticipant)
   const activeUsers = participants.filter((p) => p.participant_type === "user")
-  const availableAgentsAsAgentData = (availableAgentsData?.agents || []).map(
-    toAgentData,
-  )
+  const availableAgents = (availableAgentsData?.data ||
+    []) as UserAgentConfigPublic[]
+  const availableAgentsAsAgentData = availableAgents.map(toAgentData)
   // All agents in the room (active + inactive) for panel display
   const allRoomAgents = participants.filter(
     (p) => p.participant_type === "agent",
@@ -173,7 +175,7 @@ function RoomView() {
       name: p.display_name,
       description: agentConfig?.description ?? null,
       participationMode: agentConfig?.participationMode ?? "on_mention",
-      scope: agentConfig?.scope,
+      scope: (agentConfig?.scope ?? "system") as any,
       isCoordinator: agentConfig?.isCoordinator ?? false,
       isEnabled: p.is_active,
     }

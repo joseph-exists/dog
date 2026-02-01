@@ -13,8 +13,14 @@
  */
 
 import { Loader2, RotateCcw, Save } from "lucide-react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
+import { AgentsService } from "@/client/sdk.gen"
+import type {
+  UserAgentConfigPublic,
+  UserAgentConfigUpdate,
+} from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -28,82 +34,104 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import { AgentsService } from "@/client"
-import type { UserAgentConfigUpdate } from "@/client"
+import useCustomToast from "@/hooks/useCustomToast"
 import { ProviderModelSelector } from "../Selectors/ProviderModelSelector"
 
-interface UserAgentConfigProps {
+interface AgentModelSettingsProps {
   /** The agent to configure settings for */
-  agent: UserAgentConfigUpdate
+  agent: UserAgentConfigPublic
   /** Additional className */
   className?: string
 }
 
-export function ({
+export function AgentModelSettings({
   agent,
   className,
-}: UserAgentConfigProps) {
-  const {
-    settings,
-    isLoading,
-    isUpdating,
-    isDeleting,
-    updateSettings,
-    deleteSettings,
-  } = UserAgentConfigUpdate({ agent })
+}: AgentModelSettingsProps) {
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   // Local state for form
   const [providerId, setProviderId] = useState<string | null>(null)
   const [modelName, setModelName] = useState<string | null>(null)
-  const [providerType, setproviderType] =useState<string>("")
+  const [providerType, setProviderType] = useState<string | null>(null)
   const [customPrompt, setCustomPrompt] = useState<string>("")
   const [hasChanges, setHasChanges] = useState(false)
 
   // Sync local state with settings
   useEffect(() => {
-    if (settings) {
-      setProviderId(settings.user_access_provider ?? null)
-      setModelName(settings.model_name ?? null)
-      setProviderType(settings.provider_type ?? null)
-      setCustomPrompt(settings.custom_system_prompt || "")
-    } else {
-      // Reset to defaults if no settings
-      setProviderId(null)
-      setModelName(null)
-      setCustomPrompt("")
-    }
+    setProviderId(agent.user_access_provider ?? null)
+    setModelName(agent.model_name ?? null)
+    setProviderType(agent.provider_type ?? null)
+    setCustomPrompt(agent.custom_system_prompt || "")
     setHasChanges(false)
-  }, [settings])
+  }, [agent])
 
   // Track changes
   useEffect(() => {
-    const currentProviderId = settings?.user_access_provider ?? null
-    const currentModelName = settings?.model_name ?? null
-    const currentPrompt = settings?.custom_system_prompt || ""
-    const currentProviderType = settings?.provider_type ?? null
+    const currentProviderId = agent.user_access_provider ?? null
+    const currentModelName = agent.model_name ?? null
+    const currentPrompt = agent.custom_system_prompt || ""
+    const currentProviderType = agent.provider_type ?? null
 
     const changed =
       providerId !== currentProviderId ||
       modelName !== currentModelName ||
       customPrompt !== currentPrompt ||
-      providerType ! == providerType 
+      providerType !== currentProviderType
 
     setHasChanges(changed)
-  }, [providerId, modelName, customPrompt, providerType settings])
+  }, [providerId, modelName, customPrompt, providerType, agent])
+
+  const updateMutation = useMutation({
+    mutationFn: (data: UserAgentConfigUpdate) =>
+      AgentsService.updateAgent({
+        agentId: agent.id,
+        requestBody: data,
+      }),
+    onSuccess: (updated) => {
+      showSuccessToast("Saved your agent settings")
+      setHasChanges(false)
+      queryClient.invalidateQueries({ queryKey: ["agents"] })
+      queryClient.invalidateQueries({ queryKey: ["agent", agent.id] })
+      // refresh local state from response if present
+      if (updated) {
+        setProviderId(updated.user_access_provider ?? null)
+        setModelName(updated.model_name ?? null)
+        setProviderType(updated.provider_type ?? null)
+        setCustomPrompt(updated.custom_system_prompt || "")
+      }
+    },
+    onError: (err) => {
+      const message =
+        (err as any)?.body?.detail || "Failed to save agent settings"
+      showErrorToast(message)
+    },
+  })
+
+  const isLoading = false
+  const isUpdating = updateMutation.isPending
+  const isDeleting = false
 
   // Handle save
   const handleSave = async () => {
-    await updateSettings({
+    const payload: UserAgentConfigUpdate = {
+      provider_type_id: agent.provider_type_id,
       user_access_provider: providerId,
-      provider_type: providerType,
-      model_name: modelName,
+      provider_type: providerType ?? undefined,
+      model_name: modelName ?? undefined,
       custom_system_prompt: customPrompt || null,
-    })
+    }
+    await updateMutation.mutateAsync(payload)
   }
 
   // Handle delete (revert to agent defaults)
   const handleDelete = async () => {
-    await deleteSettings()
+    setProviderId(agent.user_access_provider ?? null)
+    setModelName(agent.model_name ?? null)
+    setProviderType(agent.provider_type ?? null)
+    setCustomPrompt(agent.custom_system_prompt || "")
+    setHasChanges(false)
   }
 
   if (isLoading) {
@@ -136,7 +164,7 @@ export function ({
         <ProviderModelSelector
           providerId={providerId}
           modelName={modelName}
-          agentDefaultModel={agent.model_name}
+          agentDefaultModel={agent.model_name ?? ""}
           onProviderChange={setProviderId}
           onModelChange={setModelName}
           showModelOverride={true}
@@ -166,7 +194,7 @@ export function ({
         <Button
           variant="outline"
           onClick={handleDelete}
-          disabled={isDeleting || !settings}
+          disabled={isDeleting}
           className="gap-1"
         >
           {isDeleting ? (
@@ -194,4 +222,4 @@ export function ({
   )
 }
 
-export default UserAgentConfigUpdate
+export default AgentModelSettings

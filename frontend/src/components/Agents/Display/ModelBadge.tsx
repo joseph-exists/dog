@@ -18,7 +18,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import type { LLMProviderType } from "@/services/llmCatalogService"
 
 interface ModelBadgeProps {
   /** Model display name */
@@ -28,7 +27,7 @@ interface ModelBadgeProps {
   /** Whether this is the default model for its provider */
   isDefault?: boolean
   /** Provider type for color coding */
-  providerType?: LLMProviderType
+  providerType?: string
   /** Show provider badge */
   showProvider?: boolean
   /** Size variant */
@@ -40,7 +39,7 @@ interface ModelBadgeProps {
 /**
  * Provider colors for visual distinction
  */
-const PROVIDER_COLORS: Record<LLMProviderType, string> = {
+const PROVIDER_COLORS: Record<string, string> = {
   empty: "",
   openai: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   anthropic: "bg-orange-500/10 text-orange-600 border-orange-500/20",
@@ -51,7 +50,7 @@ const PROVIDER_COLORS: Record<LLMProviderType, string> = {
 /**
  * Provider short labels for badges
  */
-const PROVIDER_SHORT_LABELS: Record<LLMProviderType, string> = {
+const PROVIDER_SHORT_LABELS: Record<string, string> = {
   empty: "",
   openai: "OpenAI",
   anthropic: "Claude",

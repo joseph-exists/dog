@@ -8,8 +8,11 @@
  * - Clear visual distinction between system default and user provider
  */
 
+import { useQuery } from "@tanstack/react-query"
 import { Cloud, Key } from "lucide-react"
 
+import { LlmProvidersService } from "@/client/sdk.gen"
+import type { UserAccessProviderPublic } from "@/client/types.gen"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
 import {
@@ -22,11 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import useLlmCatalog from "@/hooks/useLlmCatalog"
-import { useLlmProviders } from "@/hooks/useLlmProviders"
 import { cn } from "@/lib/utils"
-import type { UserAccessProviderViewModel } from "@/services/userAccessProviderService"
-import ModelCombobox from "./ModelCombobox.tsx"
+import ModelCombobox from "./ModelCombobox"
 import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 interface ProviderModelSelectorProps {
@@ -78,9 +78,10 @@ function UserProviderIndicator({
   provider,
   className,
 }: {
-  provider: UserAccessProviderViewModel
+  provider: UserAccessProviderPublic
   className?: string
 }) {
+  const status = provider.is_validated ? "verified" : "unknown"
   return (
     <div
       className={cn(
@@ -90,7 +91,7 @@ function UserProviderIndicator({
     >
       <Key className="size-4 text-green-500" />
       <span className="text-sm text-muted-foreground">Using your API key</span>
-      <ProviderStatusBadge status={provider.status} size="sm" />
+      <ProviderStatusBadge status={status} size="sm" />
     </div>
   )
 }
@@ -107,15 +108,12 @@ export function ProviderModelSelector({
   size = "default",
   className,
 }: ProviderModelSelectorProps) {
-  const {
-    providers,
-    hasAnyProvider,
-    isLoading: providersLoading,
-  } = useLlmProviders()
-  const {
-    isLoading: catalogLoading,
-    formatModelName,
-  } = useLlmCatalog()
+  const { data: providersResponse, isLoading: providersLoading } = useQuery({
+    queryKey: ["llm-providers"],
+    queryFn: () => LlmProvidersService.listProviders(),
+  })
+  const providers: UserAccessProviderPublic[] = providersResponse?.data || []
+  const hasAnyProvider = providers.length > 0
 
 
   // Get selected provider
@@ -147,7 +145,7 @@ export function ProviderModelSelector({
   }
 
   const isCompact = size === "compact"
-  const isLoading = providersLoading || catalogLoading
+  const isLoading = providersLoading
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -186,20 +184,20 @@ export function ProviderModelSelector({
                     <SelectItem
                       key={provider.id}
                       value={provider.id}
-                      disabled={!provider.is_usable}
+                      disabled={provider.is_enabled === false}
                     >
                       <div className="flex items-center gap-2">
                         <Key className="size-4 text-green-500" />
                         <span>{provider.name}</span>
-                        {showProviderStatus && (
-                          <ProviderStatusBadge
-                            status={provider.status}
-                            size="sm"
-                          />
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
+            {showProviderStatus && (
+              <ProviderStatusBadge
+                status={provider.is_validated ? "verified" : "unknown"}
+                size="sm"
+              />
+            )}
+          </div>
+        </SelectItem>
+      ))}
                 </SelectGroup>
               </>
             )}
@@ -221,7 +219,7 @@ export function ProviderModelSelector({
           <ModelCombobox
             value={modelName || agentDefaultModel}
             onChange={handleModelChange}
-            placeholder={`Select model (default: ${formatModelName(agentDefaultModel)})`}
+            placeholder={`Select model (default: ${agentDefaultModel || "auto"})`}
             disabled={disabled}
             className={isCompact ? "h-8 text-sm" : ""}
           />

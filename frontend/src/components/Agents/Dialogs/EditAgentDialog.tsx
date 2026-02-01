@@ -21,12 +21,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
-import {
-  AgentsService,
-} from "@/client"
-  import type {
+import { AgentsService } from "@/client/sdk.gen"
+import type {
   UserAgentConfigCreate,
   UserAgentConfigPublic,
+  UserAgentConfigUpdate,
 } from "@/client/types.gen"
 import AgentAvatar from "../Display/AgentAvatar"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
@@ -34,13 +33,13 @@ import { validateAgentFormData } from "../utils/agentValidation"
 
 interface EditAgentDialogProps {
   /** The agent to edit */
-  agent: AgentViewModel
+  agent: UserAgentConfigPublic
   /** Custom trigger element (defaults to "Edit" button) */
   trigger?: React.ReactNode
   /** Callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void
   /** Callback when agent is updated successfully */
-  onSuccess?: (agent: AgentViewModel) => void
+  onSuccess?: (agent: UserAgentConfigPublic) => void
   /** Additional classes for the trigger */
   className?: string
 }
@@ -52,6 +51,16 @@ export default function EditAgentDialog({
   onSuccess,
   className,
 }: EditAgentDialogProps) {
+  const sanitizedAgent: Partial<UserAgentConfigCreate> = {
+    name: agent.name ?? "",
+    slug: agent.slug ?? "",
+    description: agent.description ?? "",
+    model_name: agent.model_name ?? "",
+    system_prompt: agent.system_prompt ?? "",
+    participation_mode: agent.participation_mode ?? "on_mention",
+    provider_type_id: agent.provider_type_id,
+    user_access_provider: agent.user_access_provider ?? undefined,
+  }
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState<AgentFormData | null>(null)
   const queryClient = useQueryClient()
@@ -66,8 +75,11 @@ export default function EditAgentDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: UpdateAgentInput) =>
-      AgentService.updateAgent(agent.id, data),
+    mutationFn: (data: UserAgentConfigUpdate) =>
+      AgentsService.updateAgent({
+        agentId: agent.id,
+        requestBody: data,
+      }),
     onSuccess: (updatedAgent) => {
       showSuccessToast(`Agent "${updatedAgent.name}" - wow. that actually worked?  neat.`)
       handleOpenChange(false)
@@ -104,7 +116,9 @@ export default function EditAgentDialog({
     })
 
     // Only send fields that changed
-    const payload: UpdateAgentInput = {}
+    const payload: UserAgentConfigUpdate = {
+      provider_type_id: agent.provider_type_id,
+    }
 
     if (formData.name.trim() !== agent.name) {
       payload.name = formData.name.trim()
@@ -122,9 +136,6 @@ export default function EditAgentDialog({
     }
     if (formData.participation_mode !== agent.participation_mode) {
       payload.participation_mode = formData.participation_mode
-    }
-    if (formData.provider_type !== agent.provider_type) {
-      payload.provider_type = formData.provider_type
     }
     if (formData.user_access_provider !== agent.user_access_provider) {
       payload.user_access_provider = formData.user_access_provider
@@ -154,7 +165,7 @@ export default function EditAgentDialog({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AgentAvatar name={agent.name} size="sm" />
+            <AgentAvatar name={agent.name ?? "Agent"} size="sm" />
             Edit Agent
           </DialogTitle>
           <DialogDescription>
@@ -163,7 +174,7 @@ export default function EditAgentDialog({
         </DialogHeader>
 
         <AgentForm
-          initialData={agent}
+          initialData={sanitizedAgent}
           onChange={handleFormChange}
           isEditMode={true}
         />

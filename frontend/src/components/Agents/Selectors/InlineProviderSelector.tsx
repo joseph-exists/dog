@@ -7,9 +7,12 @@
  * For full settings functionality, use AgentModelSettings instead.
  */
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Cloud, Key, Loader2, Settings } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
+import { AgentsService, LlmProvidersService } from "@/client/sdk.gen"
+import type { UserAgentConfigPublic } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -18,11 +21,11 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { ProviderModelSelector } from "./ProviderModelSelector"
-import type { UserAgentConfigPublic } from "@/client"
-import { AgentsService } from "@/client"
+import ProviderStatusBadge from "../Display/ProviderStatusBadge"
 
 interface AgentProviderSelectorProps {
   /** The agent to configure */
+  agent: UserAgentConfigPublic
   /** Callback when settings are saved */
   onSettingsSaved?: () => void
   /** Additional className */
@@ -36,21 +39,15 @@ interface AgentProviderSelectorProps {
  */
 function InlineDisplay({
   agent,
+  provider,
   className,
 }: {
-  agent: AgentViewModel
+  agent: UserAgentConfigPublic
+  provider: { name: string; is_validated?: boolean } | null
   className?: string
 }) {
-  const { isUsingSystemDefault, effectiveModelDisplay, provider, isLoading } =
-    useAgentSettings({ agent })
-
-  if (isLoading) {
-    return (
-      <div className={cn("flex items-center gap-2 text-sm", className)}>
-        <span className="text-muted-foreground">Loading...</span>
-      </div>
-    )
-  }
+  const isUsingSystemDefault = !agent.user_access_provider
+  const effectiveModelDisplay = agent.model_name ?? "Default model"
 
   return (
     <div className={cn("flex items-center gap-2 text-sm", className)}>
@@ -64,7 +61,10 @@ function InlineDisplay({
           <Key className="size-4 text-green-500" />
           <span className="font-medium">{provider?.name || "Custom"}</span>
           {provider && (
-            <ProviderStatusBadge status={provider.status} size="sm" />
+            <ProviderStatusBadge
+              status={provider.is_validated ? "verified" : "unknown"}
+              size="sm"
+            />
           )}
         </>
       )}
@@ -80,25 +80,43 @@ export function AgentProviderSelector({
   className,
   variant = "button",
 }: AgentProviderSelectorProps) {
-  const {
-    settings,
-    isUsingSystemDefault,
-    effectiveModelDisplay,
-    provider,
-    updateSettings,
-    isUpdating,
-  } = useAgentSettings({ agent })
+  const queryClient = useQueryClient()
+  const { data: providersResponse } = useQuery({
+    queryKey: ["llm-providers"],
+    queryFn: () => LlmProvidersService.listProviders(),
+  })
+  const providers = providersResponse?.data || []
+  const provider = useMemo(
+    () => providers.find((p) => p.id === agent.user_access_provider) ?? null,
+    [providers, agent.user_access_provider],
+  )
+
+  const isUsingSystemDefault = !agent.user_access_provider
+  const effectiveModelDisplay = agent.model_name ?? "Default model"
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { providerId: string | null; modelName: string | null }) =>
+      AgentsService.updateAgent({
+        agentId: agent.id,
+        requestBody: {
+          provider_type_id: agent.provider_type_id,
+          user_access_provider: data.providerId,
+          model_name: data.modelName ?? undefined,
+        },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agents"] })
+      queryClient.invalidateQueries({ queryKey: ["agent", agent.id] })
+      onSettingsSaved?.()
+    },
+  })
 
   // Handle save from popover
   const handleSave = async (
     providerId: string | null,
     modelName: string | null,
   ) => {
-    await updateSettings({
-      user_access_provider: providerId,
-      model_name: modelName,
-    })
-    onSettingsSaved?.()
+    await updateMutation.mutateAsync({ providerId, modelName })
   }
 
   if (variant === "inline") {
@@ -112,16 +130,15 @@ export function AgentProviderSelector({
               className,
             )}
           >
-            <InlineDisplay agent={agent} />
+            <InlineDisplay agent={agent} provider={provider} />
             <Settings className="size-3 text-muted-foreground" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-4" align="start">
           <ProviderModelSelectorWithSave
             agent={agent}
-            settings={settings ?? null}
             onSave={handleSave}
-            isSaving={isUpdating}
+            isSaving={updateMutation.isPending}
           />
         </PopoverContent>
       </Popover>
@@ -140,16 +157,18 @@ export function AgentProviderSelector({
           )}
           <span>{effectiveModelDisplay}</span>
           {provider && (
-            <ProviderStatusBadge status={provider.status} size="sm" />
+            <ProviderStatusBadge
+              status={provider.is_validated ? "verified" : "unknown"}
+              size="sm"
+            />
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4" align="start">
         <ProviderModelSelectorWithSave
           agent={agent}
-          settings={settings ?? null}
           onSave={handleSave}
-          isSaving={isUpdating}
+          isSaving={updateMutation.isPending}
         />
       </PopoverContent>
     </Popover>
@@ -161,38 +180,36 @@ export function AgentProviderSelector({
  */
 function ProviderModelSelectorWithSave({
   agent,
-  settings,
   onSave,
   isSaving,
 }: {
-  agent: AgentViewModel
-  settings: UserAgentConfigPublic | null
+  agent: UserAgentConfigPublic
   onSave: (providerId: string | null, modelName: string | null) => Promise<void>
   isSaving: boolean
 }) {
   const [providerId, setProviderId] = useState<string | null>(
-    settings?.user_access_provider ?? null,
+    agent.user_access_provider ?? null,
   )
   const [modelName, setModelName] = useState<string | null>(
-    settings?.model_name ?? null,
+    agent.model_name ?? null,
   )
   const [hasChanges, setHasChanges] = useState(false)
 
   // Sync with settings
   useEffect(() => {
-    setProviderId(settings?.user_access_provider ?? null)
-    setModelName(settings?.model_name ?? null)
+    setProviderId(agent.user_access_provider ?? null)
+    setModelName(agent.model_name ?? null)
     setHasChanges(false)
-  }, [settings])
+  }, [agent])
 
   // Track changes
   useEffect(() => {
-    const currentProviderId = settings?.user_access_provider ?? null
-    const currentModelName = settings?.model_name ?? null
+    const currentProviderId = agent.user_access_provider ?? null
+    const currentModelName = agent.model_name ?? null
     setHasChanges(
       providerId !== currentProviderId || modelName !== currentModelName,
     )
-  }, [providerId, modelName, settings])
+  }, [providerId, modelName, agent])
 
   const handleSave = () => {
     onSave(providerId, modelName)
@@ -204,10 +221,11 @@ function ProviderModelSelectorWithSave({
       <ProviderModelSelector
         providerId={providerId}
         modelName={modelName}
-        agentDefaultModel={agent.model_name}
+        agentDefaultModel={agent.model_name ?? ""}
         onProviderChange={setProviderId}
         onModelChange={setModelName}
         size="compact"
+        showProviderStatus
       />
       <Button
         onClick={handleSave}
