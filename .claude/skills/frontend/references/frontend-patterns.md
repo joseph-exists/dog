@@ -19,10 +19,10 @@ Multiple specialized skills will handle these frontend tasks:
 - Cross the boundary to the backend
 - Look up models files
 - Modify any services
-- Create new utilities or hooks without explicit human authorization
+- Create new utilities, services, view models, or hooks without explicit human authorization
 - Create throwaway code
 - Skip inline documentation (must always create accurate JSDoc)
-- **Perform data processing on the frontend** - all processing happens on the backend; frontend processing will cause project failure
+- **Perform data processing on the frontend** - all processing should be on the backend; frontend processing will cause project failure unless previously approved.
 
 ### When should it be invoked vs. other skills?
 
@@ -47,18 +47,14 @@ Multiple specialized skills will handle these frontend tasks:
 
 ### Unique Codebase Patterns
 
-1. **Service Layer with ViewModels** (MANDATORY)
-   - All API calls go through `src/services/`
-   - Services transform API responses to UI-optimized ViewModels
-   - Never use raw API types directly in components
+1. **USE THE EXPORTED CLIENT!**
 
-2. **Aggregate Hooks Pattern**
+2. **Aggregate Hooks Pattern only in special cases**
    - Composite hooks delegate to specialized hooks (e.g., `useRoom` wraps `useRoomMessages`)
    - Derived state computed via `useMemo`
 
-3. **Polling → WebSocket/SSE Migration** (IN PROGRESS)
-   - Current: `refetchInterval` for real-time updates
-   - Planned: Replace with WebSocket/SSE from event-sourcing system
+3. **WebSocket/SSE** complete
+  Replaced polling with WebSocket/SSE from event-sourcing system
    - Impact on near-term work: TBD
 
 ### Auto-Generated API Client Workflow
@@ -99,7 +95,7 @@ src/
 │   └── ui/           # shadcn/ui primitives (install via shadcn CLI)
 ├── hooks/            # Custom hooks (useAuth, useRoom, etc.)
 ├── routes/           # TanStack Router file-based routes
-├── services/         # Service layer with ViewModels
+├── services/         # Service layer when absolutely necessary and preapproved
 └── lib/              # Utilities (cn(), etc.)
 ```
 
@@ -111,7 +107,7 @@ src/
 | Hooks | camelCase with `use` prefix | `useAuth.ts`, `useRoom.ts` |
 | Services | camelCase with `Service` suffix | `roomService.ts` |
 | Routes | kebab-case matching URL | `room-v2.$roomId.tsx` |
-| Types/Interfaces | PascalCase | `RoomViewModel`, `MessageViewModel` |
+
 
 ### Component Principles
 
@@ -137,7 +133,7 @@ import { useState } from "react"
 
 import { SomeService } from "@/client/sdk.gen"
 import { Button } from "@/components/ui/button"
-import type { SomeViewModel } from "@/services/someService"
+
 
 interface ComponentNameProps {
   requiredProp: string
@@ -188,19 +184,19 @@ refetchInterval: enablePolling ? 5000 : false
 ### Data Flow
 
 ```
-Component → Service (ViewModel) → API Client (sdk.gen) → Backend
+Component  → exported API Client (sdk.gen) → Backend
     ↑                                                        ↓
     ←←←←←←←←←← TanStack Query (cache, loading, error) ←←←←←←←
 ```
 
-1. Components call services (never API client directly)
-2. Services transform responses to ViewModels
+1. Components call the exported API client
+2. Services should be eliminated on the frontend
 3. TanStack Query handles caching, loading states, error states
 4. Mutations update server state and invalidate relevant queries
 
 ---
 
-## Forms - DECIDED
+## Forms 
 
 **Default**: Full stack (React Hook Form + Zod + shadcn/ui)
 
@@ -292,7 +288,7 @@ function MyForm() {
 
 ---
 
-## Error Handling - DECIDED
+## Error Handling -
 
 Use `ApiError` from `src/client/core/ApiError.ts` as the primary error type.
 
@@ -369,8 +365,6 @@ npm run build        # Production build
 
 ### DO NOT
 
-- Use raw API types in components (use ViewModels)
-- Create inline API calls (use services)
 - Skip TypeScript types or use `any`
 - Create new hooks without approval
 - Edit files in `src/client/` (auto-generated)
@@ -389,11 +383,3 @@ npm run build        # Production build
 - Prop drilling beyond 2 levels (use hooks or context)
 
 ---
-
-## Open Questions Remaining
-
-- [ ] Exact skill decomposition (which tasks map to which skills)
-- [ ] WebSocket/SSE migration timeline and impact assessment
-- [ ] Event-emit strategy for Rooms - how does this affect frontend state management?
-- [ ] Routing caveats for agents and rooms - what are the specific exceptions to standard TanStack Router patterns?
-- [ ] Complex state logic on frontend - what patterns will we use, if any?

@@ -17,15 +17,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import type { AgentViewModel } from "@/services/agentService"
-import { useAgentSettings } from "@/hooks/useAgentSettings"
 import { ProviderModelSelector } from "./ProviderModelSelector"
-import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 import type { UserAgentConfigPublic } from "@/client"
+import { AgentsService } from "@/client"
 
 interface AgentProviderSelectorProps {
   /** The agent to configure */
-  agent: AgentViewModel
   /** Callback when settings are saved */
   onSettingsSaved?: () => void
   /** Additional className */

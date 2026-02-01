@@ -23,10 +23,8 @@ import {
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
-  AgentService,
-  type AgentViewModel,
-  type UpdateAgentInput,
-} from "@/services/agentService"
+  AgentsService
+} from "@/client"
 import AgentAvatar from "../Display/AgentAvatar"
 import {
   AgentModeBadge,
@@ -113,7 +111,7 @@ export default function AgentDetailDialog({
   // Fetch full agent data when dialog opens
   const { data: agent, isLoading } = useQuery({
     queryKey: ["agent", agentId],
-    queryFn: () => AgentService.getAgent(agentId),
+    queryFn: () => AgentsService.getAgent(agentId),
     enabled: isOpen,
   })
 

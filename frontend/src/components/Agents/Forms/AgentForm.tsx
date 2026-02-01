@@ -4,31 +4,26 @@
  * Shared form for creating and editing agents using React Hook Form + Zod.
  *
  * Features:
- * - Name and slug inputs (slug auto-generated on create)
- * - Description textarea with character count
- * - Provider selector (UserAccessProvider for credentials)
- * - Model selector (from LLM catalog)
+ * - Name input, slug display with auto-generation
+ * - Description textarea
+ * - UserAccessProvider selector (for credentials)
+ * - Model selector
  * - System prompt textarea with preview
  * - Participation mode selector
- *
- * Three-Way Binding Architecture:
- * ================================
- * UserAgentConfig requires three aligned components:
- *   1. user_access_provider (UUID) → WHERE + WITH WHAT (endpoint + credentials)
- *   2. provider_type (string)      → HOW (API format - necessary)
- *   3. model_name (string)         → WHAT (model identifier)
- *
- * This form manages all three, deriving provider_type from model_name.
  */
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useQuery } from "@tanstack/react-query"
 import { ChevronDownIcon } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import type { LLMProviderType } from "@/services/llmCatalogService"
-import { parseProviderFromModelName } from "@/components/Agents/utils/modelParsing"
+import { AgentsService, LlmProvidersService } from "@/client/sdk.gen"
+import type {
+  UserAccessProviderPublic,
+  UserAgentConfigCreate,
+} from "@/client/types.gen"
 import ModelCombobox from "@/components/Agents/Selectors/ModelCombobox"
 import { ProviderSelect } from "../Selectors/ProviderSelect"
 
@@ -58,14 +53,6 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
-import {
-  AgentService,
-  type AgentViewModel,
-  type ParticipationMode,
-} from "@/services/agentService"
-import { useLlmProviders } from "@/hooks/useLlmProviders"
-import type { UserAccessProviderViewModel } from "@/services/userAccessProviderService"
-
 // ============================================================================
 // Constants
 // ============================================================================
@@ -74,7 +61,8 @@ const PARTICIPATION_MODES = [
   {
     value: "on_mention",
     label: "say my name, sucker",
-    description: "responds when @mentioned, this makes naming agents an interesting pain in the ass and this mechanic sucks",
+    description:
+      "responds when @mentioned, this makes naming agents an interesting pain in the ass and this mechanic sucks",
   },
   {
     value: "always",
@@ -84,7 +72,8 @@ const PARTICIPATION_MODES = [
   {
     value: "manual",
     label: "manual intervention required",
-    description: "this might not work yet, but give it a shot and let me know",
+    description:
+      "this might not work yet, but give it a shot and let me know",
   },
 ] as const
 
@@ -95,55 +84,39 @@ const PARTICIPATION_MODES = [
 /**
  * Zod validation schema for AgentForm
  *
- * Validation rules:
- * - name: Required, 1-100 characters
- * - slug: Required (auto-generated in create mode)
- * - description: Optional, max 500 characters
- * - model_name: Required (format: "provider:model" or just "model")
- * - system_prompt: Optional
- * - participation_mode: Required, one of the defined modes
- * - user_access_provider: Optional UUID
- *
- * Note: provider_type is derived from model_name, not a user input
+ * Based on UserAgentConfigCreate from the exported client types
  */
 const agentFormSchema = z.object({
   name: z
     .string()
-    .min(1, "gimme a name, pal")
-    .max(100, "you're going to have to type this, you know."),
+    .min(1, "Name is required")
+    .max(100, "Name must be 100 characters or less"),
   slug: z.string().min(1, "Slug is required"),
-  description: z.string().max(500, "Description must be 500 characters or less, you should complain about it, please"),
-  model_name: z.string().min(1, "Model IS REQUIRED???"),
-  system_prompt: z.string(),
-  participation_mode: z.enum(["on_mention", "always", "manual"]),
-  user_access_provider: z.string().nullable(),
+  description: z
+    .string()
+    .max(500, "Description must be 500 characters or less")
+    .optional(),
+  user_access_provider: z.string().nullable().optional(),
+  provider_type_id: z.string().min(1, "Provider type is required"),
+  model_name: z.string().optional(),
+  system_prompt: z.string().optional(),
+  participation_mode: z.string().optional(),
 })
 
 type AgentFormValues = z.infer<typeof agentFormSchema>
 
 // ============================================================================
-// Exported Types
+// Component Props
 // ============================================================================
 
-export interface AgentFormData {
-  name: string
-  slug: string
-  description: string
-  model_name: string
-  system_prompt: string
-  participation_mode: ParticipationMode
-  provider_type: LLMProviderType
-  user_access_provider: string | null
-}
-
 interface AgentFormProps {
-  /** Initial values (for edit mode) */
-  initialData?: Partial<AgentViewModel>
-  /** Called when form data changes */
-  onChange: (data: AgentFormData) => void
-  /** Whether this is edit mode (affects slug editability) */
+  /** Whether this is editing an existing agent or creating a new one */
   isEditMode?: boolean
-  /** Additional classes */
+  /** Initial values for edit mode */
+  initialValues?: Partial<UserAgentConfigCreate>
+  /** Callback when form values change */
+  onChange: (values: Partial<UserAgentConfigCreate>) => void
+  /** Optional className for styling */
   className?: string
 }
 
@@ -152,9 +125,9 @@ interface AgentFormProps {
 // ============================================================================
 
 export default function AgentForm({
-  initialData,
-  onChange,
   isEditMode = false,
+  initialValues,
+  onChange,
   className,
 }: AgentFormProps) {
   // ==========================================================================
@@ -165,13 +138,14 @@ export default function AgentForm({
     resolver: zodResolver(agentFormSchema),
     mode: "onChange",
     defaultValues: {
-      name: initialData?.name || "",
-      slug: initialData?.slug || "",
-      description: initialData?.description || "",
-      model_name: initialData?.model_name || "gpt-4o-mini",
-      system_prompt: initialData?.system_prompt || "",
-      participation_mode: initialData?.participation_mode || "on_mention",
-      user_access_provider: initialData?.user_access_provider ?? null,
+      name: initialValues?.name || "",
+      slug: initialValues?.slug || "",
+      description: initialValues?.description || "",
+      user_access_provider: initialValues?.user_access_provider || undefined,
+      provider_type_id: initialValues?.provider_type_id || "",
+      model_name: initialValues?.model_name || "",
+      system_prompt: initialValues?.system_prompt || "",
+      participation_mode: initialValues?.participation_mode || "on_mention",
     },
   })
 
@@ -179,29 +153,23 @@ export default function AgentForm({
   // Data Fetching
   // ==========================================================================
 
-  const { providers, isLoading: providersLoading } = useLlmProviders()
+  const { data: providersResponse, isLoading: providersLoading } = useQuery({
+    queryKey: ["llm-providers"],
+    queryFn: () => LlmProvidersService.listProviders(),
+  })
+
+  const providers: UserAccessProviderPublic[] =
+    providersResponse?.data || []
 
   // ==========================================================================
   // Derived Values
   // ==========================================================================
 
   const selectedProviderId = form.watch("user_access_provider")
-  const modelName = form.watch("model_name")
   const systemPrompt = form.watch("system_prompt")
   const description = form.watch("description")
-
   const selectedProvider =
     providers.find((p) => p.id === selectedProviderId) ?? null
-
-  /**
-   * Derive provider_type from ??? 
-   *
-   * Three-Way Binding Note:
-   * The provider_type "openai"
-   * It does NOT come from UserAccessProvider, which only stores credentials.
-   */
-  const derivedProviderType: LLMProviderType =
-    parseProviderFromModelName(modelName) ?? "empty"
 
   // ==========================================================================
   // Auto-Generate Slug (Create Mode Only)
@@ -211,14 +179,15 @@ export default function AgentForm({
     if (isEditMode || form.getValues("slug")) return
 
     let isActive = true
-    AgentService.generateSlug()
+    AgentsService.generateAgentSlug()
       .then((generatedSlug) => {
-        if (isActive) {
+        if (isActive && typeof generatedSlug === "string") {
           form.setValue("slug", generatedSlug, { shouldValidate: true })
         }
       })
-      .catch(() => {
-        // Silently fail - user can manually enter slug if needed
+      .catch((error) => {
+        console.error("Failed to generate slug:", error)
+        // TODO: Add retry mechanism or user notification
       })
 
     return () => {
@@ -233,7 +202,11 @@ export default function AgentForm({
   useEffect(() => {
     const subscription = form.watch((values) => {
       // Only notify if we have all required values
-      if (!values.name || !values.slug) return
+      if (!values.name || !values.slug || !values.provider_type_id) return
+
+      // Get provider_type_id from selected provider or use existing value
+      const providerTypeId =
+        selectedProvider?.alpha_provider_type_id || values.provider_type_id
 
       onChange({
         name: values.name,
@@ -242,13 +215,13 @@ export default function AgentForm({
         model_name: values.model_name || "",
         system_prompt: values.system_prompt || "",
         participation_mode: values.participation_mode || "on_mention",
-        provider_type: derivedProviderType,
-        user_access_provider: values.user_access_provider ?? null,
+        user_access_provider: values.user_access_provider,
+        provider_type_id: providerTypeId,
       })
     })
 
     return () => subscription.unsubscribe()
-  }, [form, onChange, derivedProviderType])
+  }, [form, onChange, selectedProvider])
 
   // ==========================================================================
   // Handlers
@@ -256,9 +229,18 @@ export default function AgentForm({
 
   const handleProviderChange = (
     providerId: string | null,
-    _provider: UserAccessProviderViewModel | null,
+    provider: UserAccessProviderPublic | null,
   ) => {
-    form.setValue("user_access_provider", providerId, { shouldValidate: true })
+    form.setValue("user_access_provider", providerId ?? undefined, {
+      shouldValidate: true,
+    })
+
+    // Update provider_type_id when provider changes
+    if (provider?.alpha_provider_type_id) {
+      form.setValue("provider_type_id", provider.alpha_provider_type_id, {
+        shouldValidate: true,
+      })
+    }
   }
 
   const handleModelChange = (newModelName: string) => {
@@ -322,7 +304,7 @@ export default function AgentForm({
               </FormControl>
               <div className="flex justify-end">
                 <p className="text-xs text-muted-foreground">
-                  {description.length}/500
+                  {description?.length || 0}/500
                 </p>
               </div>
               <FormMessage />
@@ -334,7 +316,7 @@ export default function AgentForm({
         <div className="space-y-2">
           <Label htmlFor="agent-provider">Provider</Label>
           <ProviderSelect
-            value={selectedProviderId}
+            value={selectedProviderId ?? null}
             providers={providers}
             isLoading={providersLoading}
             onChange={handleProviderChange}
@@ -357,10 +339,9 @@ export default function AgentForm({
               </FormLabel>
               <FormControl>
                 <ModelCombobox
-                  value={field.value}
+                  value={field.value ?? ""}
                   onChange={handleModelChange}
                   providerType={undefined}
-                  placeholder="Select a model..."
                 />
               </FormControl>
               <FormDescription>
@@ -404,7 +385,10 @@ export default function AgentForm({
               )}
 
               <FormDescription>
-                these are important later. but you can change them later, too.  don't sweat it too much. unless you want. if you understand them better than i do, you should write me a letter that tells me how smart you are.
+                these are important later. but you can change them later, too.
+                don't sweat it too much. unless you want. if you understand them
+                better than i do, you should write me a letter that tells me how
+                smart you are.
               </FormDescription>
               <FormMessage />
             </FormItem>

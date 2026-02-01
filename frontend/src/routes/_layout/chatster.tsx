@@ -13,7 +13,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Circle, Loader2, Wifi, WifiOff } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
-import MessageInput from "@/components/Chat/MessageInput"
+import MessageInput from "@/components/TESTCHATONLY-NOChat/MessageInput"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,

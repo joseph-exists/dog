@@ -17,8 +17,8 @@ description: |
 ## Critical Rules
 
 1. **Always be processing on the backend** - All data processing happens on backend. Frontend processing causes project failure.
-2. **Always be Using a ViewModel for great honor.** - Using raw API types in components is for engineers who don't respect themselves or their code. Always use services with ViewModels.
-3. **New hooks/utilities require approval and need to be sufficiently justified and validated** - Requires explicit human authorization, and will burn down budget without cause if it was otherwise available in the code base.  When wondering, ask your friends what they think, they might know something neat.
+2. **Always be Using the Client Exports for great honor.** 
+3. **New hooks/utilities require approval and need to be sufficiently justified and validated** - Requires explicit human authorization, and will burn down budget without cause if it was otherwise available in the code base.  When wondering, ask your friends what they think, they might know something neat. Look in the client exports - think about Rules 1 and 2.
 4. **No throwaway code** - All code must be production-ready with JSDoc documentation.
 
 ## Tech Stack
@@ -102,12 +102,11 @@ const mutation = useMutation({
 
 ## Attention paid, we must prove
 
-- We always use ViewModels- if you see raw API types in components, flag it with a note for a reward.
-- We always use services - if you see an inline API calls, flag it for a reward.
+- We always use exported client functions and types. if you see otherwise in components, flag it with a note for a reward
 - we always always always use TypeScript types and `any` is very bad cricket - we will get in trouble, so flag it to help your friends out!
 - We always get approval before we create a hook - the approval needs to be on the ticket before the code is worked on.
-- we always respect `src/client/` and always leave it alone. (auto-generated)
-- we respect the sanctity of  `src/components/ui/` only with shadcn CLI *(and use the MCP server!)
+- we always respect `src/client/` and never modify it. (it's auto-generated)
+- we respect the sanctity of  `src/components/ui/`  (and use the shadcn MCP server!)
 - we always use WebSockets, unless we're using SSE and we have documentation and validation. if we see `refetchInterval` in any code, we flag it, finish our immediate task, and write a pri 1 ticket.
 - We always keep our components under 300 lines unless we make an inline apology to the team with validation and engineering reasons why it was the right thing to do (this apology and validation don't count towards the total overage)
 - we always respect ourselves and each other and write great inline // JSDoc documentation
@@ -137,7 +136,7 @@ frontend-test/src/
 │   ├── Rooms/        # Room feature components
 │   └── Stories/      # Story feature components
 ├── hooks/            # TanStack Query hooks
-├── services/         # API service layers (ViewModels)
+├── services/         # try not to - these are being cut out as fast as possible.
 ├── routes/           # TanStack Router pages
 └── lib/utils.ts      # cn() helper
 ```

@@ -31,18 +31,17 @@ import {
 } from "@/components/ui/popover"
 import useLlmCatalog from "@/hooks/useLlmCatalog"
 import { cn } from "@/lib/utils"
-import type { LLMProviderType, ModelOption } from "@/services/llmCatalogService"
+
+// can import ONLY from client sdk and client types.
 
 interface ModelComboboxProps {
   /** Currently selected model value (e.g., "openai:gpt-4o") */
   value: string
   /** Called when selection changes */
   onChange: (value: string) => void
-  /** Filter to specific provider type */
-  providerType?: LLMProviderType
-  /** Placeholder text */
-  placeholder?: string
-  /** Disabled state */
+  /** Filter to specific provider type (hint: provider_type is not the same as user_access_provider) */
+  providerType?: string
+  /** Disable the combobox */
   disabled?: boolean
   /** Additional className for trigger button */
   className?: string
@@ -50,48 +49,6 @@ interface ModelComboboxProps {
   popoverWidth?: string
 }
 
-/**
- * Suggest a display name from a model ID
- * "llama3.2:70b" → "Llama 3.2 70B"
- * "deepseek-r1" → "Deepseek R1"
- * "ft:gpt-4:acme:abc" → "GPT-4 (Fine-tuned)"
- */
-function suggestDisplayName(modelId: string): string {
-  // Handle fine-tuned models
-  if (modelId.startsWith("ft:")) {
-    const parts = modelId.split(":")
-    const baseModel = parts[1] || modelId
-    return `${formatModelPart(baseModel)} (Fine-tuned)`
-  }
-
-  // Handle Ollama-style "model:tag" format
-  const colonParts = modelId.split(":")
-  if (colonParts.length === 2 && !modelId.includes("/")) {
-    const [model, tag] = colonParts
-    return `${formatModelPart(model)} ${formatModelPart(tag)}`
-  }
-
-  // Handle HuggingFace-style "org/model" format
-  if (modelId.includes("/")) {
-    const modelPart = modelId.split("/").pop() || modelId
-    return formatModelPart(modelPart)
-  }
-
-  return formatModelPart(modelId)
-}
-
-/**
- * Format a model part for display
- */
-function formatModelPart(part: string): string {
-  return part
-    .replace(/[-_]/g, " ")
-    .replace(/(\d+)b\b/gi, "$1B") // 70b → 70B
-    .replace(/(\d+)x(\d+)/gi, "$1x$2") // 8x7b → 8x7B
-    .replace(/\b(gpt|llm|ai)\b/gi, (m) => m.toUpperCase())
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim()
-}
 
 export default function ModelCombobox({
   value,

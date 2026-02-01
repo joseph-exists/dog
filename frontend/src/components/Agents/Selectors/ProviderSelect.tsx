@@ -28,27 +28,36 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import type { UserAccessProviderViewModel } from "@/services/userAccessProviderService"
+import type { UserAccessProviderPublic } from "@/client/types.gen"
 import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 /** Special value for "no provider selected" */
 const NONE_VALUE = "__none__"
 
+/**
+ * Derive provider status from UserAccessProviderPublic fields
+ */
+function getProviderStatus(
+  provider: UserAccessProviderPublic,
+): "verified" | "unknown" {
+  return provider.is_validated ? "verified" : "unknown"
+}
+
 interface ProviderSelectProps {
   /** Currently selected provider UUID, or null for "None" */
   value: string | null
   /** List of user's configured providers */
-  providers: UserAccessProviderViewModel[]
+  providers: UserAccessProviderPublic[]
   /** Whether providers are still loading */
   isLoading?: boolean
   /**
    * Called when selection changes
    * @param providerId - UUID or null
-   * @param provider - Full UserAccessProviderViewModel or null
+   * @param provider - Full UserAccessProviderPublic or null
    */
   onChange: (
     providerId: string | null,
-    provider: UserAccessProviderViewModel | null,
+    provider: UserAccessProviderPublic | null,
   ) => void
   /** Disable the dropdown */
   disabled?: boolean
@@ -93,7 +102,7 @@ export function ProviderSelect({
         >
           {currentProvider ? (
             <span className="flex items-center gap-2">
-              <ProviderStatusBadge status={currentProvider.status} />
+              <ProviderStatusBadge status={getProviderStatus(currentProvider)} />
               <span className="truncate">{currentProvider.name}</span>
             </span>
           ) : (
@@ -116,7 +125,7 @@ export function ProviderSelect({
         {providers.map((provider) => (
           <SelectItem key={provider.id} value={provider.id}>
             <div className="flex items-center gap-2 min-w-0">
-              <ProviderStatusBadge status={provider.status} />
+              <ProviderStatusBadge status={getProviderStatus(provider)} />
               <span className="truncate">{provider.name}</span>
             </div>
           </SelectItem>

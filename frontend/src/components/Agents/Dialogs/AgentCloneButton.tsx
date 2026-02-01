@@ -24,10 +24,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
-  AgentService,
-  type AgentViewModel,
-  type CreateAgentInput,
-} from "@/services/agentService"
+  AgentsService,
+} from "@/client"
 
 interface AgentCloneButtonProps {
   /** The agent to clone */
@@ -67,14 +65,14 @@ export default function AgentCloneButton({
   useEffect(() => {
     if (!isOpen || newSlug) return
 
-    AgentService.generateSlug()
+    AgentsService.generateSlug()
       .then((generatedSlug) => setNewSlug(generatedSlug))
       .catch(() => setNewSlug(`${agent.slug}-copy`))
   }, [isOpen, newSlug, agent.slug])
 
   const mutation = useMutation({
     mutationFn: () => {
-      const payload: CreateAgentInput = {
+      const payload:  = {
         name: newName.trim(),
         slug: newSlug.trim(),
         description: agent.description,
@@ -83,12 +81,11 @@ export default function AgentCloneButton({
         participation_mode: agent.participation_mode,
         scope: "personal",
         is_enabled: true,
-        // Explicitly set empty provider - user must configure their own
-        // (don't copy source provider as it may not be accessible to the cloning user)
         provider_type: "empty",
+        // (don't copy user access source provider as it may not be accessible to the cloning user)
         user_access_provider: null,
       }
-      return AgentService.createAgent(payload)
+      return AgentsService.createAgent(payload)
     },
     onSuccess: (clonedAgent) => {
       showSuccessToast(`Cloned as "${clonedAgent.name}"`)
@@ -117,9 +114,9 @@ export default function AgentCloneButton({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Clone Agent</DialogTitle>
+          <DialogTitle>Frends Copyings</DialogTitle>
           <DialogDescription>
-            Create a personal copy of "{agent.name}" that you can customize.
+            make your own friend of "{agent.name}" 
           </DialogDescription>
         </DialogHeader>
 
@@ -130,7 +127,7 @@ export default function AgentCloneButton({
               id="clone-name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="My Custom Agent"
+              placeholder="Fart"
             />
           </div>
           <div className="space-y-2">

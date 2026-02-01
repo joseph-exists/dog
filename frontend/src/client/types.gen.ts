@@ -170,6 +170,8 @@ export type JumpRequest = {
  * Public API response for a model catalog entry.
  */
 export type LLMModelPublic = {
+    id: string;
+    owner_id: string;
     /**
      * Model identifier (e.g., 'gpt-4o', no provider prefix)
      */
@@ -227,7 +229,6 @@ export type LLMModelPublic = {
     secondary_capabilities?: (Array<{
     [key: string]: unknown;
 }> | null);
-    id: string;
 };
 
 /**
@@ -1309,6 +1310,8 @@ export type UpdatePassword = {
  * Input model for creating provider
  */
 export type UserAccessProviderCreate = {
+    id: string;
+    owner_id?: string;
     /**
      * Endpoint URL
      */
@@ -1321,7 +1324,7 @@ export type UserAccessProviderCreate = {
      * if there's more than one provider type.
      */
     provider_type_multiple?: boolean;
-    alpha_provider_type_id: string;
+    alpha_provider_type_id?: string;
     /**
      * Whether this provider is active
      */
@@ -1341,6 +1344,8 @@ export type UserAccessProviderCreate = {
  * Public API response - NEVER includes API key.
  */
 export type UserAccessProviderPublic = {
+    id: string;
+    owner_id?: string;
     /**
      * Endpoint URL
      */
@@ -1353,7 +1358,7 @@ export type UserAccessProviderPublic = {
      * if there's more than one provider type.
      */
     provider_type_multiple?: boolean;
-    alpha_provider_type_id: string;
+    alpha_provider_type_id?: string;
     /**
      * Whether this provider is active
      */
@@ -1367,7 +1372,6 @@ export type UserAccessProviderPublic = {
      */
     is_validated?: boolean;
     description?: (string | null);
-    id: string;
     created_at: string;
 };
 

@@ -61,6 +61,7 @@ Referenced by:
  */
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Plus, TestTube, Trash2 } from "lucide-react"
 import { useState } from "react"
 import type { Resolver } from "react-hook-form"
@@ -68,12 +69,11 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 // ============================================================================
-// Service Layer Imports - Use hooks and services, not direct client
+// Client SDK Imports - Use exported client functions and types
 // ============================================================================
 
-import { useLlmProviders } from "@/hooks/useLlmProviders"
-import { UserAccessProviderService } from "@/services/userAccessProviderService"
-import type { UserAccessProviderViewModel } from "@/services/userAccessProviderService"
+import { LlmProvidersService } from "@/client/sdk.gen"
+import type { UserAccessProviderPublic } from "@/client/types.gen"
 
 // ============================================================================
 // UI Component Imports
@@ -112,7 +112,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Switch } from "@/components/ui/switch"
-import { showErrorToast } from "@/hooks/useCustomToast"
+// import { showErrorToast } from "@/hooks/useCustomToast"
 
 // ============================================================================
 // Form Validation Schema
@@ -149,34 +149,38 @@ type FormData = z.infer<typeof formSchema>
 const UserAccessProviders = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [testingProviderId, setTestingProviderId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   // ==========================================================================
-  // Data Fetching via useLlmProviders Hook
-  // ==========================================================================
-  //
-  // This hook wraps userAccessProviderService and provides:
-  // - Automatic query caching (TanStack Query)
-  // - Computed fields (usableProviders, enabledProviders)
-  // - Mutation helpers (create, update, delete, test)
-  // - Loading and error states
-  //
-  // Using the hook instead of direct service calls ensures:
-  // - Consistent query keys across the app
-  // - Automatic cache invalidation
-  // - Proper error handling with toasts
+  // Data Fetching via Client SDK
   // ==========================================================================
 
-  const {
-    providers,
-    isLoading,
-    error,
-    createProvider,
-    deleteProvider,
-    testProvider,
-    isCreating,
-    isDeleting,
-    isTesting,
-  } = useLlmProviders()
+  const { data: providersResponse, isLoading, error } = useQuery({
+    queryKey: ["llm-providers"],
+    queryFn: () => LlmProvidersService.listProviders(),
+  })
+
+  const providers: UserAccessProviderPublic[] = providersResponse?.data || []
+
+  // ==========================================================================
+  // Mutations
+  // ==========================================================================
+
+  const createProviderMutation = useMutation({
+    mutationFn: (data: any) =>
+      LlmProvidersService.createProvider({ requestBody: data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
+    },
+  })
+
+  const deleteProviderMutation = useMutation({
+    mutationFn: (providerId: string) =>
+      LlmProvidersService.deleteProvider({ providerId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
+    },
+  })
 
   // ==========================================================================
   // Form Setup
@@ -207,34 +211,23 @@ const UserAccessProviders = () => {
   // ==========================================================================
 
   const onSubmit = async (data: FormData) => {
-    // Client-side validation using service utility
-    const validation = UserAccessProviderService.validateProviderConfig(data)
-
-    if (!validation.is_valid) {
-      validation.errors.forEach((err) => showErrorToast(err))
-      return
-    }
-
-    // Show warnings (non-blocking)
-    validation.warnings.forEach((warn) => {
-      console.warn("UserAccessProvider validation warning:", warn)
-    })
-
     try {
-      await createProvider({
+      // TODO: Fix backend type generation - api_key field missing from UserAccessProviderCreate
+      // TODO: Add provider type selector to form
+      await createProviderMutation.mutateAsync({
+        id: crypto.randomUUID(),
         name: data.name,
         api_key: data.api_key,
-        base_url: data.base_url || undefined,
-        description: data.description || undefined,
+        base_url: data.base_url || null,
+        description: data.description || null,
         is_default: data.is_default,
         is_enabled: data.is_enabled,
+        alpha_provider_type_id: "673f1787-8474-4e1c-986c-8e19f14c989c", // OpenAI
       })
 
-      // Success - hook already showed toast
       setIsAddDialogOpen(false)
       form.reset()
     } catch (err) {
-      // Error already handled by hook (toast shown)
       console.error("Failed to create provider:", err)
     }
   }
@@ -253,10 +246,9 @@ const UserAccessProviders = () => {
   const handleTest = async (providerId: string) => {
     setTestingProviderId(providerId)
     try {
-      await testProvider(providerId)
-      // Success toast shown by hook
+      // TODO: Implement test endpoint when backend is ready
+      console.log("Testing provider:", providerId)
     } catch (err) {
-      // Error toast shown by hook
       console.error("Provider test failed:", err)
     } finally {
       setTestingProviderId(null)
@@ -267,17 +259,15 @@ const UserAccessProviders = () => {
   // Delete Handler
   // ==========================================================================
 
-  const handleDelete = async (provider: UserAccessProviderViewModel) => {
+  const handleDelete = async (provider: UserAccessProviderPublic) => {
     if (
       window.confirm(
         `Delete "${provider.name}"?\n\nThis cannot be undone. Any agents using this provider will fail at runtime.`,
       )
     ) {
       try {
-        await deleteProvider(provider.id)
-        // Success toast shown by hook
+        await deleteProviderMutation.mutateAsync(provider.id)
       } catch (err) {
-        // Error toast shown by hook
         console.error("Failed to delete provider:", err)
       }
     }
@@ -427,7 +417,10 @@ const UserAccessProviders = () => {
                       Cancel
                     </Button>
                   </DialogClose>
-                  <LoadingButton type="submit" loading={isCreating}>
+                  <LoadingButton
+                    type="submit"
+                    loading={createProviderMutation.isPending}
+                  >
                     Add Provider
                   </LoadingButton>
                 </DialogFooter>
@@ -486,14 +479,9 @@ const UserAccessProviders = () => {
                         Disabled
                       </Badge>
                     )}
-                    {provider.status === "verified" && (
+                    {provider.is_validated && (
                       <Badge variant="default" className="text-xs">
                         ✓ Verified
-                      </Badge>
-                    )}
-                    {provider.status === "failed" && (
-                      <Badge variant="destructive" className="text-xs">
-                        ✗ Failed
                       </Badge>
                     )}
                   </CardTitle>
@@ -522,7 +510,7 @@ const UserAccessProviders = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleTest(provider.id)}
-                disabled={testingProviderId === provider.id || isTesting}
+                disabled={testingProviderId === provider.id}
               >
                 {testingProviderId === provider.id ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -535,7 +523,7 @@ const UserAccessProviders = () => {
                 variant="destructive"
                 size="sm"
                 onClick={() => handleDelete(provider)}
-                disabled={isDeleting}
+                disabled={deleteProviderMutation.isPending}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete

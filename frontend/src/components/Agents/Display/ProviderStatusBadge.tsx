@@ -17,9 +17,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import type { UserAccessProviderStatus } from "@/services/userAccessProviderService"
 
-type ProviderStatus = UserAccessProviderStatus
+type ProviderStatus = "verified" | "failed" | "unknown"
 
 type ExtendedStatus = ProviderStatus | "system"
 

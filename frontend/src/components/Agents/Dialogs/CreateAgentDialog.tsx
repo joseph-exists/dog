@@ -22,12 +22,10 @@ import {
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
-  AgentService,
-  type AgentViewModel,
-  type CreateAgentInput,
-} from "@/services/agentService"
-import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
-import { validateAgentFormData } from "../utils/agentValidation"
+  AgentsService,
+} from "@/client"
+import AgentForm, from "../Forms/AgentForm"
+
 
 interface CreateAgentDialogProps {
   /** Custom trigger element (defaults to "Create Agent" button) */
@@ -35,7 +33,7 @@ interface CreateAgentDialogProps {
   /** Callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void
   /** Callback when agent is created successfully */
-  onSuccess?: (agent: AgentViewModel) => void
+  onSuccess?: (agent: ) => void
   /** Additional classes for the trigger */
   className?: string
 }
@@ -47,7 +45,7 @@ export default function CreateAgentDialog({
   className,
 }: CreateAgentDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [formData, setFormData] = useState<AgentFormData | null>(null)
+  const [formData, setFormData] = useState<AgaentFormDat | null>(null)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -61,7 +59,7 @@ export default function CreateAgentDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: CreateAgentInput) => AgentService.createAgent(data),
+    mutationFn: (data: CreateAgaentInpusst) => AgentsService.createAgent(data),
     onSuccess: (createdAgent) => {
       showSuccessToast(`Agent "${createdAgent.name}" created successfully.`)
       handleOpenChange(false)
