@@ -10,6 +10,11 @@ import { CopyIcon, Loader2Icon } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
+import { AgentsService } from "@/client/sdk.gen"
+import type {
+  UserAgentConfigCreate,
+  UserAgentConfigPublic,
+} from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -23,15 +28,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
-import {
-  AgentsService,
-} from "@/client"
 
 interface AgentCloneButtonProps {
   /** The agent to clone */
-  agent: AgentViewModel
+  agent: UserAgentConfigPublic
   /** Callback when clone succeeds */
-  onSuccess?: (newAgent: AgentViewModel) => void
+  onSuccess?: (newAgent: UserAgentConfigPublic) => void
   /** Button variant */
   variant?: "default" | "outline" | "ghost"
   /** Button size */
@@ -65,27 +67,31 @@ export default function AgentCloneButton({
   useEffect(() => {
     if (!isOpen || newSlug) return
 
-    AgentsService.generateSlug()
-      .then((generatedSlug) => setNewSlug(generatedSlug))
+    AgentsService.generateAgentSlug()
+      .then((result) => {
+        if (result?.slug) {
+          setNewSlug(result.slug)
+        }
+      })
       .catch(() => setNewSlug(`${agent.slug}-copy`))
   }, [isOpen, newSlug, agent.slug])
 
   const mutation = useMutation({
     mutationFn: () => {
-      const payload:  = {
+      const payload: UserAgentConfigCreate = {
         name: newName.trim(),
         slug: newSlug.trim(),
-        description: agent.description,
-        model_name: agent.model_name,
-        system_prompt: agent.system_prompt,
-        participation_mode: agent.participation_mode,
+        description: agent.description ?? null,
+        model_name: agent.model_name ?? undefined,
+        system_prompt: agent.system_prompt ?? undefined,
+        participation_mode: agent.participation_mode ?? undefined,
         scope: "personal",
         is_enabled: true,
-        provider_type: "empty",
+        provider_type_id: agent.provider_type_id,
         // (don't copy user access source provider as it may not be accessible to the cloning user)
         user_access_provider: null,
       }
-      return AgentsService.createAgent(payload)
+      return AgentsService.createAgent({ requestBody: payload })
     },
     onSuccess: (clonedAgent) => {
       showSuccessToast(`Cloned as "${clonedAgent.name}"`)

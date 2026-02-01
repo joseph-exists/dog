@@ -1053,7 +1053,7 @@ class FrontierAccessProvidersPublic(SQLModel):
 
 class UserAccessProviderBase(SQLModel):
     """Base model for user LLM access provider and API key configurations."""
-    id: uuid.UUID
+    api_key: str | None = Field(default=None, description="New API key to encrypt, if changing")
     owner_id: uuid.UUID = Field(uuid)
     base_url: str | None = Field(default=None, max_length=100, description="Endpoint URL")
     name: str = Field(max_length=100, description="User-friendly name like 'My OpenAI' or 'Work Azure'")
@@ -1154,7 +1154,6 @@ class LLMProviderTypesPublic(SQLModel):
 
 class LLMModelBase(SQLModel):
     """Base model for LLM model catalog entries."""
-    id: uuid.UUID
     owner_id: uuid.UUID
     model_id: str = Field(max_length=100, description="Model identifier (e.g., 'gpt-4o', no provider prefix)")
     display_name: str = Field(max_length=100, description="Human-friendly name (e.g., 'GPT 4o')")

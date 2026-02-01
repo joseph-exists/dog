@@ -22,10 +22,12 @@ import {
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
-  AgentService,
-  type AgentViewModel,
-  type UpdateAgentInput,
-} from "@/services/agentService"
+  AgentsService,
+} from "@/client"
+  import type {
+  UserAgentConfigCreate,
+  UserAgentConfigPublic,
+} from "@/client/types.gen"
 import AgentAvatar from "../Display/AgentAvatar"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
 import { validateAgentFormData } from "../utils/agentValidation"

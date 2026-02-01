@@ -106,7 +106,7 @@ export function ProviderSelect({
               <span className="truncate">{currentProvider.name}</span>
             </span>
           ) : (
-            "None (use system default)"
+            "None"
           )}
         </SelectValue>
       </SelectTrigger>
@@ -114,7 +114,7 @@ export function ProviderSelect({
         {/* None option */}
         <SelectItem value={NONE_VALUE}>
           <span className="text-muted-foreground">
-            None (use system default)
+            None
           </span>
         </SelectItem>
 

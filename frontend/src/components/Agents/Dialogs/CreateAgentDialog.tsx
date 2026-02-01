@@ -10,6 +10,11 @@ import { BotIcon, Loader2Icon, PlusIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
+import { AgentsService } from "@/client/sdk.gen"
+import type {
+  UserAgentConfigCreate,
+  UserAgentConfigPublic,
+} from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,10 +26,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
-import {
-  AgentsService,
-} from "@/client"
-import AgentForm, from "../Forms/AgentForm"
+import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
+import { validateAgentFormData } from "../utils/agentValidation"
 
 
 interface CreateAgentDialogProps {
@@ -33,7 +36,7 @@ interface CreateAgentDialogProps {
   /** Callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void
   /** Callback when agent is created successfully */
-  onSuccess?: (agent: ) => void
+  onSuccess?: (agent: UserAgentConfigPublic) => void
   /** Additional classes for the trigger */
   className?: string
 }
@@ -45,7 +48,7 @@ export default function CreateAgentDialog({
   className,
 }: CreateAgentDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [formData, setFormData] = useState<AgaentFormDat | null>(null)
+  const [formData, setFormData] = useState<AgentFormData | null>(null)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -59,7 +62,8 @@ export default function CreateAgentDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: CreateAgaentInpusst) => AgentsService.createAgent(data),
+    mutationFn: (data: UserAgentConfigCreate) =>
+      AgentsService.createAgent({ requestBody: data }),
     onSuccess: (createdAgent) => {
       showSuccessToast(`Agent "${createdAgent.name}" created successfully.`)
       handleOpenChange(false)
@@ -94,16 +98,16 @@ export default function CreateAgentDialog({
       console.warn("Agent creation warning:", warning)
     })
 
-    const payload: CreateAgentInput = {
+    const payload: UserAgentConfigCreate = {
       name: formData.name.trim(),
       slug: formData.slug.trim(),
       description: formData.description.trim() || null,
+      provider_type_id: formData.provider_type_id,
       model_name: formData.model_name || undefined,
-      provider_type: formData.provider_type,
-      user_access_provider: formData.user_access_provider,
-      system_prompt: formData.system_prompt.trim() || null,
-      participation_mode: formData.participation_mode,
-      scope: "personal", // Personal agents only from this dialog
+      user_access_provider: formData.user_access_provider ?? undefined,
+      system_prompt: formData.system_prompt.trim() || undefined,
+      participation_mode: formData.participation_mode || undefined,
+      scope: "personal",
       is_enabled: true,
     }
 

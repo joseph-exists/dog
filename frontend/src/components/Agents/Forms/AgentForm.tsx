@@ -105,6 +105,18 @@ const agentFormSchema = z.object({
 
 type AgentFormValues = z.infer<typeof agentFormSchema>
 
+export type AgentFormData = {
+  name: string
+  slug: string
+  description: string
+  model_name: string
+  system_prompt: string
+  participation_mode: string
+  provider_type_id: string
+  user_access_provider?: string | null
+  provider_type?: string | null
+}
+
 // ============================================================================
 // Component Props
 // ============================================================================
@@ -114,8 +126,10 @@ interface AgentFormProps {
   isEditMode?: boolean
   /** Initial values for edit mode */
   initialValues?: Partial<UserAgentConfigCreate>
+  /** Legacy prop name kept for compatibility */
+  initialData?: Partial<UserAgentConfigCreate>
   /** Callback when form values change */
-  onChange: (values: Partial<UserAgentConfigCreate>) => void
+  onChange: (values: AgentFormData) => void
   /** Optional className for styling */
   className?: string
 }
@@ -127,6 +141,7 @@ interface AgentFormProps {
 export default function AgentForm({
   isEditMode = false,
   initialValues,
+  initialData,
   onChange,
   className,
 }: AgentFormProps) {
@@ -134,18 +149,20 @@ export default function AgentForm({
   // Form Setup
   // ==========================================================================
 
+  const defaults = initialValues ?? initialData
+
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(agentFormSchema),
     mode: "onChange",
     defaultValues: {
-      name: initialValues?.name || "",
-      slug: initialValues?.slug || "",
-      description: initialValues?.description || "",
-      user_access_provider: initialValues?.user_access_provider || undefined,
-      provider_type_id: initialValues?.provider_type_id || "",
-      model_name: initialValues?.model_name || "",
-      system_prompt: initialValues?.system_prompt || "",
-      participation_mode: initialValues?.participation_mode || "on_mention",
+      name: defaults?.name || "",
+      slug: defaults?.slug || "",
+      description: defaults?.description || "",
+      user_access_provider: defaults?.user_access_provider || undefined,
+      provider_type_id: defaults?.provider_type_id || "",
+      model_name: defaults?.model_name || "",
+      system_prompt: defaults?.system_prompt || "",
+      participation_mode: defaults?.participation_mode || "on_mention",
     },
   })
 
@@ -217,6 +234,7 @@ export default function AgentForm({
         participation_mode: values.participation_mode || "on_mention",
         user_access_provider: values.user_access_provider,
         provider_type_id: providerTypeId,
+        provider_type: selectedProvider?.alpha_provider_type_id ?? null,
       })
     })
 

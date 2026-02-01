@@ -28,21 +28,21 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import { useAgentSettings } from "@/hooks/useAgentSettings"
-import type { AgentViewModel } from "@/services/agentService"
+import { AgentsService } from "@/client"
+import type { UserAgentConfigUpdate } from "@/client"
 import { ProviderModelSelector } from "../Selectors/ProviderModelSelector"
 
-interface AgentModelSettingsProps {
+interface UserAgentConfigProps {
   /** The agent to configure settings for */
-  agent: AgentViewModel
+  agent: UserAgentConfigUpdate
   /** Additional className */
   className?: string
 }
 
-export function AgentModelSettings({
+export function ({
   agent,
   className,
-}: AgentModelSettingsProps) {
+}: UserAgentConfigProps) {
   const {
     settings,
     isLoading,
@@ -50,11 +50,12 @@ export function AgentModelSettings({
     isDeleting,
     updateSettings,
     deleteSettings,
-  } = useAgentSettings({ agent })
+  } = UserAgentConfigUpdate({ agent })
 
   // Local state for form
   const [providerId, setProviderId] = useState<string | null>(null)
   const [modelName, setModelName] = useState<string | null>(null)
+  const [providerType, setproviderType] =useState<string>("")
   const [customPrompt, setCustomPrompt] = useState<string>("")
   const [hasChanges, setHasChanges] = useState(false)
 
@@ -63,6 +64,7 @@ export function AgentModelSettings({
     if (settings) {
       setProviderId(settings.user_access_provider ?? null)
       setModelName(settings.model_name ?? null)
+      setProviderType(settings.provider_type ?? null)
       setCustomPrompt(settings.custom_system_prompt || "")
     } else {
       // Reset to defaults if no settings
@@ -78,19 +80,22 @@ export function AgentModelSettings({
     const currentProviderId = settings?.user_access_provider ?? null
     const currentModelName = settings?.model_name ?? null
     const currentPrompt = settings?.custom_system_prompt || ""
+    const currentProviderType = settings?.provider_type ?? null
 
     const changed =
       providerId !== currentProviderId ||
       modelName !== currentModelName ||
-      customPrompt !== currentPrompt
+      customPrompt !== currentPrompt ||
+      providerType ! == providerType 
 
     setHasChanges(changed)
-  }, [providerId, modelName, customPrompt, settings])
+  }, [providerId, modelName, customPrompt, providerType settings])
 
   // Handle save
   const handleSave = async () => {
     await updateSettings({
       user_access_provider: providerId,
+      provider_type: providerType,
       model_name: modelName,
       custom_system_prompt: customPrompt || null,
     })
@@ -189,4 +194,4 @@ export function AgentModelSettings({
   )
 }
 
-export default AgentModelSettings
+export default UserAgentConfigUpdate
