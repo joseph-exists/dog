@@ -43,7 +43,7 @@ def get_provider_type(
     provider_type = session.get(LLMProviderType, provider_type_id)
     if not provider_type:
         raise HTTPException(status_code=404, detail="provider type not found")
-    return LLMProviderType
+    return provider_type
 
 # @router.get("providers/types/provider_type_id", response_model=uuid.UUID)
 # def get_provider_type_id(
@@ -104,8 +104,8 @@ def list_provider_models(
     provider_id: uuid.UUID,
     session: SessionDep,
     current_user: CurrentUser,
-    # skip: int = 0,
-    # limit: int = 100,
+    skip: int = 0,
+    limit: int = 100,
 ) -> Any:
     """List all models for a specific user's user access provider."""
     provider = crud.get_user_access_provider(
@@ -115,9 +115,16 @@ def list_provider_models(
     )
     if not provider:
         raise HTTPException(status_code=404, detail="user access provider not found")
-
-
-    return LLMModelsPublic(data=[], count=0)
+    models, count = crud.get_llm_models(
+        session=session,
+        primary_provider_type_id=provider.alpha_provider_type_id,
+        skip=skip,
+        limit=limit,
+    )
+    return LLMModelsPublic(
+        data=[LLMModelPublic(**m.model_dump()) for m in models],
+        count=count,
+    )
 
 
 # =============================================================================
@@ -156,41 +163,45 @@ def list_provider_models(
 def list_models(
     session: SessionDep,
     current_user: CurrentUser,
-    #skip: int = 0,
-    #limit: int = 100,
+    skip: int = 0,
+    limit: int = 100,
 ) -> Any:
     """List all LLM models available to current user."""
-    # TODO: correctly call crud.get_llm_models() ~line 159, crud.py
-    return LLMModelsPublic(data=[], count=0)
+    models, count = crud.get_llm_models(
+        session=session,
+        primary_provider_type_id=None,
+        skip=skip,
+        limit=limit,
+    )
+    return LLMModelsPublic(
+        data=[LLMModelPublic(**m.model_dump()) for m in models],
+        count=count,
+    )
+
 
 @router.get("/models/uap", response_model=LLMModelsPublic)
 def list_models_for_uap(
-    user_access_provider_id: uuid.UUID,
     session: SessionDep,
     current_user: CurrentUser,
+    user_access_provider_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
 ) -> Any:
-    """List all models for a specific user's user access provider's provider_type -
-    to get the provider type for a user_access_provider, we call:
-    crud.get_user_access_provider - which returns a UserAccessProvider.
-    alpha_provider_type_id.UserAccessProvider has FK on provider_type.id.
-    then you can call crud.get_llm_models with that provider_type_id as primary_provider_type_id
-
-    """
-    # TODO review get providers/uap-apti
-    # add some frickin models
-    # use the model add script
-    
-    user_access_provider =   crud.get_user_access_provider(
+    """List all models for a specific user's user access provider's provider_type."""
+    user_access_provider = crud.get_user_access_provider(
         session=session,
         user_access_provider_id=user_access_provider_id,
         user_id=current_user.id,
     )
     if not user_access_provider:
         raise HTTPException(status_code=404, detail="user access provider not found")
-
-    list_of_models= crud.get_llm_models(
+    models, count = crud.get_llm_models(
         session=session,
         primary_provider_type_id=user_access_provider.alpha_provider_type_id,
+        skip=skip,
+        limit=limit,
     )
-
-    return list_of_models
+    return LLMModelsPublic(
+        data=[LLMModelPublic(**m.model_dump()) for m in models],
+        count=count,
+    )

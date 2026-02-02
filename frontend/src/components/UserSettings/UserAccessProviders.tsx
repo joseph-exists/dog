@@ -79,6 +79,7 @@ import type {
 } from "@/client/types.gen"
 import type { ApiError } from "@/client/core/ApiError"
 import { ProviderTypeSelect } from "@/components/Agents/Selectors/ProviderTypeSelect"
+import useAuth from "@/hooks/useAuth"
 
 
 // ============================================================================
@@ -158,6 +159,7 @@ const UserAccessProviders = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [testingProviderId, setTestingProviderId] = useState<string | null>(null)
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   // ==========================================================================
   // Data Fetching via Client SDK
@@ -239,6 +241,7 @@ const UserAccessProviders = () => {
         is_default: data.is_default,
         is_enabled: data.is_enabled,
         alpha_provider_type_id: data.alpha_provider_type_id,
+        owner_id: user?.id,
       }
 
       await createProviderMutation.mutateAsync(payload)

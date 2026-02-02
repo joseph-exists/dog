@@ -2012,14 +2012,23 @@ export type LlmCatalogGetProviderTypeData = {
 export type LlmCatalogGetProviderTypeResponse = (LLMProviderTypePublic);
 
 export type LlmCatalogListProviderModelsData = {
+    limit?: number;
     providerId: string;
+    skip?: number;
 };
 
 export type LlmCatalogListProviderModelsResponse = (LLMModelsPublic);
 
+export type LlmCatalogListModelsData = {
+    limit?: number;
+    skip?: number;
+};
+
 export type LlmCatalogListModelsResponse = (LLMModelsPublic);
 
 export type LlmCatalogListModelsForUapData = {
+    limit?: number;
+    skip?: number;
     userAccessProviderId: string;
 };
 

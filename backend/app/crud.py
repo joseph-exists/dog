@@ -189,14 +189,13 @@ def update_llm_provider_type(*, session: Session, llm_provider_type: LLMProvider
     return llm_provider_type
 
 
-def get_llm_models (
+def get_llm_models(
     *,
     session: Session,
-    primary_provider_type_id: uuid.UUID | None,
-    skip=0,
-    limit=100,
+    primary_provider_type_id: uuid.UUID | None = None,
+    skip: int = 0,
+    limit: int = 100,
     is_default: bool | None = None,
-    is_deleted: bool | None = None,
     has_vision: bool | None = None,
     has_function_calling: bool | None = None,
     has_streaming: bool | None = None,
@@ -208,7 +207,7 @@ def get_llm_models (
 
     Args:
         session: database session
-        provider_type_id maps to LLMModel.primary_provider_type_id.
+        provider_type_id maps to LLMModel table.primary_provider_type_id.
         skip, limit
         model_id for search
         primary_provider_type_id enables both direct search by id and reverse lookup.
@@ -216,12 +215,9 @@ def get_llm_models (
     Returns:
         tuple (list of models, total count)
     """
- 
-    # Build filters
-    filters = [UserAccessProvider.user_id == user_id]
 
-    if is_deleted is not None:
-        filters.append(LLMModel.is_deleted == is_deleted)
+    # Build filters (LLMModel columns only)
+    filters: list[Any] = []
     if has_vision is not None:
         filters.append(LLMModel.has_vision == has_vision)
     if has_streaming is not None:
@@ -237,21 +233,16 @@ def get_llm_models (
     if model_id is not None:
         filters.append(LLMModel.model_id == model_id)
 
-    # Count query
-    count_statement = (
-        select(func.count())
-        .select_from(LLMModel)
-        .where(*filters)
-    )
+    base_stmt = and_(*filters) if filters else true()
+    count_statement = select(func.count()).select_from(LLMModel).where(base_stmt)
     count = session.exec(count_statement).one()
 
-    # Data query
     statement = (
         select(LLMModel)
-        .where(*filters)
+        .where(base_stmt)
         .offset(skip)
         .limit(limit)
-        .order_by(desc(LLMModel.created_at))
+        .order_by(LLMModel.sort_order, LLMModel.model_id)
     )
     models = list(session.exec(statement).all())
 

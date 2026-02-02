@@ -204,7 +204,6 @@ export default function AgentForm({
       })
       .catch((error) => {
         console.error("Failed to generate slug:", error)
-        // TODO: Add retry mechanism or user notification
       })
 
     return () => {
