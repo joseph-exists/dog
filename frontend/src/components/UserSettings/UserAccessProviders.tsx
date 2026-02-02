@@ -73,7 +73,13 @@ import { z } from "zod"
 // ============================================================================
 
 import { LlmProvidersService } from "@/client/sdk.gen"
-import type { UserAccessProviderPublic } from "@/client/types.gen"
+import type {
+  UserAccessProviderCreate,
+  UserAccessProviderPublic,
+} from "@/client/types.gen"
+import type { ApiError } from "@/client/core/ApiError"
+import { ProviderTypeSelect } from "@/components/Agents/Selectors/ProviderTypeSelect"
+
 
 // ============================================================================
 // UI Component Imports
@@ -112,7 +118,8 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Switch } from "@/components/ui/switch"
-// import { showErrorToast } from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 
 // ============================================================================
 // Form Validation Schema
@@ -121,20 +128,21 @@ import { Switch } from "@/components/ui/switch"
 /**
  * UserAccessProvider creation form schema
  *
- * NOTE: No provider_type field - that's configured at the AgentConfig level!
- *
  * Fields:
- * - name: User's friendly identifier for this credential set
+ * - name: User's friendly identifier for this credential set (required)
  * - api_key: Encrypted API key (required)
- * - base_url: Optional custom endpoint (e.g., Ollama, Azure OpenAI)
+ * - base_url: Required endpoint (e.g., Ollama, Azure OpenAI)
  * - description: Optional notes
+ * - alpha_provider_type_id: required uuid representing which AI API spec to be used
  * - is_default: Whether this is the user's default provider
  * - is_enabled: Whether this provider is active
  */
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
-  api_key: z.string().min(1, "API key is required"),
-  base_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  api_key: z.string().min(1, "API key is required").max(200),
+  base_url: z.string().url("Must be a valid URL").min(1, "Base URL is required").max(200),
+  alpha_provider_type_id: z
+    .uuid(), //todo zod uuid handling for required
   description: z.string().max(500).optional().or(z.literal("")),
   is_default: z.boolean().default(false),
   is_enabled: z.boolean().default(true),
@@ -166,20 +174,28 @@ const UserAccessProviders = () => {
   // Mutations
   // ==========================================================================
 
-  const createProviderMutation = useMutation({
-    mutationFn: (data: any) =>
+  const createProviderMutation = useMutation<
+    UserAccessProviderPublic,
+    ApiError,
+    UserAccessProviderCreate
+  >({
+    mutationFn: (data) =>
       LlmProvidersService.createProvider({ requestBody: data }),
     onSuccess: () => {
+      showSuccessToast("user access provider created, noice")
       queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
     },
+    onError: handleError.bind(showErrorToast),
   })
 
   const deleteProviderMutation = useMutation({
     mutationFn: (providerId: string) =>
       LlmProvidersService.deleteProvider({ providerId }),
     onSuccess: () => {
+      showSuccessToast("you really did that, okey dokey, it worked")
       queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
     },
+    onError: handleError.bind(showErrorToast)
   })
 
   // ==========================================================================
@@ -189,6 +205,7 @@ const UserAccessProviders = () => {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema) as Resolver<FormData>,
     mode: "onSubmit",
+    criteriaMode: "all",
     defaultValues: {
       name: "",
       api_key: "",
@@ -196,6 +213,7 @@ const UserAccessProviders = () => {
       description: "",
       is_default: false,
       is_enabled: true,
+      alpha_provider_type_id: "",
     },
   })
 
@@ -205,30 +223,30 @@ const UserAccessProviders = () => {
   //
   // Three-Way Binding Note:
   // This creates a UserAccessProvider (credentials + endpoint).
-  // The provider_type and model_name are NOT specified here -
-  // they will be specified when creating/configuring an AgentConfig
+  // alpha_provider_type_id is required - as a dropdown based on user selection of 
+  // the values returned from g
+  // will be specified when creating/configuring an AgentConfig
   // that uses this UserAccessProvider.
   // ==========================================================================
 
   const onSubmit = async (data: FormData) => {
     try {
-      // TODO: Fix backend type generation - api_key field missing from UserAccessProviderCreate
-      // TODO: Add provider type selector to form
-      await createProviderMutation.mutateAsync({
-        id: crypto.randomUUID(),
+      const payload: UserAccessProviderCreate = {
         name: data.name,
         api_key: data.api_key,
-        base_url: data.base_url || null,
+        base_url: data.base_url,
         description: data.description || null,
         is_default: data.is_default,
         is_enabled: data.is_enabled,
-        alpha_provider_type_id: "673f1787-8474-4e1c-986c-8e19f14c989c", // OpenAI
-      })
+        alpha_provider_type_id: data.alpha_provider_type_id,
+      }
+
+      await createProviderMutation.mutateAsync(payload)
 
       setIsAddDialogOpen(false)
       form.reset()
     } catch (err) {
-      console.error("Failed to create provider:", err)
+      showErrorToast("Failed to create provider")
     }
   }
 
@@ -268,7 +286,7 @@ const UserAccessProviders = () => {
       try {
         await deleteProviderMutation.mutateAsync(provider.id)
       } catch (err) {
-        console.error("Failed to delete provider:", err)
+        showErrorToast("Failed to delete provider")
       }
     }
   }
@@ -300,7 +318,9 @@ const UserAccessProviders = () => {
             <DialogHeader>
               <DialogTitle>Add API Access Provider</DialogTitle>
               <DialogDescription>
-                Add your API credentials. Keys are encrypted at rest and in transit.
+                Add your API credentials. Keys are hopefully encrypted at rest and in transit.
+                Maybe.  Joseph will remove this text once it's completely proven
+                without a shadow of a doubt.  If you see this text, Joseph doesn't believe the proof yet.
               </DialogDescription>
             </DialogHeader>
 
@@ -317,10 +337,11 @@ const UserAccessProviders = () => {
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="My OpenAI API Key" {...field} />
+                        <Input placeholder="my very own api key" {...field} />
                       </FormControl>
                       <FormDescription>
-                        A friendly name to identify this API credential
+                        this is how you'll choose this one
+                        nothing else cares what you call it
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -342,29 +363,55 @@ const UserAccessProviders = () => {
                         />
                       </FormControl>
                       <FormDescription>
-                        Your API key will be encrypted before storage
+                        your API key might be encrypted before storage
+                        it might be encrypted over the wire
+                        it might be stolen and used for dark purposes
+                        might be
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Base URL (Optional) */}
+                {/* Base URL: TODO: convert to add an optional dropdown of FAP once that's done */}
                 <FormField
                   control={form.control}
                   name="base_url"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Base URL (Optional)</FormLabel>
+                      <FormLabel>Base API URL -- required</FormLabel>
                       <FormControl>
+
                         <Input
                           placeholder="https://api.openai.com/v1"
                           {...field}
                         />
                       </FormControl>
                       <FormDescription>
-                        Custom endpoint URL. Leave empty for default endpoints.
-                        Common uses: Ollama, Azure OpenAI, OpenAI-compatible services.
+                        where you get your stuff from.  the good stuff.
+                        see docs for more deets, faqs, and normal screwups
+                        Ollama, Azure OpenAI, OpenAI-compatible services.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Provider Type */}
+                <FormField
+                  control={form.control}
+                  name="alpha_provider_type_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provider Type</FormLabel>
+                      <FormControl>
+                        <ProviderTypeSelect
+                          value={field.value || null}
+                          onChange={(id) => field.onChange(id)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Choose the API provider spec this credential targets.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -380,7 +427,7 @@ const UserAccessProviders = () => {
                       <FormLabel>Description (optional)</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Personal account, work account, etc."
+                          placeholder="this is only for you to care about, if you don't care then don't put anything here. or you could, just for funsies, and think about how you might learn to care about it later."
                           {...field}
                         />
                       </FormControl>

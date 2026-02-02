@@ -1,26 +1,23 @@
 """
 LLM Catalog routes.
-
-Public API for browsing available LLM providers and models.
-Requires auth for custom models
-
-
 """
 
+from os import name
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
-from sqlmodel import Session
+from fastapi import APIRouter, HTTPException
+from sqlmodel import func, select
 
 from app import crud
-from app.api.deps import CurrentUser, OptionalUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     LLMModel,
     LLMModelCreate,
     LLMModelPublic,
     LLMModelsPublic,
     LLMProviderType,
+    LLMProviderTypesPublic,
     LLMProviderTypeCreate,
     LLMProviderTypePublic,
     UserAccessProvider,
@@ -32,26 +29,63 @@ router = APIRouter(prefix="/llm-catalog", tags=["llm-catalog"])
 
 
 # =============================================================================
-# Helper Functions
+# LLMProviderTypes ahhh yeah
 # =============================================================================
 
+# LLM ProviderTypes are heckin neat
 
-def _get_provider_type_name(*, session: SessionDep, provider_type_id: uuid.UUID | None) -> str | None:
-    """Resolve provider_type.id to to provider_type.name in LLMProviderTypePublic.
-       can be called using UserAccessProvider.alpha_provider_type_id, FrontierAccessProvider.provider_type.id, LLMProviderTypePublic.id, or UserAgentConfig.provider_type_id.
-    """
+@router.get("/providers/types/{provider_type_id}", response_model=LLMProviderTypePublic)
+def get_provider_type(
+    provider_type_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """ Get provider type by ID. """
+    provider_type = session.get(LLMProviderType, provider_type_id)
+    if not provider_type:
+        raise HTTPException(status_code=404, detail="provider type not found")
+    return LLMProviderType
 
-def _get_provider_type_id_for_user_access_provider(*, session: SessionDep, provider_type_id: uuid.UUID) -> uuid.UUID | None:
-    """
-    can be called using 
-    UserAccessProvider.alpha_provider_type_id,
-    FrontierAccessProvider.provider_type.id,
-    LLMProviderTypePublic.id,
-    UserAgentConfig.provider_type_id.
-    """
-    provider_type= provider_type_id
+# @router.get("providers/types/provider_type_id", response_model=uuid.UUID)
+# def get_provider_type_id(
+#     provider_type_id: uuid.UUID,
+#     session: SessionDep,
+# ) -> Any:
+#     """Get a single provider type by ID."""
+#     provider_type = crud.get_llm_provider_type(
+#         session=session,
+#         llm_provider_type_id=provider_type_id,
+#     )
+#     if not provider_type:
+#         raise HTTPException(status_code=404, detail="provider type not found")
+#     return provider_type.id
 
-    return provider_type
+
+
+    # provider_type = crud.get_llm_provider_type_id_by_name(
+    #     session=session,
+    #     name=provider_type_name,
+    # )
+    # if not provider_type:
+    #     raise HTTPException(status_code=404, detail="provider type not found")
+    # return LLMProviderTypePublic(**provider_type.model_dump())
+
+
+
+
+
+
+    # user_access_provider = crud.get_user_access_provider(
+    #     session=session,
+    #     user_access_provider_id=user_access_provider_id,
+    #     user_id=current_user.id,
+    # )
+    # if not user
+    # if not user_access_provider:
+    #     raise HTTPException(status_code=404, detail="user access provider not found")
+    # return user_access_provider.alpha_provider_type_id
+
+
+
 
 
 
@@ -60,67 +94,9 @@ def _get_provider_type_id_for_user_access_provider(*, session: SessionDep, provi
 # Provider Endpoints
 # =============================================================================
 
-@router.get("/providers", response_model=UserAccessProvidersPublic)
-def list_providers(
-    session: SessionDep,
-    current_user: CurrentUser,  # Should require auth
-    skip: int = 0,
-    limit: int = 100,
-    is_enabled: bool | None = Query(
-        default=None, description="Filter by enabled status"
-    ),
-    is_validated: bool | None = Query(
-        default=None, description="Filter by validated status"
-    ),
-) -> Any:
-    """
-    List current user's access providers.
-    Each provider represents an API endpoint + key combo + primary provider_type on the user access provider.
-    """
-    providers, count = crud.get_user_access_providers(
-        session=session,
-        user_id=current_user.id,
-        skip=skip,
-        limit=limit,
-        is_enabled=is_enabled,
-        is_validated=is_validated,
-
-    )
-
-    return UserAccessProvidersPublic(data=[
-        UserAccessProviderPublic(**p.model_dump())
-        for p in providers
-    ], count=count)
+# migrated to list_providers in llm_providers.py
 
 
-# @router.get("/user-access-providers/{llmprovidertype_id}", response_model=UserAccessProviderPublic)
-# def get_provider(
-#     user_access_provider_id: uuid.UUID,
-#     session: SessionDep,
-#     user_id: uuid.UUID,
-# ) -> Any:
-#     """
-#     Get a single user access provider by ID.
-
-#     No authentication required.
-#     """
-#     provider = crud.get_user_access_provider(
-#         user_id=user_id,
-#         session=session,
-#         user_access_provider_id=user_access_provider_id,
-#     )
-#     if not provider:
-#         raise HTTPException(status_code=404, detail="Provider not found")
-
-#     # TODO: Implement model_count CRUD function
-#     # TODO: understand what the hell this is talking about
-#     # model_count = 0
-
-#     return UserAccessProviderPublic(
-#         **provider.model_dump(),
-#         model_count=model_count,
-#         provider_type=_get_provider_type_name(provider) if hasattr(provider, 'provider_type_id') else None,
-#     )
 
 
 @router.get("/providers/{provider_id}/models", response_model=LLMModelsPublic)
@@ -131,11 +107,7 @@ def list_provider_models(
     # skip: int = 0,
     # limit: int = 100,
 ) -> Any:
-    """List all models for a specific user's user access provider.
-       For now, what we're going to do is hand-load models in the backend into LLMModels and associate them
-       with the provider_types.  #TODO near term: enable polling w/ API key, start with OpenAPI and go from there.
-
-    """
+    """List all models for a specific user's user access provider."""
     provider = crud.get_user_access_provider(
         session=session,
         user_access_provider_id=provider_id,
@@ -143,6 +115,7 @@ def list_provider_models(
     )
     if not provider:
         raise HTTPException(status_code=404, detail="user access provider not found")
+
 
     return LLMModelsPublic(data=[], count=0)
 
@@ -203,6 +176,10 @@ def list_models_for_uap(
     then you can call crud.get_llm_models with that provider_type_id as primary_provider_type_id
 
     """
+    # TODO review get providers/uap-apti
+    # add some frickin models
+    # use the model add script
+    
     user_access_provider =   crud.get_user_access_provider(
         session=session,
         user_access_provider_id=user_access_provider_id,
@@ -217,6 +194,3 @@ def list_models_for_uap(
     )
 
     return list_of_models
-
-
-#

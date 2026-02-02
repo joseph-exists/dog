@@ -805,7 +805,7 @@ export const LLMModelPublicSchema = {
         }
     },
     type: 'object',
-    required: ['owner_id', 'model_id', 'display_name', 'primary_provider_type_id', 'id'],
+    required: ['model_id', 'display_name', 'primary_provider_type_id', 'id'],
     title: 'LLMModelPublic',
     description: 'Public API response for a model catalog entry.'
 } as const;
@@ -828,6 +828,71 @@ export const LLMModelsPublicSchema = {
     required: ['data', 'count'],
     title: 'LLMModelsPublic',
     description: 'Collection response for LLMModels.'
+} as const;
+
+export const LLMProviderTypePublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 30,
+            title: 'Name',
+            description: 'LLM Provider type'
+        },
+        details: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Details',
+            description: 'notes if necessary'
+        },
+        validated: {
+            type: 'boolean',
+            title: 'Validated',
+            description: 'updated when proven valid at least once',
+            default: false
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System',
+            description: 'is this a system-level provider type?',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id'],
+    title: 'LLMProviderTypePublic',
+    description: 'public api response'
+} as const;
+
+export const LLMProviderTypesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/LLMProviderTypePublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'LLMProviderTypesPublic',
+    description: 'collection response'
 } as const;
 
 export const MessageSchema = {
@@ -4854,15 +4919,10 @@ export const UserAccessProviderPublicSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
-        },
-        created_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Created At'
         }
     },
     type: 'object',
-    required: ['name', 'id', 'created_at'],
+    required: ['name', 'id'],
     title: 'UserAccessProviderPublic',
     description: 'Public API response - NEVER includes API key.'
 } as const;
@@ -4957,7 +5017,6 @@ export const UserAccessProviderUpdateSchema = {
         }
     },
     type: 'object',
-    required: ['alpha_provider_type_id'],
     title: 'UserAccessProviderUpdate'
 } as const;
 

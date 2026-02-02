@@ -170,7 +170,7 @@ export type JumpRequest = {
  * Public API response for a model catalog entry.
  */
 export type LLMModelPublic = {
-    owner_id: string;
+    owner_id?: string;
     /**
      * Model identifier (e.g., 'gpt-4o', no provider prefix)
      */
@@ -236,6 +236,37 @@ export type LLMModelPublic = {
  */
 export type LLMModelsPublic = {
     data: Array<LLMModelPublic>;
+    count: number;
+};
+
+/**
+ * public api response
+ */
+export type LLMProviderTypePublic = {
+    /**
+     * LLM Provider type
+     */
+    name: string;
+    /**
+     * notes if necessary
+     */
+    details?: (string | null);
+    /**
+     * updated when proven valid at least once
+     */
+    validated?: boolean;
+    /**
+     * is this a system-level provider type?
+     */
+    is_system?: boolean;
+    id: string;
+};
+
+/**
+ * collection response
+ */
+export type LLMProviderTypesPublic = {
+    data: Array<LLMProviderTypePublic>;
     count: number;
 };
 
@@ -1379,7 +1410,6 @@ export type UserAccessProviderPublic = {
     is_validated?: boolean;
     description?: (string | null);
     id: string;
-    created_at: string;
 };
 
 /**
@@ -1401,7 +1431,7 @@ export type UserAccessProviderUpdate = {
      * New API key to encrypt, if changing
      */
     api_key?: (string | null);
-    alpha_provider_type_id: string;
+    alpha_provider_type_id?: string;
 };
 
 export type UserAgentConfigCreate = {
@@ -1975,20 +2005,11 @@ export type ItemsDeleteItemData = {
 
 export type ItemsDeleteItemResponse = (Message);
 
-export type LlmCatalogListProvidersData = {
-    /**
-     * Filter by enabled status
-     */
-    isEnabled?: (boolean | null);
-    /**
-     * Filter by validated status
-     */
-    isValidated?: (boolean | null);
-    limit?: number;
-    skip?: number;
+export type LlmCatalogGetProviderTypeData = {
+    providerTypeId: string;
 };
 
-export type LlmCatalogListProvidersResponse = (UserAccessProvidersPublic);
+export type LlmCatalogGetProviderTypeResponse = (LLMProviderTypePublic);
 
 export type LlmCatalogListProviderModelsData = {
     providerId: string;
@@ -2016,6 +2037,21 @@ export type LlmProvidersCreateProviderData = {
 };
 
 export type LlmProvidersCreateProviderResponse = (UserAccessProviderPublic);
+
+export type LlmProvidersGetProviderTypeListResponse = (LLMProviderTypesPublic);
+
+export type LlmProvidersGetAlphaProviderTypeIdForUserAccessProviderData = {
+    userAccessProvider?: (string | null);
+    userAccessProviderId?: (string | null);
+};
+
+export type LlmProvidersGetAlphaProviderTypeIdForUserAccessProviderResponse = (UserAccessProviderPublic);
+
+export type LlmProvidersGetProviderTypeIdByNameData = {
+    providerTypeName: string;
+};
+
+export type LlmProvidersGetProviderTypeIdByNameResponse = (LLMProviderTypePublic);
 
 export type LlmProvidersGetProviderData = {
     providerId: string;

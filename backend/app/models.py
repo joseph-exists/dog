@@ -1049,16 +1049,16 @@ class FrontierAccessProvidersPublic(SQLModel):
 
 
 # ==================== UserAccessProviders Models ====================
-# 
+#
 
 class UserAccessProviderBase(SQLModel):
     """Base model for user LLM access provider and API key configurations."""
     api_key: str | None = Field(default=None, description="New API key to encrypt, if changing")
-    owner_id: uuid.UUID = Field(uuid)
+    owner_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     base_url: str | None = Field(default=None, max_length=100, description="Endpoint URL")
     name: str = Field(max_length=100, description="User-friendly name like 'My OpenAI' or 'Work Azure'")
     provider_type_multiple: bool = Field(default=False, description="if there's more than one provider type.")
-    alpha_provider_type_id: uuid.UUID = Field(default=uuid)
+    alpha_provider_type_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     is_enabled: bool = Field(default=True, description="Whether this provider is active")
     is_default: bool = Field(default=False, description="is this the user's default access provider?")
     is_validated: bool =Field(default=False, description="has this api key and url been tested?")
@@ -1078,7 +1078,7 @@ class UserAccessProviderBasePartial(SQLModel):
     base_url: str | None = Field(default=None, max_length=500)
     description: str | None = Field(default=None, max_length=500)
     api_key: str | None = Field(default=None, description="New API key to encrypt, if changing")
-    alpha_provider_type_id: uuid.UUID
+    alpha_provider_type_id: uuid.UUID = Field(default_factory=uuid.uuid4)
 
 class UserAccessProviderUpdate(UserAccessProviderBasePartial):
     pass
@@ -1094,12 +1094,14 @@ class UserAccessProvider(UserAccessProviderBase, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
         foreign_key="user.id",
         nullable=False,
         ondelete="CASCADE",
         index=True,
     )
-    alpha_provider_type_id: uuid.UUID =Field(
+    alpha_provider_type_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
         foreign_key="provider_type.id",
         nullable=False,
         index=True,
@@ -1109,7 +1111,6 @@ class UserAccessProvider(UserAccessProviderBase, table=True):
 class UserAccessProviderPublic(UserAccessProviderBase):
     """Public API response - NEVER includes API key."""
     id: uuid.UUID
-    created_at: datetime
 
 
 class UserAccessProvidersPublic(SQLModel):
@@ -1154,10 +1155,10 @@ class LLMProviderTypesPublic(SQLModel):
 
 class LLMModelBase(SQLModel):
     """Base model for LLM model catalog entries."""
-    owner_id: uuid.UUID
+    owner_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     model_id: str = Field(max_length=100, description="Model identifier (e.g., 'gpt-4o', no provider prefix)")
     display_name: str = Field(max_length=100, description="Human-friendly name (e.g., 'GPT 4o')")
-    primary_provider_type_id: uuid.UUID
+    primary_provider_type_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     multiple_provider_type_support: bool = Field(default=False, description="this overload might be neat in the future for swapping?")
     description: str | None = Field(default=None, max_length=500)
     context_window: int | None = Field(default=None, description="Max tokens in context window")
@@ -1186,7 +1187,7 @@ class LLMModelCreate(LLMModelBase):
 
 class LLMModelBasePartial(SQLModel):
     """Update model for model catalog entries - all fields optional."""
-    primary_provider_type_id: uuid.UUID | None
+    primary_provider_type_id: uuid.UUID | None = Field(default_factory=uuid.uuid4)
     display_name: str | None = Field(default=None, max_length=100, description="so much effery")
     description: str | None = Field(default=None, max_length=500)
     context_window: int | None = Field(default=None, description="Max tokens in context window")
@@ -1219,6 +1220,7 @@ class LLMModel(LLMModelBase, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     primary_provider_type_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
         foreign_key="provider_type.id",
         nullable=False,
         index=True,

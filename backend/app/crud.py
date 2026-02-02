@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime
-import logging
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -13,12 +13,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
-    UserAccessProvider,
-    UserAccessProviderCreate,
-    UserAccessProviderUpdate,
-    UserAgentConfig,
-    UserAgentConfigCreate,
-    UserAgentConfigUpdate,
     AgentPersona,
     AgentPersonaCreate,
     AgentPersonaUpdate,
@@ -31,9 +25,11 @@ from app.models import (
     EventCreate,
     Item,
     ItemCreate,
+    LLMModel,
+    LLMModelsPublic,
     LLMProviderType,
     LLMProviderTypeCreate,
-    LLMModel,
+    LLMProviderTypeUpdate,
     Message,
     NodeChoice,
     NodeChoicePublic,
@@ -94,6 +90,12 @@ from app.models import (
     TraitConflictGroupUpdate,
     TraitCreate,
     User,
+    UserAccessProvider,
+    UserAccessProviderCreate,
+    UserAccessProviderUpdate,
+    UserAgentConfig,
+    UserAgentConfigCreate,
+    UserAgentConfigUpdate,
     UserCreate,
     UserNodeChoice,
     UserPersona,
@@ -102,7 +104,7 @@ from app.models import (
     UserStoryProgress,
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
-    UserUpdate, LLMModelsPublic,
+    UserUpdate,
 )
 
 logger = logging.getLogger(__name__)
@@ -155,6 +157,37 @@ def create_llm_provider_type(*, session: Session, llm_provider_type_in: LLMProvi
     session.commit()
     session.refresh(db_llm_provider_type)
     return db_llm_provider_type
+
+def list_llm_provider_types(*, session: Session, skip: int = 0, limit: int = 100) -> tuple[list[LLMProviderType], int]:
+    """
+    Get list of LLM Provider Types with optional filtering.
+    """
+    statement = select(LLMProviderType).offset(skip).limit(limit)
+    provider_types = session.exec(statement).all()
+    return provider_types, len(provider_types)
+
+def get_llm_provider_type(*, session: Session, llm_provider_type_id: uuid.UUID) -> LLMProviderType | None:
+    """
+    Get LLM Provider Type by ID.
+    """
+    return session.get(LLMProviderType, llm_provider_type_id)
+
+def get_llm_provider_type_by_name(*, session: Session, name: str) -> LLMProviderType | None:
+    """
+    Get LLM Provider Type by name.
+    """
+    return session.exec(select(LLMProviderType).where(LLMProviderType.name == name)).first()
+
+def update_llm_provider_type(*, session: Session, llm_provider_type: LLMProviderType, llm_provider_type_update: LLMProviderTypeUpdate) -> LLMProviderType:
+    """
+    Update LLM Provider Type.
+    """
+    llm_provider_type.sqlmodel_update(llm_provider_type_update.model_dump(exclude_unset=True))
+    session.add(llm_provider_type)
+    session.commit()
+    session.refresh(llm_provider_type)
+    return llm_provider_type
+
 
 def get_llm_models (
     *,
@@ -281,7 +314,6 @@ def get_user_access_providers(
         .where(*filters)
         .offset(skip)
         .limit(limit)
-        .order_by(desc(UserAccessProvider.created_at))
     )
     providers = list(session.exec(statement).all())
 
