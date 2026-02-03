@@ -24,17 +24,17 @@ _loop_refs: dict[int, weakref.ReferenceType[asyncio.AbstractEventLoop]] = {}
 
 
 def _create_pool() -> ConnectionPool:
-    logger.info(
-        "[REDIS_INIT] Creating Redis connection pool: %s:%s",
-        settings.REDIS_HOST,
-        settings.REDIS_PORT,
-    )
+    #logger.info(
+    #    "[REDIS_INIT] Creating Redis connection pool: %s:%s",
+    #    settings.REDIS_HOST,
+    #    settings.REDIS_PORT,
+    #)
     pool = ConnectionPool.from_url(
         f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
         max_connections=20,
         # decode_responses=True,  # Automatically decode bytes to strings
     )
-    logger.info("[REDIS_INIT] Redis connection pool created: %s", pool)
+    #logger.info("[REDIS_INIT] Redis connection pool created: %s", pool)
     return pool
 
 
@@ -73,7 +73,7 @@ async def get_redis() -> Redis:
     """
     loop = asyncio.get_running_loop()
     pool = _get_pool_for_loop(loop)
-    logger.debug(f"[REDIS_GET] Creating Redis client from pool")
+    #logger.debug(f"[REDIS_GET] Creating Redis client from pool")
     client = Redis(connection_pool=pool)
-    logger.debug(f"[REDIS_GET] Redis client created: {client}")
+    #logger.debug(f"[REDIS_GET] Redis client created: {client}")
     return client

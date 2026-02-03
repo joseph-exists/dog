@@ -99,9 +99,10 @@ export function AgentProviderSelector({
       AgentsService.updateAgent({
         agentId: agent.id,
         requestBody: {
-          provider_type_id: agent.provider_type_id,
+          provider_type: (agent as any).provider_type ?? null,
           user_access_provider: data.providerId,
           model_name: data.modelName ?? undefined,
+          model: data.modelName ?? undefined,
         },
       }),
     onSuccess: () => {

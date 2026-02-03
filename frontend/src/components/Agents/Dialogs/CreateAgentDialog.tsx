@@ -98,12 +98,17 @@ export default function CreateAgentDialog({
       console.warn("Agent creation warning:", warning)
     })
 
-    const payload: UserAgentConfigCreate = {
+    const payload: UserAgentConfigCreate & {
+      provider_type?: string | null
+      model?: string | null
+    } = {
       name: formData.name.trim(),
       slug: formData.slug.trim(),
       description: formData.description.trim() || null,
-      provider_type_id: formData.provider_type_id,
+      model_id: formData.model_id || undefined,
       model_name: formData.model_name || undefined,
+      model: formData.model_name || undefined,
+      provider_type: formData.provider_type || null,
       user_access_provider: formData.user_access_provider ?? undefined,
       system_prompt: formData.system_prompt.trim() || undefined,
       participation_mode: formData.participation_mode || undefined,

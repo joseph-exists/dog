@@ -12,4 +12,4 @@ Anthropic,claude-3-opus-latest,Claude 3 Opus,Most capable,200000,false,true,3,tr
 Google,gemini-2.0-flash,Gemini 2.0 Flash,Latest fast model,1048576,false,true,0,true,true,true,true
 Google,gemini-1.5-pro,Gemini 1.5 Pro,Long context flagship,2097152,false,true,1,true,true,true,true
 Google,gemini-1.5-flash,Gemini 1.5 Flash,Fast and capable,1048576,true,true,2,true,true,true,true
-OpenAI Compatible,custom,Custom Model,Enter model name manually,,true,true,0,,,true,
+

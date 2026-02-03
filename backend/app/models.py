@@ -3034,7 +3034,8 @@ class UserAgentConfigBase(SQLModel):
     slug: str = Field(max_length=50, description="Unique identifier/registry key")
     description: str | None = Field(default=None, max_length=500)
     user_access_provider: uuid.UUID | None = Field(default=None, foreign_key="user_access_provider.id", description="User-selected provider associated with this agent config")
-    provider_type_id: uuid.UUID
+    provider_type: uuid.UUID | None = Field(default_factory=uuid.uuid4)
+    model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
     model_id: uuid.UUID | None = Field(default=None, foreign_key="user_access_provider.id", description="model associated with this agent config")
     # LLMModels table
     model_name: str = Field(default="friendly model name")
@@ -3078,8 +3079,9 @@ class UserAgentConfigUpdate(UserAgentConfigBase):
     slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
     description: str | None = Field(default=None, max_length=500)
     user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
-    provider_type: str | None = Field(default=None, max_length=30, description="why not here too")
+    provider_type: uuid.UUID | None=Field(default_factory=uuid.uuid4)
     model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
+    model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
     model_name: str | None = Field(default=None)
     system_prompt: str | None = Field(default=None)
     custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
@@ -3099,7 +3101,7 @@ class UserAgentConfigUpdate(UserAgentConfigBase):
 class UserAgentConfig(UserAgentConfigBase, table=True):
     __tablename__ = "user_agent_configs"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    owner_id: uuid.UUID | None = Field(default_factory=uuid.uuid4, foreign_key="user.id")
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime | None = Field(default=None, sa_column_kwargs={"onupdate": datetime.now})
     version: int = Field(default=1)
@@ -3107,7 +3109,7 @@ class UserAgentConfig(UserAgentConfigBase, table=True):
     slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
     description: str | None = Field(default=None, max_length=500)
     user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
-    provider_type: str | None = Field(default=None, max_length=30, description="why not here too")
+    provider_type: uuid.UUID | None = Field(default_factory=uuid.uuid4)
     model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
     model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
     model_name: str | None = Field(default=None)
@@ -3136,7 +3138,8 @@ class UserAgentConfigPublic(UserAgentConfigBase):
     slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
     description: str | None = Field(default=None, max_length=500)
     user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
-    provider_type: str | None = Field(default=None, max_length=30, description="why not here too")
+    provider_type: uuid.UUID | None = Field(default_factory=uuid.uuid4)
+    model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
     model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
     model_name: str | None = Field(default=None)
     system_prompt: str | None = Field(default=None)

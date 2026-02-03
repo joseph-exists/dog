@@ -5079,10 +5079,17 @@ export const UserAgentConfigCreateSchema = {
             title: 'User Access Provider',
             description: 'User-selected provider associated with this agent config'
         },
-        provider_type_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Provider Type Id'
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type'
         },
         model_id: {
             anyOf: [
@@ -5217,7 +5224,7 @@ export const UserAgentConfigCreateSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'slug', 'provider_type_id'],
+    required: ['name', 'slug'],
     title: 'UserAgentConfigCreate'
 } as const;
 
@@ -5274,10 +5281,17 @@ export const UserAgentConfigPublicSchema = {
             title: 'User Access Provider',
             description: 'User-selected provider associated with this agent config'
         },
-        provider_type_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Provider Type Id'
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type'
         },
         model_id: {
             anyOf: [
@@ -5502,23 +5516,10 @@ export const UserAgentConfigPublicSchema = {
         version: {
             type: 'integer',
             title: 'Version'
-        },
-        provider_type: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 30
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provider Type',
-            description: 'why not here too'
         }
     },
     type: 'object',
-    required: ['provider_type_id', 'id', 'owner_id', 'created_at', 'updated_at', 'version'],
+    required: ['id', 'owner_id', 'created_at', 'updated_at', 'version'],
     title: 'UserAgentConfigPublic'
 } as const;
 
@@ -5575,10 +5576,17 @@ export const UserAgentConfigUpdateSchema = {
             title: 'User Access Provider',
             description: 'User-selected provider associated with this agent config'
         },
-        provider_type_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Provider Type Id'
+        provider_type: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type'
         },
         model_id: {
             anyOf: [
@@ -5765,23 +5773,9 @@ export const UserAgentConfigUpdateSchema = {
                 }
             ],
             title: 'Capabilities'
-        },
-        provider_type: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 30
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provider Type',
-            description: 'why not here too'
         }
     },
     type: 'object',
-    required: ['provider_type_id'],
     title: 'UserAgentConfigUpdate'
 } as const;
 

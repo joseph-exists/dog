@@ -20,7 +20,7 @@ export function validateAgentFormData(
     errors.push("Agent slug is required")
   }
 
-  if (!data.provider_type_id.trim()) {
+  if (!data.provider_type.trim()) {
     errors.push("Select a provider type before continuing")
   }
 

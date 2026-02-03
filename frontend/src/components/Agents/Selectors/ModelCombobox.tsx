@@ -38,6 +38,8 @@ interface ModelComboboxProps {
   value: string
   /** Called when selection changes */
   onChange: (value: string) => void
+  /** Called with full model on selection */
+  onModelSelected?: (model: LLMModelPublic | null) => void
   /** Filter to specific provider type (hint: provider_type is not the same as user_access_provider) */
   providerType?: string
   /** Disable the combobox */
@@ -54,6 +56,7 @@ interface ModelComboboxProps {
 export default function ModelCombobox({
   value,
   onChange,
+  onModelSelected,
   providerType,
   placeholder = "Select a model...",
   disabled = false,
@@ -75,11 +78,13 @@ export default function ModelCombobox({
         providerType ? m.primary_provider_type_id === providerType : true,
       )
       .map((m) => ({
-        value: m.id,
-        label: m.display_name ?? m.id,
+        value: (m as any).id ?? m.model_id, // backend UUID id is what agent endpoints expect
+        label: m.display_name ?? m.model_id,
         description: m.description ?? undefined,
         providerType: m.primary_provider_type_id,
         isDefault: !!m.is_default,
+        friendlyId: m.model_id,
+        raw: m,
       }))
   }, [models, providerType])
 
@@ -101,6 +106,11 @@ export default function ModelCombobox({
   // Handle selecting a model
   const handleSelect = (modelValue: string) => {
     onChange(modelValue)
+    const selected =
+      models.find(
+        (m) => (m as any).id === modelValue || m.model_id === modelValue,
+      ) ?? null
+    onModelSelected?.(selected)
     setOpen(false)
     setSearchQuery("")
   }

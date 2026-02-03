@@ -116,10 +116,10 @@ export function AgentModelSettings({
   // Handle save
   const handleSave = async () => {
     const payload: UserAgentConfigUpdate = {
-      provider_type_id: agent.provider_type_id,
       user_access_provider: providerId,
       provider_type: providerType ?? undefined,
       model_name: modelName ?? undefined,
+      model: modelName ?? undefined,
       custom_system_prompt: customPrompt || null,
     }
     await updateMutation.mutateAsync(payload)

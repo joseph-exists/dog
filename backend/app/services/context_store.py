@@ -151,13 +151,26 @@ class RedisContextStore:
     def _key(self, room_id: uuid.UUID) -> str:
         return f"{self.key_prefix}:{room_id}:{self.key_suffix}"
 
+    @staticmethod
+    def _json_safe(value: Any) -> Any:
+        """Convert UUID/datetime in nested structures so json.dumps succeeds."""
+        if isinstance(value, uuid.UUID):
+            return str(value)
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {k: RedisContextStore._json_safe(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [RedisContextStore._json_safe(v) for v in value]
+        return value
+
     def _serialize(self, item: ContextItem) -> dict[str, Any]:
         return {
             "id": item.id,
             "room_id": str(item.room_id),
             "agent_slug": item.agent_slug,
             "context_type": item.context_type,
-            "payload": item.payload,
+            "payload": self._json_safe(item.payload),
             "source": item.source,
             "created_at": item.created_at.isoformat(),
             "expires_at": item.expires_at.isoformat() if item.expires_at else None,

@@ -15,7 +15,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDownIcon } from "lucide-react"
-import { useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -96,8 +97,9 @@ const agentFormSchema = z.object({
     .string()
     .max(500, "Description must be 500 characters or less")
     .optional(),
+  model_id: z.string().optional(),
   user_access_provider: z.string().nullable().optional(),
-  provider_type_id: z.string().min(1, "Provider type is required"),
+  provider_type: z.string().min(1, "Provider type is required"),
   model_name: z.string().optional(),
   system_prompt: z.string().optional(),
   participation_mode: z.string().optional(),
@@ -109,12 +111,12 @@ export type AgentFormData = {
   name: string
   slug: string
   description: string
+  model_id: string
   model_name: string
   system_prompt: string
   participation_mode: string
-  provider_type_id: string
+  provider_type: string
   user_access_provider?: string | null
-  provider_type?: string | null
 }
 
 // ============================================================================
@@ -159,7 +161,8 @@ export default function AgentForm({
       slug: defaults?.slug || "",
       description: defaults?.description || "",
       user_access_provider: defaults?.user_access_provider || undefined,
-      provider_type_id: defaults?.provider_type_id || "",
+      provider_type: defaults?.provider_type || "",
+      model_id: defaults?.model_id || "",
       model_name: defaults?.model_name || "",
       system_prompt: defaults?.system_prompt || "",
       participation_mode: defaults?.participation_mode || "on_mention",
@@ -185,31 +188,43 @@ export default function AgentForm({
   const selectedProviderId = form.watch("user_access_provider")
   const systemPrompt = form.watch("system_prompt")
   const description = form.watch("description")
+  const providerTypeWatch = form.watch("provider_type")
   const selectedProvider =
     providers.find((p) => p.id === selectedProviderId) ?? null
+  // ModelCombobox filters on provider type (not provider id), so pass alpha_provider_type_id when available.
+  const providerTypeFilter =
+    selectedProvider?.alpha_provider_type_id || providerTypeWatch || undefined
 
   // ==========================================================================
   // Auto-Generate Slug (Create Mode Only)
   // ==========================================================================
 
+  const [isSlugLoading, setIsSlugLoading] = useState(false)
+
+  const fetchSlug = useCallback(async () => {
+    if (isSlugLoading) return
+    setIsSlugLoading(true)
+    try {
+      const generated = await AgentsService.generateAgentSlug()
+      const slug =
+        typeof generated === "string"
+          ? generated
+          : (generated as { slug?: string })?.slug
+
+      if (slug) {
+        form.setValue("slug", slug, { shouldValidate: true })
+      }
+    } catch (error) {
+      console.error("Failed to generate slug:", error)
+    } finally {
+      setIsSlugLoading(false)
+    }
+  }, [form, isSlugLoading])
+
   useEffect(() => {
     if (isEditMode || form.getValues("slug")) return
-
-    let isActive = true
-    AgentsService.generateAgentSlug()
-      .then((generatedSlug) => {
-        if (isActive && typeof generatedSlug === "string") {
-          form.setValue("slug", generatedSlug, { shouldValidate: true })
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to generate slug:", error)
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [isEditMode, form])
+    void fetchSlug()
+  }, [isEditMode, form, fetchSlug])
 
   // ==========================================================================
   // Notify Parent of Changes
@@ -218,22 +233,22 @@ export default function AgentForm({
   useEffect(() => {
     const subscription = form.watch((values) => {
       // Only notify if we have all required values
-      if (!values.name || !values.slug || !values.provider_type_id) return
+      if (!values.name || !values.slug || !values.provider_type) return
 
-      // Get provider_type_id from selected provider or use existing value
-      const providerTypeId =
-        selectedProvider?.alpha_provider_type_id || values.provider_type_id
+      // Get provider_type from selected provider or use existing value
+      const providerType =
+        selectedProvider?.alpha_provider_type_id || values.provider_type
 
       onChange({
         name: values.name,
         slug: values.slug,
         description: values.description || "",
+        model_id: values.model_id || "",
         model_name: values.model_name || "",
         system_prompt: values.system_prompt || "",
         participation_mode: values.participation_mode || "on_mention",
         user_access_provider: values.user_access_provider,
-        provider_type_id: providerTypeId,
-        provider_type: selectedProvider?.alpha_provider_type_id ?? null,
+        provider_type: providerType,
       })
     })
 
@@ -252,16 +267,19 @@ export default function AgentForm({
       shouldValidate: true,
     })
 
-    // Update provider_type_id when provider changes
+    // Update provider_type when provider changes
     if (provider?.alpha_provider_type_id) {
-      form.setValue("provider_type_id", provider.alpha_provider_type_id, {
+      form.setValue("provider_type", provider.alpha_provider_type_id, {
         shouldValidate: true,
       })
     }
   }
 
-  const handleModelChange = (newModelName: string) => {
-    form.setValue("model_name", newModelName, { shouldValidate: true })
+  const handleModelChange = (modelId: string, modelName?: string) => {
+    form.setValue("model_id", modelId, { shouldValidate: true })
+    if (modelName) {
+      form.setValue("model_name", modelName, { shouldValidate: true })
+    }
   }
 
   // ==========================================================================
@@ -295,7 +313,23 @@ export default function AgentForm({
 
         {/* Slug (read-only, auto-generated) */}
         <div className="space-y-2">
-          <Label>Slug</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label className="flex items-center gap-2">
+              Slug
+              <span className="text-xs text-muted-foreground">(auto)</span>
+            </Label>
+            {!isEditMode && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void fetchSlug()}
+                disabled={isSlugLoading}
+              >
+                {isSlugLoading ? "Regenerating..." : "Regenerate"}
+              </Button>
+            )}
+          </div>
           <p className="text-sm font-mono text-muted-foreground px-3 py-2 rounded-md bg-muted">
             {form.watch("slug") ? `@${form.watch("slug")}` : "Generating..."}
           </p>
@@ -348,19 +382,26 @@ export default function AgentForm({
         {/* Model Selector */}
         <FormField
           control={form.control}
-          name="model_name"
+          name="model_id"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
                 Model <span className="text-destructive">*</span>
               </FormLabel>
-              <FormControl>
-                <ModelCombobox
-                  value={field.value ?? ""}
-                  onChange={handleModelChange}
-                  providerType={undefined}
-                />
-              </FormControl>
+          <FormControl>
+            <ModelCombobox
+              value={field.value ?? ""}
+              onChange={(id) => handleModelChange(id)}
+              onModelSelected={(model) =>
+                handleModelChange(
+                  // agents endpoint expects UUID from models.id
+                  (model as any)?.id || model?.model_id || "",
+                  model?.model_id || model?.display_name || "",
+                )
+              }
+              providerType={providerTypeFilter}
+            />
+          </FormControl>
               <FormDescription>
                 {selectedProvider
                   ? `Using credentials from "${selectedProvider.name}"`

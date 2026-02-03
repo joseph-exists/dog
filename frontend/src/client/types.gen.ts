@@ -1448,7 +1448,7 @@ export type UserAgentConfigCreate = {
      * User-selected provider associated with this agent config
      */
     user_access_provider?: (string | null);
-    provider_type_id: string;
+    provider_type?: (string | null);
     /**
      * model associated with this agent config
      */
@@ -1496,7 +1496,7 @@ export type UserAgentConfigPublic = {
      * User-selected provider associated with this agent config
      */
     user_access_provider?: (string | null);
-    provider_type_id: string;
+    provider_type?: (string | null);
     /**
      * model associated with this agent config
      */
@@ -1533,10 +1533,6 @@ export type UserAgentConfigPublic = {
     created_at: string;
     updated_at: (string | null);
     version: number;
-    /**
-     * why not here too
-     */
-    provider_type?: (string | null);
 };
 
 export type UserAgentConfigsPublic = {
@@ -1558,7 +1554,7 @@ export type UserAgentConfigUpdate = {
      * User-selected provider associated with this agent config
      */
     user_access_provider?: (string | null);
-    provider_type_id: string;
+    provider_type?: (string | null);
     /**
      * model associated with this agent config
      */
@@ -1590,10 +1586,6 @@ export type UserAgentConfigUpdate = {
     is_coordinator?: (boolean | null);
     max_tool_iterations?: (number | null);
     capabilities?: (Array<(string)> | null);
-    /**
-     * why not here too
-     */
-    provider_type?: (string | null);
 };
 
 export type UserCreate = {

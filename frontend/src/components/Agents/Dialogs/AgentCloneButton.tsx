@@ -87,7 +87,7 @@ export default function AgentCloneButton({
         participation_mode: agent.participation_mode ?? undefined,
         scope: "personal",
         is_enabled: true,
-        provider_type_id: agent.provider_type_id,
+        provider_type: (agent as any).provider_type ?? null,
         // (don't copy user access source provider as it may not be accessible to the cloning user)
         user_access_provider: null,
       }

@@ -159,9 +159,10 @@ export default function AgentDetailDialog({
     }
 
     // Only send fields that changed
-    const payload: UserAgentConfigUpdate = {
-      provider_type_id: agent.provider_type_id,
-    }
+    const payload: UserAgentConfigUpdate & {
+      provider_type?: string | null
+      model?: string | null
+    } = {}
 
     if (formData.name.trim() !== agent.name) {
       payload.name = formData.name.trim()
@@ -169,8 +170,15 @@ export default function AgentDetailDialog({
     if ((formData.description.trim() || null) !== (agent.description || null)) {
       payload.description = formData.description.trim() || null
     }
+    if (formData.model_id !== agent.model_id) {
+      payload.model_id = formData.model_id
+    }
     if (formData.model_name !== agent.model_name) {
       payload.model_name = formData.model_name
+      payload.model = formData.model_name
+    }
+    if (formData.provider_type !== (agent as any).provider_type) {
+      payload.provider_type = formData.provider_type ?? null
     }
     if (
       (formData.system_prompt.trim() || null) !== (agent.system_prompt || null)
@@ -232,10 +240,11 @@ export default function AgentDetailDialog({
                   name: agent.name ?? "",
                   slug: agent.slug ?? "",
                   description: agent.description ?? "",
+                  model_id: agent.model_id ?? "",
                   model_name: agent.model_name ?? "",
                   system_prompt: agent.system_prompt ?? "",
                   participation_mode: agent.participation_mode ?? "on_mention",
-                  provider_type_id: agent.provider_type_id,
+                  provider_type: agent.provider_type ?? "",
                   user_access_provider: agent.user_access_provider ?? undefined,
                 }}
                 onChange={handleFormChange}

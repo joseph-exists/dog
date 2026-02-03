@@ -113,8 +113,10 @@ class StreamingAgentRunner:
 
                 # Look up agent config for usage limits
                 agent_config = await get_agent_config(session, agent_name)
+                # Be defensive: some DB rows may omit this column or return RowMapping;
+                # fall back to 10 when not present.
                 request_limit = (
-                    agent_config.max_tool_iterations if agent_config else 10
+                    getattr(agent_config, "max_tool_iterations", 10) if agent_config else 10
                 )
 
                 full_prompt = self._build_agent_prompt(
