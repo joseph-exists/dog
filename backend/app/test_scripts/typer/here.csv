@@ -1,0 +1,10 @@
+openai_compatible,moonshotai/kimi-k2-thinking,k2-thinking,Kimi K2 Thinking,256000,false,true,0,true,true,true,true
+openai_compatible,grok-4.1-fast-non-reasoning,grok-4.1-fast,Grok41Fast,200000,false,true,0,true,true,true,true
+openai_compatible,deepseek-v3.2,deepseek-v3.2,deepseek-v3.2,128000,false,true,0,true,true,true,true
+openai_compatible,alibaba-qwen3-32b,Qwen-3-32B,Qwen3-32B,131072,false,true,0,true,true,true,true 
+openai_compatible,qwen/qwen3-next-80b-a3b-instruct,qwen3-next,qwen3-next,262144,false,true,0,true,true,true,true
+openai_compatible,Hermes-4.3-36B,Nous-Hermes-4-36B,hermes 4 36b,hermes4 36b,128000,false,true,0,false,false,false,false
+openai_compatible,Hermes-4-70B,Nous-Hermes-7-70B,NH770B,128000,false,true,0,false,false,false,false
+openai_compatible,Hermes-4-405B,Nous-Hermes-4-405B,NH405B,128000,false,true,0,false,false,false,false
+
+alibaba-qwen3-32b Qwen-3-32B -p openai_compatible  -d Qwen3-32B -c 131072 --vision --tools --streaming --enabled

@@ -22,6 +22,7 @@ import { z } from "zod"
 import { AgentsService, LlmProvidersService } from "@/client/sdk.gen"
 import type {
   UserAccessProviderPublic,
+  Type1Create,
   Type3Create,
   // Type3 is openai_compatible creation model - this allows us faster proof of concept and less munging about
   // TODO: add Type1Create (and others) as exported from "@/client/types.gen"
@@ -130,9 +131,9 @@ interface AgentFormProps {
   /** Whether this is editing an existing agent or creating a new one */
   isEditMode?: boolean
   /** Initial values for edit mode */
-  initialValues?: Partial<Type3Create>
+  initialValues?: Partial<Type1Create | Type3Create>
   /** Legacy prop name kept for compatibility */
-  initialData?: Partial<Type3Create>
+  initialData?: Partial<Type1Create | Type3Create>
   /** Callback when form values change */
   onChange: (values: AgentFormData) => void
   /** Optional className for styling */
@@ -232,6 +233,26 @@ export default function AgentForm({
   // ==========================================================================
   // Notify Parent of Changes
   // ==========================================================================
+
+  // Ensure parent gets initial values once required fields are present; the
+  // watch subscription below only fires on change events.
+  useEffect(() => {
+    const vals = form.getValues()
+    if (vals.name && vals.slug && (selectedProvider?.alpha_provider_type_id || vals.provider_type)) {
+      onChange({
+        name: vals.name,
+        slug: vals.slug,
+        description: vals.description || "",
+        model_id: vals.model_id || "",
+        model_name: vals.model_name || "",
+        system_prompt: vals.system_prompt || "",
+        participation_mode: vals.participation_mode || "on_mention",
+        user_access_provider: vals.user_access_provider,
+        provider_type: selectedProvider?.alpha_provider_type_id || vals.provider_type,
+      })
+    }
+  // selectedProvider changes when user picks a provider; emit once per change.
+  }, [form, onChange, selectedProvider])
 
   useEffect(() => {
     const subscription = form.watch((values) => {

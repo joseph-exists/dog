@@ -1,25 +1,30 @@
 """
 LLM Catalog routes.
+
+Provides endpoints for browsing and managing the LLM model catalog.
+
+Read operations (GET) are available to authenticated users.
+Write operations (POST/PATCH/DELETE) require superuser privileges.
 """
 
-from os import name
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-from sqlmodel import func, select
+from fastapi import APIRouter, Depends, HTTPException
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
 from app.models import (
     LLMModel,
     LLMModelCreate,
     LLMModelPublic,
     LLMModelsPublic,
+    LLMModelUpdate,
     LLMProviderType,
     LLMProviderTypesPublic,
     LLMProviderTypeCreate,
     LLMProviderTypePublic,
+    Message,
     UserAccessProvider,
     UserAccessProviderPublic,
     UserAccessProvidersPublic,
@@ -205,3 +210,133 @@ def list_models_for_uap(
         data=[LLMModelPublic(**m.model_dump()) for m in models],
         count=count,
     )
+
+
+# =============================================================================
+# Single Model Endpoints
+# =============================================================================
+
+
+@router.get("/models/{model_id}", response_model=LLMModelPublic)
+def get_model(
+    model_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Get a single LLM model by UUID.
+
+    Available to all authenticated users.
+    """
+    model = crud.get_llm_model(session=session, llm_model_id=model_id)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return LLMModelPublic(**model.model_dump())
+
+
+# =============================================================================
+# Model Admin Endpoints (Superuser Only)
+# =============================================================================
+
+
+@router.post(
+    "/models",
+    response_model=LLMModelPublic,
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def create_model(
+    session: SessionDep,
+    current_user: CurrentUser,
+    model_in: LLMModelCreate,
+) -> Any:
+    """
+    Create a new LLM model in the catalog.
+
+    **Superuser only.**
+
+    The model will be linked to a provider type via `primary_provider_type_id`.
+    The combination of (primary_provider_type_id, model_id) must be unique.
+    """
+    # Verify provider type exists
+    provider_type = crud.get_llm_provider_type(
+        session=session,
+        llm_provider_type_id=model_in.primary_provider_type_id,
+    )
+    if not provider_type:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider type not found: {model_in.primary_provider_type_id}"
+        )
+
+    model = crud.create_llm_model(
+        session=session,
+        llm_model_in=model_in,
+        owner_id=current_user.id,
+    )
+    return LLMModelPublic(**model.model_dump())
+
+
+@router.patch(
+    "/models/{model_id}",
+    response_model=LLMModelPublic,
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def update_model(
+    model_id: uuid.UUID,
+    session: SessionDep,
+    model_in: LLMModelUpdate,
+) -> Any:
+    """
+    Update an LLM model in the catalog.
+
+    **Superuser only.**
+
+    Only provide the fields you want to change.
+    """
+    model = crud.get_llm_model(session=session, llm_model_id=model_id)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    # If changing provider type, verify new one exists
+    update_data = model_in.model_dump(exclude_unset=True)
+    if "primary_provider_type_id" in update_data:
+        provider_type = crud.get_llm_provider_type(
+            session=session,
+            llm_provider_type_id=update_data["primary_provider_type_id"],
+        )
+        if not provider_type:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Provider type not found: {update_data['primary_provider_type_id']}"
+            )
+
+    updated_model = crud.update_llm_model(
+        session=session,
+        llm_model=model,
+        llm_model_update=model_in,
+    )
+    return LLMModelPublic(**updated_model.model_dump())
+
+
+@router.delete(
+    "/models/{model_id}",
+    response_model=Message,
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def delete_model(
+    model_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """
+    Delete an LLM model from the catalog.
+
+    **Superuser only.**
+
+    Warning: This is permanent and may affect agents using this model.
+    """
+    model = crud.get_llm_model(session=session, llm_model_id=model_id)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    crud.delete_llm_model(session=session, llm_model=model)
+    return Message(message=f"Model '{model.display_name}' deleted successfully")

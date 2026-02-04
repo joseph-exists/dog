@@ -158,45 +158,29 @@ export default function AgentDetailDialog({
       provider_type: providerType,
     }
 
-    let changed =
-      trimmedName !== (agent.name ?? "") ||
-      slug !== (agent.slug ?? "") ||
-      providerType !== (agent.provider_type as ProviderType)
-
     if (trimmedDescription !== (agent.description ?? "")) {
       payload.description = trimmedDescription || null
-      changed = true
     }
 
     if (data.model_id !== (agent.model_id ?? "")) {
       payload.model_id = data.model_id || null
-      changed = true
     }
 
     if (data.model_name !== (agent.model_name ?? "")) {
       payload.model_name = data.model_name || undefined
       payload.model = data.model_name || null
-      changed = true
     }
 
     if (trimmedSystemPrompt !== (agent.system_prompt ?? "")) {
       payload.system_prompt = trimmedSystemPrompt || null
-      changed = true
     }
 
     if (data.participation_mode !== (agent.participation_mode ?? "")) {
       payload.participation_mode = data.participation_mode
-      changed = true
     }
 
     if (data.user_access_provider !== agent.user_access_provider) {
       payload.user_access_provider = data.user_access_provider ?? null
-      changed = true
-    }
-
-    if (!changed) {
-      showErrorToast("No changes to save")
-      return null
     }
 
     return payload

@@ -833,31 +833,57 @@ python main.py agents create "Agent Name" agent-slug [OPTIONS]
 
 Create a new agent configuration. Users can create personal agents. Only admins can create system agents.
 
+The API uses a discriminated union based on `provider_type`. Different provider types have different required fields.
+
 **Arguments:**
 - `NAME` - Display name for the agent
 - `SLUG` - Unique identifier/slug
 
 **Options:**
-- `--desc, -d TEXT` - Agent description
-- `--model, -m TEXT` - Model name (default: `openai:gpt-4o-mini`)
-- `--prompt, -p TEXT` - System prompt
+- `--provider, -t TEXT` - Provider type: `openai` (default), `openai_compatible`
+- `--desc, -d TEXT` - Agent description (required for openai provider)
+- `--prompt, -p TEXT` - System prompt (required for all providers)
+- `--model-name TEXT` - Friendly model name (default: "friendly model name")
+- `--model-id TEXT` - Model UUID from catalog
 - `--scope, -s TEXT` - Scope: `personal` or `system` (default: personal)
 - `--mode TEXT` - Participation mode: `always`, `on_mention`, `manual` (default: on_mention)
+- `--coordinator/--no-coordinator` - Process messages first (default: no)
+- `--max-iterations INTEGER` - Max LLM requests per run (default: 10)
 - `--json` - Output as JSON
 - `--verbose, -v` - Show debug output
 
+**Provider Types:**
+| Type | Required Fields | Notes |
+|------|-----------------|-------|
+| `openai` | `--desc`, `--prompt` | Standard OpenAI provider |
+| `openai_compatible` | `--prompt` | OpenAI-compatible APIs (prompt max 5000 chars) |
+
 **Examples:**
 ```bash
-# Create a personal agent
-python main.py agents create "My Helper" my-helper --desc "A helpful assistant"
+# Create a personal agent (openai provider - default)
+python main.py agents create "My Helper" my-helper \
+  --desc "A helpful assistant" \
+  --prompt "You are a helpful AI assistant."
 
-# Create with custom model and prompt
+# Create with openai_compatible provider
+python main.py agents create "Local LLM" local-bot \
+  --provider openai_compatible \
+  --prompt "You are a helpful assistant running locally."
+
+# Create with all options
 python main.py agents create "Story Bot" story-bot \
-  --model openai:gpt-4o \
-  --prompt "You are a creative storytelling assistant..."
+  --provider openai \
+  --desc "A creative storyteller" \
+  --prompt "You are a creative storytelling assistant..." \
+  --mode always \
+  --coordinator \
+  --max-iterations 20
 
 # Create system agent (admin only)
-python main.py agents create "Global Advisor" global-advisor --scope system
+python main.py agents create "Global Advisor" global-advisor \
+  --desc "System-wide advisor" \
+  --prompt "You are a wise advisor." \
+  --scope system
 ```
 
 ### Update Agent
@@ -948,149 +974,688 @@ python main.py agents disable abc123
 
 ## LLM Catalog Commands
 
-Browse and query the LLM provider and model catalog. These commands don't require authentication (public catalog).
+Manage your LLM provider configurations and browse the model catalog.
 
-### List Providers
+**Important Architecture Concepts:**
+
+| Concept | Description |
+|---------|-------------|
+| **Provider Type** | Catalog entry (e.g., "openai", "anthropic") - system-defined |
+| **User Access Provider** | YOUR config with API key linked to a provider type |
+| **Model** | Available LLM models (gpt-4o, claude-3-opus) linked to provider types |
+
+### List Provider Types
+
+```bash
+python main.py catalog types [OPTIONS]
+```
+
+List all available provider types (openai, anthropic, etc.). Use this to find the ID when creating a provider config.
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog types
+python main.py catalog types --json
+```
+
+### Get Provider Type by UUID
+
+```bash
+python main.py catalog type PROVIDER_TYPE_ID [OPTIONS]
+```
+
+Get details for a specific provider type by UUID.
+
+**Arguments:**
+- `PROVIDER_TYPE_ID` - The provider type UUID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Example:**
+```bash
+python main.py catalog type 673f1787-8474-4e1c-986c-8e19f14c989c
+```
+
+### Get Provider Type by Name
+
+```bash
+python main.py catalog type-by-name NAME [OPTIONS]
+```
+
+Look up a provider type by name (e.g., "openai", "anthropic").
+
+**Arguments:**
+- `NAME` - Provider type name
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog type-by-name openai
+python main.py catalog type-by-name anthropic --json
+```
+
+### List Your Providers
 
 ```bash
 python main.py catalog providers [OPTIONS]
 ```
 
-List all LLM providers in the catalog.
+List your configured LLM providers (your API keys and settings).
 
 **Options:**
-- `--type, -t TEXT` - Filter by type: `openai`, `anthropic`, `google`, `openai_compatible`
-- `--enabled, -e` - Show only enabled providers
-- `--deleted` - Include soft-deleted providers
+- `--limit INTEGER` - Max items to list (default: 50)
+- `--skip INTEGER` - Pagination offset
 - `--json` - Output as JSON
 - `--verbose, -v` - Show debug output
 
 **Examples:**
 ```bash
 python main.py catalog providers
-python main.py catalog providers --type anthropic
-python main.py catalog providers --enabled --json
+python main.py catalog providers --json
 ```
 
-### Get Provider Details
+### Get Your Provider
 
 ```bash
 python main.py catalog provider PROVIDER_ID [OPTIONS]
 ```
 
-Get details for a specific provider.
+Get details of your specific provider configuration.
 
 **Arguments:**
-- `PROVIDER_ID` - The provider UUID
+- `PROVIDER_ID` - Your provider config UUID
 
 **Options:**
-- `--models, -m` - Include provider's models in output
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Example:**
+```bash
+python main.py catalog provider abc123
+```
+
+### Create Provider
+
+```bash
+python main.py catalog create-provider NAME --type TYPE -k API_KEY [OPTIONS]
+```
+
+Create a new LLM provider configuration with your API key. The API key is encrypted at rest.
+
+**Arguments:**
+- `NAME` - Friendly name for this config
+
+**Options:**
+- `--type, -t TEXT` - Provider type name (e.g., "openai") or UUID **(required)**
+- `--api-key, -k TEXT` - API key (will prompt securely if not provided) **(required)**
+- `--base-url, -u TEXT` - Custom base URL (for self-hosted/Azure)
+- `--desc, -d TEXT` - Description
+- `--default/--no-default` - Set as your default provider
 - `--json` - Output as JSON
 - `--verbose, -v` - Show debug output
 
 **Examples:**
 ```bash
-python main.py catalog provider abc123
-python main.py catalog provider abc123 --models
+# By provider type name (will look up UUID automatically)
+python main.py catalog create-provider "My OpenAI" --type openai -k sk-xxx
+
+# By provider type UUID
+python main.py catalog create-provider "My Claude" \
+    --type 008dc763-4309-43cd-ba5f-1eb1323a0964 -k sk-xxx
+
+# With custom endpoint (for Azure, self-hosted, etc.)
+python main.py catalog create-provider "Azure OpenAI" \
+    --type openai \
+    --base-url https://my-resource.openai.azure.com \
+    -k xxx
+
+# Interactive API key prompt (more secure - hides input)
+python main.py catalog create-provider "My Provider" --type openai
+# (will prompt for API key)
 ```
 
-### List Models
+### Update Provider
+
+```bash
+python main.py catalog update-provider PROVIDER_ID [OPTIONS]
+```
+
+Update your LLM provider configuration. Only provide fields you want to change.
+
+**Arguments:**
+- `PROVIDER_ID` - Provider config UUID to update
+
+**Options:**
+- `--name, -n TEXT` - New name
+- `--api-key, -k TEXT` - New API key (will be encrypted)
+- `--base-url, -u TEXT` - New base URL
+- `--desc, -d TEXT` - New description
+- `--enabled/--disabled` - Enable or disable
+- `--default/--no-default` - Set as default
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog update-provider abc123 --name "Renamed Provider"
+python main.py catalog update-provider abc123 --api-key NEW_KEY
+python main.py catalog update-provider abc123 --disabled
+python main.py catalog update-provider abc123 --default
+```
+
+### Delete Provider
+
+```bash
+python main.py catalog delete-provider PROVIDER_ID [OPTIONS]
+```
+
+Delete your LLM provider configuration. ⚠️ This also deletes the stored API key!
+
+**Arguments:**
+- `PROVIDER_ID` - Provider config UUID to delete
+
+**Options:**
+- `--force, -f` - Skip confirmation prompt
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog delete-provider abc123
+python main.py catalog delete-provider abc123 --force
+```
+
+### List All Models
 
 ```bash
 python main.py catalog models [OPTIONS]
 ```
 
-List all LLM models (flat list with filtering).
+List all available LLM models in the catalog.
 
 **Options:**
-- `--type, -t TEXT` - Filter by provider type
-- `--provider, -p TEXT` - Filter by provider UUID
-- `--enabled, -e` - Show only enabled models
-- `--defaults, -d` - Show only default models
-- `--vision` - Filter by vision capability
-- `--tools` - Filter by function calling capability
-- `--limit INTEGER` - Max items to list (default: 50)
+- `--limit INTEGER` - Max items to list (default: 100)
+- `--skip INTEGER` - Pagination offset
 - `--json` - Output as JSON
 - `--verbose, -v` - Show debug output
 
 **Examples:**
 ```bash
 python main.py catalog models
-python main.py catalog models --type anthropic
-python main.py catalog models --vision --tools
-python main.py catalog models --defaults
+python main.py catalog models --limit 20
+python main.py catalog models --json
 ```
 
-### List Models Grouped by Provider
+### List Models for Your Provider
 
 ```bash
-python main.py catalog models-grouped [OPTIONS]
+python main.py catalog provider-models PROVIDER_ID [OPTIONS]
 ```
 
-List models organized by provider (useful for UI dropdowns).
+List models compatible with one of your configured providers.
+
+**Arguments:**
+- `PROVIDER_ID` - Your provider config UUID
 
 **Options:**
-- `--type, -t TEXT` - Filter by provider type
-- `--enabled, -e` - Show only enabled
+- `--limit INTEGER` - Max items to list (default: 100)
+- `--skip INTEGER` - Pagination offset
 - `--json` - Output as JSON
 - `--verbose, -v` - Show debug output
 
 **Examples:**
 ```bash
-python main.py catalog models-grouped
-python main.py catalog models-grouped --type openai
+python main.py catalog provider-models abc123
+python main.py catalog provider-models abc123 --json
 ```
 
 ### Get Model Details
 
 ```bash
-python main.py catalog model MODEL_ID [OPTIONS]
+python main.py catalog model MODEL_UUID [OPTIONS]
 ```
 
 Get detailed information about a specific model.
 
 **Arguments:**
-- `MODEL_ID` - The model UUID
+- `MODEL_UUID` - Model UUID from catalog
 
 **Options:**
 - `--json` - Output as JSON
 - `--verbose, -v` - Show debug output
 
+**Examples:**
+```bash
+python main.py catalog model <uuid>
+python main.py catalog model <uuid> --json
+```
+
+---
+
+## Model Admin Commands (Superuser Only)
+
+These commands modify the model catalog and require superuser privileges. Regular users will receive 403 Forbidden errors.
+
+### Create Model
+
+```bash
+python main.py catalog create-model MODEL_ID DISPLAY_NAME --provider TYPE [OPTIONS]
+```
+
+Create a new LLM model in the catalog.
+
+**Arguments:**
+- `MODEL_ID` - Model identifier as the API expects (e.g., 'gpt-4o-mini', 'claude-3-haiku')
+- `DISPLAY_NAME` - Human-friendly name (e.g., 'GPT 4o Mini')
+
+**Options:**
+- `--provider, -p TEXT` - Provider type name or UUID **(required)**
+- `--desc, -d TEXT` - Model description
+- `--context, -c INTEGER` - Context window size in tokens
+- `--vision/--no-vision` - Supports image input
+- `--tools/--no-tools` - Supports function calling
+- `--streaming/--no-streaming` - Supports streaming
+- `--json-mode/--no-json-mode` - Supports JSON output mode
+- `--default/--no-default` - Mark as default (cheapest) model for provider
+- `--enabled/--disabled` - Enable or disable (default: enabled)
+- `--sort, -s INTEGER` - Sort order within provider (lower = first)
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+# Create a basic model
+python main.py catalog create-model gpt-4o-mini "GPT 4o Mini" --provider openai
+
+# Create with full capabilities
+python main.py catalog create-model claude-3-5-sonnet "Claude 3.5 Sonnet" \
+    --provider anthropic \
+    --desc "Most intelligent Claude model" \
+    --context 200000 \
+    --vision \
+    --tools \
+    --streaming \
+    --json-mode
+
+# Create as default model for provider
+python main.py catalog create-model gpt-4o-mini "GPT 4o Mini" \
+    --provider openai \
+    --default \
+    --desc "Fast and affordable"
+```
+
+### Update Model
+
+```bash
+python main.py catalog update-model MODEL_UUID [OPTIONS]
+```
+
+Update an existing LLM model. Only provide fields you want to change.
+
+**Arguments:**
+- `MODEL_UUID` - Model UUID to update
+
+**Options:**
+- `--model-id TEXT` - New model identifier
+- `--name, -n TEXT` - New display name
+- `--desc, -d TEXT` - New description
+- `--context, -c INTEGER` - New context window size
+- `--vision/--no-vision` - Update vision capability
+- `--tools/--no-tools` - Update function calling capability
+- `--streaming/--no-streaming` - Update streaming capability
+- `--json-mode/--no-json-mode` - Update JSON mode capability
+- `--default/--no-default` - Set as default
+- `--enabled/--disabled` - Enable or disable
+- `--deprecated/--not-deprecated` - Mark as deprecated
+- `--sort, -s INTEGER` - New sort order
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+# Update display name
+python main.py catalog update-model <uuid> --name "GPT 4o (Latest)"
+
+# Add capabilities
+python main.py catalog update-model <uuid> --vision --tools
+
+# Deprecate a model (still works but shows warning)
+python main.py catalog update-model <uuid> --deprecated
+
+# Disable a model (no longer available)
+python main.py catalog update-model <uuid> --disabled
+```
+
+### Delete Model
+
+```bash
+python main.py catalog delete-model MODEL_UUID [OPTIONS]
+```
+
+Delete an LLM model from the catalog.
+
+⚠️ **Warning:** This is permanent and may affect agents using this model!
+
+**Arguments:**
+- `MODEL_UUID` - Model UUID to delete
+
+**Options:**
+- `--force, -f` - Skip confirmation prompt
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py catalog delete-model <uuid>
+python main.py catalog delete-model <uuid> --force
+```
+
+### Enable Model
+
+```bash
+python main.py catalog enable-model MODEL_UUID
+```
+
+Enable a model (shortcut for `update-model --enabled`).
+
+### Disable Model
+
+```bash
+python main.py catalog disable-model MODEL_UUID
+```
+
+Disable a model (shortcut for `update-model --disabled`).
+
+### Deprecate Model
+
+```bash
+python main.py catalog deprecate-model MODEL_UUID
+```
+
+Mark a model as deprecated. Deprecated models still work but show warnings.
+
+---
+
+## Bulk Import/Export & Search Commands (Superuser Only)
+
+Commands for managing the model catalog at scale. Import from CSV, export for backup, and search/filter models.
+
+### Export Models to CSV
+
+```bash
+python main.py catalog export-models [OUTPUT_FILE] [OPTIONS]
+```
+
+Export the model catalog to CSV format for backup or editing.
+
+**Arguments:**
+- `OUTPUT_FILE` - Output filename (default: llm_models_export.csv)
+
+**Options:**
+- `--provider, -p TEXT` - Filter by provider name (openai, anthropic, etc.)
+- `--enabled-only` - Only export enabled models
+- `--verbose, -v` - Show debug output
+
+**CSV Columns:**
+`model_id`, `display_name`, `description`, `provider_name`, `context_window`, `supports_vision`, `supports_tools`, `supports_streaming`, `supports_json_mode`, `is_default`, `is_enabled`, `is_deprecated`, `sort_order`
+
+**Examples:**
+```bash
+# Export all models
+python main.py catalog export-models
+
+# Export to specific file
+python main.py catalog export-models backup_2024.csv
+
+# Export only OpenAI models
+python main.py catalog export-models openai_models.csv --provider openai
+
+# Export only enabled models
+python main.py catalog export-models active_models.csv --enabled-only
+```
+
+### Import Models from CSV
+
+```bash
+python main.py catalog import-models CSV_FILE [OPTIONS]
+```
+
+Import models from CSV file. Supports dry-run mode to preview changes before applying.
+
+**Arguments:**
+- `CSV_FILE` - Path to CSV file to import
+
+**Options:**
+- `--dry-run` - Preview changes without applying them
+- `--update/--no-update` - Update existing models (default: skip existing)
+- `--verbose, -v` - Show debug output
+
+**Behavior:**
+- **New models**: Created with all specified fields
+- **Existing models** (by `model_id` + `provider`):
+  - `--no-update` (default): Skipped with warning
+  - `--update`: Updated with new values from CSV
+
+**CSV Format:**
+Same columns as export. Provider can be name (e.g., "OpenAI") or UUID.
+
+**Examples:**
+```bash
+# Preview import (no changes made)
+python main.py catalog import-models new_models.csv --dry-run
+
+# Import, skip existing models
+python main.py catalog import-models new_models.csv
+
+# Import and update existing models
+python main.py catalog import-models updated_models.csv --update
+
+# Verbose mode for troubleshooting
+python main.py catalog import-models models.csv --dry-run --verbose
+```
+
+**Sample CSV:**
+```csv
+model_id,display_name,description,provider_name,context_window,supports_vision,supports_tools,supports_streaming,supports_json_mode,is_default,is_enabled,is_deprecated,sort_order
+gpt-4o-mini,"GPT 4o Mini","Fast and affordable",OpenAI,128000,true,true,true,true,true,true,false,10
+claude-3-haiku,"Claude 3 Haiku","Fast Claude model",Anthropic,200000,true,true,true,true,false,true,false,30
+```
+
+### Export Template CSV
+
+```bash
+python main.py catalog template [OUTPUT_FILE] [OPTIONS]
+```
+
+Generate an empty CSV template with all columns and example rows.
+
+**Arguments:**
+- `OUTPUT_FILE` - Output filename (default: llm_models_template.csv)
+
+**Options:**
+- `--verbose, -v` - Show debug output
+
 **Example:**
 ```bash
-python main.py catalog model abc123
+python main.py catalog template
+python main.py catalog template my_models.csv
 ```
 
-### List Default Models
+The template includes example rows showing proper formatting for each provider type.
+
+### Search Models
 
 ```bash
-python main.py catalog defaults [OPTIONS]
+python main.py catalog search [OPTIONS]
 ```
 
-Quick list of default (cheapest) models per provider.
+Search and filter models with multiple criteria.
+
+**Options:**
+- `--query, -q TEXT` - Search in model_id and display_name
+- `--provider, -p TEXT` - Filter by provider name
+- `--vision/--no-vision` - Filter by vision capability
+- `--tools/--no-tools` - Filter by function calling capability
+- `--enabled/--disabled` - Filter by enabled status
+- `--deprecated/--not-deprecated` - Filter by deprecation status
+- `--min-context INTEGER` - Minimum context window size
+- `--limit INTEGER` - Max results (default: 50)
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+# Search by name
+python main.py catalog search --query "gpt"
+
+# Find all vision-capable models
+python main.py catalog search --vision
+
+# Find OpenAI models with function calling
+python main.py catalog search --provider openai --tools
+
+# Find high-context models (100k+)
+python main.py catalog search --min-context 100000
+
+# Find deprecated models
+python main.py catalog search --deprecated
+
+# Combine filters
+python main.py catalog search --provider anthropic --vision --enabled --min-context 100000
+
+# JSON output for scripting
+python main.py catalog search --query "claude" --json | jq '.[] | .display_name'
+```
+
+### Catalog Statistics
+
+```bash
+python main.py catalog stats [OPTIONS]
+```
+
+Show aggregate statistics about the model catalog.
 
 **Options:**
 - `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
 
-**Example:**
+**Output includes:**
+- Total model count
+- Models per provider
+- Enabled vs disabled count
+- Deprecated model count
+- Capability breakdown (vision, tools, streaming, JSON mode)
+- Context window statistics (min/max/average)
+
+**Examples:**
 ```bash
-python main.py catalog defaults
+python main.py catalog stats
+python main.py catalog stats --json
 ```
 
-### List Vision Models
+**Sample Output:**
+```
+📊 LLM Catalog Statistics
 
-```bash
-python main.py catalog vision [OPTIONS]
+  Total Models: 42
+
+  By Provider:
+    • OpenAI: 12
+    • Anthropic: 8
+    • Google: 6
+    • Mistral: 4
+    • ...
+
+  Status:
+    • Enabled: 38
+    • Disabled: 4
+    • Deprecated: 2
+
+  Capabilities:
+    • Vision: 18 (43%)
+    • Function Calling: 24 (57%)
+    • Streaming: 40 (95%)
+    • JSON Mode: 22 (52%)
+
+  Context Windows:
+    • Min: 4,096 tokens
+    • Max: 2,000,000 tokens
+    • Average: 128,000 tokens
 ```
 
-Quick list of models with vision capability.
+---
 
-**Options:**
-- `--json` - Output as JSON
+### Typical Workflow
 
-**Example:**
 ```bash
-python main.py catalog vision
+# 1. See what provider types are available
+python main.py catalog types
+
+# 2. Create a provider config with your API key
+python main.py catalog create-provider "My OpenAI" --type openai -k sk-xxx --default
+
+# 3. List your configured providers
+python main.py catalog providers
+
+# 4. See what models are available for your provider
+python main.py catalog provider-models <your-provider-uuid>
+
+# 5. Use a model UUID when creating agents
+python main.py agents create "My Agent" my-agent \
+    --desc "My agent" \
+    --prompt "You are helpful" \
+    --model-id <model-uuid>
+```
+
+### Admin: Bulk Model Management Workflow
+
+```bash
+# 1. Export current catalog for backup
+python main.py catalog export-models backup_before_changes.csv
+
+# 2. Check catalog statistics
+python main.py catalog stats
+
+# 3. Generate a template to add new models
+python main.py catalog template new_models.csv
+
+# 4. Edit new_models.csv with your models...
+
+# 5. Preview import (dry run)
+python main.py catalog import-models new_models.csv --dry-run
+
+# 6. Import the models
+python main.py catalog import-models new_models.csv
+
+# 7. Search to verify models were added
+python main.py catalog search --query "new-model-name"
+
+# 8. Export updated catalog for documentation
+python main.py catalog export-models catalog_v2.csv
+```
+
+### Admin: Model Maintenance Workflow
+
+```bash
+# Find deprecated models that need attention
+python main.py catalog search --deprecated
+
+# Find disabled models
+python main.py catalog search --disabled
+
+# Update models from edited CSV (updates existing, adds new)
+python main.py catalog import-models updated_models.csv --update --dry-run
+python main.py catalog import-models updated_models.csv --update
+
+# Export provider-specific catalog
+python main.py catalog export-models openai_only.csv --provider openai
 ```
 
 ## User Commands
@@ -1465,6 +2030,289 @@ Validate that a conflict group has appropriate member count for its type.
 **Example:**
 ```bash
 python main.py conflicts validate abc123
+```
+
+## Page Layout Commands
+
+Commands for managing persisted page layouts for entities.
+
+### List Pages
+
+```bash
+python main.py pages list [OPTIONS]
+```
+
+Search persisted page layouts with filtering.
+
+**Options:**
+- `--type, -t TEXT` - Filter by entity type
+- `--entity-id, -e TEXT` - Filter by entity ID
+- `--type-prefix TEXT` - Filter by entity type prefix
+- `--id-prefix TEXT` - Filter by entity ID prefix
+- `--limit INTEGER` - Maximum items to list (default: 20)
+- `--skip INTEGER` - Pagination offset (default: 0)
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py pages list
+python main.py pages list --type story
+python main.py pages list --type-prefix room --json
+```
+
+### Get Page Layout
+
+```bash
+python main.py pages get ENTITY_TYPE ENTITY_ID [OPTIONS]
+```
+
+Get the page layout for a specific entity.
+
+**Arguments:**
+- `ENTITY_TYPE` - Entity type (e.g. 'story', 'room')
+- `ENTITY_ID` - Entity ID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py pages get story abc123
+python main.py pages get room def456 --json
+```
+
+### Upsert Page Layout
+
+```bash
+python main.py pages upsert ENTITY_TYPE ENTITY_ID [OPTIONS]
+```
+
+Create or overwrite a page layout for an entity.
+
+**Arguments:**
+- `ENTITY_TYPE` - Entity type (e.g. 'story', 'room')
+- `ENTITY_ID` - Entity ID
+
+**Options:**
+- `--file, -f TEXT` - JSON file containing layout_json array
+- `--layout, -l TEXT` - Inline JSON string for layout_json
+- `--version INTEGER` - Layout version
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py pages upsert story abc123 --file layout.json
+python main.py pages upsert room def456 --layout '[{"type":"chat","position":0}]'
+```
+
+### Update Page
+
+```bash
+python main.py pages update PAGE_ID [OPTIONS]
+```
+
+Update an existing page layout by page ID.
+
+**Arguments:**
+- `PAGE_ID` - The page UUID
+
+**Options:**
+- `--file, -f TEXT` - JSON file containing layout_json array
+- `--layout, -l TEXT` - Inline JSON string for layout_json
+- `--version INTEGER` - Layout version
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py pages update abc123 --file updated_layout.json
+python main.py pages update abc123 --layout '[{"type":"chat","position":1}]'
+```
+
+### Delete Page
+
+```bash
+python main.py pages delete PAGE_ID [OPTIONS]
+```
+
+Delete a persisted page layout.
+
+**Arguments:**
+- `PAGE_ID` - The page UUID
+
+**Options:**
+- `--force, -f` - Skip confirmation prompt
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py pages delete abc123
+python main.py pages delete abc123 --force
+```
+
+## Preset Commands
+
+Commands for browsing available panel presets. No authentication required.
+
+### List Presets
+
+```bash
+python main.py presets list [OPTIONS]
+```
+
+List all available panel presets (system presets).
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py presets list
+python main.py presets list --json
+python main.py presets list -v
+```
+
+### Get Preset
+
+```bash
+python main.py presets get PRESET_ID [OPTIONS]
+```
+
+Get details of a specific preset.
+
+**Arguments:**
+- `PRESET_ID` - The preset ID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py presets get my-preset
+python main.py presets get my-preset --json
+```
+
+## Panel Commands
+
+Commands for managing room panel configurations. Supports resolved panels, room defaults, and per-user overrides.
+
+### Get Resolved Panels
+
+```bash
+python main.py panels get ROOM_ID [OPTIONS]
+```
+
+Get resolved panel configuration for current user. Returns the effective panels based on user override or room/type defaults.
+
+**Arguments:**
+- `ROOM_ID` - The room UUID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py panels get abc123
+python main.py panels get abc123 --json
+```
+
+### Get Room Default Panels
+
+```bash
+python main.py panels get-defaults ROOM_ID [OPTIONS]
+```
+
+Get room's default panel configuration (set by owner).
+
+**Arguments:**
+- `ROOM_ID` - The room UUID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py panels get-defaults abc123
+python main.py panels get-defaults abc123 --json
+```
+
+### Set Room Default Panels
+
+```bash
+python main.py panels set-defaults ROOM_ID [OPTIONS]
+```
+
+Update room's default panel configuration. Only room owner can modify.
+
+**Arguments:**
+- `ROOM_ID` - The room UUID
+
+**Options:**
+- `--file, -f TEXT` - JSON file containing panels array
+- `--panels, -p TEXT` - Inline JSON string for panels
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py panels set-defaults abc123 --file panels.json
+python main.py panels set-defaults abc123 --panels '[{"type":"chat"},{"type":"info"}]'
+```
+
+### Get My Panel Config
+
+```bash
+python main.py panels my-config ROOM_ID [OPTIONS]
+```
+
+Get your panel configuration override for a room.
+
+**Arguments:**
+- `ROOM_ID` - The room UUID
+
+**Options:**
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+python main.py panels my-config abc123
+python main.py panels my-config abc123 --json
+```
+
+### Set My Panel Config
+
+```bash
+python main.py panels set-my-config ROOM_ID [OPTIONS]
+```
+
+Update your panel configuration for a room. Use `--use-defaults` to follow room defaults, or `--custom` with panel data for a personal override.
+
+**Arguments:**
+- `ROOM_ID` - The room UUID
+
+**Options:**
+- `--use-defaults/--custom` - Use room defaults or custom panels (default: use-defaults)
+- `--file, -f TEXT` - JSON file containing panels array
+- `--panels, -p TEXT` - Inline JSON string for panels
+- `--json` - Output as JSON
+- `--verbose, -v` - Show debug output
+
+**Examples:**
+```bash
+# Use room defaults
+python main.py panels set-my-config abc123 --use-defaults
+
+# Set custom panels
+python main.py panels set-my-config abc123 --custom --file my_panels.json
+python main.py panels set-my-config abc123 --custom --panels '[{"type":"chat"}]'
 ```
 
 ## Demo Commands

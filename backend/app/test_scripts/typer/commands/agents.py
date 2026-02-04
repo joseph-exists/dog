@@ -11,6 +11,10 @@ API Endpoints:
     POST   /agents              - Create agent
     PUT    /agents/{id}         - Update agent
     DELETE /agents/{id}         - Delete agent
+
+Provider Types (discriminated union):
+    openai           - OpenAI provider (Type1)
+    openai_compatible - OpenAI-compatible provider (Type3)
 """
 import json
 from typing import Annotated
@@ -22,6 +26,15 @@ from auth_helper import get_authenticated_session
 app = typer.Typer(help="Agent registry management commands")
 
 BASE_URL = "http://localhost:8000/api/v1"
+
+# Provider type UUIDs for the discriminated union
+PROVIDER_TYPES = {
+    "openai": "673f1787-8474-4e1c-986c-8e19f14c989c",
+    "openai_compatible": "e09ade10-8563-4748-8deb-1a6c87c97134",
+}
+
+# Friendly names for display
+PROVIDER_NAMES = {v: k for k, v in PROVIDER_TYPES.items()}
 
 
 # ============================================================================
@@ -217,14 +230,24 @@ def get_agent(
 def create_agent(
     name: Annotated[str, typer.Argument(help="Display name for the agent")],
     slug: Annotated[str, typer.Argument(help="Unique identifier/slug")],
+    provider_type: Annotated[
+        str,
+        typer.Option(
+            "--provider", "-t",
+            help="Provider type: openai (default), openai_compatible"
+        ),
+    ] = "openai",
     description: Annotated[
-        str, typer.Option("--desc", "-d", help="Agent description")
-    ] = "",
-    model: Annotated[
-        str, typer.Option("--model", "-m", help="Model name")
-    ] = "openai:gpt-4o-mini",
+        str | None, typer.Option("--desc", "-d", help="Agent description (required for openai)")
+    ] = None,
     system_prompt: Annotated[
-        str | None, typer.Option("--prompt", "-p", help="System prompt")
+        str | None, typer.Option("--prompt", "-p", help="System prompt (required)")
+    ] = None,
+    model_name: Annotated[
+        str, typer.Option("--model-name", help="Friendly model name")
+    ] = "friendly model name",
+    model_id: Annotated[
+        str | None, typer.Option("--model-id", help="Model UUID from catalog")
     ] = None,
     scope: Annotated[
         str, typer.Option("--scope", "-s", help="Scope: personal or system")
@@ -232,6 +255,12 @@ def create_agent(
     participation_mode: Annotated[
         str, typer.Option("--mode", help="Participation mode: always, on_mention, manual")
     ] = "on_mention",
+    is_coordinator: Annotated[
+        bool, typer.Option("--coordinator/--no-coordinator", help="Process messages first")
+    ] = False,
+    max_tool_iterations: Annotated[
+        int, typer.Option("--max-iterations", help="Max LLM requests per run")
+    ] = 10,
     json_output: Annotated[
         bool, typer.Option("--json", help="Output as JSON")
     ] = False,
@@ -243,16 +272,47 @@ def create_agent(
     Create a new agent configuration.
 
     Users can create personal agents. Only admins can create system agents.
+    The API uses a discriminated union based on provider_type.
+
+    Provider Types:
+        openai            - Standard OpenAI provider (requires description and prompt)
+        openai_compatible - OpenAI-compatible providers (requires prompt)
 
     Examples:
-        python main.py agents create "My Helper" my-helper --desc "A helpful agent"
-        python main.py agents create "Story Bot" story-bot --model openai:gpt-4o --scope system
-        python main.py agents create "Advisor" advisor --prompt "You are a wise advisor..."
+        python main.py agents create "My Helper" my-helper --desc "A helpful agent" --prompt "You are helpful"
+        python main.py agents create "Story Bot" story-bot --provider openai --desc "Storyteller" --prompt "Tell stories"
+        python main.py agents create "Local LLM" local-bot --provider openai_compatible --prompt "You are an assistant"
     """
 
     def log(msg: str):
         if verbose:
             typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    # Validate provider type
+    if provider_type not in PROVIDER_TYPES:
+        valid_types = ", ".join(PROVIDER_TYPES.keys())
+        typer.secho(f"❌ Invalid provider type: {provider_type}", fg=typer.colors.RED, err=True)
+        typer.echo(f"Valid types: {valid_types}")
+        raise typer.Exit(1)
+
+    provider_type_uuid = PROVIDER_TYPES[provider_type]
+    log(f"Provider type: {provider_type} -> {provider_type_uuid}")
+
+    # Validate required fields based on provider type
+    if provider_type == "openai":
+        if not description:
+            typer.secho("❌ --desc is required for openai provider type", fg=typer.colors.RED, err=True)
+            raise typer.Exit(1)
+        if not system_prompt:
+            typer.secho("❌ --prompt is required for openai provider type", fg=typer.colors.RED, err=True)
+            raise typer.Exit(1)
+    elif provider_type == "openai_compatible":
+        if not system_prompt:
+            typer.secho("❌ --prompt is required for openai_compatible provider type", fg=typer.colors.RED, err=True)
+            raise typer.Exit(1)
+        if system_prompt and len(system_prompt) > 5000:
+            typer.secho("❌ --prompt exceeds 5000 char limit for openai_compatible", fg=typer.colors.RED, err=True)
+            raise typer.Exit(1)
 
     try:
         session = get_authenticated_session()
@@ -260,16 +320,25 @@ def create_agent(
         typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
 
+    # Build payload with discriminator field
     payload = {
+        "provider_type": provider_type_uuid,
         "name": name,
         "slug": slug,
-        "description": description or None,
-        "model_name": model,
         "system_prompt": system_prompt,
+        "model_name": model_name,
         "scope": scope,
         "participation_mode": participation_mode,
         "is_enabled": True,
+        "is_coordinator": is_coordinator,
+        "max_tool_iterations": max_tool_iterations,
     }
+
+    # Add optional fields
+    if description:
+        payload["description"] = description
+    if model_id:
+        payload["model_id"] = model_id
 
     log(f"POST /agents with payload:")
     log(json.dumps(payload, indent=2))
@@ -293,6 +362,12 @@ def create_agent(
     elif response.status_code == 403:
         typer.secho("❌ Permission denied", fg=typer.colors.RED, err=True)
         typer.echo("Only admins can create system agents")
+        raise typer.Exit(1)
+    elif response.status_code == 422:
+        typer.secho("❌ Validation error", fg=typer.colors.RED, err=True)
+        detail = response.json().get("detail", [])
+        for err in detail:
+            typer.echo(f"  • {err.get('msg', err)}")
         raise typer.Exit(1)
     else:
         typer.secho("❌ Failed to create agent", fg=typer.colors.RED, err=True)
@@ -525,12 +600,21 @@ def _print_agent_summary(agent: dict, verbose: bool = False) -> None:
     typer.echo(f"    Slug: {slug}")
 
     if verbose:
+        # Provider type
+        provider_uuid = agent.get("provider_type")
+        if provider_uuid:
+            provider_name = PROVIDER_NAMES.get(provider_uuid, provider_uuid[:8] + "...")
+            typer.echo(f"    Provider: {provider_name}")
+
         description = agent.get("description", "")
         model = agent.get("model_name", "")
         if description:
             typer.echo(f"    Desc: {description}")
         if model:
             typer.echo(f"    Model: {model}")
+
+        if agent.get("is_coordinator"):
+            typer.secho(f"    Coordinator: Yes", fg=typer.colors.YELLOW)
 
     typer.echo()
 
@@ -542,6 +626,12 @@ def _print_agent_detail(agent: dict) -> None:
     typer.echo(f"  Slug:        {agent.get('slug', 'N/A')}")
     typer.echo(f"  Scope:       {agent.get('scope', 'N/A')}")
 
+    # Provider type (show friendly name if possible)
+    provider_uuid = agent.get("provider_type")
+    if provider_uuid:
+        provider_name = PROVIDER_NAMES.get(provider_uuid, provider_uuid)
+        typer.echo(f"  Provider:    {provider_name}")
+
     enabled = agent.get("is_enabled", True)
     enabled_str = "Yes" if enabled else "No"
     enabled_color = typer.colors.GREEN if enabled else typer.colors.RED
@@ -549,7 +639,15 @@ def _print_agent_detail(agent: dict) -> None:
     typer.secho(enabled_str, fg=enabled_color)
 
     typer.echo(f"  Model:       {agent.get('model_name', 'N/A')}")
+    if agent.get("model_id"):
+        typer.echo(f"  Model ID:    {agent['model_id']}")
     typer.echo(f"  Mode:        {agent.get('participation_mode', 'N/A')}")
+
+    if agent.get("is_coordinator"):
+        typer.secho(f"  Coordinator: Yes", fg=typer.colors.YELLOW)
+
+    if agent.get("max_tool_iterations"):
+        typer.echo(f"  Max Iters:   {agent['max_tool_iterations']}")
 
     if agent.get("description"):
         typer.echo(f"  Description: {agent['description']}")
@@ -560,6 +658,10 @@ def _print_agent_detail(agent: dict) -> None:
         if len(prompt) > 100:
             prompt = prompt[:100] + "..."
         typer.echo(f"  Prompt:      {prompt}")
+
+    if agent.get("capabilities"):
+        caps = ", ".join(agent["capabilities"])
+        typer.echo(f"  Capabilities: {caps}")
 
     if agent.get("owner_id"):
         typer.echo(f"  Owner:       {agent['owner_id']}")

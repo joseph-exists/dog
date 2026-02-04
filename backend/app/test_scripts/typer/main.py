@@ -37,7 +37,7 @@ app.add_typer(wonka.app, name="demo", help="Demo commands (see wonka.py)")
 
 
 # Command modules
-from commands import agents, stories, personas, rooms, users, trait_conflicts, llm_catalog
+from commands import agents, stories, personas, rooms, users, trait_conflicts, llm_catalog, pages, presets, panels
 
 app.add_typer(items.app, name="items")
 app.add_typer(stories.app, name="stories")
@@ -47,6 +47,9 @@ app.add_typer(users.app, name="users")
 app.add_typer(agents.app, name="agents", help="Agent management commands")
 app.add_typer(trait_conflicts.app, name="conflicts", help="Trait conflict management")
 app.add_typer(llm_catalog.app, name="catalog", help="LLM Catalog - browse providers and models")
+app.add_typer(pages.app, name="pages", help="Page layout management")
+app.add_typer(presets.app, name="presets", help="Panel preset browsing")
+app.add_typer(panels.app, name="panels", help="Room panel configuration")
 
 # TODO: Add more command modules
 # from commands import tests

@@ -51,6 +51,7 @@ export default function EditAgentDialog({
   onSuccess,
   className,
 }: EditAgentDialogProps) {
+  const TYPE1_PROVIDER = "673f1787-8474-4e1c-986c-8e19f14c989c" as const
   const TYPE3_PROVIDER = "e09ade10-8563-4748-8deb-1a6c87c97134" as const
   const sanitizedAgent = {
     name: agent.name ?? "",
@@ -60,11 +61,14 @@ export default function EditAgentDialog({
     model_name: agent.model_name ?? "",
     system_prompt: agent.system_prompt ?? "",
     participation_mode: agent.participation_mode ?? "on_mention",
-    // AgentForm.initialData expects Partial<Type3Create>; only pass the literal
-    // when the agent actually matches the Type3 provider. Otherwise leave
-    // undefined so TypeScript doesn't narrow incorrectly.
+    // AgentForm.initialData expects a TypeN literal; supply it for known types
+    // so the form watcher can emit onChange (name+slug+provider_type needed).
     provider_type:
-      agent.provider_type === TYPE3_PROVIDER ? TYPE3_PROVIDER : undefined,
+      agent.provider_type === TYPE1_PROVIDER
+        ? TYPE1_PROVIDER
+        : agent.provider_type === TYPE3_PROVIDER
+          ? TYPE3_PROVIDER
+          : undefined,
     user_access_provider: agent.user_access_provider ?? undefined,
   }
   const [isOpen, setIsOpen] = useState(false)

@@ -26,7 +26,10 @@ from app.models import (
     Item,
     ItemCreate,
     LLMModel,
+    LLMModelCreate,
+    LLMModelPublic,
     LLMModelsPublic,
+    LLMModelUpdate,
     LLMProviderType,
     LLMProviderTypeCreate,
     LLMProviderTypeUpdate,
@@ -247,6 +250,156 @@ def get_llm_models(
     models = list(session.exec(statement).all())
 
     return models, count
+
+
+def get_llm_model(
+    *,
+    session: Session,
+    llm_model_id: uuid.UUID,
+) -> LLMModel | None:
+    """
+    Get a single LLM Model by its UUID.
+
+    Args:
+        session: Database session
+        llm_model_id: The model's primary key UUID
+
+    Returns:
+        LLMModel or None if not found
+    """
+    return session.get(LLMModel, llm_model_id)
+
+
+def get_llm_model_by_model_id(
+    *,
+    session: Session,
+    model_id: str,
+    primary_provider_type_id: uuid.UUID | None = None,
+) -> LLMModel | None:
+    """
+    Get a single LLM Model by its model_id string (e.g., 'gpt-4o').
+
+    If primary_provider_type_id is provided, it will also filter by provider type
+    (since model_id + provider_type_id is a unique constraint).
+
+    Args:
+        session: Database session
+        model_id: The model identifier string (e.g., 'gpt-4o', 'claude-3-opus')
+        primary_provider_type_id: Optional provider type UUID for disambiguation
+
+    Returns:
+        LLMModel or None if not found
+    """
+    statement = select(LLMModel).where(LLMModel.model_id == model_id)
+    if primary_provider_type_id is not None:
+        statement = statement.where(LLMModel.primary_provider_type_id == primary_provider_type_id)
+    return session.exec(statement).first()
+
+
+def create_llm_model(
+    *,
+    session: Session,
+    llm_model_in: LLMModelCreate,
+    owner_id: uuid.UUID | None = None,
+) -> LLMModel:
+    """
+    Create a new LLM Model in the catalog.
+
+    Args:
+        session: Database session
+        llm_model_in: Model creation data
+        owner_id: Optional owner UUID (defaults to model's owner_id field)
+
+    Returns:
+        The created LLMModel
+
+    Raises:
+        HTTPException 400 if model_id + provider_type_id already exists
+    """
+    # Check for duplicate (unique constraint: primary_provider_type_id + model_id)
+    existing = get_llm_model_by_model_id(
+        session=session,
+        model_id=llm_model_in.model_id,
+        primary_provider_type_id=llm_model_in.primary_provider_type_id,
+    )
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Model '{llm_model_in.model_id}' already exists for this provider type"
+        )
+
+    model_data = llm_model_in.model_dump()
+    if owner_id:
+        model_data["owner_id"] = owner_id
+
+    llm_model = LLMModel(**model_data)
+    session.add(llm_model)
+    session.commit()
+    session.refresh(llm_model)
+    return llm_model
+
+
+def update_llm_model(
+    *,
+    session: Session,
+    llm_model: LLMModel,
+    llm_model_update: LLMModelUpdate,
+) -> LLMModel:
+    """
+    Update an existing LLM Model.
+
+    Args:
+        session: Database session
+        llm_model: The existing model to update
+        llm_model_update: Update data (only non-None fields are applied)
+
+    Returns:
+        The updated LLMModel
+
+    Raises:
+        HTTPException 400 if updating model_id would create a duplicate
+    """
+    update_data = llm_model_update.model_dump(exclude_unset=True)
+
+    # If changing model_id, check for duplicate
+    if "model_id" in update_data and update_data["model_id"] != llm_model.model_id:
+        provider_type_id = update_data.get(
+            "primary_provider_type_id",
+            llm_model.primary_provider_type_id
+        )
+        existing = get_llm_model_by_model_id(
+            session=session,
+            model_id=update_data["model_id"],
+            primary_provider_type_id=provider_type_id,
+        )
+        if existing and existing.id != llm_model.id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Model '{update_data['model_id']}' already exists for this provider type"
+            )
+
+    llm_model.sqlmodel_update(update_data)
+    session.add(llm_model)
+    session.commit()
+    session.refresh(llm_model)
+    return llm_model
+
+
+def delete_llm_model(
+    *,
+    session: Session,
+    llm_model: LLMModel,
+) -> None:
+    """
+    Delete an LLM Model from the catalog.
+
+    Args:
+        session: Database session
+        llm_model: The model to delete
+    """
+    session.delete(llm_model)
+    session.commit()
+
 
 # =============================================================================
 # USER ACCESS PROVIDER CRUD

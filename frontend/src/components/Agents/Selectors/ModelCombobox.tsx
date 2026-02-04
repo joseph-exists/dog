@@ -88,6 +88,34 @@ export default function ModelCombobox({
       }))
   }, [models, providerType])
 
+  // If the currently selected value is filtered out (e.g., provider type
+  // changed), add a synthetic option so the combobox can still render a
+  // friendly label instead of the raw UUID.
+  const augmentedOptions = useMemo(() => {
+    if (!value) return options
+    const alreadyPresent = options.some((opt) => opt.value === value)
+    if (alreadyPresent) return options
+
+    const model =
+      models.find((m) => (m as any).id === value || m.model_id === value) ??
+      null
+
+    if (!model) return options
+
+    return [
+      ...options,
+      {
+        value,
+        label: model.display_name ?? model.model_id ?? value,
+        description: model.description ?? undefined,
+        providerType: model.primary_provider_type_id,
+        isDefault: !!model.is_default,
+        friendlyId: model.model_id,
+        raw: model,
+      },
+    ]
+  }, [models, options, value])
+
   const grouped = useMemo(() => {
     const groups: Record<string, typeof options> = {}
     options.forEach((opt) => {
@@ -98,9 +126,24 @@ export default function ModelCombobox({
     return groups
   }, [options])
 
+  // Prefer matched option within filtered list; fall back to any catalog model
+  // (unfiltered) so previously selected values still render friendly labels.
+  const fallbackModel =
+    models.find(
+      (m) => (m as any).id === value || m.model_id === value,
+    ) ?? null
   const selectedModel =
-    options.find((m) => m.value === value) ??
-    (value ? { value, label: value, providerType: "", isDefault: false } : null)
+    augmentedOptions.find((m) => m.value === value) ??
+    (fallbackModel
+      ? {
+          value,
+          label: fallbackModel.display_name ?? fallbackModel.model_id ?? value,
+          providerType: fallbackModel.primary_provider_type_id,
+          isDefault: !!fallbackModel.is_default,
+        }
+      : value
+        ? { value, label: value, providerType: "", isDefault: false }
+        : null)
   const displayValue = selectedModel?.label ?? placeholder
 
   // Handle selecting a model
