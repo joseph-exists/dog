@@ -4690,6 +4690,760 @@ export const TraitsPublicSchema = {
     description: 'Collection model for Trait API responses.'
 } as const;
 
+export const Type1CreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            type: 'string',
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: '673f1787-8474-4e1c-986c-8e19f14c989c',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            type: 'string',
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'description', 'provider_type', 'system_prompt'],
+    title: 'Type1Create'
+} as const;
+
+export const Type1UpdateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: '673f1787-8474-4e1c-986c-8e19f14c989c',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type1Update'
+} as const;
+
+export const Type3CreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: 'e09ade10-8563-4748-8deb-1a6c87c97134',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            type: 'string',
+            maxLength: 5000,
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type', 'system_prompt'],
+    title: 'Type3Create'
+} as const;
+
+export const Type3UpdateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: 'e09ade10-8563-4748-8deb-1a6c87c97134',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type3Update'
+} as const;
+
 export const UIActionRequestSchema = {
     properties: {
         action: {
@@ -5040,194 +5794,6 @@ export const UserAccessProvidersPublicSchema = {
     description: 'Collection response for UserAccessProviders.'
 } as const;
 
-export const UserAgentConfigCreateSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            maxLength: 100,
-            title: 'Name',
-            description: 'Display name'
-        },
-        slug: {
-            type: 'string',
-            maxLength: 50,
-            title: 'Slug',
-            description: 'Unique identifier/registry key'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 500
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        user_access_provider: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'User Access Provider',
-            description: 'User-selected provider associated with this agent config'
-        },
-        provider_type: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provider Type'
-        },
-        model_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Model Id',
-            description: 'model associated with this agent config'
-        },
-        model_name: {
-            type: 'string',
-            title: 'Model Name',
-            default: 'friendly model name'
-        },
-        system_prompt: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'System Prompt'
-        },
-        custom_system_prompt: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Custom System Prompt',
-            description: 'Optional user override for system prompt'
-        },
-        instructions: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Instructions',
-            description: 'big ass text field for lots of words.'
-        },
-        tool_config: {
-            anyOf: [
-                {
-                    additionalProperties: true,
-                    type: 'object'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tool Config'
-        },
-        deps_config: {
-            anyOf: [
-                {
-                    additionalProperties: true,
-                    type: 'object'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Deps Config'
-        },
-        agent_metadata: {
-            anyOf: [
-                {
-                    additionalProperties: true,
-                    type: 'object'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Agent Metadata'
-        },
-        is_enabled: {
-            type: 'boolean',
-            title: 'Is Enabled',
-            default: true
-        },
-        is_clonable: {
-            type: 'boolean',
-            title: 'Is Clonable',
-            default: false
-        },
-        is_visible: {
-            type: 'boolean',
-            title: 'Is Visible',
-            default: false
-        },
-        scope: {
-            type: 'string',
-            title: 'Scope',
-            default: 'personal'
-        },
-        participation_mode: {
-            type: 'string',
-            title: 'Participation Mode',
-            default: 'on_mention'
-        },
-        is_coordinator: {
-            type: 'boolean',
-            title: 'Is Coordinator',
-            default: false
-        },
-        max_tool_iterations: {
-            type: 'integer',
-            title: 'Max Tool Iterations',
-            default: 10
-        },
-        capabilities: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Capabilities'
-        }
-    },
-    type: 'object',
-    required: ['name', 'slug'],
-    title: 'UserAgentConfigCreate'
-} as const;
-
 export const UserAgentConfigPublicSchema = {
     properties: {
         name: {
@@ -5292,6 +5858,19 @@ export const UserAgentConfigPublicSchema = {
                 }
             ],
             title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 20
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
         },
         model_id: {
             anyOf: [
@@ -5519,264 +6098,8 @@ export const UserAgentConfigPublicSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'owner_id', 'created_at', 'updated_at', 'version'],
+    required: ['id', 'created_at', 'updated_at', 'version'],
     title: 'UserAgentConfigPublic'
-} as const;
-
-export const UserAgentConfigUpdateSchema = {
-    properties: {
-        name: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 100
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name',
-            description: 'Display name'
-        },
-        slug: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 50
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Slug',
-            description: 'Unique identifier/registry key'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 500
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        user_access_provider: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'User Access Provider',
-            description: 'User-selected provider associated with this agent config'
-        },
-        provider_type: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provider Type'
-        },
-        model_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Model Id',
-            description: 'model associated with this agent config'
-        },
-        model_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Model Name'
-        },
-        system_prompt: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'System Prompt'
-        },
-        custom_system_prompt: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Custom System Prompt',
-            description: 'Optional user override for system prompt'
-        },
-        instructions: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Instructions',
-            description: 'big ass text field for lots of words.'
-        },
-        tool_config: {
-            anyOf: [
-                {
-                    additionalProperties: true,
-                    type: 'object'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tool Config'
-        },
-        deps_config: {
-            anyOf: [
-                {
-                    additionalProperties: true,
-                    type: 'object'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Deps Config'
-        },
-        agent_metadata: {
-            anyOf: [
-                {
-                    additionalProperties: true,
-                    type: 'object'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Agent Metadata'
-        },
-        is_enabled: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Is Enabled'
-        },
-        is_clonable: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Is Clonable'
-        },
-        is_visible: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Is Visible'
-        },
-        scope: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Scope'
-        },
-        participation_mode: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Participation Mode'
-        },
-        is_coordinator: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Is Coordinator'
-        },
-        max_tool_iterations: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Max Tool Iterations'
-        },
-        capabilities: {
-            anyOf: [
-                {
-                    items: {
-                        type: 'string'
-                    },
-                    type: 'array'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Capabilities'
-        }
-    },
-    type: 'object',
-    title: 'UserAgentConfigUpdate'
 } as const;
 
 export const UserAgentConfigsPublicSchema = {

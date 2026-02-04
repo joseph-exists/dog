@@ -25,7 +25,9 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { AgentsService } from "@/client/sdk.gen"
 import type {
   UserAgentConfigPublic,
-  UserAgentConfigUpdate,
+  AgentsUpdateAgentData,
+  Type1Update,
+  Type3Update,
 } from "@/client/types.gen"
 import AgentAvatar from "../Display/AgentAvatar"
 import {
@@ -106,6 +108,7 @@ export default function AgentDetailDialog({
   trigger,
   className,
 }: AgentDetailDialogProps) {
+  const TYPE3_PROVIDER = "e09ade10-8563-4748-8deb-1a6c87c97134" as const
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<"view" | "edit">("view")
   const [formData, setFormData] = useState<AgentFormData | null>(null)
@@ -127,9 +130,84 @@ export default function AgentDetailDialog({
     }
   }
 
+  type ProviderType =
+    | Type1Update["provider_type"]
+    | Type3Update["provider_type"]
+
+  const buildDiscriminatedPayload = (
+    data: AgentFormData,
+    agent: UserAgentConfigPublic
+  ): AgentsUpdateAgentData["requestBody"] | null => {
+    const providerType = (data.provider_type || agent.provider_type) as
+      | ProviderType
+      | undefined
+
+    if (!providerType) {
+      showErrorToast("Provider type is required")
+      return null
+    }
+
+    const trimmedName = data.name.trim()
+    const trimmedDescription = data.description.trim()
+    const trimmedSystemPrompt = data.system_prompt.trim()
+    const slug = data.slug || agent.slug || ""
+
+    const payload: AgentsUpdateAgentData["requestBody"] = {
+      name: trimmedName,
+      slug,
+      provider_type: providerType,
+    }
+
+    let changed =
+      trimmedName !== (agent.name ?? "") ||
+      slug !== (agent.slug ?? "") ||
+      providerType !== (agent.provider_type as ProviderType)
+
+    if (trimmedDescription !== (agent.description ?? "")) {
+      payload.description = trimmedDescription || null
+      changed = true
+    }
+
+    if (data.model_id !== (agent.model_id ?? "")) {
+      payload.model_id = data.model_id || null
+      changed = true
+    }
+
+    if (data.model_name !== (agent.model_name ?? "")) {
+      payload.model_name = data.model_name || undefined
+      payload.model = data.model_name || null
+      changed = true
+    }
+
+    if (trimmedSystemPrompt !== (agent.system_prompt ?? "")) {
+      payload.system_prompt = trimmedSystemPrompt || null
+      changed = true
+    }
+
+    if (data.participation_mode !== (agent.participation_mode ?? "")) {
+      payload.participation_mode = data.participation_mode
+      changed = true
+    }
+
+    if (data.user_access_provider !== agent.user_access_provider) {
+      payload.user_access_provider = data.user_access_provider ?? null
+      changed = true
+    }
+
+    if (!changed) {
+      showErrorToast("No changes to save")
+      return null
+    }
+
+    return payload
+  }
+
   const mutation = useMutation({
-    mutationFn: (data: UserAgentConfigUpdate) =>
-      AgentsService.updateAgent({ agentId, requestBody: data }),
+    mutationFn: (payload: AgentsUpdateAgentData["requestBody"]) =>
+      AgentsService.updateAgent({
+        agentId,
+        requestBody: payload,
+      }),
     onSuccess: (updatedAgent) => {
       showSuccessToast(`Agent "${updatedAgent.name}" updated successfully.`)
       setMode("view")
@@ -158,41 +236,9 @@ export default function AgentDetailDialog({
       return
     }
 
-    // Only send fields that changed
-    const payload: UserAgentConfigUpdate & {
-      provider_type?: string | null
-      model?: string | null
-    } = {}
+    const payload = buildDiscriminatedPayload(formData, agent)
 
-    if (formData.name.trim() !== agent.name) {
-      payload.name = formData.name.trim()
-    }
-    if ((formData.description.trim() || null) !== (agent.description || null)) {
-      payload.description = formData.description.trim() || null
-    }
-    if (formData.model_id !== agent.model_id) {
-      payload.model_id = formData.model_id
-    }
-    if (formData.model_name !== agent.model_name) {
-      payload.model_name = formData.model_name
-      payload.model = formData.model_name
-    }
-    if (formData.provider_type !== (agent as any).provider_type) {
-      payload.provider_type = formData.provider_type ?? null
-    }
-    if (
-      (formData.system_prompt.trim() || null) !== (agent.system_prompt || null)
-    ) {
-      payload.system_prompt = formData.system_prompt.trim() || null
-    }
-    if (formData.participation_mode !== agent.participation_mode) {
-      payload.participation_mode = formData.participation_mode
-    }
-
-    if (Object.keys(payload).length === 0) {
-      showErrorToast("No changes to save")
-      return
-    }
+    if (!payload) return
 
     mutation.mutate(payload)
   }
@@ -244,7 +290,10 @@ export default function AgentDetailDialog({
                   model_name: agent.model_name ?? "",
                   system_prompt: agent.system_prompt ?? "",
                   participation_mode: agent.participation_mode ?? "on_mention",
-                  provider_type: agent.provider_type ?? "",
+                  provider_type:
+                    agent.provider_type === TYPE3_PROVIDER
+                      ? TYPE3_PROVIDER
+                      : undefined,
                   user_access_provider: agent.user_access_provider ?? undefined,
                 }}
                 onChange={handleFormChange}

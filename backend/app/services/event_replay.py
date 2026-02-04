@@ -15,7 +15,7 @@ import logging
 from uuid import UUID
 from typing import Any
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import RoomEvent

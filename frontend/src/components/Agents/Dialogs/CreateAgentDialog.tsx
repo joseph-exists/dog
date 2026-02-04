@@ -12,7 +12,7 @@ import { useCallback, useState } from "react"
 import type { ApiError } from "@/client/core/ApiError"
 import { AgentsService } from "@/client/sdk.gen"
 import type {
-  UserAgentConfigCreate,
+  AgentsCreateAgentData,
   UserAgentConfigPublic,
 } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
@@ -47,6 +47,7 @@ export default function CreateAgentDialog({
   onSuccess,
   className,
 }: CreateAgentDialogProps) {
+  type ProviderType = AgentsCreateAgentData["requestBody"]["provider_type"]
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState<AgentFormData | null>(null)
   const queryClient = useQueryClient()
@@ -62,8 +63,10 @@ export default function CreateAgentDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: UserAgentConfigCreate) =>
-      AgentsService.createAgent({ requestBody: data }),
+    // Use discriminated union payload (Type1Create | Type3Create) instead of the
+    // legacy UserAgentConfigCreate type.
+    mutationFn: (payload: AgentsCreateAgentData["requestBody"]) =>
+      AgentsService.createAgent({ requestBody: payload }),
     onSuccess: (createdAgent) => {
       showSuccessToast(`Agent "${createdAgent.name}" created successfully.`)
       handleOpenChange(false)
@@ -98,19 +101,19 @@ export default function CreateAgentDialog({
       console.warn("Agent creation warning:", warning)
     })
 
-    const payload: UserAgentConfigCreate & {
-      provider_type?: string | null
-      model?: string | null
-    } = {
+    // Satisfy Type1Create/Type3Create: both require provider_type and some
+    // required strings; we default to empty strings to keep the discriminator
+    // happy while the form enforces real values.
+    const payload: AgentsCreateAgentData["requestBody"] = {
       name: formData.name.trim(),
       slug: formData.slug.trim(),
-      description: formData.description.trim() || null,
+      description: formData.description.trim() || "",
       model_id: formData.model_id || undefined,
       model_name: formData.model_name || undefined,
       model: formData.model_name || undefined,
-      provider_type: formData.provider_type || null,
-      user_access_provider: formData.user_access_provider ?? undefined,
-      system_prompt: formData.system_prompt.trim() || undefined,
+      provider_type: formData.provider_type as ProviderType,
+      user_access_provider: formData.user_access_provider ?? null,
+      system_prompt: formData.system_prompt.trim() || "",
       participation_mode: formData.participation_mode || undefined,
       scope: "personal",
       is_enabled: true,

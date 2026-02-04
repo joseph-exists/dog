@@ -12,7 +12,7 @@ import { useEffect, useState } from "react"
 import type { ApiError } from "@/client/core/ApiError"
 import { AgentsService } from "@/client/sdk.gen"
 import type {
-  UserAgentConfigCreate,
+  AgentsCreateAgentData,
   UserAgentConfigPublic,
 } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
@@ -49,6 +49,7 @@ export default function AgentCloneButton({
   size = "sm",
   className,
 }: AgentCloneButtonProps) {
+  type ProviderType = AgentsCreateAgentData["requestBody"]["provider_type"]
   const [isOpen, setIsOpen] = useState(false)
   const [newName, setNewName] = useState(`${agent.name} (Copy)`)
   const [newSlug, setNewSlug] = useState("")
@@ -77,17 +78,21 @@ export default function AgentCloneButton({
   }, [isOpen, newSlug, agent.slug])
 
   const mutation = useMutation({
+    // Build a discriminated create payload; required fields differ by TypeN so
+    // we provide safe fallbacks (empty strings) to satisfy the union.
     mutationFn: () => {
-      const payload: UserAgentConfigCreate = {
+      const payload: AgentsCreateAgentData["requestBody"] = {
         name: newName.trim(),
         slug: newSlug.trim(),
-        description: agent.description ?? null,
+        description: agent.description ?? "",
         model_name: agent.model_name ?? undefined,
-        system_prompt: agent.system_prompt ?? undefined,
+        model_id: agent.model_id ?? undefined,
+        model: agent.model_name ?? undefined,
+        system_prompt: agent.system_prompt ?? "",
         participation_mode: agent.participation_mode ?? undefined,
         scope: "personal",
         is_enabled: true,
-        provider_type: (agent as any).provider_type ?? null,
+        provider_type: agent.provider_type as ProviderType,
         // (don't copy user access source provider as it may not be accessible to the cloning user)
         user_access_provider: null,
       }

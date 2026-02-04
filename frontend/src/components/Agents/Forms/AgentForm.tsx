@@ -22,7 +22,10 @@ import { z } from "zod"
 import { AgentsService, LlmProvidersService } from "@/client/sdk.gen"
 import type {
   UserAccessProviderPublic,
-  UserAgentConfigCreate,
+  Type3Create,
+  // Type3 is openai_compatible creation model - this allows us faster proof of concept and less munging about
+  // TODO: add Type1Create (and others) as exported from "@/client/types.gen"
+  // this is the switch between types (openai, anthropic, openai_compatible that enables creating user agent config forms tailored specifically to those models with field validators)
 } from "@/client/types.gen"
 import ModelCombobox from "@/components/Agents/Selectors/ModelCombobox"
 import { ProviderSelect } from "../Selectors/ProviderSelect"
@@ -127,9 +130,9 @@ interface AgentFormProps {
   /** Whether this is editing an existing agent or creating a new one */
   isEditMode?: boolean
   /** Initial values for edit mode */
-  initialValues?: Partial<UserAgentConfigCreate>
+  initialValues?: Partial<Type3Create>
   /** Legacy prop name kept for compatibility */
-  initialData?: Partial<UserAgentConfigCreate>
+  initialData?: Partial<Type3Create>
   /** Callback when form values change */
   onChange: (values: AgentFormData) => void
   /** Optional className for styling */

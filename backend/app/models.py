@@ -1,13 +1,16 @@
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Any, Literal
+from typing import Any, Literal, Annotated, Union
 from uuid import UUID
 
-from pydantic import EmailStr, field_validator
+from pydantic import  EmailStr, field_validator
 from sqlalchemy import JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, Relationship, SQLModel
+
+from app.core.provider_types import TYPE1, TYPE3
+
 
 # ===== Model Overview for Relational References Ordering
 #
@@ -3020,9 +3023,6 @@ class StoryNodeTree(SQLModel):
     reachable_nodes: int
 
 
-# class AvailableAgent(SQLModel):
-# class AvailableAgentsPublic(SQLModel):
-# ->  UserAgentConfigPublic (joined with two other merged classes)
 
  # ═══════════════════════════════════════════════════════════════════════════════
  # Agent Configuration Models
@@ -3033,10 +3033,10 @@ class UserAgentConfigBase(SQLModel):
     name: str = Field(max_length=100, description="Display name")
     slug: str = Field(max_length=50, description="Unique identifier/registry key")
     description: str | None = Field(default=None, max_length=500)
-    user_access_provider: uuid.UUID | None = Field(default=None, foreign_key="user_access_provider.id", description="User-selected provider associated with this agent config")
+    user_access_provider: uuid.UUID | None = Field(default_factory=uuid.uuid4, foreign_key="user_access_provider.id", description="User-selected provider associated with this agent config" )
     provider_type: uuid.UUID | None = Field(default_factory=uuid.uuid4)
     model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
-    model_id: uuid.UUID | None = Field(default=None, foreign_key="user_access_provider.id", description="model associated with this agent config")
+    model_id: uuid.UUID | None = Field(default_factory=uuid.uuid4, foreign_key="user_access_provider.id", description="model associated with this agent config")
     # LLMModels table
     model_name: str = Field(default="friendly model name")
     system_prompt: str | None = None
@@ -3072,31 +3072,93 @@ class UserAgentConfigBase(SQLModel):
         return v if v is not None else []
 
 class UserAgentConfigCreate(UserAgentConfigBase):
-    pass
+     pass
 
-class UserAgentConfigUpdate(UserAgentConfigBase):
-    name: str | None = Field(default=None, max_length=100, description="Display name")
-    slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
-    description: str | None = Field(default=None, max_length=500)
-    user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
-    provider_type: uuid.UUID | None=Field(default_factory=uuid.uuid4)
-    model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
-    model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
-    model_name: str | None = Field(default=None)
-    system_prompt: str | None = Field(default=None)
-    custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
-    instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
-    tool_config: dict | None = Field(default=None)
-    deps_config: dict | None = Field(default=None)
-    agent_metadata: dict | None = Field(default=None)
-    is_enabled: bool | None = Field(default=None)
-    is_clonable: bool | None = Field(default=None)
-    is_visible: bool | None = Field(default=None)
-    scope: str | None = Field(default=None)
-    participation_mode: str | None = Field(default=None)
-    is_coordinator: bool | None = Field(default=None)
-    max_tool_iterations: int | None = Field(default=None)
-    capabilities: list[str] | None = Field(default=None)
+class Type1Create(UserAgentConfigBase):
+    provider_type: Literal[TYPE1]
+    system_prompt: str
+    description: str
+    model_name: str = Field(default="friendly model name")
+    is_enabled: bool = Field(default=True)
+    is_clonable: bool = Field(default=False)
+    is_visible: bool = Field(default=False)
+    scope: str = Field(default="personal")  # "personal" | "system"
+    participation_mode: str = Field(default="on_mention")
+    is_coordinator: bool = Field(default=False)
+    max_tool_iterations: int = Field(default=10)
+    capabilities: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    @field_validator('description')
+    @classmethod
+    def validate_type1_scope(cls, v: str)->str:
+        if not v or v.strip() == '':
+            raise ValueError("description required for Type1")
+        return v
+
+
+class Type3Create(UserAgentConfigBase):
+    provider_type: Literal[TYPE3]
+    system_prompt: str = Field(max_length=5000)
+    model_name: str = Field(default="friendly model name")
+    is_enabled: bool = Field(default=True)
+    is_clonable: bool = Field(default=False)
+    is_visible: bool = Field(default=False)
+    scope: str = Field(default="personal")  # "personal" | "system"
+    participation_mode: str = Field(default="on_mention")
+    is_coordinator: bool = Field(default=False)
+    max_tool_iterations: int = Field(default=10)
+    capabilities: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    @field_validator('system_prompt')
+    @classmethod
+    def validate_type3_system_prompt(cls, v: str) -> str:
+        if not v or v.strip() == '':
+            raise ValueError("system prompt required for Type3")
+
+
+UserAgentConfigCreate = Annotated[
+    Type1Create | Type3Create,
+    Field(discriminator='provider_type')
+]
+
+class Type1Update(UserAgentConfigBase):
+    provider_type: Literal[TYPE1]
+    description: str | None = None # optional for updates, but this will cause validation if it is passed again
+
+
+class Type3Update(UserAgentConfigBase):
+    provider_type: Literal[TYPE3]
+    system_prompt: str | None = None # optional for update, but causes validation trigger if passed
+
+
+UserAgentConfigUpdate = Annotated[
+    Type1Update | Type3Update,
+    Field(discriminator='provider_type')
+]
+
+# class UserAgentConfigUpdate(UserAgentConfigBase):
+#     name: str | None = Field(default=None, max_length=100, description="Display name")
+#     slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
+#     description: str | None = Field(default=None, max_length=500)
+#     user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
+#     provider_type: uuid.UUID | None=Field(default_factory=uuid.uuid4)
+#     model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
+#     model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
+#     model_name: str | None = Field(default=None)
+#     system_prompt: str | None = Field(default=None)
+#     custom_system_prompt: str | None = Field(default=None, description="Optional user override for system prompt")
+#     instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
+#     tool_config: dict | None = Field(default=None)
+#     deps_config: dict | None = Field(default=None)
+#     agent_metadata: dict | None = Field(default=None)
+#     is_enabled: bool | None = Field(default=None)
+#     is_clonable: bool | None = Field(default=None)
+#     is_visible: bool | None = Field(default=None)
+#     scope: str | None = Field(default=None)
+#     participation_mode: str | None = Field(default=None)
+#     is_coordinator: bool | None = Field(default=None)
+#     max_tool_iterations: int | None = Field(default=None)
+#     capabilities: list[str] | None = Field(default=None)
 
 class UserAgentConfig(UserAgentConfigBase, table=True):
     __tablename__ = "user_agent_configs"
@@ -3108,7 +3170,7 @@ class UserAgentConfig(UserAgentConfigBase, table=True):
     name: str | None = Field(default=None, max_length=100, description="Display name")
     slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
     description: str | None = Field(default=None, max_length=500)
-    user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
+    user_access_provider: uuid.UUID | None = Field(default_factory=uuid.uuid4,  description="User-selected provider associated with this agent config")
     provider_type: uuid.UUID | None = Field(default_factory=uuid.uuid4)
     model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
     model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")
@@ -3130,14 +3192,14 @@ class UserAgentConfig(UserAgentConfigBase, table=True):
 
 class UserAgentConfigPublic(UserAgentConfigBase):
     id: uuid.UUID
-    owner_id: uuid.UUID | None
+    owner_id: uuid.UUID | None = Field(default_factory=uuid.uuid4)
     created_at: datetime
     updated_at: datetime | None
     version: int
     name: str | None = Field(default=None, max_length=100, description="Display name")
     slug: str | None = Field(default=None, max_length=50, description="Unique identifier/registry key")
     description: str | None = Field(default=None, max_length=500)
-    user_access_provider: uuid.UUID | None = Field(default=None, description="User-selected provider associated with this agent config")
+    user_access_provider: uuid.UUID | None = Field(default_factory=uuid.uuid4, description="User-selected provider associated with this agent config")
     provider_type: uuid.UUID | None = Field(default_factory=uuid.uuid4)
     model: str | None=Field(default=None, max_length=20, description="friendly name of model as specified by api and user access providers")
     model_id: uuid.UUID | None = Field(default=None, description="model associated with this agent config")

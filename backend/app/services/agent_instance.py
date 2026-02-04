@@ -6,7 +6,7 @@ from typing import Any
 from collections.abc import Mapping
 
 from pydantic_ai import Agent
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
@@ -22,8 +22,6 @@ async def get_user_agent_config_by_slug(*, session: AsyncSession, slug: str) -> 
     """Get user agent configuration from database by slug."""
     result = await session.exec(select(UserAgentConfig).where(UserAgentConfig.slug == slug))
     return result.first()
-
-
 
 async def get_user_agent_config_by_id(*, session: AsyncSession, agent_id: uuid.UUID) -> UserAgentConfig | None:
     """get user agent config from db by id"""
@@ -100,6 +98,7 @@ async def get_agent_instance_with_tools(
     )
 
     if not config:
+        logger.error("[AGENT_INSTANCE_FAILURE.get_agent_instance_with_tools] -NO CONFIG")
         return None
 
     # Minimal, safe extraction: ignore unknown/extra columns to avoid AttributeError as
@@ -121,12 +120,14 @@ async def get_agent_instance_with_tools(
     if not model_name:
         logger.error(
             "[AGENT_INSTANCE.get_agent_instance_with_tools] slug=%s missing model/model_name; cannot instantiate Agent",
+            config,
             slug,
         )
         return None
     system_prompt = _get(config, "system_prompt", "custom_system_prompt") or (
         f"You are {getattr(config, 'name', slug)}. {getattr(config, 'description', '')}".strip()
     )
+    # this might be where we pass instructions, pass skills, etc - agent_personas/archetypes?
     # Future extension: pull model/base_url/provider overrides from user-specific credentials.
     # Keep the hook explicit so new credential sources can slot in without rewriting the caller.
 
@@ -137,6 +138,7 @@ async def get_agent_instance_with_tools(
         tools.append(emit_ui_component)
 
     agent_kwargs: dict[str, Any] = {
+        # pydantic_ai.Agent expects `model`
         "model": model_name,
         "system_prompt": system_prompt,
         "deps_type": AgentDeps,

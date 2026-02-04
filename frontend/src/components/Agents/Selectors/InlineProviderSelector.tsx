@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils"
 import { ProviderModelSelector } from "./ProviderModelSelector"
 import ProviderStatusBadge from "../Display/ProviderStatusBadge"
+import { AgentsUpdateAgentData } from "@/client/types.gen"
 
 interface AgentProviderSelectorProps {
   /** The agent to configure */
@@ -103,7 +104,7 @@ export function AgentProviderSelector({
           user_access_provider: data.providerId,
           model_name: data.modelName ?? undefined,
           model: data.modelName ?? undefined,
-        },
+        } as AgentsUpdateAgentData['requestBody'],
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agents"] })

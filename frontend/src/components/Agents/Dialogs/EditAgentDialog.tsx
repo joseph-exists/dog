@@ -23,13 +23,13 @@ import {
 import useCustomToast from "@/hooks/useCustomToast"
 import { AgentsService } from "@/client/sdk.gen"
 import type {
-  UserAgentConfigCreate,
   UserAgentConfigPublic,
-  UserAgentConfigUpdate,
+  AgentsUpdateAgentData,
 } from "@/client/types.gen"
 import AgentAvatar from "../Display/AgentAvatar"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
 import { validateAgentFormData } from "../utils/agentValidation"
+import { sparseAgentUpdate } from "../utils/agentPayload"
 
 interface EditAgentDialogProps {
   /** The agent to edit */
@@ -51,7 +51,8 @@ export default function EditAgentDialog({
   onSuccess,
   className,
 }: EditAgentDialogProps) {
-  const sanitizedAgent: Partial<UserAgentConfigCreate> = {
+  const TYPE3_PROVIDER = "e09ade10-8563-4748-8deb-1a6c87c97134" as const
+  const sanitizedAgent = {
     name: agent.name ?? "",
     slug: agent.slug ?? "",
     description: agent.description ?? "",
@@ -59,7 +60,11 @@ export default function EditAgentDialog({
     model_name: agent.model_name ?? "",
     system_prompt: agent.system_prompt ?? "",
     participation_mode: agent.participation_mode ?? "on_mention",
-    provider_type: agent.provider_type ?? "",
+    // AgentForm.initialData expects Partial<Type3Create>; only pass the literal
+    // when the agent actually matches the Type3 provider. Otherwise leave
+    // undefined so TypeScript doesn't narrow incorrectly.
+    provider_type:
+      agent.provider_type === TYPE3_PROVIDER ? TYPE3_PROVIDER : undefined,
     user_access_provider: agent.user_access_provider ?? undefined,
   }
   const [isOpen, setIsOpen] = useState(false)
@@ -76,10 +81,11 @@ export default function EditAgentDialog({
   }
 
   const mutation = useMutation({
-    mutationFn: (data: UserAgentConfigUpdate) =>
+    // Use discriminated update payload; provider_type is injected via helper.
+    mutationFn: (payload: AgentsUpdateAgentData["requestBody"]) =>
       AgentsService.updateAgent({
         agentId: agent.id,
-        requestBody: data,
+        requestBody: payload,
       }),
     onSuccess: (updatedAgent) => {
       showSuccessToast(`Agent "${updatedAgent.name}" - wow. that actually worked?  neat.`)
@@ -117,44 +123,41 @@ export default function EditAgentDialog({
     })
 
     // Only send fields that changed
-    const payload: UserAgentConfigUpdate & {
-      provider_type?: string | null
-      model?: string | null
-    } = {}
+    const changes: Partial<AgentsUpdateAgentData["requestBody"]> = {}
 
     if (formData.name.trim() !== agent.name) {
-      payload.name = formData.name.trim()
+      changes.name = formData.name.trim()
     }
     if ((formData.description.trim() || null) !== (agent.description || null)) {
-      payload.description = formData.description.trim() || null
+      changes.description = formData.description.trim() || null
     }
     if (formData.model_id !== agent.model_id) {
-      payload.model_id = formData.model_id
+      changes.model_id = formData.model_id || null
     }
     if (formData.model_name !== agent.model_name) {
-      payload.model_name = formData.model_name
-      payload.model = formData.model_name
-    }
-    if (formData.provider_type !== (agent as any).provider_type) {
-      payload.provider_type = formData.provider_type ?? null
+      changes.model_name = formData.model_name || undefined
+      changes.model = formData.model_name || null
     }
     if (
       (formData.system_prompt.trim() || null) !== (agent.system_prompt || null)
     ) {
-      payload.system_prompt = formData.system_prompt.trim() || null
+      changes.system_prompt = formData.system_prompt.trim() || null
     }
     if (formData.participation_mode !== agent.participation_mode) {
-      payload.participation_mode = formData.participation_mode
+      changes.participation_mode = formData.participation_mode
     }
     if (formData.user_access_provider !== agent.user_access_provider) {
-      payload.user_access_provider = formData.user_access_provider
+      changes.user_access_provider = formData.user_access_provider ?? null
     }
 
     // Check if anything changed
-    if (Object.keys(payload).length === 0) {
+    if (Object.keys(changes).length === 0) {
       showErrorToast("NOTHING CHANGED.  WHAT WERE YOU HOPING WOULD HAPPEN")
       return
     }
+
+    // Always include provider_type via helper to satisfy discriminator.
+    const payload = sparseAgentUpdate(agent, changes)
 
     mutation.mutate(payload)
   }

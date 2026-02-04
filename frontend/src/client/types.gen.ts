@@ -1306,6 +1306,214 @@ export type TraitUpdate = {
     description?: (string | null);
 };
 
+export type Type1Create = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description: string;
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "673f1787-8474-4e1c-986c-8e19f14c989c";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt: string;
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type  Type1Update = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "673f1787-8474-4e1c-986c-8e19f14c989c";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type Type3Create = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "e09ade10-8563-4748-8deb-1a6c87c97134";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt: string;
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type Type3Update = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "e09ade10-8563-4748-8deb-1a6c87c97134";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
 /**
  * Request body for AG-UI action button clicks.
  *
@@ -1434,54 +1642,6 @@ export type UserAccessProviderUpdate = {
     alpha_provider_type_id?: string;
 };
 
-export type UserAgentConfigCreate = {
-    /**
-     * Display name
-     */
-    name: string;
-    /**
-     * Unique identifier/registry key
-     */
-    slug: string;
-    description?: (string | null);
-    /**
-     * User-selected provider associated with this agent config
-     */
-    user_access_provider?: (string | null);
-    provider_type?: (string | null);
-    /**
-     * model associated with this agent config
-     */
-    model_id?: (string | null);
-    model_name?: string;
-    system_prompt?: (string | null);
-    /**
-     * Optional user override for system prompt
-     */
-    custom_system_prompt?: (string | null);
-    /**
-     * big ass text field for lots of words.
-     */
-    instructions?: (string | null);
-    tool_config?: ({
-    [key: string]: unknown;
-} | null);
-    deps_config?: ({
-    [key: string]: unknown;
-} | null);
-    agent_metadata?: ({
-    [key: string]: unknown;
-} | null);
-    is_enabled?: boolean;
-    is_clonable?: boolean;
-    is_visible?: boolean;
-    scope?: string;
-    participation_mode?: string;
-    is_coordinator?: boolean;
-    max_tool_iterations?: number;
-    capabilities?: Array<(string)>;
-};
-
 export type UserAgentConfigPublic = {
     /**
      * Display name
@@ -1497,6 +1657,10 @@ export type UserAgentConfigPublic = {
      */
     user_access_provider?: (string | null);
     provider_type?: (string | null);
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
     /**
      * model associated with this agent config
      */
@@ -1529,7 +1693,7 @@ export type UserAgentConfigPublic = {
     max_tool_iterations?: (number | null);
     capabilities?: (Array<(string)> | null);
     id: string;
-    owner_id: (string | null);
+    owner_id?: (string | null);
     created_at: string;
     updated_at: (string | null);
     version: number;
@@ -1538,54 +1702,6 @@ export type UserAgentConfigPublic = {
 export type UserAgentConfigsPublic = {
     data: Array<UserAgentConfigPublic>;
     count: number;
-};
-
-export type UserAgentConfigUpdate = {
-    /**
-     * Display name
-     */
-    name?: (string | null);
-    /**
-     * Unique identifier/registry key
-     */
-    slug?: (string | null);
-    description?: (string | null);
-    /**
-     * User-selected provider associated with this agent config
-     */
-    user_access_provider?: (string | null);
-    provider_type?: (string | null);
-    /**
-     * model associated with this agent config
-     */
-    model_id?: (string | null);
-    model_name?: (string | null);
-    system_prompt?: (string | null);
-    /**
-     * Optional user override for system prompt
-     */
-    custom_system_prompt?: (string | null);
-    /**
-     * big ass text field for lots of words.
-     */
-    instructions?: (string | null);
-    tool_config?: ({
-    [key: string]: unknown;
-} | null);
-    deps_config?: ({
-    [key: string]: unknown;
-} | null);
-    agent_metadata?: ({
-    [key: string]: unknown;
-} | null);
-    is_enabled?: (boolean | null);
-    is_clonable?: (boolean | null);
-    is_visible?: (boolean | null);
-    scope?: (string | null);
-    participation_mode?: (string | null);
-    is_coordinator?: (boolean | null);
-    max_tool_iterations?: (number | null);
-    capabilities?: (Array<(string)> | null);
 };
 
 export type UserCreate = {
@@ -1794,7 +1910,7 @@ export type AgentsListAgentsData = {
 export type AgentsListAgentsResponse = (UserAgentConfigsPublic);
 
 export type AgentsCreateAgentData = {
-    requestBody: UserAgentConfigCreate;
+    requestBody: (Type1Create | Type3Create);
 };
 
 export type AgentsCreateAgentResponse = (UserAgentConfigPublic);
@@ -1817,7 +1933,7 @@ export type AgentsGetAgentResponse = (UserAgentConfigPublic);
 
 export type AgentsUpdateAgentData = {
     agentId: string;
-    requestBody: UserAgentConfigUpdate;
+    requestBody: (Type1Update | Type3Update);
 };
 
 export type AgentsUpdateAgentResponse = (UserAgentConfigPublic);

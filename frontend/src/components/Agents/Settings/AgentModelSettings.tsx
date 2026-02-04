@@ -19,7 +19,7 @@ import { useEffect, useState } from "react"
 import { AgentsService } from "@/client/sdk.gen"
 import type {
   UserAgentConfigPublic,
-  UserAgentConfigUpdate,
+  AgentsUpdateAgentData
 } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
@@ -84,10 +84,15 @@ export function AgentModelSettings({
   }, [providerId, modelName, customPrompt, providerType, agent])
 
   const updateMutation = useMutation({
-    mutationFn: (data: UserAgentConfigUpdate) =>
+    mutationFn: () =>
       AgentsService.updateAgent({
         agentId: agent.id,
-        requestBody: data,
+        requestBody:  {
+          provider_type: agent.provider_type!,
+          user_access_provider: providerId,
+          model_name: modelName ?? undefined,
+          custom_system_prompt: customPrompt || null,
+        } as AgentsUpdateAgentData['requestBody'],
       }),
     onSuccess: (updated) => {
       showSuccessToast("Saved your agent settings")
@@ -115,14 +120,7 @@ export function AgentModelSettings({
 
   // Handle save
   const handleSave = async () => {
-    const payload: UserAgentConfigUpdate = {
-      user_access_provider: providerId,
-      provider_type: providerType ?? undefined,
-      model_name: modelName ?? undefined,
-      model: modelName ?? undefined,
-      custom_system_prompt: customPrompt || null,
-    }
-    await updateMutation.mutateAsync(payload)
+    await updateMutation.mutateAsync();
   }
 
   // Handle delete (revert to agent defaults)

@@ -36,7 +36,7 @@ from typing import Any
 from app.services.logfire_client import ServiceLogfire
 
 from dataclasses import asdict
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
