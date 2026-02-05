@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from pydantic_ai import Agent
 from sqlmodel import select
@@ -11,9 +11,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
     UserAgentConfig,
+    LLMProviderType,
+    LLMProviderTypePublic,
 )
-
-from app.services.agent_tools import AgentDeps, emit_ui_component, request_agent_assistance
+from app.services.agent_tools import (
+    AgentDeps,
+    emit_ui_component,
+    request_agent_assistance,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +31,28 @@ async def get_user_agent_config_by_slug(*, session: AsyncSession, slug: str) -> 
 async def get_user_agent_config_by_id(*, session: AsyncSession, agent_id: uuid.UUID) -> UserAgentConfig | None:
     """get user agent config from db by id"""
     return await session.get(UserAgentConfig, agent_id)
+
+async def get_user_agent_config_provider_type_name_for_model_concat_by_slug(*, session: AsyncSession, slug: str) -> Any | None:
+    """get the provider type name for a model based on the slug of the user agent config which is calling that model"""
+    stmt = (
+        select(LLMProviderType.name)
+        .select_from(UserAgentConfig)
+        .join(LLMProviderType, UserAgentConfig.provider_type == LLMProviderType.id)
+        .where(UserAgentConfig.slug == slug)
+    )
+    result = await session.exec(stmt)
+    return result.first()
+
+async def get_user_agent_config_provider_type_name_for_model_concat_by_user_agent_config_id(*, session: AsyncSession, agent_id: uuid.UUID) -> Any| None:
+    """get the provider type name for a model based on the id of the user agent config which is calling that model"""
+    stmt = (
+        select(LLMProviderType.name)
+        .select_from(UserAgentConfig)
+        .join(LLMProviderType, UserAgentConfig.provider_type == LLMProviderType.id)
+        .where(UserAgentConfig.id == agent_id)
+    )
+    result = await session.exec(stmt)
+    return result.first()
 
 async def get_agent_instance(
     session: AsyncSession,
@@ -124,6 +151,16 @@ async def get_agent_instance_with_tools(
             slug,
         )
         return None
+
+    provider_type_name = await get_user_agent_config_provider_type_name_for_model_concat_by_slug(
+        session=session, slug=slug
+    )
+    # Prefix model with provider type when needed (pydantic_ai expects provider:model for non-openai providers).
+    if provider_type_name and provider_type_name.lower() != "openai":
+        model_final_form = f"{provider_type_name}:{model_name}"
+    else:
+        model_final_form = model_name
+
     system_prompt = _get(config, "system_prompt", "custom_system_prompt") or (
         f"You are {getattr(config, 'name', slug)}. {getattr(config, 'description', '')}".strip()
     )
@@ -138,8 +175,14 @@ async def get_agent_instance_with_tools(
         tools.append(emit_ui_component)
 
     agent_kwargs: dict[str, Any] = {
-        # pydantic_ai.Agent expects `model`
-        "model": model_name,
+        # pydantic_ai.Agent expects `model` such as:
+        # if provider type =  openai, then model by itself is 'fine'
+        # if provider type != openai, then we need to pass provider_type_string:model to pydantic as 'model'
+        # ie: model = model_name + ':' + (the resolved provider_type)
+        # we need to keep this as slip as possible - we will be refactoring much of this in the near future,
+        # this is meant to be a performant stopgap with minimal complexity.
+        # note: model_final_form might get us through to the next proof - we'll see.
+        "model": model_final_form, 
         "system_prompt": system_prompt,
         "deps_type": AgentDeps,
         "tools": tools or None,
