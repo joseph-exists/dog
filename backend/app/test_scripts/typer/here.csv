@@ -7,4 +7,8 @@ openai_compatible,Hermes-4.3-36B,Nous-Hermes-4-36B,hermes 4 36b,hermes4 36b,1280
 openai_compatible,Hermes-4-70B,Nous-Hermes-7-70B,NH770B,128000,false,true,0,false,false,false,false
 openai_compatible,Hermes-4-405B,Nous-Hermes-4-405B,NH405B,128000,false,true,0,false,false,false,false
 
+python main.py catalog create-model hermes-4-405b Hermes4Big -p openai_compatible -d HERMES THE GREAT -c 128000
+
+
+
 alibaba-qwen3-32b Qwen-3-32B -p openai_compatible  -d Qwen3-32B -c 131072 --vision --tools --streaming --enabled
