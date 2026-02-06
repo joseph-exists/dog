@@ -167,6 +167,70 @@ export type JumpRequest = {
 };
 
 /**
+ * Input model for creating a model catalog entry.
+ */
+export type LLMModelCreate = {
+    owner_id?: string;
+    /**
+     * Model identifier (e.g., 'gpt-4o', no provider prefix)
+     */
+    model_id: string;
+    /**
+     * Human-friendly name (e.g., 'GPT 4o')
+     */
+    display_name: string;
+    primary_provider_type_id?: string;
+    /**
+     * this overload might be neat in the future for swapping?
+     */
+    multiple_provider_type_support?: boolean;
+    description?: (string | null);
+    /**
+     * Max tokens in context window
+     */
+    context_window?: (number | null);
+    /**
+     * Default/cheapest model for this provider
+     */
+    is_default?: boolean;
+    /**
+     * Whether model is available for use
+     */
+    is_enabled?: boolean;
+    /**
+     * Model is deprecated (still works)
+     */
+    is_deprecated?: boolean;
+    /**
+     * Display ordering within provider
+     */
+    sort_order?: number;
+    /**
+     * system level model
+     */
+    is_system?: boolean;
+    /**
+     * Supports image input
+     */
+    has_vision?: (boolean | null);
+    /**
+     * Supports function/tool calling
+     */
+    has_function_calling?: (boolean | null);
+    /**
+     * Supports streaming responses
+     */
+    has_streaming?: (boolean | null);
+    /**
+     * Supports JSON output mode
+     */
+    has_json_mode?: (boolean | null);
+    secondary_capabilities?: (Array<{
+    [key: string]: unknown;
+}> | null);
+};
+
+/**
  * Public API response for a model catalog entry.
  */
 export type LLMModelPublic = {
@@ -237,6 +301,57 @@ export type LLMModelPublic = {
 export type LLMModelsPublic = {
     data: Array<LLMModelPublic>;
     count: number;
+};
+
+/**
+ * update model, all fields optional
+ */
+export type LLMModelUpdate = {
+    primary_provider_type_id?: (string | null);
+    /**
+     * so much effery
+     */
+    display_name?: (string | null);
+    description?: (string | null);
+    /**
+     * Max tokens in context window
+     */
+    context_window?: (number | null);
+    /**
+     * Default/cheapest model for this provider
+     */
+    is_default?: (boolean | null);
+    /**
+     * Whether model is available for use
+     */
+    is_enabled?: (boolean | null);
+    /**
+     * Model is deprecated (still works)
+     */
+    is_deprecated?: (boolean | null);
+    /**
+     * Display ordering within provider
+     */
+    sort_order?: (number | null);
+    /**
+     * Supports image input
+     */
+    has_vision?: (boolean | null);
+    /**
+     * Supports function/tool calling
+     */
+    has_function_calling?: (boolean | null);
+    /**
+     * Supports streaming responses
+     */
+    has_streaming?: (boolean | null);
+    /**
+     * Supports JSON output mode
+     */
+    has_json_mode?: (boolean | null);
+    secondary_capabilities?: (Array<{
+    [key: string]: unknown;
+}> | null);
 };
 
 /**
@@ -1358,7 +1473,7 @@ export type Type1Create = {
     capabilities?: Array<(string)>;
 };
 
-export type  Type1Update = {
+export type Type1Update = {
     /**
      * Display name
      */
@@ -2134,6 +2249,12 @@ export type LlmCatalogListModelsData = {
 
 export type LlmCatalogListModelsResponse = (LLMModelsPublic);
 
+export type LlmCatalogCreateModelData = {
+    requestBody: LLMModelCreate;
+};
+
+export type LlmCatalogCreateModelResponse = (LLMModelPublic);
+
 export type LlmCatalogListModelsForUapData = {
     limit?: number;
     skip?: number;
@@ -2141,6 +2262,25 @@ export type LlmCatalogListModelsForUapData = {
 };
 
 export type LlmCatalogListModelsForUapResponse = (LLMModelsPublic);
+
+export type LlmCatalogGetModelData = {
+    modelId: string;
+};
+
+export type LlmCatalogGetModelResponse = (LLMModelPublic);
+
+export type LlmCatalogUpdateModelData = {
+    modelId: string;
+    requestBody: LLMModelUpdate;
+};
+
+export type LlmCatalogUpdateModelResponse = (LLMModelPublic);
+
+export type LlmCatalogDeleteModelData = {
+    modelId: string;
+};
+
+export type LlmCatalogDeleteModelResponse = (Message);
 
 export type LlmProvidersListProvidersData = {
     limit?: number;

@@ -139,9 +139,8 @@ def create_provider(
     #     _unset_defaults(session, current_user.id)
 
     provider = UserAccessProvider.model_validate(provider_in, update={"user_id": current_user.id})
-
-    # TODO : add encryption back once this isn't stupidly broken
-    provider_data = provider_in.model_dump(exclude={"api_key"})
+    # provider_data = provider_in.model_dump(exclude={"api_key"})
+    provider_data = provider_in.model_dump()
     provider = UserAccessProvider(
         **provider_data,
         user_id=current_user.id,

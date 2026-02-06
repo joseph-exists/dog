@@ -31,27 +31,33 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import asdict
 from typing import Any
 
-from app.services.logfire_client import ServiceLogfire
-
-from dataclasses import asdict
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
     RoomParticipant,
 )
-from app.services.a2a_orchestrator import A2AOrchestrator, DEFAULT_MAX_A2A_DEPTH
+from app.services.a2a_orchestrator import DEFAULT_MAX_A2A_DEPTH, A2AOrchestrator
 from app.services.agent_context import RoomContextService
 from app.services.agent_events import AgentEventPublisher
-from app.services.agent_instance import get_agent_instance, get_agent_instance_with_tools
+from app.services.agent_instance import (
+    get_agent_instance,
+    get_agent_instance_with_tools,
+)
 from app.services.agent_prompt import build_agent_prompt
-from app.services.agent_selection import AgentSelectionService
 from app.services.agent_runner_non_streaming import NonStreamingAgentRunner
 from app.services.agent_runner_streaming import StreamingAgentRunner
 from app.services.agent_runner_types import AgentRunRequest
-from app.services.agent_tools import AgentDeps, emit_ui_component, request_agent_assistance
+from app.services.agent_selection import AgentSelectionService
+from app.services.agent_tools import (
+    AgentDeps,
+    emit_ui_component,
+    request_agent_assistance,
+)
+from app.services.logfire_client import ServiceLogfire
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +92,7 @@ _non_streaming_runner: NonStreamingAgentRunner | None = None
 def _uuid_to_str(value: uuid.UUID | None) -> str | None:
     return str(value) if value else None
 
-
+# TODO: either branch here or refactor in agent_instance for tools/a2a/orchestrator?
 def _get_streaming_runner() -> StreamingAgentRunner:
     global _streaming_runner
     if _streaming_runner is None:

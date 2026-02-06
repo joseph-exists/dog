@@ -651,6 +651,160 @@ export const JumpRequestSchema = {
 Used by jump endpoint to specify target and optimistic concurrency check.`
 } as const;
 
+export const LLMModelCreateSchema = {
+    properties: {
+        owner_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner Id'
+        },
+        model_id: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Model Id',
+            description: "Model identifier (e.g., 'gpt-4o', no provider prefix)"
+        },
+        display_name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Display Name',
+            description: "Human-friendly name (e.g., 'GPT 4o')"
+        },
+        primary_provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Primary Provider Type Id'
+        },
+        multiple_provider_type_support: {
+            type: 'boolean',
+            title: 'Multiple Provider Type Support',
+            description: 'this overload might be neat in the future for swapping?',
+            default: false
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        context_window: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Window',
+            description: 'Max tokens in context window'
+        },
+        is_default: {
+            type: 'boolean',
+            title: 'Is Default',
+            description: 'Default/cheapest model for this provider',
+            default: false
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether model is available for use',
+            default: true
+        },
+        is_deprecated: {
+            type: 'boolean',
+            title: 'Is Deprecated',
+            description: 'Model is deprecated (still works)',
+            default: false
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Display ordering within provider',
+            default: 0
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System',
+            description: 'system level model',
+            default: false
+        },
+        has_vision: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Vision',
+            description: 'Supports image input'
+        },
+        has_function_calling: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Function Calling',
+            description: 'Supports function/tool calling'
+        },
+        has_streaming: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Streaming',
+            description: 'Supports streaming responses'
+        },
+        has_json_mode: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Json Mode',
+            description: 'Supports JSON output mode'
+        },
+        secondary_capabilities: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Secondary Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['model_id', 'display_name'],
+    title: 'LLMModelCreate',
+    description: 'Input model for creating a model catalog entry.'
+} as const;
+
 export const LLMModelPublicSchema = {
     properties: {
         owner_id: {
@@ -808,6 +962,174 @@ export const LLMModelPublicSchema = {
     required: ['model_id', 'display_name', 'primary_provider_type_id', 'id'],
     title: 'LLMModelPublic',
     description: 'Public API response for a model catalog entry.'
+} as const;
+
+export const LLMModelUpdateSchema = {
+    properties: {
+        primary_provider_type_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Primary Provider Type Id'
+        },
+        display_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Display Name',
+            description: 'so much effery'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        context_window: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Window',
+            description: 'Max tokens in context window'
+        },
+        is_default: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Default',
+            description: 'Default/cheapest model for this provider'
+        },
+        is_enabled: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Enabled',
+            description: 'Whether model is available for use'
+        },
+        is_deprecated: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Deprecated',
+            description: 'Model is deprecated (still works)'
+        },
+        sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sort Order',
+            description: 'Display ordering within provider'
+        },
+        has_vision: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Vision',
+            description: 'Supports image input'
+        },
+        has_function_calling: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Function Calling',
+            description: 'Supports function/tool calling'
+        },
+        has_streaming: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Streaming',
+            description: 'Supports streaming responses'
+        },
+        has_json_mode: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Json Mode',
+            description: 'Supports JSON output mode'
+        },
+        secondary_capabilities: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Secondary Capabilities'
+        }
+    },
+    type: 'object',
+    title: 'LLMModelUpdate',
+    description: 'update model, all fields optional'
 } as const;
 
 export const LLMModelsPublicSchema = {
@@ -4730,7 +5052,7 @@ export const Type1CreateSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 20
+                    maxLength: 50
                 },
                 {
                     type: 'null'
@@ -4916,7 +5238,7 @@ export const Type1UpdateSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 20
+                    maxLength: 50
                 },
                 {
                     type: 'null'
@@ -5110,7 +5432,7 @@ export const Type3CreateSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 20
+                    maxLength: 50
                 },
                 {
                     type: 'null'
@@ -5298,7 +5620,7 @@ export const Type3UpdateSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 20
+                    maxLength: 50
                 },
                 {
                     type: 'null'
