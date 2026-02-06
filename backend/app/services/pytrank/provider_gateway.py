@@ -9,17 +9,20 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 import httpx
 from pydantic_ai.exceptions import UserError
-from pydantic_ai.models import cached_async_http_client
+
+from .model_manager import cached_async_http_client
+from .providers_interface import Provider
 
 if TYPE_CHECKING:
+    from anthropic import AsyncAnthropic as AsyncAnthropicClient
     from botocore.client import BaseClient
     from google.genai import Client as GoogleClient
     from groq import AsyncGroq
     from openai import AsyncOpenAI
-    from pydantic_ai.models.anthropic import AsyncAnthropicClient
-    from pydantic_ai.providers import Provider
+    from providers_interface import Provider
 
 GATEWAY_BASE_URL = "https://gateway.pydantic.dev/proxy"
+# commented out for the moment
 
 
 @overload
@@ -83,6 +86,7 @@ def gateway_provider(
 ) -> Provider[GoogleClient]: ...
 
 
+# this is where we do it!!
 @overload
 def gateway_provider(
     upstream_provider: str,
@@ -139,18 +143,16 @@ def gateway_provider(
             environment variable will be used if available. Otherwise, defaults to `https://gateway.pydantic.dev/proxy`.
         http_client: The HTTP client to use for the Gateway.
     """
-    api_key = api_key or os.getenv(
-        "PYDANTIC_AI_GATEWAY_API_KEY", os.getenv("PAIG_API_KEY")
-    )
+    # api_key = api_key or os.getenv(
+    #     "PYDANTIC_AI_GATEWAY_API_KEY", os.getenv("PAIG_API_KEY")
+    #     )
     if not api_key:
         raise UserError(
-            "Set the `PYDANTIC_AI_GATEWAY_API_KEY` environment variable or pass it via `gateway_provider(..., api_key=...)`"
-            " to use the Pydantic AI Gateway provider."
+            "Set the `API KEY` environment variable or pass it via `gateway_provider(..., api_key=...)`"
+            " to use this provider."
         )
 
-    base_url = base_url or os.getenv(
-        "PYDANTIC_AI_GATEWAY_BASE_URL", os.getenv("PAIG_BASE_URL", GATEWAY_BASE_URL)
-    )
+    base_url = base_url or os.getenv("PYDANTIC_AI_GATEWAY_BASE_URL", GATEWAY_BASE_URL)
     http_client = http_client or cached_async_http_client(
         provider=f"gateway/{upstream_provider}"
     )
@@ -169,19 +171,18 @@ def gateway_provider(
         "chat",
         "responses",
     ):
-        from .openai import OpenAIProvider
+        from pydantic_ai.providers.openai import OpenAIProvider
 
         return OpenAIProvider(
             api_key=api_key, base_url=base_url, http_client=http_client
         )
     elif upstream_provider == "groq":
-        from .groq import GroqProvider
+        from pydantic_ai.providers.groq import GroqProvider
 
         return GroqProvider(api_key=api_key, base_url=base_url, http_client=http_client)
     elif upstream_provider == "anthropic":
         from anthropic import AsyncAnthropic
-
-        from .anthropic import AnthropicProvider
+        from pydantic_ai.providers.anthropic import AnthropicProvider
 
         return AnthropicProvider(
             anthropic_client=AsyncAnthropic(
@@ -189,7 +190,7 @@ def gateway_provider(
             )
         )
     elif upstream_provider in ("bedrock", "converse"):
-        from .bedrock import BedrockProvider
+        from pydantic_ai.providers.bedrock import BedrockProvider
 
         return BedrockProvider(
             api_key=api_key,
@@ -197,7 +198,7 @@ def gateway_provider(
             region_name="pydantic-ai-gateway",  # Fake region name to avoid NoRegionError
         )
     elif upstream_provider in ("google-vertex", "gemini"):
-        from .google import GoogleProvider
+        from pydantic_ai.providers.google import GoogleProvider
 
         return GoogleProvider(
             vertexai=True, api_key=api_key, base_url=base_url, http_client=http_client
@@ -237,6 +238,7 @@ def _merge_url_path(base_url: str, path: str) -> str:
     return base_url.rstrip("/") + "/" + path.lstrip("/")
 
 
+# TODO: CREATE LIST OF NEEDED PROVIDERS TO ADD FOR NORMALIZATION
 def normalize_gateway_provider(provider: str) -> str:
     """Normalize a gateway provider name.
 
