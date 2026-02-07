@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils"
 import AgentAvatar from "./Display/AgentAvatar"
 import { AgentModeBadge } from "./Display/AgentBadge"
-import type { AgentData } from "./AgentCarousel"
+import type { AgentData } from "./types"
 
 interface RoomAgentListProps {
   /** Agents currently in the room */

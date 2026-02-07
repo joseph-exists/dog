@@ -10,9 +10,9 @@
 import { Crown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { AgentScope, ParticipationMode } from "@/components/Agents/types"
 
-type AgentScope = "system" | "personal"
-type ParticipationMode = "always" | "on_mention" | "manual"
+
 
 interface ScopeBadgeProps {
   scope: AgentScope
