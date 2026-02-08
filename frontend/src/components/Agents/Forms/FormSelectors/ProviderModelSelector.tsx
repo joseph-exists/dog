@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Cloud, Key } from "lucide-react"
 
 import { LlmProvidersService } from "@/client/sdk.gen"
-import type { UserAccessProviderPublic } from "@/client/types.gen"
+import type { LLMModelPublic, UserAccessProviderPublic } from "@/client/types.gen"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
 import {
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import ModelCombobox from "./ModelCombobox"
-import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 interface ProviderModelSelectorProps {
   /** Selected provider ID (null = system default) */
@@ -38,8 +37,12 @@ interface ProviderModelSelectorProps {
   agentDefaultModel: string
   /** Called when provider changes */
   onProviderChange: (providerId: string | null) => void
-  /** Called when model changes */
+  /** Called when model changes (receives model UUID) */
   onModelChange: (modelName: string | null) => void
+  /** Called with full model object on selection — use to extract model_id, model_name, etc. */
+  onModelSelected?: (model: LLMModelPublic | null) => void
+  /** Called when provider resolves — use to extract alpha_provider_type_id */
+  onProviderResolved?: (provider: UserAccessProviderPublic | null) => void
   /** Whether to show model override option */
   showModelOverride?: boolean
   /** Whether to show provider status badges */
@@ -65,7 +68,6 @@ function SystemDefaultIndicator({ className }: { className?: string }) {
     >
       <Cloud className="size-4 text-blue-500" />
       <span className="text-sm text-muted-foreground">
-        using system default, you weirdbeard
       </span>
     </div>
   )
@@ -91,7 +93,6 @@ function UserProviderIndicator({
     >
       <Key className="size-4 text-green-500" />
       <span className="text-sm text-muted-foreground">Using your API key</span>
-      <ProviderStatusBadge status={status} size="sm" />
     </div>
   )
 }
@@ -102,6 +103,8 @@ export function ProviderModelSelector({
   agentDefaultModel,
   onProviderChange,
   onModelChange,
+  onModelSelected,
+  onProviderResolved,
   showModelOverride = true,
   showProviderStatus = true,
   disabled = false,
@@ -134,8 +137,11 @@ export function ProviderModelSelector({
   const handleProviderChange = (value: string) => {
     if (value === "system") {
       onProviderChange(null)
+      onProviderResolved?.(null)
     } else {
       onProviderChange(value)
+      const provider = providers.find((p) => p.id === value) ?? null
+      onProviderResolved?.(provider)
     }
   }
 
@@ -190,9 +196,12 @@ export function ProviderModelSelector({
                         <Key className="size-4 text-green-500" />
                         <span>{provider.name}</span>
             {showProviderStatus && (
-              <ProviderStatusBadge
-                status={provider.is_validated ? "verified" : "unknown"}
-                size="sm"
+              <span
+                className={cn(
+                  "size-2 rounded-full shrink-0",
+                  provider.is_validated ? "bg-green-500" : "bg-muted-foreground/40",
+                )}
+                title={provider.is_validated ? "Verified" : "Not tested"}
               />
             )}
           </div>
@@ -219,9 +228,10 @@ export function ProviderModelSelector({
           <ModelCombobox
             value={modelName || agentDefaultModel}
             onChange={handleModelChange}
+            onModelSelected={onModelSelected}
             placeholder={`Select model (default: ${agentDefaultModel || "auto"})`}
             disabled={disabled}
-            className={isCompact ? "h-8 text-sm" : ""}
+            className={isCompact ? "h-8 text-sm" : ""}  
           />
           <p className="text-xs text-muted-foreground">
            this can change whenever you want.

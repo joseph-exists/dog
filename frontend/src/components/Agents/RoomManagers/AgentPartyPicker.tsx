@@ -9,6 +9,9 @@
  * - Search/filter capability
  */
 
+// PRI1 refactor target
+// used by ChatPanel -> RoomView -> r.$roomId.tsx
+
 import { Loader2Icon, SearchIcon, UsersIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -24,9 +27,10 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import AgentAvatar from "./Display/AgentAvatar"
-import { AgentModeBadge, AgentScopeBadge } from "./Display/AgentBadge"
-import type { AgentData } from "./AgentCarousel"
+import AgentAvatar from "../Display/AgentAvatar"
+import { AgentModeBadge, AgentScopeBadge } from "../Display/AgentBadge"
+import type { UserAgentConfigData as AgentData } from "../types"
+import { isAgentScope, isParticipationMode } from "../types"
 
 interface AgentPartyPickerProps {
   /** Available agents to choose from */
@@ -68,7 +72,7 @@ export default function AgentPartyPicker({
       // Filter by search query
       const matchesSearch =
         searchQuery === "" ||
-        agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         agent.description?.toLowerCase().includes(searchQuery.toLowerCase())
 
       return matchesSearch
@@ -275,12 +279,12 @@ function AgentPickerItem({
         disabled={disabled}
       />
 
-      <AgentAvatar name={agent.name} size="sm" />
+      <AgentAvatar name={agent.name ?? "Unknown"} size="sm" />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium truncate">{agent.name}</span>
-          {agent.scope && (
+          {isAgentScope(agent.scope) && (
             <AgentScopeBadge scope={agent.scope} className="scale-75" />
           )}
         </div>
@@ -291,9 +295,9 @@ function AgentPickerItem({
         )}
       </div>
 
-      {agent.participationMode && (
+      {isParticipationMode(agent.participation_mode) && (
         <AgentModeBadge
-          mode={agent.participationMode}
+          mode={agent.participation_mode}
           className="hidden sm:flex scale-75"
         />
       )}

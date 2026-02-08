@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 
 interface AgentCloneButtonProps {
   /** The agent to clone */
@@ -54,7 +54,6 @@ export default function AgentCloneButton({
   const [newName, setNewName] = useState(`${agent.name} (Copy)`)
   const [newSlug, setNewSlug] = useState("")
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)

@@ -26,7 +26,7 @@ import {
   AgentScopeBadge,
   AgentStatusBadge,
   EditAgentDialog,
-} from "@/components/Agents"
+} from "@/components/AgentsOLD"
 import {
   Breadcrumb,
   BreadcrumbItem,

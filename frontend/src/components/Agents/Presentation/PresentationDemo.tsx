@@ -11,10 +11,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 // import { cn } from "@/lib/utils"
 // import presentationToStyle from resolve.ts
-import PresentableAgentCard from "./PresentableAgentCard"
-import PresentableAgentAvatar from "./PresentableAgentAvatar"
-import { resolveAgentPresentation } from "./resolve"
-import type { AgentWithPresentation } from "./types"
+import AgentCard from "../Display/AgentCard"
+import AgentAvatar from "../Display/AgentAvatar"
+import { resolveAgentPresentation } from "../resolve"
+import type { UserAgentConfigData as AgentWithPresentation } from "../types"
 
 // ── Sample Agent Data ─────────────────────────────────────────────────────
 
@@ -30,7 +30,7 @@ const AGENTS: AgentWithPresentation[] = [
     isEnabled: true,
     modelName: "anthropic:claude-sonnet-4-5-20250929",
     agentType: "advisor",
-    creator: "Joseph",
+    owner_id: "Joseph",
     presentation: {
       tokens: {
         "--agent-accent": "oklch(0.65 0.14 55)",
@@ -61,7 +61,7 @@ const AGENTS: AgentWithPresentation[] = [
     isEnabled: true,
     modelName: "openai:gpt-4o",
     agentType: "creative",
-    creator: "Mika",
+    owner_id: "Mika",
     presentation: {
       tokens: {
         "--agent-accent": "oklch(0.7 0.25 340)",
@@ -74,8 +74,6 @@ const AGENTS: AgentWithPresentation[] = [
         "--secondary": "oklch(0.25 0.05 310)",
         "--secondary-foreground": "oklch(0.85 0.06 330)",
         "--foreground": "oklch(0.92 0.02 320)",
-        "--accent": "oklch(0.25 0.05 310)",
-        "--accent-foreground": "oklch(0.85 0.06 330)",
         "--agent-card-shadow":
           "0 0 25px oklch(0.65 0.25 340 / 0.12), 0 0 5px oklch(0.7 0.2 340 / 0.08)",
         "--agent-card-radius": "4px",
@@ -97,7 +95,7 @@ const AGENTS: AgentWithPresentation[] = [
     isEnabled: true,
     modelName: "anthropic:claude-sonnet-4-5-20250929",
     agentType: "analyst",
-    creator: "System",
+    owner_id: "System",
     presentation: {
       tokens: {
         "--agent-accent": "oklch(0.5 0.08 240)",
@@ -127,7 +125,7 @@ const AGENTS: AgentWithPresentation[] = [
     isEnabled: true,
     modelName: "google:gemini-pro",
     agentType: "oracle",
-    creator: "Lena",
+    owner_id: "Lena",
     presentation: {
       tokens: {
         "--agent-accent": "oklch(0.6 0.15 150)",
@@ -158,7 +156,7 @@ const AGENTS: AgentWithPresentation[] = [
     isEnabled: true,
     modelName: "anthropic:claude-sonnet-4-5-20250929",
     agentType: "engineer",
-    creator: "System",
+    owner_id: "System",
     presentation: {
       tokens: {
         "--agent-accent": "oklch(0.85 0.17 90)",
@@ -188,7 +186,7 @@ const AGENTS: AgentWithPresentation[] = [
     isEnabled: true,
     modelName: "openai:gpt-4o",
     agentType: "oracle",
-    creator: "Ren",
+    owner_id: "Ren",
     presentation: {
       tokens: {
         "--agent-accent": "oklch(0.65 0.1 290)",
@@ -220,7 +218,7 @@ const PLAIN_AGENT: AgentWithPresentation = {
   isEnabled: true,
   modelName: "openai:gpt-4o",
   agentType: "creative",
-  creator: "Default User",
+  owner_id: "Default User",
   presentation: null,
 }
 
@@ -356,7 +354,7 @@ export default function PresentationDemo() {
           <SectionLabel>Full Variant — Six agents, six personalities</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {AGENTS.map((a) => (
-              <PresentableAgentCard
+              <AgentCard
                 key={a.id}
                 agent={a}
                 variant="full"
@@ -373,7 +371,7 @@ export default function PresentationDemo() {
               <SectionLabel>Compact Variant — Sidebar density</SectionLabel>
               <div className="space-y-2">
                 {AGENTS.filter((a) => a.isEnabled).map((a) => (
-                  <PresentableAgentCard
+                  <AgentCard
                     key={a.id}
                     agent={a}
                     variant="compact"
@@ -389,7 +387,7 @@ export default function PresentationDemo() {
                 <SectionLabel>Mini Variant — Selection chips</SectionLabel>
                 <div className="flex flex-wrap gap-1.5 p-3 rounded-lg border bg-card transition-all duration-300">
                   {AGENTS.map((a) => (
-                    <PresentableAgentCard
+                    <AgentCard
                       key={a.id}
                       agent={a}
                       variant="mini"
@@ -416,7 +414,7 @@ export default function PresentationDemo() {
                           key={a.id}
                           className="ring-2 ring-card rounded-full"
                         >
-                          <PresentableAgentAvatar
+                          <AgentAvatar
                             name={a.name}
                             size="sm"
                             presentation={
@@ -448,7 +446,7 @@ export default function PresentationDemo() {
                         <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           FULL
                         </div>
-                        <PresentableAgentCard
+                        <AgentCard
                           agent={a}
                           variant="full"
                           presentationEnabled={presentationEnabled}
@@ -456,7 +454,7 @@ export default function PresentationDemo() {
                         <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-3">
                           COMPACT
                         </div>
-                        <PresentableAgentCard
+                        <AgentCard
                           agent={a}
                           variant="compact"
                           presentationEnabled={presentationEnabled}
@@ -464,7 +462,7 @@ export default function PresentationDemo() {
                         <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-3">
                           MINI
                         </div>
-                        <PresentableAgentCard
+                        <AgentCard
                           agent={a}
                           variant="mini"
                           presentationEnabled={presentationEnabled}
@@ -484,7 +482,7 @@ export default function PresentationDemo() {
           </SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
             <div>
-              <PresentableAgentCard
+              <AgentCard
                 agent={AGENTS[1]} // Neon Muse
                 variant="full"
                 presentationEnabled={presentationEnabled}
@@ -495,7 +493,7 @@ export default function PresentationDemo() {
               </p>
             </div>
             <div>
-              <PresentableAgentCard
+              <AgentCard
                 agent={AGENTS[5]} // Whisper
                 variant="full"
                 presentationEnabled={presentationEnabled}
@@ -512,19 +510,19 @@ export default function PresentationDemo() {
             Fallback — agent with no instance presentation
           </SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <PresentableAgentCard
+            <AgentCard
               agent={PLAIN_AGENT}
               variant="full"
               presentationEnabled={presentationEnabled}
               debug={debug}
             />
-            <PresentableAgentCard
+            <AgentCard
               agent={PLAIN_AGENT}
               variant="compact"
               presentationEnabled={presentationEnabled}
             />
             <div className="flex items-start p-4 rounded-lg border bg-card transition-all duration-300">
-              <PresentableAgentCard
+              <AgentCard
                 agent={PLAIN_AGENT}
                 variant="mini"
                 presentationEnabled={presentationEnabled}

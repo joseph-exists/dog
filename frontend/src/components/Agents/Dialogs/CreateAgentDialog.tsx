@@ -1,13 +1,14 @@
 /**
- * CreateAgentDialog Component
+ * CreateAgentDialog
  *
- * Dialog for creating a new personal agent.
- * Uses AgentForm for the form fields and handles API submission.
+ * Thin dialog shell around AgentForm for creating new agents.
+ * Owns: open/close state, create mutation, toast feedback, query invalidation.
+ * Delegates: form state, validation, submit button → AgentForm.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { BotIcon, Loader2Icon, PlusIcon } from "lucide-react"
-import { useCallback, useState } from "react"
+import { BotIcon, PlusIcon } from "lucide-react"
+import { useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
 import { AgentsService } from "@/client/sdk.gen"
@@ -20,24 +21,17 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
-import { validateAgentFormData } from "../utils/agentValidation"
-
 
 interface CreateAgentDialogProps {
-  /** Custom trigger element (defaults to "Create Agent" button) */
   trigger?: React.ReactNode
-  /** Callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void
-  /** Callback when agent is created successfully */
   onSuccess?: (agent: UserAgentConfigPublic) => void
-  /** Additional classes for the trigger */
   className?: string
 }
 
@@ -47,93 +41,72 @@ export default function CreateAgentDialog({
   onSuccess,
   className,
 }: CreateAgentDialogProps) {
-  type ProviderType = AgentsCreateAgentData["requestBody"]["provider_type"]
   const [isOpen, setIsOpen] = useState(false)
-  const [formData, setFormData] = useState<AgentFormData | null>(null)
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     onOpenChange?.(open)
-    if (!open) {
-      // Reset form data when closing
-      setFormData(null)
-    }
   }
 
   const mutation = useMutation({
-    // Use discriminated union payload (Type1Create | Type3Create) instead of the
-    // legacy UserAgentConfigCreate type.
     mutationFn: (payload: AgentsCreateAgentData["requestBody"]) =>
       AgentsService.createAgent({ requestBody: payload }),
-    onSuccess: (createdAgent) => {
-      showSuccessToast(`Agent "${createdAgent.name}" created successfully.`)
+    onSuccess: (created) => {
+      showSuccessToast(`Agent "${created.name}" created.`)
       handleOpenChange(false)
-      onSuccess?.(createdAgent)
+      onSuccess?.(created)
     },
     onError: (err: ApiError) => {
-      const message =
-        (err.body as { detail?: string })?.detail || "aw. you bonzered that one, mckraclin."
-      showErrorToast(message)
+      const detail = (err.body as { detail?: string })?.detail
+      showErrorToast(detail || "Failed to create agent.")
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["agents"] })
     },
   })
 
-  const handleFormChange = useCallback((data: AgentFormData) => {
-    setFormData(data)
-  }, [])
+  const handleSubmit = async (data: AgentFormData) => {
+    type ProviderType = AgentsCreateAgentData["requestBody"]["provider_type"]
 
-  const handleSubmit = () => {
-    if (!formData) return
-
-    // Validate form data
-    const validation = validateAgentFormData(formData)
-    if (!validation.isValid) {
-      validation.errors.forEach((error) => showErrorToast(error))
-      return
-    }
-
-    // Show warnings (non-blocking)
-    validation.warnings.forEach((warning) => {
-      console.warn("Agent creation warning:", warning)
-    })
-
-    // Satisfy Type1Create/Type3Create: both require provider_type and some
-    // required strings; we default to empty strings to keep the discriminator
-    // happy while the form enforces real values.
     const payload: AgentsCreateAgentData["requestBody"] = {
-      name: formData.name.trim(),
-      slug: formData.slug.trim(),
-      description: formData.description.trim() || "",
-      model_id: formData.model_id || undefined,
-      model_name: formData.model_name || undefined,
-      model: formData.model_name || undefined,
-      provider_type: formData.provider_type as ProviderType,
-      user_access_provider: formData.user_access_provider ?? null,
-      system_prompt: formData.system_prompt.trim() || "",
-      participation_mode: formData.participation_mode || undefined,
-      scope: "personal",
-      is_enabled: true,
+      name: data.name,
+      slug: data.slug,
+      description: data.description || "",
+      provider_type: data.provider_type as ProviderType,
+      user_access_provider: data.user_access_provider ?? null,
+      model: data.model ?? null,
+      model_id: data.model_id ?? null,
+      model_name: data.model_name,
+      system_prompt: data.system_prompt || "",
+      custom_system_prompt: data.custom_system_prompt ?? null,
+      instructions: data.instructions ?? null,
+      participation_mode: data.participation_mode,
+      scope: data.scope,
+      is_enabled: data.is_enabled,
+      is_clonable: data.is_clonable,
+      is_visible: data.is_visible,
+      is_coordinator: data.is_coordinator,
+      max_tool_iterations: data.max_tool_iterations,
+      capabilities: data.capabilities,
+      tool_config: data.tool_config ?? null,
+      deps_config: data.deps_config ?? null,
+      agent_metadata: data.agent_metadata ?? null,
     }
 
     mutation.mutate(payload)
   }
 
-  const isValid = formData?.name.trim() && formData?.slug.trim()
-
-  const defaultTrigger = (
-    <Button className={className}>
-      <PlusIcon className="size-4" />
-      Create Agent
-    </Button>
-  )
-
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button className={className}>
+            <PlusIcon className="size-4" />
+            Create Agent
+          </Button>
+        )}
+      </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -141,31 +114,15 @@ export default function CreateAgentDialog({
             Create New Agent
           </DialogTitle>
           <DialogDescription>
-            CreateAgentDialog - make you an agent, bud.
+            Configure a new personal agent.
           </DialogDescription>
         </DialogHeader>
 
-        <AgentForm onChange={handleFormChange} isEditMode={false} />
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={mutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isValid || mutation.isPending}
-          >
-            {mutation.isPending && (
-              <Loader2Icon className="size-22 animate-spin" />
-            )}
-            Create Agent
-          </Button>
-        </DialogFooter>
+        <AgentForm
+          mode="create"
+          onSubmit={handleSubmit}
+          isSubmitting={mutation.isPending}
+        />
       </DialogContent>
     </Dialog>
   )

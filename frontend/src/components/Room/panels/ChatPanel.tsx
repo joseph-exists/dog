@@ -7,7 +7,8 @@
 
 import { Copy, Download, Search, Users } from "lucide-react"
 import * as React from "react"
-import { type AgentData, AgentPartyPicker } from "@/components/Agents"
+import type { UserAgentConfigData as AgentData} from "@/components/AgentsOLD/types"
+import { AgentPartyPicker } from "@/components/AgentsOLD"
 import MessageInput from "@/components/Rooms/MessageInput"
 import MessageList from "@/components/Rooms/MessageList"
 import { Button } from "@/components/ui/button"

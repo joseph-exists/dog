@@ -11,7 +11,7 @@ import { Crown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { AgentScope, ParticipationMode } from "@/components/Agents/types"
-
+import { useProviderTypeName } from "../hooks"
 
 
 interface ScopeBadgeProps {
@@ -154,17 +154,15 @@ export function AgentCoordinatorBadge({ className }: CoordinatorBadgeProps) {
   )
 }
 
-type LLMProviderType = "openai" | "anthropic" | "google" | "openai_compatible"
 
 interface ProviderBadgeProps {
-  providerType: LLMProviderType
+  providerType: string
   className?: string
 }
 
-const providerConfig: Record<
-  LLMProviderType,
-  { label: string; colorClass: string }
-> = {
+type KnownProviderType = "openai" | "anthropic" | "google" | "openai_compatible"
+
+const providerConfig: Record<KnownProviderType, { label: string; colorClass: string }> = {
   openai: {
     label: "OpenAI",
     colorClass:
@@ -195,37 +193,29 @@ export function AgentProviderBadge({
   providerType,
   className,
 }: ProviderBadgeProps) {
-  const config = providerConfig[providerType]
-  if (!config) return null
+  const { data: providerName } = useProviderTypeName(providerType)
+  const knownConfig = providerConfig[providerType as KnownProviderType]
+  const label = providerName ?? knownConfig?.label ?? providerType
+  const colorClass =
+    knownConfig?.colorClass ??
+    "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300"
 
   return (
     <Badge
       variant="outline"
       className={cn(
         "gap-1 border-0 text-xs font-medium",
-        config.colorClass,
+        colorClass,
         className,
       )}
     >
-      {config.label}
+      {label}
     </Badge>
   )
 }
 
-/**
- * Extracts the provider type from a "provider:model" format string.
- * Returns null if the format is invalid or provider is unknown.
- */
-export function parseProviderFromModelName(
-  modelName: string | undefined | null,
-): LLMProviderType | null {
-  if (!modelName) return null
-  const provider = modelName.split(":")[0]
-  if (provider && provider in providerConfig) {
-    return provider as LLMProviderType
-  }
-  return null
-}
+
+
 
 interface AgentBadgeProps {
   /** What type of badge to display */
@@ -265,5 +255,3 @@ export default function AgentBadge({
   }
 }
 
-// Type exports for consumers
-export type { AgentScope, ParticipationMode, LLMProviderType }

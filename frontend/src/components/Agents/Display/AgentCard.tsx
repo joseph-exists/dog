@@ -1,17 +1,14 @@
 /**
  * AgentCard Component
  *
- * A versatile card for displaying agent information.
- * Supports multiple variants:
- * - "full": Complete card with all details (for agent lists, management)
- * - "compact": Smaller inline display (for room sidebars, selection)
- * - "mini": Minimal display with just avatar and name (for tight spaces)
+ * The single card implementation for displaying agents. Supports presentation-as-data
+ * styling via CSS variable scoping on a wrapper div. When an agent carries presentation
+ * data (or has a typed default), the card renders with that visual identity.
+ * When it doesn't, the card renders with standard shadcn defaults.
  *
- * Full feature set (from agents page usage):
- * - slug: Display @slug under name
- * - href: Link avatar/name to detail page
- * - description, scope/mode/provider/model badges
- * - action slot: Edit/Delete buttons, view dialog, etc.
+ * Supports three variants: full, compact, mini.
+ *
+ * See Presentation/REFERENCE.md for the complete architectural guide.
  */
 
 import { Link } from "@tanstack/react-router"
@@ -26,61 +23,389 @@ import {
 import { cn } from "@/lib/utils"
 
 import AgentAvatar from "./AgentAvatar"
-import type { AgentScope, ParticipationMode } from "./AgentBadge"
 import {
   AgentModeBadge,
   AgentProviderBadge,
   AgentScopeBadge,
   AgentStatusBadge,
-  parseProviderFromModelName,
 } from "./AgentBadge"
 
+import { useProviderTypeName } from "../hooks"
+
+import type {
+  AgentPresentation,
+//  AgentTypeKey,
+  UserAgentConfigData,
+} from "../types"
+import { isAgentScope, isAgentTypeKey, isParticipationMode } from "../types"
+import { presentationToStyle, resolveAgentPresentation } from "../resolve"
+
+// ── Props ─────────────────────────────────────────────────────────────────
+
 interface AgentCardProps {
-  /** Agent unique identifier */
-  id: string
-  /** Display name */
-  name: string
-  /** Agent slug (displays as @slug under name) */
-  slug?: string
-  /** Link destination for avatar/name (enables client-side navigation) */
-  href?: string
-  /** Short description */
-  description?: string | null
-  /** Agent scope */
-  scope?: AgentScope
-  /** Participation mode */
-  participationMode?: ParticipationMode
-  /** Whether agent is enabled */
-  isEnabled?: boolean
-  /** Model being used (e.g., "openai:gpt-4o-mini") */
-  modelName?: string
-  /** Card variant */
+  agent: UserAgentConfigData
   variant?: "full" | "compact" | "mini"
-  /** Whether this agent is currently selected/active */
+  /** Override presentation behavior. Defaults to true when agent has presentation or agent_type. */
+  presentationEnabled?: boolean
+  href?: string
   isSelected?: boolean
-  /** Click handler */
   onClick?: () => void
-  /** Optional action slot (buttons, toggles, etc.) */
   action?: React.ReactNode
-  /** Additional classes */
   className?: string
+  /** Show debug info about resolved presentation */
+  debug?: boolean
 }
 
-/**
- * Mini variant: Just avatar and name in a row
- */
+// ── Accent Strip ──────────────────────────────────────────────────────────
+
+function AccentStrip({
+  presentation,
+  enabled,
+}: {
+  presentation: AgentPresentation
+  enabled: boolean
+}) {
+  if (!enabled) return null
+
+  const position = presentation.tokens?.["--agent-accent-position"] ?? "top"
+  const width = presentation.tokens?.["--agent-accent-width"] ?? "3px"
+  const color = presentation.tokens?.["--agent-accent"]
+
+  if (position === "none" || !color) return null
+
+  const positionStyles: Record<string, string> = {
+    top: "absolute top-0 left-0 right-0 rounded-t-xl",
+    bottom: "absolute bottom-0 left-0 right-0",
+    left: "absolute top-0 bottom-0 left-0 rounded-l-xl",
+  }
+
+  const dimensionStyle =
+    position === "left"
+      ? { width, height: "100%" }
+      : { height: width, width: "100%" }
+
+  return (
+    <div
+      className={cn("pointer-events-none transition-all", positionStyles[position])}
+      style={{ backgroundColor: color, ...dimensionStyle }}
+    />
+  )
+}
+
+// ── Decoration Hint Classes ───────────────────────────────────────────────
+
+function getDecorationClasses(hint?: AgentPresentation["decorationHint"]): string {
+  switch (hint) {
+    case "brutalist":
+      return "font-mono"
+    case "ethereal":
+      return "font-serif"
+    default:
+      return ""
+  }
+}
+
+function getDecorationTitleClasses(hint?: AgentPresentation["decorationHint"]): string {
+  switch (hint) {
+    case "brutalist":
+      return "uppercase tracking-wide text-[13px]"
+    case "ethereal":
+      return "italic font-normal text-[16px]"
+    default:
+      return ""
+  }
+}
+
+// ── Debug Panel ───────────────────────────────────────────────────────────
+
+function DebugPanel({
+  agent,
+  resolved,
+}: {
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
+}) {
+  const tokenCount = Object.keys(resolved.tokens || {}).length
+  return (
+    <div className="border-t border-dashed border-border px-4 py-2 text-[10px] font-mono text-muted-foreground bg-muted/30">
+      <span className="font-bold">src:</span>{" "}
+      {agent.presentation ? "instance" : "type default"}
+      {" · "}
+      <span className="font-bold">tokens:</span> {tokenCount}
+      {" · "}
+      <span className="font-bold">deco:</span> {resolved.decorationHint || "none"}
+      {" · "}
+      <span className="font-bold">accent:</span>{" "}
+      {resolved.tokens?.["--agent-accent-position"] || "top"}
+    </div>
+  )
+}
+
+// ── Full Variant ──────────────────────────────────────────────────────────
+
+function AgentCardFull({
+  agent,
+  resolved,
+  presentationEnabled,
+  href,
+  isSelected,
+  onClick,
+  action,
+  className,
+  debug,
+}: {
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
+  presentationEnabled: boolean
+  debug: boolean
+} & Pick<AgentCardProps, "href" | "isSelected" | "onClick" | "action" | "className">) {
+  
+  const providerTypeQuery = useProviderTypeName(agent.model_name)
+  const providerType = providerTypeQuery.data
+
+  const displayModel = agent.model_name
+
+
+  const scope = isAgentScope(agent.scope) ? agent.scope : undefined
+  const participationMode = isParticipationMode(agent.participation_mode)
+    ? agent.participation_mode
+    : undefined
+  const isEnabled = agent.is_enabled ?? true
+
+  const decoClasses = presentationEnabled
+    ? getDecorationClasses(resolved.decorationHint)
+    : ""
+  const titleDecoClasses = presentationEnabled
+    ? getDecorationTitleClasses(resolved.decorationHint)
+    : ""
+
+  // CSS variable overrides on wrapper div — the core presentation mechanism
+  const wrapperStyle = presentationEnabled
+    ? presentationToStyle(resolved.tokens)
+    : undefined
+
+  // Shadow and radius applied directly on Card element because Tailwind's
+  // shadow-sm sets --tw-shadow on the element itself, overriding inherited values.
+  const cardInlineStyle: React.CSSProperties = {
+    ...(presentationEnabled && resolved.tokens?.["--agent-card-radius"]
+      ? { borderRadius: resolved.tokens["--agent-card-radius"] }
+      : {}),
+    ...(presentationEnabled && resolved.tokens?.["--agent-card-shadow"]
+      ? { boxShadow: resolved.tokens["--agent-card-shadow"] }
+      : {}),
+  }
+
+  const avatar = (
+    <AgentAvatar
+      name={agent.name ?? "Agent"}
+      size="lg"
+      presentation={presentationEnabled ? resolved.avatar : undefined}
+    />
+  )
+
+  const title = (
+    <CardTitle className={cn("truncate", titleDecoClasses)}>
+      {agent.name ?? "Agent"}
+    </CardTitle>
+  )
+
+  return (
+    <div style={wrapperStyle} className={cn("transition-all duration-300", decoClasses)}>
+      <Card
+        className={cn(
+          "transition-all relative overflow-hidden",
+          onClick && "cursor-pointer hover:shadow-md hover:border-primary/50",
+          isSelected && "ring-2 ring-primary",
+          !isEnabled && "opacity-60",
+          className,
+        )}
+        onClick={onClick}
+        style={Object.keys(cardInlineStyle).length > 0 ? cardInlineStyle : undefined}
+      >
+        <AccentStrip presentation={resolved} enabled={presentationEnabled} />
+
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            {href ? (
+              <Link to={href} onClick={(e) => e.stopPropagation()}>
+                {avatar}
+              </Link>
+            ) : (
+              avatar
+            )}
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                {href ? (
+                  <Link
+                    to={href}
+                    className="hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {title}
+                  </Link>
+                ) : (
+                  title
+                )}
+                <AgentStatusBadge isEnabled={isEnabled} />
+              </div>
+
+              {agent.slug && (
+                <CardDescription className="font-mono text-xs">
+                  @{agent.slug}
+                </CardDescription>
+              )}
+
+              {agent.description && (
+                <CardDescription
+                  className={cn(
+                    "mt-1 line-clamp-2",
+                    resolved.decorationHint === "ethereal" && presentationEnabled && "italic",
+                  )}
+                >
+                  {agent.description}
+                </CardDescription>
+              )}
+            </div>
+
+            {action && (
+              <div onClick={(e) => e.stopPropagation()}>{action}</div>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0">
+          <div className="flex flex-wrap gap-2">
+            {scope && <AgentScopeBadge scope={scope} />}
+            {participationMode && (
+              <AgentModeBadge mode={participationMode} />
+            )}
+            {scope === "personal" && providerType && (
+              <AgentProviderBadge providerType={providerType} />
+            )}
+            {displayModel && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                {displayModel}
+              </span>
+            )}
+          </div>
+        </CardContent>
+
+        {debug && <DebugPanel agent={agent} resolved={resolved} />}
+      </Card>
+    </div>
+  )
+}
+
+// ── Compact Variant ───────────────────────────────────────────────────────
+
+function AgentCardCompact({
+  agent,
+  resolved,
+  presentationEnabled,
+  isSelected,
+  onClick,
+  action,
+  className,
+}: {
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
+  presentationEnabled: boolean
+} & Pick<AgentCardProps, "isSelected" | "onClick" | "action" | "className">) {
+  const providerTypeQuery = useProviderTypeName(agent.model_name)
+  const providerType = providerTypeQuery.data
+  const scope = isAgentScope(agent.scope) ? agent.scope : undefined
+  const participationMode = isParticipationMode(agent.participation_mode)
+    ? agent.participation_mode
+    : undefined
+  const isEnabled = agent.is_enabled ?? true
+
+  const wrapperStyle = presentationEnabled
+    ? presentationToStyle(resolved.tokens)
+    : undefined
+
+  const accentColor = presentationEnabled
+    ? resolved.tokens?.["--agent-accent"]
+    : undefined
+
+  const decoClasses = presentationEnabled
+    ? getDecorationClasses(resolved.decorationHint)
+    : ""
+  const titleDecoClasses = presentationEnabled
+    ? getDecorationTitleClasses(resolved.decorationHint)
+    : ""
+
+  return (
+    <div style={wrapperStyle} className={cn("transition-all duration-300", decoClasses)}>
+      <div
+        className={cn(
+          "flex items-center gap-3 p-3 rounded-lg border bg-card text-card-foreground transition-colors",
+          onClick && "cursor-pointer hover:bg-accent/50",
+          isSelected && "ring-2 ring-primary",
+          !isEnabled && "opacity-60",
+          className,
+        )}
+        style={
+          accentColor
+            ? { borderLeftWidth: 3, borderLeftColor: accentColor }
+            : undefined
+        }
+        onClick={onClick}
+      >
+        <AgentAvatar
+          name={agent.name ?? "Agent"}
+          size="md"
+          presentation={presentationEnabled ? resolved.avatar : undefined}
+        />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={cn("font-medium truncate", titleDecoClasses)}>
+              {agent.name ?? "Agent"}
+            </span>
+            {scope && (
+              <AgentScopeBadge scope={scope} className="scale-90" />
+            )}
+            {scope === "personal" && providerType && (
+              <AgentProviderBadge providerType={providerType} className="scale-90" />
+            )}
+          </div>
+          {agent.description && (
+            <p className="text-sm text-muted-foreground truncate">
+              {agent.description}
+            </p>
+          )}
+        </div>
+
+        {participationMode && (
+          <AgentModeBadge mode={participationMode} className="hidden sm:flex" />
+        )}
+
+        {action && (
+          <div onClick={(e) => e.stopPropagation()}>{action}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Mini Variant ──────────────────────────────────────────────────────────
+
 function AgentCardMini({
-  name,
-  scope,
-  modelName,
+  agent,
+  resolved,
+  presentationEnabled,
   isSelected,
   onClick,
   className,
-}: Pick<
-  AgentCardProps,
-  "name" | "scope" | "modelName" | "isSelected" | "onClick" | "className"
->) {
-  const providerType = parseProviderFromModelName(modelName)
+}: {
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
+  presentationEnabled: boolean
+} & Pick<AgentCardProps, "isSelected" | "onClick" | "className">) {
+  const accentColor = presentationEnabled
+    ? resolved.tokens?.["--agent-accent"]
+    : undefined
 
   return (
     <div
@@ -90,192 +415,70 @@ function AgentCardMini({
         isSelected && "bg-accent",
         className,
       )}
+      style={
+        isSelected && accentColor
+          ? {
+              backgroundColor: `color-mix(in oklch, ${accentColor} 10%, transparent)`,
+              outline: `1.5px solid color-mix(in oklch, ${accentColor} 30%, transparent)`,
+              outlineOffset: "-1.5px",
+            }
+          : undefined
+      }
       onClick={onClick}
     >
-      <AgentAvatar name={name} size="sm" />
-      <span className="text-sm font-medium truncate">{name}</span>
-      {scope === "personal" && providerType && (
-        <AgentProviderBadge providerType={providerType} className="scale-75" />
-      )}
+      <AgentAvatar
+        name={agent.name ?? "Agent"}
+        size="sm"
+        presentation={presentationEnabled ? resolved.avatar : undefined}
+      />
+      <span className="text-sm font-medium truncate text-card-foreground">
+        {agent.name ?? "Agent"}
+      </span>
     </div>
   )
 }
 
-/**
- * Compact variant: Avatar, name, description in a horizontal layout
- */
-function AgentCardCompact({
-  name,
-  description,
-  scope,
-  participationMode,
-  isEnabled = true,
-  modelName,
-  isSelected,
-  onClick,
-  action,
-  className,
-}: Omit<AgentCardProps, "variant" | "id">) {
-  const providerType = parseProviderFromModelName(modelName)
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 p-3 rounded-lg border bg-card transition-colors",
-        onClick && "cursor-pointer hover:bg-accent/50",
-        isSelected && "ring-2 ring-primary",
-        !isEnabled && "opacity-60",
-        className,
-      )}
-      onClick={onClick}
-    >
-      <AgentAvatar name={name} size="md" />
+// ── Main Component ────────────────────────────────────────────────────────
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium truncate">{name}</span>
-          {scope && <AgentScopeBadge scope={scope} className="scale-90" />}
-          {scope === "personal" && providerType && (
-            <AgentProviderBadge
-              providerType={providerType}
-              className="scale-90"
-            />
-          )}
-        </div>
-        {description && (
-          <p className="text-sm text-muted-foreground truncate">
-            {description}
-          </p>
-        )}
-      </div>
-
-      {participationMode && (
-        <AgentModeBadge mode={participationMode} className="hidden sm:flex" />
-      )}
-
-      {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
-    </div>
-  )
-}
-
-/**
- * Full variant: Complete card with all details
- */
-function AgentCardFull({
-  name,
-  slug,
-  href,
-  description,
-  scope,
-  participationMode,
-  isEnabled = true,
-  modelName,
-  isSelected,
-  onClick,
-  action,
-  className,
-}: Omit<AgentCardProps, "variant" | "id">) {
-  // Extract provider type and model display name from "provider:model" format
-  const providerType = parseProviderFromModelName(modelName)
- 
-  // TODO PRI A: as soon as we touch this file again, this needs to be refactored.
-  // this is awfully unnecessary when we already have it.
-  const displayModel = modelName
-    ?.split(":")
-    .pop()
-    ?.replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-
-  const avatar = <AgentAvatar name={name} size="lg" />
-  const title = <CardTitle className="truncate">{name}</CardTitle>
-
-  return (
-    <Card
-      className={cn(
-        "transition-all",
-        onClick && "cursor-pointer hover:shadow-md hover:border-primary/50",
-        isSelected && "ring-2 ring-primary",
-        !isEnabled && "opacity-60",
-        className,
-      )}
-      onClick={onClick}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-3">
-          {href ? (
-            <Link to={href} onClick={(e) => e.stopPropagation()}>
-              {avatar}
-            </Link>
-          ) : (
-            avatar
-          )}
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              {href ? (
-                <Link
-                  to={href}
-                  className="hover:underline"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {title}
-                </Link>
-              ) : (
-                title
-              )}
-              <AgentStatusBadge isEnabled={isEnabled} />
-            </div>
-
-            {slug && (
-              <CardDescription className="font-mono text-xs">
-                @{slug}
-              </CardDescription>
-            )}
-
-            {description && (
-              <CardDescription className="mt-1 line-clamp-2">
-                {description}
-              </CardDescription>
-            )}
-          </div>
-
-          {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-0">
-        <div className="flex flex-wrap gap-2">
-          {scope && <AgentScopeBadge scope={scope} />}
-          {participationMode && <AgentModeBadge mode={participationMode} />}
-          {scope === "personal" && providerType && (
-            <AgentProviderBadge providerType={providerType} />
-          )}
-          {displayModel && (
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-              {displayModel}
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-/**
- * Main AgentCard component that renders the appropriate variant
- */
 export default function AgentCard({
+  agent,
   variant = "full",
-  ...props
+  presentationEnabled,
+  href,
+  isSelected,
+  onClick,
+  action,
+  className,
+  debug = false,
 }: AgentCardProps) {
+  // Default: presentation is enabled when the agent has presentation data or a typed default
+  const agentType = isAgentTypeKey(agent.agent_type) ? agent.agent_type : undefined
+  const enabled = presentationEnabled ?? !!(agent.presentation || agentType)
+
+  const resolved = resolveAgentPresentation(
+    agentType,
+    enabled ? agent.presentation : null,
+  )
+
+  const shared = {
+    agent,
+    resolved,
+    presentationEnabled: enabled,
+    isSelected,
+    onClick,
+    action,
+    className,
+  }
+
   switch (variant) {
     case "mini":
-      return <AgentCardMini {...props} />
+      return <AgentCardMini {...shared} />
     case "compact":
-      return <AgentCardCompact {...props} />
+      return <AgentCardCompact {...shared} />
     default:
-      return <AgentCardFull {...props} />
+      return <AgentCardFull {...shared} href={href} debug={debug} />
   }
 }
 
 // Export variants for direct use if needed
-export { AgentCardMini, AgentCardCompact, AgentCardFull }
+export { AgentCardFull, AgentCardCompact, AgentCardMini }

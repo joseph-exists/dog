@@ -3046,6 +3046,8 @@ class UserAgentConfigBase(SQLModel):
     tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
     deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
     agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
+    agent_type: str | None = Field(default=None, description="text for type that can be overloaded in presentation")
+    presentation: dict | None = Field(default=None, sa_column=Column(JSON))
 
     # Behavior flags
     is_enabled: bool = Field(default=True)
@@ -3078,6 +3080,7 @@ class Type1Create(UserAgentConfigBase):
     provider_type: Literal[TYPE1]
     system_prompt: str
     description: str
+    agent_type: str = Field(default="advisor",max_length=30)
     model_name: str = Field(default="friendly model name")
     is_enabled: bool = Field(default=True)
     is_clonable: bool = Field(default=False)
@@ -3103,6 +3106,7 @@ class Type3Create(UserAgentConfigBase):
     is_enabled: bool = Field(default=True)
     is_clonable: bool = Field(default=False)
     is_visible: bool = Field(default=False)
+    agent_type: str = Field(default="advisor",max_length=30)
     scope: str = Field(default="personal")  # "personal" | "system"
     participation_mode: str = Field(default="on_mention")
     is_coordinator: bool = Field(default=False)
@@ -3189,6 +3193,8 @@ class UserAgentConfig(UserAgentConfigBase, table=True):
     is_coordinator: bool | None = Field(default=None)
     max_tool_iterations: int | None = Field(default=None)
     capabilities: list[str] | None = Field(default=None, sa_column=Column(JSON))
+    agent_type: str | None = Field(default=None, description="text for type that can be overloaded in presentation")
+    presentation: dict | None = Field(default=None, sa_column=Column(JSON))
 
 class UserAgentConfigPublic(UserAgentConfigBase):
     id: uuid.UUID
@@ -3218,6 +3224,8 @@ class UserAgentConfigPublic(UserAgentConfigBase):
     is_coordinator: bool | None = Field(default=None)
     max_tool_iterations: int | None = Field(default=None)
     capabilities: list[str] | None = Field(default=None)
+    agent_type: str | None = Field(default=None, description="text for type that can be overloaded in presentation")
+    presentation: dict | None = Field(default=None, sa_column=Column(JSON))
 
 class UserAgentConfigsPublic(SQLModel):
     data: list[UserAgentConfigPublic]

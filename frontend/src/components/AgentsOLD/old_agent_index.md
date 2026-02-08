@@ -1,3 +1,4 @@
+```typescript
 /**
  * Agent Components
  *
@@ -5,7 +6,7 @@
  */
 
 // ============================================================================
-// Foundation Components (Sprint 1)
+// Foundation Components 
 // ============================================================================
 
 // Avatar
@@ -13,8 +14,8 @@ export {
   default as AgentAvatar,
   getColorForName,
   getInitials,
-} from "./Display/AgentAvatar"
-export type { AgentScope, ParticipationMode } from "./Display/AgentBadge"
+} from 
+export type { AgentScope, ParticipationMode } 
 // Badges
 export {
   AgentCoordinatorBadge,
@@ -22,7 +23,7 @@ export {
   AgentScopeBadge,
   AgentStatusBadge,
   default as AgentBadge,
-} from "./Display/AgentBadge"
+} from "../UserAccessProviders/Display/AgentBadge"
 
 // Card
 export {
@@ -30,25 +31,25 @@ export {
   AgentCardFull,
   AgentCardMini,
   default as AgentCard,
-} from "./Display/AgentCard"
+} from "../UserAccessProviders/Display/AgentCard"
 
 // ============================================================================
-// Room Integration Components (Sprint 2)
+// Room Integration Components 
 // ============================================================================
 
-export type { AgentData } from "./AgentCarousel"
+
 // Carousel
-export { default as AgentCarousel } from "./AgentCarousel"
+export { default as AgentCarousel } from "../Agents/RoomManagers/AgentCarousel"
 // Party Picker (multi-select dialog)
-export { default as AgentPartyPicker } from "./AgentPartyPicker"
+export { default as AgentPartyPicker } from "../Agents/RoomManagers/AgentPartyPicker"
 // Quick Add (dropdown)
-export { default as AgentQuickAdd } from "./AgentQuickAdd"
+export { default as AgentQuickAdd } from "../Agents/RoomManagers/AgentQuickAdd"
 
 // Room Agent List
 export { default as RoomAgentList } from "./RoomAgentList"
 
 // ============================================================================
-// Agent Management Components (Sprint 3)
+// Agent Management Components 
 // ============================================================================
 
 // Clone Button
@@ -57,18 +58,19 @@ export { default as AgentCloneButton } from "./Dialogs/AgentCloneButton"
 export type { AgentFormData } from "./Forms/AgentForm"
 export { default as AgentForm, PARTICIPATION_MODES } from "./Forms/AgentForm"
 // Create Dialog
-export { default as CreateAgentDialog } from "./Dialogs/CreateAgentDialog"
+export { default as CreateAgentDialog } from "../Agents/Dialogs/CreateAgentDialog"
 // Edit Dialog
 export { default as EditAgentDialog } from "./Dialogs/EditAgentDialog"
 
 // ============================================================================
-// Provider Configuration Components (Sprint 4)
+// Provider Configuration Components 
 // ============================================================================
 
 // Model Settings - allows users to customize model and provider for an agent
-export { default as AgentModelSettings } from "./Settings/AgentModelSettings"
+export { default as AgentModelSettings } from "../Agents/Dialogs/AgentModelSettings"
 // Provider Selector - lightweight inline selector
-export { default as AgentProviderSelector } from "./Selectors/InlineProviderSelector"
+export { default as AgentProviderSelector } from "../UserAccessProviders/Selectors/InlineProviderSelector"
 // Provider components (reusable building blocks)
-export { ProviderModelSelector } from "./Selectors/ProviderModelSelector"
-export { ProviderStatusBadge } from "./Display/ProviderStatusBadge"
+export { ProviderModelSelector } from "../Agents/Forms/FormSelectors/ProviderModelSelector"
+export { ProviderStatusBadge } from "../UserAccessProviders/Display/ProviderStatusBadge"
+```

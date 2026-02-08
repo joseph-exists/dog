@@ -6185,7 +6185,7 @@ export const UserAgentConfigPublicSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 20
+                    maxLength: 100
                 },
                 {
                     type: 'null'

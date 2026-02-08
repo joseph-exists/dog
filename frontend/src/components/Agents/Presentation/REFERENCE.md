@@ -10,7 +10,7 @@
 
 Objects carry their own visual identity as data, alongside content. An agent's warm amber palette is stored in the same record as its name and description. The component renders both — no separate theming system needed.
 
-This coexists with **ambient themes** (page-level visual context set by a page owner). The two systems use different mechanisms, have different lifecycles, and compose via CSS specificity: ambient sets the canvas, object presentation overrides it locally.
+This coexists with **application defaults**, **user defaults**,and **ambient themes** (page-level visual context set by a page owner). These systems use different mechanisms, have different lifecycles, and compose via CSS specificity: ambient sets the canvas, object presentation overrides it locally.
 
 ---
 
@@ -356,3 +356,9 @@ The pattern is not agent-specific. Any entity that should carry visual identity 
 5. **Variant scaling is a component concern.** The data doesn't know about full/compact/mini. The component decides which tokens are relevant at each density. Data authors don't need to think about variants.
 
 6. **Decoration hints are interpreted, not literal.** The object says "I'm brutalist." The component decides what that means in each variant, viewport, and context. This keeps the data portable and the component in control.
+
+
+NOTES: 
+
+"So: no, the migration doesn't break the design. The one thing to lock down is that the presentation JSON column is treated as an opaque blob that round-trips without key transformation. Test that with one agent end-to-end (write presentation JSON to DB, read it back via API, confirm --agent-accent key survives intact) before wiring up the full grid."
+

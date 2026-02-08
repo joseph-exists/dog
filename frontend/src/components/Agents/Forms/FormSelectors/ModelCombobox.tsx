@@ -78,7 +78,7 @@ export default function ModelCombobox({
         providerType ? m.primary_provider_type_id === providerType : true,
       )
       .map((m) => ({
-        value: (m as any).id ?? m.model_id, // backend UUID id is what agent endpoints expect
+        value: m.id ?? m.model_id, // backend UUID id is what agent endpoints expect
         label: m.display_name ?? m.model_id,
         description: m.description ?? undefined,
         providerType: m.primary_provider_type_id,

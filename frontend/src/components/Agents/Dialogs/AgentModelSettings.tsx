@@ -17,10 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
 import { AgentsService } from "@/client/sdk.gen"
-import type {
-  UserAgentConfigPublic,
-  AgentsUpdateAgentData
-} from "@/client/types.gen"
+import type { UserAgentConfigPublic } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -34,8 +31,10 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import useCustomToast from "@/hooks/useCustomToast"
-import { ProviderModelSelector } from "../Selectors/ProviderModelSelector"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
+import { ProviderModelSelector } from "../Forms/FormSelectors/ProviderModelSelector"
+import { sparseAgentUpdate } from "../utils"
+
 
 interface AgentModelSettingsProps {
   /** The agent to configure settings for */
@@ -49,7 +48,7 @@ export function AgentModelSettings({
   className,
 }: AgentModelSettingsProps) {
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+
 
   // Local state for form
   const [providerId, setProviderId] = useState<string | null>(null)
@@ -87,12 +86,11 @@ export function AgentModelSettings({
     mutationFn: () =>
       AgentsService.updateAgent({
         agentId: agent.id,
-        requestBody:  {
-          provider_type: agent.provider_type!,
+        requestBody: sparseAgentUpdate(agent, {
           user_access_provider: providerId,
           model_name: modelName ?? undefined,
           custom_system_prompt: customPrompt || null,
-        } as AgentsUpdateAgentData['requestBody'],
+        }),
       }),
     onSuccess: (updated) => {
       showSuccessToast("Saved your agent settings")

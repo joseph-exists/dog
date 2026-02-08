@@ -9,24 +9,18 @@
  * - Keyboard navigation support
  */
 
+// currently unused - but I like the idea and the implementation looks fairly reasonable
+// needs minor refactor
+
+
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { AgentScope, ParticipationMode } from "./Display/AgentBadge"
-import AgentCard from "./Display/AgentCard"
-import AgentDetailDialog from "./Settings/AgentDetailDialog"
+import AgentCard from "../Display/AgentCard"
+import AgentDetailDialog from "../Dialogs/AgentDetailDialog"
+import type { UserAgentConfigData as AgentData } from "../types"
 
-export interface AgentData {
-  id: string
-  name: string
-  description?: string | null
-  scope?: AgentScope
-  participationMode?: ParticipationMode
-  isEnabled?: boolean
-  isCoordinator?: boolean
-  modelName?: string
-}
 
 interface AgentCarouselProps {
   /** List of agents to display */
@@ -130,13 +124,7 @@ export default function AgentCarousel({
         {agents.map((agent) => (
           <div key={agent.id} className="flex-shrink-0">
             <AgentCard
-              id={agent.id}
-              name={agent.name}
-              description={agent.description}
-              scope={agent.scope}
-              participationMode={agent.participationMode}
-              isEnabled={agent.isEnabled}
-              modelName={agent.modelName}
+              agent={agent}
               variant={cardVariant}
               isSelected={selectedId === agent.id}
               onClick={() => onSelect?.(agent)}
