@@ -48,7 +48,11 @@ function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
   const mode = isParticipationMode(agent.participation_mode)
     ? agent.participation_mode
     : undefined
-  // const { data: providerName } = useProviderTypeName(agent.provider_type)
+  //const providerName  = useProviderTypeName(agent.provider_type)
+  const providerNameQuery = useProviderTypeName(agent.provider_type)
+  const providerName = providerNameQuery.data ?? agent.provider_type ?? "Unknown"
+  // providerNameQuery.data && <AgentProviderBadge providerType={providerNameQuery.data} />
+
 
   return (
     <div className="space-y-4">
@@ -58,8 +62,10 @@ function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
         {scope && <AgentScopeBadge scope={scope} />}
         {mode && <AgentModeBadge mode={mode} />}
         {agent.is_coordinator && <AgentCoordinatorBadge />}
+        {providerNameQuery.data && 
+        <AgentProviderBadge providerType={providerNameQuery.data} />}
         {agent.provider_type && (
-          <AgentProviderBadge providerType={agent.provider_type} />
+          <AgentProviderBadge providerType={providerName} />
         )}
       </div>
 

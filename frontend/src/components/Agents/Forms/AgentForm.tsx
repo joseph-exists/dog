@@ -16,12 +16,12 @@
  * The parent component receives validated AgentFormData on submit and
  * is responsible for calling the API (create or update).
  */
-
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ChevronDownIcon, Loader2 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
+
+import { z } from "zod/v4"
 
 import { AgentsService } from "@/client/sdk.gen"
 import type { LLMModelPublic, UserAccessProviderPublic, UserAgentConfigPublic } from "@/client/types.gen"
@@ -126,39 +126,40 @@ const agentFormSchema = z.object({
   // Identity
   name: z.string().min(1, "Name is required").max(100, "Max 100 characters"),
   slug: z.string().min(1, "Slug is required"),
-  description: z.string().max(500, "Max 500 characters").default(""),
+  description: z.string().max(500, "Max 500 characters"),
 
   // Provider & Model (managed outside zod, stored as hidden fields)
-  user_access_provider: z.string().nullable().default(null),
+  user_access_provider: z.string().nullable(),
   provider_type: z.string().min(1, "Provider type is required"),
-  model: z.string().nullable().default(null),
-  model_id: z.string().nullable().default(null),
-  model_name: z.string().default(""),
+  model: z.string().nullable(),
+  model_id: z.string().nullable(),
+  model_name: z.string(),
 
   // Prompts
-  system_prompt: z.string().default(""),
-  custom_system_prompt: z.string().nullable().default(null),
-  instructions: z.string().nullable().default(null),
+  system_prompt: z.string(),
+  custom_system_prompt: z.string().nullable(),
+  instructions: z.string().nullable(),
 
   // Behavior
-  participation_mode: z.string().default("on_mention"),
-  scope: z.string().default("personal"),
+  participation_mode: z.string(),
+  scope: z.string(),
 
   // Settings
-  is_enabled: z.boolean().default(true),
-  is_clonable: z.boolean().default(false),
-  is_visible: z.boolean().default(true),
-  is_coordinator: z.boolean().default(false),
-  max_tool_iterations: z.coerce.number().int().min(0).max(100).default(10),
+  is_enabled: z.boolean(),
+  is_clonable: z.boolean(),
+  is_visible: z.boolean(),
+  is_coordinator: z.boolean(),
+  max_tool_iterations: z.coerce.number().int().min(0).max(100),
 
   // Advanced (JSON strings — parsed via safeJsonParse in submit handler)
-  capabilities_raw: z.string().default(""),
-  tool_config_raw: z.string().default(""),
-  deps_config_raw: z.string().default(""),
-  agent_metadata_raw: z.string().default(""),
+  capabilities_raw: z.string(),
+  tool_config_raw: z.string(),
+  deps_config_raw: z.string(),
+  agent_metadata_raw: z.string(),
 })
 
-type FormValues = z.infer<typeof agentFormSchema>
+// type FormValues = z.infer<typeof agentFormSchema>
+// we don't need to do this because we're using zodresolver
 
 // ── Props ─────────────────────────────────────────────────────────────────
 
@@ -210,7 +211,8 @@ export default function AgentForm({
 
   // ── Form Setup ──────────────────────────────────────────────────────────
 
-  const form = useForm<FormValues>({
+  //const form = useForm<FormValues>({
+  const form = useForm({
     resolver: zodResolver(agentFormSchema),
     mode: "onBlur",
     defaultValues: {
@@ -742,6 +744,7 @@ export default function AgentForm({
                       max={100}
                       className="w-20 text-center"
                       {...field}
+                      value={Number(field.value)}
                     />
                   </FormControl>
                   <FormMessage />

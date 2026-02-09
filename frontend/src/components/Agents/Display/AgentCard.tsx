@@ -227,7 +227,7 @@ function AgentCardFull({
         <CardHeader className="pb-3">
           <div className="flex items-start gap-3">
             {href ? (
-              <Link to={href} onClick={(e) => e.stopPropagation()}>
+              <Link to={href} onClick={(e: { stopPropagation: () => any }) => e.stopPropagation()}>
                 {avatar}
               </Link>
             ) : (
@@ -237,13 +237,13 @@ function AgentCardFull({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 {href ? (
-                  <Link
+                    <Link
                     to={href}
                     className="hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) => e.stopPropagation()}
+                    >
                     {title}
-                  </Link>
+                    </Link>
                 ) : (
                   title
                 )}

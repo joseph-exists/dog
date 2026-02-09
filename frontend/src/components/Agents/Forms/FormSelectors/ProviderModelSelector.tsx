@@ -83,7 +83,7 @@ function UserProviderIndicator({
   provider: UserAccessProviderPublic
   className?: string
 }) {
-  const status = provider.is_validated ? "verified" : "unknown"
+  const status = provider.is_validated ? "verified" : "not tested"
   return (
     <div
       className={cn(
@@ -92,7 +92,9 @@ function UserProviderIndicator({
       )}
     >
       <Key className="size-4 text-green-500" />
-      <span className="text-sm text-muted-foreground">Using your API key</span>
+      <span className="text-sm text-muted-foreground">
+        Using your API key ({status})
+      </span>
     </div>
   )
 }

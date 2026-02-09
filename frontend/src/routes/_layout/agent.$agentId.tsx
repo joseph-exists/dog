@@ -18,15 +18,10 @@ import {
 } from "lucide-react"
 import { Suspense } from "react"
 
-import {
-  AgentAvatar,
-  AgentCloneButton,
-  AgentModeBadge,
-  AgentModelSettings,
-  AgentScopeBadge,
-  AgentStatusBadge,
-  EditAgentDialog,
-} from "@/components/AgentsOLD"
+
+//import { AgentAvatar } from "@/components/Agents/Display"
+
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -40,6 +35,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AgentsService } from "@/client/sdk.gen"
+// import AgentBadge from "@/components/Agents/Display/AgentBadge"
+import AgentAvatar from "@/components/Agents/Display/AgentAvatar"
+// import AgentCard from "@/components/Agents/Display/AgentCard"
+import AgentDetailDialog from "@/components/Agents/Dialogs/AgentDetailDialog"
+// import CreateAgentDialog from "@/components/Agents/Dialogs/CreateAgentDialog"
+import { AgentModeBadge, AgentScopeBadge, AgentStatusBadge } from "@/components/Agents/Display/AgentBadge"
+import AgentCloneButton  from "@/components/Agents/Dialogs/AgentCloneButton"
+import  AgentModelSettings   from "@/components/Agents/Dialogs/AgentModelSettings"
 
 export const Route = createFileRoute("/_layout/agent/$agentId")({
   component: AgentDetailPage,
@@ -170,7 +173,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               }
             />
           )}
-          {isPersonal && <EditAgentDialog agent={agent} />}
+          {isPersonal && <AgentDetailDialog agent={agent} />}
         </div>
       </div>
 

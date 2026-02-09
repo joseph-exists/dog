@@ -23,7 +23,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useForm, useFormContext, FormProvider } from "react-hook-form"
-import { z } from "zod"
+import { z } from "zod/v4"
 
 import { AgentsService } from "@/client/sdk.gen"
 import type {
@@ -623,7 +623,7 @@ export default function AgentusFormulaicus({
 
   // ── Tracing the Lines of Magic (Form Setup) ─────────────────────────
 
-  const form = useForm<FormValues>({
+  const form = useForm({
     resolver: zodResolver(schema),
     mode: "onBlur",
     defaultValues: {
