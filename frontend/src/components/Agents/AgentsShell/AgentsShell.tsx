@@ -2,31 +2,36 @@
  * AgentsShell
  *
  * Structural container for the agents page.
- * Composes: AgentsHeader → ambient theme wrapper div → AgentsLayout.
+ * Composes: Page theme wrapper → AgentsHeader → Cards theme wrapper → AgentsLayout.
  *
- * The ambient theme wrapper is the architectural centerpiece:
- * a div with CSS custom properties from the selected theme.
- * All panel content inherits these variables. AgentCards with
- * their own presentation override via CSS specificity (closer scope wins).
+ * Two nested theme wrappers enable the 4-layer cascade:
+ *   Application (:root) → Page theme → Cards theme → Individual card presentation
+ *
+ * CSS custom property inheritance means inner wrappers override outer ones
+ * for the same variable. No specificity hacks needed.
  *
  * See Presentation/REFERENCE.md §Two Scoping Levels.
  */
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { getThemeById } from "./themes"
 import { AgentsHeader } from "./AgentsHeader"
-import { type PanelConfig, AgentsLayout } from "./AgentsLayout"
+import { AgentsLayout, type PanelConfig } from "./AgentsLayout"
+import { getThemeById, getThemeStyle } from "./themes"
 
 export interface AgentsShellProps {
   /** Page title */
   title: string
   /** Panel configurations */
   panels: PanelConfig[]
-  /** Currently selected theme ID */
-  selectedThemeId: string
-  /** Theme change callback */
-  onThemeChange: (themeId: string) => void
+  /** Currently selected page theme ID */
+  pageThemeId: string
+  /** Currently selected cards theme ID */
+  cardsThemeId: string
+  /** Page theme change callback */
+  onPageThemeChange: (themeId: string) => void
+  /** Cards theme change callback */
+  onCardsThemeChange: (themeId: string) => void
   /** Additional className */
   className?: string
 }
@@ -34,28 +39,37 @@ export interface AgentsShellProps {
 export function AgentsShell({
   title,
   panels,
-  selectedThemeId,
-  onThemeChange,
+  pageThemeId,
+  cardsThemeId,
+  onPageThemeChange,
+  onCardsThemeChange,
   className,
 }: AgentsShellProps) {
   const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
     "panels",
   )
 
-  const ambientTheme = getThemeById(selectedThemeId)
+  const pageTheme = getThemeById(pageThemeId)
+  const cardsTheme = getThemeById(cardsThemeId)
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    // Outermost: Page theme scope (affects header + content)
+    <div
+      style={getThemeStyle(pageTheme)}
+      className={cn("flex flex-col h-full", className)}
+    >
       <AgentsHeader
         title={title}
-        selectedThemeId={selectedThemeId}
-        onThemeChange={onThemeChange}
+        pageThemeId={pageThemeId}
+        cardsThemeId={cardsThemeId}
+        onPageThemeChange={onPageThemeChange}
+        onCardsThemeChange={onCardsThemeChange}
         layoutMode={layoutMode}
         onLayoutModeChange={setLayoutMode}
       />
 
-      {/* Ambient theme wrapper — sets CSS variables for all panel content */}
-      <div style={ambientTheme.style} className="flex-1 min-h-0">
+      {/* Inner: Cards theme scope (overrides page theme for card areas) */}
+      <div style={getThemeStyle(cardsTheme)} className="flex-1 min-h-0">
         <AgentsLayout panels={panels} mode={layoutMode} />
       </div>
     </div>
