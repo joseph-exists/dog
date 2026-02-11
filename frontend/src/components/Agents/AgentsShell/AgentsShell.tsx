@@ -54,9 +54,10 @@ export function AgentsShell({
 
   return (
     // Outermost: Page theme scope (affects header + content)
+    // bg-card/text-card-foreground consume the CSS variables set by the theme
     <div
       style={getThemeStyle(pageTheme)}
-      className={cn("flex flex-col h-full", className)}
+      className={cn("flex flex-col h-full bg-card text-card-foreground", className)}
     >
       <AgentsHeader
         title={title}
@@ -69,7 +70,7 @@ export function AgentsShell({
       />
 
       {/* Inner: Cards theme scope (overrides page theme for card areas) */}
-      <div style={getThemeStyle(cardsTheme)} className="flex-1 min-h-0">
+      <div style={getThemeStyle(cardsTheme)} className="flex-1 min-h-0 bg-card text-card-foreground">
         <AgentsLayout panels={panels} mode={layoutMode} />
       </div>
     </div>
