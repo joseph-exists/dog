@@ -11,11 +11,22 @@
  * a query. Interface stays the same. Components don't change.
  */
 
+import type { PresentationTokens } from "../types"
+import { presentationToStyle } from "../resolve"
+
 export interface AmbientTheme {
   id: string
   name: string
   description?: string
-  style: React.CSSProperties
+  tokens: PresentationTokens
+}
+
+/**
+ * Convert theme tokens to inline style for wrapper div.
+ * Uses the same mechanism as AgentCard presentation.
+ */
+export function getThemeStyle(theme: AmbientTheme): React.CSSProperties | undefined {
+  return presentationToStyle(theme.tokens)
 }
 
 /**
@@ -29,13 +40,13 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
     id: "default",
     name: "Default",
     description: "Application theme",
-    style: {},
+    tokens: {},
   },
   {
     id: "midnight",
     name: "Midnight",
     description: "Deep blue-violet dark surface",
-    style: {
+    tokens: {
       "--card": "oklch(0.18 0.03 280)",
       "--card-foreground": "oklch(0.92 0.01 280)",
       "--foreground": "oklch(0.90 0.01 280)",
@@ -46,13 +57,13 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
       "--secondary-foreground": "oklch(0.88 0.01 280)",
       "--accent": "oklch(0.30 0.04 280)",
       "--accent-foreground": "oklch(0.92 0.01 280)",
-    } as React.CSSProperties,
+    },
   },
   {
     id: "warm-sand",
     name: "Warm Sand",
     description: "Warm neutral light surface",
-    style: {
+    tokens: {
       "--card": "oklch(0.95 0.02 75)",
       "--card-foreground": "oklch(0.20 0.02 75)",
       "--foreground": "oklch(0.18 0.02 75)",
@@ -63,13 +74,13 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
       "--secondary-foreground": "oklch(0.25 0.02 75)",
       "--accent": "oklch(0.90 0.04 75)",
       "--accent-foreground": "oklch(0.20 0.02 75)",
-    } as React.CSSProperties,
+    },
   },
   {
     id: "forest",
     name: "Forest",
     description: "Dark green surface",
-    style: {
+    tokens: {
       "--card": "oklch(0.16 0.04 155)",
       "--card-foreground": "oklch(0.92 0.02 155)",
       "--foreground": "oklch(0.90 0.02 155)",
@@ -80,13 +91,13 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
       "--secondary-foreground": "oklch(0.88 0.02 155)",
       "--accent": "oklch(0.28 0.05 155)",
       "--accent-foreground": "oklch(0.92 0.02 155)",
-    } as React.CSSProperties,
+    },
   },
   {
     id: "slate",
     name: "Slate",
     description: "Cool neutral dark surface",
-    style: {
+    tokens: {
       "--card": "oklch(0.20 0.01 250)",
       "--card-foreground": "oklch(0.90 0.01 250)",
       "--foreground": "oklch(0.88 0.01 250)",
@@ -97,7 +108,7 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
       "--secondary-foreground": "oklch(0.86 0.01 250)",
       "--accent": "oklch(0.32 0.02 250)",
       "--accent-foreground": "oklch(0.90 0.01 250)",
-    } as React.CSSProperties,
+    },
   },
 ]
 

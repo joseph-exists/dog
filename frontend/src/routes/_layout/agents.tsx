@@ -6,6 +6,9 @@
  *
  * Follows the orchestrator pattern from r.$roomId.tsx:
  * route owns state + panel registry, shell owns structure + rendering.
+ *
+ * Theme state uses nullish coalescing for future user preference integration:
+ * when prefs loading is implemented, savedPrefs?.pageTheme will provide the value.
  */
 
 import { createFileRoute } from "@tanstack/react-router"
@@ -22,8 +25,16 @@ export const Route = createFileRoute("/_layout/agents")({
 })
 
 function AgentsPage() {
-  // Theme selection — local state for now, future: persisted preference
-  const [selectedThemeId, setSelectedThemeId] = useState("default")
+  // Future: useUserPagePrefs("agents") will provide saved preferences
+  const savedPrefs = null as { pageTheme?: string; cardsTheme?: string } | null
+
+  // Theme selection — nullish coalescing ready for future prefs integration
+  const [pageThemeId, setPageThemeId] = useState(
+    savedPrefs?.pageTheme ?? "default"
+  )
+  const [cardsThemeId, setCardsThemeId] = useState(
+    savedPrefs?.cardsTheme ?? "default"
+  )
 
   // Panel component registry
   const panelComponents: Record<string, () => React.ReactNode> = {
@@ -45,8 +56,10 @@ function AgentsPage() {
     <AgentsShell
       title="Agents"
       panels={panels}
-      selectedThemeId={selectedThemeId}
-      onThemeChange={setSelectedThemeId}
+      pageThemeId={pageThemeId}
+      cardsThemeId={cardsThemeId}
+      onPageThemeChange={setPageThemeId}
+      onCardsThemeChange={setCardsThemeId}
     />
   )
 }
