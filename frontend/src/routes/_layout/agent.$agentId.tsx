@@ -173,7 +173,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               }
             />
           )}
-          {isPersonal && <AgentDetailDialog agent={agent} />}
+          {isPersonal && <AgentDetailDialog agentId={agent.id} />}
         </div>
       </div>
 

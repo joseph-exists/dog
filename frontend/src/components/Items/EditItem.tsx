@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
@@ -45,7 +45,7 @@ interface EditItemProps {
 const EditItem = ({ item, onSuccess }: EditItemProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

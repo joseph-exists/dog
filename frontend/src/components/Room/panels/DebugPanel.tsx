@@ -5,7 +5,7 @@
  * Wraps RoomDebugPanelContent with PanelContainer.
  */
 
-import { RoomDebugPanelContent } from "@/components/Rooms/RoomDebugPanel"
+import { RoomDebugPanelContent } from "@/components/Room/panels/RoomDebugPanel"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import type {

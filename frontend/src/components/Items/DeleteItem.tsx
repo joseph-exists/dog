@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { LoadingButton } from "@/components/ui/loading-button"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 interface DeleteItemProps {
@@ -27,7 +27,6 @@ interface DeleteItemProps {
 const DeleteItem = ({ id, onSuccess }: DeleteItemProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
   const { handleSubmit } = useForm()
 
   const deleteItem = async (id: string) => {

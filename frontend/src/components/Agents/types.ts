@@ -1,12 +1,22 @@
 import type { UserAgentConfigPublic } from "@/client"
 
 // ── Core Agent Data ───────────────────────────────────────────────────────
-// The API type is the data type. We extend it with fields the backend
-// doesn't have yet. When the backend adds them, remove from this intersection.
+// Interim type that accepts BOTH loose API data (existing agents) AND strict typed data (new agents).
+// Uses Omit to avoid intersection conflicts, then re-adds fields accepting both forms.
+// Components use type guards (isAgentTypeKey, etc.) to narrow at runtime.
+// When backend enforces strict types, we can simplify this.
 
-export type UserAgentConfigData = UserAgentConfigPublic & {
+export type UserAgentConfigData = Omit<UserAgentConfigPublic, 'agent_type' | 'presentation'> & {
+  // Accepts API string OR narrow AgentTypeKey - use isAgentTypeKey() to narrow at runtime
+  agent_type?: AgentTypeKey | string | null
+  // Accepts API generic object OR structured AgentPresentation
+  presentation?: AgentPresentation | { [key: string]: unknown } | null
+}
+
+// Strict variant for agent creation/validation where we require proper types
+export type StrictAgentConfig = Omit<UserAgentConfigPublic, 'agent_type' | 'presentation'> & {
+  agent_type: AgentTypeKey
   presentation?: AgentPresentation | null
-  agent_type?: AgentTypeKey | null
 }
 
 // ── Narrowing Types ───────────────────────────────────────────────────────

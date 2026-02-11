@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
 interface PersonaDetailDialogProps {
   personaId: string
@@ -240,7 +240,7 @@ export default function PersonaDetailDialog({
     specific_domain: string
   } | null>(null)
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  
 
   const { data: persona, isLoading } = useQuery({
     queryKey: ["persona", personaId],

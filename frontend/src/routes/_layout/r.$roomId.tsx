@@ -25,8 +25,8 @@ import {
   StoryPlayerPanel,
 } from "@/components/Room"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
-import RoomDebugPanel from "@/components/Rooms/RoomDebugPanel"
-import useCustomToast from "@/hooks/useCustomToast"
+import RoomDebugPanel from "@/components/Room/panels/RoomDebugPanel"
+import { showSuccessToast} from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
 import { useRoomStream } from "@/hooks/useRoomStream"
@@ -56,26 +56,9 @@ function toParticipant(p: ParticipantViewModel): Participant {
   }
 }
 
-/**
- * Convert AgentViewModel to AgentData format
- */
-function toAgentData(a: UserAgentConfigPublic) {
-  return {
-    id: a.id,
-    name: a.name ?? "Agent",
-    description: a.description ?? null,
-    participationMode: (a.participation_mode ?? "on_mention") as any,
-    scope: (a.scope ?? "system") as any,
-    isCoordinator: !!a.is_coordinator,
-    isEnabled: !!a.is_enabled,
-    modelName: a.model_name ?? "",
-  }
-}
-
 function RoomView() {
   const { roomId } = Route.useParams()
   const navigate = useNavigate()
-  const { showSuccessToast } = useCustomToast()
 
   // Edit drawer state
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
@@ -159,7 +142,6 @@ function RoomView() {
   const activeUsers = participants.filter((p) => p.participant_type === "user")
   const availableAgents = (availableAgentsData?.data ||
     []) as UserAgentConfigPublic[]
-  const availableAgentsAsAgentData = availableAgents.map(toAgentData)
   // All agents in the room (active + inactive) for panel display
   const allRoomAgents = participants.filter(
     (p) => p.participant_type === "agent",
@@ -167,35 +149,35 @@ function RoomView() {
   const roomAgentsAsAgentData = allRoomAgents.map((p) => {
     // Cross-reference with full agent config for real metadata
     // participant_id for agents is the agent name, not UUID
-    const agentConfig = availableAgentsAsAgentData.find(
+    const agentConfig = availableAgents.find(
       (a) => a.id === p.participant_id || a.name === p.participant_id,
     )
     return {
       id: p.participant_id,
       name: p.display_name,
       description: agentConfig?.description ?? null,
-      participationMode: agentConfig?.participationMode ?? "on_mention",
-      scope: (agentConfig?.scope ?? "system") as any,
-      isCoordinator: agentConfig?.isCoordinator ?? false,
-      isEnabled: p.is_active,
+      participation_mode: agentConfig?.participation_mode ?? "on_mention",
+      scope: agentConfig?.scope ?? "system",
+      is_coordinator: agentConfig?.is_coordinator ?? false,
+      is_enabled: p.is_active,
     }
   })
   const existingAgentIds = allRoomAgents.map((p) => {
     // Resolve participant name to agent config UUID for downstream filtering
-    const config = availableAgentsAsAgentData.find(
+    const config = availableAgents.find(
       (a) => a.id === p.participant_id || a.name === p.participant_id,
     )
     return config?.id ?? p.participant_id
   })
 
-  // Handlers
-  const handleAddAgent = async (agent: { id: string; name: string }) => {
+  // Handlers - accept any object with id and name (compatible with both API types and simplified types)
+  const handleAddAgent = async (agent: { id: string; name?: string | null }) => {
     await addParticipant(agent.id, "agent")
-    showSuccessToast(`Added ${agent.name} to the room`)
+    showSuccessToast(`Added ${agent.name ?? "Agent"} to the room`)
   }
 
   const handleAddMultipleAgents = async (
-    agents: { id: string; name: string }[],
+    agents: { id: string; name?: string | null }[],
   ) => {
     for (const agent of agents) {
       await addParticipant(agent.id, "agent")
@@ -203,9 +185,9 @@ function RoomView() {
     showSuccessToast(`Added ${agents.length} agent(s) to the room`)
   }
 
-  const handleRemoveAgent = async (agent: { id: string; name: string }) => {
+  const handleRemoveAgent = async (agent: { id: string; name?: string | null }) => {
     await removeParticipant(agent.id)
-    showSuccessToast(`Removed ${agent.name} from the room`)
+    showSuccessToast(`Removed ${agent.name ?? "Agent"} from the room`)
   }
 
   const handleEditMessage = (message: MessageViewModel) => {
@@ -324,7 +306,7 @@ function RoomView() {
         onToggleContext={handleToggleContext}
         onDeleteMessage={handleDeleteMessage}
         onUiAction={handleUiAction}
-        availableAgents={availableAgentsAsAgentData}
+        availableAgents={availableAgents}
         existingAgentIds={existingAgentIds}
         onAddMultipleAgents={handleAddMultipleAgents}
       />
@@ -377,7 +359,7 @@ function RoomView() {
       <ParticipantPanel
         activeUsers={activeUsers}
         roomAgents={roomAgentsAsAgentData}
-        availableAgents={availableAgentsAsAgentData}
+        availableAgents={availableAgents}
         existingAgentIds={existingAgentIds}
         onAddAgent={handleAddAgent}
         onRemoveAgent={handleRemoveAgent}

@@ -11,7 +11,7 @@
  *   3. Prompts — system_prompt, custom_system_prompt, instructions
  *   4. Behavior — participation_mode, scope
  *   5. Settings — is_enabled, is_visible, is_clonable, is_coordinator, max_tool_iterations
- *   6. Advanced — capabilities, tool_config, deps_config, agent_metadata
+ *   6. Advanced — capabilities, tool_config, presentation, deps_config, agent_metadata
  *
  * The parent component receives validated AgentFormData on submit and
  * is responsible for calling the API (create or update).
@@ -73,6 +73,7 @@ export type AgentFormData = {
   model_name?: string
   system_prompt: string
   custom_system_prompt?: string | null
+  agent_type: string
   instructions?: string | null
   is_enabled: boolean
   is_clonable: boolean
@@ -85,6 +86,7 @@ export type AgentFormData = {
   tool_config?: Record<string, unknown> | null
   deps_config?: Record<string, unknown> | null
   agent_metadata?: Record<string, unknown> | null
+  presentation?: Record<string, unknown> | null
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -120,6 +122,39 @@ const SCOPE_OPTIONS = [
   },
 ] as const
 
+const AGENT_TYPE_PRESENTATIONS = [
+  {
+    value: "advisor",
+    label: "advisor",
+    description: "advises with advisories",
+  },
+  {
+    value: "creative",
+    label: "creative",
+    description: "creatively",
+  },
+  {
+    value: "analyst",
+    label: "analyst",
+    description: "analytic analysis and analyses",
+  },
+  {
+    value: "guardian",
+    label: "guardian",
+    description: "guarder that guards",
+  },
+  {
+    value: "oracle",
+    label: "oracle",
+    description: "orally oracular",
+  },
+  {
+    value: "engineer",
+    label: "engineer",
+    description: "engines the eers",
+  }
+] as const
+
 // ── Schema ────────────────────────────────────────────────────────────────
 
 const agentFormSchema = z.object({
@@ -138,7 +173,9 @@ const agentFormSchema = z.object({
   // Prompts
   system_prompt: z.string(),
   custom_system_prompt: z.string().nullable(),
+  agent_type: z.string(),
   instructions: z.string().nullable(),
+
 
   // Behavior
   participation_mode: z.string(),
@@ -156,6 +193,7 @@ const agentFormSchema = z.object({
   tool_config_raw: z.string(),
   deps_config_raw: z.string(),
   agent_metadata_raw: z.string(),
+  presentation_raw: z.string(),
 })
 
 // type FormValues = z.infer<typeof agentFormSchema>
@@ -211,7 +249,7 @@ export default function AgentForm({
 
   // ── Form Setup ──────────────────────────────────────────────────────────
 
-  //const form = useForm<FormValues>({
+
   const form = useForm({
     resolver: zodResolver(agentFormSchema),
     mode: "onBlur",
@@ -226,6 +264,7 @@ export default function AgentForm({
       model_name: dv?.model_name ?? "",
       system_prompt: dv?.system_prompt ?? "",
       custom_system_prompt: dv?.custom_system_prompt ?? null,
+      agent_type: dv?.agent_type ?? "advisor",
       instructions: dv?.instructions ?? null,
       participation_mode: dv?.participation_mode ?? "on_mention",
       scope: dv?.scope ?? "personal",
@@ -238,6 +277,7 @@ export default function AgentForm({
       tool_config_raw: safeJsonStringify(dv?.tool_config),
       deps_config_raw: safeJsonStringify(dv?.deps_config),
       agent_metadata_raw: safeJsonStringify(dv?.agent_metadata),
+      presentation_raw: safeJsonStringify(dv?.presentation),
     },
   })
 
@@ -322,6 +362,7 @@ export default function AgentForm({
       system_prompt: values.system_prompt,
       custom_system_prompt: values.custom_system_prompt || null,
       instructions: values.instructions || null,
+      agent_type: values.agent_type,
       participation_mode: values.participation_mode,
       scope: values.scope,
       is_enabled: values.is_enabled,
@@ -333,6 +374,8 @@ export default function AgentForm({
       tool_config: safeJsonParse(values.tool_config_raw),
       deps_config: safeJsonParse(values.deps_config_raw),
       agent_metadata: safeJsonParse(values.agent_metadata_raw),
+      presentation: safeJsonParse(values.presentation_raw),
+
     }
 
     await onSubmit(data)
@@ -606,7 +649,36 @@ export default function AgentForm({
                 </FormItem>
               )}
             />
-
+            {/* Agent Type */}
+            <FormField
+              control={form.control}
+              name="agent_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Agent Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select agent type..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {AGENT_TYPE_PRESENTATIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex flex-col">
+                            <span>{opt.label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {opt.description}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             {/* Scope */}
             <FormField
               control={form.control}
@@ -801,6 +873,27 @@ export default function AgentForm({
                   </FormControl>
                   <FormDescription>
                     JSON object for tool configuration
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Presentation Config */}
+            <FormField
+              control={form.control}
+              name="presentation_raw"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Presentation Config</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder='{"presentation": []}'
+                      className="min-h-[100px] font-mono text-sm"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    JSON object for presentation configuration
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

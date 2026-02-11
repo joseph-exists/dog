@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
 interface CreatePersonaDialogProps {
   trigger?: React.ReactNode
@@ -47,7 +47,7 @@ export default function CreatePersonaDialog({
   const [specificDomain, setSpecificDomain] = useState("")
   const [archetypeId, setArchetypeId] = useState<string | null>(null)
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  
 
   const { data: archetypes } = useQuery({
     queryKey: ["archetypes"],

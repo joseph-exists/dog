@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useAuth from "@/hooks/useAuth"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
@@ -30,7 +30,7 @@ type FormData = z.infer<typeof formSchema>
 
 const UserInformation = () => {
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  
   const [editMode, setEditMode] = useState(false)
   const { user: currentUser } = useAuth()
 

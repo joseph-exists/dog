@@ -39,11 +39,10 @@ export function Component({ className, children }: ComponentProps) {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { SomeService } from "@/client"
 import { handleError } from "@/utils"
-import useCustomToast from "./useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
 export function useSomething(id: string) {
   const queryClient = useQueryClient()
-  const { showErrorToast } = useCustomToast()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["something", id],

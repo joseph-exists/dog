@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
 interface CreateQualityDialogProps {
   /** Custom trigger element (defaults to "Create Quality" button) */
@@ -45,7 +45,7 @@ export default function CreateQualityDialog({
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)

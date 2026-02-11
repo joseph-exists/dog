@@ -9,8 +9,7 @@
  * - "avatars-only": Stacked avatar circles for tight spaces (headers, toolbars)
  */
 
-// currently not used - but healthy.  Can be imported.
-// AvatarsOnly is neat.
+
 
 import { BotIcon, Loader2Icon, XIcon } from "lucide-react"
 import { useState } from "react"
@@ -23,7 +22,7 @@ import {
 import { cn } from "@/lib/utils"
 import AgentAvatar from "../Display/AgentAvatar"
 import AgentCard from "../Display/AgentCard"
-import type { UserAgentConfigData } from "../types"
+import type { AvatarPresentation, UserAgentConfigData } from "../types"
 
 // ── Remove Button ─────────────────────────────────────────────────────────
 
@@ -71,7 +70,7 @@ function AvatarsOnly({
               <AgentAvatar
                 name={agent.name ?? "Agent"}
                 size="sm"
-                presentation={agent.presentation?.avatar}
+                presentation={agent.presentation?.avatar as AvatarPresentation | undefined}
               />
             </div>
           </TooltipTrigger>

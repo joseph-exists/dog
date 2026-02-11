@@ -79,9 +79,8 @@ export default function ComponentName({
 ```typescript
 import { ApiError } from "@/client"
 import { handleError } from "@/utils"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
-const { showErrorToast } = useCustomToast()
 
 const mutation = useMutation({
   mutationFn: (data) => SomeService.doThing({ requestBody: data }),

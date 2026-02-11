@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
 import AgentAvatar from "../Display/AgentAvatar"
 import {
@@ -151,7 +151,6 @@ export default function AgentDetailDialog({
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<"view" | "edit">("view")
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const { data: agent, isLoading } = useQuery({
     queryKey: ["agent", agentId],

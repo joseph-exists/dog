@@ -12,7 +12,7 @@
  */
 
 import { AgentUIRenderer } from "@/components/AgentUI"
-import MessageActionMenu from "@/components/Rooms/MessageActionMenu"
+import MessageActionMenu from "@/components/Room/RoomMessages/MessageActionMenu"
 import { Badge } from "@/components/ui/badge"
 import { MessageBadge } from "@/components/ui/message-badge"
 import { cn } from "@/lib/utils"

@@ -9,8 +9,8 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2 } from "lucide-react"
 
-import AddRoom from "@/components/Rooms/AddRoom"
-import RoomList from "@/components/Rooms/RoomList"
+import AddRoom from "@/components/Room/Dialogs/AddRoom"
+import RoomList from "@/components/Room/RoomList"
 import { RoomService } from "@/services/roomService"
 
 export const Route = createFileRoute("/_layout/rooms")({

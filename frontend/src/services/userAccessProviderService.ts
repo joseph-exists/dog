@@ -1,6 +1,0 @@
-// NOPE 
-
-// NOPE NOPE NOPE
-
-//  ALL WEEK ON THIS??
-

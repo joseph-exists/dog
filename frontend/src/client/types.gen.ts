@@ -1463,6 +1463,10 @@ export type Type1Create = {
     agent_metadata?: ({
     [key: string]: unknown;
 } | null);
+    agent_type?: string;
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
     is_enabled?: boolean;
     is_clonable?: boolean;
     is_visible?: boolean;
@@ -1513,6 +1517,13 @@ export type Type1Update = {
     [key: string]: unknown;
 } | null);
     agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
     [key: string]: unknown;
 } | null);
     is_enabled?: boolean;
@@ -1567,6 +1578,10 @@ export type Type3Create = {
     agent_metadata?: ({
     [key: string]: unknown;
 } | null);
+    agent_type?: string;
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
     is_enabled?: boolean;
     is_clonable?: boolean;
     is_visible?: boolean;
@@ -1617,6 +1632,13 @@ export type Type3Update = {
     [key: string]: unknown;
 } | null);
     agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
     [key: string]: unknown;
 } | null);
     is_enabled?: boolean;
@@ -1797,6 +1819,13 @@ export type UserAgentConfigPublic = {
     [key: string]: unknown;
 } | null);
     agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
     [key: string]: unknown;
 } | null);
     is_enabled?: (boolean | null);

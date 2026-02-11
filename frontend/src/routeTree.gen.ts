@@ -19,7 +19,6 @@ import { Route as LayoutTraitsRouteImport } from './routes/_layout/traits'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRoomsRouteImport } from './routes/_layout/rooms'
 import { Route as LayoutQualitiesRouteImport } from './routes/_layout/qualities'
-import { Route as LayoutPresentationPocRouteImport } from './routes/_layout/presentation-poc'
 import { Route as LayoutPersonasRouteImport } from './routes/_layout/personas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutChatsterRouteImport } from './routes/_layout/chatster'
@@ -87,11 +86,6 @@ const LayoutRoomsRoute = LayoutRoomsRouteImport.update({
 const LayoutQualitiesRoute = LayoutQualitiesRouteImport.update({
   id: '/qualities',
   path: '/qualities',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutPresentationPocRoute = LayoutPresentationPocRouteImport.update({
-  id: '/presentation-poc',
-  path: '/presentation-poc',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutPersonasRoute = LayoutPersonasRouteImport.update({
@@ -193,6 +187,7 @@ const LayoutStoriesStoryIdEditRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -203,12 +198,10 @@ export interface FileRoutesByFullPath {
   '/chatster': typeof LayoutChatsterRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
-  '/presentation-poc': typeof LayoutPresentationPocRoute
   '/qualities': typeof LayoutQualitiesRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
   '/traits': typeof LayoutTraitsRoute
-  '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
   '/demo/$slug': typeof LayoutDemoSlugRoute
@@ -220,7 +213,7 @@ export interface FileRoutesByFullPath {
   '/team/$slug': typeof LayoutTeamSlugRoute
   '/trait/$traitId': typeof LayoutTraitTraitIdRoute
   '/u/$slug': typeof LayoutUSlugRoute
-  '/stories': typeof LayoutStoriesIndexRoute
+  '/stories/': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -234,7 +227,6 @@ export interface FileRoutesByTo {
   '/chatster': typeof LayoutChatsterRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
-  '/presentation-poc': typeof LayoutPresentationPocRoute
   '/qualities': typeof LayoutQualitiesRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
@@ -267,7 +259,6 @@ export interface FileRoutesById {
   '/_layout/chatster': typeof LayoutChatsterRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/personas': typeof LayoutPersonasRoute
-  '/_layout/presentation-poc': typeof LayoutPresentationPocRoute
   '/_layout/qualities': typeof LayoutQualitiesRoute
   '/_layout/rooms': typeof LayoutRoomsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
@@ -290,6 +281,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -300,12 +292,10 @@ export interface FileRouteTypes {
     | '/chatster'
     | '/items'
     | '/personas'
-    | '/presentation-poc'
     | '/qualities'
     | '/rooms'
     | '/settings'
     | '/traits'
-    | '/'
     | '/agent/$agentId'
     | '/archetype/$archetypeId'
     | '/demo/$slug'
@@ -317,7 +307,7 @@ export interface FileRouteTypes {
     | '/team/$slug'
     | '/trait/$traitId'
     | '/u/$slug'
-    | '/stories'
+    | '/stories/'
     | '/stories/$storyId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -331,7 +321,6 @@ export interface FileRouteTypes {
     | '/chatster'
     | '/items'
     | '/personas'
-    | '/presentation-poc'
     | '/qualities'
     | '/rooms'
     | '/settings'
@@ -363,7 +352,6 @@ export interface FileRouteTypes {
     | '/_layout/chatster'
     | '/_layout/items'
     | '/_layout/personas'
-    | '/_layout/presentation-poc'
     | '/_layout/qualities'
     | '/_layout/rooms'
     | '/_layout/settings'
@@ -425,7 +413,7 @@ declare module '@tanstack/react-router' {
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -462,13 +450,6 @@ declare module '@tanstack/react-router' {
       path: '/qualities'
       fullPath: '/qualities'
       preLoaderRoute: typeof LayoutQualitiesRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/presentation-poc': {
-      id: '/_layout/presentation-poc'
-      path: '/presentation-poc'
-      fullPath: '/presentation-poc'
-      preLoaderRoute: typeof LayoutPresentationPocRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/personas': {
@@ -516,7 +497,7 @@ declare module '@tanstack/react-router' {
     '/_layout/stories/': {
       id: '/_layout/stories/'
       path: '/stories'
-      fullPath: '/stories'
+      fullPath: '/stories/'
       preLoaderRoute: typeof LayoutStoriesIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
@@ -614,7 +595,6 @@ interface LayoutRouteChildren {
   LayoutChatsterRoute: typeof LayoutChatsterRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPersonasRoute: typeof LayoutPersonasRoute
-  LayoutPresentationPocRoute: typeof LayoutPresentationPocRoute
   LayoutQualitiesRoute: typeof LayoutQualitiesRoute
   LayoutRoomsRoute: typeof LayoutRoomsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
@@ -642,7 +622,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutChatsterRoute: LayoutChatsterRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPersonasRoute: LayoutPersonasRoute,
-  LayoutPresentationPocRoute: LayoutPresentationPocRoute,
   LayoutQualitiesRoute: LayoutQualitiesRoute,
   LayoutRoomsRoute: LayoutRoomsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,

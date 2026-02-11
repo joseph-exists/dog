@@ -12,8 +12,24 @@
 
 import { Loader2 } from "lucide-react"
 
-// PRI ZERO:is this the best place for components/panels pulling UserAgentConfigData from?
-import type { UserAgentConfigData as AgentData } from "@/components/Agents/types"
+import {
+  isParticipationMode,
+  type ParticipationMode,
+  type UserAgentConfigData,
+} from "@/components/Agents/types"
+
+// Simplified agent data interface for room agents display
+// Only includes fields actually used for rendering in this panel
+// Compatible with both API types and simplified objects from room participants
+interface RoomAgentData {
+  id: string
+  name?: string | null
+  description?: string | null
+  participation_mode?: ParticipationMode | string
+  scope?: "system" | "personal" | string
+  is_coordinator?: boolean
+  is_enabled?: boolean
+}
 
 // ok now we have to review AgentQuickAdd
 import AgentQuickAdd from "@/components/Agents/RoomManagers/AgentQuickAdd"
@@ -23,9 +39,9 @@ import {  AgentCoordinatorBadge, AgentModeBadge } from "@/components/Agents/Disp
 import AgentAvatar from "@/components/Agents/Display/AgentAvatar"
 
 // PRI0 yuck we have to review Rooms
-import AgentToggle from "@/components/Rooms/AgentToggle"
+import AgentToggle from "@/components/Room/Dialogs/AgentToggle"
 
-import RemoveParticipantButton from "@/components/Rooms/RemoveParticipantButton"
+import RemoveParticipantButton from "@/components/Room/Dialogs/RemoveParticipantButton"
 import type { ParticipantViewModel } from "@/services/roomService"
 import { PanelContainer } from "../primitives/PanelContainer"
 
@@ -33,15 +49,15 @@ interface ParticipantPanelProps {
   /** Human users in the room */
   activeUsers: ParticipantViewModel[]
   /** Enriched agent data (with real mode, scope, coordinator) */
-  roomAgents: AgentData[]
-  /** All available agents for quick-add */
-  availableAgents: AgentData[]
+  roomAgents: RoomAgentData[]
+  /** All available agents for quick-add - uses full type for AgentQuickAdd */
+  availableAgents: UserAgentConfigData[]
   /** IDs of agents already in room */
   existingAgentIds: string[]
   /** Add agent callback */
-  onAddAgent: (agent: AgentData) => Promise<void>
+  onAddAgent: (agent: UserAgentConfigData) => Promise<void>
   /** Remove agent callback */
-  onRemoveAgent: (agent: AgentData) => Promise<void>
+  onRemoveAgent: (agent: RoomAgentData) => Promise<void>
   /** Toggle agent activate/deactivate callback */
   onToggleAgent: (agentId: string, activate: boolean) => Promise<void>
   /** Remove user participant callback */
@@ -154,16 +170,16 @@ export function ParticipantPanel({
                     key={agent.id}
                     className={`flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 ${isInactive ? "opacity-50" : ""}`}
                   >
-                    <AgentAvatar name={agent.name} size="sm" />
+                    <AgentAvatar name={agent.name ?? "Agent"} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-sm font-medium truncate">
-                          {agent.name}
+                          {agent.name ?? "Agent"}
                         </span>
                         {agent.is_coordinator && (
                           <AgentCoordinatorBadge className="text-[10px] px-1.5 py-0 h-4 scale-90" />
                         )}
-                        {agent.participation_mode && (
+                        {isParticipationMode(agent.participation_mode) && (
                           <AgentModeBadge
                             mode={agent.participation_mode}
                             className="text-[10px] px-1.5 py-0 h-4 scale-90"
@@ -175,13 +191,13 @@ export function ParticipantPanel({
                       <div className="flex items-center gap-1 shrink-0">
                         <AgentToggle
                           agentId={agent.id}
-                          agentName={agent.name}
+                          agentName={agent.name ?? "Agent"}
                           isActive={agent.is_enabled ?? true}
                           onToggle={onToggleAgent}
                         />
                         <RemoveParticipantButton
                           participantId={agent.id}
-                          participantName={agent.name}
+                          participantName={agent.name ?? "Agent"}
                           participantType="agent"
                           onRemove={async (id) => {
                             const agentData = roomAgents.find(

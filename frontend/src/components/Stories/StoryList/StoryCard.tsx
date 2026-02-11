@@ -15,7 +15,7 @@ import { Edit, MessageSquare, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { RoomsService, type StoryPublic } from "@/client"
-import AddRoom from "@/components/Rooms/AddRoom"
+import AddRoom from "@/components/Room/Dialogs/AddRoom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

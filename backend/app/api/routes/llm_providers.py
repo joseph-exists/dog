@@ -79,10 +79,12 @@ def get_provider_type_list(
         count_statement = (
             select(func.count())
             .select_from(LLMProviderType)
-            .where(LLMProviderType.is_system.is_(False))
+            .where(LLMProviderType.validated.is_(True))
         )
+        # if an LLMProviderType isn't validated, it can't be seen by non-superusers.  hacky overload, not what we want,
+        # need to think about distinctions here.
         count = session.exec(count_statement).one()
-        statement = select(LLMProviderType).where(LLMProviderType.is_system.is_(False))
+        statement = select(LLMProviderType).where(LLMProviderType.is_system.is_(True))
         llmprovidertypes = session.exec(statement).all()
         if not llmprovidertypes:
             raise HTTPException(status_code=404, detail="nothing not for finding")

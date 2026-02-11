@@ -6,8 +6,8 @@
 
 import { Copy, Download, Search } from "lucide-react"
 import * as React from "react"
-import MessageInput from "@/components/Rooms/MessageInput"
-import MessageList from "@/components/Rooms/MessageList"
+import MessageInput from "@/components/Room/RoomMessages/MessageInput"
+import MessageList from "@/components/Room/RoomMessages/MessageList"
 import { Input } from "@/components/ui/input"
 import type { MessageViewModel } from "@/services/roomService"
 import { ActionBar, type ActionItem } from "../Room/primitives/ActionBar"

@@ -13,8 +13,8 @@
 
 import { Loader2, MessageSquare } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import Message from "@/components/Rooms/Message"
-import PinnedMessagesSection from "@/components/Rooms/PinnedMessagesSection"
+import Message from "@/components/Room/RoomMessages/Message"
+import PinnedMessagesSection from "@/components/Room/RoomMessages/PinnedMessagesSection"
 import { Button } from "@/components/ui/button"
 import type { MessageViewModel } from "@/services/roomService"
 import MessageFilters, {

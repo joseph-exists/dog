@@ -5143,6 +5143,24 @@ export const Type1CreateSchema = {
             ],
             title: 'Agent Metadata'
         },
+        agent_type: {
+            type: 'string',
+            maxLength: 30,
+            title: 'Agent Type',
+            default: 'advisor'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
         is_enabled: {
             type: 'boolean',
             title: 'Is Enabled',
@@ -5336,6 +5354,30 @@ export const Type1UpdateSchema = {
             ],
             title: 'Agent Metadata'
         },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
         is_enabled: {
             type: 'boolean',
             title: 'Is Enabled',
@@ -5523,6 +5565,24 @@ export const Type3CreateSchema = {
                 }
             ],
             title: 'Agent Metadata'
+        },
+        agent_type: {
+            type: 'string',
+            maxLength: 30,
+            title: 'Agent Type',
+            default: 'advisor'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
         },
         is_enabled: {
             type: 'boolean',
@@ -5717,6 +5777,30 @@ export const Type3UpdateSchema = {
                 }
             ],
             title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
         },
         is_enabled: {
             type: 'boolean',
@@ -6288,6 +6372,30 @@ export const UserAgentConfigPublicSchema = {
                 }
             ],
             title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
         },
         is_enabled: {
             anyOf: [

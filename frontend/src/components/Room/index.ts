@@ -11,24 +11,24 @@ export {
   InteractivePreview,
   type InteractivePreviewProps,
   type PreviewPanel,
-} from "./InteractivePreview"
+} from "./RoomShell/InteractivePreview"
 export {
   type LayoutSource,
   LayoutSourceSelector,
   type LayoutSourceSelectorProps,
-} from "./LayoutSourceSelector"
+} from "./RoomShell/LayoutSourceSelector"
 // Layout Dialog
 export {
   PanelLayoutDialog,
   type PanelLayoutDialogProps,
-} from "./PanelLayoutDialog"
+} from "./Dialogs/PanelLayoutDialog"
 // Panels
 export * from "./panels"
 // Primitives
 export * from "./primitives"
 // Header
-export { RoomHeader, type RoomType } from "./RoomHeader"
+export { RoomHeader, type RoomType } from "./RoomShell/RoomHeader"
 // Layout
-export { type PanelConfig, RoomLayout } from "./RoomLayout"
+export { type PanelConfig, RoomLayout } from "./RoomShell/RoomLayout"
 // Shell
-export { RoomShell } from "./RoomShell"
+export { RoomShell } from "./RoomShell/RoomShell"

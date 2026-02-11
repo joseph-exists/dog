@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import useCustomToast from "@/hooks/useCustomToast"
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/qualities")({
   component: QualitiesPage,
@@ -50,7 +50,7 @@ function getAllQualitiesQueryOptions() {
 
 function DeleteQualityButton({ quality }: { quality: QualityPublic }) {
   const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  
   const [isOpen, setIsOpen] = useState(false)
 
   const mutation = useMutation({

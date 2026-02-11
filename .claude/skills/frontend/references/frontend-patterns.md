@@ -309,9 +309,7 @@ Use `ApiError` from `src/client/core/ApiError.ts` as the primary error type.
 ```typescript
 import { ApiError } from "@/client"
 import { handleError } from "@/utils"
-import useCustomToast from "@/hooks/useCustomToast"
-
-const { showErrorToast } = useCustomToast()
+import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 
 const mutation = useMutation({
   mutationFn: (data) => SomeService.doThing({ requestBody: data }),

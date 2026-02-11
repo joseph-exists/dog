@@ -1,14 +1,38 @@
 # Presentation-as-Data: Architecture Reference
 
 > **Location:** `frontend/src/components/Agents/Presentation/`  
-> **Status:** Proof of concept — validated against real shadcn components  
-> **Last updated:** 2025-02-07
+> **Status:** Nearing MVP - solid foundations, proven workflow with 'some' dev-only requirements.
+> **Last updated:** 2025-02-09
+
+
+---
+## Current Status
+
+Agents is an ontology overload for the sake of our users.  When we reference an AgentCard we don't mean an actual Agent - an actual agent is the composition of multiple elements and the emergent behavior from that composition.
+
+Agents in our system are a composition as well.  We have Agent objects on the frontend.  These Agent objects are composed references to data on the backend - and that data is stored in a postgres table user_agent_config, and managed on the backend with the pydantic & sqlmodel UserAgentConfig object.  We have exported types, client, and schema from that object on the frontend.
+
+The Agent, derived from UserAgentConfig and with data stored in user_agent_config, can be managed by the user through a set of forms. Through these forms, the User will be able to save their objects visual identity - as seen below.  What we have proof of, as working, is that if a developer adds the JSON data for the visual representation to a UserAgentConfig (by saving valid json to presentation.user_agent_config with an API call) that presentation will be shown on the AgentCard.  
+
+What we need to prove in our build out of the agents.tsx page is that Ambient themes (even as inline imports on the page object) can be specified at the Page level, and that they can be used together with AgentCard themes, with appropriate cascades.
+
+With that in mind, we need to build out the agents.tsx page, using the constructs being worked through in this document, and using the structures of compositionality and abstraction in the src/components/Page directory.  The Page directory structure has been proven as an Agents listing capable page in the past, and the Page structure has been applied to Room as the most sophisticated example. 
+
+We should think of this as a net-new Agents Page and Agent Page - we can use the existing page as a template or reference artifact, but if we try to refactor them, we'll box ourselves in.  We will need to satisfy the contracts with other components - which have been written with this in mind, and should be modularized to the degree where this is an effective strategy.
+
+The Full, Compact, and Mini cards and their cascade were all tested and validated in the demo presentation.  At this point, we don't have a place to validate Cards other than Full.  Our Agent Page(s) for individual agents (agent.$agentId.tsx && agent.$slug.tsx) will be where users, and we, can see these visually.
+
+We also need to develop agents.tsx around the concept of the existing ambient theme system.  We have the top-level system in place: Application level themes.  We have the lower level proved with the steel thread (AgentCards currently show their db-driven presentation JSON as visual effects). We can review the src/components/REFERENCE-ONLY-OLD-BROKEN_PresentationDemo.tsx.md - and I can get that working fairly quickly, and ported over to the new AgentCard system as a rapid testing environment.
+
+We will be creating a set of models and tables to store and reference these ambient themes and user selections.  That is already designed, but waiting for this implementation to tell us if we should move forward.  
+
+
 
 ---
 
 ## What This System Does
 
-Objects carry their own visual identity as data, alongside content. An agent's warm amber palette is stored in the same record as its name and description. The component renders both — no separate theming system needed.
+Objects carry their own visual identity as data, alongside content. An object's warm amber palette is stored in the same record as its name and description. The component renders both — no separate theming system needed.
 
 This coexists with **application defaults**, **user defaults**,and **ambient themes** (page-level visual context set by a page owner). These systems use different mechanisms, have different lifecycles, and compose via CSS specificity: ambient sets the canvas, object presentation overrides it locally.
 
@@ -73,12 +97,7 @@ This is the single most important lesson from building this system. Every ambien
 | `--secondary`, `--secondary-foreground` | `<Badge variant="secondary">` (scope:system) |
 | `--accent`, `--accent-foreground` | Hover states (`hover:bg-accent`), selected mini chips |
 
-### Diagnosis pattern for invisible text:
 
-1. Identify the invisible element's Tailwind class (e.g., `text-foreground`)
-2. Find which CSS variable that maps to (e.g., `--foreground`)
-3. Check whether the current scope (ambient or object) overrides that variable
-4. If not → that's the bug. The element is reading a value from a higher scope with incompatible lightness.
 
 ---
 
@@ -230,23 +249,6 @@ If a Tailwind class sets the same CSS property you're trying to override via a v
 
 ---
 
-## Gotcha: Container Text Color
-
-### Problem
-
-Compact and mini variants use plain `<div>` containers (not `<Card>`). The `<Card>` component includes `text-card-foreground` in its class, but a plain div does not. Without an explicit text color class, text inherits `color` from the nearest ancestor that sets it — often `<body>` via `text-foreground`. When the ambient or object scope changes surface lightness, this inherited body-level color may be wrong.
-
-### Solution
-
-Always set `text-card-foreground` explicitly on any container that uses `bg-card`:
-
-```tsx
-// ✗ Broken — text color inherits from body
-<div className="bg-card rounded-lg border p-3">
-
-// ✓ Fixed — text color reads from scoped --card-foreground
-<div className="bg-card text-card-foreground rounded-lg border p-3">
-```
 
 ### General rule
 
@@ -256,50 +258,20 @@ Never rely on color inheritance across scope boundaries. If a container sets its
 
 ## File Structure
 
+TODO: add file structures
+
 ```
-Presentation/
-├── types.ts                    # AgentPresentation, PresentationTokens, AgentWithPresentation
-├── resolve.ts                  # resolvePresentation(), presentationToStyle(), type defaults
-├── PresentableAgentCard.tsx    # Full/Compact/Mini variants with presentation scoping
-├── PresentableAgentAvatar.tsx  # Avatar with emoji/color override support
-├── PresentationDemo.tsx        # Demo page with ambient themes, toggle controls
-└── REFERENCE.md                # This file
+
 ```
 
 ---
 
-## Adding a New Agent with Presentation
+## Adding a New Element with Presentation
+
+TODO: DOCUMENT: add new element
 
 ```typescript
-const myAgent: AgentWithPresentation = {
-  id: "...",
-  name: "My Agent",
-  slug: "my-agent",
-  description: "...",
-  scope: "personal",
-  participationMode: "always",
-  isEnabled: true,
-  modelName: "anthropic:claude-sonnet-4-5-20250929",
-  agentType: "advisor",       // Provides type-level defaults
-  presentation: {             // Instance overrides (optional)
-    tokens: {
-      // REQUIRED if changing lightness from ambient:
-      // the full surface set from "Complete Variable Surface" above.
-      // OPTIONAL if only shifting hue/saturation within same lightness:
-      // just the tokens you want to change.
-      "--agent-accent": "oklch(0.65 0.14 55)",
-      "--card": "oklch(0.96 0.015 60)",
-      "--card-foreground": "oklch(0.2 0.02 50)",
-      "--foreground": "oklch(0.2 0.02 50)",
-      // ... etc
-    },
-    avatar: {
-      emoji: "🦔",
-      backgroundColor: "oklch(0.65 0.14 55)",
-    },
-    decorationHint: "warm",
-  },
-}
+
 ```
 
 All color values use **oklch()** format to match the project's design token system in `index.css`.
@@ -335,11 +307,16 @@ The three most commonly forgotten variables are `--foreground`, `--accent`, and 
 
 The pattern is not agent-specific. Any entity that should carry visual identity can use it:
 
+# TODO: migrate utils, resolv, and hooks from Agents to top level
+# TODO: modify Agents imports for above
+
 1. Define a `presentation` field on the entity's data type
+(see `UserAgentConfig`)
 2. Wrap the component's outermost element with `style={presentationToStyle(resolved.tokens)}`
 3. Apply shadow/radius as inline styles on the element that has Tailwind shadow/radius classes
 4. Ensure all containers pair `bg-*` with `text-*-foreground`
 5. If the entity can have a dark surface on a light page (or vice versa), its presentation must include the full variable set
+
 
 ---
 

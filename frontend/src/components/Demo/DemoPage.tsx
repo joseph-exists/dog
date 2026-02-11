@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
-import MessageInput from "@/components/Rooms/MessageInput"
-import MessageList from "@/components/Rooms/MessageList"
+import MessageInput from "@/components/Room/RoomMessages/MessageInput"
+import MessageList from "@/components/Room/RoomMessages/MessageList"
 import {
   ResizableHandle,
   ResizablePanel,
