@@ -35,8 +35,8 @@ import {
 import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
 import type { PanelConfig } from "@/services/panelService"
-import { InteractivePreview, type PreviewPanel } from "../RoomShell/InteractivePreview"
-import { type LayoutSource, LayoutSourceSelector } from "../RoomShell/LayoutSourceSelector"
+import { InteractivePreview, type PreviewPanel } from "../InteractivePreview"
+import { type LayoutSource, LayoutSourceSelector } from "../Forms/FormSelectors/LayoutSourceSelector"
 import { PresetPicker, SYSTEM_PRESETS } from "../primitives/PresetPicker"
 
 // ============================================================================
