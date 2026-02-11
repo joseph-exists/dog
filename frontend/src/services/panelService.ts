@@ -1,7 +1,7 @@
 /**
  * Panel Configuration Service
  *
- * Manages room panel configuration - resolving, updating,
+ * Manages panel configuration - resolving, updating,
  * and managing user overrides vs room defaults.
  *
  * Architecture:
@@ -11,6 +11,7 @@
  *
  * @see backend/app/crud_panels.py for resolution logic
  */
+//  TODO: refactor from Room to Page - if secondary distinction required, then figure that out (josep)
 
 import {
   type ResolvedPanelConfig,

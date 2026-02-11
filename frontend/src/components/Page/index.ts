@@ -14,7 +14,7 @@ export {
   ProfileImageBlock,
   RelationshipsBlock,
 } from "./blocks"
-export { CreatePageDialog } from "./CreatePageDialog"
+export { CreatePageDialog } from "./Dialogs/CreatePageDialog"
 export { PageHeader } from "./PageHeader"
 export { PageLayout } from "./PageLayout"
 // Main components
