@@ -113,9 +113,7 @@ export default function CreateAgentDialog({
             <BotIcon className="size-5" />
             Create New Agent
           </DialogTitle>
-          <DialogDescription>
-            Configure a new personal agent.
-          </DialogDescription>
+          <DialogDescription>Configure a new personal agent.</DialogDescription>
         </DialogHeader>
 
         <AgentForm

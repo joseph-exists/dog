@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 
 interface CreateArchetypeDialogProps {
   /** Custom trigger element (defaults to "Create Archetype" button) */

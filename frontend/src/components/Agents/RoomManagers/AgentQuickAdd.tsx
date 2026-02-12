@@ -6,7 +6,7 @@
  * Filters out agents already in the room.
  */
 
-// P0 refactor target for Room/Rooms. 
+// P0 refactor target for Room/Rooms.
 // used by ParticipantPanel
 
 import { Loader2Icon, PlusIcon } from "lucide-react"

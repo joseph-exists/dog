@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/dialog"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useAuth from "@/hooks/useAuth"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 const DeleteConfirmation = () => {
   const queryClient = useQueryClient()
-  
+
   const { handleSubmit } = useForm()
   const { logout } = useAuth()
 

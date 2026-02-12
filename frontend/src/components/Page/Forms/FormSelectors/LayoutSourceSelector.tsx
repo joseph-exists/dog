@@ -156,7 +156,9 @@ export function LayoutSourceSelector({
                   <Link
                     to={option.link.to}
                     //onClick={(e) => e.stopPropagation()}
-                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) => e.stopPropagation()}
+                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) =>
+                      e.stopPropagation()
+                    }
                     className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 shrink-0"
                   >
                     {option.link.label} <ExternalLink className="h-3 w-3" />

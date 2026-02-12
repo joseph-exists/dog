@@ -35,7 +35,6 @@ interface CreateAgentDialogProps {
   className?: string
 }
 
-
 export default function CreateAgentusDialog({
   trigger,
   onOpenChange,

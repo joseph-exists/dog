@@ -12,8 +12,8 @@
  * - Save/Reset buttons
  */
 
-import { Loader2, RotateCcw, Save } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { Loader2, RotateCcw, Save } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { AgentsService } from "@/client/sdk.gen"
@@ -35,7 +35,6 @@ import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { ProviderModelSelector } from "../Forms/FormSelectors/ProviderModelSelector"
 import { sparseAgentUpdate } from "../utils"
 
-
 interface AgentModelSettingsProps {
   /** The agent to configure settings for */
   agent: UserAgentConfigPublic
@@ -48,7 +47,6 @@ export function AgentModelSettings({
   className,
 }: AgentModelSettingsProps) {
   const queryClient = useQueryClient()
-
 
   // Local state for form
   const [providerId, setProviderId] = useState<string | null>(null)
@@ -118,7 +116,7 @@ export function AgentModelSettings({
 
   // Handle save
   const handleSave = async () => {
-    await updateMutation.mutateAsync();
+    await updateMutation.mutateAsync()
   }
 
   // Handle delete (revert to agent defaults)

@@ -9,7 +9,6 @@
 // we need to understand how this panel interacts with the presentation design we're moving towards.
 // posthaste.
 
-
 import { Loader2 } from "lucide-react"
 
 import {
@@ -31,12 +30,14 @@ interface RoomAgentData {
   is_enabled?: boolean
 }
 
+import AgentAvatar from "@/components/Agents/Display/AgentAvatar"
+
+import {
+  AgentCoordinatorBadge,
+  AgentModeBadge,
+} from "@/components/Agents/Display/AgentBadge"
 // ok now we have to review AgentQuickAdd
 import AgentQuickAdd from "@/components/Agents/RoomManagers/AgentQuickAdd"
-
-import {  AgentCoordinatorBadge, AgentModeBadge } from "@/components/Agents/Display/AgentBadge"
-
-import AgentAvatar from "@/components/Agents/Display/AgentAvatar"
 
 // PRI0 yuck we have to review Rooms
 import AgentToggle from "@/components/Room/Dialogs/AgentToggle"

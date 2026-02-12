@@ -9,8 +9,6 @@ import { useQuery } from "@tanstack/react-query"
 import { Loader2, Plus } from "lucide-react"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
-
 import { AgentsService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
@@ -33,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 interface AddParticipantForm {

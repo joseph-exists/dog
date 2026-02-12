@@ -11,7 +11,8 @@
 
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
-
+import AgentToggle from "@/components/Room/Dialogs/AgentToggle"
+import RemoveParticipantButton from "@/components/Room/Dialogs/RemoveParticipantButton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Select,
@@ -28,8 +29,6 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import type { ParticipantViewModel } from "@/services/roomService"
-import AgentToggle from "@/components/Room/Dialogs/AgentToggle"
-import RemoveParticipantButton from "@/components/Room/Dialogs/RemoveParticipantButton"
 
 /** Display modes for participants */
 type DisplayMode = "names" | "ids" | "avatars" | "all"

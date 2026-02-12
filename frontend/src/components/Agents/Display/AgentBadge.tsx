@@ -8,11 +8,10 @@
  */
 
 import { Crown } from "lucide-react"
+import type { AgentScope, ParticipationMode } from "@/components/Agents/types"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { AgentScope, ParticipationMode } from "@/components/Agents/types"
 import { useProviderTypeName } from "../hooks"
-
 
 interface ScopeBadgeProps {
   scope: AgentScope
@@ -154,7 +153,6 @@ export function AgentCoordinatorBadge({ className }: CoordinatorBadgeProps) {
   )
 }
 
-
 interface ProviderBadgeProps {
   providerType: string
   className?: string
@@ -162,7 +160,10 @@ interface ProviderBadgeProps {
 
 type KnownProviderType = "openai" | "anthropic" | "google" | "openai_compatible"
 
-const providerConfig: Record<KnownProviderType, { label: string; colorClass: string }> = {
+const providerConfig: Record<
+  KnownProviderType,
+  { label: string; colorClass: string }
+> = {
   openai: {
     label: "OpenAI",
     colorClass:
@@ -214,9 +215,6 @@ export function AgentProviderBadge({
   )
 }
 
-
-
-
 interface AgentBadgeProps {
   /** What type of badge to display */
   type: "scope" | "mode" | "status"
@@ -254,4 +252,3 @@ export default function AgentBadge({
       return null
   }
 }
-

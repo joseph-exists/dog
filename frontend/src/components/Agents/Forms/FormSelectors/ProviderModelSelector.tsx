@@ -12,7 +12,10 @@ import { useQuery } from "@tanstack/react-query"
 import { Cloud, Key } from "lucide-react"
 
 import { LlmProvidersService } from "@/client/sdk.gen"
-import type { LLMModelPublic, UserAccessProviderPublic } from "@/client/types.gen"
+import type {
+  LLMModelPublic,
+  UserAccessProviderPublic,
+} from "@/client/types.gen"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
 import {
@@ -67,8 +70,7 @@ function SystemDefaultIndicator({ className }: { className?: string }) {
       )}
     >
       <Cloud className="size-4 text-blue-500" />
-      <span className="text-sm text-muted-foreground">
-      </span>
+      <span className="text-sm text-muted-foreground"></span>
     </div>
   )
 }
@@ -120,12 +122,10 @@ export function ProviderModelSelector({
   const providers: UserAccessProviderPublic[] = providersResponse?.data || []
   const hasAnyProvider = providers.length > 0
 
-
   // Get selected provider
   const selectedProvider = providerId
     ? providers.find((p) => p.id === providerId)
     : null
-
 
   /**
    * Handle provider change.
@@ -187,7 +187,9 @@ export function ProviderModelSelector({
               <>
                 <SelectSeparator />
                 <SelectGroup>
-                  <SelectLabel className="text-xs">your API Keys, probably leaked or stolen</SelectLabel>
+                  <SelectLabel className="text-xs">
+                    your API Keys, probably leaked or stolen
+                  </SelectLabel>
                   {providers.map((provider) => (
                     <SelectItem
                       key={provider.id}
@@ -197,18 +199,22 @@ export function ProviderModelSelector({
                       <div className="flex items-center gap-2">
                         <Key className="size-4 text-green-500" />
                         <span>{provider.name}</span>
-            {showProviderStatus && (
-              <span
-                className={cn(
-                  "size-2 rounded-full shrink-0",
-                  provider.is_validated ? "bg-green-500" : "bg-muted-foreground/40",
-                )}
-                title={provider.is_validated ? "Verified" : "Not tested"}
-              />
-            )}
-          </div>
-        </SelectItem>
-      ))}
+                        {showProviderStatus && (
+                          <span
+                            className={cn(
+                              "size-2 rounded-full shrink-0",
+                              provider.is_validated
+                                ? "bg-green-500"
+                                : "bg-muted-foreground/40",
+                            )}
+                            title={
+                              provider.is_validated ? "Verified" : "Not tested"
+                            }
+                          />
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </>
             )}
@@ -233,10 +239,10 @@ export function ProviderModelSelector({
             onModelSelected={onModelSelected}
             placeholder={`Select model (default: ${agentDefaultModel || "auto"})`}
             disabled={disabled}
-            className={isCompact ? "h-8 text-sm" : ""}  
+            className={isCompact ? "h-8 text-sm" : ""}
           />
           <p className="text-xs text-muted-foreground">
-           this can change whenever you want.
+            this can change whenever you want.
           </p>
         </div>
       )}

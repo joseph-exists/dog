@@ -9,8 +9,6 @@
  * - "avatars-only": Stacked avatar circles for tight spaces (headers, toolbars)
  */
 
-
-
 import { BotIcon, Loader2Icon, XIcon } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -70,7 +68,9 @@ function AvatarsOnly({
               <AgentAvatar
                 name={agent.name ?? "Agent"}
                 size="sm"
-                presentation={agent.presentation?.avatar as AvatarPresentation | undefined}
+                presentation={
+                  agent.presentation?.avatar as AvatarPresentation | undefined
+                }
               />
             </div>
           </TooltipTrigger>

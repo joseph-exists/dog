@@ -6,7 +6,10 @@ import type { UserAgentConfigPublic } from "@/client"
 // Components use type guards (isAgentTypeKey, etc.) to narrow at runtime.
 // When backend enforces strict types, we can simplify this.
 
-export type UserAgentConfigData = Omit<UserAgentConfigPublic, 'agent_type' | 'presentation'> & {
+export type UserAgentConfigData = Omit<
+  UserAgentConfigPublic,
+  "agent_type" | "presentation"
+> & {
   // Accepts API string OR narrow AgentTypeKey - use isAgentTypeKey() to narrow at runtime
   agent_type?: AgentTypeKey | string | null
   // Accepts API generic object OR structured AgentPresentation
@@ -14,7 +17,10 @@ export type UserAgentConfigData = Omit<UserAgentConfigPublic, 'agent_type' | 'pr
 }
 
 // Strict variant for agent creation/validation where we require proper types
-export type StrictAgentConfig = Omit<UserAgentConfigPublic, 'agent_type' | 'presentation'> & {
+export type StrictAgentConfig = Omit<
+  UserAgentConfigPublic,
+  "agent_type" | "presentation"
+> & {
   agent_type: AgentTypeKey
   presentation?: AgentPresentation | null
 }
@@ -25,19 +31,35 @@ export type StrictAgentConfig = Omit<UserAgentConfigPublic, 'agent_type' | 'pres
 
 export type AgentScope = "system" | "personal"
 export type ParticipationMode = "always" | "on_mention" | "manual"
-export type AgentTypeKey = "advisor" | "creative" | "analyst" | "guardian" | "oracle" | "engineer"
+export type AgentTypeKey =
+  | "advisor"
+  | "creative"
+  | "analyst"
+  | "guardian"
+  | "oracle"
+  | "engineer"
 
 export function isAgentScope(s: string | null | undefined): s is AgentScope {
   return s === "system" || s === "personal"
 }
 
-export function isParticipationMode(s: string | null | undefined): s is ParticipationMode {
+export function isParticipationMode(
+  s: string | null | undefined,
+): s is ParticipationMode {
   return s === "always" || s === "on_mention" || s === "manual"
 }
 
-export function isAgentTypeKey(s: string | null | undefined): s is AgentTypeKey {
-  return s === "advisor" || s === "creative" || s === "analyst"
-    || s === "guardian" || s === "oracle" || s === "engineer"
+export function isAgentTypeKey(
+  s: string | null | undefined,
+): s is AgentTypeKey {
+  return (
+    s === "advisor" ||
+    s === "creative" ||
+    s === "analyst" ||
+    s === "guardian" ||
+    s === "oracle" ||
+    s === "engineer"
+  )
 }
 
 // ── Presentation-as-Data Types ────────────────────────────────────────────
@@ -98,5 +120,11 @@ export interface AgentPresentation {
   /** Avatar customization */
   avatar?: AvatarPresentation
   /** Typographic hint — component interprets, not raw CSS */
-  decorationHint?: "warm" | "neon" | "precise" | "organic" | "brutalist" | "ethereal"
+  decorationHint?:
+    | "warm"
+    | "neon"
+    | "precise"
+    | "organic"
+    | "brutalist"
+    | "ethereal"
 }

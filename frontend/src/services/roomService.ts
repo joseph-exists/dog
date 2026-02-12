@@ -36,8 +36,8 @@ import {
 } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
-import type { UIComponent } from "@/components/AgentUI/types"
 import { AgentsService } from "@/client/sdk.gen"
+import type { UIComponent } from "@/components/AgentUI/types"
 
 // ============================================================================
 // Type Definitions - ViewModels

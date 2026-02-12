@@ -2,7 +2,6 @@ import { useMemo } from "react"
 import type { UIComponent } from "@/components/AgentUI/types"
 import type { MessageViewModel } from "@/services/roomService"
 
-
 // NOTE: THIS HOOK STAYS.  DO NOT REMOVE.  APPROVED WRAPPER FOR PROCESSING THAT SHOULD HAPPEN ON THE FRONTEND
 
 export interface AgentUIEntry {

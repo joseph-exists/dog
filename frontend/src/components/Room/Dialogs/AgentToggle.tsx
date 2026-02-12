@@ -9,7 +9,7 @@ import { useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
 import { Switch } from "@/components/ui/switch"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 /** Display modes for participants */
@@ -40,7 +40,6 @@ export default function AgentToggle({
   displayMode = "names",
 }: AgentToggleProps) {
   const [isToggling, setIsToggling] = useState(false)
-  
 
   const handleToggle = async (checked: boolean) => {
     setIsToggling(true)

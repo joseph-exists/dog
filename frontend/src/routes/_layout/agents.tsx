@@ -14,8 +14,8 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { AgentsShell, type PanelConfig } from "@/components/Agents/AgentsShell"
-import { AgentsGridPanel } from "@/components/Agents/AgentsShell/panels"
+import { AgentsShell, type PanelConfig } from "@/components/Agents"
+import { AgentsGridPanel } from "@/components/Agents/panels"
 
 export const Route = createFileRoute("/_layout/agents")({
   component: AgentsPage,
@@ -30,10 +30,10 @@ function AgentsPage() {
 
   // Theme selection — nullish coalescing ready for future prefs integration
   const [pageThemeId, setPageThemeId] = useState(
-    savedPrefs?.pageTheme ?? "default"
+    savedPrefs?.pageTheme ?? "default",
   )
   const [cardsThemeId, setCardsThemeId] = useState(
-    savedPrefs?.cardsTheme ?? "default"
+    savedPrefs?.cardsTheme ?? "default",
   )
 
   // Panel component registry

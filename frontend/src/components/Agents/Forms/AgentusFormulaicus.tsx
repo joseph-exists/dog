@@ -22,7 +22,7 @@ import {
   SparklesIcon,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useForm, useFormContext, FormProvider } from "react-hook-form"
+import { FormProvider, useForm, useFormContext } from "react-hook-form"
 import { z } from "zod/v4"
 
 import { AgentsService } from "@/client/sdk.gen"
@@ -34,10 +34,10 @@ import type {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { springConfig, useReduceMotion } from "@/components/ui/motion"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { springConfig, useReduceMotion } from "@/components/ui/motion"
 import { cn } from "@/lib/utils"
 import { ProviderModelSelector } from "./FormSelectors/ProviderModelSelector"
 
@@ -136,12 +136,20 @@ interface AgentusFormulaicusProps {
 
 function safeJsonStringify(v: unknown): string {
   if (v == null) return ""
-  try { return JSON.stringify(v, null, 2) } catch { return "" }
+  try {
+    return JSON.stringify(v, null, 2)
+  } catch {
+    return ""
+  }
 }
 
 function safeJsonParse(v: string | null): Record<string, unknown> | null {
   if (!v?.trim()) return null
-  try { return JSON.parse(v) } catch { return null }
+  try {
+    return JSON.parse(v)
+  } catch {
+    return null
+  }
 }
 
 /** Thin field wrapper — label + input + error. No ceremony. */
@@ -162,7 +170,10 @@ function Field({
   return (
     <div className={cn("space-y-1.5", className)}>
       {label && (
-        <Label htmlFor={name} className="text-xs tracking-wide text-muted-foreground">
+        <Label
+          htmlFor={name}
+          className="text-xs tracking-wide text-muted-foreground"
+        >
           {label}
         </Label>
       )}
@@ -262,10 +273,14 @@ function ChapterIdentity({ isEdit }: { isEdit: boolean }) {
     setSlugLoading(true)
     try {
       const res = await AgentsService.generateAgentSlug()
-      const slug = typeof res === "string" ? res : (res as { slug?: string })?.slug
+      const slug =
+        typeof res === "string" ? res : (res as { slug?: string })?.slug
       if (slug) setValue("slug", slug, { shouldValidate: true })
-    } catch { /* slug stays empty, zod catches it */ }
-    finally { setSlugLoading(false) }
+    } catch {
+      /* slug stays empty, zod catches it */
+    } finally {
+      setSlugLoading(false)
+    }
   }, [setValue, slugLoading])
 
   useEffect(() => {
@@ -335,7 +350,9 @@ function ChapterBinding({ defaultModel }: { defaultModel: string }) {
 
   const handleProviderResolved = (p: UserAccessProviderPublic | null) => {
     if (p?.alpha_provider_type_id)
-      setValue("provider_type", p.alpha_provider_type_id, { shouldValidate: true })
+      setValue("provider_type", p.alpha_provider_type_id, {
+        shouldValidate: true,
+      })
   }
 
   const handleModelChange = (v: string | null) =>
@@ -537,9 +554,7 @@ function ChapterNature() {
 
       {/* Tool iterations */}
       <div className="flex items-center justify-between">
-        <Label className="text-xs text-muted-foreground">
-          Max tool loops
-        </Label>
+        <Label className="text-xs text-muted-foreground">Max tool loops</Label>
         <Input
           type="number"
           min={0}
@@ -731,7 +746,10 @@ export default function AgentusFormulaicus({
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6", className)}>
+      <form
+        onSubmit={handleSubmit}
+        className={cn("flex flex-col gap-6", className)}
+      >
         {/* Sigils */}
         <StepIndicator current={chapter} onNavigate={(i) => goTo(i)} />
 

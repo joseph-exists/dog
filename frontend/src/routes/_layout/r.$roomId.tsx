@@ -10,7 +10,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2 } from "lucide-react"
 import type React from "react"
 import { useEffect, useState } from "react"
-
+import { AgentsService } from "@/client/sdk.gen"
+import type { UserAgentConfigPublic } from "@/client/types.gen"
 import EditDrawer from "@/components/Common/EditDrawer"
 import {
   A2UIPanel,
@@ -24,14 +25,12 @@ import {
   StoryPanel,
   StoryPlayerPanel,
 } from "@/components/Room"
-import type { Participant } from "@/components/Room/primitives/ParticipantStack"
 import RoomDebugPanel from "@/components/Room/panels/RoomDebugPanel"
-import { showSuccessToast} from "@/hooks/useCustomToast"
+import type { Participant } from "@/components/Room/primitives/ParticipantStack"
+import { showSuccessToast } from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
 import { useRoomStream } from "@/hooks/useRoomStream"
-import { AgentsService } from "@/client/sdk.gen"
-import type { UserAgentConfigPublic } from "@/client/types.gen"
 import { getPanelDisplayName } from "@/services/panelService"
 import {
   type MessageViewModel,
@@ -171,7 +170,10 @@ function RoomView() {
   })
 
   // Handlers - accept any object with id and name (compatible with both API types and simplified types)
-  const handleAddAgent = async (agent: { id: string; name?: string | null }) => {
+  const handleAddAgent = async (agent: {
+    id: string
+    name?: string | null
+  }) => {
     await addParticipant(agent.id, "agent")
     showSuccessToast(`Added ${agent.name ?? "Agent"} to the room`)
   }
@@ -185,7 +187,10 @@ function RoomView() {
     showSuccessToast(`Added ${agents.length} agent(s) to the room`)
   }
 
-  const handleRemoveAgent = async (agent: { id: string; name?: string | null }) => {
+  const handleRemoveAgent = async (agent: {
+    id: string
+    name?: string | null
+  }) => {
     await removeParticipant(agent.id)
     showSuccessToast(`Removed ${agent.name ?? "Agent"} from the room`)
   }

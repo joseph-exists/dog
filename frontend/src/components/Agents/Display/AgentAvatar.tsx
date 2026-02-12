@@ -3,11 +3,15 @@
  *
  */
 
-import { AvatarSize, getColorForName, sizeClasses, getInitials } from "@/components/Agents/utils"
+import {
+  type AvatarSize,
+  getColorForName,
+  getInitials,
+  sizeClasses,
+} from "@/components/Agents/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import type { AvatarPresentation } from "../types"
-
 
 interface AgentAvatarProps {
   /** Agent name used for initials and color generation */
@@ -35,7 +39,7 @@ export default function AgentAvatar({
 
   return (
     <Avatar className={cn(sizeClasses[size], className)}>
-      <AvatarFallback 
+      <AvatarFallback
         className={cn(
           // use hash color class when no presentation override
           !hasCustomBg && hashColor,
@@ -44,8 +48,8 @@ export default function AgentAvatar({
         )}
         style={
           hasCustomBg
-          ? { backgroundColor: presentation.backgroundColor, color: "white"}
-          : undefined
+            ? { backgroundColor: presentation.backgroundColor, color: "white" }
+            : undefined
         }
       >
         {content}
@@ -53,5 +57,3 @@ export default function AgentAvatar({
     </Avatar>
   )
 }
-
-

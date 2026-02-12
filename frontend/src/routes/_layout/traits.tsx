@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/traits")({
   component: TraitsPage,
@@ -50,7 +50,7 @@ function getAllTraitsQueryOptions() {
 
 function DeleteTraitButton({ trait }: { trait: TraitPublic }) {
   const queryClient = useQueryClient()
-  
+
   const [isOpen, setIsOpen] = useState(false)
 
   const mutation = useMutation({

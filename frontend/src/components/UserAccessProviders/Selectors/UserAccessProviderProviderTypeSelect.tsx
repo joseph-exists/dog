@@ -19,6 +19,7 @@
  * />
  */
 
+import type { UserAccessProviderPublic } from "@/client/types.gen"
 import {
   Select,
   SelectContent,
@@ -28,7 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import type { UserAccessProviderPublic } from "@/client/types.gen"
 import { ProviderStatusBadge } from "../Display/ProviderStatusBadge"
 
 /** Special value for "no provider selected" */
@@ -102,7 +102,9 @@ export function ProviderSelect({
         >
           {currentProvider ? (
             <span className="flex items-center gap-2">
-              <ProviderStatusBadge status={getProviderStatus(currentProvider)} />
+              <ProviderStatusBadge
+                status={getProviderStatus(currentProvider)}
+              />
               <span className="truncate">{currentProvider.name}</span>
             </span>
           ) : (
@@ -113,9 +115,7 @@ export function ProviderSelect({
       <SelectContent>
         {/* None option */}
         <SelectItem value={NONE_VALUE}>
-          <span className="text-muted-foreground">
-            None
-          </span>
+          <span className="text-muted-foreground">None</span>
         </SelectItem>
 
         {/* Separator if there are providers */}

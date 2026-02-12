@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 
 import AgentAvatar from "../Display/AgentAvatar"
 import {
@@ -50,9 +50,9 @@ function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
     : undefined
   //const providerName  = useProviderTypeName(agent.provider_type)
   const providerNameQuery = useProviderTypeName(agent.provider_type)
-  const providerName = providerNameQuery.data ?? agent.provider_type ?? "Unknown"
+  const providerName =
+    providerNameQuery.data ?? agent.provider_type ?? "Unknown"
   // providerNameQuery.data && <AgentProviderBadge providerType={providerNameQuery.data} />
-
 
   return (
     <div className="space-y-4">
@@ -62,8 +62,9 @@ function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
         {scope && <AgentScopeBadge scope={scope} />}
         {mode && <AgentModeBadge mode={mode} />}
         {agent.is_coordinator && <AgentCoordinatorBadge />}
-        {providerNameQuery.data && 
-        <AgentProviderBadge providerType={providerNameQuery.data} />}
+        {providerNameQuery.data && (
+          <AgentProviderBadge providerType={providerNameQuery.data} />
+        )}
         {agent.provider_type && (
           <AgentProviderBadge providerType={providerName} />
         )}

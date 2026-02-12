@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { RoomViewModel } from "@/services/roomService"
-import { Button } from "@/components/ui/button"
 import EditRoomDialog from "./EditRoomDialog"
 
 interface RoomActionsMenuProps {

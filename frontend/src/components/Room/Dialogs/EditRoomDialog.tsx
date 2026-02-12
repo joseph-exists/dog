@@ -21,7 +21,7 @@ import {
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import type { RoomViewModel } from "@/services/roomService"
 import { handleError } from "@/utils"
@@ -40,7 +40,6 @@ export default function EditRoomDialog({
   onUpdate,
 }: EditRoomDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
-  
 
   const {
     register,

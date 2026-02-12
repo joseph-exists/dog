@@ -72,15 +72,14 @@ import { z } from "zod"
 // Client SDK Imports - Use exported client functions and types
 // ============================================================================
 
+import type { ApiError } from "@/client/core/ApiError"
 import { LlmProvidersService } from "@/client/sdk.gen"
 import type {
   UserAccessProviderCreate,
   UserAccessProviderPublic,
 } from "@/client/types.gen"
-import type { ApiError } from "@/client/core/ApiError"
 import { ProviderTypeSelect } from "@/components/UserAccessProviders/Selectors/ProviderTypeSelect"
 import useAuth from "@/hooks/useAuth"
-
 
 // ============================================================================
 // UI Component Imports
@@ -119,7 +118,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Switch } from "@/components/ui/switch"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 // ============================================================================
@@ -141,9 +140,12 @@ import { handleError } from "@/utils"
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   api_key: z.string().min(1, "API key is required").max(200),
-  base_url: z.string().url("Must be a valid URL").min(1, "Base URL is required").max(200),
-  alpha_provider_type_id: z
-    .uuid(), //todo zod uuid handling for required
+  base_url: z
+    .string()
+    .url("Must be a valid URL")
+    .min(1, "Base URL is required")
+    .max(200),
+  alpha_provider_type_id: z.uuid(), //todo zod uuid handling for required
   description: z.string().max(500).optional().or(z.literal("")),
   is_default: z.boolean().default(false),
   is_enabled: z.boolean().default(true),
@@ -157,7 +159,9 @@ type FormData = z.infer<typeof formSchema>
 
 const UserAccessProviders = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [testingProviderId, setTestingProviderId] = useState<string | null>(null)
+  const [testingProviderId, setTestingProviderId] = useState<string | null>(
+    null,
+  )
   const queryClient = useQueryClient()
   const { user } = useAuth()
 
@@ -165,7 +169,11 @@ const UserAccessProviders = () => {
   // Data Fetching via Client SDK
   // ==========================================================================
 
-  const { data: providersResponse, isLoading, error } = useQuery({
+  const {
+    data: providersResponse,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["llm-providers"],
     queryFn: () => LlmProvidersService.listProviders(),
   })
@@ -197,7 +205,7 @@ const UserAccessProviders = () => {
       showSuccessToast("you really did that, okey dokey, it worked")
       queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
     },
-    onError: handleError.bind(showErrorToast)
+    onError: handleError.bind(showErrorToast),
   })
 
   // ==========================================================================
@@ -225,7 +233,7 @@ const UserAccessProviders = () => {
   //
   // Three-Way Binding Note:
   // This creates a UserAccessProvider (credentials + endpoint).
-  // alpha_provider_type_id is required - as a dropdown based on user selection of 
+  // alpha_provider_type_id is required - as a dropdown based on user selection of
   // the values returned from g
   // will be specified when creating/configuring an AgentConfig
   // that uses this UserAccessProvider.
@@ -248,7 +256,7 @@ const UserAccessProviders = () => {
 
       setIsAddDialogOpen(false)
       form.reset()
-    } catch (err) {
+    } catch (_err) {
       showErrorToast("Failed to create provider")
     }
   }
@@ -288,7 +296,7 @@ const UserAccessProviders = () => {
     ) {
       try {
         await deleteProviderMutation.mutateAsync(provider.id)
-      } catch (err) {
+      } catch (_err) {
         showErrorToast("Failed to delete provider")
       }
     }
@@ -321,9 +329,10 @@ const UserAccessProviders = () => {
             <DialogHeader>
               <DialogTitle>Add API Access Provider</DialogTitle>
               <DialogDescription>
-                Add your API credentials. Keys are hopefully encrypted at rest and in transit.
-                Maybe.  Joseph will remove this text once it's completely proven
-                without a shadow of a doubt.  If you see this text, Joseph doesn't believe the proof yet.
+                Add your API credentials. Keys are hopefully encrypted at rest
+                and in transit. Maybe. Joseph will remove this text once it's
+                completely proven without a shadow of a doubt. If you see this
+                text, Joseph doesn't believe the proof yet.
               </DialogDescription>
             </DialogHeader>
 
@@ -343,8 +352,8 @@ const UserAccessProviders = () => {
                         <Input placeholder="my very own api key" {...field} />
                       </FormControl>
                       <FormDescription>
-                        this is how you'll choose this one
-                        nothing else cares what you call it
+                        this is how you'll choose this one nothing else cares
+                        what you call it
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -366,10 +375,9 @@ const UserAccessProviders = () => {
                         />
                       </FormControl>
                       <FormDescription>
-                        your API key might be encrypted before storage
-                        it might be encrypted over the wire
-                        it might be stolen and used for dark purposes
-                        might be
+                        your API key might be encrypted before storage it might
+                        be encrypted over the wire it might be stolen and used
+                        for dark purposes might be
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -384,16 +392,15 @@ const UserAccessProviders = () => {
                     <FormItem>
                       <FormLabel>Base API URL -- required</FormLabel>
                       <FormControl>
-
                         <Input
                           placeholder="https://api.openai.com/v1"
                           {...field}
                         />
                       </FormControl>
                       <FormDescription>
-                        where you get your stuff from.  the good stuff.
-                        see docs for more deets, faqs, and normal screwups
-                        Ollama, Azure OpenAI, OpenAI-compatible services.
+                        where you get your stuff from. the good stuff. see docs
+                        for more deets, faqs, and normal screwups Ollama, Azure
+                        OpenAI, OpenAI-compatible services.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

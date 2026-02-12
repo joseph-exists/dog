@@ -12,7 +12,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
-
+import { LlmCatalogService } from "@/client/sdk.gen"
+import type { LLMModelPublic } from "@/client/types.gen"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,8 +28,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { LlmCatalogService } from "@/client/sdk.gen"
-import type { LLMModelPublic } from "@/client/types.gen"
 import { cn } from "@/lib/utils"
 
 // can import ONLY from client sdk and client types.
@@ -51,7 +50,6 @@ interface ModelComboboxProps {
   /** Placeholder text */
   placeholder?: string
 }
-
 
 export default function ModelCombobox({
   value,
@@ -129,9 +127,7 @@ export default function ModelCombobox({
   // Prefer matched option within filtered list; fall back to any catalog model
   // (unfiltered) so previously selected values still render friendly labels.
   const fallbackModel =
-    models.find(
-      (m) => (m as any).id === value || m.model_id === value,
-    ) ?? null
+    models.find((m) => (m as any).id === value || m.model_id === value) ?? null
   const selectedModel =
     augmentedOptions.find((m) => m.value === value) ??
     (fallbackModel
@@ -240,9 +236,7 @@ export default function ModelCombobox({
                         <Check
                           className={cn(
                             "size-4 shrink-0",
-                            value === model.value
-                              ? "opacity-100"
-                              : "opacity-0",
+                            value === model.value ? "opacity-100" : "opacity-0",
                           )}
                         />
                       </CommandItem>

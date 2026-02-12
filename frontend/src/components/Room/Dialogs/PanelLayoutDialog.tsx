@@ -32,12 +32,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
 import type { PanelConfig } from "@/services/panelService"
-import { InteractivePreview, type PreviewPanel } from "../RoomShell/InteractivePreview"
-import { type LayoutSource, LayoutSourceSelector } from "../RoomShell/LayoutSourceSelector"
 import { PresetPicker, SYSTEM_PRESETS } from "../primitives/PresetPicker"
+import {
+  InteractivePreview,
+  type PreviewPanel,
+} from "../RoomShell/InteractivePreview"
+import {
+  type LayoutSource,
+  LayoutSourceSelector,
+} from "../RoomShell/LayoutSourceSelector"
 
 // ============================================================================
 // Types
@@ -91,8 +97,6 @@ export function PanelLayoutDialog({
   isRoomOwner = false,
   mode = "room",
 }: PanelLayoutDialogProps) {
-  
-
   // Room panels hook (only used in room mode)
   const roomPanels = useRoomPanels(roomId ?? "", {
     enabled: mode === "room" && !!roomId,

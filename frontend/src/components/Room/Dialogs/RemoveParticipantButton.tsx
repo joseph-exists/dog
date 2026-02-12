@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { showSuccessToast, showErrorToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 interface RemoveParticipantButtonProps {
@@ -36,7 +36,6 @@ export default function RemoveParticipantButton({
 }: RemoveParticipantButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
-  
 
   const handleRemove = async () => {
     setIsRemoving(true)

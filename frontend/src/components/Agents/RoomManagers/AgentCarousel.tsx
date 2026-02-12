@@ -12,15 +12,13 @@
 // currently unused - but I like the idea and the implementation looks fairly reasonable
 // needs minor refactor
 
-
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import AgentCard from "../Display/AgentCard"
 import AgentDetailDialog from "../Dialogs/AgentDetailDialog"
+import AgentCard from "../Display/AgentCard"
 import type { UserAgentConfigData as AgentData } from "../types"
-
 
 interface AgentCarouselProps {
   /** List of agents to display */

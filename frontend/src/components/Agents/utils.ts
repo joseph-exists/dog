@@ -16,7 +16,7 @@ export const AVATAR_COLORS = [
   "bg-amber-500",
   "bg-orange-500",
   "bg-red-500",
-] 
+]
 /**
  * Generate a consistent hash from a string.
  * Same input always produces same output.
@@ -74,7 +74,6 @@ function getColorForName(name: string): string {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length]
 }
 
-
 export type AvatarSize = "sm" | "md" | "lg" | "xl"
 
 export const sizeClasses: Record<AvatarSize, string> = {
@@ -114,9 +113,7 @@ import type {
 
 type RequestBody = AgentsUpdateAgentData["requestBody"]
 // Extracts the union of literal provider types from the discriminated union.
-type ProviderType = RequestBody extends { provider_type: infer P }
-  ? P
-  : never
+type ProviderType = RequestBody extends { provider_type: infer P } ? P : never
 
 /**
  * Builds a minimal agent update payload that always includes the discriminator
@@ -144,4 +141,3 @@ export const sparseAgentUpdate = (
     ...changes,
   } as RequestBody
 }
-

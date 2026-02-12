@@ -21,7 +21,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-
+import { useProviderTypeName } from "../hooks"
+import { presentationToStyle, resolveAgentPresentation } from "../resolve"
+import type {
+  AgentPresentation,
+  UserAgentConfigData,
+} from "../types"
+import { isAgentScope, isAgentTypeKey, isParticipationMode } from "../types"
 import AgentAvatar from "./AgentAvatar"
 import {
   AgentModeBadge,
@@ -29,16 +35,6 @@ import {
   AgentScopeBadge,
   AgentStatusBadge,
 } from "./AgentBadge"
-
-import { useProviderTypeName } from "../hooks"
-
-import type {
-  AgentPresentation,
-//  AgentTypeKey,
-  UserAgentConfigData,
-} from "../types"
-import { isAgentScope, isAgentTypeKey, isParticipationMode } from "../types"
-import { presentationToStyle, resolveAgentPresentation } from "../resolve"
 
 // ── Props ─────────────────────────────────────────────────────────────────
 
@@ -86,7 +82,10 @@ function AccentStrip({
 
   return (
     <div
-      className={cn("pointer-events-none transition-all", positionStyles[position])}
+      className={cn(
+        "pointer-events-none transition-all",
+        positionStyles[position],
+      )}
       style={{ backgroundColor: color, ...dimensionStyle }}
     />
   )
@@ -94,7 +93,9 @@ function AccentStrip({
 
 // ── Decoration Hint Classes ───────────────────────────────────────────────
 
-function getDecorationClasses(hint?: AgentPresentation["decorationHint"]): string {
+function getDecorationClasses(
+  hint?: AgentPresentation["decorationHint"],
+): string {
   switch (hint) {
     case "brutalist":
       return "font-mono"
@@ -105,7 +106,9 @@ function getDecorationClasses(hint?: AgentPresentation["decorationHint"]): strin
   }
 }
 
-function getDecorationTitleClasses(hint?: AgentPresentation["decorationHint"]): string {
+function getDecorationTitleClasses(
+  hint?: AgentPresentation["decorationHint"],
+): string {
   switch (hint) {
     case "brutalist":
       return "uppercase tracking-wide text-[13px]"
@@ -133,7 +136,8 @@ function DebugPanel({
       {" · "}
       <span className="font-bold">tokens:</span> {tokenCount}
       {" · "}
-      <span className="font-bold">deco:</span> {resolved.decorationHint || "none"}
+      <span className="font-bold">deco:</span>{" "}
+      {resolved.decorationHint || "none"}
       {" · "}
       <span className="font-bold">accent:</span>{" "}
       {resolved.tokens?.["--agent-accent-position"] || "top"}
@@ -158,13 +162,14 @@ function AgentCardFull({
   resolved: AgentPresentation
   presentationEnabled: boolean
   debug: boolean
-} & Pick<AgentCardProps, "href" | "isSelected" | "onClick" | "action" | "className">) {
-  
+} & Pick<
+  AgentCardProps,
+  "href" | "isSelected" | "onClick" | "action" | "className"
+>) {
   const providerTypeQuery = useProviderTypeName(agent.model_name)
   const providerType = providerTypeQuery.data
 
   const displayModel = agent.model_name
-
 
   const scope = isAgentScope(agent.scope) ? agent.scope : undefined
   const participationMode = isParticipationMode(agent.participation_mode)
@@ -210,7 +215,10 @@ function AgentCardFull({
   )
 
   return (
-    <div style={wrapperStyle} className={cn("transition-all duration-300", decoClasses)}>
+    <div
+      style={wrapperStyle}
+      className={cn("transition-all duration-300", decoClasses)}
+    >
       <Card
         className={cn(
           "transition-all relative overflow-hidden",
@@ -220,14 +228,21 @@ function AgentCardFull({
           className,
         )}
         onClick={onClick}
-        style={Object.keys(cardInlineStyle).length > 0 ? cardInlineStyle : undefined}
+        style={
+          Object.keys(cardInlineStyle).length > 0 ? cardInlineStyle : undefined
+        }
       >
         <AccentStrip presentation={resolved} enabled={presentationEnabled} />
 
         <CardHeader className="pb-3">
           <div className="flex items-start gap-3">
             {href ? (
-              <Link to={href} onClick={(e: { stopPropagation: () => any }) => e.stopPropagation()}>
+              <Link
+                to={href}
+                onClick={(e: { stopPropagation: () => any }) =>
+                  e.stopPropagation()
+                }
+              >
                 {avatar}
               </Link>
             ) : (
@@ -237,13 +252,15 @@ function AgentCardFull({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 {href ? (
-                    <Link
+                  <Link
                     to={href}
                     className="hover:underline"
-                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) => e.stopPropagation()}
-                    >
+                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) =>
+                      e.stopPropagation()
+                    }
+                  >
                     {title}
-                    </Link>
+                  </Link>
                 ) : (
                   title
                 )}
@@ -260,7 +277,9 @@ function AgentCardFull({
                 <CardDescription
                   className={cn(
                     "mt-1 line-clamp-2",
-                    resolved.decorationHint === "ethereal" && presentationEnabled && "italic",
+                    resolved.decorationHint === "ethereal" &&
+                      presentationEnabled &&
+                      "italic",
                   )}
                 >
                   {agent.description}
@@ -268,18 +287,14 @@ function AgentCardFull({
               )}
             </div>
 
-            {action && (
-              <div onClick={(e) => e.stopPropagation()}>{action}</div>
-            )}
+            {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
           </div>
         </CardHeader>
 
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-2">
             {scope && <AgentScopeBadge scope={scope} />}
-            {participationMode && (
-              <AgentModeBadge mode={participationMode} />
-            )}
+            {participationMode && <AgentModeBadge mode={participationMode} />}
             {scope === "personal" && providerType && (
               <AgentProviderBadge providerType={providerType} />
             )}
@@ -336,7 +351,10 @@ function AgentCardCompact({
     : ""
 
   return (
-    <div style={wrapperStyle} className={cn("transition-all duration-300", decoClasses)}>
+    <div
+      style={wrapperStyle}
+      className={cn("transition-all duration-300", decoClasses)}
+    >
       <div
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg border bg-card text-card-foreground transition-colors",
@@ -363,11 +381,12 @@ function AgentCardCompact({
             <span className={cn("font-medium truncate", titleDecoClasses)}>
               {agent.name ?? "Agent"}
             </span>
-            {scope && (
-              <AgentScopeBadge scope={scope} className="scale-90" />
-            )}
+            {scope && <AgentScopeBadge scope={scope} className="scale-90" />}
             {scope === "personal" && providerType && (
-              <AgentProviderBadge providerType={providerType} className="scale-90" />
+              <AgentProviderBadge
+                providerType={providerType}
+                className="scale-90"
+              />
             )}
           </div>
           {agent.description && (
@@ -381,9 +400,7 @@ function AgentCardCompact({
           <AgentModeBadge mode={participationMode} className="hidden sm:flex" />
         )}
 
-        {action && (
-          <div onClick={(e) => e.stopPropagation()}>{action}</div>
-        )}
+        {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
       </div>
     </div>
   )
@@ -452,7 +469,9 @@ export default function AgentCard({
   debug = false,
 }: AgentCardProps) {
   // Default: presentation is enabled when the agent has presentation data or a typed default
-  const agentType = isAgentTypeKey(agent.agent_type) ? agent.agent_type : undefined
+  const agentType = isAgentTypeKey(agent.agent_type)
+    ? agent.agent_type
+    : undefined
   const enabled = presentationEnabled ?? !!(agent.presentation || agentType)
 
   const resolved = resolveAgentPresentation(

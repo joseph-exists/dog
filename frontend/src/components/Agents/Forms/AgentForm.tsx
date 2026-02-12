@@ -16,17 +16,20 @@
  * The parent component receives validated AgentFormData on submit and
  * is responsible for calling the API (create or update).
  */
-import { useForm } from "react-hook-form"
+
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ChevronDownIcon, Loader2 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useForm } from "react-hook-form"
 
 import { z } from "zod/v4"
 
 import { AgentsService } from "@/client/sdk.gen"
-import type { LLMModelPublic, UserAccessProviderPublic, UserAgentConfigPublic } from "@/client/types.gen"
-import { ProviderModelSelector } from "./FormSelectors/ProviderModelSelector"
-
+import type {
+  LLMModelPublic,
+  UserAccessProviderPublic,
+  UserAgentConfigPublic,
+} from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -54,6 +57,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { ProviderModelSelector } from "./FormSelectors/ProviderModelSelector"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -152,7 +156,7 @@ const AGENT_TYPE_PRESENTATIONS = [
     value: "engineer",
     label: "engineer",
     description: "engines the eers",
-  }
+  },
 ] as const
 
 // ── Schema ────────────────────────────────────────────────────────────────
@@ -175,7 +179,6 @@ const agentFormSchema = z.object({
   custom_system_prompt: z.string().nullable(),
   agent_type: z.string(),
   instructions: z.string().nullable(),
-
 
   // Behavior
   participation_mode: z.string(),
@@ -249,7 +252,6 @@ export default function AgentForm({
 
   // ── Form Setup ──────────────────────────────────────────────────────────
 
-
   const form = useForm({
     resolver: zodResolver(agentFormSchema),
     mode: "onBlur",
@@ -317,7 +319,9 @@ export default function AgentForm({
     form.setValue("user_access_provider", providerId, { shouldValidate: true })
   }
 
-  const handleProviderResolved = (provider: UserAccessProviderPublic | null) => {
+  const handleProviderResolved = (
+    provider: UserAccessProviderPublic | null,
+  ) => {
     if (provider?.alpha_provider_type_id) {
       form.setValue("provider_type", provider.alpha_provider_type_id, {
         shouldValidate: true,
@@ -375,7 +379,6 @@ export default function AgentForm({
       deps_config: safeJsonParse(values.deps_config_raw),
       agent_metadata: safeJsonParse(values.agent_metadata_raw),
       presentation: safeJsonParse(values.presentation_raw),
-
     }
 
     await onSubmit(data)
@@ -393,7 +396,6 @@ export default function AgentForm({
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit} className={cn("space-y-8", className)}>
-
         {/* ════════════════════════════════════════════════════════════════
             Section 1: Identity
             ════════════════════════════════════════════════════════════════ */}
@@ -565,7 +567,8 @@ export default function AgentForm({
                       />
                     </FormControl>
                     <FormDescription>
-                      If set, replaces the system prompt entirely for this agent.
+                      If set, replaces the system prompt entirely for this
+                      agent.
                     </FormDescription>
                   </CollapsibleContent>
                 </Collapsible>
@@ -600,7 +603,8 @@ export default function AgentForm({
                       />
                     </FormControl>
                     <FormDescription>
-                      Supplementary context or rules. Does not replace the system prompt.
+                      Supplementary context or rules. Does not replace the
+                      system prompt.
                     </FormDescription>
                   </CollapsibleContent>
                 </Collapsible>
@@ -734,7 +738,10 @@ export default function AgentForm({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -753,7 +760,10 @@ export default function AgentForm({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -772,7 +782,10 @@ export default function AgentForm({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -791,7 +804,10 @@ export default function AgentForm({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -804,7 +820,9 @@ export default function AgentForm({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-sm">Max Tool Iterations</FormLabel>
+                    <FormLabel className="text-sm">
+                      Max Tool Iterations
+                    </FormLabel>
                     <FormDescription className="text-xs">
                       Maximum tool call loops per turn (0–100)
                     </FormDescription>

@@ -126,7 +126,7 @@ export default function AgentCloneButton({
         <DialogHeader>
           <DialogTitle>Frends Copyings</DialogTitle>
           <DialogDescription>
-            make your own friend of "{agent.name}" 
+            make your own friend of "{agent.name}"
           </DialogDescription>
         </DialogHeader>
 
