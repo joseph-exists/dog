@@ -47,6 +47,7 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
     name: "Midnight",
     description: "Deep blue-violet dark surface",
     tokens: {
+      "--background": "oklch(0.15 0.03 280)",
       "--card": "oklch(0.18 0.03 280)",
       "--card-foreground": "oklch(0.92 0.01 280)",
       "--foreground": "oklch(0.90 0.01 280)",
@@ -64,6 +65,7 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
     name: "Warm Sand",
     description: "Warm neutral light surface",
     tokens: {
+      "--background": "oklch(0.97 0.02 75)",
       "--card": "oklch(0.95 0.02 75)",
       "--card-foreground": "oklch(0.20 0.02 75)",
       "--foreground": "oklch(0.18 0.02 75)",
@@ -81,6 +83,7 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
     name: "Forest",
     description: "Dark green surface",
     tokens: {
+      "--background": "oklch(0.13 0.04 155)",
       "--card": "oklch(0.16 0.04 155)",
       "--card-foreground": "oklch(0.92 0.02 155)",
       "--foreground": "oklch(0.90 0.02 155)",
@@ -98,6 +101,7 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
     name: "Slate",
     description: "Cool neutral dark surface",
     tokens: {
+      "--background": "oklch(0.17 0.01 250)",
       "--card": "oklch(0.20 0.01 250)",
       "--card-foreground": "oklch(0.90 0.01 250)",
       "--foreground": "oklch(0.88 0.01 250)",

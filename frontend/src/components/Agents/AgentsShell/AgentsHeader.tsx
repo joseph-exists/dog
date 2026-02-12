@@ -64,7 +64,7 @@ export function AgentsHeader({
   const cardsTheme = getThemeById(cardsThemeId)
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+    <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 bg-background text-foreground">
       {/* Left: Title */}
       <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
 

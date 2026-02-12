@@ -59,6 +59,9 @@ export function isAgentTypeKey(s: string | null | undefined): s is AgentTypeKey 
  * the same-named variables that shadcn components read from.
  */
 export interface PresentationTokens {
+  // Page surface — overrides bg-background used by containers
+  "--background"?: string
+
   // Card surface — overrides shadcn Card's bg-card, text-card-foreground, border
   "--card"?: string
   "--card-foreground"?: string
