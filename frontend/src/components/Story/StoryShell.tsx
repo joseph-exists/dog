@@ -11,17 +11,17 @@
  * 2. Cards theme (inner) - affects panel content areas
  */
 import * as React from "react"
-import { cn } from "@/lib/utils"
-import { StoryHeader } from "./StoryHeader"
-import { StoryLayout, type PanelConfig } from "./StoryLayout"
-import {
-  getPageThemeById,
-  getPageThemeStyle,
-} from "@/components/Common/Themes/page_themes"
 import {
   getCardThemeById,
   getCardThemeStyle,
 } from "@/components/Common/Themes/card_themes"
+import {
+  getPageThemeById,
+  getPageThemeStyle,
+} from "@/components/Common/Themes/page_themes"
+import { cn } from "@/lib/utils"
+import { StoryHeader } from "./StoryHeader"
+import { type PanelConfig, StoryLayout } from "./StoryLayout"
 import { StoryPlayerProvider } from "./StoryPlayer"
 
 export interface StoryShellProps {
@@ -53,7 +53,9 @@ export function StoryShell({
   onCardsThemeChange,
   className,
 }: StoryShellProps) {
-  const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">("panels")
+  const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
+    "panels",
+  )
 
   const pageTheme = getPageThemeById(pageThemeId)
   const cardsTheme = getCardThemeById(cardsThemeId)

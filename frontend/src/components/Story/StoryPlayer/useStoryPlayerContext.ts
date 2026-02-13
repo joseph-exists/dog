@@ -18,7 +18,7 @@ export function useStoryPlayerContext(): StoryPlayerContextValue {
   if (!context) {
     throw new Error(
       "useStoryPlayerContext must be used within a StoryPlayerProvider. " +
-        "Ensure StoryPlayerProvider wraps your component tree."
+        "Ensure StoryPlayerProvider wraps your component tree.",
     )
   }
 

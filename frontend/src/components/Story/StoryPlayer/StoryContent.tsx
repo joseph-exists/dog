@@ -14,11 +14,11 @@
  */
 import DOMPurify from "dompurify"
 import { ChevronRight, Play } from "lucide-react"
+import type { StoryNodePublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import type { StoryNodePublic } from "@/client"
 import { useStoryPlayerContext } from "./useStoryPlayerContext"
 
 /**

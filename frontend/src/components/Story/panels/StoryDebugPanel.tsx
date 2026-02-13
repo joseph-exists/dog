@@ -14,8 +14,9 @@
  * - Choice History: List of choices made with index
  * - Available Choices: All choices for node, showing blocked status + conditions
  */
-import { useState } from "react"
+
 import { Bug, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

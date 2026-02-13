@@ -15,10 +15,10 @@
  */
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useMemo,
   useState,
-  type ReactNode,
 } from "react"
 import type { NodeChoicePublic, StoryNodePublic, StoryPublic } from "@/client"
 import { useStoryEditor } from "@/hooks/stories/useStoryEditor"
@@ -71,7 +71,7 @@ interface StoryPlayerProviderProps {
 // === Context ===
 
 export const StoryPlayerContext = createContext<StoryPlayerContextValue | null>(
-  null
+  null,
 )
 
 // === Provider ===
@@ -86,10 +86,7 @@ export function StoryPlayerProvider({
   })
 
   // Find start node
-  const startNode = useMemo(
-    () => nodes.find((n) => n.is_start_node),
-    [nodes]
-  )
+  const startNode = useMemo(() => nodes.find((n) => n.is_start_node), [nodes])
 
   // Runtime state
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null)
@@ -108,13 +105,13 @@ export function StoryPlayerProvider({
   // Derived: current node
   const currentNode = useMemo(
     () => nodes.find((n) => n.id === currentNodeId),
-    [nodes, currentNodeId]
+    [nodes, currentNodeId],
   )
 
   // Derived: all choices for current node (unfiltered, for debug panel)
   const allChoicesForNode = useMemo(
     () => choices.filter((c) => c.from_node_id === currentNodeId),
-    [choices, currentNodeId]
+    [choices, currentNodeId],
   )
 
   // Derived: available choices (filtered by requires_state conditions)
@@ -123,10 +120,10 @@ export function StoryPlayerProvider({
       allChoicesForNode.filter((choice) =>
         evaluateRequiresState(
           choice.requires_state as StateConditions | null,
-          playerState
-        )
+          playerState,
+        ),
       ),
-    [allChoicesForNode, playerState]
+    [allChoicesForNode, playerState],
   )
 
   // Derived: is this an end node?
@@ -150,14 +147,14 @@ export function StoryPlayerProvider({
       // Apply state mutations if any
       if (choice.sets_state) {
         setPlayerState((prev) =>
-          applySetsState(choice.sets_state as StateMutations, prev)
+          applySetsState(choice.sets_state as StateMutations, prev),
         )
       }
 
       // Navigate to next node
       setCurrentNodeId(choice.to_node_id)
     },
-    [currentNode, playerState]
+    [currentNode, playerState],
   )
 
   // Action: undo last choice (restores both node AND state)
@@ -221,7 +218,7 @@ export function StoryPlayerProvider({
       handleChoice,
       handleUndo,
       handleRestart,
-    ]
+    ],
   )
 
   return (
