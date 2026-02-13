@@ -57,7 +57,7 @@ export function useRoomPanels(
   // Resolved panels for current user
   const resolvedQuery = useQuery({
     queryKey: baseKey,
-    queryFn: () => getResolvedPanels(roomId),
+    queryFn: () => getResolvedPanels("room", roomId),
     enabled,
   })
 
@@ -71,7 +71,7 @@ export function useRoomPanels(
   // User's personal config
   const myConfigQuery = useQuery({
     queryKey: myConfigKey,
-    queryFn: () => getMyPanelConfig(roomId),
+    queryFn: () => getMyPanelConfig("room", roomId),
     enabled,
   })
 
@@ -93,7 +93,7 @@ export function useRoomPanels(
     }: {
       panels: PanelConfig[] | null
       useRoomDefaults: boolean
-    }) => updateMyPanelConfig(roomId, panels, useRoomDefaults),
+    }) => updateMyPanelConfig("room", roomId, panels, useRoomDefaults),
     onSuccess: () => {
       // Invalidate all panel queries to refresh resolved panels
       queryClient.invalidateQueries({ queryKey: baseKey })

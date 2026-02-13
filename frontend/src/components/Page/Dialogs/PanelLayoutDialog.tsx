@@ -2,21 +2,24 @@
  * PanelLayoutDialog Component
  *
  * Main dialog for panel layout customization.
- * Supports room-level and user-default editing modes.
+ * Supports entity-level and user-default editing modes.
+ * Uses Page/registry/panelTypes as single source of truth for available panels.
  *
  * @example
  * ```tsx
  * <PanelLayoutDialog
  *   open={isOpen}
  *   onOpenChange={setIsOpen}
- *   roomId={roomId}
- *   isRoomOwner={canManage}
+ *   entityId={storyId}
+ *   context="story"
+ *   isOwner={isAuthor}
+ *   userPermission="owner"
  * />
  * ```
  */
 
 import { Plus } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -41,6 +44,14 @@ import {
 } from "../Forms/FormSelectors/LayoutSourceSelector"
 import { InteractivePreview, type PreviewPanel } from "../InteractivePreview"
 import { PresetPicker, SYSTEM_PRESETS } from "../primitives/PresetPicker"
+import {
+  getPanelDisplayName,
+  getPanelsForContext,
+  getPanelsForEntityPermission,
+  type PanelContext,
+  type PanelKind,
+  type PanelPermission,
+} from "../registry"
 
 // ============================================================================
 // Types
@@ -51,36 +62,18 @@ export interface PanelLayoutDialogProps {
   open: boolean
   /** Called when open state changes */
   onOpenChange: (open: boolean) => void
-  /** Room ID (null for editing user defaults) */
-  roomId: string | null
-  /** Whether current user is room owner */
-  isRoomOwner?: boolean
-  /** Mode: room settings or user defaults */
-  mode?: "room" | "user-defaults"
-}
-
-// ============================================================================
-// Available Panels
-// ============================================================================
-
-const AVAILABLE_PANELS: PreviewPanel[] = [
-  { id: "chat", kind: "chat", prominence: "primary" },
-  { id: "story", kind: "storyEditor", prominence: "primary" },
-  { id: "runtime", kind: "storyRuntime", prominence: "primary" },
-  { id: "canvas", kind: "canvas", prominence: "primary" },
-  { id: "a2ui", kind: "a2ui", prominence: "primary" },
-  { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
-  { id: "debug", kind: "debug", prominence: "auxiliary" },
-]
-
-const panelNames: Record<string, string> = {
-  chat: "Chat",
-  storyEditor: "Story Editor",
-  storyRuntime: "Story Runtime",
-  canvas: "Canvas",
-  a2ui: "Agent UI",
-  participantPanel: "Participants",
-  debug: "Debug",
+  /** Entity ID (roomId, storyId, etc.) - null for editing user defaults */
+  entityId: string | null
+  /** Panel context - determines which panels are available */
+  context: PanelContext
+  /** Whether current user owns the entity */
+  isOwner?: boolean
+  /** User's permission level on this entity */
+  userPermission?: PanelPermission
+  /** Whether user is admin/superuser */
+  isAdmin?: boolean
+  /** Mode: entity settings or user defaults */
+  mode?: "entity" | "user-defaults"
 }
 
 // ============================================================================
@@ -90,14 +83,42 @@ const panelNames: Record<string, string> = {
 export function PanelLayoutDialog({
   open,
   onOpenChange,
-  roomId,
-  isRoomOwner = false,
-  mode = "room",
+  entityId,
+  context,
+  isOwner = false,
+  userPermission = "participant",
+  isAdmin = false,
+  mode = "entity",
 }: PanelLayoutDialogProps) {
-  // Room panels hook (only used in room mode)
-  const roomPanels = useRoomPanels(roomId ?? "", {
-    enabled: mode === "room" && !!roomId,
+  // Room panels hook (only used in room/entity mode)
+  // TODO: Generalize to usePanels hook that accepts entityType
+  const roomPanels = useRoomPanels(entityId ?? "", {
+    enabled: mode === "entity" && context === "room" && !!entityId,
   })
+
+  // Derive available panels from registry
+  const availablePanelsFromRegistry = useMemo(() => {
+    // Filter by context
+    let panels = getPanelsForContext(context)
+
+    // Filter by entity permission
+    const permittedPanels = getPanelsForEntityPermission(userPermission)
+    panels = panels.filter((p) =>
+      permittedPanels.some((pp) => pp.kind === p.kind)
+    )
+
+    // Filter by system role (exclude admin-only for non-admins)
+    if (!isAdmin) {
+      panels = panels.filter((p) => p.permission !== "admin")
+    }
+
+    // Convert to PreviewPanel format
+    return panels.map((p) => ({
+      id: p.kind,
+      kind: p.kind,
+      prominence: p.defaultProminence,
+    }))
+  }, [context, userPermission, isAdmin])
 
   // Local state for editing
   const [panels, setPanels] = useState<PreviewPanel[]>([])
@@ -111,13 +132,13 @@ export function PanelLayoutDialog({
   useEffect(() => {
     if (!open) return
 
-    if (mode === "room" && roomPanels.panels.length > 0) {
+    if (mode === "entity" && context === "room" && roomPanels.panels.length > 0) {
       setPanels(
         roomPanels.panels.map((p) => ({
           id: p.id,
           kind: p.kind,
           prominence: p.prominence,
-        })),
+        }))
       )
       const initialSource =
         (roomPanels.panelSource as LayoutSource) || "user_defaults"
@@ -131,7 +152,7 @@ export function PanelLayoutDialog({
       setSource("user_defaults")
       setSavedSource("user_defaults")
     }
-  }, [open, mode, roomPanels.panels, roomPanels.panelSource])
+  }, [open, mode, context, roomPanels.panels, roomPanels.panelSource])
 
   // Auto-switch to custom when user modifies panels
   const switchToCustom = () => {
@@ -174,15 +195,15 @@ export function PanelLayoutDialog({
   }
 
   // Get panels not yet added
-  const availablePanelsToAdd = AVAILABLE_PANELS.filter(
-    (ap) => !panels.some((p) => p.id === ap.id),
+  const availablePanelsToAdd = availablePanelsFromRegistry.filter(
+    (ap) => !panels.some((p) => p.id === ap.id)
   )
 
   // Handle save
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      if (mode === "room" && roomId) {
+      if (mode === "entity" && context === "room" && entityId) {
         if (source === "custom" || source === "room_override") {
           await roomPanels.setCustomPanels(panels as PanelConfig[])
         } else if (source === "user_defaults" || source === "room_defaults") {
@@ -190,6 +211,7 @@ export function PanelLayoutDialog({
           await roomPanels.resetToDefaults()
         }
       }
+      // TODO: Handle story entity type
       // TODO: Handle user-defaults mode
 
       showSuccessToast("Your panel layout has been updated.")
@@ -201,23 +223,28 @@ export function PanelLayoutDialog({
     }
   }
 
+  // Context-aware description
+  const description = context === "room"
+    ? "Customize how panels are arranged in this room."
+    : context === "story"
+    ? "Customize how panels are arranged for this story."
+    : "Customize your panel layout."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Panel Layout</DialogTitle>
-          <DialogDescription>
-            Customize how panels are arranged in this room.
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Source selector (room mode only) */}
-          {mode === "room" && (
+          {/* Source selector (entity mode only, room context for now) */}
+          {mode === "entity" && context === "room" && (
             <LayoutSourceSelector
               currentSource={source}
               onSourceChange={setSource}
-              isRoomOwner={isRoomOwner}
+              isRoomOwner={isOwner}
               hasRoomDefaults={!!roomPanels.roomDefaults}
               savedSource={savedSource}
             />
@@ -264,7 +291,7 @@ export function PanelLayoutDialog({
                       className="justify-start"
                       onClick={() => handleAddPanel(panel)}
                     >
-                      {panelNames[panel.kind] || panel.kind}
+                      {getPanelDisplayName(panel.kind as PanelKind)}
                     </Button>
                   ))}
                 </div>
