@@ -1,7 +1,7 @@
 // src/components/Story/StoryHeader.tsx
 
 import { LayoutGridIcon, PanelLeftIcon } from "lucide-react"
-import CreateStoryModal from "@/components/Story/StoryList/CreateStoryModal"
+import CreateStoryModal from "@/components/Story/Display/CreateStoryModal"
 // TODO: story buttons and stuff :woooo:
 
 

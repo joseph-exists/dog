@@ -3719,6 +3719,30 @@ export const StoryCreateSchema = {
             type: 'boolean',
             title: 'Is Published',
             default: false
+        },
+        story_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Story Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
         }
     },
     type: 'object',
@@ -4063,6 +4087,30 @@ export const StoryPublicSchema = {
         is_published: {
             type: 'boolean',
             title: 'Is Published'
+        },
+        story_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Story Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
         },
         id: {
             type: 'string',

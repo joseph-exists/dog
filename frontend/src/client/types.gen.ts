@@ -1082,6 +1082,13 @@ export type StoryCreate = {
     content_format?: (ContentFormat | null);
     description?: (string | null);
     is_published?: boolean;
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    story_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
 };
 
 /**
@@ -1165,6 +1172,13 @@ export type StoryPublic = {
     content_format?: (ContentFormat | null);
     description?: (string | null);
     is_published: boolean;
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    story_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
     id: string;
     owner_id: string;
     current_version: number;

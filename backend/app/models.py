@@ -256,6 +256,8 @@ class StoryBase(SQLModel):
     content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)
     description: str | None = Field(default=None, max_length=1000)
     is_published: bool = Field(default=False)
+    story_type: str | None = Field(default=None, description="text for type that can be overloaded in presentation")
+    presentation: dict | None = Field(default=None, sa_column=Column(JSON))
 
 class ItemBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
@@ -512,6 +514,8 @@ class Story(StoryBase, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     deleted_at: datetime | None = Field(default=None, nullable=True)
+    story_type: str | None = Field(default=None, description="text for type that can be overloaded in presentation")
+    presentation: dict | None = Field(default=None, sa_column=Column(JSON))
 
     # Relationships defined after all models
     # nodes: list["StoryNode"] = Relationship(back_populates="story")
@@ -528,6 +532,8 @@ class StoryPublic(StoryBase):
     is_published: bool
     created_at: datetime
     updated_at: datetime
+    story_type: str | None = Field(default=None, description="text for type that can be overloaded in presentation")
+    presentation: dict | None = Field(default=None, sa_column=Column(JSON))
 
 
 class StoriesPublic(SQLModel):

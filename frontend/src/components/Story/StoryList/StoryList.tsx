@@ -11,7 +11,7 @@
 import { AlertCircle, BookOpen, Loader2 } from "lucide-react"
 
 import { useStories } from "@/hooks/stories/useStories"
-import CreateStoryModal from "./CreateStoryModal"
+import CreateStoryModal from "../Display/CreateStoryModal"
 import StoryCard from "./StoryCard"
 
 const StoryList = () => {

@@ -16,6 +16,7 @@ export type UserAgentConfigData = Omit<
   presentation?: AgentPresentation | { [key: string]: unknown } | null
 }
 
+
 // Strict variant for agent creation/validation where we require proper types
 export type StrictAgentConfig = Omit<
   UserAgentConfigPublic,
