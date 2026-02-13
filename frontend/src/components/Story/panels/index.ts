@@ -4,3 +4,4 @@
 // All panels consume StoryPlayerContext for shared state.
 
 export { StoryPlayerPanel } from "./StoryPlayerPanel"
+export { StoryDebugPanel } from "./StoryDebugPanel"
