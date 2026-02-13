@@ -33,6 +33,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
 import { PanelLayoutDialog } from "../Dialogs/PanelLayoutDialog"
+// note: room version contains room ID and isroomOwner - page don't :)
 import {
   type Participant,
   ParticipantStack,

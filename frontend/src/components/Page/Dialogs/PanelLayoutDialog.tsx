@@ -2,15 +2,13 @@
  * PanelLayoutDialog Component
  *
  * Main dialog for panel layout customization.
- * Supports room-level and user-default editing modes.
+ * Supports page-level and user-default editing modes.
  *
  * @example
  * ```tsx
  * <PanelLayoutDialog
  *   open={isOpen}
  *   onOpenChange={setIsOpen}
- *   roomId={roomId}
- *   isRoomOwner={canManage}
  * />
  * ```
  */
@@ -33,7 +31,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
-import { useRoomPanels } from "@/hooks/useRoomPanels"
 import type { PanelConfig } from "@/services/panelService"
 import {
   type LayoutSource,
@@ -52,11 +49,11 @@ export interface PanelLayoutDialogProps {
   /** Called when open state changes */
   onOpenChange: (open: boolean) => void
   /** Room ID (null for editing user defaults) */
-  roomId: string | null
-  /** Whether current user is room owner */
-  isRoomOwner?: boolean
-  /** Mode: room settings or user defaults */
-  mode?: "room" | "user-defaults"
+  // roomId: string | null
+  // /** Whether current user is room owner */
+  // isRoomOwner?: boolean
+  // /** Mode: room settings or user defaults */
+  // mode?: "room" | "user-defaults"
 }
 
 // ============================================================================
@@ -90,14 +87,14 @@ const panelNames: Record<string, string> = {
 export function PanelLayoutDialog({
   open,
   onOpenChange,
-  roomId,
-  isRoomOwner = false,
-  mode = "room",
+  // roomId,
+  // isRoomOwner = false,
+  // mode = "room",
 }: PanelLayoutDialogProps) {
   // Room panels hook (only used in room mode)
-  const roomPanels = useRoomPanels(roomId ?? "", {
-    enabled: mode === "room" && !!roomId,
-  })
+  // const roomPanels = useRoomPanels(roomId ?? "", {
+  //   enabled: mode === "room" && !!roomId,
+  // })
 
   // Local state for editing
   const [panels, setPanels] = useState<PreviewPanel[]>([])

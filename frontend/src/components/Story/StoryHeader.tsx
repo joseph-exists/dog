@@ -1,10 +1,27 @@
 // src/components/Story/StoryHeader.tsx
 
-import { LayoutGridIcon, PanelLeftIcon } from "lucide-react"
+import {
+  BookOpen,
+  Bug,
+  Grid3X3,
+  Layout,
+  PanelLeftIcon,
+  LayoutGridIcon,
+  LayoutList,
+  Link,
+  LayoutPanelLeft,
+  MoreVertical,
+  Plus,
+  Settings,
+  Trash2,
+  MessageSquare,
+  Grid2X2PlusIcon,
+  Gamepad2Icon,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
 import CreateStoryModal from "@/components/Story/Display/CreateStoryModal"
-// TODO: story buttons and stuff :woooo:
-
-
+import type * as React from "react"
+import { useState } from "react"
 import {
   Select,
   SelectContent,
@@ -21,13 +38,26 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { PanelLayoutDialog } from "@/components/Page/Dialogs/PanelLayoutDialog"
 
 import { PAGE_THEMES, getPageThemeById } from "@/components/Common/Themes/page_themes"
 import { CARD_THEMES, getCardThemeById } from "@/components/Common/Themes/card_themes" 
 
+export type StoryType = "process" | "workspace" | "play"
+
 export interface StoryHeaderProps {
+  storyId?: string
   /** Page title */
   title: string
+  type: StoryType 
+  /* not sure if this is the way i want to go or not */
   /** Currently selected page theme ID */
   pageThemeId: string
   /** Currently selected cards theme ID */
@@ -40,8 +70,32 @@ export interface StoryHeaderProps {
   layoutMode: "panels" | "tabs"
   /** Layout mode change callback */
   onLayoutModeChange: (mode: "panels" | "tabs") => void
+
+  canEdit: boolean
+  /** Add panel callback (workspace only) */
+  onAddPanel?: () => void
+  /** Room settings callback */
+  onSettings?: () => void
+  /** Copy link callback */
+  onCopyLink?: () => void
+  /** Delete room callback */
+  onDelete?: () => void
+
+  showDebugPanel?: boolean
+  /** Toggle debug panel callback */
+  onToggleDebugPanel?: () => void
+  /** Show dev mode indicator when internal messages are enabled. */
+  devModeEnabled?: boolean
+  /** Additional className */
+  className?: string
 }
 
+const storyTypeIcons: Record<StoryType, React.ElementType>={
+  process: MessageSquare,
+  workspace: Grid2X2PlusIcon,
+  play: Gamepad2Icon,
+  
+}
 
 /**
  * PageHeader - Header component for entity pages
@@ -50,6 +104,8 @@ export interface StoryHeaderProps {
  * Actions vary based on whether the current user is the owner.
  */
 export function StoryHeader({
+  storyId,
+  type,
   title,
   pageThemeId,
   cardsThemeId,
@@ -57,7 +113,17 @@ export function StoryHeader({
   onCardsThemeChange,
   layoutMode,
   onLayoutModeChange,
+  canEdit,
+  onAddPanel,
+  onSettings,
+  onCopyLink,
+  showDebugPanel,
+  onToggleDebugPanel,
+  devModeEnabled,
+  className,
 }: StoryHeaderProps) {
+  const TypeIcon = storyTypeIcons[type]
+  const [layoutDialogOpen, setLayoutDialogOpen] = useState(false)
   const pageTheme = getPageThemeById(pageThemeId)
   const cardsTheme = getCardThemeById(cardsThemeId)
 
@@ -65,6 +131,7 @@ export function StoryHeader({
     <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 bg-background text-foreground">
       {/* Left: Sidebar trigger + Title */}
       <div className="flex items-center gap-2">
+      <TypeIcon className="h-5 w-5 text-muted-foreground" />
         <SidebarTrigger className="-ml-1 text-muted-foreground" />
         <Separator orientation="vertical" className="h-4" />
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -72,7 +139,8 @@ export function StoryHeader({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-3">
-        {/* Page theme selector */}
+        {/* TODO: change to DropdownMenu Page theme selector */}
+        
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -93,7 +161,7 @@ export function StoryHeader({
           </Tooltip>
         </TooltipProvider>
 
-        {/* Cards theme selector */}
+        {/* Cards theme selector TODO: DropdownMenu */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -141,10 +209,70 @@ export function StoryHeader({
           </ToggleGroupItem>
         </ToggleGroup>
 
+        {/* StoryMenu */}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {type === "workspace" && onAddPanel && (
+              <DropdownMenuItem onClick={onAddPanel}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Panel
+              </DropdownMenuItem>
+            )}
+            {onCopyLink && (
+              <DropdownMenuItem onClick={onCopyLink}>
+                <Link className="h-4 w-4 mr-2" />
+                Copy Link
+              </DropdownMenuItem>
+            )}
+            {onToggleDebugPanel && (
+              <DropdownMenuItem onClick={onToggleDebugPanel}>
+                <Bug className="h-4 w-4 mr-2" />
+                {showDebugPanel ? "Hide Debug Panel" : "Show Debug Panel"}
+              </DropdownMenuItem>
+            )}
+              <DropdownMenuItem onClick={() => setLayoutDialogOpen(true)}>
+                <Layout className="h-4 w-4 mr-2" />
+                Panel Layout
+              </DropdownMenuItem>
+            {canEdit && onSettings && (
+              <DropdownMenuItem onClick={onSettings}>
+                <Settings className="h-4 w-4 mr-2" />
+                Story Settings
+              </DropdownMenuItem>
+            )}
+            {/* {canEdit && onDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={onDelete}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Story
+                </DropdownMenuItem>
+              </>
+            )} */}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Panel layout dialog */}
+        <PanelLayoutDialog
+          open={layoutDialogOpen}
+          onOpenChange={setLayoutDialogOpen}
+        />
+
+
         {/* Create actions   <StoryPlayer /> */}
          <CreateStoryModal />
 
       </div>
-    </div>
+
   )
 }
