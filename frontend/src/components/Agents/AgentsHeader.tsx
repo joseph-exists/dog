@@ -266,6 +266,8 @@ export function AgentsHeader({
         <PanelLayoutDialog
           open={layoutDialogOpen}
           onOpenChange={setLayoutDialogOpen}
+          entityId={null}
+          context="room"
         />
       )
       </div>

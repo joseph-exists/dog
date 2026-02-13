@@ -266,6 +266,8 @@ export function StoryHeader({
         <PanelLayoutDialog
           open={layoutDialogOpen}
           onOpenChange={setLayoutDialogOpen}
+          entityId={null}
+          context="story"
         />
 
 
