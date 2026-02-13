@@ -1,13 +1,32 @@
-// src/components/Page/PageShell.tsx
-import * as React from 'react'
+// src/components/Story/StoryShell.tsx
+/**
+ * StoryShell - Main container that orchestrates the Story page layout
+ *
+ * ARCHITECTURE DECISION: StoryPlayerProvider wraps StoryLayout so that
+ * all panels can access shared player state via context. The shell knows
+ * the storyId (from route params) and passes it to the provider.
+ *
+ * THEMING: Uses two-layer theme cascade:
+ * 1. Page theme (outer) - affects header and overall page
+ * 2. Cards theme (inner) - affects panel content areas
+ */
+import * as React from "react"
+import {
+  getCardThemeById,
+  getCardThemeStyle,
+} from "@/components/Common/Themes/card_themes"
+import {
+  getPageThemeById,
+  getPageThemeStyle,
+} from "@/components/Common/Themes/page_themes"
 import { cn } from "@/lib/utils"
 import { StoryHeader } from "./StoryHeader"
-import { StoryLayout, type PanelConfig } from "./StoryLayout"
-import { getPageThemeById, getPageThemeStyle } from "@/components/Common/Themes/page_themes"
-import { getCardThemeById, getCardThemeStyle } from "@/components/Common/Themes/card_themes"
-
+import { type PanelConfig, StoryLayout } from "./StoryLayout"
+import { StoryPlayerProvider } from "./StoryPlayer"
 
 export interface StoryShellProps {
+  /** Story ID for data fetching (required for player panels) */
+  storyId?: string
   /** Page title */
   title: string
   /** Panel configurations */
@@ -22,19 +41,10 @@ export interface StoryShellProps {
   onCardsThemeChange: (themeId: string) => void
   /** Additional className */
   className?: string
-  // entityType: string
-  // entityId: string
-  // isOwner: boolean
-  // onDelete?: () => void
 }
 
-/**
- * StoryShell - Main container that orchestrates the page layout
- *
- * Uses usePageEditor hook to manage layout state and editing.
- * Renders the PageHeader, PageLayout with blocks, and editor components.
- */
 export function StoryShell({
+  storyId,
   title,
   panels,
   pageThemeId,
@@ -43,19 +53,16 @@ export function StoryShell({
   onCardsThemeChange,
   className,
 }: StoryShellProps) {
-  const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">("panels",)
-  // const [paletteOpen, setPaletteOpen] = useState(true)
-  // const [targetColumn, setTargetColumn] = useState<"primary" | "auxiliary">(
-  //   "primary",
-  // )
+  const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
+    "panels",
+  )
 
   const pageTheme = getPageThemeById(pageThemeId)
   const cardsTheme = getCardThemeById(cardsThemeId)
-  
+
   return (
-  // outermost: page theme scope (affects header and content)
-  // transparent wrapper - only sets CSS variables does not render a surface
-  // downstream components render with inherited variables
+    // Outermost: page theme scope (affects header and content)
+    // Transparent wrapper - only sets CSS variables, does not render a surface
     <div
       style={getPageThemeStyle(pageTheme)}
       className={cn("flex flex-col h-full", className)}
@@ -71,9 +78,21 @@ export function StoryShell({
       />
 
       {/* Inner: Cards theme scope (overrides page theme for card areas) */}
-      {/* Transparent wrapper — only sets CSS variables, does not render a surface */}
+      {/* Transparent wrapper - only sets CSS variables, does not render a surface */}
       <div style={getCardThemeStyle(cardsTheme)} className="flex-1 min-h-0">
-        <StoryLayout panels={panels} mode={layoutMode} />
+        {/*
+          ARCHITECTURE DECISION: Provider wraps layout so all panels
+          can access shared player state without prop drilling.
+          Only wrap when storyId is provided (player pages vs. listing pages).
+          See StoryPlayerProvider for context shape.
+        */}
+        {storyId ? (
+          <StoryPlayerProvider storyId={storyId}>
+            <StoryLayout panels={panels} mode={layoutMode} />
+          </StoryPlayerProvider>
+        ) : (
+          <StoryLayout panels={panels} mode={layoutMode} />
+        )}
       </div>
     </div>
   )

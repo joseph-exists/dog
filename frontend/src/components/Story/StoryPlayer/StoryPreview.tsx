@@ -9,7 +9,7 @@
  * - Navigation controls (undo with state restoration, restart)
  * - Collapsible debug panel (state, history, available choices)
  *
- * 
+ *
  */
 
 import DOMPurify from "dompurify"

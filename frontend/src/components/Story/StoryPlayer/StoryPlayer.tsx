@@ -9,7 +9,7 @@
  * - Navigation controls (undo with state restoration, restart)
  * - Collapsible debug panel (state, history, available choices)
  *
- * 
+ *
  */
 import DOMPurify from "dompurify"
 import {
@@ -40,10 +40,10 @@ import {
 } from "@/utils/stateConditions"
 
 interface StoryPlayerProps {
-    story: StoryPublic
-    nodes: StoryNodePublic[]
-    choices: NodeChoicePublic[]
-    onExit: () => void
+  story: StoryPublic
+  nodes: StoryNodePublic[]
+  choices: NodeChoicePublic[]
+  onExit: () => void
 }
 
 interface HistoryEntry {
