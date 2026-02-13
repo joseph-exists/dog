@@ -20,7 +20,7 @@ import {
   getPageThemeStyle,
 } from "@/components/Common/Themes/page_themes"
 import { cn } from "@/lib/utils"
-import { StoryHeader } from "./StoryHeader"
+import { StoryHeader, type StoryType } from "./StoryHeader"
 import { type PanelConfig, StoryLayout } from "./StoryLayout"
 import { StoryPlayerProvider } from "./StoryPlayer"
 
@@ -29,6 +29,10 @@ export interface StoryShellProps {
   storyId?: string
   /** Page title */
   title: string
+  /** Story type - controls header icon and available actions */
+  type: StoryType
+  /** Whether the current user can edit this story */
+  canEdit: boolean
   /** Panel configurations */
   panels: PanelConfig[]
   /** Currently selected page theme ID */
@@ -46,6 +50,8 @@ export interface StoryShellProps {
 export function StoryShell({
   storyId,
   title,
+  type,
+  canEdit,
   panels,
   pageThemeId,
   cardsThemeId,
@@ -69,6 +75,8 @@ export function StoryShell({
     >
       <StoryHeader
         title={title}
+        type={type}
+        canEdit={canEdit}
         pageThemeId={pageThemeId}
         cardsThemeId={cardsThemeId}
         onPageThemeChange={onPageThemeChange}

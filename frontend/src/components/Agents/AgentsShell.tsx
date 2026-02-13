@@ -15,7 +15,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { AgentsHeader } from "./AgentsHeader"
+import { AgentsHeader, type AgentType } from "./AgentsHeader"
 import { AgentsLayout, type PanelConfig } from "./AgentsLayout"
 // import { getThemeById, getThemeStyle } from "./themes"
 import { getPageThemeById, getPageThemeStyle } from "@/components/Common/Themes/page_themes"
@@ -25,6 +25,10 @@ import { getCardThemeById, getCardThemeStyle } from "@/components/Common/Themes/
 export interface AgentsShellProps {
   /** Page title */
   title: string
+  /** Agent type - controls header icon and available actions */
+  type: AgentType
+  /** Whether the current user can edit */
+  canEdit: boolean
   /** Panel configurations */
   panels: PanelConfig[]
   /** Currently selected page theme ID */
@@ -41,6 +45,8 @@ export interface AgentsShellProps {
 
 export function AgentsShell({
   title,
+  type,
+  canEdit,
   panels,
   pageThemeId,
   cardsThemeId,
@@ -65,6 +71,8 @@ export function AgentsShell({
     >
       <AgentsHeader
         title={title}
+        type={type}
+        canEdit={canEdit}
         pageThemeId={pageThemeId}
         cardsThemeId={cardsThemeId}
         onPageThemeChange={onPageThemeChange}

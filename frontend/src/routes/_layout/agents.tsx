@@ -55,6 +55,8 @@ function AgentsPage() {
   return (
     <AgentsShell
       title="Agents"
+      type="work"
+      canEdit={false}
       panels={panels}
       pageThemeId={pageThemeId}
       cardsThemeId={cardsThemeId}

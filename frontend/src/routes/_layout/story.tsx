@@ -57,6 +57,8 @@ function StoryPage() {
   return (
     <StoryShell
       title="Library"
+      type="workspace"
+      canEdit={false}
       panels={panels}
       pageThemeId={pageThemeId}
       cardsThemeId={cardsThemeId}

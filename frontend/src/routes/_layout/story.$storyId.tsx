@@ -106,6 +106,8 @@ function StoryPlayerPage() {
     <StoryShell
       storyId={storyId}
       title={story.title}
+      type="play"
+      canEdit={true} // TODO: check story.owner_id against current user
       panels={panels}
       pageThemeId={pageThemeId}
       cardsThemeId={cardsThemeId}

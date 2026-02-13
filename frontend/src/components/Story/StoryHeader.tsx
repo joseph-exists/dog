@@ -1,19 +1,14 @@
 // src/components/Story/StoryHeader.tsx
 
 import {
-  BookOpen,
   Bug,
-  Grid3X3,
   Layout,
   PanelLeftIcon,
   LayoutGridIcon,
-  LayoutList,
   Link,
-  LayoutPanelLeft,
   MoreVertical,
   Plus,
   Settings,
-  Trash2,
   MessageSquare,
   Grid2X2PlusIcon,
   Gamepad2Icon,
@@ -42,7 +37,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
+  // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PanelLayoutDialog } from "@/components/Page/Dialogs/PanelLayoutDialog"
@@ -104,7 +99,7 @@ const storyTypeIcons: Record<StoryType, React.ElementType>={
  * Actions vary based on whether the current user is the owner.
  */
 export function StoryHeader({
-  storyId,
+  // storyId,
   type,
   title,
   pageThemeId,
@@ -119,8 +114,8 @@ export function StoryHeader({
   onCopyLink,
   showDebugPanel,
   onToggleDebugPanel,
-  devModeEnabled,
-  className,
+  // devModeEnabled,
+  //className,
 }: StoryHeaderProps) {
   const TypeIcon = storyTypeIcons[type]
   const [layoutDialogOpen, setLayoutDialogOpen] = useState(false)
