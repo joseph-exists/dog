@@ -1,17 +1,16 @@
 /**
  * Panel Configuration Service
  *
- * Manages panel configuration - resolving, updating,
- * and managing user overrides vs room defaults.
+ * Manages panel configuration for any Page entity (Room, Story, etc.).
+ * Handles the layered resolution: user override → entity defaults → type defaults
  *
  * Architecture:
+ * - Types imported from Page/registry/panelTypes (single source of truth)
+ * - Routes to appropriate backend service based on entityType
  * - Wraps OpenAPI client methods for panel configuration
- * - Provides strongly-typed PanelConfig interface
- * - Handles the layered resolution: user override → room defaults → type defaults
  *
  * @see backend/app/crud_panels.py for resolution logic
  */
-//  TODO: refactor from Room to Page - if secondary distinction required, then figure that out (josep)
 
 import {
   type ResolvedPanelConfig,
@@ -19,44 +18,42 @@ import {
   RoomPanelsService,
   type UserRoomPanelConfigPublic,
 } from "@/client"
+import type {
+  PanelKind,
+  PanelProminence,
+} from "@/components/Page/registry/panelTypes"
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
 /**
- * Panel configuration item
- *
- * Represents a single panel in the room layout.
- * - id: unique identifier for this panel instance
- * - kind: the panel type (determines which component renders)
- * - prominence: where the panel appears in the layout
+ * Panel configuration item for layouts.
+ * Uses PanelKind from registry as single source of truth.
  */
 export interface PanelConfig {
   id: string
-  kind:
-    | "chat"
-    | "storyEditor"
-    | "storyRuntime"
-    | "storyPlayer"
-    | "debug"
-    | "canvas"
-    | "a2ui"
-    | "participantPanel"
-  prominence: "primary" | "auxiliary"
+  kind: PanelKind
+  prominence: PanelProminence
 }
 
 /**
- * Resolved panel configuration with source tracking
+ * Supported entity types for panel configuration.
+ * Add new types here as backend support is added.
+ */
+export type PanelEntityType = "room" | "story"
+
+/**
+ * Resolved panel configuration with source tracking.
  *
  * The source tells us where the configuration came from:
- * - user_override: User has custom config for this room
- * - room_defaults: Using room owner's defaults
- * - type_defaults: Using built-in defaults for room type
+ * - user_override: User has custom config for this entity
+ * - entity_defaults: Using entity owner's defaults
+ * - type_defaults: Using built-in defaults for entity type
  */
 export interface ResolvedPanels {
   panels: PanelConfig[]
-  source: "user_override" | "room_defaults" | "type_defaults"
+  source: "user_override" | "entity_defaults" | "type_defaults"
 }
 
 // Re-export API types for consumers that need them
@@ -66,132 +63,188 @@ export type {
   UserRoomPanelConfigPublic,
 }
 
+// Re-export registry helpers for convenience
+export {
+  getPanelDisplayName,
+  isValidPanelKind,
+} from "@/components/Page/registry/panelTypes"
+
 // ============================================================================
 // Service Functions
 // ============================================================================
 
 /**
- * Get resolved panel configuration for current user
+ * Get resolved panel configuration for current user on an entity.
  *
- * Returns the effective panel layout based on the layered resolution:
- * 1. User's personal override (if set and not using defaults)
- * 2. Room owner's defaults (if set)
- * 3. Built-in type defaults (chat, story, workspace)
+ * Resolution order:
+ * 1. User's personal override (if set)
+ * 2. Entity owner's defaults (if set)
+ * 3. Built-in type defaults
+ *
+ * @param entityType - Type of entity (room, story, etc.)
+ * @param entityId - ID of the entity
  */
 export async function getResolvedPanels(
-  roomId: string,
+  entityType: PanelEntityType,
+  entityId: string
 ): Promise<ResolvedPanels> {
-  const response = await RoomPanelsService.getResolvedPanels({ roomId })
-  // Cast through unknown since API returns generic dict array
-  const panels = (response.panels ?? []) as unknown as PanelConfig[]
+  if (entityType === "room") {
+    const response = await RoomPanelsService.getResolvedPanels({
+      roomId: entityId,
+    })
+    // Cast through unknown since API returns generic dict array
+    const panels = (response.panels ?? []) as unknown as PanelConfig[]
+    // Map room-specific source names to generic ones
+    const sourceMap: Record<string, ResolvedPanels["source"]> = {
+      user_override: "user_override",
+      room_defaults: "entity_defaults",
+      type_defaults: "type_defaults",
+    }
+    return {
+      panels,
+      source: sourceMap[response.source] ?? "type_defaults",
+    }
+  }
+
+  // Story: TODO when backend ready
+  // For now, return empty with type defaults
   return {
-    panels,
-    source: response.source as ResolvedPanels["source"],
+    panels: [],
+    source: "type_defaults",
   }
 }
 
 /**
- * Get room's default panel configuration
+ * Get entity's default panel configuration.
  *
- * Returns the configuration set by the room owner, or null if not set.
- * When null, the room uses built-in type defaults.
+ * Returns the configuration set by the entity owner, or null if not set.
+ * When null, the entity uses built-in type defaults.
+ *
+ * @param entityType - Type of entity
+ * @param entityId - ID of the entity
  */
-export async function getRoomPanelDefaults(
-  roomId: string,
+export async function getEntityPanelDefaults(
+  entityType: PanelEntityType,
+  entityId: string
 ): Promise<RoomPanelDefaultsPublic | null> {
-  return await RoomPanelsService.getRoomDefaults({ roomId })
+  if (entityType === "room") {
+    return await RoomPanelsService.getRoomDefaults({ roomId: entityId })
+  }
+
+  // Story: TODO when backend ready
+  return null
 }
 
 /**
- * Update room's default panel configuration (owner only)
+ * Update entity's default panel configuration (owner only).
  *
- * Sets the default panel layout for all participants in this room.
- * Only the room owner can call this endpoint.
+ * Sets the default panel layout for all participants/viewers.
+ * Only the entity owner can call this endpoint.
  *
- * @throws ApiError with 403 if not room owner
+ * @param entityType - Type of entity
+ * @param entityId - ID of the entity
+ * @param panels - Panel configuration to set
+ * @throws ApiError with 403 if not entity owner
+ */
+export async function updateEntityPanelDefaults(
+  entityType: PanelEntityType,
+  entityId: string,
+  panels: PanelConfig[]
+): Promise<RoomPanelDefaultsPublic> {
+  if (entityType === "room") {
+    // Cast to API expected type (generic dict array)
+    const requestBody = panels as unknown as Array<{ [key: string]: unknown }>
+    return await RoomPanelsService.updateRoomDefaults({
+      roomId: entityId,
+      requestBody,
+    })
+  }
+
+  // Story: TODO when backend ready
+  throw new Error(`Panel defaults not yet supported for entity type: ${entityType}`)
+}
+
+/**
+ * Get current user's panel config override for an entity.
+ *
+ * Returns the user's personal override, or null if not set.
+ * Check `use_room_defaults` to see if they're using entity defaults.
+ *
+ * @param entityType - Type of entity
+ * @param entityId - ID of the entity
+ */
+export async function getMyPanelConfig(
+  entityType: PanelEntityType,
+  entityId: string
+): Promise<UserRoomPanelConfigPublic | null> {
+  if (entityType === "room") {
+    return await RoomPanelsService.getMyPanelConfig({ roomId: entityId })
+  }
+
+  // Story: TODO when backend ready
+  return null
+}
+
+/**
+ * Update current user's panel config for an entity.
+ *
+ * Sets the user's personal panel layout.
+ *
+ * @param entityType - Type of entity
+ * @param entityId - ID of the entity
+ * @param panels - Panel configuration (null to clear and use defaults)
+ * @param useDefaults - If true, ignore panels and use entity/type defaults
+ */
+export async function updateMyPanelConfig(
+  entityType: PanelEntityType,
+  entityId: string,
+  panels: PanelConfig[] | null,
+  useDefaults: boolean
+): Promise<UserRoomPanelConfigPublic> {
+  if (entityType === "room") {
+    // Cast to API expected type (generic dict array or null)
+    const requestBody = panels as unknown as Array<{
+      [key: string]: unknown
+    }> | null
+    return await RoomPanelsService.updateMyPanelConfig({
+      roomId: entityId,
+      requestBody,
+      useRoomDefaults: useDefaults,
+    })
+  }
+
+  // Story: TODO when backend ready
+  throw new Error(`Panel config not yet supported for entity type: ${entityType}`)
+}
+
+// ============================================================================
+// Legacy Compatibility Functions
+// ============================================================================
+
+/**
+ * @deprecated Use getResolvedPanels(entityType, entityId) instead
+ */
+export async function getResolvedPanelsForRoom(
+  roomId: string
+): Promise<ResolvedPanels> {
+  return getResolvedPanels("room", roomId)
+}
+
+/**
+ * @deprecated Use getEntityPanelDefaults(entityType, entityId) instead
+ */
+export async function getRoomPanelDefaults(
+  roomId: string
+): Promise<RoomPanelDefaultsPublic | null> {
+  return getEntityPanelDefaults("room", roomId)
+}
+
+/**
+ * @deprecated Use updateEntityPanelDefaults(entityType, entityId, panels) instead
  */
 export async function updateRoomPanelDefaults(
   roomId: string,
-  panels: PanelConfig[],
+  panels: PanelConfig[]
 ): Promise<RoomPanelDefaultsPublic> {
-  // Cast to API expected type (generic dict array)
-  const requestBody = panels as unknown as Array<{ [key: string]: unknown }>
-  return await RoomPanelsService.updateRoomDefaults({
-    roomId,
-    requestBody,
-  })
-}
-
-/**
- * Get current user's panel config override
- *
- * Returns the user's personal override for this room, or null if not set.
- * Check `use_room_defaults` to see if they're using room defaults.
- */
-export async function getMyPanelConfig(
-  roomId: string,
-): Promise<UserRoomPanelConfigPublic | null> {
-  return await RoomPanelsService.getMyPanelConfig({ roomId })
-}
-
-/**
- * Update current user's panel config
- *
- * Sets the user's personal panel layout for this room.
- *
- * @param roomId - Room to update config for
- * @param panels - Panel configuration (null to clear and use defaults)
- * @param useRoomDefaults - If true, ignore panels and use room/type defaults
- */
-export async function updateMyPanelConfig(
-  roomId: string,
-  panels: PanelConfig[] | null,
-  useRoomDefaults: boolean,
-): Promise<UserRoomPanelConfigPublic> {
-  // Cast to API expected type (generic dict array or null)
-  const requestBody = panels as unknown as Array<{
-    [key: string]: unknown
-  }> | null
-  return await RoomPanelsService.updateMyPanelConfig({
-    roomId,
-    requestBody,
-    useRoomDefaults,
-  })
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Check if a panel kind is valid
- */
-export function isValidPanelKind(kind: string): kind is PanelConfig["kind"] {
-  return [
-    "chat",
-    "storyEditor",
-    "storyRuntime",
-    "storyPlayer",
-    "debug",
-    "canvas",
-    "a2ui",
-    "participantPanel",
-  ].includes(kind)
-}
-
-/**
- * Get display name for a panel kind
- */
-export function getPanelDisplayName(kind: PanelConfig["kind"]): string {
-  const names: Record<PanelConfig["kind"], string> = {
-    chat: "Chat",
-    storyEditor: "Story Editor",
-    storyRuntime: "Story Runtime",
-    storyPlayer: "Story Player",
-    debug: "Debug",
-    canvas: "Canvas",
-    a2ui: "Agent UI",
-    participantPanel: "Participants",
-  }
-  return names[kind]
+  return updateEntityPanelDefaults("room", roomId, panels)
 }

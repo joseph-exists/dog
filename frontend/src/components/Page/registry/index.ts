@@ -45,3 +45,23 @@ export {
   type RelationshipTypeDefinition,
   relationshipTypes,
 } from "./relationshipTypes"
+
+// Panel types
+export {
+  areDependenciesSatisfied,
+  getDefaultPanelConfig,
+  getPanelDependents,
+  getPanelDisplayName,
+  getPanelsForContext,
+  getPanelsForEntityPermission,
+  getPanelsForSystemRole,
+  getPanelType,
+  isValidPanelKind,
+  PANEL_TYPES,
+  type EntityCardinality,
+  type PanelContext,
+  type PanelKind,
+  type PanelPermission,
+  type PanelProminence,
+  type PanelTypeDefinition,
+} from "./panelTypes"
