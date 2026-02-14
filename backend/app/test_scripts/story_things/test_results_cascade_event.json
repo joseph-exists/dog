@@ -1,0 +1,37 @@
+{
+  "test_suite": "M-2: The Cascade Event",
+  "start_time": "2026-02-13T14:17:14.467365",
+  "end_time": "2026-02-13T14:17:15.574192",
+  "story_id": "3fc7f4f4-174a-48d5-a2fa-118cf2f5b2f9",
+  "node_ids": {
+    "alert": "58354c88-c74d-4ab3-a1ef-893e3057e641",
+    "database_investigation": "2abd4eed-cc2b-4b3f-b171-116ae3ee290b",
+    "network_investigation": "8169efe9-6ead-48a4-aa1b-7cb52604a6b0",
+    "application_investigation": "201c756e-e9cd-400f-8a5e-94093499a20f",
+    "monitoring_investigation": "fae8b917-2484-4522-b972-d39f3cb19398",
+    "ending_clean_recovery": "cd2f405f-4570-4317-a1f0-3fc5a7b96b80",
+    "ending_partial_fix": "eb4789d0-7e71-4138-ab22-5fd8c340f0b6",
+    "ending_cascading_failure": "4fcfc52a-9cb3-4f02-8650-6081c0d499fa",
+    "ending_heroic_save": "ee8a78d6-bbc6-4c95-9dda-9ede6f250a84"
+  },
+  "choice_ids": [
+    "fa473aea-bdac-42fa-86cc-b1c26cfa3e97",
+    "fed36f5a-d4a3-40a4-86f3-d3efdb0ea980",
+    "b079af89-ea58-4e01-831b-17ad7d01f0c0",
+    "71664229-8fa8-40ff-8800-606fec02647c",
+    "36296b9d-7aec-4ac2-9c1d-6480fb763470",
+    "403be854-df55-4c50-8fac-5c120d1bac6a",
+    "c75defe3-77b4-4d52-90d9-736b943dce6c",
+    "2f0764ff-3477-4581-b5e1-d78ae24e1c7f",
+    "981246ad-3892-48d8-8953-b3d288026ce1",
+    "215b4a2c-1065-4543-a269-b4bda29186bb",
+    "3bdbbf19-6cc4-405a-9a7a-80437786e4b8",
+    "0ba5c6a1-15dc-42fd-874f-fbe45ae43376",
+    "97dbb678-d74c-4a37-9d58-570e79361386",
+    "10b980a7-906b-4916-9d64-097846fc985a",
+    "feaf9c74-b101-42f0-8dc2-3ba29839c848"
+  ],
+  "state_variable_ids": {},
+  "success": false,
+  "errors": []
+}

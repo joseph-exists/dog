@@ -1,22 +1,23 @@
 /**
- * PanelLayoutDialog Component
+ * PanelLayoutDialog Component (Story-specific)
  *
- * Main dialog for panel layout customization.
- * Supports room-level and user-default editing modes.
+ * Dialog for customizing panel layout on story pages.
+ * Uses Story/registry/panelTypes as single source of truth for available panels.
  *
  * @example
  * ```tsx
  * <PanelLayoutDialog
  *   open={isOpen}
  *   onOpenChange={setIsOpen}
- *   roomId={roomId}
- *   isRoomOwner={canManage}
+ *   storyId={storyId}
+ *   isOwner={isAuthor}
+ *   userPermission="owner"
  * />
  * ```
  */
 
 import { Plus } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -33,14 +34,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
-import { useRoomPanels } from "@/hooks/useRoomPanels"
-import type { PanelConfig } from "@/services/panelService"
 import {
   type LayoutSource,
   LayoutSourceSelector,
 } from "../Forms/FormSelectors/LayoutSourceSelector"
 import { InteractivePreview, type PreviewPanel } from "../InteractivePreview"
 import { PresetPicker, SYSTEM_PRESETS } from "../primitives/PresetPicker"
+import {
+  getPanelDisplayName,
+  getPanelsForContext,
+  getPanelsForEntityPermission,
+  type PanelKind,
+  type PanelPermission,
+} from "../registry"
 
 // ============================================================================
 // Types
@@ -51,36 +57,14 @@ export interface PanelLayoutDialogProps {
   open: boolean
   /** Called when open state changes */
   onOpenChange: (open: boolean) => void
-  /** Room ID (null for editing user defaults) */
-  roomId: string | null
-  /** Whether current user is room owner */
-  isRoomOwner?: boolean
-  /** Mode: room settings or user defaults */
-  mode?: "room" | "user-defaults"
-}
-
-// ============================================================================
-// Available Panels
-// ============================================================================
-
-const AVAILABLE_PANELS: PreviewPanel[] = [
-  { id: "chat", kind: "chat", prominence: "primary" },
-  { id: "story", kind: "storyEditor", prominence: "primary" },
-  { id: "runtime", kind: "storyRuntime", prominence: "primary" },
-  { id: "canvas", kind: "canvas", prominence: "primary" },
-  { id: "a2ui", kind: "a2ui", prominence: "primary" },
-  { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
-  { id: "debug", kind: "debug", prominence: "auxiliary" },
-]
-
-const panelNames: Record<string, string> = {
-  chat: "Chat",
-  storyEditor: "Story Editor",
-  storyRuntime: "Story Runtime",
-  canvas: "Canvas",
-  a2ui: "Agent UI",
-  participantPanel: "Participants",
-  debug: "Debug",
+  /** Story ID - null for editing user defaults */
+  storyId: string | null
+  /** Whether current user owns the story */
+  isOwner?: boolean
+  /** User's permission level on this story */
+  userPermission?: PanelPermission
+  /** Whether user is admin/superuser */
+  isAdmin?: boolean
 }
 
 // ============================================================================
@@ -90,15 +74,11 @@ const panelNames: Record<string, string> = {
 export function PanelLayoutDialog({
   open,
   onOpenChange,
-  roomId,
-  isRoomOwner = false,
-  mode = "room",
+  storyId,
+  isOwner = false,
+  userPermission = "none",
+  isAdmin = false,
 }: PanelLayoutDialogProps) {
-  // Room panels hook (only used in room mode)
-  const roomPanels = useRoomPanels(roomId ?? "", {
-    enabled: mode === "room" && !!roomId,
-  })
-
   // Local state for editing
   const [panels, setPanels] = useState<PreviewPanel[]>([])
   const [source, setSource] = useState<LayoutSource>("user_defaults")
@@ -107,35 +87,64 @@ export function PanelLayoutDialog({
   const [addPanelOpen, setAddPanelOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
+  // Derive available panels from registry (story context only)
+  const availablePanelsFromRegistry = useMemo(() => {
+    // Filter by story context
+    let panelDefs = getPanelsForContext("story")
+
+    // Filter by entity permission
+    const permittedPanels = getPanelsForEntityPermission(userPermission)
+    panelDefs = panelDefs.filter((p) =>
+      permittedPanels.some((pp) => pp.kind === p.kind)
+    )
+
+    // Filter by system role (exclude admin-only for non-admins)
+    if (!isAdmin) {
+      panelDefs = panelDefs.filter((p) => p.permission !== "admin")
+    }
+
+    // Convert to PreviewPanel format
+    return panelDefs.map((p) => ({
+      id: p.kind,
+      kind: p.kind,
+      prominence: p.defaultProminence,
+    }))
+  }, [userPermission, isAdmin])
+
+  // Get the default preset for stories
+  const getDefaultStoryPreset = () => {
+    // Try story-specific preset first, fallback to first available
+    const storyPreset = SYSTEM_PRESETS.find(
+      (p) => p.id === "story_player" || p.id === "story_play"
+    )
+    if (storyPreset) return storyPreset
+
+    // Fallback: create a default from available panels
+    const defaultPanels = availablePanelsFromRegistry.slice(0, 2)
+    return {
+      id: "default",
+      name: "Default",
+      description: "Default story layout",
+      panels: defaultPanels,
+    }
+  }
+
   // Initialize from current config
   useEffect(() => {
     if (!open) return
 
-    if (mode === "room" && roomPanels.panels.length > 0) {
-      setPanels(
-        roomPanels.panels.map((p) => ({
-          id: p.id,
-          kind: p.kind,
-          prominence: p.prominence,
-        })),
-      )
-      const initialSource =
-        (roomPanels.panelSource as LayoutSource) || "user_defaults"
-      setSource(initialSource)
-      setSavedSource(initialSource)
-    } else {
-      // Default to collaborate preset
-      const defaultPreset = SYSTEM_PRESETS.find((p) => p.id === "collaborate")
-      setPanels(defaultPreset?.panels || [])
-      setSelectedPresetId("collaborate")
-      setSource("user_defaults")
-      setSavedSource("user_defaults")
-    }
-  }, [open, mode, roomPanels.panels, roomPanels.panelSource])
+    // TODO: Load saved story panel config when backend support is added
+    // For now, use default preset
+    const defaultPreset = getDefaultStoryPreset()
+    setPanels(defaultPreset.panels)
+    setSelectedPresetId(defaultPreset.id)
+    setSource("user_defaults")
+    setSavedSource("user_defaults")
+  }, [open, availablePanelsFromRegistry])
 
   // Auto-switch to custom when user modifies panels
   const switchToCustom = () => {
-    if (source !== "custom" && source !== "room_override") {
+    if (source !== "custom") {
       setSource("custom")
     }
   }
@@ -144,7 +153,11 @@ export function PanelLayoutDialog({
   const handlePresetSelect = (presetId: string) => {
     const preset = SYSTEM_PRESETS.find((p) => p.id === presetId)
     if (preset) {
-      setPanels(preset.panels)
+      // Filter preset panels to only include valid story panels
+      const validPanels = preset.panels.filter((panel) =>
+        availablePanelsFromRegistry.some((ap) => ap.kind === panel.kind)
+      )
+      setPanels(validPanels.length > 0 ? validPanels : preset.panels)
       setSelectedPresetId(presetId)
       switchToCustom()
     }
@@ -173,24 +186,21 @@ export function PanelLayoutDialog({
     setAddPanelOpen(false)
   }
 
-  // Get panels not yet added
-  const availablePanelsToAdd = AVAILABLE_PANELS.filter(
-    (ap) => !panels.some((p) => p.id === ap.id),
+  // Get panels not yet added (filtered to story-valid panels)
+  const availablePanelsToAdd = availablePanelsFromRegistry.filter(
+    (ap) => !panels.some((p) => p.kind === ap.kind)
   )
 
   // Handle save
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      if (mode === "room" && roomId) {
-        if (source === "custom" || source === "room_override") {
-          await roomPanels.setCustomPanels(panels as PanelConfig[])
-        } else if (source === "user_defaults" || source === "room_defaults") {
-          // User chose a default source — clear any custom override
-          await roomPanels.resetToDefaults()
-        }
+      // TODO: Implement story panel persistence when backend support is added
+      // For now, just show success and close
+      if (storyId) {
+        console.log("Saving story panel layout:", { storyId, panels, source })
+        // Future: await storyPanelsService.saveLayout(storyId, panels, source)
       }
-      // TODO: Handle user-defaults mode
 
       showSuccessToast("Your panel layout has been updated.")
       onOpenChange(false)
@@ -201,38 +211,47 @@ export function PanelLayoutDialog({
     }
   }
 
+  // Filter presets to only show those with at least one valid story panel
+  const validPresets = SYSTEM_PRESETS.filter((preset) =>
+    preset.panels.some((panel) =>
+      availablePanelsFromRegistry.some((ap) => ap.kind === panel.kind)
+    )
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Panel Layout</DialogTitle>
           <DialogDescription>
-            Customize how panels are arranged in this room.
+            Customize how panels are arranged for this story.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Source selector (room mode only) */}
-          {mode === "room" && (
+          {/* Source selector (when storyId is provided) */}
+          {storyId && (
             <LayoutSourceSelector
               currentSource={source}
               onSourceChange={setSource}
-              isRoomOwner={isRoomOwner}
-              hasRoomDefaults={!!roomPanels.roomDefaults}
+              isRoomOwner={isOwner}
+              hasRoomDefaults={false} // TODO: Check for story defaults
               savedSource={savedSource}
             />
           )}
 
-          {/* Presets */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Quick Presets</h4>
-            <PresetPicker
-              presets={SYSTEM_PRESETS}
-              currentPresetId={selectedPresetId}
-              onSelect={handlePresetSelect}
-              variant="buttons"
-            />
-          </div>
+          {/* Presets (only show presets with valid story panels) */}
+          {validPresets.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Quick Presets</h4>
+              <PresetPicker
+                presets={validPresets}
+                currentPresetId={selectedPresetId}
+                onSelect={handlePresetSelect}
+                variant="buttons"
+              />
+            </div>
+          )}
 
           {/* Interactive preview */}
           <div className="space-y-2">
@@ -264,7 +283,7 @@ export function PanelLayoutDialog({
                       className="justify-start"
                       onClick={() => handleAddPanel(panel)}
                     >
-                      {panelNames[panel.kind] || panel.kind}
+                      {getPanelDisplayName(panel.kind as PanelKind)}
                     </Button>
                   ))}
                 </div>

@@ -1,4 +1,23 @@
-// src/components/Page/registry/index.ts
+// src/components/Story/registry/index.ts
+
+// Panel types (for layout dialogs)
+export {
+  type PanelKind,
+  type PanelProminence,
+  type PanelContext,
+  type PanelPermission,
+  type PanelTypeDefinition,
+  PANEL_TYPES,
+  getPanelType,
+  getPanelDisplayName,
+  getPanelsForContext,
+  getPanelsForEntityPermission,
+  getPanelsForSystemRole,
+  isValidPanelKind,
+  getDefaultPanelConfig,
+  getPanelDependents,
+  areDependenciesSatisfied,
+} from "./panelTypes"
 
 // Block types
 export {

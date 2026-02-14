@@ -1,0 +1,37 @@
+{
+  "test_suite": "Carroll Baroco Story (AOO-2)",
+  "start_time": "2026-02-13T13:43:45.176850",
+  "end_time": "2026-02-13T13:43:46.200408",
+  "story_id": "e4f5cef5-97d4-4bc3-83fd-6d0dcdbd3f47",
+  "node_ids": {
+    "intro": "c03d5a11-50fa-4e85-a0c2-b752a310c9b3",
+    "major_premise": "a4f41878-5ac1-4739-828a-3b1d5898608d",
+    "minor_premise": "bc2fd608-2458-4480-912f-9a1d831605c7",
+    "indirect_method": "36821816-5c0b-4ab8-9124-ab153737ffe1",
+    "make_assumption": "6079e3a6-6af9-459a-92d7-f3d36829674d",
+    "find_contradiction": "16718625-e4f5-484d-843b-8df97ea352cd",
+    "valid_conclusion": "51fd9807-d0a0-45ce-b53c-109c176fe6b2",
+    "fallacy_direct_attempt": "7168c500-6a20-4a54-a713-e7f33296f391",
+    "fallacy_universal": "51d3dc8b-1e4c-400b-ad79-3f74493fea4b",
+    "retry": "38713f6a-a5da-4276-b7a4-723b613c1f6b",
+    "skip_fallacy": "c49b7be3-39e7-4767-be98-3d6baee4f71f"
+  },
+  "choice_ids": [
+    "45608439-83b7-4821-b1b4-3dd44449c6f0",
+    "e43296ff-c3ea-4616-9989-5aa2757b5d67",
+    "d5a9c97f-b1ae-4e9c-8760-938c72106517",
+    "33ba6def-c3e1-40a1-9585-d44caf4568df",
+    "13d795a8-c78e-44f0-b809-59bb4c6ae616",
+    "ae0a224a-3795-4bcf-8e3d-ca4b1e48ee4e",
+    "c81ac7e0-cd04-47c3-8b2d-fed9c0dfb803",
+    "bb30b9da-fd8e-4f7a-892f-7bae78f8bd38",
+    "69f8e55e-4516-4b65-b07a-f9bc400a26a9",
+    "c1403c9d-9f5a-4056-8d5f-8c591bec5bd7",
+    "162ff707-36dc-40a0-9383-b6f1f8e284d1",
+    "04c34597-7b56-476e-9295-1639a1f03fe5",
+    "f4af4c9b-612a-4e0c-9221-c2fedb88ace5"
+  ],
+  "state_variable_ids": {},
+  "success": false,
+  "errors": []
+}

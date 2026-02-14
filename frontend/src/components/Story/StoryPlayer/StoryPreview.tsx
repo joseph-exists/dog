@@ -23,6 +23,7 @@ import {
   RotateCcw,
 } from "lucide-react"
 import { useMemo, useState } from "react"
+import ReactMarkdown from "react-markdown"
 import type { NodeChoicePublic, StoryNodePublic, StoryPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -67,6 +68,13 @@ function renderContent(node: StoryNodePublic) {
           className="prose prose-lg dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
         />
+      )
+
+    case "markdown":
+      return (
+        <div className="prose prose-lg dark:prose-invert max-w-none">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </div>
       )
 
     case "json":

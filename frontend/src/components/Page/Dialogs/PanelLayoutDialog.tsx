@@ -211,8 +211,7 @@ export function PanelLayoutDialog({
           await roomPanels.resetToDefaults()
         }
       }
-      // TODO: Handle story entity type
-      // TODO: Handle user-defaults mode
+
 
       showSuccessToast("Your panel layout has been updated.")
       onOpenChange(false)

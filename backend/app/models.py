@@ -129,6 +129,17 @@ class ContentFormat(str, PyEnum):
     HTML = "html"
     MARKDOWN = "markdown"
     JSON = "json"
+    YAML = "yaml"
+    MDX = "mdx"
+    CODE = "code"
+    SVG = "svg"
+    IMAGE = "image"
+    AUDIO = "audio"
+    VIDEO = "video"
+    EMPTY = "empty"
+    UNKNOWN = "unknown"
+    TEST = "test"
+
 
 
 # ============ Base Models ++++++++

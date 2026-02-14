@@ -40,7 +40,7 @@ import {
   // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { PanelLayoutDialog } from "@/components/Page/Dialogs/PanelLayoutDialog"
+import { PanelLayoutDialog } from "./Dialogs/PanelLayoutDialog"
 
 import { PAGE_THEMES, getPageThemeById } from "@/components/Common/Themes/page_themes"
 import { CARD_THEMES, getCardThemeById } from "@/components/Common/Themes/card_themes" 
@@ -99,7 +99,7 @@ const storyTypeIcons: Record<StoryType, React.ElementType>={
  * Actions vary based on whether the current user is the owner.
  */
 export function StoryHeader({
-  // storyId,
+  storyId,
   type,
   title,
   pageThemeId,
@@ -261,8 +261,9 @@ export function StoryHeader({
         <PanelLayoutDialog
           open={layoutDialogOpen}
           onOpenChange={setLayoutDialogOpen}
-          entityId={null}
-          context="story"
+          storyId={storyId ?? null}
+          isOwner={canEdit}
+          userPermission={canEdit ? "owner" : "none"}
         />
 
 

@@ -6,14 +6,13 @@
  *
  * CONTENT FORMATS:
  * - html: Sanitized via DOMPurify, rendered with prose styling
+ * - markdown: Rendered via ReactMarkdown with prose styling
  * - json: Formatted as preformatted code block
  * - text: Plain text with whitespace preserved
- *
- * NOTE: Content format handling is preserved from original StoryPlayer.
- * This is a future refactor target for cleaner rich-text/markdown pipeline.
  */
 import DOMPurify from "dompurify"
 import { ChevronRight, Play } from "lucide-react"
+import ReactMarkdown from "react-markdown"
 import type { StoryNodePublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,6 +38,13 @@ function renderContent(node: StoryNodePublic) {
           className="prose prose-lg dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
         />
+      )
+
+    case "markdown":
+      return (
+        <div className="prose prose-lg dark:prose-invert max-w-none">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </div>
       )
 
     case "json":
@@ -102,8 +108,8 @@ export function StoryContent() {
     return (
       <div className="flex items-center justify-center h-full p-8">
         <Card className="max-w-md">
-          <CardContent className="py-8 text-center">
-            <p className="text-destructive font-medium">Node not found</p>
+          <CardContent className="text-center">
+            <p className="text-destructive">Node not found</p>
             <Button className="mt-4" onClick={handleRestart}>
               Restart
             </Button>
@@ -116,12 +122,12 @@ export function StoryContent() {
   // Normal content rendering
   return (
     <div className="p-8">
-      <div className="mx-auto max-w-2xl">
+      <div className="flex items-center h-full justify-between mx-auto max-w-xxl">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl">{currentNode.title}</CardTitle>
-              {isEndNode && <Badge className="bg-green-600">The End</Badge>}
+              <CardTitle className="flex-1 min-h-0">{currentNode.title}</CardTitle>
+              {isEndNode && <Badge>The End</Badge>}
             </div>
           </CardHeader>
           <CardContent className="space-y-6">

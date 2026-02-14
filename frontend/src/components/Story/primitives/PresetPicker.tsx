@@ -182,19 +182,18 @@ export function PresetPicker({
 
 export const SYSTEM_PRESETS: Preset[] = [
   {
-    id: "focus",
-    name: "Focus",
-    description: "Chat only, full width",
-    panels: [{ id: "chat", kind: "chat", prominence: "primary" }],
+    id: "story",
+    name: "focused story",
+    description: "",
+    panels: [{ id: "player", kind: "storyPlayer", prominence: "primary" }],
   },
   {
-    id: "classic",
-    name: "Classic",
-    description: "Chat with participants sidebar",
+    id: "reviewer",
+    name: "review mode",
+    description: "story with debug sidebar",
     panels: [
-      { id: "chat", kind: "chat", prominence: "primary" },
-      { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
-    ],
+      { id: "player", kind: "storyPlayer", prominence: "primary" },
+      { id: "debug", kind: "storyDebug", prominence: "auxiliary" }]
   },
   {
     id: "collaborate",

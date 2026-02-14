@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export const Route = createFileRoute("/_layout/story/$storyId")({
+export const Route = createFileRoute("/_layout/story_/$storyId")({
   component: StoryPlayerPage,
   head: () => ({
     meta: [{ title: "Story Player" }],
