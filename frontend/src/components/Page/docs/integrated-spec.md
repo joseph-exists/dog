@@ -30,36 +30,15 @@ This document synthesizes the **design specification** (collaborative decisions)
 > "Simplicity is the ultimate sophistication."
 > — Leonardo da Vinci
 
-### 2.1 The Enum (Backend Request)
+### 2.1 The Enum (Backend Request SATISFIED)
+** complete ** ContentFormat has been included to include all types listed.
+use with 
+```import type { ContentFormat } from "@/client"`` 
 
-```python
-class ContentFormat(str, Enum):
-    # Core text formats
-    TEXT = "text"
-    MARKDOWN = "markdown"
-    HTML = "html"
+ ```export type ContentFormat = 'text' | 'html' | 'markdown' | 'json' | 'yaml' | 'mdx' | 'code' | 'svg' | 'image' | 'audio' | 'video' | 'empty' | 'unknown' | 'test';```
 
-    # Structured data formats
-    JSON = "json"
-    YAML = "yaml"  # Future: config files, structured content
 
-    # Rich content formats
-    MDX = "mdx"
-    CODE = "code"
-
-    # Media formats
-    SVG = "svg"
-    IMAGE = "image"
-    AUDIO = "audio"    # Future
-    VIDEO = "video"    # Future
-
-    # Special/meta formats
-    EMPTY = "empty"      # Explicitly empty content
-    UNKNOWN = "unknown"  # Format couldn't be determined
-    TEST = "test"        # For testing purposes
-```
-
-**Status:** ✅ Approved (design-spec Q2 follow-up). Backend request pending.
+**Status:** ✅ Approved (design-spec Q2 follow-up). Backend request pending => BACKEND HAS DELIVERED.
 
 ### 2.2 The Frontend Type
 
@@ -429,8 +408,10 @@ type MDXComponents = {
 **Status:** New backend work being designed outside scope of this plan.
 
 Frontend should expect:
-- After `mdx` added to `ContentFormat` enum
-- API call to get content will return compiled MDX object when `useCompiledMDX: true`
+- After `mdx` added to `ContentFormat` enum (done)
+
+(undetermined, let's pause when we get here, but assume some sort of flag)
+- API call to get content will return compiled MDX object when `useCompiledMDX: true` 
 - Raw MDX returned when `useCompiledMDX: false`
 
 ---
@@ -579,6 +560,8 @@ enum ContentTrustLevel {
 > — Benjamin Franklin
 
 ### 9.1 Primary Implementation
+
+Files created.  These are the only files currently approved for modification for Phase 1 of the plan.
 
 ```
 @/components/Page/primitives/ContentRenderer/

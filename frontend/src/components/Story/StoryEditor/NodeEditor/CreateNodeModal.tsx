@@ -32,12 +32,17 @@ import {
 } from "@/components/ui/select"
 import { useCreateNode } from "@/hooks/stories/useStoryNodes"
 
+// whyfore ist thist here?
+// why dost thou insisteth upon mine sadness?
+// fine, i shalt suffer instead of submitting a bug
 const createNodeSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  content_format: z.enum(["text", "html", "markdown", "json"]),
+  content_format: z.enum(["text", "html", "markdown", "json","yaml","mdx","code","svg","image","audio","video","empty","unknown","test"]),
   is_start_node: z.boolean(),
   is_end_node: z.boolean(),
 })
+// added extended inline enum after the build failed
+
 
 type CreateNodeFormData = z.infer<typeof createNodeSchema>
 

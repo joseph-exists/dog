@@ -305,7 +305,7 @@ export const Body_login_login_access_tokenSchema = {
 
 export const ContentFormatSchema = {
     type: 'string',
-    enum: ['text', 'html', 'markdown', 'json'],
+    enum: ['text', 'html', 'markdown', 'json', 'yaml', 'mdx', 'code', 'svg', 'image', 'audio', 'video', 'empty', 'unknown', 'test'],
     title: 'ContentFormat'
 } as const;
 

@@ -69,7 +69,7 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
-export type ContentFormat = 'text' | 'html' | 'markdown' | 'json';
+export type ContentFormat = 'text' | 'html' | 'markdown' | 'json' | 'yaml' | 'mdx' | 'code' | 'svg' | 'image' | 'audio' | 'video' | 'empty' | 'unknown' | 'test';
 
 /**
  * Response model for getting current node with available choices.

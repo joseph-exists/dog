@@ -32,12 +32,17 @@ import {
 } from "@/components/ui/select"
 import { useCreateNode } from "@/hooks/stories/useStoryNodes"
 
+
+// if you need to edit this file, you'll need to edit the dupe over in Story.
+// added the enum below after adding to contentformat db - we can call that directly, and it's exposed throug the client types - this is awkward to have here I think.
 const createNodeSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  content_format: z.enum(["text", "html", "markdown", "json"]),
+  // content_format: z.enum(["text", "html", "markdown", "json"]),
+  content_format: z.enum(["text", "html", "markdown", "json","yaml","mdx","code","svg","image","audio","video","empty","unknown","test"]),
   is_start_node: z.boolean(),
   is_end_node: z.boolean(),
 })
+// neat we have this in both the Story tree and the Stories tree, exactly the same.  I wonder if this entire file is the same.
 
 type CreateNodeFormData = z.infer<typeof createNodeSchema>
 
