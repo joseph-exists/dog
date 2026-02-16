@@ -15,7 +15,6 @@
  * const traits = await EntityTraitsService.getTraits("persona", personaId)
  * ```
  */
-
 import {
   ArchetypeTraitsService,
   PersonaTraitsService,

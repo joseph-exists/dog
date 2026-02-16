@@ -10,15 +10,17 @@
  * - json: Formatted as preformatted code block
  * - text: Plain text with whitespace preserved
  */
-import DOMPurify from "dompurify"
-import { ChevronRight, Play } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import type { StoryNodePublic } from "@/client"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { useStoryPlayerContext } from "./useStoryPlayerContext"
+import { ChevronRight, Play } from "lucide-react";
+import {
+  ContentRenderer,
+  nodeToContent,
+} from "@/components/Common/ContentRenderer";
+// import type { StoryNodePublic } from "@/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useStoryPlayerContext } from "./useStoryPlayerContext";
 
 /**
  * Renders node content based on format.
@@ -27,55 +29,6 @@ import { useStoryPlayerContext } from "./useStoryPlayerContext"
  * a component because it's tightly coupled to node data structure and
  * doesn't need its own lifecycle or state.
  */
-function renderContent(node: StoryNodePublic) {
-  const format = node.content_format || "text"
-  const content = node.content || ""
-
-  switch (format) {
-    case "html":
-      return (
-        <div
-          className="prose prose-lg dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
-        />
-      )
-
-    case "markdown":
-      return (
-        <div className="prose prose-lg dark:prose-invert max-w-none">
-          <ReactMarkdown>{content}</ReactMarkdown>
-        </div>
-      )
-
-    case "json":
-      try {
-        const parsed = JSON.parse(content)
-        return (
-          <div>
-            <p className="text-sm text-muted-foreground italic mb-2">
-              [JSON Content]
-            </p>
-            <pre className="bg-muted p-4 rounded-md overflow-auto text-sm font-mono">
-              {JSON.stringify(parsed, null, 2)}
-            </pre>
-          </div>
-        )
-      } catch {
-        return (
-          <p className="text-destructive whitespace-pre-wrap">
-            [Invalid JSON content]
-          </p>
-        )
-      }
-
-    default:
-      return (
-        <p className="text-lg leading-relaxed whitespace-pre-wrap">
-          {content || "(No content)"}
-        </p>
-      )
-  }
-}
 
 export function StoryContent() {
   const {
@@ -85,7 +38,7 @@ export function StoryContent() {
     isEndNode,
     handleChoice,
     handleRestart,
-  } = useStoryPlayerContext()
+  } = useStoryPlayerContext();
 
   // No start node configured
   if (!startNode) {
@@ -100,7 +53,7 @@ export function StoryContent() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   // Current node not found (edge case)
@@ -116,7 +69,7 @@ export function StoryContent() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   // Normal content rendering
@@ -126,13 +79,18 @@ export function StoryContent() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex-1 min-h-0">{currentNode.title}</CardTitle>
+              <CardTitle className="flex-1 min-h-0">
+                {currentNode.title}
+              </CardTitle>
               {isEndNode && <Badge>The End</Badge>}
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Node Content */}
-            {renderContent(currentNode)}
+            <ContentRenderer
+              content={nodeToContent(currentNode, "page")}
+              safeMode={true}
+            />
 
             {/* Choices Section */}
             {!isEndNode && availableChoices.length > 0 && (
@@ -190,5 +148,5 @@ export function StoryContent() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

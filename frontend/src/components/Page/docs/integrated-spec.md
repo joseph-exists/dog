@@ -376,7 +376,7 @@ interface MDXRendererProps extends Content<ContentFormat.MDX> {
 }
 ```
 
-**Note:** Toggle scope (per-item vs per-session) paused pending RBAC/trust system resolution.
+**Note:** Toggle (per-item or per-session).
 
 ### 6.3 MDXComponents Contract
 
@@ -405,14 +405,12 @@ type MDXComponents = {
 
 ### 6.4 Backend Work
 
-**Status:** New backend work being designed outside scope of this plan.
+**Status:** completed:
 
 Frontend should expect:
 - After `mdx` added to `ContentFormat` enum (done)
-
-(undetermined, let's pause when we get here, but assume some sort of flag)
-- API call to get content will return compiled MDX object when `useCompiledMDX: true` 
-- Raw MDX returned when `useCompiledMDX: false`
+- API call to get content will return compiled MDX object when called.
+- Raw MDX returned when requested as text.
 
 ---
 
@@ -722,6 +720,8 @@ type ShikiTransformer = unknown; // From react-shiki ecosystem
 
 ### 13.2 Bundle Considerations
 
+all installed in frontend environment, will be added to build-dependencies after proof of work.
+
 | Module | Strategy |
 |--------|----------|
 | `@mdx-js/mdx` | Lazy-load only when runtime MDX needed |
@@ -735,7 +735,7 @@ type ShikiTransformer = unknown; // From react-shiki ecosystem
 > "Rome wasn't built in a day, but they were laying bricks every hour."
 > — John Heywood
 
-### Phase 1: New Format Value Proof
+### Phase 1: New Format Value Proof [X] COMPLETE
 
 1. Create `@/components/Page/primitives/ContentRenderer/`
 2. Implement core renderers:
@@ -750,16 +750,16 @@ type ShikiTransformer = unknown; // From react-shiki ecosystem
 4. Wire theme/decorationHint props with parent context fallback
 5. **Document** any paradigm conflicts for migration (per design-spec Q11 constraint)
 
-### Phase 2: MDX Wiring
+### Phase 2: MDX Wiring [X] Complete
 
-1. Add `MDX` to backend ContentFormat enum (request to backend team)
+1. Add `MDX` to backend ContentFormat enum (request to backend team) [X - complete]
 2. Implement MDX renderer with:
    - Compile-time path: hydrate backend-compiled JS
    - Runtime path: lazy-load `@mdx-js/mdx`, compile + render
-   - Toggle: `useCompiledMDX` (scope TBD pending RBAC)
-3. Define MDXComponents whitelist
+   - Toggle:  `useCompiledMDX` 
+3. Define MDXComponents whitelist - pending review
 
-### Phase 3: Proving Ground
+### Phase 3: Proving Ground [X] Complete
 
 1. Demo page approach: Deferred until components ready (Josep has stub/mock frameworks)
 2. Add ContentRenderer to StoryEditor (import from Page/)
@@ -769,18 +769,25 @@ type ShikiTransformer = unknown; // From react-shiki ecosystem
    - Viewer can play story smoothly
    - Experience is well-designed and sophisticated
 
-### Phase 4: Migration
+### Phase 4: Migration [X] Complete
 
 1. Create `@/components/Common/ContentRenderer/` (re-exports)
 2. Export `renderContent()` compatibility helper
 3. Migrate: `StoryContent`, `StoryPreview`, `StoryPlayer`
 4. Migrate: `Page/panels/StoryPanel/NodeDisplay`, `Room/panels/StoryPanel/NodeDisplay`
 
-### Phase 5: Plugin System
+### Phase 5: Plugin System [ ] IMPLEMENTATION GUIDE READY
+
+> **Implementation Guide:** `phase5-implementation-guide.md`
 
 1. Formalize `Plugin<T>` interface
-2. Add plugin registration API
-3. Document plugin authoring guide
+2. Add `PluginRenderer<T>` with metadata (pluginId, label, priority)
+3. Create `pluginRegistry.ts` with:
+   - `registerPlugin()` / `unregisterPlugin()` API
+   - Priority-based renderer resolution
+   - Transform and validation hooks
+4. Wire transforms and validation in ContentRenderer
+5. Document plugin authoring guide
 
 ---
 

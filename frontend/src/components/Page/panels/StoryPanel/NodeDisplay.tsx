@@ -2,61 +2,40 @@
  * NodeDisplay
  *
  * Presents the current story node with formatted content.
- * Allows optional action slot and content renderer override.
+ * Uses ContentRenderer for all format rendering.
  */
-
-import DOMPurify from "dompurify"
-import type { ReactNode } from "react"
-import ReactMarkdown from "react-markdown"
-import type { ContentFormat } from "@/client"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import type { NodeViewModel } from "@/services/roomRuntimeService"
+import type { ReactNode } from "react";
+import type { ContentFormat } from "@/client";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import type { NodeViewModel } from "@/services/roomRuntimeService";
+import {
+  ContentRenderer,
+  toContent,
+} from "@/components/Common/ContentRenderer";
 
 interface NodeDisplayProps {
-  node: NodeViewModel
-  onNodeClick?: (node: NodeViewModel) => void
-  actions?: ReactNode
-  renderContent?: (content: string, format: ContentFormat | null) => ReactNode
-  className?: string
+  node: NodeViewModel;
+  onNodeClick?: (node: NodeViewModel) => void;
+  actions?: ReactNode;
+  /** @deprecated Custom renderers should use ContentRenderer directly */
+  renderContent?: (content: string, format: ContentFormat | null) => ReactNode;
+  className?: string;
 }
 
-function renderNodeContent(
+/**
+ * Default content renderer using ContentRenderer
+ */
+function defaultRenderContent(
   content: string,
   format: ContentFormat | null,
 ): ReactNode {
-  switch (format) {
-    case "html":
-      return (
-        <div
-          className="prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
-        />
-      )
-    case "json":
-      try {
-        const parsed = content ? JSON.parse(content) : {}
-        return (
-          <pre className="rounded-md bg-muted px-3 py-2 text-xs font-mono whitespace-pre-wrap">
-            {JSON.stringify(parsed, null, 2)}
-          </pre>
-        )
-      } catch {
-        return (
-          <pre className="rounded-md bg-muted px-3 py-2 text-xs font-mono whitespace-pre-wrap text-destructive">
-            Invalid JSON content
-          </pre>
-        )
-      }
-    case "markdown":
-      return (
-        <div className="prose max-w-none">
-          <ReactMarkdown>{content}</ReactMarkdown>
-        </div>
-      )
-    default:
-      return <p className="whitespace-pre-wrap">{content}</p>
-  }
+  return (
+    <ContentRenderer
+      content={toContent(content, format, "card")}
+      safeMode={true}
+    />
+  );
 }
 
 export function NodeDisplay({
@@ -66,7 +45,8 @@ export function NodeDisplay({
   renderContent,
   className,
 }: NodeDisplayProps) {
-  const contentRenderer = renderContent ?? renderNodeContent
+  // Use custom renderer if provided, otherwise use ContentRenderer
+  const contentRenderer = renderContent ?? defaultRenderContent;
 
   return (
     <div
@@ -101,5 +81,5 @@ export function NodeDisplay({
         {contentRenderer(node.content, node.contentFormat)}
       </div>
     </div>
-  )
+  );
 }

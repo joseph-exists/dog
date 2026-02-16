@@ -9,10 +9,8 @@
  * - Navigation controls (undo with state restoration, restart)
  * - Collapsible debug panel (state, history, available choices)
  *
- * 
+ *
  */
-
-import DOMPurify from "dompurify"
 import {
   ArrowLeft,
   Bug,
@@ -21,114 +19,74 @@ import {
   ChevronUp,
   Play,
   RotateCcw,
-} from "lucide-react"
-import { useMemo, useState } from "react"
-import type { NodeChoicePublic, StoryNodePublic, StoryPublic } from "@/client"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  ContentRenderer,
+  nodeToContent,
+} from "@/components/Common/ContentRenderer";
+import type { NodeChoicePublic, StoryNodePublic, StoryPublic } from "@/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 import {
   applySetsState,
   evaluateRequiresState,
   type StateConditions,
   type StateMutations,
-} from "@/utils/stateConditions"
+} from "@/utils/stateConditions";
 
 interface StoryPreviewProps {
-  story: StoryPublic
-  nodes: StoryNodePublic[]
-  choices: NodeChoicePublic[]
-  onExit: () => void
+  story: StoryPublic;
+  nodes: StoryNodePublic[];
+  choices: NodeChoicePublic[];
+  onExit: () => void;
 }
 
 interface HistoryEntry {
-  nodeId: string
-  state: Record<string, unknown>
-  choiceText?: string
+  nodeId: string;
+  state: Record<string, unknown>;
+  choiceText?: string;
 }
-
 /**
  * Renders node content based on format with appropriate styling
  */
-function renderContent(node: StoryNodePublic) {
-  const format = node.content_format || "text"
-  const content = node.content || ""
-
-  switch (format) {
-    case "html":
-      return (
-        <div
-          className="prose prose-lg dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
-        />
-      )
-
-    case "json":
-      try {
-        const parsed = JSON.parse(content)
-        return (
-          <div>
-            <p className="text-sm text-muted-foreground italic mb-2">
-              [JSON Content]
-            </p>
-            <pre className="bg-muted p-4 rounded-md overflow-auto text-sm font-mono">
-              {JSON.stringify(parsed, null, 2)}
-            </pre>
-          </div>
-        )
-      } catch {
-        return (
-          <p className="text-destructive whitespace-pre-wrap">
-            [Invalid JSON content]
-          </p>
-        )
-      }
-
-    default:
-      return (
-        <p className="text-lg leading-relaxed whitespace-pre-wrap">
-          {content || "(No content)"}
-        </p>
-      )
-  }
-}
-
 const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
   // Find the start node
-  const startNode = useMemo(() => nodes.find((n) => n.is_start_node), [nodes])
+  const startNode = useMemo(() => nodes.find((n) => n.is_start_node), [nodes]);
 
   // Core state
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(
     startNode?.id ?? null,
-  )
-  const [playerState, setPlayerState] = useState<Record<string, unknown>>({})
-  const [history, setHistory] = useState<HistoryEntry[]>([])
+  );
+  const [playerState, setPlayerState] = useState<Record<string, unknown>>({});
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   // Debug panel visibility
-  const [showDebugPanel, setShowDebugPanel] = useState(true)
+  const [showDebugPanel, setShowDebugPanel] = useState(true);
   const [expandedSections, setExpandedSections] = useState({
     state: true,
     history: true,
     choices: true,
-  })
+  });
 
   // Get current node
   const currentNode = useMemo(
     () => nodes.find((n) => n.id === currentNodeId),
     [nodes, currentNodeId],
-  )
+  );
 
   // Get all choices for current node
   const allChoicesForNode = useMemo(
     () => choices.filter((c) => c.from_node_id === currentNodeId),
     [choices, currentNodeId],
-  )
+  );
 
   // Filter choices by requires_state conditions
   const availableChoices = useMemo(() => {
@@ -137,12 +95,12 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
         choice.requires_state as StateConditions | null,
         playerState,
       ),
-    )
-  }, [allChoicesForNode, playerState])
+    );
+  }, [allChoicesForNode, playerState]);
 
   // Handle choice selection
   const handleChoice = (choice: NodeChoicePublic) => {
-    if (!currentNode || !choice.to_node_id) return
+    if (!currentNode || !choice.to_node_id) return;
 
     // Save current state to history before transitioning
     setHistory((prev) => [
@@ -152,46 +110,46 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
         state: { ...playerState },
         choiceText: choice.text,
       },
-    ])
+    ]);
 
     // Apply state mutations if any
     if (choice.sets_state) {
       setPlayerState((prev) =>
         applySetsState(choice.sets_state as StateMutations, prev),
-      )
+      );
     }
 
     // Navigate to next node
-    setCurrentNodeId(choice.to_node_id)
-  }
+    setCurrentNodeId(choice.to_node_id);
+  };
 
   // Handle undo - restores both node AND state
   const handleUndo = () => {
-    if (history.length === 0) return
+    if (history.length === 0) return;
 
-    const previous = history[history.length - 1]
-    setCurrentNodeId(previous.nodeId)
-    setPlayerState(previous.state)
-    setHistory((prev) => prev.slice(0, -1))
-  }
+    const previous = history[history.length - 1];
+    setCurrentNodeId(previous.nodeId);
+    setPlayerState(previous.state);
+    setHistory((prev) => prev.slice(0, -1));
+  };
 
   // Handle restart - resets everything
   const handleRestart = () => {
-    setHistory([])
-    setPlayerState({})
-    setCurrentNodeId(startNode?.id ?? null)
-  }
+    setHistory([]);
+    setPlayerState({});
+    setCurrentNodeId(startNode?.id ?? null);
+  };
 
   // Toggle debug section
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
+    }));
+  };
 
   // Determine if at end
-  const isEndNode = currentNode?.is_end_node || availableChoices.length === 0
+  const isEndNode = currentNode?.is_end_node || availableChoices.length === 0;
 
   return (
     <div className="flex h-screen flex-col bg-muted/30">
@@ -273,8 +231,10 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Node Content */}
-                  {renderContent(currentNode)}
-
+                  <ContentRenderer
+                    content={nodeToContent(currentNode, "page")}
+                    safeMode={true}
+                  />
                   {/* Choices Section */}
                   {!isEndNode && availableChoices.length > 0 && (
                     <>
@@ -454,7 +414,7 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
                     </span>
                   ) : (
                     allChoicesForNode.map((choice) => {
-                      const isAvailable = availableChoices.includes(choice)
+                      const isAvailable = availableChoices.includes(choice);
                       return (
                         <div
                           key={choice.id}
@@ -486,7 +446,7 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
                             </div>
                           )}
                         </div>
-                      )
+                      );
                     })
                   )}
                 </div>
@@ -506,7 +466,7 @@ const StoryPreview = ({ story, nodes, choices, onExit }: StoryPreviewProps) => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default StoryPreview
+export default StoryPreview;

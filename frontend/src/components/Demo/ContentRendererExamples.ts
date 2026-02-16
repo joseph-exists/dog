@@ -1,0 +1,382 @@
+/**
+ * ContentRendererExamples - Sample content for demo/testing
+ *
+ * Provides realistic examples of each ContentFormat with various
+ * metadata options to demonstrate all capabilities.
+ */
+import type { Content, ContentVariant } from "@/components/Page/primitives/ContentRenderer"
+
+// Test SVG files (imported as raw strings)
+import basicShapesSvg from "./test-files/basic_shapes.svg?raw"
+import arrowExampleSvg from "./test-files/arrow_example.svg?raw"
+import textAndShapesSvg from "./test-files/text_and_shapes.svg?raw"
+import hierarchicalTreeSvg from "./test-files/hierarchical_tree.svg?raw"
+import neuralNetworkSvg from "./test-files/neural_network.svg?raw"
+import forceNetworkSvg from "./test-files/force_network.svg?raw"
+import convolutionDemoSvg from "./test-files/convolution_demo.svg?raw"
+import physicsBounceSvg from "./test-files/physics_bounce.svg?raw"
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEXT EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const textExamples: Content<"text">[] = [
+  {
+    format: "text",
+    value: "Hello, World! This is plain text content with no formatting.",
+    metadata: { variant: "card" },
+  },
+  {
+    format: "text",
+    value: "A longer text block that demonstrates\nmultiple lines\nwith whitespace preserved.",
+    metadata: { variant: "page" },
+  },
+  {
+    format: "text",
+    value: "Inline snippet",
+    metadata: { variant: "inline" },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MARKDOWN EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const markdownExamples: Content<"markdown">[] = [
+  {
+    format: "markdown",
+    value: `# Markdown Heading
+
+This is a **bold** statement with *italic* emphasis.
+
+## Code Block
+
+\`\`\`typescript
+function greet(name: string): string {
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
+
+## List
+
+- Item one
+- Item two
+- Item three
+
+> A blockquote for emphasis.
+`,
+    metadata: { variant: "page" },
+  },
+  {
+    format: "markdown",
+    value: "**Bold** and *italic* inline markdown",
+    metadata: { variant: "inline" },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CODE EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const codeExamples: Content<"code">[] = [
+  {
+    format: "code",
+    value: `function fibonacci(n: number): number {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// Calculate first 10 Fibonacci numbers
+for (let i = 0; i < 10; i++) {
+  console.log(fibonacci(i));
+}`,
+    metadata: {
+      variant: "card",
+      options: {
+        language: "typescript",
+        lineNumbers: true,
+        copyable: true,
+        filename: "fibonacci.ts",
+      },
+    },
+  },
+  {
+    format: "code",
+    value: `const highlighted = true;
+const notHighlighted = false;
+const alsoHighlighted = true;`,
+    metadata: {
+      variant: "card",
+      options: {
+        language: "typescript",
+        highlightLines: [1, 3],
+        lineNumbers: true,
+      },
+    },
+  },
+  {
+    format: "code",
+    value: `// Starting from line 100
+export function important() {
+  return "This line is 102";
+}`,
+    metadata: {
+      variant: "card",
+      options: {
+        language: "typescript",
+        lineNumbers: true,
+        startLine: 100,
+      },
+    },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HTML EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const htmlExamples: Content<"html">[] = [
+  {
+    format: "html",
+    value: `<article>
+  <h2>HTML Content</h2>
+  <p>This is <strong>sanitized HTML</strong> with <em>emphasis</em>.</p>
+  <ul>
+    <li>List item one</li>
+    <li>List item two</li>
+  </ul>
+</article>`,
+    metadata: { variant: "card" },
+  },
+  {
+    format: "html",
+    value: `<span style="color: blue;">Styled inline HTML</span>`,
+    metadata: { variant: "inline" },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JSON EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const jsonExamples: Content<"json">[] = [
+  {
+    format: "json",
+    value: JSON.stringify({
+      name: "ContentRenderer",
+      version: "1.0.0",
+      formats: ["text", "markdown", "html", "json", "code", "svg", "image", "mdx"],
+      features: {
+        variants: 9,
+        themeSupport: true,
+        safeMode: true,
+      },
+    }),
+    metadata: {
+      variant: "card",
+      options: { viewMode: "text" },
+    },
+  },
+  {
+    format: "json",
+    value: JSON.stringify({ status: "ok", count: 42 }),
+    metadata: {
+      variant: "inline",
+      options: { viewMode: "text" },
+    },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SVG EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const svgExamples: Content<"svg">[] = [
+  // Original simple examples
+  {
+    format: "svg",
+    value: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="40" fill="#3b82f6" />
+  <text x="50" y="55" text-anchor="middle" fill="white" font-size="12">SVG</text>
+</svg>`,
+    metadata: {
+      variant: "card",
+      label: "Simple Circle",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: `<svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="10" width="80" height="80" fill="#ef4444" rx="8"/>
+  <rect x="110" y="10" width="80" height="80" fill="#22c55e" rx="8"/>
+</svg>`,
+    metadata: {
+      variant: "card",
+      label: "Two Squares",
+      options: { inline: true },
+    },
+  },
+  // Test files
+  {
+    format: "svg",
+    value: basicShapesSvg,
+    metadata: {
+      variant: "card",
+      label: "Basic Shapes",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: arrowExampleSvg,
+    metadata: {
+      variant: "card",
+      label: "Arrow Example",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: textAndShapesSvg,
+    metadata: {
+      variant: "card",
+      label: "Text and Shapes",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: hierarchicalTreeSvg,
+    metadata: {
+      variant: "page",
+      label: "Hierarchical Tree (Org Chart)",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: neuralNetworkSvg,
+    metadata: {
+      variant: "page",
+      label: "Neural Network Architecture",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: forceNetworkSvg,
+    metadata: {
+      variant: "page",
+      label: "Force-Directed Network",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: convolutionDemoSvg,
+    metadata: {
+      variant: "page",
+      label: "Convolution Demo",
+      options: { inline: true },
+    },
+  },
+  {
+    format: "svg",
+    value: physicsBounceSvg,
+    metadata: {
+      variant: "page",
+      label: "Physics Bounce Simulation",
+      options: { inline: true },
+    },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMAGE EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const imageExamples: Content<"image">[] = [
+  {
+    format: "image",
+    value: "https://picsum.photos/400/300",
+    metadata: {
+      variant: "card",
+      options: {
+        alt: "Random image from Picsum",
+        loading: "lazy",
+      },
+    },
+  },
+  {
+    format: "image",
+    value: "https://picsum.photos/100/100",
+    metadata: {
+      variant: "thumbnail",
+      options: {
+        alt: "Thumbnail image",
+      },
+    },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MDX EXAMPLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const mdxExamples: Content<"mdx">[] = [
+  {
+    format: "mdx",
+    value: `# MDX Content
+
+This is **MDX** with embedded components.
+
+\`\`\`typescript
+const greeting = "Hello from MDX!";
+console.log(greeting);
+\`\`\`
+
+The code above will be syntax highlighted with Shiki.
+
+## Features
+
+- Markdown syntax
+- JSX components (when enabled)
+- Code highlighting
+`,
+    metadata: { variant: "page" },
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ALL EXAMPLES GROUPED
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const allExamples = {
+  text: textExamples,
+  markdown: markdownExamples,
+  code: codeExamples,
+  html: htmlExamples,
+  json: jsonExamples,
+  svg: svgExamples,
+  image: imageExamples,
+  mdx: mdxExamples,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VARIANT DEMONSTRATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const variantDemos: Array<{ variant: ContentVariant; description: string }> = [
+  { variant: "inline", description: "Inline: compact, no scroll" },
+  { variant: "card", description: "Card: bounded height, scrollable" },
+  { variant: "page", description: "Page: full layout with headings" },
+  { variant: "tooltip", description: "Tooltip: very small, truncated" },
+  { variant: "preview", description: "Preview: medium size, read-only" },
+  { variant: "embed", description: "Embed: nested context" },
+  { variant: "modal", description: "Modal: centered, backdrop" },
+  { variant: "thumbnail", description: "Thumbnail: fixed dimensions" },
+  { variant: "background", description: "Background: decorative layer" },
+]

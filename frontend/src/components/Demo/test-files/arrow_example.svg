@@ -1,0 +1,14 @@
+<svg width="500" height="200" viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arrow" viewBox="-10 -4 10 8" refX="0" refY="0" orient="auto" markerWidth="10" markerHeight="8"><path d="M -10 -4 L 0 0 L -10 4 Z" fill="rgba(0,0,0,1.0)" stroke="rgba(0,0,0,0.0)" stroke-width="1.0"   /></marker></defs>
+  <g transform="translate(80.0 100.0) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="30" stroke="rgba(139,0,0,1.0)" fill="rgba(255,99,71,1.0)" />
+</g>
+  <g transform="translate(250.0 100.0) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="30" stroke="rgba(0,0,139,1.0)" fill="rgba(100,149,237,1.0)" />
+</g>
+  <g transform="translate(400.0 100.0) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(255,165,0,1.0)" fill="rgba(255,215,0,1.0)" />
+</g>
+  <path d="M 110 100 L 220 100" fill="rgba(0,0,0,0.0)" stroke="rgba(0,0,0,1.0)" stroke-width="2"  marker-end="url(#arrow)" />
+  <path d="M 280 100 L 375 100" fill="rgba(0,0,0,0.0)" stroke="rgba(128,0,128,1.0)" stroke-width="2"  marker-end="url(#arrow)" />
+</svg>

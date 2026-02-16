@@ -1,0 +1,88 @@
+<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arrow" viewBox="-10 -4 10 8" refX="0" refY="0" orient="auto" markerWidth="10" markerHeight="8"><path d="M -10 -4 L 0 0 L -10 4 Z" fill="rgba(0,0,0,1.0)" stroke="rgba(0,0,0,0.0)" stroke-width="1.0"   /></marker></defs>
+  <g transform="translate(-51.0524455732526 125.56397912222262) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(0, 60%, 75%)" />
+</g>
+<g transform="translate(3949.4143057744886 1472.1414191313943) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Alice</text>
+</g>
+<g transform="translate(22.67211018974631 102.24867115973721) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(45, 60%, 75%)" />
+</g>
+<g transform="translate(1754.804217077639 3840.1147151224723) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Bob</text>
+</g>
+<g transform="translate(-68.18979414179155 51.009611443910266) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(90, 60%, 75%)" />
+</g>
+<g transform="translate(-1630.0088704573966 3895.7622517091254) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Charlie</text>
+</g>
+<g transform="translate(68.7554360387741 4.374255076026487) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(135, 60%, 75%)" />
+</g>
+<g transform="translate(-3907.5949715213933 1577.7057424207248) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Diana</text>
+</g>
+<g transform="translate(-16.944623383455404 27.05899593563766) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(180, 60%, 75%)" />
+</g>
+<g transform="translate(-3868.3311457775426 -1651.0036139792985) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Eve</text>
+</g>
+<g transform="translate(41.24366420444607 -104.34079171114975) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(225, 60%, 75%)" />
+</g>
+<g transform="translate(-1587.498212899776 -3897.9176591105766) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Frank</text>
+</g>
+<g transform="translate(-41.152259517853786 -64.27958686051174) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(270, 60%, 75%)" />
+</g>
+<g transform="translate(1751.69787606947 -3830.5802159425266) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Grace</text>
+</g>
+<g transform="translate(-20.656981299744064 -166.96924213886012) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="25" stroke="rgba(0,0,139,1.0)" fill="hsl(315, 60%, 75%)" />
+</g>
+<g transform="translate(3897.7489693732737 -1598.5652698384097) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Henry</text>
+</g>
+  <path d="M -27.216025508827553 118.02573804672794 L -1.164309874678736 109.7869122352319" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M -56.65298559154969 101.19937464147118 L -62.58925412349446 75.3742159246617" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M 0.895969457105732 89.96861844029695 L -46.413653409150974 63.28966416335052" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M 33.32172361145719 79.63041008669902 L 58.105822617063225 26.99251614906469" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M -45.54135089303996 40.42433778622534 L -39.593066632207 37.64426959332259" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M 44.587765650235625 10.771419134494902 L 7.223047005083078 20.66183187716925" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M 62.622199134076936 -19.86173892196874 L 47.37690110914323 -80.10479771315453" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M -23.349299148569788 2.8933151394391743 L -34.7475837527394 -40.113906064313255" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M 18.76028663755161 -93.40928983883289 L -18.668881950959324 -75.2110887328286" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M 23.669611192794306 -122.12147394619498 L -3.082928288092301 -149.18855990381488" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M -36.2591479551973 -88.79606008231502 L -25.55009286240055 -142.45276891705683" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M -42.87255200202868 101.9400645193578 L -25.124516954679322 50.682910538502476" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <path d="M -62.48168329522284 26.669983867398656 L -46.8603703644225 -39.93995928400013" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,1.0)" stroke-width="1"  marker-end="url(#arrow)" />
+  <g transform="translate(-51.0524455732526 125.56397912222262) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Alice</text>
+</g>
+  <g transform="translate(22.67211018974631 102.24867115973721) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Bob</text>
+</g>
+  <g transform="translate(-68.18979414179155 51.009611443910266) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Charlie</text>
+</g>
+  <g transform="translate(68.7554360387741 4.374255076026487) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Diana</text>
+</g>
+  <g transform="translate(-16.944623383455404 27.05899593563766) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Eve</text>
+</g>
+  <g transform="translate(41.24366420444607 -104.34079171114975) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Frank</text>
+</g>
+  <g transform="translate(-41.152259517853786 -64.27958686051174) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Grace</text>
+</g>
+  <g transform="translate(-20.656981299744064 -166.96924213886012) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Henry</text>
+</g>
+</svg>
