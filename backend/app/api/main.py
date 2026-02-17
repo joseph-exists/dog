@@ -31,6 +31,8 @@ from app.api.routes import (
     rooms,
     stories,
     storynodes,
+    theme_bindings,
+    themes,
     trait_conflicts,
     trait_users,
     traits,
@@ -82,6 +84,8 @@ api_router.include_router(trait_users.router)
 api_router.include_router(quality_users.router)
 api_router.include_router(user_panels.router, prefix="/users", tags=["user-panels"])
 api_router.include_router(presets.router, prefix="/presets", tags=["presets"])
+api_router.include_router(themes.router, prefix="/themes", tags=["themes"])
+api_router.include_router(theme_bindings.router, prefix="/theme-bindings", tags=["theme-bindings"])
 
 if settings.ENVIRONMENT == "local":
     api_router.include_router(private.router)
