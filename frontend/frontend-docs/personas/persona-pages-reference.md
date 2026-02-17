@@ -65,6 +65,8 @@
 
 ### PersonaPublic Shape
 
+[josep-note: see extended note on this definition below. I am moving very quickly away from the domain language, this will be refactored in very near future]
+
 ```typescript
 {
   id: string
@@ -113,11 +115,19 @@ When a persona is created via `createPersonaFromArchetype`:
 
 ---
 
+## Current Relationship Structure for archetypes/personas/qualities/traits included as addendum
+
+
+
+
+
 ## New Block Types
 
 ### DomainsBlock
 
 Displays domain expertise areas with color-coded hierarchy.
+
+[josep-note: these don't feel right in their current form. I think extensability/integration with the tag structure will be important here.  if I try to model these for [human, agent] concurrently, i think more about capability and accessibility. tools, range, sophistication? desires, motivations, affordances?  There's a distinction between (what we need to do)(what we like doing)(what we're good at) - and there's a further distinction between (how we need to do a thing)(how we want to do a thing) and these distinctions will have an impact on who we want or need to do a thing with.  If we're driven to learn and know, that's a different context then being driven by fear of not completing a task.  If we're driven to become better using a specific tool or way of thinking or way of approaching a problem - then that's a different epistemic position than being driven to be financially successful through the application of solving that particular problem.  These epistemic stances, and our capability to move through them, are part of our relational construct.  If one way we're thinking about the affordance of personas is to enable movement through different affordances of being - so a person/agent/etc isn't stuck in an interpellated approximation of 'who they are and what they are capable of and what they have to do to survive' - then telling a person to choose their domains feels counterproductive.  Tagging seems better, and weighted tagging seems more fluid than a hierarchical structure.  But not too much more noodling.  We need to move. 
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -211,7 +221,7 @@ const isOwner = !!user
 
 ### What is a Persona?
 
-A persona represents a character profile with identity, expertise domains, and personality traits. Personas can be added to your personal library and assigned to agents or used in rooms as a userPersona.
+A persona represents a character profile with identity, expertise domains, and personality traits. Personas can be added to your personal library and assigned to agents or used elsewhere as a userPersona.
 
 ### Browsing Personas (`/personas`)
 
@@ -275,3 +285,110 @@ From the catalog section on `/personas`, click any persona card to view it. To a
 | **Agent Pages** | Agents can have persona libraries via `AgentPersonasService` |
 | **Archetypes** | Personas can be created from archetypes via `createPersonaFromArchetype` |
 | **Traits/Qualities** | Stored separately, displayed in TraitsBlock. APIs: `TraitsService`, `QualitiesService` |
+
+
+
+## ADDENDUM A: current data objects
+
+
+                          Table "public.archetype"
+   Column    |            Type             | Collation | Nullable | Default 
+-------------+-----------------------------+-----------+----------+---------
+ id          | uuid                        |           | not null | 
+ created_at  | timestamp without time zone |           | not null | 
+ description | character varying(255)      |           |          | 
+ name        | character varying(255)      |           | not null | 
+Indexes:
+    "archetype_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "archetypepersonalink" CONSTRAINT "archetypepersonalink_archetype_id_fkey" FOREIGN KEY (archetype_id) REFERENCES archetype(id)
+    TABLE "archetypequalitylink" CONSTRAINT "archetypequalitylink_archetype_id_fkey" FOREIGN KEY (archetype_id) REFERENCES archetype(id)
+    TABLE "archetypetraitlink" CONSTRAINT "archetypetraitlink_archetype_id_fkey" FOREIGN KEY (archetype_id) REFERENCES archetype(id)
+    TABLE "personaqualitylink" CONSTRAINT "personaqualitylink_source_archetype_id_fkey" FOREIGN KEY (source_archetype_id) REFERENCES archetype(id)
+    TABLE "personatraitlink" CONSTRAINT "personatraitlink_source_archetype_id_fkey" FOREIGN KEY (source_archetype_id) REFERENCES archetype(id)
+    
+                            Table "public.trait"
+   Column    |            Type             | Collation | Nullable | Default 
+-------------+-----------------------------+-----------+----------+---------
+ id          | uuid                        |           | not null | 
+ created_at  | timestamp without time zone |           | not null | 
+ description | character varying(255)      |           |          | 
+ name        | character varying(255)      |           | not null | 
+Indexes:
+    "trait_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "archetypetraitlink" CONSTRAINT "archetypetraitlink_trait_id_fkey" FOREIGN KEY (trait_id) REFERENCES trait(id)
+    TABLE "personaqualitylink" CONSTRAINT "personaqualitylink_source_trait_id_fkey" FOREIGN KEY (source_trait_id) REFERENCES trait(id)
+    TABLE "personatraitlink" CONSTRAINT "personatraitlink_trait_id_fkey" FOREIGN KEY (trait_id) REFERENCES trait(id)
+    TABLE "qualitytraitlink" CONSTRAINT "qualitytraitlink_trait_id_fkey" FOREIGN KEY (trait_id) REFERENCES trait(id)
+    TABLE "traitconflictgroupmember" CONSTRAINT "traitconflictgroupmember_trait_id_fkey" FOREIGN KEY (trait_id) REFERENCES trait(id)
+
+tinyfoot=# \d quality;
+                           Table "public.quality"
+   Column    |            Type             | Collation | Nullable | Default 
+-------------+-----------------------------+-----------+----------+---------
+ id          | uuid                        |           | not null | 
+ created_at  | timestamp without time zone |           | not null | 
+ description | character varying(255)      |           |          | 
+ name        | character varying(255)      |           | not null | 
+Indexes:
+    "quality_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "archetypequalitylink" CONSTRAINT "archetypequalitylink_quality_id_fkey" FOREIGN KEY (quality_id) REFERENCES quality(id)
+    TABLE "personaqualitylink" CONSTRAINT "personaqualitylink_quality_id_fkey" FOREIGN KEY (quality_id) REFERENCES quality(id)
+    TABLE "qualityeventtrigger" CONSTRAINT "qualityeventtrigger_quality_id_fkey" FOREIGN KEY (quality_id) REFERENCES quality(id)
+    TABLE "qualitytraitlink" CONSTRAINT "qualitytraitlink_quality_id_fkey" FOREIGN KEY (quality_id) REFERENCES quality(id)
+
+[note: persona columns to be refactored in very near future]
+tinyfoot=# \d persona;
+                               Table "public.persona"
+        Column        |            Type             | Collation | Nullable | Default 
+----------------------+-----------------------------+-----------+----------+---------
+ id                   | uuid                        |           | not null | 
+ created_at           | timestamp without time zone |           | not null | 
+ description          | character varying(255)      |           |          | 
+ name                 | character varying(255)      |           | not null | 
+ long_description     | character varying           |           |          | 
+ general_domain       | character varying(255)      |           |          | 
+ specific_domain      | character varying(255)      |           |          | 
+ general_domain_high  | character varying(255)      |           |          | 
+ specific_domain_high | character varying(255)      |           |          | 
+Indexes:
+    "persona_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "agent_personas" CONSTRAINT "agent_personas_persona_id_fkey" FOREIGN KEY (persona_id) REFERENCES persona(id) ON DELETE CASCADE
+    TABLE "archetypepersonalink" CONSTRAINT "archetypepersonalink_persona_id_fkey" FOREIGN KEY (persona_id) REFERENCES persona(id)
+    TABLE "personaqualitylink" CONSTRAINT "personaqualitylink_persona_id_fkey" FOREIGN KEY (persona_id) REFERENCES persona(id)
+    TABLE "personatraitlink" CONSTRAINT "personatraitlink_persona_id_fkey" FOREIGN KEY (persona_id) REFERENCES persona(id)
+    TABLE "room_participant_bindings" CONSTRAINT "room_participant_bindings_persona_id_fkey" FOREIGN KEY (persona_id) REFERENCES persona(id)
+    TABLE "userpersona" CONSTRAINT "userpersona_persona_id_fkey" FOREIGN KEY (persona_id) REFERENCES persona(id)
+    
+[note: event included for consistency, not integrated with any current components, will be used extensively in vouch and recommender systems, along with tag object]
+tinyfoot=# \d event
+                            Table "public.event"
+   Column    |            Type             | Collation | Nullable | Default 
+-------------+-----------------------------+-----------+----------+---------
+ name        | character varying(255)      |           | not null | 
+ description | character varying(100)      |           |          | 
+ event_type  | character varying(100)      |           | not null | 
+ id          | uuid                        |           | not null | 
+ created_at  | timestamp without time zone |           | not null | 
+Indexes:
+    "event_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "qualityeventtrigger" CONSTRAINT "qualityeventtrigger_event_id_fkey" FOREIGN KEY (event_id) REFERENCES event(id)
+
+
+[note: tag will be extended to all primary data objects]
+tinyfoot=# \d tag
+                       Table "public.tag"
+ Column |         Type          | Collation | Nullable | Default 
+--------+-----------------------+-----------+----------+---------
+ name   | character varying(50) |           | not null | 
+ color  | character varying(20) |           |          | 
+ id     | uuid                  |           | not null | 
+Indexes:
+    "tag_pkey" PRIMARY KEY, btree (id)
+    "tag_name_key" UNIQUE CONSTRAINT, btree (name)
+Referenced by:
+    TABLE "storytotag" CONSTRAINT "storytotag_tag_id_fkey" FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE

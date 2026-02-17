@@ -10,23 +10,23 @@ import {
   Sparkles,
   User2,
   Users,
-} from "lucide-react"
+} from "lucide-react";
 
-import { SidebarAppearance } from "@/components/Common/Appearance"
-import { Logo } from "@/components/Common/Logo"
+import { SidebarAppearance } from "@/components/Common/Appearance";
+import { Logo } from "@/components/Common/Logo";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-} from "@/components/ui/sidebar"
-import useAuth from "@/hooks/useAuth"
-import { type Item, Main } from "./Main"
-import { User } from "./User"
+} from "@/components/ui/sidebar";
+import useAuth from "@/hooks/useAuth";
+import { type Item, Main } from "./Main";
+import { User } from "./User";
 
 const baseItems: Item[] = [
   { icon: Home, title: "Dashboard", path: "/" },
-  { icon: BookOpen, title: "Stories", path: "/stories" },
+  { icon: BookOpen, title: "Creative Desk", path: "/stories" },
   { icon: MessageSquare, title: "Rooms", path: "/rooms" },
   { icon: Bot, title: "Agents", path: "/agents" },
   { icon: Smile, title: "Personas", path: "/personas" },
@@ -35,22 +35,22 @@ const baseItems: Item[] = [
   { icon: Sparkles, title: "Traits", path: "/traits" },
   { icon: Briefcase, title: "Items", path: "/items" },
   { icon: BookOpen, title: "debug-chatster", path: "/chatster" },
-]
+];
 
 export function AppSidebar() {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser } = useAuth();
 
   // Build items list based on user state
-  const items: Item[] = [...baseItems]
+  const items: Item[] = [...baseItems];
 
   // Add "My Page" only for authenticated users
   if (currentUser?.id) {
-    items.push({ icon: User2, title: "My Page", path: `/u/${currentUser.id}` })
+    items.push({ icon: User2, title: "My Page", path: `/u/${currentUser.id}` });
   }
 
   // Add Admin for superusers
   if (currentUser?.is_superuser) {
-    items.push({ icon: Users, title: "Admin", path: "/admin" })
+    items.push({ icon: Users, title: "Admin", path: "/admin" });
   }
 
   return (
@@ -66,7 +66,7 @@ export function AppSidebar() {
         <User user={currentUser} />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
 
-export default AppSidebar
+export default AppSidebar;

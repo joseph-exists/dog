@@ -167,7 +167,7 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
 
       {/* Content Format */}
       <div className="space-y-2">
-        <Label htmlFor="content_format">Content Format</Label>
+        <Label htmlFor="content_format">Contents Fermat</Label>
         <Select value={contentFormat} onValueChange={handleContentFormatChange}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Select format" />

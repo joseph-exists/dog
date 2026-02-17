@@ -6,6 +6,161 @@
 
 ---
 
+NOTES BEFORE USE: TODO: josep-reconcile 
+Part 1: Reconciliation Note for Your Plan Document
+
+## Reconciliation Notes: Theme Documentation (2026-02-17)
+
+### Documents Requiring Alignment
+
+| Document | Location | Purpose | Status |
+|----------|----------|---------|--------|
+| CASCADING-THEMES.md | `Common/Themes/` | Authoritative cascade architecture | **Current** |
+| THEME-CASCADE-REFERENCE.md | `Agents/docs/` | Migration guide for junior engineers | **Needs update** |
+| REFERENCE.md | `Agents/docs/Presentation/` | Deep presentation-as-data architecture | **Partially current**
+ |
+
+### Critical Conflict: `--background` in Card Themes
+
+**Old guidance:** All themes (including "cards themes") must include `--background`.
+**New guidance:** Card themes must NOT include `--background` — it overrides page surface.
+
+This reflects the intentional split:
+- `PAGE_THEMES` → control surfaces → MUST set `--background`
+- `CARD_THEMES` → control content areas → must EXCLUDE `--background`
+
+**Action required:** Update THEME-CASCADE-REFERENCE.md "Common Mistakes" section to reflect this.
+
+### Structural Changes from AMBIENT_THEMES Split
+
+| Aspect | Old (per-feature) | New (centralized) |
+|--------|-------------------|-------------------|
+| Location | `YourFeature/themes.ts` | `Common/Themes/page_themes.ts` + `card_themes.ts` |
+| Array | Single `AMBIENT_THEMES[]` | Separate `PAGE_THEMES[]` and `CARD_THEMES[]` |
+| Functions | `getThemeStyle(theme)` | `getPageThemeStyle(id)` / `getCardThemeStyle(id)` |
+
+### THEME-CASCADE-REFERENCE.md Updates Needed
+
+1. Point "Step 1: Create themes.ts" to centralized files instead
+2. Update function names in code examples
+3. Add callout about PAGE vs CARD theme `--background` handling
+4. Update "Related Files" table to reference `Common/Themes/`
+
+### REFERENCE.md (Presentation) Updates Needed
+
+1. Update file paths (types/resolve moved to `Common/Themes/`)
+2. Complete TODO sections (file structure, adding new elements)
+3. Mark as cross-domain (applies to Story, Agent, future entities)
+4. Reference CASCADING-THEMES.md for cascade context
+
+### Safe Extensions (No Conflicts)
+
+These topics in CASCADING-THEMES.md extend without conflicting:
+- Decoration hints system
+- Accent strip positioning
+- localStorage persistence pattern
+- Future `useUserPagePrefs()` hook signature
+
+---
+Part 2: Presentation-as-Data Pattern Assessment
+
+★ Insight ─────────────────────────────────────
+You have three complementary documents that together form complete coverage, but they're scattered and have
+some redundancy/drift:
+
+1. types.ts — Source of truth for TypeScript interfaces (PresentationTokens, AgentPresentation,
+StoryPresentation)
+2. Presentation/REFERENCE.md — Deep "why" and "how" architecture doc
+3. CASCADING-THEMES.md — Layer cascade context
+─────────────────────────────────────────────────
+
+Current State of Documentation
+┌──────────────────────────┬───────────────────────────────────┬──────────────┐
+│         Concept          │       Where It's Documented       │ Completeness │
+├──────────────────────────┼───────────────────────────────────┼──────────────┤
+│ What fields exist        │ types.ts:105-177                  │ ✅ Complete  │
+├──────────────────────────┼───────────────────────────────────┼──────────────┤
+│ How resolution works     │ Presentation/REFERENCE.md:126-146 │ ✅ Complete  │
+├──────────────────────────┼───────────────────────────────────┼──────────────┤
+│ Variable surface rules   │ Presentation/REFERENCE.md:65-99   │ ✅ Complete  │
+├──────────────────────────┼───────────────────────────────────┼──────────────┤
+│ How it's stored in DB    │ Presentation/REFERENCE.md:114-122 │ ⚠️ Brief     │
+├──────────────────────────┼───────────────────────────────────┼──────────────┤
+│ Cascade with page themes │ CASCADING-THEMES.md               │ ✅ Complete  │
+├──────────────────────────┼───────────────────────────────────┼──────────────┤
+│ Backend model structure  │ Not documented (only in code)     │ ❌ Missing   │
+└──────────────────────────┴───────────────────────────────────┴──────────────┘
+The Gap You're Sensing
+
+The persistence layer isn't formally documented. Here's what exists in code:
+
+Backend (models.py:271, 529, 3067):
+# Story model
+presentation: dict | None = Field(default=None, sa_column=Column(JSON))
+
+# UserAgentConfig model
+presentation: dict | None = Field(default=None, sa_column=Column(JSON))
+
+Frontend (types.ts:14-17):
+// Accepts API generic object OR structured AgentPresentation
+presentation?: AgentPresentation | { [key: string]: unknown } | null
+
+This means:
+- Backend stores presentation as an opaque JSON blob (dict | None)
+- Frontend has typed interfaces but accepts loose objects for backwards compatibility
+- Round-trip integrity is assumed (no key transformation)
+
+Recommended Documentation Addition
+
+For your atomic specificity demo, I'd suggest adding a section to either CASCADING-THEMES.md or
+Presentation/REFERENCE.md:
+
+## Persistence: Presentation-as-Data
+
+### Storage Model
+
+Presentation data is stored as a JSON column on entity tables:
+
+| Entity | Table | Column | Type |
+|--------|-------|--------|------|
+| Story | `story` | `presentation` | `JSON` (nullable) |
+| Agent | `user_agent_config` | `presentation` | `JSON` (nullable) |
+
+### Data Shape
+
+```typescript
+// Stored in DB, round-trips via API
+{
+  "tokens": {
+    "--story-accent": "oklch(0.6 0.15 155)",
+    "--story-accent-position": "top"
+  },
+  "avatar": {
+    "emoji": "🧭",
+    "backgroundColor": "oklch(0.5 0.15 155)"
+  },
+  "decorationHint": "organic"
+}
+
+Key Invariant
+
+The JSON keys (including CSS variable names like --story-accent) must
+round-trip without transformation. Backend treats this as an opaque blob.
+Test: write presentation → read via API → confirm keys survive intact.
+
+Resolution Order
+
+1. Entity type defaults (e.g., STORY_TYPE_PRESENTATIONS["process"])
+2. Instance presentation field (creator's customization)
+3. Shallow merge: later layers override earlier, no deep merge
+
+---
+
+Would you like me to add this persistence section to one of the existing docs, or would you prefer to
+integrate it yourself? Also, should I update the THEME-CASCADE-REFERENCE.md to point to the centralized
+architecture, or leave that for your own integration pass?
+
+
 ## Overview
 
 This document explains how to implement the 4-layer theme cascade system used on the Agents page. The system allows themes to be applied at multiple levels, with downstream themes overriding upstream ones.
@@ -147,6 +302,27 @@ interface ThemeTokens {
 
 ## File Structure for Theme Cascade
 
+
+  ---
+  📂 Structural Divergence
+  Aspect: Theme location
+  Old (per-feature): YourFeature/YourShell/themes.ts
+  New (centralized): Common/Themes/page_themes.ts + card_themes.ts
+  ────────────────────────────────────────
+  Aspect: Theme type
+  Old (per-feature): Single AMBIENT_THEMES[]
+  New (centralized): Separate PAGE_THEMES[] and CARD_THEMES[]
+  ────────────────────────────────────────
+  Aspect: Style function
+  Old (per-feature): getThemeStyle(theme)
+  New (centralized): getPageThemeStyle(id) / getCardThemeStyle(id)
+  ────────────────────────────────────────
+  Aspect: Lookup
+  Old (per-feature): getThemeById(id)
+  New (centralized): Theme arrays with ID lookup built-in
+
+
+## Following table is for PAGE level integration for new components only before integration.  Intentionally decoupled from Agents and Story - these are integrated as per the above
 ```
 src/components/YourFeature/
 ├── YourShell/
@@ -357,22 +533,7 @@ function YourPage() {
 
 Theme wrappers should be transparent. Let downstream components render surfaces.
 
-### Mistake 2: Forgetting --background in themes
-
-```typescript
-// WRONG — PanelContainer uses bg-background, will fall through to :root
-tokens: {
-  "--card": "...",
-  "--foreground": "...",
-}
-
-// CORRECT — includes --background
-tokens: {
-  "--background": "...",
-  "--card": "...",
-  "--foreground": "...",
-}
-```
+### Mistake 2: --background.  Think about it. #todo: josep-review
 
 ### Mistake 3: Missing bg-background on Header
 

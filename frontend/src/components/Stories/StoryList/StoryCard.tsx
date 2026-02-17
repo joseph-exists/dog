@@ -9,15 +9,22 @@
  * - Relative timestamp formatting
  */
 
-import { useQuery } from "@tanstack/react-query"
-import { Link, useNavigate } from "@tanstack/react-router"
-import { Edit, MessageSquare, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Edit, MessageSquare, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 
-import { RoomsService, type StoryPublic } from "@/client"
-import AddRoom from "@/components/Room/Dialogs/AddRoom"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { RoomsService, type StoryPublic } from "@/client";
+import AddRoom from "@/components/Room/Dialogs/AddRoom";
+// import {
+//   presentationToStyle,
+//   resolveStoryPresentation,
+//   STORY_TYPE_PRESENTATIONS,
+// } from "@/components/Common/Themes/resolve";
+// import type { StoryPresentation } from "@/components/Common/Themes/types";
+//import { isStoryTypeKey } from "@/components/Common/Themes/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -25,7 +32,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogClose,
@@ -35,43 +42,43 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   useDeleteStory,
   usePublishStory,
   useUnpublishStory,
-} from "@/hooks/stories/useStories"
+} from "@/hooks/stories/useStories";
 
 interface StoryCardProps {
-  story: StoryPublic
+  story: StoryPublic;
 }
 
 const StoryCard = ({ story }: StoryCardProps) => {
-  const navigate = useNavigate()
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const navigate = useNavigate();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const publishMutation = usePublishStory()
-  const unpublishMutation = useUnpublishStory()
-  const deleteMutation = useDeleteStory()
+  const publishMutation = usePublishStory();
+  const unpublishMutation = useUnpublishStory();
+  const deleteMutation = useDeleteStory();
 
   // Fetch linked rooms for this story
   const { data: roomsData } = useQuery({
     queryKey: ["rooms", "story", story.id],
     queryFn: () => RoomsService.getRoomsForStory({ storyId: story.id }),
-  })
+  });
 
   // Determine story lifecycle state for badge
   const getStatusBadge = () => {
     if (story.is_published && story.published_version !== null) {
       return (
         <Badge variant="default">Published v{story.published_version}</Badge>
-      )
+      );
     }
     if (!story.is_published && story.published_version !== null) {
-      return <Badge variant="secondary">Unpublished</Badge>
+      return <Badge variant="secondary">Unpublished</Badge>;
     }
-    return <Badge variant="outline">Draft v{story.current_version}</Badge>
-  }
+    return <Badge variant="outline">Draft v{story.current_version}</Badge>;
+  };
 
   // Show editing badge if current version > published version
   const getEditingBadge = () => {
@@ -86,43 +93,43 @@ const StoryCard = ({ story }: StoryCardProps) => {
         >
           Draft v{story.current_version}
         </Badge>
-      )
+      );
     }
-    return null
-  }
+    return null;
+  };
 
   const handleEdit = () => {
-    navigate({ to: "/stories/$storyId/edit", params: { storyId: story.id } })
-  }
+    navigate({ to: "/stories/$storyId/edit", params: { storyId: story.id } });
+  };
 
   const handleTogglePublish = () => {
     if (story.is_published) {
-      unpublishMutation.mutate(story.id)
+      unpublishMutation.mutate(story.id);
     } else {
-      publishMutation.mutate(story.id)
+      publishMutation.mutate(story.id);
     }
-  }
+  };
 
   const handleDelete = () => {
-    deleteMutation.mutate(story.id)
-    setShowDeleteDialog(false)
-  }
+    deleteMutation.mutate(story.id);
+    setShowDeleteDialog(false);
+  };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
+    const date = new Date(dateString);
+    const now = new Date();
     const diffInDays = Math.floor(
       (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-    )
+    );
 
-    if (diffInDays === 0) return "Today"
-    if (diffInDays === 1) return "Yesterday"
-    if (diffInDays < 7) return `${diffInDays} days ago`
-    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
-    return date.toLocaleDateString()
-  }
+    if (diffInDays === 0) return "Today";
+    if (diffInDays === 1) return "Yesterday";
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
 
-  const linkedRooms = roomsData?.data ?? []
+  const linkedRooms = roomsData?.data ?? [];
 
   return (
     <Card>
@@ -134,7 +141,7 @@ const StoryCard = ({ story }: StoryCardProps) => {
             {getEditingBadge()}
           </div>
         </div>
-        <CardDescription className="min-h-[40px]">
+        <CardDescription className="min-h-4">
           {story.description || "No description"}
         </CardDescription>
       </CardHeader>
@@ -249,7 +256,7 @@ const StoryCard = ({ story }: StoryCardProps) => {
         </Dialog>
       </CardFooter>
     </Card>
-  )
-}
+  );
+};
 
-export default StoryCard
+export default StoryCard;

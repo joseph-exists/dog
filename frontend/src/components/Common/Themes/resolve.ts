@@ -26,6 +26,7 @@ export const STORY_TYPE_PRESENTATIONS: Record<StoryTypeKey, StoryPresentation> =
         "--story-accent-foreground": "oklch(1 0 0)",
       },
       avatar: { emoji: "🧭" },
+      decorationHint: "organic",
     },
     dynamic: {
       tokens: {
@@ -33,6 +34,7 @@ export const STORY_TYPE_PRESENTATIONS: Record<StoryTypeKey, StoryPresentation> =
         "--story-accent-foreground": "oklch(1 0 0)",
       },
       avatar: { emoji: "🎨" },
+      decorationHint: "warm",
     },
     analytic: {
       tokens: {
@@ -40,6 +42,7 @@ export const STORY_TYPE_PRESENTATIONS: Record<StoryTypeKey, StoryPresentation> =
         "--story-accent-foreground": "oklch(1 0 0)",
       },
       avatar: { emoji: "📊" },
+      decorationHint: "precise",
     },
     safety: {
       tokens: {
@@ -47,6 +50,7 @@ export const STORY_TYPE_PRESENTATIONS: Record<StoryTypeKey, StoryPresentation> =
         "--story-accent-foreground": "oklch(1 0 0)",
       },
       avatar: { emoji: "🛡️" },
+      decorationHint: "brutalist",
     },
     prediction: {
       tokens: {
@@ -54,6 +58,7 @@ export const STORY_TYPE_PRESENTATIONS: Record<StoryTypeKey, StoryPresentation> =
         "--story-accent-foreground": "oklch(1 0 0)",
       },
       avatar: { emoji: "🔮" },
+      decorationHint: "ethereal",
     },
     review: {
       tokens: {
@@ -61,6 +66,7 @@ export const STORY_TYPE_PRESENTATIONS: Record<StoryTypeKey, StoryPresentation> =
         "--story-accent-foreground": "oklch(0.2 0 0)",
       },
       avatar: { emoji: "⚙️" },
+      decorationHint: "neon",
     },
   }
 

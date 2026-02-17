@@ -3,8 +3,6 @@
 import {
   Bug,
   Layout,
-  PanelLeftIcon,
-  LayoutGridIcon,
   Link,
   MoreVertical,
   Plus,
@@ -12,85 +10,88 @@ import {
   MessageSquare,
   Grid2X2PlusIcon,
   Gamepad2Icon,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import CreateStoryModal from "@/components/Story/Display/CreateStoryModal"
-import type * as React from "react"
-import { useState } from "react"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type * as React from "react";
+import { useState } from "react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   // DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { PanelLayoutDialog } from "./Dialogs/PanelLayoutDialog"
+} from "@/components/ui/dropdown-menu";
+import { PanelLayoutDialog } from "./Dialogs/PanelLayoutDialog";
 
-import { PAGE_THEMES, getPageThemeById } from "@/components/Common/Themes/page_themes"
-import { CARD_THEMES, getCardThemeById } from "@/components/Common/Themes/card_themes" 
+import {
+  PAGE_THEMES,
+  getPageThemeById,
+} from "@/components/Common/Themes/page_themes";
+import {
+  CARD_THEMES,
+  getCardThemeById,
+} from "@/components/Common/Themes/card_themes";
 
-export type StoryType = "process" | "workspace" | "play"
+export type StoryType = "process" | "workspace" | "play";
 
 export interface StoryHeaderProps {
-  storyId?: string
+  storyId?: string;
   /** Page title */
-  title: string
-  type: StoryType 
+  title: string;
+  type: StoryType;
   /* not sure if this is the way i want to go or not */
   /** Currently selected page theme ID */
-  pageThemeId: string
+  pageThemeId: string;
   /** Currently selected cards theme ID */
-  cardsThemeId: string
+  cardsThemeId: string;
   /** Page theme change callback */
-  onPageThemeChange: (themeId: string) => void
+  onPageThemeChange: (themeId: string) => void;
   /** Cards theme change callback */
-  onCardsThemeChange: (themeId: string) => void
+  onCardsThemeChange: (themeId: string) => void;
   /** Current layout mode */
-  layoutMode: "panels" | "tabs"
+  layoutMode: "panels" | "tabs";
   /** Layout mode change callback */
-  onLayoutModeChange: (mode: "panels" | "tabs") => void
+  onLayoutModeChange: (mode: "panels" | "tabs") => void;
 
-  canEdit: boolean
+  canEdit: boolean;
   /** Add panel callback (workspace only) */
-  onAddPanel?: () => void
+  onAddPanel?: () => void;
   /** Room settings callback */
-  onSettings?: () => void
+  onSettings?: () => void;
   /** Copy link callback */
-  onCopyLink?: () => void
+  onCopyLink?: () => void;
   /** Delete room callback */
-  onDelete?: () => void
+  onDelete?: () => void;
 
-  showDebugPanel?: boolean
+  showDebugPanel?: boolean;
   /** Toggle debug panel callback */
-  onToggleDebugPanel?: () => void
+  onToggleDebugPanel?: () => void;
   /** Show dev mode indicator when internal messages are enabled. */
-  devModeEnabled?: boolean
+  devModeEnabled?: boolean;
   /** Additional className */
-  className?: string
+  className?: string;
 }
 
-const storyTypeIcons: Record<StoryType, React.ElementType>={
+const storyTypeIcons: Record<StoryType, React.ElementType> = {
   process: MessageSquare,
   workspace: Grid2X2PlusIcon,
   play: Gamepad2Icon,
-  
-}
+};
 
 /**
  * PageHeader - Header component for entity pages
@@ -106,8 +107,8 @@ export function StoryHeader({
   cardsThemeId,
   onPageThemeChange,
   onCardsThemeChange,
-  layoutMode,
-  onLayoutModeChange,
+  layoutMode: _layoutMode,
+  onLayoutModeChange: _onLayoutModeChange,
   canEdit,
   onAddPanel,
   onSettings,
@@ -117,16 +118,16 @@ export function StoryHeader({
   // devModeEnabled,
   //className,
 }: StoryHeaderProps) {
-  const TypeIcon = storyTypeIcons[type]
-  const [layoutDialogOpen, setLayoutDialogOpen] = useState(false)
-  const pageTheme = getPageThemeById(pageThemeId)
-  const cardsTheme = getCardThemeById(cardsThemeId)
+  const TypeIcon = storyTypeIcons[type];
+  const [layoutDialogOpen, setLayoutDialogOpen] = useState(false);
+  const pageTheme = getPageThemeById(pageThemeId);
+  const cardsTheme = getCardThemeById(cardsThemeId);
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 bg-background text-foreground">
       {/* Left: Sidebar trigger + Title */}
       <div className="flex items-center gap-2">
-      <TypeIcon className="h-5 w-5 text-muted-foreground" />
+        <TypeIcon className="h-5 w-5 text-muted-foreground" />
         <SidebarTrigger className="-ml-1 text-muted-foreground" />
         <Separator orientation="vertical" className="h-4" />
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -135,12 +136,12 @@ export function StoryHeader({
       {/* Right: Actions */}
       <div className="flex items-center gap-3">
         {/* TODO: change to DropdownMenu Page theme selector */}
-        
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Select value={pageThemeId} onValueChange={onPageThemeChange}>
-                <SelectTrigger className="w-[160px] h-8 text-xs">
+                <SelectTrigger className="w-40 h-8 text-xs">
                   <SelectValue>Page: {pageTheme.name}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -161,7 +162,7 @@ export function StoryHeader({
           <Tooltip>
             <TooltipTrigger asChild>
               <Select value={cardsThemeId} onValueChange={onCardsThemeChange}>
-                <SelectTrigger className="w-[160px] h-8 text-xs">
+                <SelectTrigger className="w-40 h-8 text-xs">
                   <SelectValue>Cards: {cardsTheme.name}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -179,12 +180,12 @@ export function StoryHeader({
           </Tooltip>
         </TooltipProvider>
 
-        {/* Layout toggle */}
+        {/* Layout toggle  // pulling out panel reader from header TODO: finish this cleanup
         <ToggleGroup
           type="single"
           value={layoutMode}
           onValueChange={(v) => {
-            if (v === "panels" || v === "tabs") onLayoutModeChange(v)
+            if (v === "panels" || v === "tabs") onLayoutModeChange(v);
           }}
           className="h-8"
         >
@@ -203,9 +204,8 @@ export function StoryHeader({
             <LayoutGridIcon className="size-4" />
           </ToggleGroupItem>
         </ToggleGroup>
-
+        */}
         {/* StoryMenu */}
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -231,10 +231,10 @@ export function StoryHeader({
                 {showDebugPanel ? "Hide Debug Panel" : "Show Debug Panel"}
               </DropdownMenuItem>
             )}
-              <DropdownMenuItem onClick={() => setLayoutDialogOpen(true)}>
-                <Layout className="h-4 w-4 mr-2" />
-                Panel Layout
-              </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLayoutDialogOpen(true)}>
+              <Layout className="h-4 w-4 mr-2" />
+              Panel Layout
+            </DropdownMenuItem>
             {canEdit && onSettings && (
               <DropdownMenuItem onClick={onSettings}>
                 <Settings className="h-4 w-4 mr-2" />
@@ -258,19 +258,16 @@ export function StoryHeader({
       </div>
 
       {/* Panel layout dialog */}
-        <PanelLayoutDialog
-          open={layoutDialogOpen}
-          onOpenChange={setLayoutDialogOpen}
-          storyId={storyId ?? null}
-          isOwner={canEdit}
-          userPermission={canEdit ? "owner" : "none"}
-        />
+      <PanelLayoutDialog
+        open={layoutDialogOpen}
+        onOpenChange={setLayoutDialogOpen}
+        storyId={storyId ?? null}
+        isOwner={canEdit}
+        userPermission={canEdit ? "owner" : "none"}
+      />
 
-
-        {/* Create actions   <StoryPlayer /> */}
-         <CreateStoryModal />
-
-      </div>
-
-  )
+      {/* Create actions   <StoryPlayer />
+      <CreateStoryModal /> */}
+    </div>
+  );
 }

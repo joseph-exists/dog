@@ -11,22 +11,22 @@
  * - Relative timestamp formatting
  */
 
-import { useQuery } from "@tanstack/react-query"
-import { Link, useNavigate } from "@tanstack/react-router"
-import { Edit, MessageSquare, Plus, Trash2 } from "lucide-react"
-import React, { useState } from "react"
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { Copy, MessageSquare, Plus } from "lucide-react";
+import React from "react";
 
-import { RoomsService, type StoryPublic } from "@/client"
-import AddRoom from "@/components/Room/Dialogs/AddRoom"
+import { RoomsService, type StoryPublic } from "@/client";
+import AddRoom from "@/components/Room/Dialogs/AddRoom";
 import {
   presentationToStyle,
   resolveStoryPresentation,
   STORY_TYPE_PRESENTATIONS,
-} from "@/components/Common/Themes/resolve"
-import type { StoryPresentation } from "@/components/Common/Themes/types"
-import { isStoryTypeKey } from "@/components/Common/Themes/types"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+} from "@/components/Common/Themes/resolve";
+import type { StoryPresentation } from "@/components/Common/Themes/types";
+import { isStoryTypeKey } from "@/components/Common/Themes/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -34,46 +34,40 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  useDeleteStory,
-  usePublishStory,
-  useUnpublishStory,
-} from "@/hooks/stories/useStories"
-import { cn } from "@/lib/utils"
-import StoryAvatar from "../Display/StoryAvatar"
+} from "@/components/ui/card";
+// import {
+//   useDeleteStory,
+//   usePublishStory,
+//   useUnpublishStory,
+// } from "@/hooks/stories/useStories"
+import { cn } from "@/lib/utils";
+import StoryAvatar from "../Display/StoryAvatar";
 
 // ============================================================================
 // Types
 // ============================================================================
 
 interface StoryCardProps {
-  story: StoryPublic
-  variant?: "full" | "compact" | "mini"
-  href?: string
-  presentationEnabled?: boolean
-  isSelected?: boolean
-  onClick?: () => void
+  story: StoryPublic;
+  variant?: "full" | "compact" | "mini";
+  href?: string;
+  presentationEnabled?: boolean;
+  isSelected?: boolean;
+  onClick?: () => void;
   /** Custom action slot (used when showActions is false) */
-  action?: React.ReactNode
+  action?: React.ReactNode;
   /** Show standard CRUD actions (Edit, Publish, Delete) */
-  showActions?: boolean
+  showActions?: boolean;
   /** Show linked rooms section */
-  showLinkedRooms?: boolean
+  showLinkedRooms?: boolean;
   /** Show version info */
-  showVersionInfo?: boolean
-  className?: string
-  debug?: boolean
+  showVersionInfo?: boolean;
+  /** Show clone button (placeholder for future clone functionality) */
+  showClone?: boolean;
+  /** Clone button callback (placeholder) */
+  onClone?: (storyId: string) => void;
+  className?: string;
+  debug?: boolean;
 }
 
 // ============================================================================
@@ -81,17 +75,17 @@ interface StoryCardProps {
 // ============================================================================
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
+  const date = new Date(dateString);
+  const now = new Date();
   const diffInDays = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-  )
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
-  if (diffInDays === 0) return "Today"
-  if (diffInDays === 1) return "Yesterday"
-  if (diffInDays < 7) return `${diffInDays} days ago`
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
-  return date.toLocaleDateString()
+  if (diffInDays === 0) return "Today";
+  if (diffInDays === 1) return "Yesterday";
+  if (diffInDays < 7) return `${diffInDays} days ago`;
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+  return date.toLocaleDateString();
 }
 
 // ============================================================================
@@ -100,31 +94,43 @@ function formatDate(dateString: string): string {
 
 // ── Status Badges ─────────────────────────────────────────────────────────
 
-function StoryStatusBadge({ story }: { story: StoryPublic }) {
+/**
+ * Version badge - shows only version number for published stories
+ * Used in StoryCardFull header, right-justified
+ */
+function StoryVersionBadge({ story }: { story: StoryPublic }) {
   if (story.is_published && story.published_version !== null) {
-    return <Badge variant="default">Published v{story.published_version}</Badge>
+    return (
+      <Badge variant="outline" className="text-xs">
+        v{story.published_version}
+      </Badge>
+    );
   }
-  if (!story.is_published && story.published_version !== null) {
-    return <Badge variant="secondary">Unpublished</Badge>
-  }
-  return <Badge variant="outline">Draft v{story.current_version}</Badge>
+  // For unpublished/draft, show current version
+  return (
+    <Badge variant="outline" className="text-xs text-muted-foreground">
+      v{story.current_version}
+    </Badge>
+  );
 }
 
-function StoryEditingBadge({ story }: { story: StoryPublic }) {
-  if (
-    story.published_version &&
-    story.current_version > story.published_version
-  ) {
+/**
+ * Status badge - shows Published/Draft status
+ * Used in StoryCardCompact
+ */
+function StoryStatusBadge({ story }: { story: StoryPublic }) {
+  if (story.is_published) {
     return (
-      <Badge
-        variant="secondary"
-        className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-      >
-        Draft v{story.current_version}
+      <Badge variant="default" className="text-xs">
+        Published
       </Badge>
-    )
+    );
   }
-  return null
+  return (
+    <Badge variant="outline" className="text-xs">
+      Draft
+    </Badge>
+  );
 }
 
 // ── Accent Strip ──────────────────────────────────────────────────────────
@@ -133,64 +139,64 @@ function AccentStrip({
   presentation,
   enabled,
 }: {
-  presentation: StoryPresentation
-  enabled: boolean
+  presentation: StoryPresentation;
+  enabled: boolean;
 }) {
-  if (!enabled) return null
+  if (!enabled) return null;
 
-  const position = presentation.tokens?.["--story-accent-position"] ?? "top"
-  const width = presentation.tokens?.["--story-accent-width"] ?? "3px"
-  const color = presentation.tokens?.["--story-accent"]
+  const position = presentation.tokens?.["--story-accent-position"] ?? "top";
+  const width = presentation.tokens?.["--story-accent-width"] ?? "3px";
+  const color = presentation.tokens?.["--story-accent"];
 
-  if (position === "none" || !color) return null
+  if (position === "none" || !color) return null;
 
   const positionStyles: Record<string, string> = {
     top: "absolute top-0 left-0 right-0 rounded-t-xl",
     bottom: "absolute bottom-0 left-0 right-0",
     left: "absolute top-0 bottom-0 left-0 rounded-l-xl",
-  }
+  };
 
   const dimensionStyle =
     position === "left"
       ? { width, height: "100%" }
-      : { height: width, width: "100%" }
+      : { height: width, width: "100%" };
 
   return (
     <div
       className={cn(
         "pointer-events-none transition-all",
-        positionStyles[position]
+        positionStyles[position],
       )}
       style={{ backgroundColor: color, ...dimensionStyle }}
     />
-  )
+  );
 }
 
 // ── Decoration Hint Classes ───────────────────────────────────────────────
 
 function getDecorationClasses(
-  hint?: StoryPresentation["decorationHint"]
+  hint?: StoryPresentation["decorationHint"],
 ): string {
   switch (hint) {
     case "brutalist":
-      return "font-mono"
+      return "font-mono";
     case "ethereal":
-      return "font-serif"
+      return "font-serif";
     default:
-      return ""
+      return "";
   }
 }
 
 function getDecorationTitleClasses(
-  hint?: StoryPresentation["decorationHint"]
+  hint?: StoryPresentation["decorationHint"],
 ): string {
   switch (hint) {
     case "brutalist":
-      return "uppercase tracking-wide text-[13px]"
+      return "uppercase tracking-wide text-[13px]";
     case "ethereal":
-      return "italic font-normal text-[16px]"
+      return "italic font-normal text-[16px]";
     default:
-      return ""
+      return "";
   }
 }
 
@@ -200,10 +206,10 @@ function DebugPanel({
   story,
   resolved,
 }: {
-  story: StoryPublic
-  resolved: StoryPresentation
+  story: StoryPublic;
+  resolved: StoryPresentation;
 }) {
-  const tokenCount = Object.keys(resolved.tokens || {}).length
+  const tokenCount = Object.keys(resolved.tokens || {}).length;
   return (
     <div className="border-t border-dashed border-border px-4 py-2 text-[10px] font-mono text-muted-foreground bg-muted/30">
       <span className="font-bold">src:</span>{" "}
@@ -217,7 +223,7 @@ function DebugPanel({
       <span className="font-bold">accent:</span>{" "}
       {resolved.tokens?.["--story-accent-position"] || "top"}
     </div>
-  )
+  );
 }
 
 // ── Linked Rooms ──────────────────────────────────────────────────────────
@@ -226,17 +232,17 @@ function LinkedRoomsSection({ storyId }: { storyId: string }) {
   const { data: roomsData } = useQuery({
     queryKey: ["rooms", "story", storyId],
     queryFn: () => RoomsService.getRoomsForStory({ storyId }),
-  })
+  });
+  // todo : change to users or publicly available linked rooms only
+  const linkedRooms = roomsData?.data ?? [];
 
-  const linkedRooms = roomsData?.data ?? []
-
-  if (linkedRooms.length === 0) return null
+  if (linkedRooms.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2 pt-2">
       <div className="text-muted-foreground flex items-center gap-1 text-xs">
         <MessageSquare className="h-3 w-3" />
-        <span>Linked Rooms:</span>
+        <span>Your Linked Rooms:</span>
       </div>
       <div className="flex flex-wrap gap-2">
         {linkedRooms.map((room) => (
@@ -246,52 +252,47 @@ function LinkedRoomsSection({ storyId }: { storyId: string }) {
             params={{ roomId: room.room_id }}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
-            <Badge variant="secondary" className="cursor-pointer hover:opacity-80">
+            <Badge
+              variant="secondary"
+              className="cursor-pointer hover:opacity-80"
+            >
               {room.title || "Untitled Room"}
             </Badge>
           </Link>
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 // ── Action Buttons ────────────────────────────────────────────────────────
 
-function StoryActions({ story }: { story: StoryPublic }) {
-  const navigate = useNavigate()
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+interface StoryActionsProps {
+  story: StoryPublic;
+  showClone?: boolean;
+  onClone?: (storyId: string) => void;
+}
 
-  const publishMutation = usePublishStory()
-  const unpublishMutation = useUnpublishStory()
-  const deleteMutation = useDeleteStory()
-
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    navigate({ to: "/stories/$storyId/edit", params: { storyId: story.id } })
-  }
-
-  const handleTogglePublish = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (story.is_published) {
-      unpublishMutation.mutate(story.id)
-    } else {
-      publishMutation.mutate(story.id)
-    }
-  }
-
-  const handleDelete = () => {
-    deleteMutation.mutate(story.id)
-    setShowDeleteDialog(false)
-  }
+function StoryActions({ story, showClone, onClone }: StoryActionsProps) {
+  const handleClone = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClone?.(story.id);
+  };
 
   return (
     <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-      {/* Edit Button */}
-      <Button size="sm" onClick={handleEdit}>
-        <Edit className="mr-1 h-4 w-4" />
-        Edit
-      </Button>
+      {/* Clone Button - placeholder for future functionality */}
+      {showClone && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleClone}
+          disabled={!onClone}
+        >
+          <Copy className="mr-1 h-4 w-4" />
+          Clone
+        </Button>
+      )}
 
       {/* Create Room Button - only for published stories */}
       {story.is_published && (
@@ -307,7 +308,7 @@ function StoryActions({ story }: { story: StoryPublic }) {
       )}
 
       {/* Publish/Unpublish Button */}
-      <Button
+      {/*  <Button
         size="sm"
         variant="outline"
         onClick={handleTogglePublish}
@@ -318,10 +319,10 @@ function StoryActions({ story }: { story: StoryPublic }) {
           : story.is_published
             ? "Unpublish"
             : "Publish"}
-      </Button>
+      </Button>*/}
 
       {/* Delete Button with Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      {/*<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogTrigger asChild>
           <Button
             size="sm"
@@ -352,9 +353,9 @@ function StoryActions({ story }: { story: StoryPublic }) {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>*/}
     </div>
-  )
+  );
 }
 
 // ============================================================================
@@ -374,30 +375,34 @@ function StoryCardFull({
   showActions,
   showLinkedRooms,
   showVersionInfo,
+  showClone,
+  onClone,
   className,
   debug,
 }: {
-  story: StoryPublic
-  resolved: StoryPresentation
-  presentationEnabled: boolean
-  debug: boolean
-  showActions: boolean
-  showLinkedRooms: boolean
-  showVersionInfo: boolean
+  story: StoryPublic;
+  resolved: StoryPresentation;
+  presentationEnabled: boolean;
+  debug: boolean;
+  showActions: boolean;
+  showLinkedRooms: boolean;
+  showVersionInfo: boolean;
+  showClone: boolean;
+  onClone?: (storyId: string) => void;
 } & Pick<
   StoryCardProps,
   "href" | "isSelected" | "onClick" | "action" | "className"
 >) {
   const decoClasses = presentationEnabled
     ? getDecorationClasses(resolved.decorationHint)
-    : ""
+    : "";
   const titleDecoClasses = presentationEnabled
     ? getDecorationTitleClasses(resolved.decorationHint)
-    : ""
+    : "";
 
   const wrapperStyle = presentationEnabled
     ? presentationToStyle(resolved.tokens)
-    : undefined
+    : undefined;
 
   const cardInlineStyle: React.CSSProperties = {
     ...(presentationEnabled && resolved.tokens?.["--story-card-radius"]
@@ -406,21 +411,13 @@ function StoryCardFull({
     ...(presentationEnabled && resolved.tokens?.["--story-card-shadow"]
       ? { boxShadow: resolved.tokens["--story-card-shadow"] }
       : {}),
-  }
-
-  const avatar = (
-    <StoryAvatar
-      name={story.title ?? "Story"}
-      size="lg"
-      presentation={presentationEnabled ? resolved.avatar : undefined}
-    />
-  )
+  };
 
   const title = (
     <CardTitle className={cn("truncate", titleDecoClasses)}>
       {story.title ?? "Story"}
     </CardTitle>
-  )
+  );
 
   return (
     <div
@@ -429,10 +426,13 @@ function StoryCardFull({
     >
       <Card
         className={cn(
+          // Layout: fixed height for consistent grid appearance
+          "h-96 flex flex-col",
+          // Base styles
           "transition-all relative overflow-hidden",
           onClick && "cursor-pointer hover:shadow-md hover:border-primary/50",
           isSelected && "ring-2 ring-primary",
-          className
+          className,
         )}
         onClick={onClick}
         style={
@@ -441,92 +441,74 @@ function StoryCardFull({
       >
         <AccentStrip presentation={resolved} enabled={presentationEnabled} />
 
-        <CardHeader className="pb-3">
-          <div className="flex items-start gap-3">
-            {href ? (
-              <Link
-                to={href}
-                onClick={(e: { stopPropagation: () => void }) =>
-                  e.stopPropagation()
-                }
-              >
-                {avatar}
-              </Link>
-            ) : (
-              avatar
-            )}
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                {href ? (
-                  <Link
-                    to={href}
-                    className="hover:underline"
-                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) =>
-                      e.stopPropagation()
-                    }
-                  >
-                    {title}
-                  </Link>
-                ) : (
-                  title
-                )}
-                <StoryStatusBadge story={story} />
-                <StoryEditingBadge story={story} />
-              </div>
-
-              {story.description && (
-                <CardDescription
-                  className={cn(
-                    "mt-1 line-clamp-2",
-                    resolved.decorationHint === "ethereal" &&
-                      presentationEnabled &&
-                      "italic"
-                  )}
+        <CardHeader className="pb-3 flex-1 min-h-0 overflow-hidden">
+          {/* Title row: title left, version badge right */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0 overflow-hidden">
+              {href ? (
+                <Link
+                  to={href}
+                  className="hover:underline block truncate"
+                  onClick={(e: React.MouseEvent<HTMLAnchorElement>) =>
+                    e.stopPropagation()
+                  }
                 >
-                  {story.description}
-                </CardDescription>
+                  {title}
+                </Link>
+              ) : (
+                title
               )}
             </div>
-
-            {action && !showActions && (
-              <div onClick={(e) => e.stopPropagation()}>{action}</div>
-            )}
+            <StoryVersionBadge story={story} />
           </div>
+
+          {/* Description in bordered container */}
+          {story.description && (
+            <div className="mt-3 border border-border rounded-md p-3 bg-muted/20 overflow-hidden">
+              <CardDescription
+                className={cn(
+                  "line-clamp-6 text-sm",
+                  resolved.decorationHint === "ethereal" &&
+                    presentationEnabled &&
+                    "italic",
+                )}
+              >
+                {story.description}
+              </CardDescription>
+            </div>
+          )}
+
+          {/* Timestamp - only shown when showVersionInfo is true */}
+          {showVersionInfo && (
+            <p className="text-muted-foreground text-xs mt-2">
+              Updated {formatDate(story.updated_at)}
+            </p>
+          )}
+
+          {/* Custom action slot */}
+          {action && !showActions && (
+            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+              {action}
+            </div>
+          )}
         </CardHeader>
 
-        {(showVersionInfo || showLinkedRooms) && (
-          <CardContent className="pt-0 flex flex-col gap-3">
-            {/* Version Info */}
-            {showVersionInfo && (
-              <>
-                <div className="text-muted-foreground flex gap-4 text-xs">
-                  <span>Current: v{story.current_version}</span>
-                  {story.published_version && (
-                    <span>Published: v{story.published_version}</span>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Updated {formatDate(story.updated_at)}
-                </p>
-              </>
-            )}
-
-            {/* Linked Rooms */}
-            {showLinkedRooms && <LinkedRoomsSection storyId={story.id} />}
+        {showLinkedRooms && (
+          <CardContent className="pt-0 shrink-0 min-h-3">
+            <LinkedRoomsSection storyId={story.id} />
           </CardContent>
         )}
 
         {showActions && (
-          <CardFooter>
-            <StoryActions story={story} />
+          <CardFooter className="shrink-0 flex pt-3">
+            <StoryActions story={story} showClone={showClone} onClone={onClone} />
           </CardFooter>
         )}
 
         {debug && <DebugPanel story={story} resolved={resolved} />}
       </Card>
     </div>
-  )
+  );
 }
 
 // ── Compact Variant ───────────────────────────────────────────────────────
@@ -541,25 +523,25 @@ function StoryCardCompact({
   showActions,
   className,
 }: {
-  story: StoryPublic
-  resolved: StoryPresentation
-  presentationEnabled: boolean
-  showActions: boolean
+  story: StoryPublic;
+  resolved: StoryPresentation;
+  presentationEnabled: boolean;
+  showActions: boolean;
 } & Pick<StoryCardProps, "isSelected" | "onClick" | "action" | "className">) {
   const wrapperStyle = presentationEnabled
     ? presentationToStyle(resolved.tokens)
-    : undefined
+    : undefined;
 
   const accentColor = presentationEnabled
     ? resolved.tokens?.["--story-accent"]
-    : undefined
+    : undefined;
 
   const decoClasses = presentationEnabled
     ? getDecorationClasses(resolved.decorationHint)
-    : ""
+    : "";
   const titleDecoClasses = presentationEnabled
     ? getDecorationTitleClasses(resolved.decorationHint)
-    : ""
+    : "";
 
   return (
     <div
@@ -568,10 +550,10 @@ function StoryCardCompact({
     >
       <div
         className={cn(
-          "flex items-center gap-3 p-3 rounded-lg border bg-card text-card-foreground transition-colors",
+          "flex items-center gap-3 p-2 rounded-lg border bg-card text-card-foreground transition-colors",
           onClick && "cursor-pointer hover:bg-accent/50",
           isSelected && "ring-2 ring-primary",
-          className
+          className,
         )}
         style={
           accentColor
@@ -610,7 +592,7 @@ function StoryCardCompact({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // ── Mini Variant ──────────────────────────────────────────────────────────
@@ -623,13 +605,13 @@ function StoryCardMini({
   onClick,
   className,
 }: {
-  story: StoryPublic
-  resolved: StoryPresentation
-  presentationEnabled: boolean
+  story: StoryPublic;
+  resolved: StoryPresentation;
+  presentationEnabled: boolean;
 } & Pick<StoryCardProps, "isSelected" | "onClick" | "className">) {
   const accentColor = presentationEnabled
     ? resolved.tokens?.["--story-accent"]
-    : undefined
+    : undefined;
 
   return (
     <div
@@ -637,7 +619,7 @@ function StoryCardMini({
         "flex items-center gap-2 p-2 rounded-md transition-colors",
         onClick && "cursor-pointer hover:bg-accent",
         isSelected && "bg-accent",
-        className
+        className,
       )}
       style={
         isSelected && accentColor
@@ -659,7 +641,7 @@ function StoryCardMini({
         {story.title ?? "Story"}
       </span>
     </div>
-  )
+  );
 }
 
 // ============================================================================
@@ -677,22 +659,24 @@ export default function StoryCard({
   showActions = false,
   showLinkedRooms = false,
   showVersionInfo = false,
+  showClone = false,
+  onClone,
   className,
   debug = false,
 }: StoryCardProps) {
   // Default: presentation is enabled when the story has presentation data or a typed default
   const storyType = isStoryTypeKey(story.story_type)
     ? story.story_type
-    : undefined
-  const enabled = presentationEnabled ?? !!(story.presentation || storyType)
+    : undefined;
+  const enabled = presentationEnabled ?? !!(story.presentation || storyType);
 
   const typeDefaults = storyType
     ? STORY_TYPE_PRESENTATIONS[storyType]
-    : undefined
+    : undefined;
   const resolved = resolveStoryPresentation(
     typeDefaults,
-    enabled ? story.presentation : null
-  )
+    enabled ? story.presentation : null,
+  );
 
   const shared = {
     story,
@@ -703,13 +687,13 @@ export default function StoryCard({
     action,
     showActions,
     className,
-  }
+  };
 
   switch (variant) {
     case "mini":
-      return <StoryCardMini {...shared} />
+      return <StoryCardMini {...shared} />;
     case "compact":
-      return <StoryCardCompact {...shared} />
+      return <StoryCardCompact {...shared} />;
     default:
       return (
         <StoryCardFull
@@ -718,9 +702,11 @@ export default function StoryCard({
           debug={debug}
           showLinkedRooms={showLinkedRooms}
           showVersionInfo={showVersionInfo}
+          showClone={showClone}
+          onClone={onClone}
         />
-      )
+      );
   }
 }
 
-export { StoryCardFull, StoryCardCompact, StoryCardMini }
+export { StoryCardFull, StoryCardCompact, StoryCardMini };

@@ -3,8 +3,78 @@
 > **Location:** `frontend/src/components/Agents/AgentsShell/`
 > **Status:** Ready for implementation
 > **Created:** 2026-02-11
+LAST REVISION 2.17 josep & claude
 
 ---
+
+REVIEW THESE CHANGES FIRST:
+
+  ★ Insight ─────────────────────────────────────
+  Plan vs Reality: The plan was executed successfully, but with one key refinement—we split AMBIENT_THEMES into
+   PAGE_THEMES and CARD_THEMES to enforce the rule that cards themes shouldn't include --background. This is an
+   improvement over the original design.
+  ─────────────────────────────────────────────────
+
+  Reconciliation Analysis
+
+  ✅ Fully Implemented (No Changes Needed)
+  ┌────────────────────────────────────┬──────────────────────────────────────────────┐
+  │              Planned               │                 Implemented                  │
+  ├────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Two nested wrappers in Shell       │ ✅ Both AgentsShell and StoryShell have this │
+  ├────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Page + Cards dropdowns in Header   │ ✅ Both headers have dual selectors          │
+  ├────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Dual state with nullish coalescing │ ✅ Implemented with localStorage persistence │
+  ├────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ tokens: PresentationTokens type    │ ✅ Using this in all theme definitions       │
+  ├────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ CSS variable cascade mechanism     │ ✅ Working as designed                       │
+  └────────────────────────────────────┴──────────────────────────────────────────────┘
+  🔄 Evolved Beyond Plan (Document Needs Update)
+  Plan Says: Single AMBIENT_THEMES array for both dropdowns
+  Reality: Split into PAGE_THEMES + CARD_THEMES
+  Action Needed: Update plan to reflect this refinement
+  ────────────────────────────────────────
+  Plan Says: AgentsShell/themes.ts location
+  Reality: Common/Themes/ with multiple files
+  Action Needed: Update plan with new file structure
+  ────────────────────────────────────────
+  Plan Says: getThemeStyle() single function
+  Reality: getPageThemeStyle() + getCardThemeStyle()
+  Action Needed: Update plan with actual function names
+  📋 Backend Contracts (Ready to Implement)
+
+  The backend section looks good and compatible with our frontend:
+
+  # This model aligns with our frontend PresentationTokens
+  class Theme(SQLModel, table=True):
+      id: UUID
+      name: str
+      tokens: dict  # JSON column - maps to PresentationTokens
+      scope: Literal["system", "personal"]
+
+  One consideration: The plan has a single Theme table, but our frontend now distinguishes page vs cards
+  themes. You have options:
+
+  1. Single table with theme_type column:
+  theme_type: Literal["page", "cards", "ambient"]
+  2. Single table, let frontend filter:
+    - Page themes = themes that include --background
+    - Cards themes = themes that don't include --background
+  3. Keep as-is:
+    - All themes can be used for either purpose
+    - Frontend just knows not to use cards themes for page layer
+
+  🔧 Suggested Plan Updates
+
+  Would you like me to update the plan document to reflect:
+
+  1. File structure change: Common/Themes/ with page_themes.ts, card_themes.ts, types.ts, resolve.ts
+  2. Split theme arrays: Explain why PAGE_THEMES includes --background and CARD_THEMES excludes it
+  3. localStorage implementation: Document the current persistence pattern as a stepping stone to backend
+  4. Story parity: Note that Story now follows the same architecture as Agents
+  5. Backend model consideration: Add note about theme_type column or filtering strategy
 
 ## Goal
 

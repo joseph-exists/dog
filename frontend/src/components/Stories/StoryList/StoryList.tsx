@@ -6,28 +6,29 @@
  * - Empty state when no stories exist
  * - Loading and error states
  * - "Create Story" button in header
+ * - used in Stories, not in Story.
  */
 
-import { AlertCircle, BookOpen, Loader2 } from "lucide-react"
+import { AlertCircle, BookOpen, Loader2 } from "lucide-react";
 
-import { useStories } from "@/hooks/stories/useStories"
-import CreateStoryModal from "./CreateStoryModal"
-import StoryCard from "./StoryCard"
+import { useStories } from "@/hooks/stories/useStories";
+import CreateStoryModal from "./CreateStoryModal";
+import StoryCard from "./StoryCard";
 
 const StoryList = () => {
-  const { data, isLoading, error } = useStories()
+  const { data, isLoading, error } = useStories();
 
-  const stories = data?.data ?? []
+  const stories = data?.data ?? [];
 
   // Loading state
   if (isLoading) {
     return (
       <div className="container mx-auto max-w-7xl py-8">
-        <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex min-h-100 items-center justify-center">
           <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
         </div>
       </div>
-    )
+    );
   }
 
   // Error state
@@ -44,7 +45,7 @@ const StoryList = () => {
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   // Empty state
@@ -52,7 +53,7 @@ const StoryList = () => {
     return (
       <div className="container mx-auto max-w-7xl py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">My Stories</h1>
+          <h1 className="text-2xl font-bold">STORY AUTHORS</h1>
           <CreateStoryModal />
         </div>
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -66,14 +67,14 @@ const StoryList = () => {
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   // Stories grid
   return (
     <div className="container mx-auto max-w-7xl py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Stories</h1>
+        <h1 className="text-2xl font-bold">STORY AUTHOR</h1>
         <CreateStoryModal />
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -82,7 +83,7 @@ const StoryList = () => {
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default StoryList
+export default StoryList;

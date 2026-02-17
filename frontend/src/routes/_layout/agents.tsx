@@ -24,17 +24,45 @@ export const Route = createFileRoute("/_layout/agents")({
   }),
 })
 
-function AgentsPage() {
-  // Future: useUserPagePrefs("agents") will provide saved preferences
-  const savedPrefs = null as { pageTheme?: string; cardsTheme?: string } | null
+// localStorage keys for theme persistence
+const STORAGE_KEYS = {
+  pageTheme: "agents-page-theme",
+  cardsTheme: "agents-cards-theme",
+} as const
 
-  // Theme selection — nullish coalescing ready for future prefs integration
-  const [pageThemeId, setPageThemeId] = useState(
-    savedPrefs?.pageTheme ?? "default",
+function AgentsPage() {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Theme Persistence (localStorage)
+  //
+  // TODO: Replace with useUserPagePrefs("agents") when backend user preferences
+  // are implemented. The hook should:
+  //   1. Fetch user preferences from backend on mount
+  //   2. Return { pageTheme, cardsTheme } with defaults if not set
+  //   3. Provide updatePrefs(key, value) that persists to backend
+  //   4. Use optimistic updates for responsive UX
+  //
+  // When migrating, replace the useState + handlers below with:
+  //   const { prefs, updatePageTheme, updateCardsTheme } = useUserPagePrefs("agents")
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Theme selection with localStorage persistence
+  const [pageThemeId, setPageThemeId] = useState(() =>
+    localStorage.getItem(STORAGE_KEYS.pageTheme) ?? "default"
   )
-  const [cardsThemeId, setCardsThemeId] = useState(
-    savedPrefs?.cardsTheme ?? "default",
+  const [cardsThemeId, setCardsThemeId] = useState(() =>
+    localStorage.getItem(STORAGE_KEYS.cardsTheme) ?? "default"
   )
+
+  // Handlers that persist to localStorage
+  const handlePageThemeChange = (themeId: string) => {
+    setPageThemeId(themeId)
+    localStorage.setItem(STORAGE_KEYS.pageTheme, themeId)
+  }
+
+  const handleCardsThemeChange = (themeId: string) => {
+    setCardsThemeId(themeId)
+    localStorage.setItem(STORAGE_KEYS.cardsTheme, themeId)
+  }
 
   // Panel component registry
   const panelComponents: Record<string, () => React.ReactNode> = {
@@ -60,8 +88,8 @@ function AgentsPage() {
       panels={panels}
       pageThemeId={pageThemeId}
       cardsThemeId={cardsThemeId}
-      onPageThemeChange={setPageThemeId}
-      onCardsThemeChange={setCardsThemeId}
+      onPageThemeChange={handlePageThemeChange}
+      onCardsThemeChange={handleCardsThemeChange}
     />
   )
 }
