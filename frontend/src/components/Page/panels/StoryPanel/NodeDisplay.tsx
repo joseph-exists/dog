@@ -4,23 +4,20 @@
  * Presents the current story node with formatted content.
  * Uses ContentRenderer for all format rendering.
  */
-import type { ReactNode } from "react";
-import type { ContentFormat } from "@/client";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import type { NodeViewModel } from "@/services/roomRuntimeService";
-import {
-  ContentRenderer,
-  toContent,
-} from "@/components/Common/ContentRenderer";
+import type { ReactNode } from "react"
+import type { ContentFormat } from "@/client"
+import { ContentRenderer, toContent } from "@/components/Common/ContentRenderer"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+import type { NodeViewModel } from "@/services/roomRuntimeService"
 
 interface NodeDisplayProps {
-  node: NodeViewModel;
-  onNodeClick?: (node: NodeViewModel) => void;
-  actions?: ReactNode;
+  node: NodeViewModel
+  onNodeClick?: (node: NodeViewModel) => void
+  actions?: ReactNode
   /** @deprecated Custom renderers should use ContentRenderer directly */
-  renderContent?: (content: string, format: ContentFormat | null) => ReactNode;
-  className?: string;
+  renderContent?: (content: string, format: ContentFormat | null) => ReactNode
+  className?: string
 }
 
 /**
@@ -35,7 +32,7 @@ function defaultRenderContent(
       content={toContent(content, format, "card")}
       safeMode={true}
     />
-  );
+  )
 }
 
 export function NodeDisplay({
@@ -46,7 +43,7 @@ export function NodeDisplay({
   className,
 }: NodeDisplayProps) {
   // Use custom renderer if provided, otherwise use ContentRenderer
-  const contentRenderer = renderContent ?? defaultRenderContent;
+  const contentRenderer = renderContent ?? defaultRenderContent
 
   return (
     <div
@@ -81,5 +78,5 @@ export function NodeDisplay({
         {contentRenderer(node.content, node.contentFormat)}
       </div>
     </div>
-  );
+  )
 }

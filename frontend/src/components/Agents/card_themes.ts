@@ -22,7 +22,13 @@ export interface CardTheme {
   /** Optional avatar customization hint */
   avatar?: { emoji?: string; backgroundColor?: string }
   /** Optional decoration hint for typography/styling */
-  decorationHint?: "warm" | "neon" | "precise" | "organic" | "brutalist" | "ethereal"
+  decorationHint?:
+    | "warm"
+    | "neon"
+    | "precise"
+    | "organic"
+    | "brutalist"
+    | "ethereal"
 }
 
 /**
@@ -406,7 +412,8 @@ export const CARD_THEMES: CardTheme[] = [
       "--secondary-foreground": "oklch(0.15 0 0)",
       "--accent": "oklch(0.55 0.22 25)",
       "--accent-foreground": "oklch(1 0 0)",
-      "--agent-card-shadow": "8px 8px 0 oklch(0.12 0 0), -2px -2px 0 oklch(0.55 0.22 25)",
+      "--agent-card-shadow":
+        "8px 8px 0 oklch(0.12 0 0), -2px -2px 0 oklch(0.55 0.22 25)",
       "--agent-card-radius": "0px",
     },
     decorationHint: "brutalist",

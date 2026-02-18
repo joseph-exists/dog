@@ -11,20 +11,17 @@
  */
 
 import type { ContentFormat } from "@/client"
-import type { RendererEntry, PluginResolutionResult } from "./types"
-
-import { TextRenderer } from "./renderers/TextRenderer"
-import { CodeRenderer } from "./renderers/CodeRenderer"
-import { HTMLRenderer } from "./renderers/HTMLRenderer"
-import { JSONRenderer } from "./renderers/JSONRenderer"
-import { SVGRenderer } from "./renderers/SVGRenderer"
-import { ImageRenderer } from "./renderers/ImageRenderer"
-import { MarkdownRenderer } from "./renderers/MarkdownRenderer"
-import { MDXRenderer } from "./renderers/MDXRenderer"
-
-
 // Import plugin resolution (lazy to avoid circular deps)
 import { resolveRenderer as pluginResolveRenderer } from "./pluginRegistry"
+import { CodeRenderer } from "./renderers/CodeRenderer"
+import { HTMLRenderer } from "./renderers/HTMLRenderer"
+import { ImageRenderer } from "./renderers/ImageRenderer"
+import { JSONRenderer } from "./renderers/JSONRenderer"
+import { MarkdownRenderer } from "./renderers/MarkdownRenderer"
+import { MDXRenderer } from "./renderers/MDXRenderer"
+import { SVGRenderer } from "./renderers/SVGRenderer"
+import { TextRenderer } from "./renderers/TextRenderer"
+import type { PluginResolutionResult, RendererEntry } from "./types"
 
 /**
  * Core registry mapping ContentFormat to renderer components
@@ -62,7 +59,9 @@ export function getRenderer(format: ContentFormat): RendererEntry | undefined {
  *
  * Use this when you need to know which plugin provided the renderer.
  */
-export function resolveRenderer(format: ContentFormat): PluginResolutionResult | null {
+export function resolveRenderer(
+  format: ContentFormat,
+): PluginResolutionResult | null {
   return pluginResolveRenderer(format)
 }
 // /**

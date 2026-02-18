@@ -10,17 +10,17 @@
 
 import type React from "react"
 import type { ContentFormat } from "@/client"
+import { rendererRegistry } from "./registry"
 import type {
   Content,
   Plugin,
-  RegisteredPlugin,
   PluginRegistrationOptions,
   PluginRenderer,
   PluginResolutionResult,
   PluginValidationResult,
+  RegisteredPlugin,
   RendererEntry,
 } from "./types"
-import { rendererRegistry } from "./registry"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PLUGIN STORAGE
@@ -35,7 +35,10 @@ const plugins = new Map<string, RegisteredPlugin>()
  * Event listeners for plugin lifecycle
  */
 type PluginEventType = "register" | "unregister" | "error"
-type PluginEventListener = (plugin: RegisteredPlugin, event: PluginEventType) => void
+type PluginEventListener = (
+  plugin: RegisteredPlugin,
+  event: PluginEventType,
+) => void
 const eventListeners = new Set<PluginEventListener>()
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -52,14 +55,14 @@ const eventListeners = new Set<PluginEventListener>()
  */
 export async function registerPlugin<T extends ContentFormat>(
   plugin: Plugin<T>,
-  options: PluginRegistrationOptions = {}
+  options: PluginRegistrationOptions = {},
 ): Promise<RegisteredPlugin<T>> {
   const { skipInit = false, replace = false } = options
 
   // Check for existing plugin
   if (plugins.has(plugin.id) && !replace) {
     throw new Error(
-      `Plugin "${plugin.id}" is already registered. Use replace: true to override.`
+      `Plugin "${plugin.id}" is already registered. Use replace: true to override.`,
     )
   }
 
@@ -81,7 +84,8 @@ export async function registerPlugin<T extends ContentFormat>(
       await plugin.onRegister()
     } catch (error) {
       registered.status = "error"
-      registered.error = error instanceof Error ? error : new Error(String(error))
+      registered.error =
+        error instanceof Error ? error : new Error(String(error))
       console.error(`Plugin "${plugin.id}" registration failed:`, error)
     }
   }
@@ -160,14 +164,20 @@ export function hasPlugin(pluginId: string): boolean {
  * @param format - Content format to resolve
  * @returns Resolution result with renderer and source info
  */
-export function resolveRenderer(format: ContentFormat): PluginResolutionResult | null {
+export function resolveRenderer(
+  format: ContentFormat,
+): PluginResolutionResult | null {
   // Collect plugin renderers for this format
   // Note: Using loose typing here due to TypeScript contravariance with function parameters.
   // Each renderer is individually typed at definition; the collection uses `any` for storage.
   const pluginRenderers: Array<{
     plugin: RegisteredPlugin
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    renderer: { format: ContentFormat; Component: React.FC<any>; meta: { pluginId: string; label: string; priority?: number } }
+    renderer: {
+      format: ContentFormat
+      Component: React.FC<any>
+      meta: { pluginId: string; label: string; priority?: number }
+    }
   }> = []
 
   for (const plugin of plugins.values()) {
@@ -316,7 +326,7 @@ export function validateContent(content: Content): PluginValidationResult {
  * @returns Transformed content
  */
 export function transformContent<T extends ContentFormat>(
-  content: Content<T>
+  content: Content<T>,
 ): Content<T> {
   // Get plugins with transforms, sorted by priority
   const transformPlugins = Array.from(plugins.values())
@@ -327,7 +337,7 @@ export function transformContent<T extends ContentFormat>(
         if (!plugin.renderers) return 0
         return Math.max(
           0,
-          ...Object.values(plugin.renderers).map((r) => r?.meta.priority ?? 0)
+          ...Object.values(plugin.renderers).map((r) => r?.meta.priority ?? 0),
         )
       }
       return getMaxPriority(b) - getMaxPriority(a)

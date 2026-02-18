@@ -10,7 +10,6 @@
 
 // Re-export everything from the primary implementation
 export * from "@/components/Page/primitives/ContentRenderer"
-
+export { nodeToContent, toContent } from "./nodeToContent"
 // Re-export compatibility helpers
 export { renderContent, renderNodeContent } from "./renderContent"
-export { nodeToContent, toContent } from "./nodeToContent"

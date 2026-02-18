@@ -25,7 +25,7 @@ import {
  * 4. Create the panel component in the appropriate feature folder
  */
 export type PanelKind =
-  // 
+  //
   | "chat"
   | "canvas"
   | "a2ui"
@@ -280,10 +280,10 @@ export function getPanelDisplayName(kind: PanelKind): string {
  * Get all panels available for a specific context
  */
 export function getPanelsForContext(
-  context: PanelContext
+  context: PanelContext,
 ): PanelTypeDefinition[] {
   return PANEL_TYPES.filter(
-    (p) => p.contexts.includes(context) || p.contexts.includes("universal")
+    (p) => p.contexts.includes(context) || p.contexts.includes("universal"),
   )
 }
 
@@ -296,7 +296,7 @@ export function getPanelsForContext(
  * Returns panels where required permission <= user's permission.
  */
 export function getPanelsForEntityPermission(
-  userPermissionOnEntity: PanelPermission
+  userPermissionOnEntity: PanelPermission,
 ): PanelTypeDefinition[] {
   const levels: PanelPermission[] = ["none", "participant", "owner", "admin"]
   const userIndex = levels.indexOf(userPermissionOnEntity)
@@ -314,7 +314,7 @@ export function getPanelsForEntityPermission(
  * Filters out admin-only panels for regular users.
  */
 export function getPanelsForSystemRole(
-  role: "user" | "admin"
+  role: "user" | "admin",
 ): PanelTypeDefinition[] {
   if (role === "admin") {
     return PANEL_TYPES // Admins see everything
@@ -362,7 +362,7 @@ export function getPanelDependents(kind: PanelKind): PanelTypeDefinition[] {
  */
 export function areDependenciesSatisfied(
   kind: PanelKind,
-  activePanelKinds: PanelKind[]
+  activePanelKinds: PanelKind[],
 ): boolean {
   const panel = getPanelType(kind)
   if (!panel?.dependencies) return true

@@ -29,7 +29,7 @@ import { nodeToContent, toContent } from "./nodeToContent"
  */
 export function renderContent(
   node: StoryNodePublic,
-  variant: ContentVariant = "card"
+  variant: ContentVariant = "card",
 ): ReactNode {
   const content = nodeToContent(node, variant)
   return <ContentRenderer content={content} safeMode={true} />
@@ -47,7 +47,7 @@ export function renderContent(
 export function renderNodeContent(
   content: string,
   format: ContentFormat | null,
-  variant: ContentVariant = "card"
+  variant: ContentVariant = "card",
 ): ReactNode {
   const contentObj = toContent(content, format, variant)
   return <ContentRenderer content={contentObj} safeMode={true} />

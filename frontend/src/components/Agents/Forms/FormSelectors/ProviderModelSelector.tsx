@@ -70,7 +70,7 @@ function SystemDefaultIndicator({ className }: { className?: string }) {
       )}
     >
       <Cloud className="size-4 text-blue-500" />
-      <span className="text-sm text-muted-foreground"></span>
+      <span className="text-sm text-muted-foreground" />
     </div>
   )
 }

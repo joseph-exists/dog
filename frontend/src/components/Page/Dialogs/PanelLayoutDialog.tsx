@@ -104,7 +104,7 @@ export function PanelLayoutDialog({
     // Filter by entity permission
     const permittedPanels = getPanelsForEntityPermission(userPermission)
     panels = panels.filter((p) =>
-      permittedPanels.some((pp) => pp.kind === p.kind)
+      permittedPanels.some((pp) => pp.kind === p.kind),
     )
 
     // Filter by system role (exclude admin-only for non-admins)
@@ -132,13 +132,17 @@ export function PanelLayoutDialog({
   useEffect(() => {
     if (!open) return
 
-    if (mode === "entity" && context === "room" && roomPanels.panels.length > 0) {
+    if (
+      mode === "entity" &&
+      context === "room" &&
+      roomPanels.panels.length > 0
+    ) {
       setPanels(
         roomPanels.panels.map((p) => ({
           id: p.id,
           kind: p.kind,
           prominence: p.prominence,
-        }))
+        })),
       )
       const initialSource =
         (roomPanels.panelSource as LayoutSource) || "user_defaults"
@@ -196,7 +200,7 @@ export function PanelLayoutDialog({
 
   // Get panels not yet added
   const availablePanelsToAdd = availablePanelsFromRegistry.filter(
-    (ap) => !panels.some((p) => p.id === ap.id)
+    (ap) => !panels.some((p) => p.id === ap.id),
   )
 
   // Handle save
@@ -212,7 +216,6 @@ export function PanelLayoutDialog({
         }
       }
 
-
       showSuccessToast("Your panel layout has been updated.")
       onOpenChange(false)
     } catch {
@@ -223,11 +226,12 @@ export function PanelLayoutDialog({
   }
 
   // Context-aware description
-  const description = context === "room"
-    ? "Customize how panels are arranged in this room."
-    : context === "story"
-    ? "Customize how panels are arranged for this story."
-    : "Customize your panel layout."
+  const description =
+    context === "room"
+      ? "Customize how panels are arranged in this room."
+      : context === "story"
+        ? "Customize how panels are arranged for this story."
+        : "Customize your panel layout."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

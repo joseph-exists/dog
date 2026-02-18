@@ -10,11 +10,16 @@
  */
 
 import { Suspense, useMemo } from "react"
-import { useMDXCompiler } from "../hooks/useMDXCompiler"
-import { useThemeResolution } from "../hooks/useThemeResolution"
 import { CodeHighlight } from "../components/CodeHighlight"
 import { FallbackRenderer } from "../components/FallbackRenderer"
-import type { ContentProps, MDXContentOptions, MDXComponents, MDXCompiledResult } from "../types"
+import { useMDXCompiler } from "../hooks/useMDXCompiler"
+import { useThemeResolution } from "../hooks/useThemeResolution"
+import type {
+  ContentProps,
+  MDXCompiledResult,
+  MDXComponents,
+  MDXContentOptions,
+} from "../types"
 
 /**
  * Default MDX components with Shiki integration
@@ -31,14 +36,12 @@ function createDefaultComponents(codeTheme: string): MDXComponents {
       </CodeHighlight>
     ),
     // Pre wrapper (Shiki handles this, we just provide a container)
-    pre: ({ children }) => (
-      <div className="not-prose my-4">
-        {children}
-      </div>
-    ),
+    pre: ({ children }) => <div className="not-prose my-4">{children}</div>,
     // Standard elements with prose styling
     h1: (props) => <h1 className="text-3xl font-bold mt-8 mb-4" {...props} />,
-    h2: (props) => <h2 className="text-2xl font-semibold mt-6 mb-3" {...props} />,
+    h2: (props) => (
+      <h2 className="text-2xl font-semibold mt-6 mb-3" {...props} />
+    ),
     h3: (props) => <h3 className="text-xl font-medium mt-4 mb-2" {...props} />,
     p: (props) => <p className="my-4 leading-relaxed" {...props} />,
     ul: (props) => <ul className="my-4 ml-6 list-disc" {...props} />,
@@ -67,22 +70,39 @@ function createDefaultComponents(codeTheme: string): MDXComponents {
  * Only allows basic formatting, no custom components
  */
 const RESTRICTED_COMPONENT_NAMES = new Set([
-  "h1", "h2", "h3", "h4", "h5", "h6",
-  "p", "strong", "em", "ul", "ol", "li",
-  "blockquote", "a", "img", "hr",
-  "table", "thead", "tbody", "tr", "th", "td",
-  "pre", "code",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "strong",
+  "em",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "a",
+  "img",
+  "hr",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "th",
+  "td",
+  "pre",
+  "code",
 ])
 
-function filterRestrictedComponents(
-  components: MDXComponents
-): MDXComponents {
+function filterRestrictedComponents(components: MDXComponents): MDXComponents {
   // Filter to only include restricted (safe) component names
   // Uses type assertion since we're dynamically building the object
   const filtered = Object.fromEntries(
     Object.entries(components).filter(([key]) =>
-      RESTRICTED_COMPONENT_NAMES.has(key)
-    )
+      RESTRICTED_COMPONENT_NAMES.has(key),
+    ),
   ) as MDXComponents
   return filtered
 }

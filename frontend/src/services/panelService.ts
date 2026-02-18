@@ -86,7 +86,7 @@ export {
  */
 export async function getResolvedPanels(
   entityType: PanelEntityType,
-  entityId: string
+  entityId: string,
 ): Promise<ResolvedPanels> {
   if (entityType === "room") {
     const response = await RoomPanelsService.getResolvedPanels({
@@ -125,7 +125,7 @@ export async function getResolvedPanels(
  */
 export async function getEntityPanelDefaults(
   entityType: PanelEntityType,
-  entityId: string
+  entityId: string,
 ): Promise<RoomPanelDefaultsPublic | null> {
   if (entityType === "room") {
     return await RoomPanelsService.getRoomDefaults({ roomId: entityId })
@@ -149,7 +149,7 @@ export async function getEntityPanelDefaults(
 export async function updateEntityPanelDefaults(
   entityType: PanelEntityType,
   entityId: string,
-  panels: PanelConfig[]
+  panels: PanelConfig[],
 ): Promise<RoomPanelDefaultsPublic> {
   if (entityType === "room") {
     // Cast to API expected type (generic dict array)
@@ -161,7 +161,9 @@ export async function updateEntityPanelDefaults(
   }
 
   // Story: TODO when backend ready
-  throw new Error(`Panel defaults not yet supported for entity type: ${entityType}`)
+  throw new Error(
+    `Panel defaults not yet supported for entity type: ${entityType}`,
+  )
 }
 
 /**
@@ -175,7 +177,7 @@ export async function updateEntityPanelDefaults(
  */
 export async function getMyPanelConfig(
   entityType: PanelEntityType,
-  entityId: string
+  entityId: string,
 ): Promise<UserRoomPanelConfigPublic | null> {
   if (entityType === "room") {
     return await RoomPanelsService.getMyPanelConfig({ roomId: entityId })
@@ -199,7 +201,7 @@ export async function updateMyPanelConfig(
   entityType: PanelEntityType,
   entityId: string,
   panels: PanelConfig[] | null,
-  useDefaults: boolean
+  useDefaults: boolean,
 ): Promise<UserRoomPanelConfigPublic> {
   if (entityType === "room") {
     // Cast to API expected type (generic dict array or null)
@@ -214,7 +216,9 @@ export async function updateMyPanelConfig(
   }
 
   // Story: TODO when backend ready
-  throw new Error(`Panel config not yet supported for entity type: ${entityType}`)
+  throw new Error(
+    `Panel config not yet supported for entity type: ${entityType}`,
+  )
 }
 
 // ============================================================================
@@ -225,7 +229,7 @@ export async function updateMyPanelConfig(
  * @deprecated Use getResolvedPanels(entityType, entityId) instead
  */
 export async function getResolvedPanelsForRoom(
-  roomId: string
+  roomId: string,
 ): Promise<ResolvedPanels> {
   return getResolvedPanels("room", roomId)
 }
@@ -234,7 +238,7 @@ export async function getResolvedPanelsForRoom(
  * @deprecated Use getEntityPanelDefaults(entityType, entityId) instead
  */
 export async function getRoomPanelDefaults(
-  roomId: string
+  roomId: string,
 ): Promise<RoomPanelDefaultsPublic | null> {
   return getEntityPanelDefaults("room", roomId)
 }
@@ -244,7 +248,7 @@ export async function getRoomPanelDefaults(
  */
 export async function updateRoomPanelDefaults(
   roomId: string,
-  panels: PanelConfig[]
+  panels: PanelConfig[],
 ): Promise<RoomPanelDefaultsPublic> {
   return updateEntityPanelDefaults("room", roomId, panels)
 }

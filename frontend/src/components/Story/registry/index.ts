@@ -1,24 +1,5 @@
 // src/components/Story/registry/index.ts
 
-// Panel types (for layout dialogs)
-export {
-  type PanelKind,
-  type PanelProminence,
-  type PanelContext,
-  type PanelPermission,
-  type PanelTypeDefinition,
-  PANEL_TYPES,
-  getPanelType,
-  getPanelDisplayName,
-  getPanelsForContext,
-  getPanelsForEntityPermission,
-  getPanelsForSystemRole,
-  isValidPanelKind,
-  getDefaultPanelConfig,
-  getPanelDependents,
-  areDependenciesSatisfied,
-} from "./panelTypes"
-
 // Block types
 export {
   BLOCK_TYPES,
@@ -45,7 +26,6 @@ export {
   getEntityType,
   getEntityTypeOrThrow,
 } from "./entityTypes"
-
 // Page templates
 export {
   getDefaultTemplate,
@@ -56,6 +36,24 @@ export {
   pageTemplates,
   type TemplateBlock,
 } from "./pageTemplates"
+// Panel types (for layout dialogs)
+export {
+  areDependenciesSatisfied,
+  getDefaultPanelConfig,
+  getPanelDependents,
+  getPanelDisplayName,
+  getPanelsForContext,
+  getPanelsForEntityPermission,
+  getPanelsForSystemRole,
+  getPanelType,
+  isValidPanelKind,
+  PANEL_TYPES,
+  type PanelContext,
+  type PanelKind,
+  type PanelPermission,
+  type PanelProminence,
+  type PanelTypeDefinition,
+} from "./panelTypes"
 // Relationship types
 export {
   getRelationshipType,

@@ -5,11 +5,11 @@
  * Handles theme resolution, variant propagation, and fallback.
  */
 import { useMemo } from "react"
-import type { ContentRendererProps, PluginValidationResult } from "./types"
-import { resolveRenderer } from "./registry"
-import { transformContent, validateContent } from "./pluginRegistry"
 import { FallbackRenderer } from "./components/FallbackRenderer"
 import { useThemeResolution } from "./hooks/useThemeResolution"
+import { transformContent, validateContent } from "./pluginRegistry"
+import { resolveRenderer } from "./registry"
+import type { ContentRendererProps, PluginValidationResult } from "./types"
 
 export function ContentRenderer({
   content,
@@ -25,7 +25,10 @@ export function ContentRenderer({
   const resolvedVariant = variant ?? content.metadata?.variant ?? "card"
 
   // Theme resolution (codeTheme available for future use in augmentedContent pattern)
-  const { codeTheme: _codeTheme } = useThemeResolution({ content, propsTheme: theme })
+  const { codeTheme: _codeTheme } = useThemeResolution({
+    content,
+    propsTheme: theme,
+  })
 
   // Apply plugin transforms
   const transformedContent = useMemo(() => {
@@ -55,7 +58,7 @@ export function ContentRenderer({
   // Debug logging in development
   if (process.env.NODE_ENV === "development" && isOverride) {
     console.debug(
-      `ContentRenderer: Using plugin "${plugin?.id}" for format "${transformedContent.format}"`
+      `ContentRenderer: Using plugin "${plugin?.id}" for format "${transformedContent.format}"`,
     )
   }
 
@@ -69,20 +72,20 @@ export function ContentRenderer({
   )
 }
 
-  // // Get renderer for this format
-  // const renderer = getRenderer(content.format)
+// // Get renderer for this format
+// const renderer = getRenderer(content.format)
 
-  // if (!renderer) {
-  //   // Use custom fallback or default
-  //   if (fallback) {
-  //     const FallbackComponent = fallback
-  //     return <FallbackComponent {...content} />
-  //   }
-  //   return <FallbackRenderer content={content} />
-  // }
+// if (!renderer) {
+//   // Use custom fallback or default
+//   if (fallback) {
+//     const FallbackComponent = fallback
+//     return <FallbackComponent {...content} />
+//   }
+//   return <FallbackRenderer content={content} />
+// }
 
-  // Augment content with theme if not already set
-  // This enables the cascade: props.theme → content.metadata.options.theme
+// Augment content with theme if not already set
+// This enables the cascade: props.theme → content.metadata.options.theme
 //   const augmentedContent: Content = theme?.codeTheme
 //     ? {
 //         ...content,

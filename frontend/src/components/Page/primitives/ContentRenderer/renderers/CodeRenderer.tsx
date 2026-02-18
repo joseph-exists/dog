@@ -6,9 +6,13 @@
  */
 import { CodeHighlight } from "../components/CodeHighlight"
 import { useThemeResolution } from "../hooks/useThemeResolution"
-import type { ContentProps, CodeContentOptions } from "../types"
+import type { CodeContentOptions, ContentProps } from "../types"
 
-export function CodeRenderer({ content, variant, className }: ContentProps<"code">) {
+export function CodeRenderer({
+  content,
+  variant,
+  className,
+}: ContentProps<"code">) {
   const code = typeof content.value === "string" ? content.value : ""
   const options = content.metadata?.options as CodeContentOptions | undefined
   const { codeTheme } = useThemeResolution({ content })
@@ -20,7 +24,6 @@ export function CodeRenderer({ content, variant, className }: ContentProps<"code
   const lineNumbers = options?.lineNumbers ?? false
   const highlightLines = options?.highlightLines
   const startLine = options?.startLine
-
 
   // Background variant: code as decorative layer
   if (variant === "background") {

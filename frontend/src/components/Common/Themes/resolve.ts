@@ -8,9 +8,9 @@
 import type {
   AgentPresentation,
   AgentTypeKey,
+  PresentationTokens,
   StoryPresentation,
   StoryTypeKey,
-  PresentationTokens,
 } from "./types"
 
 /**
@@ -69,7 +69,6 @@ export const STORY_TYPE_PRESENTATIONS: Record<StoryTypeKey, StoryPresentation> =
       decorationHint: "neon",
     },
   }
-
 
 export const AGENT_TYPE_PRESENTATIONS: Record<AgentTypeKey, AgentPresentation> =
   {
@@ -170,7 +169,6 @@ export function resolveStoryPresentation(
 
   return result
 }
-
 
 /**
  * Convert presentation tokens to a React inline style object.

@@ -8,16 +8,16 @@
  * - "Create Story" button in header
  */
 
-import { AlertCircle, BookOpen, Loader2 } from "lucide-react";
+import { AlertCircle, BookOpen, Loader2 } from "lucide-react"
 
-import { useStories } from "@/hooks/stories/useStories";
-import CreateStoryModal from "../Display/CreateStoryModal";
-import StoryCard from "./StoryCard";
+import { useStories } from "@/hooks/stories/useStories"
+import CreateStoryModal from "../Display/CreateStoryModal"
+import StoryCard from "./StoryCard"
 
 const StoryList = () => {
-  const { data, isLoading, error } = useStories();
+  const { data, isLoading, error } = useStories()
 
-  const stories = data?.data ?? [];
+  const stories = data?.data ?? []
 
   // Loading state
   if (isLoading) {
@@ -27,7 +27,7 @@ const StoryList = () => {
           <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
         </div>
       </div>
-    );
+    )
   }
 
   // Error state
@@ -44,7 +44,7 @@ const StoryList = () => {
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   // Empty state
@@ -66,7 +66,7 @@ const StoryList = () => {
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   // Stories grid
@@ -89,7 +89,7 @@ const StoryList = () => {
         ))}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StoryList;
+export default StoryList

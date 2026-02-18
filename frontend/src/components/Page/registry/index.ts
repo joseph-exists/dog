@@ -37,18 +37,10 @@ export {
   pageTemplates,
   type TemplateBlock,
 } from "./pageTemplates"
-// Relationship types
-export {
-  getRelationshipType,
-  isValidRelationship,
-  type RelationshipPair,
-  type RelationshipTypeDefinition,
-  relationshipTypes,
-} from "./relationshipTypes"
-
 // Panel types
 export {
   areDependenciesSatisfied,
+  type EntityCardinality,
   getDefaultPanelConfig,
   getPanelDependents,
   getPanelDisplayName,
@@ -58,10 +50,17 @@ export {
   getPanelType,
   isValidPanelKind,
   PANEL_TYPES,
-  type EntityCardinality,
   type PanelContext,
   type PanelKind,
   type PanelPermission,
   type PanelProminence,
   type PanelTypeDefinition,
 } from "./panelTypes"
+// Relationship types
+export {
+  getRelationshipType,
+  isValidRelationship,
+  type RelationshipPair,
+  type RelationshipTypeDefinition,
+  relationshipTypes,
+} from "./relationshipTypes"

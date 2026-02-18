@@ -7,15 +7,18 @@
  * Follows the orchestrator pattern from r.$roomId.tsx:
  * route owns state + panel registry, shell owns structure + rendering.
  *
- * Theme state uses nullish coalescing for future user preference integration:
- * when prefs loading is implemented, savedPrefs?.pageTheme will provide the value.
+ * Theme state uses backend bindings via useUserThemeBindings hook.
  */
 
 import { createFileRoute } from "@tanstack/react-router"
-import { useState } from "react"
 
 import { AgentsShell, type PanelConfig } from "@/components/Agents"
 import { AgentsGridPanel } from "@/components/Agents/panels"
+import { usePageThemes } from "@/hooks/useThemeBinding"
+import {
+  useAvailableThemes,
+  useUserThemeBindings,
+} from "@/hooks/useThemeRegistry"
 
 export const Route = createFileRoute("/_layout/agents")({
   component: AgentsPage,
@@ -24,44 +27,44 @@ export const Route = createFileRoute("/_layout/agents")({
   }),
 })
 
-// localStorage keys for theme persistence
-const STORAGE_KEYS = {
-  pageTheme: "agents-page-theme",
-  cardsTheme: "agents-cards-theme",
-} as const
+// Context path for theme resolution
+const CONTEXT_PATH = ["page:agents"]
 
 function AgentsPage() {
   // ─────────────────────────────────────────────────────────────────────────
-  // Theme Persistence (localStorage)
+  // Theme Resolution & Bindings
   //
-  // TODO: Replace with useUserPagePrefs("agents") when backend user preferences
-  // are implemented. The hook should:
-  //   1. Fetch user preferences from backend on mount
-  //   2. Return { pageTheme, cardsTheme } with defaults if not set
-  //   3. Provide updatePrefs(key, value) that persists to backend
-  //   4. Use optimistic updates for responsive UX
-  //
-  // When migrating, replace the useState + handlers below with:
-  //   const { prefs, updatePageTheme, updateCardsTheme } = useUserPagePrefs("agents")
+  // Resolves effective themes from the cascade:
+  //   1. Authored bindings (not applicable for listing page)
+  //   2. User preference bindings
+  //   3. System defaults
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Theme selection with localStorage persistence
-  const [pageThemeId, setPageThemeId] = useState(() =>
-    localStorage.getItem(STORAGE_KEYS.pageTheme) ?? "default"
-  )
-  const [cardsThemeId, setCardsThemeId] = useState(() =>
-    localStorage.getItem(STORAGE_KEYS.cardsTheme) ?? "default"
-  )
+  // Resolve current themes
+  const { themes, isLoading: isResolvingThemes } = usePageThemes(CONTEXT_PATH)
 
-  // Handlers that persist to localStorage
+  // User binding management
+  const { setBinding } = useUserThemeBindings("page:agents")
+
+  // Available themes for pickers
+  const { themes: availablePageThemes } = useAvailableThemes("page")
+  const { themes: availableCardThemes } = useAvailableThemes("card")
+
+  // Theme change handlers
   const handlePageThemeChange = (themeId: string) => {
-    setPageThemeId(themeId)
-    localStorage.setItem(STORAGE_KEYS.pageTheme, themeId)
+    setBinding({
+      contextKey: "page:agents",
+      slot: "page",
+      themeId,
+    })
   }
 
   const handleCardsThemeChange = (themeId: string) => {
-    setCardsThemeId(themeId)
-    localStorage.setItem(STORAGE_KEYS.cardsTheme, themeId)
+    setBinding({
+      contextKey: "page:agents",
+      slot: "cards",
+      themeId,
+    })
   }
 
   // Panel component registry
@@ -80,16 +83,24 @@ function AgentsPage() {
     },
   ]
 
+  // Extract resolved theme data
+  const pageTheme = themes.page?.theme ?? null
+  const cardsTheme = themes.cards?.theme ?? null
+
   return (
     <AgentsShell
       title="Agents"
       type="work"
       canEdit={false}
       panels={panels}
-      pageThemeId={pageThemeId}
-      cardsThemeId={cardsThemeId}
+      // New theme props
+      pageTheme={pageTheme}
+      cardsTheme={cardsTheme}
+      availablePageThemes={availablePageThemes}
+      availableCardThemes={availableCardThemes}
       onPageThemeChange={handlePageThemeChange}
       onCardsThemeChange={handleCardsThemeChange}
+      isLoadingThemes={isResolvingThemes}
     />
   )
 }

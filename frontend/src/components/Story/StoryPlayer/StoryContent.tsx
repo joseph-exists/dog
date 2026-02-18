@@ -10,17 +10,17 @@
  * - json: Formatted as preformatted code block
  * - text: Plain text with whitespace preserved
  */
-import { ChevronRight, Play } from "lucide-react";
+import { ChevronRight, Play } from "lucide-react"
 import {
   ContentRenderer,
   nodeToContent,
-} from "@/components/Common/ContentRenderer";
+} from "@/components/Common/ContentRenderer"
 // import type { StoryNodePublic } from "@/client";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { useStoryPlayerContext } from "./useStoryPlayerContext";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { useStoryPlayerContext } from "./useStoryPlayerContext"
 
 /**
  * Renders node content based on format.
@@ -38,7 +38,7 @@ export function StoryContent() {
     isEndNode,
     handleChoice,
     handleRestart,
-  } = useStoryPlayerContext();
+  } = useStoryPlayerContext()
 
   // No start node configured
   if (!startNode) {
@@ -53,7 +53,7 @@ export function StoryContent() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   // Current node not found (edge case)
@@ -69,7 +69,7 @@ export function StoryContent() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   // Normal content rendering
@@ -148,5 +148,5 @@ export function StoryContent() {
         </Card>
       </div>
     </div>
-  );
+  )
 }

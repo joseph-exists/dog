@@ -4,19 +4,19 @@
  * Provides realistic examples of each ContentFormat with various
  * metadata options to demonstrate all capabilities.
  */
-import type { Content, ContentVariant } from "@/components/Page/primitives/ContentRenderer"
-
+import type {
+  Content,
+  ContentVariant,
+} from "@/components/Page/primitives/ContentRenderer"
+import arrowExampleSvg from "./test-files/arrow_example.svg?raw"
 // Test SVG files (imported as raw strings)
 import basicShapesSvg from "./test-files/basic_shapes.svg?raw"
-import arrowExampleSvg from "./test-files/arrow_example.svg?raw"
-import textAndShapesSvg from "./test-files/text_and_shapes.svg?raw"
+import convolutionDemoSvg from "./test-files/convolution_demo.svg?raw"
+import forceNetworkSvg from "./test-files/force_network.svg?raw"
 import hierarchicalTreeSvg from "./test-files/hierarchical_tree.svg?raw"
 import neuralNetworkSvg from "./test-files/neural_network.svg?raw"
-import forceNetworkSvg from "./test-files/force_network.svg?raw"
-import convolutionDemoSvg from "./test-files/convolution_demo.svg?raw"
 import physicsBounceSvg from "./test-files/physics_bounce.svg?raw"
-
-
+import textAndShapesSvg from "./test-files/text_and_shapes.svg?raw"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TEXT EXAMPLES
@@ -30,7 +30,8 @@ export const textExamples: Content<"text">[] = [
   },
   {
     format: "text",
-    value: "A longer text block that demonstrates\nmultiple lines\nwith whitespace preserved.",
+    value:
+      "A longer text block that demonstrates\nmultiple lines\nwith whitespace preserved.",
     metadata: { variant: "page" },
   },
   {
@@ -167,7 +168,16 @@ export const jsonExamples: Content<"json">[] = [
     value: JSON.stringify({
       name: "ContentRenderer",
       version: "1.0.0",
-      formats: ["text", "markdown", "html", "json", "code", "svg", "image", "mdx"],
+      formats: [
+        "text",
+        "markdown",
+        "html",
+        "json",
+        "code",
+        "svg",
+        "image",
+        "mdx",
+      ],
       features: {
         variants: 9,
         themeSupport: true,
@@ -369,7 +379,10 @@ export const allExamples = {
 // VARIANT DEMONSTRATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const variantDemos: Array<{ variant: ContentVariant; description: string }> = [
+export const variantDemos: Array<{
+  variant: ContentVariant
+  description: string
+}> = [
   { variant: "inline", description: "Inline: compact, no scroll" },
   { variant: "card", description: "Card: bounded height, scrollable" },
   { variant: "page", description: "Page: full layout with headings" },

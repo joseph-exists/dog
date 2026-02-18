@@ -4,9 +4,10 @@
  * Re-exports ContentFormat from backend client.
  * Defines frontend-specific interfaces for rendering.
  */
-import type { ContentFormat } from "@/client"
-import type { ReactNode } from "react"
+
 import type { ShikiTransformer } from "@shikijs/types"
+import type { ReactNode } from "react"
+import type { ContentFormat } from "@/client"
 
 // Re-export for convenience
 export type { ContentFormat }
@@ -16,15 +17,15 @@ export type { ShikiTransformer }
  * UX positioning variants - WHERE content appears
  */
 export type ContentVariant =
-  | "inline"      // Short snippet, no scroll, no headings
-  | "card"        // Limited height, scrollable body
-  | "page"        // Full layout, headings, TOC
-  | "tooltip"     // Very small, truncated, hover dismissal
-  | "preview"     // Medium size, read-only, animated entrance
-  | "embed"       // Nested context, reduced chrome
-  | "modal"       // Centered, backdrop, dismissible
-  | "thumbnail"   // Fixed dimensions, cropped/scaled
-  | "background"  // Layer behind other content
+  | "inline" // Short snippet, no scroll, no headings
+  | "card" // Limited height, scrollable body
+  | "page" // Full layout, headings, TOC
+  | "tooltip" // Very small, truncated, hover dismissal
+  | "preview" // Medium size, read-only, animated entrance
+  | "embed" // Nested context, reduced chrome
+  | "modal" // Centered, backdrop, dismissible
+  | "thumbnail" // Fixed dimensions, cropped/scaled
+  | "background" // Layer behind other content
 
 /**
  * Content trust levels for security policy
@@ -80,9 +81,6 @@ export interface MDXContentOptions {
   /** Use backend-compiled MDX instead of runtime compilation */
   useCompiledMDX?: boolean
 }
-
-
-
 
 /**
  * Union of all format-specific options

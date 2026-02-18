@@ -193,7 +193,8 @@ export const SYSTEM_PRESETS: Preset[] = [
     description: "story with debug sidebar",
     panels: [
       { id: "player", kind: "storyPlayer", prominence: "primary" },
-      { id: "debug", kind: "storyDebug", prominence: "auxiliary" }]
+      { id: "debug", kind: "storyDebug", prominence: "auxiliary" },
+    ],
   },
   {
     id: "collaborate",

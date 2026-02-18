@@ -10,7 +10,11 @@
 
 import type { ContentProps, JSONContentOptions } from "../types"
 
-export function JSONRenderer({ content, variant, className }: ContentProps<"json">) {
+export function JSONRenderer({
+  content,
+  variant,
+  className,
+}: ContentProps<"json">) {
   const options = content.metadata?.options as JSONContentOptions | undefined
   const viewMode = options?.viewMode ?? "text"
 
@@ -41,9 +45,7 @@ export function JSONRenderer({ content, variant, className }: ContentProps<"json
     return (
       <div className={className}>
         {variant !== "inline" && (
-          <p className="text-sm text-muted-foreground italic mb-2">
-            [JSON]
-          </p>
+          <p className="text-sm text-muted-foreground italic mb-2">[JSON]</p>
         )}
         <pre className="bg-muted p-4 rounded-md overflow-auto text-sm font-mono">
           {JSON.stringify(parsed, null, 2)}

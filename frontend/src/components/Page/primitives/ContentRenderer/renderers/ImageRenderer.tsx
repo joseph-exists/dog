@@ -6,7 +6,11 @@
  */
 import type { ContentProps, ImageContentOptions } from "../types"
 
-export function ImageRenderer({ content, variant, className }: ContentProps<"image">) {
+export function ImageRenderer({
+  content,
+  variant,
+  className,
+}: ContentProps<"image">) {
   const src = typeof content.value === "string" ? content.value : ""
   const options = content.metadata?.options as ImageContentOptions | undefined
 
@@ -28,7 +32,9 @@ export function ImageRenderer({ content, variant, className }: ContentProps<"ima
   // Error handling: show placeholder if src is empty
   if (!src) {
     return (
-      <div className={`bg-muted rounded flex items-center justify-center text-muted-foreground text-sm ${style} ${className ?? ""}`}>
+      <div
+        className={`bg-muted rounded flex items-center justify-center text-muted-foreground text-sm ${style} ${className ?? ""}`}
+      >
         No image source
       </div>
     )

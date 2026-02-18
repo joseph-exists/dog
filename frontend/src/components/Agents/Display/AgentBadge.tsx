@@ -112,7 +112,8 @@ interface StatusBadgeProps {
 }
 
 /**
- * Badge showing enabled/disabled status
+ * Badge showing enabled/disabled status.
+ * Uses inherited accent color when available, falls back to default styling.
  */
 export function AgentStatusBadge({ isEnabled, className }: StatusBadgeProps) {
   return (
@@ -120,7 +121,7 @@ export function AgentStatusBadge({ isEnabled, className }: StatusBadgeProps) {
       variant={isEnabled ? "default" : "secondary"}
       className={cn(
         isEnabled
-          ? "bg-green-600 hover:bg-green-600"
+          ? "bg-[var(--agent-accent,hsl(var(--primary)))] text-[var(--agent-accent-foreground,hsl(var(--primary-foreground)))] hover:opacity-90"
           : "bg-muted text-muted-foreground",
         className,
       )}

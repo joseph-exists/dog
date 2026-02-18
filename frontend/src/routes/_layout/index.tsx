@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
-
-import useAuth from "@/hooks/useAuth"
 import { ContentRendererDemo } from "@/components/Demo/ContentRendererDemo"
-
+import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
@@ -28,7 +26,7 @@ function Dashboard() {
           Welcome back, nice to see you again!!!
         </p>
         <div>
-          <ContentRendererDemo/>
+          <ContentRendererDemo />
         </div>
       </div>
     </div>

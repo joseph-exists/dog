@@ -5,7 +5,10 @@
  * expected by ContentRenderer.
  */
 import type { ContentFormat, StoryNodePublic } from "@/client"
-import type { Content, ContentVariant } from "@/components/Page/primitives/ContentRenderer"
+import type {
+  Content,
+  ContentVariant,
+} from "@/components/Page/primitives/ContentRenderer"
 
 /**
  * Convert a StoryNodePublic to a Content object
@@ -16,7 +19,7 @@ import type { Content, ContentVariant } from "@/components/Page/primitives/Conte
  */
 export function nodeToContent(
   node: StoryNodePublic,
-  variant: ContentVariant = "card"
+  variant: ContentVariant = "card",
 ): Content {
   return {
     format: (node.content_format as ContentFormat) || "text",
@@ -39,7 +42,7 @@ export function nodeToContent(
 export function toContent(
   content: string,
   format: ContentFormat | null,
-  variant: ContentVariant = "card"
+  variant: ContentVariant = "card",
 ): Content {
   return {
     format: format || "text",

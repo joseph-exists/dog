@@ -9,9 +9,9 @@ import {
   getInitials,
   sizeClasses,
 } from "@/components/Agents/utils"
+import type { AvatarPresentation } from "@/components/Common/Themes/types"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import type { AvatarPresentation } from "@/components/Common/Themes/types"
 
 interface StoryAvatarProps {
   /** Agent name used for initials and color generation */

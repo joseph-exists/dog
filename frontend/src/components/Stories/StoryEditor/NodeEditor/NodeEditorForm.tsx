@@ -9,13 +9,16 @@
  * - Start/End node checkboxes
  */
 
+import { Eye } from "lucide-react"
 import { useEffect, useState } from "react"
-import {
-  ContentRenderer,
-  type Content,
-} from "@/components/Page/primitives/ContentRenderer"
 import type { ContentFormat, StoryNodePublic } from "@/client"
+import {
+  type Content,
+  ContentRenderer,
+} from "@/components/Page/primitives/ContentRenderer"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -28,12 +31,6 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useUpdateNode } from "@/hooks/stories/useStoryNodes"
 import RichTextEditor from "../../shared/RichTextEditor"
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
-import { Eye } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 interface NodeEditorFormProps {
   node: StoryNodePublic
@@ -44,7 +41,10 @@ interface NodeEditorFormProps {
 const FORMAT_INFO: Record<ContentFormat, { label: string; hint: string }> = {
   text: { label: "Plain Text", hint: "Simple text with whitespace preserved" },
   html: { label: "HTML (Rich Text)", hint: "Rich text with formatting" },
-  markdown: { label: "Markdown", hint: "Markdown syntax with code highlighting" },
+  markdown: {
+    label: "Markdown",
+    hint: "Markdown syntax with code highlighting",
+  },
   json: { label: "JSON", hint: "Structured data in JSON format" },
   code: { label: "Code", hint: "Syntax-highlighted code block" },
   svg: { label: "SVG", hint: "Scalable vector graphics" },

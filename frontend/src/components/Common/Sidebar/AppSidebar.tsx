@@ -1,5 +1,6 @@
 // src/components/Common/Sidebar/AppSidebar.tsx
 
+import { IconRobotFace } from "@tabler/icons-react"
 import { useRouterState } from "@tanstack/react-router"
 import {
   BookHeart,
@@ -15,14 +16,11 @@ import {
   User2,
   Users,
 } from "lucide-react"
-
 import { Logo } from "@/components/Common/Logo"
 import { Sidebar } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
-
 import { SidebarLayout } from "./SidebarLayout"
 import type { NavItem, NavSection, SidebarUser } from "./types"
-import { IconRobotFace } from "@tabler/icons-react"
 
 // ============================================================================
 // NAVIGATION REGISTRY
@@ -55,7 +53,12 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "agents", title: "Agents", path: "/agents", icon: Bot },
   { id: "personas", title: "Personas", path: "/personas", icon: Smile },
   { id: "items", title: "Items", path: "/items", icon: Briefcase },
-  { id: "chatster", title: "Debug-Chatster", path: "/chatster", icon: IconRobotFace },
+  {
+    id: "chatster",
+    title: "Debug-Chatster",
+    path: "/chatster",
+    icon: IconRobotFace,
+  },
 ]
 
 // ============================================================================

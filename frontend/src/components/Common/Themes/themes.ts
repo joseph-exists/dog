@@ -80,7 +80,7 @@ export const AMBIENT_THEMES: AmbientTheme[] = [
       "--accent-foreground": "oklch(0.20 0.02 75)",
     },
   },
-    {
+  {
     id: "forest",
     name: "Forest",
     description: "Dark green surface",

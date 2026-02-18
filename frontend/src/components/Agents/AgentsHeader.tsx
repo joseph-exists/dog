@@ -7,11 +7,11 @@
  * - Cards theme selector (ambient theme for cards without individual presentation)
  * - Create agent triggers (both simple and wizard)
  * - Layout mode toggle (panels/tabs)
- *.
- * Same structural role: top bar with title and actions.
+ *
+ * Themes are resolved by the route and passed as ThemeViewModel objects.
  */
 
- import {
+import {
   BookOpen,
   Bug,
   Layout,
@@ -27,10 +27,12 @@
   Settings,
   Trash2,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import React, {useState } from "react"
+import type React from "react"
+import { useState } from "react"
 import CreateAgentDialog from "@/components/Agents/Dialogs/CreateAgentDialog"
 import CreateAgentusDialog from "@/components/Agents/Dialogs/CreateAgentusDialog"
+import { PanelLayoutDialog } from "@/components/Page/Dialogs/PanelLayoutDialog"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +40,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
 import {
   Select,
   SelectContent,
@@ -55,10 +56,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-
-import { PAGE_THEMES, getPageThemeById } from "./page_themes"
-import { CARD_THEMES, getCardThemeById } from "./card_themes" 
-import { PanelLayoutDialog }  from "@/components/Page/Dialogs/PanelLayoutDialog"
+import type { ThemeViewModel } from "@/services/themeService"
 
 export type AgentType = "work" | "boss" | "think" | "be" | "make"
 
@@ -67,10 +65,14 @@ export interface AgentsHeaderProps {
   title: string
   type: AgentType
   agentId?: string
-  /** Currently selected page theme ID */
-  pageThemeId: string
-  /** Currently selected cards theme ID */
-  cardsThemeId: string
+  /** Resolved page theme (from usePageThemes hook) */
+  pageTheme: ThemeViewModel | null
+  /** Resolved cards theme (from usePageThemes hook) */
+  cardsTheme: ThemeViewModel | null
+  /** Available page themes for picker */
+  availablePageThemes: ThemeViewModel[]
+  /** Available card themes for picker */
+  availableCardThemes: ThemeViewModel[]
   /** Page theme change callback */
   onPageThemeChange: (themeId: string) => void
   /** Cards theme change callback */
@@ -87,7 +89,7 @@ export interface AgentsHeaderProps {
   onCopyLink?: () => void
   /** Delete room callback */
   onDelete?: () => void
-    /** Whether debug panel is shown */
+  /** Whether debug panel is shown */
   showDebugPanel?: boolean
   /** Toggle debug panel callback */
   onToggleDebugPanel?: () => void
@@ -97,7 +99,7 @@ export interface AgentsHeaderProps {
   className?: string
 }
 
-const agentTypeIcons: Record<AgentType, React.ElementType>= { 
+const agentTypeIcons: Record<AgentType, React.ElementType> = {
   work: MessageSquareHeart,
   boss: RockingChair,
   think: BookOpen,
@@ -108,8 +110,10 @@ const agentTypeIcons: Record<AgentType, React.ElementType>= {
 export function AgentsHeader({
   title,
   type,
-  pageThemeId,
-  cardsThemeId,
+  pageTheme,
+  cardsTheme,
+  availablePageThemes,
+  availableCardThemes,
   onPageThemeChange,
   onCardsThemeChange,
   layoutMode,
@@ -121,18 +125,19 @@ export function AgentsHeader({
   onDelete,
   showDebugPanel,
   onToggleDebugPanel,
-  //devModeEnabled,
 }: AgentsHeaderProps) {
-
   const TypeIcon = agentTypeIcons[type]
-  const pageTheme = getPageThemeById(pageThemeId)
-  const cardsTheme = getCardThemeById(cardsThemeId)
   const [layoutDialogOpen, setLayoutDialogOpen] = useState(false)
+
+  // Get current theme IDs for select value (fallback to empty string if not resolved)
+  const pageThemeId = pageTheme?.id ?? ""
+  const cardsThemeId = cardsTheme?.id ?? ""
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 bg-background text-foreground">
       {/* Left: Sidebar trigger + Title */}
-      <div className="flex items-center gap-2"> <TypeIcon className="h-5 w-5 text-muted-foreground"/>
+      <div className="flex items-center gap-2">
+        <TypeIcon className="h-5 w-5 text-muted-foreground" />
         <SidebarTrigger className="-ml-1 text-muted-foreground" />
         <Separator orientation="vertical" className="h-4" />
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
@@ -146,12 +151,19 @@ export function AgentsHeader({
             <TooltipTrigger asChild>
               <Select value={pageThemeId} onValueChange={onPageThemeChange}>
                 <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue>Page: {pageTheme.name}</SelectValue>
+                  <SelectValue>
+                    Page: {pageTheme?.name ?? "Loading..."}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {PAGE_THEMES.map((theme) => (
+                  {availablePageThemes.map((theme) => (
                     <SelectItem key={theme.id} value={theme.id}>
                       {theme.name}
+                      {theme.isSystem && (
+                        <span className="ml-2 text-muted-foreground text-xs">
+                          (system)
+                        </span>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -167,12 +179,19 @@ export function AgentsHeader({
             <TooltipTrigger asChild>
               <Select value={cardsThemeId} onValueChange={onCardsThemeChange}>
                 <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue>Cards: {cardsTheme.name}</SelectValue>
+                  <SelectValue>
+                    Cards: {cardsTheme?.name ?? "Loading..."}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {CARD_THEMES.map((theme) => (
+                  {availableCardThemes.map((theme) => (
                     <SelectItem key={theme.id} value={theme.id}>
                       {theme.name}
+                      {theme.isSystem && (
+                        <span className="ml-2 text-muted-foreground text-xs">
+                          (system)
+                        </span>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -193,22 +212,17 @@ export function AgentsHeader({
           }}
           className="hidden md:flex"
         >
-          <ToggleGroupItem
-            value="panels"
-            aria-label="Panel layout">
-              <LayoutGrid className="h-4 w-4" />
+          <ToggleGroupItem value="panels" aria-label="Panel layout">
+            <LayoutGrid className="h-4 w-4" />
           </ToggleGroupItem>
-          <ToggleGroupItem
-            value="tabs"
-            aria-label="Tab layout">
-            <LayoutList className ="h-4 w-4" />
+          <ToggleGroupItem value="tabs" aria-label="Tab layout">
+            <LayoutList className="h-4 w-4" />
           </ToggleGroupItem>
         </ToggleGroup>
 
         {/* Create actions */}
         <CreateAgentDialog />
         <CreateAgentusDialog />
-
 
         {/* Room menu */}
         <DropdownMenu>
@@ -236,10 +250,10 @@ export function AgentsHeader({
                 {showDebugPanel ? "Hide Debug Panel" : "Show Debug Panel"}
               </DropdownMenuItem>
             )}
-              <DropdownMenuItem onClick={() => setLayoutDialogOpen(true)}>
-                <Layout className="h-4 w-4 mr-2" />
-                Panel Layout
-              </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLayoutDialogOpen(true)}>
+              <Layout className="h-4 w-4 mr-2" />
+              Panel Layout
+            </DropdownMenuItem>
             {canEdit && onSettings && (
               <DropdownMenuItem onClick={onSettings}>
                 <Settings className="h-4 w-4 mr-2" />
@@ -263,13 +277,12 @@ export function AgentsHeader({
       </div>
 
       {/* Panel layout dialog */}
-        <PanelLayoutDialog
-          open={layoutDialogOpen}
-          onOpenChange={setLayoutDialogOpen}
-          entityId={null}
-          context="room"
-        />
-      )
-      </div>
+      <PanelLayoutDialog
+        open={layoutDialogOpen}
+        onOpenChange={setLayoutDialogOpen}
+        entityId={null}
+        context="room"
+      />
+    </div>
   )
 }

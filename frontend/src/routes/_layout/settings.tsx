@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 
+import { ThemeManagerPanel } from "@/components/Themes"
 import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserAccessProviders from "@/components/UserSettings/UserAccessProviders"
@@ -15,6 +16,7 @@ const tabsConfig = [
     title: "Access Providers",
     component: UserAccessProviders,
   },
+  { value: "themes", title: "Themes", component: ThemeManagerPanel },
   { value: "danger-zone", title: "Danger zone", component: DeleteAccount },
 ]
 
@@ -31,8 +33,9 @@ export const Route = createFileRoute("/_layout/settings")({
 
 function UserSettings() {
   const { user: currentUser } = useAuth()
+  // Superusers don't see "danger zone" (can't delete own account)
   const finalTabs = currentUser?.is_superuser
-    ? tabsConfig.slice(0, 3)
+    ? tabsConfig.filter((tab) => tab.value !== "danger-zone")
     : tabsConfig
 
   if (!currentUser) {

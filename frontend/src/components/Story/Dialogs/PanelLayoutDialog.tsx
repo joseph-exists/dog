@@ -95,7 +95,7 @@ export function PanelLayoutDialog({
     // Filter by entity permission
     const permittedPanels = getPanelsForEntityPermission(userPermission)
     panelDefs = panelDefs.filter((p) =>
-      permittedPanels.some((pp) => pp.kind === p.kind)
+      permittedPanels.some((pp) => pp.kind === p.kind),
     )
 
     // Filter by system role (exclude admin-only for non-admins)
@@ -115,7 +115,7 @@ export function PanelLayoutDialog({
   const getDefaultStoryPreset = () => {
     // Try story-specific preset first, fallback to first available
     const storyPreset = SYSTEM_PRESETS.find(
-      (p) => p.id === "story_player" || p.id === "story_play"
+      (p) => p.id === "story_player" || p.id === "story_play",
     )
     if (storyPreset) return storyPreset
 
@@ -140,7 +140,7 @@ export function PanelLayoutDialog({
     setSelectedPresetId(defaultPreset.id)
     setSource("user_defaults")
     setSavedSource("user_defaults")
-  }, [open, availablePanelsFromRegistry])
+  }, [open, getDefaultStoryPreset])
 
   // Auto-switch to custom when user modifies panels
   const switchToCustom = () => {
@@ -155,7 +155,7 @@ export function PanelLayoutDialog({
     if (preset) {
       // Filter preset panels to only include valid story panels
       const validPanels = preset.panels.filter((panel) =>
-        availablePanelsFromRegistry.some((ap) => ap.kind === panel.kind)
+        availablePanelsFromRegistry.some((ap) => ap.kind === panel.kind),
       )
       setPanels(validPanels.length > 0 ? validPanels : preset.panels)
       setSelectedPresetId(presetId)
@@ -188,7 +188,7 @@ export function PanelLayoutDialog({
 
   // Get panels not yet added (filtered to story-valid panels)
   const availablePanelsToAdd = availablePanelsFromRegistry.filter(
-    (ap) => !panels.some((p) => p.kind === ap.kind)
+    (ap) => !panels.some((p) => p.kind === ap.kind),
   )
 
   // Handle save
@@ -214,8 +214,8 @@ export function PanelLayoutDialog({
   // Filter presets to only show those with at least one valid story panel
   const validPresets = SYSTEM_PRESETS.filter((preset) =>
     preset.panels.some((panel) =>
-      availablePanelsFromRegistry.some((ap) => ap.kind === panel.kind)
-    )
+      availablePanelsFromRegistry.some((ap) => ap.kind === panel.kind),
+    ),
   )
 
   return (

@@ -8,14 +8,19 @@
  */
 
 import { useQuery } from "@tanstack/react-query"
-import { EyeIcon, Loader2Icon, ExternalLinkIcon } from "lucide-react"
-import { useState } from "react"
 import { Link } from "@tanstack/react-router"
+import { ExternalLinkIcon, EyeIcon, Loader2Icon } from "lucide-react"
+import { useState } from "react"
 
 import { StoriesService } from "@/client/sdk.gen"
 import type { StoryPublic } from "@/client/types.gen"
-import { Button } from "@/components/ui/button"
+import {
+  resolveStoryPresentation,
+  STORY_TYPE_PRESENTATIONS,
+} from "@/components/Common/Themes/resolve"
+import { isStoryTypeKey } from "@/components/Common/Themes/types"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -25,13 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-
 import StoryAvatar from "../Display/StoryAvatar"
-import {
-  resolveStoryPresentation,
-  STORY_TYPE_PRESENTATIONS,
-} from "@/components/Common/Themes/resolve"
-import { isStoryTypeKey } from "@/components/Common/Themes/types"
 
 // ── View Mode ─────────────────────────────────────────────────────────────
 
@@ -154,9 +153,8 @@ export default function StoryDetailDialog({
     setIsOpen(open)
   }
 
-  const storyType = story && isStoryTypeKey(story.story_type)
-    ? story.story_type
-    : undefined
+  const storyType =
+    story && isStoryTypeKey(story.story_type) ? story.story_type : undefined
   const typeDefaults = storyType
     ? STORY_TYPE_PRESENTATIONS[storyType]
     : undefined

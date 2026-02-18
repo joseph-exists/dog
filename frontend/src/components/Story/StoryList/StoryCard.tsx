@@ -11,22 +11,22 @@
  * - Relative timestamp formatting
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { Copy, MessageSquare, Plus } from "lucide-react";
-import React from "react";
+import { useQuery } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
+import { Copy, MessageSquare, Plus } from "lucide-react"
+import type React from "react"
 
-import { RoomsService, type StoryPublic } from "@/client";
-import AddRoom from "@/components/Room/Dialogs/AddRoom";
+import { RoomsService, type StoryPublic } from "@/client"
 import {
   presentationToStyle,
   resolveStoryPresentation,
   STORY_TYPE_PRESENTATIONS,
-} from "@/components/Common/Themes/resolve";
-import type { StoryPresentation } from "@/components/Common/Themes/types";
-import { isStoryTypeKey } from "@/components/Common/Themes/types";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@/components/Common/Themes/resolve"
+import type { StoryPresentation } from "@/components/Common/Themes/types"
+import { isStoryTypeKey } from "@/components/Common/Themes/types"
+import AddRoom from "@/components/Room/Dialogs/AddRoom"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -34,40 +34,40 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/card"
 // import {
 //   useDeleteStory,
 //   usePublishStory,
 //   useUnpublishStory,
 // } from "@/hooks/stories/useStories"
-import { cn } from "@/lib/utils";
-import StoryAvatar from "../Display/StoryAvatar";
+import { cn } from "@/lib/utils"
+import StoryAvatar from "../Display/StoryAvatar"
 
 // ============================================================================
 // Types
 // ============================================================================
 
 interface StoryCardProps {
-  story: StoryPublic;
-  variant?: "full" | "compact" | "mini";
-  href?: string;
-  presentationEnabled?: boolean;
-  isSelected?: boolean;
-  onClick?: () => void;
+  story: StoryPublic
+  variant?: "full" | "compact" | "mini"
+  href?: string
+  presentationEnabled?: boolean
+  isSelected?: boolean
+  onClick?: () => void
   /** Custom action slot (used when showActions is false) */
-  action?: React.ReactNode;
+  action?: React.ReactNode
   /** Show standard CRUD actions (Edit, Publish, Delete) */
-  showActions?: boolean;
+  showActions?: boolean
   /** Show linked rooms section */
-  showLinkedRooms?: boolean;
+  showLinkedRooms?: boolean
   /** Show version info */
-  showVersionInfo?: boolean;
+  showVersionInfo?: boolean
   /** Show clone button (placeholder for future clone functionality) */
-  showClone?: boolean;
+  showClone?: boolean
   /** Clone button callback (placeholder) */
-  onClone?: (storyId: string) => void;
-  className?: string;
-  debug?: boolean;
+  onClone?: (storyId: string) => void
+  className?: string
+  debug?: boolean
 }
 
 // ============================================================================
@@ -75,17 +75,17 @@ interface StoryCardProps {
 // ============================================================================
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
+  const date = new Date(dateString)
+  const now = new Date()
   const diffInDays = Math.floor(
     (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  )
 
-  if (diffInDays === 0) return "Today";
-  if (diffInDays === 1) return "Yesterday";
-  if (diffInDays < 7) return `${diffInDays} days ago`;
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-  return date.toLocaleDateString();
+  if (diffInDays === 0) return "Today"
+  if (diffInDays === 1) return "Yesterday"
+  if (diffInDays < 7) return `${diffInDays} days ago`
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
+  return date.toLocaleDateString()
 }
 
 // ============================================================================
@@ -104,14 +104,14 @@ function StoryVersionBadge({ story }: { story: StoryPublic }) {
       <Badge variant="outline" className="text-xs">
         v{story.published_version}
       </Badge>
-    );
+    )
   }
   // For unpublished/draft, show current version
   return (
     <Badge variant="outline" className="text-xs text-muted-foreground">
       v{story.current_version}
     </Badge>
-  );
+  )
 }
 
 /**
@@ -124,13 +124,13 @@ function StoryStatusBadge({ story }: { story: StoryPublic }) {
       <Badge variant="default" className="text-xs">
         Published
       </Badge>
-    );
+    )
   }
   return (
     <Badge variant="outline" className="text-xs">
       Draft
     </Badge>
-  );
+  )
 }
 
 // ── Accent Strip ──────────────────────────────────────────────────────────
@@ -139,27 +139,27 @@ function AccentStrip({
   presentation,
   enabled,
 }: {
-  presentation: StoryPresentation;
-  enabled: boolean;
+  presentation: StoryPresentation
+  enabled: boolean
 }) {
-  if (!enabled) return null;
+  if (!enabled) return null
 
-  const position = presentation.tokens?.["--story-accent-position"] ?? "top";
-  const width = presentation.tokens?.["--story-accent-width"] ?? "3px";
-  const color = presentation.tokens?.["--story-accent"];
+  const position = presentation.tokens?.["--story-accent-position"] ?? "top"
+  const width = presentation.tokens?.["--story-accent-width"] ?? "3px"
+  const color = presentation.tokens?.["--story-accent"]
 
-  if (position === "none" || !color) return null;
+  if (position === "none" || !color) return null
 
   const positionStyles: Record<string, string> = {
     top: "absolute top-0 left-0 right-0 rounded-t-xl",
     bottom: "absolute bottom-0 left-0 right-0",
     left: "absolute top-0 bottom-0 left-0 rounded-l-xl",
-  };
+  }
 
   const dimensionStyle =
     position === "left"
       ? { width, height: "100%" }
-      : { height: width, width: "100%" };
+      : { height: width, width: "100%" }
 
   return (
     <div
@@ -169,7 +169,7 @@ function AccentStrip({
       )}
       style={{ backgroundColor: color, ...dimensionStyle }}
     />
-  );
+  )
 }
 
 // ── Decoration Hint Classes ───────────────────────────────────────────────
@@ -179,11 +179,11 @@ function getDecorationClasses(
 ): string {
   switch (hint) {
     case "brutalist":
-      return "font-mono";
+      return "font-mono"
     case "ethereal":
-      return "font-serif";
+      return "font-serif"
     default:
-      return "";
+      return ""
   }
 }
 
@@ -192,11 +192,11 @@ function getDecorationTitleClasses(
 ): string {
   switch (hint) {
     case "brutalist":
-      return "uppercase tracking-wide text-[13px]";
+      return "uppercase tracking-wide text-[13px]"
     case "ethereal":
-      return "italic font-normal text-[16px]";
+      return "italic font-normal text-[16px]"
     default:
-      return "";
+      return ""
   }
 }
 
@@ -206,10 +206,10 @@ function DebugPanel({
   story,
   resolved,
 }: {
-  story: StoryPublic;
-  resolved: StoryPresentation;
+  story: StoryPublic
+  resolved: StoryPresentation
 }) {
-  const tokenCount = Object.keys(resolved.tokens || {}).length;
+  const tokenCount = Object.keys(resolved.tokens || {}).length
   return (
     <div className="border-t border-dashed border-border px-4 py-2 text-[10px] font-mono text-muted-foreground bg-muted/30">
       <span className="font-bold">src:</span>{" "}
@@ -223,7 +223,7 @@ function DebugPanel({
       <span className="font-bold">accent:</span>{" "}
       {resolved.tokens?.["--story-accent-position"] || "top"}
     </div>
-  );
+  )
 }
 
 // ── Linked Rooms ──────────────────────────────────────────────────────────
@@ -232,11 +232,11 @@ function LinkedRoomsSection({ storyId }: { storyId: string }) {
   const { data: roomsData } = useQuery({
     queryKey: ["rooms", "story", storyId],
     queryFn: () => RoomsService.getRoomsForStory({ storyId }),
-  });
+  })
   // todo : change to users or publicly available linked rooms only
-  const linkedRooms = roomsData?.data ?? [];
+  const linkedRooms = roomsData?.data ?? []
 
-  if (linkedRooms.length === 0) return null;
+  if (linkedRooms.length === 0) return null
 
   return (
     <div className="flex flex-col gap-2 pt-2">
@@ -262,22 +262,22 @@ function LinkedRoomsSection({ storyId }: { storyId: string }) {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 // ── Action Buttons ────────────────────────────────────────────────────────
 
 interface StoryActionsProps {
-  story: StoryPublic;
-  showClone?: boolean;
-  onClone?: (storyId: string) => void;
+  story: StoryPublic
+  showClone?: boolean
+  onClone?: (storyId: string) => void
 }
 
 function StoryActions({ story, showClone, onClone }: StoryActionsProps) {
   const handleClone = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onClone?.(story.id);
-  };
+    e.stopPropagation()
+    onClone?.(story.id)
+  }
 
   return (
     <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
@@ -355,7 +355,7 @@ function StoryActions({ story, showClone, onClone }: StoryActionsProps) {
         </DialogContent>
       </Dialog>*/}
     </div>
-  );
+  )
 }
 
 // ============================================================================
@@ -380,29 +380,29 @@ function StoryCardFull({
   className,
   debug,
 }: {
-  story: StoryPublic;
-  resolved: StoryPresentation;
-  presentationEnabled: boolean;
-  debug: boolean;
-  showActions: boolean;
-  showLinkedRooms: boolean;
-  showVersionInfo: boolean;
-  showClone: boolean;
-  onClone?: (storyId: string) => void;
+  story: StoryPublic
+  resolved: StoryPresentation
+  presentationEnabled: boolean
+  debug: boolean
+  showActions: boolean
+  showLinkedRooms: boolean
+  showVersionInfo: boolean
+  showClone: boolean
+  onClone?: (storyId: string) => void
 } & Pick<
   StoryCardProps,
   "href" | "isSelected" | "onClick" | "action" | "className"
 >) {
   const decoClasses = presentationEnabled
     ? getDecorationClasses(resolved.decorationHint)
-    : "";
+    : ""
   const titleDecoClasses = presentationEnabled
     ? getDecorationTitleClasses(resolved.decorationHint)
-    : "";
+    : ""
 
   const wrapperStyle = presentationEnabled
     ? presentationToStyle(resolved.tokens)
-    : undefined;
+    : undefined
 
   const cardInlineStyle: React.CSSProperties = {
     ...(presentationEnabled && resolved.tokens?.["--story-card-radius"]
@@ -411,13 +411,13 @@ function StoryCardFull({
     ...(presentationEnabled && resolved.tokens?.["--story-card-shadow"]
       ? { boxShadow: resolved.tokens["--story-card-shadow"] }
       : {}),
-  };
+  }
 
   const title = (
     <CardTitle className={cn("truncate", titleDecoClasses)}>
       {story.title ?? "Story"}
     </CardTitle>
-  );
+  )
 
   return (
     <div
@@ -501,14 +501,18 @@ function StoryCardFull({
 
         {showActions && (
           <CardFooter className="shrink-0 flex pt-3">
-            <StoryActions story={story} showClone={showClone} onClone={onClone} />
+            <StoryActions
+              story={story}
+              showClone={showClone}
+              onClone={onClone}
+            />
           </CardFooter>
         )}
 
         {debug && <DebugPanel story={story} resolved={resolved} />}
       </Card>
     </div>
-  );
+  )
 }
 
 // ── Compact Variant ───────────────────────────────────────────────────────
@@ -523,25 +527,25 @@ function StoryCardCompact({
   showActions,
   className,
 }: {
-  story: StoryPublic;
-  resolved: StoryPresentation;
-  presentationEnabled: boolean;
-  showActions: boolean;
+  story: StoryPublic
+  resolved: StoryPresentation
+  presentationEnabled: boolean
+  showActions: boolean
 } & Pick<StoryCardProps, "isSelected" | "onClick" | "action" | "className">) {
   const wrapperStyle = presentationEnabled
     ? presentationToStyle(resolved.tokens)
-    : undefined;
+    : undefined
 
   const accentColor = presentationEnabled
     ? resolved.tokens?.["--story-accent"]
-    : undefined;
+    : undefined
 
   const decoClasses = presentationEnabled
     ? getDecorationClasses(resolved.decorationHint)
-    : "";
+    : ""
   const titleDecoClasses = presentationEnabled
     ? getDecorationTitleClasses(resolved.decorationHint)
-    : "";
+    : ""
 
   return (
     <div
@@ -592,7 +596,7 @@ function StoryCardCompact({
         )}
       </div>
     </div>
-  );
+  )
 }
 
 // ── Mini Variant ──────────────────────────────────────────────────────────
@@ -605,13 +609,13 @@ function StoryCardMini({
   onClick,
   className,
 }: {
-  story: StoryPublic;
-  resolved: StoryPresentation;
-  presentationEnabled: boolean;
+  story: StoryPublic
+  resolved: StoryPresentation
+  presentationEnabled: boolean
 } & Pick<StoryCardProps, "isSelected" | "onClick" | "className">) {
   const accentColor = presentationEnabled
     ? resolved.tokens?.["--story-accent"]
-    : undefined;
+    : undefined
 
   return (
     <div
@@ -641,7 +645,7 @@ function StoryCardMini({
         {story.title ?? "Story"}
       </span>
     </div>
-  );
+  )
 }
 
 // ============================================================================
@@ -667,16 +671,16 @@ export default function StoryCard({
   // Default: presentation is enabled when the story has presentation data or a typed default
   const storyType = isStoryTypeKey(story.story_type)
     ? story.story_type
-    : undefined;
-  const enabled = presentationEnabled ?? !!(story.presentation || storyType);
+    : undefined
+  const enabled = presentationEnabled ?? !!(story.presentation || storyType)
 
   const typeDefaults = storyType
     ? STORY_TYPE_PRESENTATIONS[storyType]
-    : undefined;
+    : undefined
   const resolved = resolveStoryPresentation(
     typeDefaults,
     enabled ? story.presentation : null,
-  );
+  )
 
   const shared = {
     story,
@@ -687,13 +691,13 @@ export default function StoryCard({
     action,
     showActions,
     className,
-  };
+  }
 
   switch (variant) {
     case "mini":
-      return <StoryCardMini {...shared} />;
+      return <StoryCardMini {...shared} />
     case "compact":
-      return <StoryCardCompact {...shared} />;
+      return <StoryCardCompact {...shared} />
     default:
       return (
         <StoryCardFull
@@ -705,8 +709,8 @@ export default function StoryCard({
           showClone={showClone}
           onClone={onClone}
         />
-      );
+      )
   }
 }
 
-export { StoryCardFull, StoryCardCompact, StoryCardMini };
+export { StoryCardFull, StoryCardCompact, StoryCardMini }

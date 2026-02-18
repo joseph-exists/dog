@@ -15,15 +15,15 @@
  * react-shiki's ShikiHighlighter accepts `transformers` prop via
  * CodeToHastOptions → TransformerOptions inheritance.
  */
-import { ShikiHighlighter } from "react-shiki"
-import { useMemo } from "react"
-import type { CodeHighlightProps } from "../types"
+
 import {
-  transformerCompactLineOptions,
   type TransformerCompactLineOption,
+  transformerCompactLineOptions,
 } from "@shikijs/transformers"
 import type { ShikiTransformer } from "@shikijs/types"
-
+import { useMemo } from "react"
+import { ShikiHighlighter } from "react-shiki"
+import type { CodeHighlightProps } from "../types"
 
 // Extract language from className like "language-typescript"
 function extractLanguage(className?: string): string | undefined {
@@ -31,7 +31,6 @@ function extractLanguage(className?: string): string | undefined {
   const match = className.match(/language-(\w+)/)
   return match?.[1]
 }
-
 
 /**
  * Create line numbers transformer
@@ -60,16 +59,13 @@ function createLineNumbersTransformer(startLine: number = 1): ShikiTransformer {
 /**
  * Create line highlight transformer using @shikijs/transformers
  */
-function createHighlightLinesTransformer(
-  lines: number[]
-): ShikiTransformer {
+function createHighlightLinesTransformer(lines: number[]): ShikiTransformer {
   const lineOptions: TransformerCompactLineOption[] = lines.map((line) => ({
     line,
     classes: ["shiki-highlighted"],
   }))
   return transformerCompactLineOptions(lineOptions)
 }
-
 
 export function CodeHighlight({
   className,
@@ -81,9 +77,7 @@ export function CodeHighlight({
 
   // Get code content as string
   const code =
-    typeof children === "string"
-      ? children
-      : children?.toString?.() ?? ""
+    typeof children === "string" ? children : (children?.toString?.() ?? "")
 
   // Inline detection: single line without explicit forceBlock
   const isInline = !options.forceBlock && !code.includes("\n")
@@ -108,7 +102,12 @@ export function CodeHighlight({
     }
 
     return result
-  }, [options.lineNumbers, options.startLine, options.highlightLines, options.transformers])
+  }, [
+    options.lineNumbers,
+    options.startLine,
+    options.highlightLines,
+    options.transformers,
+  ])
 
   if (isInline) {
     // Inline code: simple styled span

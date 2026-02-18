@@ -21,7 +21,7 @@ export function SVGRenderer({
   const options = content.metadata?.options as SVGContentOptions | undefined
 
   // Determine inline mode - background defaults to inline
-  const shouldInline = options?.inline ?? (variant === "background")
+  const shouldInline = options?.inline ?? variant === "background"
 
   // If safe mode, force img wrapper regardless of options
   if (safeMode && shouldInline) {
@@ -52,11 +52,5 @@ export function SVGRenderer({
 
   // Default: img wrapper
   const dataUrl = `data:image/svg+xml,${encodeURIComponent(svg)}`
-  return (
-    <img
-      src={dataUrl}
-      alt="SVG content"
-      className={className}
-    />
-  )
+  return <img src={dataUrl} alt="SVG content" className={className} />
 }

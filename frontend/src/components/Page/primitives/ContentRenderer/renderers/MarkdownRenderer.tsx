@@ -16,13 +16,16 @@ export function MarkdownRenderer({
   const markdown = typeof content.value === "string" ? content.value : ""
   const { codeTheme, prose } = useThemeResolution({ content })
   // Options reserved for future use (e.g., readonly mode)
-  const _options = content.metadata?.options as MarkdownContentOptions | undefined
+  const _options = content.metadata?.options as
+    | MarkdownContentOptions
+    | undefined
   void _options // Suppress unused warning until implemented
 
   // Prose class based on variant and theme resolution
-  const proseClass = prose && variant !== "inline"
-    ? "prose prose-lg dark:prose-invert max-w-none"
-    : ""
+  const proseClass =
+    prose && variant !== "inline"
+      ? "prose prose-lg dark:prose-invert max-w-none"
+      : ""
 
   return (
     <div className={`${proseClass} ${className ?? ""}`}>
@@ -31,15 +34,15 @@ export function MarkdownRenderer({
           code({ className: codeClassName, children }) {
             // check if this is a code block with language class vs inline code
             const isBlock = codeClassName?.includes("language-")
-            
+
             return (
               <CodeHighlight
                 className={codeClassName}
-                options={{ 
+                options={{
                   theme: codeTheme,
                   forceBlock: isBlock,
                   // enable line numbers for blocks by default in page variant
-                  lineNumbers: isBlock && variant == "page",
+                  lineNumbers: isBlock && variant === "page",
                 }}
               >
                 {children}

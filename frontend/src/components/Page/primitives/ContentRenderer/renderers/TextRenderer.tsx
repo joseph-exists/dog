@@ -5,7 +5,11 @@
  */
 import type { ContentProps } from "../types"
 
-export function TextRenderer({ content, variant, className }: ContentProps<"text">) {
+export function TextRenderer({
+  content,
+  variant,
+  className,
+}: ContentProps<"text">) {
   const text = typeof content.value === "string" ? content.value : ""
 
   // Variant-specific rendering
@@ -19,11 +23,7 @@ export function TextRenderer({ content, variant, className }: ContentProps<"text
       )
 
     case "inline":
-      return (
-        <span className={`truncate ${className ?? ""}`}>
-          {text}
-        </span>
-      )
+      return <span className={`truncate ${className ?? ""}`}>{text}</span>
 
     case "background":
       // Text as background doesn't make sense - render nothing

@@ -10,17 +10,20 @@
  * CSS custom property inheritance means inner wrappers override outer ones
  * for the same variable. No specificity hacks needed.
  *
+ * Themes are resolved by the route via usePageThemes hook and passed
+ * as ThemeViewModel objects. The shell converts tokens to CSS styles.
+ *
  * See Presentation/REFERENCE.md §Two Scoping Levels.
  */
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import {
+  type ThemeViewModel,
+  themeTokensToStyle,
+} from "@/services/themeService"
 import { AgentsHeader, type AgentType } from "./AgentsHeader"
 import { AgentsLayout, type PanelConfig } from "./AgentsLayout"
-// import { getThemeById, getThemeStyle } from "./themes"
-import { getPageThemeById, getPageThemeStyle } from "@/components/Common/Themes/page_themes"
-import { getCardThemeById, getCardThemeStyle } from "@/components/Common/Themes/card_themes"
-
 
 export interface AgentsShellProps {
   /** Page title */
@@ -31,14 +34,20 @@ export interface AgentsShellProps {
   canEdit: boolean
   /** Panel configurations */
   panels: PanelConfig[]
-  /** Currently selected page theme ID */
-  pageThemeId: string
-  /** Currently selected cards theme ID */
-  cardsThemeId: string
+  /** Resolved page theme (from usePageThemes hook) */
+  pageTheme: ThemeViewModel | null
+  /** Resolved cards theme (from usePageThemes hook) */
+  cardsTheme: ThemeViewModel | null
+  /** Available page themes for picker */
+  availablePageThemes: ThemeViewModel[]
+  /** Available card themes for picker */
+  availableCardThemes: ThemeViewModel[]
   /** Page theme change callback */
   onPageThemeChange: (themeId: string) => void
   /** Cards theme change callback */
   onCardsThemeChange: (themeId: string) => void
+  /** Whether themes are still loading */
+  isLoadingThemes?: boolean
   /** Additional className */
   className?: string
 }
@@ -48,33 +57,40 @@ export function AgentsShell({
   type,
   canEdit,
   panels,
-  pageThemeId,
-  cardsThemeId,
+  pageTheme,
+  cardsTheme,
+  availablePageThemes,
+  availableCardThemes,
   onPageThemeChange,
   onCardsThemeChange,
+  // isLoadingThemes,
   className,
 }: AgentsShellProps) {
   const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
     "panels",
   )
 
-  const pageTheme = getPageThemeById(pageThemeId)
-  const cardsTheme = getCardThemeById(cardsThemeId)
+  // Convert theme tokens to CSS style objects
+  const pageThemeStyle = themeTokensToStyle(pageTheme?.tokens)
+  const cardsThemeStyle = themeTokensToStyle(cardsTheme?.tokens)
 
   return (
     // Outermost: Page theme scope (affects header + content)
     // Transparent wrapper — only sets CSS variables, does not render a surface
     // Downstream components (Header, PanelContainer) render with inherited variables
     <div
-      style={getPageThemeStyle(pageTheme)}
+      style={pageThemeStyle}
       className={cn("flex flex-col h-full", className)}
     >
       <AgentsHeader
         title={title}
         type={type}
         canEdit={canEdit}
-        pageThemeId={pageThemeId}
-        cardsThemeId={cardsThemeId}
+        // Pass theme info to header for picker
+        pageTheme={pageTheme}
+        cardsTheme={cardsTheme}
+        availablePageThemes={availablePageThemes}
+        availableCardThemes={availableCardThemes}
         onPageThemeChange={onPageThemeChange}
         onCardsThemeChange={onCardsThemeChange}
         layoutMode={layoutMode}
@@ -83,7 +99,7 @@ export function AgentsShell({
 
       {/* Inner: Cards theme scope (overrides page theme for card areas) */}
       {/* Transparent wrapper — only sets CSS variables, does not render a surface */}
-      <div style={getCardThemeStyle(cardsTheme)} className="flex-1 min-h-0">
+      <div style={cardsThemeStyle} className="flex-1 min-h-0">
         <AgentsLayout panels={panels} mode={layoutMode} />
       </div>
     </div>

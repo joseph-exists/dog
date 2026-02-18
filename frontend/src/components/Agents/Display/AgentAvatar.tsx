@@ -37,19 +37,26 @@ export default function AgentAvatar({
   const hasCustomBg = presentation?.backgroundColor
   const content = presentation?.emoji || initials
 
+  // Use explicit backgroundColor, or fall back to --agent-accent if available, or hash color
+  const useAccentFallback = !hasCustomBg && presentation?.emoji
+
   return (
     <Avatar className={cn(sizeClasses[size], className)}>
       <AvatarFallback
         className={cn(
-          // use hash color class when no presentation override
-          !hasCustomBg && hashColor,
-          "text-white font-semibold",
-          // {show_emoji ? "🤖" : initials}
+          // use hash color class when no presentation override and no accent fallback
+          !hasCustomBg && !useAccentFallback && hashColor,
+          "font-semibold",
         )}
         style={
           hasCustomBg
             ? { backgroundColor: presentation.backgroundColor, color: "white" }
-            : undefined
+            : useAccentFallback
+              ? {
+                  backgroundColor: "var(--agent-accent, var(--primary))",
+                  color: "var(--agent-accent-foreground, white)",
+                }
+              : { color: "white" }
         }
       >
         {content}

@@ -7,7 +7,7 @@
  * - Preview mode toggle (renders StoryPreview when active)
  * - Publish workflow integration with validation status
  *
- * 
+ *
  */
 
 import { useNavigate } from "@tanstack/react-router"

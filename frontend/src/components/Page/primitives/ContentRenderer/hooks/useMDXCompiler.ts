@@ -4,8 +4,8 @@
  * Lazily loads @mdx-js/mdx and compiles MDX source to React components.
  * Uses dynamic import to avoid bundling the compiler for non-MDX content.
  */
-import { useState, useEffect, useCallback, useRef } from "react"
-import type { MDXCompiledResult, MDXCompilationState } from "../types"
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { MDXCompilationState, MDXCompiledResult } from "../types"
 
 // Cache for compiled MDX to avoid recompilation
 const compilationCache = new Map<string, MDXCompiledResult>()
@@ -31,7 +31,7 @@ function getCacheKey(source: string): string {
   let hash = 0
   for (let i = 0; i < source.length; i++) {
     const char = source.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
+    hash = (hash << 5) - hash + char
     hash = hash & hash // Convert to 32-bit integer
   }
   return `mdx_${hash}`
@@ -79,7 +79,7 @@ async function compileMDX(source: string): Promise<MDXCompiledResult> {
  */
 export function useMDXCompiler(
   source: string,
-  enabled: boolean = true
+  enabled: boolean = true,
 ): MDXCompilationState {
   const [state, setState] = useState<MDXCompilationState>({
     status: "idle",

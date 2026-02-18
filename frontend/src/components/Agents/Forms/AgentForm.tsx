@@ -25,6 +25,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
 import { AgentsService } from "@/client/sdk.gen"
+import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 import type {
   LLMModelPublic,
   UserAccessProviderPublic,
@@ -235,6 +236,104 @@ function safeJsonParse(val: string | null): Record<string, unknown> | null {
   } catch {
     return null
   }
+}
+
+// ── Presentation Section ──────────────────────────────────────────────────
+
+interface PresentationSectionProps {
+  presentationRaw: string
+  onPresentationChange: (value: string) => void
+  defaultPresentation?: Record<string, unknown>
+}
+
+function PresentationSection({
+  presentationRaw,
+  onPresentationChange,
+  defaultPresentation,
+}: PresentationSectionProps) {
+  const { themes: cardThemes, isLoading } = useAvailableThemes("card")
+
+  // Parse current presentation to get selected theme
+  const currentPresentation = presentationRaw
+    ? safeJsonParse(presentationRaw)
+    : defaultPresentation
+
+  const selectedCardThemeId = currentPresentation?.card_theme_id as string | undefined
+
+  const handleCardThemeChange = (themeId: string) => {
+    // Merge with existing presentation data, preserving non-token fields
+    const existing = presentationRaw ? safeJsonParse(presentationRaw) ?? {} : {}
+
+    if (themeId === "none") {
+      // Clear theme: remove card_theme_id and all token overrides
+      const { card_theme_id, tokens, ...rest } = existing as Record<string, unknown>
+      onPresentationChange(
+        Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : ""
+      )
+      return
+    }
+
+    // Find the selected theme and copy its tokens into presentation
+    const selectedTheme = cardThemes.find((t) => t.id === themeId)
+    if (!selectedTheme) return
+
+    // Build updated presentation with theme tokens embedded
+    const updated: Record<string, unknown> = {
+      ...existing,
+      card_theme_id: themeId,
+      tokens: selectedTheme.tokens ?? {},
+    }
+
+    onPresentationChange(JSON.stringify(updated, null, 2))
+  }
+
+  return (
+    <fieldset className="space-y-4">
+      <legend className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        Presentation
+      </legend>
+
+      <div className="space-y-2">
+        <Label>Card Theme</Label>
+        <Select
+          value={selectedCardThemeId ?? "none"}
+          onValueChange={handleCardThemeChange}
+          disabled={isLoading}
+        >
+          <SelectTrigger>
+            <SelectValue
+              placeholder={isLoading ? "Loading themes..." : "Select card theme..."}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">
+              <div className="flex flex-col">
+                <span>Default</span>
+                <span className="text-xs text-muted-foreground">
+                  Inherit from context
+                </span>
+              </div>
+            </SelectItem>
+            {cardThemes.map((theme) => (
+              <SelectItem key={theme.id} value={theme.id}>
+                <div className="flex flex-col">
+                  <span>{theme.name}</span>
+                  {theme.description && (
+                    <span className="text-xs text-muted-foreground">
+                      {theme.description}
+                    </span>
+                  )}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Visual theme applied to this agent's card appearance
+        </p>
+      </div>
+    </fieldset>
+  )
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -717,7 +816,18 @@ export default function AgentForm({
         </fieldset>
 
         {/* ════════════════════════════════════════════════════════════════
-            Section 5: Settings
+            Section 5: Presentation
+            ════════════════════════════════════════════════════════════════ */}
+        <PresentationSection
+          presentationRaw={form.watch("presentation_raw")}
+          onPresentationChange={(value) =>
+            form.setValue("presentation_raw", value, { shouldValidate: true })
+          }
+          defaultPresentation={dv?.presentation as Record<string, unknown> | undefined}
+        />
+
+        {/* ════════════════════════════════════════════════════════════════
+            Section 6: Settings
             ════════════════════════════════════════════════════════════════ */}
         <fieldset className="space-y-4">
           <legend className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -845,7 +955,7 @@ export default function AgentForm({
         </fieldset>
 
         {/* ════════════════════════════════════════════════════════════════
-            Section 6: Advanced
+            Section 7: Advanced
             ════════════════════════════════════════════════════════════════ */}
         <Collapsible>
           <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">

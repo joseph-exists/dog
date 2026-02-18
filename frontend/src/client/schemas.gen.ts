@@ -246,6 +246,72 @@ export const ArchetypesPublicSchema = {
     description: 'Collection model for Archetype API responses.'
 } as const;
 
+export const BatchResolveThemeRequestSchema = {
+    properties: {
+        context_path: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Context Path',
+            description: 'Ordered path segments'
+        },
+        slots: {
+            items: {
+                '$ref': '#/components/schemas/ThemeSlot'
+            },
+            type: 'array',
+            title: 'Slots',
+            description: 'Which theme categories to resolve'
+        },
+        entity_context: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/EntityContext'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['context_path', 'slots'],
+    title: 'BatchResolveThemeRequest',
+    description: `Input for batch theme resolution.
+Resolves multiple slots in a single request for efficiency.`
+} as const;
+
+export const BatchResolvedThemesResponseSchema = {
+    properties: {
+        results: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/ResolvedThemeResponse'
+            },
+            propertyNames: {
+                '$ref': '#/components/schemas/ThemeSlot'
+            },
+            type: 'object',
+            title: 'Results',
+            description: 'Resolution results keyed by slot'
+        }
+    },
+    type: 'object',
+    required: ['results'],
+    title: 'BatchResolvedThemesResponse',
+    description: 'Output from batch theme resolution.'
+} as const;
+
+export const BindingTypeSchema = {
+    type: 'string',
+    enum: ['user_pref', 'authored'],
+    title: 'BindingType',
+    description: `Classification of theme binding ownership.
+
+- user_pref: owner_id = user_id (viewer's personal preferences)
+- authored: owner_id = entity_id (creator's content theming)`
+} as const;
+
 export const Body_login_login_access_tokenSchema = {
     properties: {
         grant_type: {
@@ -339,6 +405,33 @@ export const CurrentNodePublicSchema = {
     title: 'CurrentNodePublic',
     description: `Response model for getting current node with available choices.
 Used by players to understand their current position in a story.`
+} as const;
+
+export const EntityContextSchema = {
+    properties: {
+        entity_type: {
+            type: 'string',
+            title: 'Entity Type',
+            description: 'Type of entity (story, room, etc.)'
+        },
+        entity_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Entity Id',
+            description: 'ID of the entity'
+        },
+        owner_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner Id',
+            description: 'Owner of the entity (for authorization)'
+        }
+    },
+    type: 'object',
+    required: ['entity_type', 'entity_id', 'owner_id'],
+    title: 'EntityContext',
+    description: `Optional context for resolving authored bindings.
+Provides information about the entity being viewed.`
 } as const;
 
 export const EventCreateSchema = {
@@ -2456,6 +2549,13 @@ export const QualityUpdateSchema = {
     title: 'QualityUpdate'
 } as const;
 
+export const ResolutionSourceSchema = {
+    type: 'string',
+    enum: ['authored', 'user_pref', 'system_default', 'none'],
+    title: 'ResolutionSource',
+    description: 'How a theme was resolved in the cascade.'
+} as const;
+
 export const ResolvedPanelConfigSchema = {
     properties: {
         panels: {
@@ -2475,6 +2575,42 @@ export const ResolvedPanelConfigSchema = {
     required: ['panels', 'source'],
     title: 'ResolvedPanelConfig',
     description: 'Resolved panel config for a user in a room'
+} as const;
+
+export const ResolvedThemeResponseSchema = {
+    properties: {
+        theme: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/ThemePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'Resolved theme or null'
+        },
+        source: {
+            '$ref': '#/components/schemas/ResolutionSource',
+            description: 'How the theme was resolved'
+        },
+        context_key_matched: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Key Matched',
+            description: 'Which binding context_key matched (null for system_default/none)'
+        }
+    },
+    type: 'object',
+    required: ['theme', 'source'],
+    title: 'ResolvedThemeResponse',
+    description: 'Output from theme resolution domain service.'
 } as const;
 
 export const RoomAgentSettingsBundleSchema = {
@@ -4585,6 +4721,342 @@ export const StoryValidationResultSchema = {
     required: ['is_valid', 'errors', 'warnings', 'node_count', 'choice_count', 'start_node_count', 'end_node_count', 'orphaned_node_count'],
     title: 'StoryValidationResult',
     description: "Result of validating a story's graph structure for publishing."
+} as const;
+
+export const ThemeBindingCreateSchema = {
+    properties: {
+        binding_type: {
+            '$ref': '#/components/schemas/BindingType',
+            description: 'Classification of binding ownership'
+        },
+        context_key: {
+            type: 'string',
+            maxLength: 500,
+            minLength: 1,
+            title: 'Context Key',
+            description: "Composite context path (e.g., 'page:story/panel:debug')"
+        },
+        slot: {
+            '$ref': '#/components/schemas/ThemeSlot',
+            description: 'Which theme category slot this binding fills'
+        },
+        theme_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Theme Id',
+            description: 'Reference to theme being bound'
+        }
+    },
+    type: 'object',
+    required: ['binding_type', 'context_key', 'slot', 'theme_id'],
+    title: 'ThemeBindingCreate',
+    description: `API input for creating a theme binding.
+
+For user_pref bindings: owner_id is set by system to authenticated user
+For authored bindings: owner_id is validated against entity ownership`
+} as const;
+
+export const ThemeBindingPublicSchema = {
+    properties: {
+        binding_type: {
+            '$ref': '#/components/schemas/BindingType',
+            description: 'Classification of binding ownership'
+        },
+        context_key: {
+            type: 'string',
+            maxLength: 500,
+            minLength: 1,
+            title: 'Context Key',
+            description: "Composite context path (e.g., 'page:story/panel:debug')"
+        },
+        slot: {
+            '$ref': '#/components/schemas/ThemeSlot',
+            description: 'Which theme category slot this binding fills'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner Id'
+        },
+        theme_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Theme Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['binding_type', 'context_key', 'slot', 'id', 'owner_id', 'theme_id', 'created_at', 'updated_at'],
+    title: 'ThemeBindingPublic',
+    description: 'API response model for ThemeBinding entity.'
+} as const;
+
+export const ThemeBindingsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ThemeBindingPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'ThemeBindingsPublic',
+    description: 'Paginated collection response for ThemeBinding list endpoints.'
+} as const;
+
+export const ThemeCategorySchema = {
+    type: 'string',
+    enum: ['page', 'card', 'syntax', 'motion'],
+    title: 'ThemeCategory',
+    description: `Classification of theme purpose. Each category has distinct token schemas.
+
+- page: Page surface theming (includes --background)
+- card: Card/panel content areas (excludes --background)
+- syntax: Code syntax highlighting (Shiki theme or token colors)
+- motion: Animation characteristics (duration, easing, spring physics)`
+} as const;
+
+export const ThemeCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Name',
+            description: 'Human-readable theme name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description',
+            description: 'Optional theme description'
+        },
+        category: {
+            '$ref': '#/components/schemas/ThemeCategory',
+            description: 'Classification of theme purpose'
+        },
+        scope: {
+            '$ref': '#/components/schemas/ThemeScope',
+            description: 'Visibility and ownership rules',
+            default: 'personal'
+        },
+        tokens: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Tokens',
+            description: 'Category-specific token payload (CSS variables, Shiki config, motion params)'
+        }
+    },
+    type: 'object',
+    required: ['name', 'category'],
+    title: 'ThemeCreate',
+    description: `API input for creating a new theme.
+owner_id is set by the system based on authenticated user.
+is_system is always False for user-created themes.`
+} as const;
+
+export const ThemePublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Name',
+            description: 'Human-readable theme name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description',
+            description: 'Optional theme description'
+        },
+        category: {
+            '$ref': '#/components/schemas/ThemeCategory',
+            description: 'Classification of theme purpose'
+        },
+        scope: {
+            '$ref': '#/components/schemas/ThemeScope',
+            description: 'Visibility and ownership rules',
+            default: 'personal'
+        },
+        tokens: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Tokens',
+            description: 'Category-specific token payload (CSS variables, Shiki config, motion params)'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner Id'
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['name', 'category', 'id', 'owner_id', 'is_system', 'created_at', 'updated_at'],
+    title: 'ThemePublic',
+    description: `API response model for Theme entity.
+Includes all fields visible to API consumers.`
+} as const;
+
+export const ThemeScopeSchema = {
+    type: 'string',
+    enum: ['system', 'org', 'personal', 'shared'],
+    title: 'ThemeScope',
+    description: `Visibility and ownership rules for themes.
+
+- system: Immutable system-seeded themes, visible to all users
+- org: Admin-created themes, visible to all org users
+- personal: User-created themes, visible only to owner
+- shared: User-created themes, visible to all org users`
+} as const;
+
+export const ThemeSlotSchema = {
+    type: 'string',
+    enum: ['page', 'cards', 'syntax', 'motion'],
+    title: 'ThemeSlot',
+    description: `Which theme category slot is being filled by a binding.
+Matches ThemeCategory values.`
+} as const;
+
+export const ThemeUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        scope: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/ThemeScope'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        tokens: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tokens'
+        }
+    },
+    type: 'object',
+    title: 'ThemeUpdate',
+    description: `API input for updating an existing theme.
+All fields optional - only provided fields are updated.
+
+Constraints:
+- Cannot update is_system themes
+- Cannot change scope to/from 'system'
+- Cannot change category (would invalidate tokens)`
+} as const;
+
+export const ThemesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ThemePublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'ThemesPublic',
+    description: 'Paginated collection response for Theme list endpoints.'
 } as const;
 
 export const TimelineSchema = {

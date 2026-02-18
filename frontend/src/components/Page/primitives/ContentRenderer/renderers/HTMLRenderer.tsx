@@ -24,7 +24,8 @@ export function HTMLRenderer({
 
   // Variant-specific wrapper
   const variantClass = variant === "inline" ? "inline" : ""
-  const proseClass = variant !== "inline" ? "prose prose-lg dark:prose-invert max-w-none" : ""
+  const proseClass =
+    variant !== "inline" ? "prose prose-lg dark:prose-invert max-w-none" : ""
 
   return (
     <div

@@ -11,7 +11,7 @@
  * See Presentation/REFERENCE.md for the complete architectural guide.
  */
 
-import { Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router"
 
 import {
   Card,
@@ -19,34 +19,34 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { useProviderTypeName } from "../hooks";
-import { presentationToStyle, resolveAgentPresentation } from "../resolve";
-import type { AgentPresentation, UserAgentConfigData } from "../types";
-import { isAgentScope, isAgentTypeKey, isParticipationMode } from "../types";
-import AgentAvatar from "./AgentAvatar";
+} from "@/components/ui/card"
+import { cn } from "@/lib/utils"
+import { useProviderTypeName } from "../hooks"
+import { presentationToStyle, resolveAgentPresentation } from "../resolve"
+import type { AgentPresentation, UserAgentConfigData } from "../types"
+import { isAgentScope, isAgentTypeKey, isParticipationMode } from "../types"
+import AgentAvatar from "./AgentAvatar"
 import {
   AgentModeBadge,
   AgentProviderBadge,
   AgentScopeBadge,
   AgentStatusBadge,
-} from "./AgentBadge";
+} from "./AgentBadge"
 
 // ── Props ─────────────────────────────────────────────────────────────────
 
 interface AgentCardProps {
-  agent: UserAgentConfigData;
-  variant?: "full" | "compact" | "mini";
+  agent: UserAgentConfigData
+  variant?: "full" | "compact" | "mini"
   /** Override presentation behavior. Defaults to true when agent has presentation or agent_type. */
-  presentationEnabled?: boolean;
-  href?: string;
-  isSelected?: boolean;
-  onClick?: () => void;
-  action?: React.ReactNode;
-  className?: string;
+  presentationEnabled?: boolean
+  href?: string
+  isSelected?: boolean
+  onClick?: () => void
+  action?: React.ReactNode
+  className?: string
   /** Show debug info about resolved presentation */
-  debug?: boolean;
+  debug?: boolean
 }
 
 // ── Accent Strip ──────────────────────────────────────────────────────────
@@ -55,27 +55,27 @@ function AccentStrip({
   presentation,
   enabled,
 }: {
-  presentation: AgentPresentation;
-  enabled: boolean;
+  presentation: AgentPresentation
+  enabled: boolean
 }) {
-  if (!enabled) return null;
+  if (!enabled) return null
 
-  const position = presentation.tokens?.["--agent-accent-position"] ?? "top";
-  const width = presentation.tokens?.["--agent-accent-width"] ?? "3px";
-  const color = presentation.tokens?.["--agent-accent"];
+  const position = presentation.tokens?.["--agent-accent-position"] ?? "top"
+  const width = presentation.tokens?.["--agent-accent-width"] ?? "3px"
+  const color = presentation.tokens?.["--agent-accent"]
 
-  if (position === "none" || !color) return null;
+  if (position === "none" || !color) return null
 
   const positionStyles: Record<string, string> = {
     top: "absolute top-0 left-0 right-0 rounded-t-xl",
     bottom: "absolute bottom-0 left-0 right-0",
     left: "absolute top-0 bottom-0 left-0 rounded-l-xl",
-  };
+  }
 
   const dimensionStyle =
     position === "left"
       ? { width, height: "100%" }
-      : { height: width, width: "100%" };
+      : { height: width, width: "100%" }
 
   return (
     <div
@@ -85,7 +85,7 @@ function AccentStrip({
       )}
       style={{ backgroundColor: color, ...dimensionStyle }}
     />
-  );
+  )
 }
 
 // ── Decoration Hint Classes ───────────────────────────────────────────────
@@ -95,11 +95,11 @@ function getDecorationClasses(
 ): string {
   switch (hint) {
     case "brutalist":
-      return "font-mono";
+      return "font-mono"
     case "ethereal":
-      return "font-serif";
+      return "font-serif"
     default:
-      return "";
+      return ""
   }
 }
 
@@ -108,11 +108,11 @@ function getDecorationTitleClasses(
 ): string {
   switch (hint) {
     case "brutalist":
-      return "uppercase tracking-wide text-[13px]";
+      return "uppercase tracking-wide text-[13px]"
     case "ethereal":
-      return "italic font-normal text-[16px]";
+      return "italic font-normal text-[16px]"
     default:
-      return "";
+      return ""
   }
 }
 
@@ -122,10 +122,10 @@ function DebugPanel({
   agent,
   resolved,
 }: {
-  agent: UserAgentConfigData;
-  resolved: AgentPresentation;
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
 }) {
-  const tokenCount = Object.keys(resolved.tokens || {}).length;
+  const tokenCount = Object.keys(resolved.tokens || {}).length
   return (
     <div className="border-t border-dashed border-border px-4 py-2 text-[10px] font-mono text-muted-foreground bg-muted/30">
       <span className="font-bold">src:</span>{" "}
@@ -139,7 +139,7 @@ function DebugPanel({
       <span className="font-bold">accent:</span>{" "}
       {resolved.tokens?.["--agent-accent-position"] || "top"}
     </div>
-  );
+  )
 }
 
 // ── Full Variant ──────────────────────────────────────────────────────────
@@ -155,39 +155,41 @@ function AgentCardFull({
   className,
   debug,
 }: {
-  agent: UserAgentConfigData;
-  resolved: AgentPresentation;
-  presentationEnabled: boolean;
-  debug: boolean;
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
+  presentationEnabled: boolean
+  debug: boolean
 } & Pick<
   AgentCardProps,
   "href" | "isSelected" | "onClick" | "action" | "className"
 >) {
-  const providerTypeQuery = useProviderTypeName(agent.model_name);
-  const providerType = providerTypeQuery.data;
+  const providerTypeQuery = useProviderTypeName(agent.model_name)
+  const providerType = providerTypeQuery.data
 
-  const displayModel = agent.model_name;
+  const displayModel = agent.model_name
 
-  const scope = isAgentScope(agent.scope) ? agent.scope : undefined;
+  const scope = isAgentScope(agent.scope) ? agent.scope : undefined
   const participationMode = isParticipationMode(agent.participation_mode)
     ? agent.participation_mode
-    : undefined;
-  const isEnabled = agent.is_enabled ?? true;
+    : undefined
+  const isEnabled = agent.is_enabled ?? true
 
   const decoClasses = presentationEnabled
     ? getDecorationClasses(resolved.decorationHint)
-    : "";
+    : ""
   const titleDecoClasses = presentationEnabled
     ? getDecorationTitleClasses(resolved.decorationHint)
-    : "";
+    : ""
 
   // CSS variable overrides on wrapper div — the core presentation mechanism
   const wrapperStyle = presentationEnabled
     ? presentationToStyle(resolved.tokens)
-    : undefined;
+    : undefined
 
-  // Shadow and radius applied directly on Card element because Tailwind's
-  // shadow-sm sets --tw-shadow on the element itself, overriding inherited values.
+  // Custom card styling from theme tokens.
+  // Shadow, radius, and colors applied directly because:
+  // - Tailwind's shadow-sm sets --tw-shadow on the element itself
+  // - Background/border need direct application for proper theme layering
   const cardInlineStyle: React.CSSProperties = {
     ...(presentationEnabled && resolved.tokens?.["--agent-card-radius"]
       ? { borderRadius: resolved.tokens["--agent-card-radius"] }
@@ -195,7 +197,16 @@ function AgentCardFull({
     ...(presentationEnabled && resolved.tokens?.["--agent-card-shadow"]
       ? { boxShadow: resolved.tokens["--agent-card-shadow"] }
       : {}),
-  };
+    ...(presentationEnabled && resolved.tokens?.["--card"]
+      ? { backgroundColor: resolved.tokens["--card"] }
+      : {}),
+    ...(presentationEnabled && resolved.tokens?.["--card-foreground"]
+      ? { color: resolved.tokens["--card-foreground"] }
+      : {}),
+    ...(presentationEnabled && resolved.tokens?.["--border"]
+      ? { borderColor: resolved.tokens["--border"] }
+      : {}),
+  }
 
   const avatar = (
     <AgentAvatar
@@ -203,13 +214,13 @@ function AgentCardFull({
       size="lg"
       presentation={presentationEnabled ? resolved.avatar : undefined}
     />
-  );
+  )
 
   const title = (
     <CardTitle className={cn("truncate", titleDecoClasses)}>
       {agent.name ?? "Agent"}
     </CardTitle>
-  );
+  )
 
   return (
     <div
@@ -218,7 +229,7 @@ function AgentCardFull({
     >
       <Card
         className={cn(
-          "transition-all relative overflow-hidden",
+          "transition-all relative overflow-hidden h-[280px] flex flex-col",
           onClick && "cursor-pointer hover:shadow-md hover:border-primary/50",
           isSelected && "ring-2 ring-primary",
           !isEnabled && "opacity-60",
@@ -231,7 +242,7 @@ function AgentCardFull({
       >
         <AccentStrip presentation={resolved} enabled={presentationEnabled} />
 
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 flex-1 min-h-0">
           <div className="flex items-start gap-3">
             {href ? (
               <Link
@@ -296,7 +307,7 @@ function AgentCardFull({
               <AgentProviderBadge providerType={providerType} />
             )}
             {displayModel && (
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+              <span className="text-xs text-muted-foreground bg-muted/80 px-2 py-1 rounded border border-border/50">
                 {displayModel}
               </span>
             )}
@@ -306,7 +317,7 @@ function AgentCardFull({
         {debug && <DebugPanel agent={agent} resolved={resolved} />}
       </Card>
     </div>
-  );
+  )
 }
 
 // ── Compact Variant ───────────────────────────────────────────────────────
@@ -320,32 +331,48 @@ function AgentCardCompact({
   action,
   className,
 }: {
-  agent: UserAgentConfigData;
-  resolved: AgentPresentation;
-  presentationEnabled: boolean;
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
+  presentationEnabled: boolean
 } & Pick<AgentCardProps, "isSelected" | "onClick" | "action" | "className">) {
-  const providerTypeQuery = useProviderTypeName(agent.model_name);
-  const providerType = providerTypeQuery.data;
-  const scope = isAgentScope(agent.scope) ? agent.scope : undefined;
+  const providerTypeQuery = useProviderTypeName(agent.model_name)
+  const providerType = providerTypeQuery.data
+  const scope = isAgentScope(agent.scope) ? agent.scope : undefined
   const participationMode = isParticipationMode(agent.participation_mode)
     ? agent.participation_mode
-    : undefined;
-  const isEnabled = agent.is_enabled ?? true;
+    : undefined
+  const isEnabled = agent.is_enabled ?? true
 
   const wrapperStyle = presentationEnabled
     ? presentationToStyle(resolved.tokens)
-    : undefined;
+    : undefined
 
   const accentColor = presentationEnabled
     ? resolved.tokens?.["--agent-accent"]
-    : undefined;
+    : undefined
+
+  // Direct style overrides for theme colors
+  const cardStyle: React.CSSProperties = {
+    ...(accentColor
+      ? { borderLeftWidth: 3, borderLeftColor: accentColor }
+      : {}),
+    ...(presentationEnabled && resolved.tokens?.["--card"]
+      ? { backgroundColor: resolved.tokens["--card"] }
+      : {}),
+    ...(presentationEnabled && resolved.tokens?.["--card-foreground"]
+      ? { color: resolved.tokens["--card-foreground"] }
+      : {}),
+    ...(presentationEnabled && resolved.tokens?.["--border"]
+      ? { borderColor: resolved.tokens["--border"] }
+      : {}),
+  }
 
   const decoClasses = presentationEnabled
     ? getDecorationClasses(resolved.decorationHint)
-    : "";
+    : ""
   const titleDecoClasses = presentationEnabled
     ? getDecorationTitleClasses(resolved.decorationHint)
-    : "";
+    : ""
 
   return (
     <div
@@ -360,11 +387,7 @@ function AgentCardCompact({
           !isEnabled && "opacity-60",
           className,
         )}
-        style={
-          accentColor
-            ? { borderLeftWidth: 3, borderLeftColor: accentColor }
-            : undefined
-        }
+        style={Object.keys(cardStyle).length > 0 ? cardStyle : undefined}
         onClick={onClick}
       >
         <AgentAvatar
@@ -400,7 +423,7 @@ function AgentCardCompact({
         {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
       </div>
     </div>
-  );
+  )
 }
 
 // ── Mini Variant ──────────────────────────────────────────────────────────
@@ -413,13 +436,13 @@ function AgentCardMini({
   onClick,
   className,
 }: {
-  agent: UserAgentConfigData;
-  resolved: AgentPresentation;
-  presentationEnabled: boolean;
+  agent: UserAgentConfigData
+  resolved: AgentPresentation
+  presentationEnabled: boolean
 } & Pick<AgentCardProps, "isSelected" | "onClick" | "className">) {
   const accentColor = presentationEnabled
     ? resolved.tokens?.["--agent-accent"]
-    : undefined;
+    : undefined
 
   return (
     <div
@@ -449,7 +472,7 @@ function AgentCardMini({
         {agent.name ?? "Agent"}
       </span>
     </div>
-  );
+  )
 }
 
 // ── Main Component ────────────────────────────────────────────────────────
@@ -468,13 +491,13 @@ export default function AgentCard({
   // Default: presentation is enabled when the agent has presentation data or a typed default
   const agentType = isAgentTypeKey(agent.agent_type)
     ? agent.agent_type
-    : undefined;
-  const enabled = presentationEnabled ?? !!(agent.presentation || agentType);
+    : undefined
+  const enabled = presentationEnabled ?? !!(agent.presentation || agentType)
 
   const resolved = resolveAgentPresentation(
     agentType,
     enabled ? agent.presentation : null,
-  );
+  )
 
   const shared = {
     agent,
@@ -484,17 +507,17 @@ export default function AgentCard({
     onClick,
     action,
     className,
-  };
+  }
 
   switch (variant) {
     case "mini":
-      return <AgentCardMini {...shared} />;
+      return <AgentCardMini {...shared} />
     case "compact":
-      return <AgentCardCompact {...shared} />;
+      return <AgentCardCompact {...shared} />
     default:
-      return <AgentCardFull {...shared} href={href} debug={debug} />;
+      return <AgentCardFull {...shared} href={href} debug={debug} />
   }
 }
 
 // Export variants for direct use if needed
-export { AgentCardFull, AgentCardCompact, AgentCardMini };
+export { AgentCardFull, AgentCardCompact, AgentCardMini }

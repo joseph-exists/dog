@@ -10,12 +10,14 @@
  */
 import { useState } from "react"
 import {
-  ContentRenderer,
   type Content,
-  type ContentVariant,
   type ContentFormat,
+  ContentRenderer,
+  type ContentVariant,
 } from "@/components/Page/primitives/ContentRenderer"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -24,13 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import {
-  allExamples,
-  variantDemos,
-} from "./ContentRendererExamples"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { allExamples, variantDemos } from "./ContentRendererExamples"
 
 const FORMAT_TABS: Array<{ value: ContentFormat; label: string }> = [
   { value: "text", label: "Text" },
@@ -92,7 +89,7 @@ export function ContentRendererDemo() {
               </SelectTrigger>
               <SelectContent>
                 {/* removed description parameter due to compile time error */}
-                {variantDemos.map(({ variant}) => (
+                {variantDemos.map(({ variant }) => (
                   <SelectItem key={variant} value={variant}>
                     {variant}
                   </SelectItem>
@@ -214,9 +211,7 @@ export function ContentRendererDemo() {
               </div>
               <div
                 className={
-                  variant === "background"
-                    ? "relative h-24 border rounded"
-                    : ""
+                  variant === "background" ? "relative h-24 border rounded" : ""
                 }
               >
                 {currentExample && (

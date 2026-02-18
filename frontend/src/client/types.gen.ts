@@ -60,6 +60,42 @@ export type ArchetypeUpdate = {
     description?: (string | null);
 };
 
+/**
+ * Output from batch theme resolution.
+ */
+export type BatchResolvedThemesResponse = {
+    /**
+     * Resolution results keyed by slot
+     */
+    results: {
+        [key: string]: ResolvedThemeResponse;
+    };
+};
+
+/**
+ * Input for batch theme resolution.
+ * Resolves multiple slots in a single request for efficiency.
+ */
+export type BatchResolveThemeRequest = {
+    /**
+     * Ordered path segments
+     */
+    context_path: Array<(string)>;
+    /**
+     * Which theme categories to resolve
+     */
+    slots: Array<ThemeSlot>;
+    entity_context?: (EntityContext | null);
+};
+
+/**
+ * Classification of theme binding ownership.
+ *
+ * - user_pref: owner_id = user_id (viewer's personal preferences)
+ * - authored: owner_id = entity_id (creator's content theming)
+ */
+export type BindingType = 'user_pref' | 'authored';
+
 export type Body_login_login_access_token = {
     grant_type?: (string | null);
     username: string;
@@ -81,6 +117,25 @@ export type CurrentNodePublic = {
     story_state: ({
     [key: string]: unknown;
 } | null);
+};
+
+/**
+ * Optional context for resolving authored bindings.
+ * Provides information about the entity being viewed.
+ */
+export type EntityContext = {
+    /**
+     * Type of entity (story, room, etc.)
+     */
+    entity_type: string;
+    /**
+     * ID of the entity
+     */
+    entity_id: string;
+    /**
+     * Owner of the entity (for authorization)
+     */
+    owner_id: string;
 };
 
 /**
@@ -744,6 +799,11 @@ export type QualityUpdate = {
 };
 
 /**
+ * How a theme was resolved in the cascade.
+ */
+export type ResolutionSource = 'authored' | 'user_pref' | 'system_default' | 'none';
+
+/**
  * Resolved panel config for a user in a room
  */
 export type ResolvedPanelConfig = {
@@ -751,6 +811,24 @@ export type ResolvedPanelConfig = {
         [key: string]: unknown;
     }>;
     source: string;
+};
+
+/**
+ * Output from theme resolution domain service.
+ */
+export type ResolvedThemeResponse = {
+    /**
+     * Resolved theme or null
+     */
+    theme: (ThemePublic | null);
+    /**
+     * How the theme was resolved
+     */
+    source: ResolutionSource;
+    /**
+     * Which binding context_key matched (null for system_default/none)
+     */
+    context_key_matched?: (string | null);
 };
 
 export type RoomAgentSettingsBundle = {
@@ -1272,6 +1350,178 @@ export type StoryValidationResult = {
     end_node_count: number;
     orphaned_node_count: number;
     state_schema_validation?: (StateSchemaValidationResult | null);
+};
+
+/**
+ * API input for creating a theme binding.
+ *
+ * For user_pref bindings: owner_id is set by system to authenticated user
+ * For authored bindings: owner_id is validated against entity ownership
+ */
+export type ThemeBindingCreate = {
+    /**
+     * Classification of binding ownership
+     */
+    binding_type: BindingType;
+    /**
+     * Composite context path (e.g., 'page:story/panel:debug')
+     */
+    context_key: string;
+    /**
+     * Which theme category slot this binding fills
+     */
+    slot: ThemeSlot;
+    /**
+     * Reference to theme being bound
+     */
+    theme_id: string;
+};
+
+/**
+ * API response model for ThemeBinding entity.
+ */
+export type ThemeBindingPublic = {
+    /**
+     * Classification of binding ownership
+     */
+    binding_type: BindingType;
+    /**
+     * Composite context path (e.g., 'page:story/panel:debug')
+     */
+    context_key: string;
+    /**
+     * Which theme category slot this binding fills
+     */
+    slot: ThemeSlot;
+    id: string;
+    owner_id: string;
+    theme_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Paginated collection response for ThemeBinding list endpoints.
+ */
+export type ThemeBindingsPublic = {
+    data: Array<ThemeBindingPublic>;
+    count: number;
+};
+
+/**
+ * Classification of theme purpose. Each category has distinct token schemas.
+ *
+ * - page: Page surface theming (includes --background)
+ * - card: Card/panel content areas (excludes --background)
+ * - syntax: Code syntax highlighting (Shiki theme or token colors)
+ * - motion: Animation characteristics (duration, easing, spring physics)
+ */
+export type ThemeCategory = 'page' | 'card' | 'syntax' | 'motion';
+
+/**
+ * API input for creating a new theme.
+ * owner_id is set by the system based on authenticated user.
+ * is_system is always False for user-created themes.
+ */
+export type ThemeCreate = {
+    /**
+     * Human-readable theme name
+     */
+    name: string;
+    /**
+     * Optional theme description
+     */
+    description?: (string | null);
+    /**
+     * Classification of theme purpose
+     */
+    category: ThemeCategory;
+    /**
+     * Visibility and ownership rules
+     */
+    scope?: ThemeScope;
+    /**
+     * Category-specific token payload (CSS variables, Shiki config, motion params)
+     */
+    tokens?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * API response model for Theme entity.
+ * Includes all fields visible to API consumers.
+ */
+export type ThemePublic = {
+    /**
+     * Human-readable theme name
+     */
+    name: string;
+    /**
+     * Optional theme description
+     */
+    description?: (string | null);
+    /**
+     * Classification of theme purpose
+     */
+    category: ThemeCategory;
+    /**
+     * Visibility and ownership rules
+     */
+    scope?: ThemeScope;
+    /**
+     * Category-specific token payload (CSS variables, Shiki config, motion params)
+     */
+    tokens?: {
+        [key: string]: unknown;
+    };
+    id: string;
+    owner_id: (string | null);
+    is_system: boolean;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Visibility and ownership rules for themes.
+ *
+ * - system: Immutable system-seeded themes, visible to all users
+ * - org: Admin-created themes, visible to all org users
+ * - personal: User-created themes, visible only to owner
+ * - shared: User-created themes, visible to all org users
+ */
+export type ThemeScope = 'system' | 'org' | 'personal' | 'shared';
+
+/**
+ * Which theme category slot is being filled by a binding.
+ * Matches ThemeCategory values.
+ */
+export type ThemeSlot = 'page' | 'cards' | 'syntax' | 'motion';
+
+/**
+ * Paginated collection response for Theme list endpoints.
+ */
+export type ThemesPublic = {
+    data: Array<ThemePublic>;
+    count: number;
+};
+
+/**
+ * API input for updating an existing theme.
+ * All fields optional - only provided fields are updated.
+ *
+ * Constraints:
+ * - Cannot update is_system themes
+ * - Cannot change scope to/from 'system'
+ * - Cannot change category (would invalidate tokens)
+ */
+export type ThemeUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    scope?: (ThemeScope | null);
+    tokens?: ({
+    [key: string]: unknown;
+} | null);
 };
 
 /**
@@ -3087,6 +3337,82 @@ export type StorynodesCreateNodeChoiceFromNodeData = {
 };
 
 export type StorynodesCreateNodeChoiceFromNodeResponse = (NodeChoicePublic);
+
+export type ThemeBindingsGetMyBindingsData = {
+    contextPrefix?: (string | null);
+};
+
+export type ThemeBindingsGetMyBindingsResponse = (ThemeBindingsPublic);
+
+export type ThemeBindingsSetMyBindingData = {
+    requestBody: ThemeBindingCreate;
+};
+
+export type ThemeBindingsSetMyBindingResponse = (ThemeBindingPublic);
+
+export type ThemeBindingsClearMyBindingData = {
+    contextKey: string;
+    slot: ThemeSlot;
+};
+
+export type ThemeBindingsClearMyBindingResponse = (void);
+
+export type ThemeBindingsResolveSingleThemeData = {
+    contextPath: string;
+    entityId?: (string | null);
+    entityOwnerId?: (string | null);
+    entityType?: (string | null);
+    slot: ThemeSlot;
+};
+
+export type ThemeBindingsResolveSingleThemeResponse = (ResolvedThemeResponse);
+
+export type ThemeBindingsResolveMultipleThemesData = {
+    requestBody: BatchResolveThemeRequest;
+};
+
+export type ThemeBindingsResolveMultipleThemesResponse = (BatchResolvedThemesResponse);
+
+export type ThemesListAllThemesData = {
+    category?: (ThemeCategory | null);
+    includeSystem?: boolean;
+    limit?: number;
+    scope?: (ThemeScope | null);
+    skip?: number;
+};
+
+export type ThemesListAllThemesResponse = (ThemesPublic);
+
+export type ThemesCreateNewThemeData = {
+    requestBody: ThemeCreate;
+};
+
+export type ThemesCreateNewThemeResponse = (ThemePublic);
+
+export type ThemesGetAvailableThemesData = {
+    category: ThemeCategory;
+};
+
+export type ThemesGetAvailableThemesResponse = (Array<ThemePublic>);
+
+export type ThemesGetThemeData = {
+    themeId: string;
+};
+
+export type ThemesGetThemeResponse = (ThemePublic);
+
+export type ThemesUpdateExistingThemeData = {
+    requestBody: ThemeUpdate;
+    themeId: string;
+};
+
+export type ThemesUpdateExistingThemeResponse = (ThemePublic);
+
+export type ThemesDeleteExistingThemeData = {
+    themeId: string;
+};
+
+export type ThemesDeleteExistingThemeResponse = (void);
 
 export type TraitConflictsReadTraitConflictGroupsData = {
     /**

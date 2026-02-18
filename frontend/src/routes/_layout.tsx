@@ -40,7 +40,7 @@ const routeTitles: Record<string, string> = {
   "/admin": "Admin",
   "/settings": "Settings",
   "/demo": "Demo",
-  "/content-renderer-demo": "Content Demo"
+  "/content-renderer-demo": "Content Demo",
 }
 
 /** Routes that need full-bleed layout (no max-width or padding) */
