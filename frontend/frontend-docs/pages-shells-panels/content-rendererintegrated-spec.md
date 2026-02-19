@@ -776,7 +776,7 @@ all installed in frontend environment, will be added to build-dependencies after
 3. Migrate: `StoryContent`, `StoryPreview`, `StoryPlayer`
 4. Migrate: `Page/panels/StoryPanel/NodeDisplay`, `Room/panels/StoryPanel/NodeDisplay`
 
-### Phase 5: Plugin System [ ] IMPLEMENTATION GUIDE READY
+### Phase 5: Plugin System [X] Complete 
 
 > **Implementation Guide:** `phase5-implementation-guide.md`
 
@@ -801,7 +801,7 @@ all installed in frontend environment, will be added to build-dependencies after
 | Image URL normalization | Deferred | Evolve during implementation |
 | MDX toggle scope | Paused | Pending RBAC/trust system |
 | Demo page | Deferred | Josep has stub/mock frameworks ready |
-| Backend ContentFormat enum | Pending | Request to backend team needed |
+| Backend ContentFormat enum | Complete| Request to backend team needed |
 | `hero` UX variant | Deferred | Not in v1 |
 
 ---

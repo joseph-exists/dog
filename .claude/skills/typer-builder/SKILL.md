@@ -18,6 +18,8 @@ Build and extend the TinyFoot CLI with new Typer commands and modules.
 1. **Read the template**: `backend/app/test_scripts/typer/commands/_template.py`
 2. **Copy template** to `commands/<feature>.py`
 3. **Implement commands** following template patterns
+3.1. **GREP THE OPENAPI.JSON** these are the API route patterns to use.
+3.2. **RAISE A FLAG** if an API route doesn't exist in the OpenAPI.json that makes sense.
 4. **Register** in `main.py`:
    ```python
    from commands import my_feature
@@ -42,7 +44,7 @@ cd /home/josep/dog/backend/app/test_scripts/typer
 | `COMMANDS.md` | Document commands |
 | `auth_helper.py` | Authentication utilities |
 
-## Existing Modules
+## Existing Modules (subset, not full list.)
 
 | Module | CLI Name | Description |
 |--------|----------|-------------|
@@ -71,11 +73,14 @@ force: Annotated[bool, typer.Option("--force", "-f")] = False
 
 ### Standard CRUD Commands
 For a resource, implement: `create`, `list`, `get`, `update`, `delete`
+For a resource, implement those commands which make sense from that direction: even if that same command is implemented from another resource.
 
 ## Style Guidelines
 
+
 - Emoji status: ✅ success, ❌ error, ⚠️ warning, 🔍 info
-- Human-readable by default, `--json` for scripting
+- always use auth_helper for auth
+- language-based: readable by default, always include `--json` for scripting
 - Always include `--verbose` for debugging
 - Exit code 0 success, 1 error
 

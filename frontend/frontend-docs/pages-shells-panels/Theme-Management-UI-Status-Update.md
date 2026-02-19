@@ -21,6 +21,5 @@ Phase 4: Theme Management UI is COMPLETE!
 4. **Phase 4: Theme Management UI** - Full user-facing theme CRUD
 
 ## Next Steps (Optional)
-- Add theme picker to page headers for quick theme switching
 - Implement syntax/motion theme editors (currently show "coming soon" placeholders)
 - Add live preview panel to ThemeForm

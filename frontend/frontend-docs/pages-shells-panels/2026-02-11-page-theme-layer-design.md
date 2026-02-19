@@ -205,11 +205,11 @@ After implementation, demonstrate:
 
 ---
 
-## Future Contracts (Not This Iteration)
+## Contracts 
 
 Documented for backend integration planning.
 
-### Backend Model (Expected)
+### Backend Model 
 
 ```python
 class Theme(SQLModel, table=True):
@@ -230,7 +230,7 @@ class UserPagePreference(SQLModel, table=True):
     cards_theme_id: UUID | None  # FK to Theme
 ```
 
-### API Endpoints (Expected)
+### API Endpoints 
 
 ```
 GET  /api/themes              → list available themes (system + user's personal)
