@@ -1,6 +1,6 @@
 # OpenAPI Embedder Reference
 
-This folder contains two scripts:
+scripts:
 - `api_embedder.py`: ingest `openapi.json` into Postgres `pgvector`
 - `api_embedder_query.py`: semantic search over those embeddings
 - `api_code_embedder.py`: ingest exported SDK/types/schemas into a code-focused vector table
@@ -40,7 +40,7 @@ Basic semantic search:
 
 ```bash
 python3 app/test_scripts/embedder/utils/api_embedder_query.py \
-  --query "How do I create a repository?" \
+  --query "How do I add a theme to a Story?" \
   --db-uri "postgresql://USER:PASS@HOST:5432/DB"
 ```
 
@@ -56,7 +56,7 @@ JSON output:
 
 ```bash
 python3 app/test_scripts/embedder/utils/api_embedder_query.py \
-  --query "How do I create an issue?" \
+  --query "How do I create an orchestrator agent?" \
   --top-k 3 \
   --json
 ```

@@ -165,6 +165,18 @@ python -m backend.app.test_scripts.typer.main stories create "My Story" --verbos
 python -m backend.app.test_scripts.typer.main stories list --json
 ```
 
+### Embedder Queries
+
+```bash
+# Query OpenAPI embeddings
+python -m backend.app.test_scripts.typer.main embedder api-query \
+  --query "How do I create a story?" --top-k 5
+
+# Query embedded SDK/types/schema code chunks
+python -m backend.app.test_scripts.typer.main embedder code-query \
+  --query "How is room panel configuration updated?" --kinds sdk_method,schema --top-k 8
+```
+
 ## Testing Your Commands
 
 ### Test Module Directly

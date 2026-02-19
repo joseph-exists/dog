@@ -5,6 +5,7 @@ import asyncio
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 import asyncpg
@@ -14,6 +15,31 @@ DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_EMBEDDING_DIMENSIONS = 1536
 DEFAULT_TABLE_NAME = "api_code_chunks"
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _load_typer_env() -> None:
+    env_path = Path(__file__).resolve().parents[2] / "typer" / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        # Backward compatibility: previous file format was a raw API key line.
+        if "=" not in line:
+            os.environ.setdefault("OPENAI_API_KEY", line)
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and value:
+            os.environ.setdefault(key, value)
+
+
+_load_typer_env()
 
 
 def _parse_csv(value: str | None) -> list[str] | None:
