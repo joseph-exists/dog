@@ -11,6 +11,9 @@ import {
   Users,
 } from "lucide-react"
 
+import { PagesService } from "@/client/sdk.gen"
+import { PagePublicSchema } from "@/client/schemas.gen"
+
 /**
  * Entity type definition for the registry.
  * Add new entity types here - no component changes needed.

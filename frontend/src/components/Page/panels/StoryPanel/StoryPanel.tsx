@@ -1,7 +1,7 @@
 /**
  * StoryPanel
  *
- * Room runtime panel for playing through a story in a room.
+ * runtime panel for playing through a story - in a room, although that may be 'invisible' to the player.
  */
 
 import { AlertCircle, BookOpen, Loader2 } from "lucide-react"

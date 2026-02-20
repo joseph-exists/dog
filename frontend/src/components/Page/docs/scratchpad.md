@@ -1,3 +1,9 @@
+>> josep needs claude's help!  can claude help?
+
+>> ...
+
+
+
 use the exported client sdk, schema, and types.
 failure to use the exported client will cause rejection of components and failure of project milestone.
 maintain scope - do not minimize or go beyond without approval.

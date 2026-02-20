@@ -1,3 +1,7 @@
+// todo: this needs migrated to backend ASAP.
+// then we just use these as exported client functions, types, and schema - and we
+// can interact with it via cli or other means
+
 export interface DemoConfig {
   slug: string
   title: string
