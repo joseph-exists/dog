@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { allExamples, variantDemos } from "./ContentRendererExamples"
+import { allExamples, variantDemos } from "./ContentRendererExamples.bak"
 
 const FORMAT_TABS: Array<{ value: ContentFormat; label: string }> = [
   { value: "text", label: "Text" },

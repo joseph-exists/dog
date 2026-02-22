@@ -1,13 +1,4 @@
-/**
- * ContentRendererExamples - Sample content for demo/testing
- *
- * Provides realistic examples of each ContentFormat with various
- * metadata options to demonstrate all capabilities.
- */
-import type {
-  Content,
-  ContentVariant,
-} from "@/components/Page/primitives/ContentRenderer"
+
 import arrowExampleSvg from "./test-files/arrow_example.svg?raw"
 // Test SVG files (imported as raw strings)
 import basicShapesSvg from "./test-files/basic_shapes.svg?raw"

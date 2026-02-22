@@ -1,5 +1,7 @@
 # Template Cleanup Work in Progress
 
+--- LEGACY< NEEED UPDAAAATE SOOO MUCHHHHH >
+
 ## Technology Stack and Features
 
 - ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.

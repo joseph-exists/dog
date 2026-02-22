@@ -156,4 +156,4 @@ Define these contracts before more feature wiring:
 5. Add first block contract (`ContextBlock`) and render it above panel layout.
 6. Add `ParticipantPanel` contract path for Demo A using existing Page/Room panel primitives.
 
-If you want, I can draft the exact TypeScript interfaces for these contracts next and wire the first pass into `demo.$slug.tsx` + `DemoShell.tsx`.
+

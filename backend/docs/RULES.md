@@ -31,7 +31,7 @@ The backend follows this structure:
 
 - Use `def` for pure functions and `async def` for asynchronous operations.
 - Use type hints for all function signatures. Prefer Pydantic models over raw dictionaries for input validation.
-- For routes, use the pattern seen in existing route files.  Routes should never go in crud.py, only in an appropriately named file in the /backend/app/routes/ directory.
+- For routes, use the pattern seen in existing route files.  Routes should never go in crud.py, only in an appropriately named file in the /backend/app/api/routes/ directory.
 
 - Once a routes file has been added, it will be necessary to add it to the /backend/app/api/main.py.
 
@@ -283,7 +283,7 @@ After modifying the models, always follow these steps:
 
 When adding a new feature that requires data models:
 
-1. Define models in `models.py`
+1. Define models in `models.py` - following all DATA_MODEL_RULES.
    - Base model with common fields
    - Create/Update models for input validation
    - Database model with table=True

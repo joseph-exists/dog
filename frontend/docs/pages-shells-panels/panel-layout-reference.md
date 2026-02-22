@@ -2,6 +2,12 @@
 
 Quick reference for engineers working with the panel customization system.
 
+## Scope Note
+
+This card documents the current room-oriented panel customization flow. It is not the full composition contract for demos/pages that require nested composition (panels-in-panels, blocks-in-blocks) or headless/invisible mounted nodes.
+
+For composition-contract decisions, align with demo composition v2 planning and active demo integration docs.
+
 ## Architecture Overview
 
 ```
@@ -64,6 +70,32 @@ interface PanelConfig {
   prominence: "primary" | "auxiliary"     // Layout position
 }
 ```
+
+### Composition Guardrails (Do Not Contradict)
+
+```typescript
+type VisibilityMode = "visible" | "hidden_unmounted" | "hidden_mounted"
+
+type LayoutNode =
+  | { node_type: "panel"; id: string; panel: PanelConfig; visibility?: VisibilityMode }
+  | { node_type: "block"; id: string; block_type: string; visibility?: VisibilityMode }
+  | {
+      node_type: "container"
+      id: string
+      layout_mode: "stack" | "split" | "tabs" | "overlay"
+      children: LayoutNode[]
+      visibility?: VisibilityMode
+    }
+```
+
+Practical implications:
+1. Flat `PanelConfig[]` is an editor projection, not the canonical long-term composition graph.
+2. Invisible panels may still be mounted (`hidden_mounted`) to preserve runtime state.
+3. Stacked blocks are represented by container nodes with `layout_mode: "stack"`.
+4. Theme precedence must remain composition-aware:
+- composition page/cards themes
+- node-level theme overrides
+- renderer/content-level overrides
 
 ### System Presets
 | ID | Name | Panels |

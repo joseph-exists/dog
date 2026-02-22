@@ -1,8 +1,5 @@
 # Demo Theming — Engineering Reference Card
 
-NOTE: NEEDS REWRITTEN ASAP: @josep-todo
-@josep-todo: this is prior to the theming work that enables presentation-as-data on all object entities in presentation, and the themes work on pages and panels.  keeping this because it's helpful for understanding several other concepts, but this is not how theming works.  josep to rewrite and extract relevant data - please do not use.
-
 > How to create visual themes for demo pages. Multiple demos can share the same room and functionality while presenting a completely different visual experience.
 
   ★ Insights
@@ -35,62 +32,20 @@ NOTE: NEEDS REWRITTEN ASAP: @josep-todo
 ## Architecture
 
 ```
-DemoConfig.theme = "enchanted-rose"
-        │
-        ▼
-DemoPage: <div data-demo-theme="enchanted-rose">
-        │
-        ▼
-demo-themes.css: [data-demo-theme="enchanted-rose"] .demo-node { ... }
-        │
-        ▼
-Components: <div class="demo-node rounded-lg border bg-card ...">
-                   ▲                ▲
-                   │                └── Tailwind defaults (no theme = standard look)
-                   └── Semantic hook (theme CSS targets this)
 ```
 
 **Key principle:** Themes are additive CSS overrides. When no theme is set, the existing Tailwind classes render the default look. When a theme is active, CSS specificity overrides the visual properties.
 
 ---
 
-## Quick Start: Creating a New Theme
-
-### 1. Add a theme block to `frontend/src/styles/demo-themes.css`
 
 ```css
-/* Theme: your-theme-name */
-[data-demo-theme="your-theme-name"] .demo-node {
-  background: #your-color;
-  border-color: #your-border;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-[data-demo-theme="your-theme-name"] .demo-node-title {
-  color: #your-title-color;
-}
-
-[data-demo-theme="your-theme-name"] .demo-choice {
-  background: #your-choice-bg;
-  border-color: #your-choice-border;
-  color: #your-choice-text;
-}
-
-/* ... override as many or as few classes as needed */
 ```
 
 ### 2. Add a demo config entry
 
 ```typescript
-// frontend/src/config/demos.ts
-"your-demo-slug": {
-  slug: "your-demo-slug",
-  title: "Your Themed Demo",
-  description: "Same story, different vibe.",
-  roomId: "existing-room-uuid",  // Can share a room with other demos
-  autoRespond: true,
-  theme: "your-theme-name",      // Matches data-demo-theme value
-},
+
 ```
 
 ### 3. Visit `/demo/your-demo-slug`
@@ -174,7 +129,7 @@ For elements inside semantic containers that don't have their own class:
 
 ## Sharing Rooms Between Themes
 
-Multiple demo configs can point to the same `roomId`. The theme is purely a frontend presentation concern — the backend doesn't know or care about themes.
+<!-- THIS IS NO LONGER ACCURATE: NEEDS UPDATE Multiple demo configs can point to the same `roomId`. The theme is purely a frontend presentation concern — the backend doesn't know or care about themes. -->
 
 ```typescript
 // Same room, three different looks:

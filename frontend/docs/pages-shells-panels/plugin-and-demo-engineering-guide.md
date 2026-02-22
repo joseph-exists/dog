@@ -82,6 +82,29 @@ import {
 } from "@/components/Common/ContentRenderer"
 ```
 
+### 1.4 Contract Alignment with Demo Composition v2
+
+When integrating plugins into demo panel/block rendering, preserve these contract rules:
+1. Use one canonical `Content` shape across:
+- node surfaces
+- demo content panels
+- demo content/context blocks
+2. Keep content payload and presentation metadata separate:
+- content object carries render data
+- composition node metadata carries layout/chrome/theming intent
+3. Preserve composition graph behavior:
+- nested panels/blocks are valid
+- stacked containers are valid
+- invisible mounted nodes (`hidden_mounted`) may still execute runtime logic
+4. Keep plugin behavior deterministic under theme cascade:
+- composition page/cards theme
+- node-level theme override
+- content/plugin-level override
+5. Plugin transforms/validation must not mutate contract identity fields (`kind`, `type`, node IDs).
+
+Implementation note:
+Demo UI editors may present a flat/projection view for usability, but plugin and renderer integration must remain compatible with canonical graph-based composition contracts.
+
 ---
 
 ## 2. Creating Demos

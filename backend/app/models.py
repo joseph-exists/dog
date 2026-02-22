@@ -3812,6 +3812,8 @@ DemoPanelKind = Literal[
     "canvas",
     "storyEditor",
     "storyPlayer",
+    "storyPlayerPanel",
+    "strange",
 ]
 
 DemoPanelProminence = Literal["primary", "auxiliary"]
@@ -3820,11 +3822,15 @@ DemoPanelViewportMode = Literal["panel", "page"]
 DemoBlockType = Literal[
     "context",
     "story",
+    "storyMetadata",
     "agentRoster",
     "orchestratorState",
     "toolCapability",
     "contributionFeed",
     "content",
+    "gitView",
+    "fileExplorer",
+    "strange",
 ]
 DemoBlockRegion = Literal["top", "primary", "auxiliary", "footer"]
 DemoBlockVisibility = Literal["visible", "hidden"]
@@ -3835,17 +3841,55 @@ DemoBlockVisibility = Literal["visible", "hidden"]
 # =============================================================================
 
 
+class DemoContentMetadataConstraints(SQLModel):
+    """Optional constraints applied by content renderers."""
+
+    isTrustedSource: bool | None = Field(default=None)
+    cacheKey: str | None = Field(default=None)
+
+
+class DemoContentMetadata(SQLModel):
+    """Metadata envelope for renderer hints and formatting options."""
+
+    variant: str | None = Field(default=None, max_length=100)
+    label: str | None = Field(default=None, max_length=200)
+    constraints: DemoContentMetadataConstraints | None = Field(default=None)
+    options: dict[str, Any] | None = Field(default=None)
+
+
+class DemoContent(SQLModel):
+    """
+    Canonical renderable content payload for demo panels and blocks.
+
+    This mirrors the frontend ContentRenderer contract:
+    - format: canonical content format discriminator
+    - value: renderable payload
+    - metadata: optional display/configuration hints
+    """
+
+    id: str | None = Field(default=None, max_length=120)
+    format: ContentFormat
+    value: str | int | float | bool | dict[str, Any] | list[Any] | None
+    metadata: DemoContentMetadata | None = Field(default=None)
+
+
 class DemoChatPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
     mode: DemoChatMode = Field(default=DemoChatMode.participant)
     include_internal_messages: bool = Field(default=False)
 
 
 class DemoStoryRuntimePanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
     send_runtime_events_to_chat: bool = Field(default=True)
     viewer_mode: bool = Field(default=False)
 
 
 class DemoContentPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
     """
     Content payload for 'content' panel kind.
 
@@ -3853,15 +3897,48 @@ class DemoContentPanelOptions(SQLModel):
     """
 
     sticky: bool = Field(default=True)
-    content_json: dict[str, Any] | None = Field(default=None)
+    content_json: DemoContent | None = Field(default=None)
 
 
-class DemoPanelOptions(SQLModel):
-    """
-    Generic options payload for panel kinds that do not yet have strict models.
-    """
+class DemoParticipantPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
 
-    data: dict[str, Any] = Field(default_factory=dict)
+    showUsers: bool = Field(default=True)
+    showAgents: bool = Field(default=True)
+    compact: bool = Field(default=False)
+    allowQuickAdd: bool = Field(default=True)
+
+
+class DemoCanvasPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
+
+class DemoA2UIPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
+
+class DemoDebugPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
+
+class DemoStoryEditorPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
+
+class DemoStoryPlayerPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
+    viewer_mode: bool = Field(default=False)
+
+
+class DemoStoryPlayerLegacyPanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
+
+    viewer_mode: bool = Field(default=False)
+
+
+class DemoStrangePanelOptions(SQLModel):
+    model_config = {"extra": "allow"}
 
 
 # =============================================================================
@@ -3934,16 +4011,70 @@ class DemoContentPanelSpec(DemoPanelSpecBase):
     options: DemoContentPanelOptions = Field(default_factory=DemoContentPanelOptions)
 
 
-class DemoGenericPanelSpec(DemoPanelSpecBase):
-    options: DemoPanelOptions = Field(default_factory=DemoPanelOptions)
+class DemoParticipantPanelSpec(DemoPanelSpecBase):
+    kind: Literal["participantPanel"] = "participantPanel"
+    options: DemoParticipantPanelOptions = Field(
+        default_factory=DemoParticipantPanelOptions
+    )
 
 
-DemoPanelSpec = (
-    DemoChatPanelSpec
-    | DemoStoryRuntimePanelSpec
-    | DemoContentPanelSpec
-    | DemoGenericPanelSpec
-)
+class DemoCanvasPanelSpec(DemoPanelSpecBase):
+    kind: Literal["canvas"] = "canvas"
+    options: DemoCanvasPanelOptions = Field(default_factory=DemoCanvasPanelOptions)
+
+
+class DemoA2UIPanelSpec(DemoPanelSpecBase):
+    kind: Literal["a2ui"] = "a2ui"
+    options: DemoA2UIPanelOptions = Field(default_factory=DemoA2UIPanelOptions)
+
+
+class DemoDebugPanelSpec(DemoPanelSpecBase):
+    kind: Literal["debug"] = "debug"
+    options: DemoDebugPanelOptions = Field(default_factory=DemoDebugPanelOptions)
+
+
+class DemoStoryEditorPanelSpec(DemoPanelSpecBase):
+    kind: Literal["storyEditor"] = "storyEditor"
+    options: DemoStoryEditorPanelOptions = Field(
+        default_factory=DemoStoryEditorPanelOptions
+    )
+
+
+class DemoStoryPlayerPanelSpec(DemoPanelSpecBase):
+    kind: Literal["storyPlayer"] = "storyPlayer"
+    options: DemoStoryPlayerPanelOptions = Field(
+        default_factory=DemoStoryPlayerPanelOptions
+    )
+
+
+class DemoStoryPlayerLegacyPanelSpec(DemoPanelSpecBase):
+    kind: Literal["storyPlayerPanel"] = "storyPlayerPanel"
+    options: DemoStoryPlayerLegacyPanelOptions = Field(
+        default_factory=DemoStoryPlayerLegacyPanelOptions
+    )
+
+
+class DemoStrangePanelSpec(DemoPanelSpecBase):
+    kind: Literal["strange"] = "strange"
+    options: DemoStrangePanelOptions = Field(default_factory=DemoStrangePanelOptions)
+
+
+DemoPanelSpec = Annotated[
+    Union[
+        DemoChatPanelSpec
+        | DemoStoryRuntimePanelSpec
+        | DemoContentPanelSpec
+        | DemoParticipantPanelSpec
+        | DemoCanvasPanelSpec
+        | DemoA2UIPanelSpec
+        | DemoDebugPanelSpec
+        | DemoStoryEditorPanelSpec
+        | DemoStoryPlayerPanelSpec
+        | DemoStoryPlayerLegacyPanelSpec
+        | DemoStrangePanelSpec
+    ],
+    Field(discriminator="kind"),
+]
 
 
 # =============================================================================
@@ -3951,7 +4082,7 @@ DemoPanelSpec = (
 # =============================================================================
 
 
-class DemoBlockSpec(SQLModel):
+class DemoBlockSpecBase(SQLModel):
     id: str = Field(min_length=1, max_length=100)
     type: DemoBlockType
     region: DemoBlockRegion = Field(default="top")
@@ -3971,8 +4102,81 @@ class DemoBlockSpec(SQLModel):
             "Block-level presentation overrides (e.g., density, chrome, emphasis)."
         ),
     )
+
+
+class DemoContextBlockSpec(DemoBlockSpecBase):
+    type: Literal["context"] = "context"
     config_json: dict[str, Any] = Field(default_factory=dict)
-    content_json: dict[str, Any] = Field(default_factory=dict)
+    content_json: DemoContent | None = Field(default=None)
+
+
+class DemoContentBlockSpec(DemoBlockSpecBase):
+    type: Literal["content"] = "content"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+    content_json: DemoContent | None = Field(default=None)
+
+
+class DemoStoryBlockSpec(DemoBlockSpecBase):
+    type: Literal["story"] = "story"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoStoryMetadataBlockSpec(DemoBlockSpecBase):
+    type: Literal["storyMetadata"] = "storyMetadata"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoAgentRosterBlockSpec(DemoBlockSpecBase):
+    type: Literal["agentRoster"] = "agentRoster"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoOrchestratorStateBlockSpec(DemoBlockSpecBase):
+    type: Literal["orchestratorState"] = "orchestratorState"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoToolCapabilityBlockSpec(DemoBlockSpecBase):
+    type: Literal["toolCapability"] = "toolCapability"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoContributionFeedBlockSpec(DemoBlockSpecBase):
+    type: Literal["contributionFeed"] = "contributionFeed"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoGitViewBlockSpec(DemoBlockSpecBase):
+    type: Literal["gitView"] = "gitView"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoFileExplorerBlockSpec(DemoBlockSpecBase):
+    type: Literal["fileExplorer"] = "fileExplorer"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoStrangeBlockSpec(DemoBlockSpecBase):
+    type: Literal["strange"] = "strange"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
+DemoBlockSpec = Annotated[
+    Union[
+        DemoContextBlockSpec
+        | DemoContentBlockSpec
+        | DemoStoryBlockSpec
+        | DemoStoryMetadataBlockSpec
+        | DemoAgentRosterBlockSpec
+        | DemoOrchestratorStateBlockSpec
+        | DemoToolCapabilityBlockSpec
+        | DemoContributionFeedBlockSpec
+        | DemoGitViewBlockSpec
+        | DemoFileExplorerBlockSpec
+        | DemoStrangeBlockSpec
+    ],
+    Field(discriminator="type"),
+]
 
 
 # =============================================================================

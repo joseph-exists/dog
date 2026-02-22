@@ -45,6 +45,28 @@ Resolution Order using Room as Example (first match wins):
 - **Panel header buttons** → Quick collapse/remove
 - **Keyboard shortcuts** → Instant actions
 
+### Compositional Guardrails (Demo/Page v2 Compatibility)
+
+This document describes interaction design, not the full persistence contract. To preserve a high degree of compositionality, implementation must support:
+1. Nested composition graphs:
+- panels within panels
+- blocks within blocks
+- panel/block combinations inside container nodes
+2. Invisible node behavior with explicit semantics:
+- `hidden_unmounted`: not rendered
+- `hidden_mounted`: not visible but still mounted for runtime/state continuity
+3. Stacked block and mixed-layout containers:
+- `stack`, `split`, `tabs`, `overlay` as container modes
+4. Theme cascade integrity:
+- composition-level page/cards theme
+- node-level overrides
+- renderer/content-level overrides
+
+UI guidance:
+1. Drag/collapse/preset controls operate on a projected editor view.
+2. The projected view must map losslessly to/from the canonical composition graph.
+3. Do not assume top-level flat `panels[]` is the long-term source of truth.
+
 ---
 
 ## 2. Primitive Architecture

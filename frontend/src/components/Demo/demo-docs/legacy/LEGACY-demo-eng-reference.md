@@ -1,9 +1,5 @@
 # Demo System — Engineering Reference Card
 
-NOTE: MID-REWRITE: @josep-todo - ASAP. 
-
-NOTE: for frontend purposes: 
-this is the service and type to use when engaging with the agent or uac as defined below.
 
 if you don't see a type, operation on that type, or definition for something you need - raise a high priority flag for backend work.
 
@@ -14,11 +10,7 @@ import type {
   UserAgentConfigPublic,
 } from "@/client/types.gen"
 ```
-NOTE: the rewrite needed extends with the following:
 
--- UserAgentConfig vs AgentPrompt (current structure is 'functional' but doesn't exercise UAC.  We can fallback to prompt if we need to, but we need to ensure we enable - as first class citizen - the ability for UAC here.) (started this migration in doc already FYI)
--- the seed script is 'fine and functional' - but we need demos to be created through multiple interfaces. all functionality needs reviewed to ensure that any demo can be created: through the UI, through the CLI, and through script. (@josep-todo: working through this now on miranda/dogbert branch)
--- need to review slug vs id paradigm - i believe slug is correct, but may need to migrate some functionality (or just review and collapse slug functionality and ensure key:value stores are set )
 
 -- need to extract and re-compose the presentation elements. while significant aspect of demos, this should focus on the constructs of data, objects, and layout.  for presentation (theming) and those interactions, while accessible through the patterns below, taking it out of this doc and adding to a second doc - as a sequential element in the demo construction process - is needed.
 
@@ -42,36 +34,24 @@ Route (/demo/$slug)
         └── any size we want. any theme we want.
 ```
 
-**Config:** `frontend/src/config/demos.ts` — slug → DemoConfig resolution
-# @josep-note: actively migrating DemoConfig to backend model for dynamic interop.  demos.ts may persist in some format, but eventually will be cut away (will keep it to prove functionality until it's no longer necessary.  feel free to depend on it - if you're importing from there, I will fix at a later date and ensure parity)
 
-**Seed:** `backend/app/test_scripts/story_things/seed_enchanted_library.py` — API-based seeding script (returns generated IDs) 
-(@josep-note: this script is fine for testing certain things - but it doesn't exercise the paths I would like it to.)
-
-**Layout Mode:** Demo routes are full-bleed (`_layout.tsx` → `fullBleedRoutes`). Required for proper flex height constraints.
-# @josep-note: I'm not sure that this is still required.  need to review.
 ---
 
 ## File Map (OLD - works, but not the model we want.)
 
 | Layer | Path | Purpose |
 |-------|------|---------|
-| Config | `frontend/src/config/demos.ts` | Demo registry (slug → roomId, title, autoRespond) |
 | Route | `frontend/src/routes/_layout/demo.$slug.tsx` | Entry point, slug resolution, not-found fallback |
 | Page | `frontend/src/components/Demo/DemoPage.tsx` | Resizable split layout, hooks, message routing |
 | Header | `frontend/src/components/Demo/DemoHeader.tsx` | Title, description, connection badge, toggle |
-| StoryWrapper | `frontend/src/components/Demo/DemoStoryPanel.tsx` | Watches runtime changes, sends synthetic messages |
-| Seed | `backend/app/test_scripts/story_things/seed_enchanted_library.py` | Creates story, nodes, room, agents, runtime via API |
+
 | Context | `backend/app/services/context_provider.py` | `StoryRuntimeContext` → agent context builder |
-| Prompt | `backend/app/services/agent_prompt.py` | Formats story state into LLM prompt |
 
 ---
 
 ## Creating a New Demo
 
-### 1. Write the Seed Script
 
-Create a seed script in `backend/app/test_scripts/story_things/` following the API-based pattern:
 
 ```python
 """
@@ -156,19 +136,11 @@ if __name__ == "__main__":
     ids = seed_your_demo(session)
     print(json.dumps(ids, indent=2))
 ```
-
-**Key patterns:**
-- Uses HTTP API calls (not direct DB access)
-- Server generates all UUIDs — no hardcoded IDs
-- Returns a dict of generated IDs for programmatic use
-- State variables must be created before publishing (API rejects edits to published versions)
-- Room runtime initialization (`PUT /rooms/{room_id}/runtime`) auto-creates `UserStoryProgress` and `RoomStoryProgress`
-- `--json` flag enables clean output for piping to other scripts
-- The `seed_*()` function is importable for use in other test scripts
+ortable for use in other test scripts
 
 ### 2. Register the Demo Config
 
-# TODO: priority 1: currently adding DemoConfig as a backend model, adding routes and crud, and then, as appropriate, will update all imports/references to frontend/src/config/demos.ts to reflect that.
+
 
 Run the seed script and capture the room ID, then add to `frontend/src/config/demos.ts`: 
 
@@ -199,17 +171,6 @@ Visit `/demo/your-demo-slug` — the route, DemoPage, and all components are sha
 
 ---
 
-## DemoConfig Interface
-
-```typescript
-export interface DemoConfig {
-  slug: string       // URL-safe identifier, used in /demo/$slug
-  title: string      // Display title in DemoHeader
-  description: string // Subtitle text in DemoHeader
-  roomId: string     // UUID of seeded room (from seed script output)
-  autoRespond: boolean // Default state of auto-respond toggle
-}
-```
 
 ---
 
@@ -349,19 +310,6 @@ Because `build_room_context()` queries the **current** `UserStoryProgress` at ca
 
 ### Agent System Prompt Tips
 
-For demo agents, reference the context sections explicitly:
-
-```python
-system_prompt = """You are the Narrator...
-
-When responding, reference:
-- The 'Current node' title and content for scene awareness
-- The 'Path taken' to acknowledge the player's journey
-- The 'Available choices' to hint at options without spoiling
-- The 'Story state' to reference items or flags collected
-
-Keep responses to 2-3 sentences."""
-```
 
 ---
 
@@ -410,27 +358,6 @@ For agents to respond to synthetic messages, set `participation_mode: "always"` 
 
 Not all demos need the story runtime. You can replace the left panel:
 
-```typescript
-// In a custom DemoPage variant:
-<ResizablePanel defaultSize={60} minSize={30}>
-  {/* Replace StoryPanel with any interactive component */}
-  <YourCustomComponent roomId={config.roomId} />
-</ResizablePanel>
-```
-
-To support this, extend `DemoConfig`:
-(@josep-note: currently migrating DemoConfig to the )
-
-```typescript
-export interface DemoConfig {
-  slug: string
-  title: string
-  description: string
-  roomId: string
-  autoRespond: boolean
-  panelType?: "story" | "custom"  // Future: choose left panel content
-}
-```
 
 ### Adding Custom Auto-Respond Triggers
 
@@ -473,9 +400,8 @@ import { DEMOS } from "@/config/demos"
 # 1. Ensure backend is running
 docker compose up -d  # or: docker compose watch
 
-# 2. Seed the demo (from backend/app/test_scripts/story_things/)
-cd backend/app/test_scripts/story_things
-python seed_enchanted_library.py
+# 2. Seed the demos (from backend/app/test_scripts/story_things/)
+
 
 # 3. Copy the room_id from the output into frontend/src/config/demos.ts
 
@@ -494,7 +420,7 @@ open http://localhost:5173/demo/story-runtime
 
 ---
 
-## Seed Script Output Format
+## Test Script Output Format
 
 The seed script returns a structured dict of all generated IDs:
 
