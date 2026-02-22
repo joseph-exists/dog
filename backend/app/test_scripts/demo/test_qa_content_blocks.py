@@ -461,7 +461,7 @@ def get_regions_composition(story_id: str | None = None) -> dict[str, Any]:
                 "region": "footer",
                 "order": 1,
                 "title": "Hidden Block",
-                "visibility": "hidden",
+                "visibility": "hidden_unmounted",
                 "content_json": {
                     "format": "markdown",
                     "value": "**THIS SHOULD NOT BE VISIBLE** - Hidden block test",

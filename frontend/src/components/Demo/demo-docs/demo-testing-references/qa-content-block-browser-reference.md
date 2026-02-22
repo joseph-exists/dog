@@ -288,7 +288,7 @@ Step 2 payload (replace `<story-id>`):
       "type": "content",
       "region": "footer",
       "order": 1,
-      "visibility": "hidden",
+      "visibility": "hidden_unmounted",
       "content_json": { "format": "markdown", "value": "Should not render" }
     }
   ],
@@ -313,5 +313,5 @@ Expected browser result:
 2. Code format uses syntax highlighting path and shows code options.
 3. Panel content and block content both work.
 4. Region and order behavior is predictable.
-5. Hidden visibility is honored.
+5. Hidden modes are honored (`hidden_unmounted` and `hidden_mounted`).
 6. Demo URL composition works: `https://<frontend-host>/demo/<slug>`.

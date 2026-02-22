@@ -11,7 +11,7 @@ import {
   type Content,
 } from "@/components/Page/primitives/ContentRenderer"
 import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
-import { DemoShell } from "@/components/Demo/DemoShell"
+import { DemoShell, type DemoShellBlockRenderItem } from "@/components/Demo/DemoShell"
 import { DemoStoryPanel } from "@/components/Demo/DemoStoryPanel"
 import { CanvasPanel, ParticipantPanel } from "@/components/Room"
 import MessageInput from "@/components/Room/RoomMessages/MessageInput"
@@ -141,6 +141,15 @@ function getPanelContentPayload(panel: { options?: unknown }): unknown {
   if (!panel.options || typeof panel.options !== "object") return undefined
   const options = panel.options as Record<string, unknown>
   return options.content_json
+}
+
+function normalizeBlockVisibility(
+  visibility: unknown,
+): "visible" | "hidden_unmounted" | "hidden_mounted" {
+  const rawVisibility = typeof visibility === "string" ? visibility : "visible"
+  if (rawVisibility === "hidden_unmounted") return "hidden_unmounted"
+  if (rawVisibility === "hidden_mounted") return "hidden_mounted"
+  return "visible"
 }
 
 function ResolvedDemoRoute({
@@ -515,18 +524,25 @@ function ResolvedDemoRoute({
   }, [panels, resolved.composition.panels])
 
   const renderedBlocksByRegion = useMemo(() => {
-    const visibleBlocks = (resolved.composition.blocks ?? [])
-      .filter((block) => (block.visibility ?? "visible") !== "hidden")
-      .sort((a, b) => (a.order ?? 1) - (b.order ?? 1))
+    const orderedBlocks = (resolved.composition.blocks ?? [])
+      .map((block) => ({
+        block,
+        visibilityMode: normalizeBlockVisibility(block.visibility),
+      }))
+      .filter(({ visibilityMode }) => visibilityMode !== "hidden_unmounted")
+      .sort((a, b) => (a.block.order ?? 1) - (b.block.order ?? 1))
 
-    const regions: Record<"top" | "primary" | "auxiliary" | "footer", ReactNode[]> = {
+    const regions: Record<
+      "top" | "primary" | "auxiliary" | "footer",
+      DemoShellBlockRenderItem[]
+    > = {
       top: [],
       primary: [],
       auxiliary: [],
       footer: [],
     }
 
-    for (const block of visibleBlocks) {
+    for (const { block, visibilityMode } of orderedBlocks) {
       const region = (block.region ?? "top") as "top" | "primary" | "auxiliary" | "footer"
       const fallback = `Block "${block.id}" has no supported content payload.`
 
@@ -541,7 +557,11 @@ function ResolvedDemoRoute({
         )
       }
 
-      regions[region].push(rendered)
+      regions[region].push({
+        id: block.id,
+        content: rendered,
+        visibilityMode: visibilityMode === "hidden_mounted" ? "hidden_mounted" : "visible",
+      })
     }
 
     return regions

@@ -515,7 +515,8 @@ def get_baseline_composition(
 
                 # Visibility control
                 # "visible" = shown by default
-                # "hidden" = collapsed/minimized by default
+                # "hidden_unmounted" = not rendered
+                # "hidden_mounted" = mounted but visually hidden
                 "visibility": "visible",
 
                 # Presentation hints for frontend

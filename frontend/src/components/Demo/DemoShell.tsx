@@ -8,18 +8,24 @@ import {
 import { DemoHeader } from "./DemoHeader"
 import { DemoLayout, type PanelConfig } from "./DemoLayout"
 
+export interface DemoShellBlockRenderItem {
+  id: string
+  content: React.ReactNode
+  visibilityMode: "visible" | "hidden_mounted"
+}
+
 export interface DemoShellProps {
   demoConfig: DemoConfigViewModel
   /** Panel configurations */
   panels: PanelConfig[]
   /** Blocks rendered above panel layout */
-  topBlocks?: React.ReactNode[]
+  topBlocks?: DemoShellBlockRenderItem[]
   /** Blocks rendered in primary support region */
-  primaryBlocks?: React.ReactNode[]
+  primaryBlocks?: DemoShellBlockRenderItem[]
   /** Blocks rendered in auxiliary support region */
-  auxiliaryBlocks?: React.ReactNode[]
+  auxiliaryBlocks?: DemoShellBlockRenderItem[]
   /** Blocks rendered below panel layout */
-  footerBlocks?: React.ReactNode[]
+  footerBlocks?: DemoShellBlockRenderItem[]
   /** Auto-respond toggle state */
   autoRespond: boolean
   /** Auto-respond toggle handler */
@@ -96,9 +102,15 @@ export function DemoShell ({
       >
         {topBlocks.length > 0 && (
           <div className="space-y-2">
-            {topBlocks.map((block, index) => (
-              <div key={`top-block-${index}`} className="rounded-md border bg-card/50">
-                {block}
+            {topBlocks.map((block) => (
+              <div
+                key={`top-block-${block.id}`}
+                className={cn(
+                  "rounded-md border bg-card/50",
+                  block.visibilityMode === "hidden_mounted" && "hidden",
+                )}
+              >
+                {block.content}
               </div>
             ))}
           </div>
@@ -107,16 +119,28 @@ export function DemoShell ({
         {(primaryBlocks.length > 0 || auxiliaryBlocks.length > 0) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             <div className="space-y-2">
-              {primaryBlocks.map((block, index) => (
-                <div key={`primary-block-${index}`} className="rounded-md border bg-card/50">
-                  {block}
+              {primaryBlocks.map((block) => (
+                <div
+                  key={`primary-block-${block.id}`}
+                  className={cn(
+                    "rounded-md border bg-card/50",
+                    block.visibilityMode === "hidden_mounted" && "hidden",
+                  )}
+                >
+                  {block.content}
                 </div>
               ))}
             </div>
             <div className="space-y-2">
-              {auxiliaryBlocks.map((block, index) => (
-                <div key={`aux-block-${index}`} className="rounded-md border bg-card/50">
-                  {block}
+              {auxiliaryBlocks.map((block) => (
+                <div
+                  key={`aux-block-${block.id}`}
+                  className={cn(
+                    "rounded-md border bg-card/50",
+                    block.visibilityMode === "hidden_mounted" && "hidden",
+                  )}
+                >
+                  {block.content}
                 </div>
               ))}
             </div>
@@ -129,9 +153,15 @@ export function DemoShell ({
 
         {footerBlocks.length > 0 && (
           <div className="space-y-2">
-            {footerBlocks.map((block, index) => (
-              <div key={`footer-block-${index}`} className="rounded-md border bg-card/50">
-                {block}
+            {footerBlocks.map((block) => (
+              <div
+                key={`footer-block-${block.id}`}
+                className={cn(
+                  "rounded-md border bg-card/50",
+                  block.visibilityMode === "hidden_mounted" && "hidden",
+                )}
+              >
+                {block.content}
               </div>
             ))}
           </div>

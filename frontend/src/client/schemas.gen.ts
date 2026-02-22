@@ -407,7 +407,125 @@ export const CurrentNodePublicSchema = {
 Used by players to understand their current position in a story.`
 } as const;
 
-export const DemoBlockSpecSchema = {
+export const DemoA2UIPanelOptionsSchema = {
+    properties: {},
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoA2UIPanelOptions'
+} as const;
+
+export const DemoA2UIPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'a2ui',
+            title: 'Kind',
+            default: 'a2ui'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoA2UIPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoA2UIPanelSpec'
+} as const;
+
+export const DemoAgentRosterBlockSpecSchema = {
     properties: {
         id: {
             type: 'string',
@@ -417,8 +535,9 @@ export const DemoBlockSpecSchema = {
         },
         type: {
             type: 'string',
-            enum: ['context', 'story', 'agentRoster', 'orchestratorState', 'toolCapability', 'contributionFeed', 'content'],
-            title: 'Type'
+            const: 'agentRoster',
+            title: 'Type',
+            default: 'agentRoster'
         },
         region: {
             type: 'string',
@@ -446,7 +565,7 @@ export const DemoBlockSpecSchema = {
         },
         visibility: {
             type: 'string',
-            enum: ['visible', 'hidden'],
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
             title: 'Visibility',
             default: 'visible'
         },
@@ -473,16 +592,129 @@ export const DemoBlockSpecSchema = {
             additionalProperties: true,
             type: 'object',
             title: 'Config Json'
-        },
-        content_json: {
-            additionalProperties: true,
-            type: 'object',
-            title: 'Content Json'
         }
     },
     type: 'object',
-    required: ['id', 'type'],
-    title: 'DemoBlockSpec'
+    required: ['id'],
+    title: 'DemoAgentRosterBlockSpec'
+} as const;
+
+export const DemoCanvasPanelOptionsSchema = {
+    properties: {},
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoCanvasPanelOptions'
+} as const;
+
+export const DemoCanvasPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'canvas',
+            title: 'Kind',
+            default: 'canvas'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoCanvasPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoCanvasPanelSpec'
 } as const;
 
 export const DemoChatModeSchema = {
@@ -504,6 +736,7 @@ export const DemoChatPanelOptionsSchema = {
             default: false
         }
     },
+    additionalProperties: true,
     type: 'object',
     title: 'DemoChatPanelOptions'
 } as const;
@@ -1050,14 +1283,345 @@ export const DemoConfigsPublicSchema = {
     title: 'DemoConfigsPublic'
 } as const;
 
-export const DemoContentPanelOptionsSchema = {
+export const DemoContent_InputSchema = {
     properties: {
-        sticky: {
-            type: 'boolean',
-            title: 'Sticky',
-            default: true
+        metadata: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContentMetadata'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Id'
+        },
+        format: {
+            '$ref': '#/components/schemas/ContentFormat'
+        },
+        value: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'boolean'
+                },
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    items: {},
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Value'
+        }
+    },
+    type: 'object',
+    required: ['format', 'value'],
+    title: 'DemoContent',
+    description: `Canonical renderable content payload for demo panels and blocks.
+
+This mirrors the frontend ContentRenderer contract:
+- format: canonical content format discriminator
+- value: renderable payload
+- metadata: optional display/configuration hints`
+} as const;
+
+export const DemoContent_OutputSchema = {
+    properties: {
+        metadata: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContentMetadata'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Id'
+        },
+        format: {
+            '$ref': '#/components/schemas/ContentFormat'
+        },
+        value: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'boolean'
+                },
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    items: {},
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Value'
+        }
+    },
+    type: 'object',
+    required: ['format', 'value'],
+    title: 'DemoContent',
+    description: `Canonical renderable content payload for demo panels and blocks.
+
+This mirrors the frontend ContentRenderer contract:
+- format: canonical content format discriminator
+- value: renderable payload
+- metadata: optional display/configuration hints`
+} as const;
+
+export const DemoContentBlockSpec_InputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'content',
+            title: 'Type',
+            default: 'content'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
         },
         content_json: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContent-Input'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoContentBlockSpec'
+} as const;
+
+export const DemoContentBlockSpec_OutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'content',
+            title: 'Type',
+            default: 'content'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        },
+        content_json: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContent-Output'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoContentBlockSpec'
+} as const;
+
+export const DemoContentMetadataSchema = {
+    properties: {
+        variant: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Variant'
+        },
+        label: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Label'
+        },
+        constraints: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContentMetadataConstraints'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        options: {
             anyOf: [
                 {
                     additionalProperties: true,
@@ -1067,17 +1631,91 @@ export const DemoContentPanelOptionsSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Content Json'
+            title: 'Options'
         }
     },
     type: 'object',
-    title: 'DemoContentPanelOptions',
-    description: `Content payload for 'content' panel kind.
-
-Expected format aligns with frontend ContentRenderer contract.`
+    title: 'DemoContentMetadata',
+    description: 'Metadata envelope for renderer hints and formatting options.'
 } as const;
 
-export const DemoContentPanelSpecSchema = {
+export const DemoContentMetadataConstraintsSchema = {
+    properties: {
+        isTrustedSource: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Istrustedsource'
+        },
+        cacheKey: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cachekey'
+        }
+    },
+    type: 'object',
+    title: 'DemoContentMetadataConstraints',
+    description: 'Optional constraints applied by content renderers.'
+} as const;
+
+export const DemoContentPanelOptions_InputSchema = {
+    properties: {
+        sticky: {
+            type: 'boolean',
+            title: 'Sticky',
+            default: true
+        },
+        content_json: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContent-Input'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoContentPanelOptions'
+} as const;
+
+export const DemoContentPanelOptions_OutputSchema = {
+    properties: {
+        sticky: {
+            type: 'boolean',
+            title: 'Sticky',
+            default: true
+        },
+        content_json: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContent-Output'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoContentPanelOptions'
+} as const;
+
+export const DemoContentPanelSpec_InputSchema = {
     properties: {
         id: {
             type: 'string',
@@ -1180,7 +1818,7 @@ export const DemoContentPanelSpecSchema = {
             default: 'panel'
         },
         options: {
-            '$ref': '#/components/schemas/DemoContentPanelOptions'
+            '$ref': '#/components/schemas/DemoContentPanelOptions-Input'
         }
     },
     type: 'object',
@@ -1188,7 +1826,7 @@ export const DemoContentPanelSpecSchema = {
     title: 'DemoContentPanelSpec'
 } as const;
 
-export const DemoGenericPanelSpecSchema = {
+export const DemoContentPanelSpec_OutputSchema = {
     properties: {
         id: {
             type: 'string',
@@ -1198,8 +1836,9 @@ export const DemoGenericPanelSpecSchema = {
         },
         kind: {
             type: 'string',
-            enum: ['chat', 'storyRuntime', 'participantPanel', 'content', 'a2ui', 'debug', 'canvas', 'storyEditor', 'storyPlayer'],
-            title: 'Kind'
+            const: 'content',
+            title: 'Kind',
+            default: 'content'
         },
         prominence: {
             type: 'string',
@@ -1290,12 +1929,520 @@ export const DemoGenericPanelSpecSchema = {
             default: 'panel'
         },
         options: {
-            '$ref': '#/components/schemas/DemoPanelOptions'
+            '$ref': '#/components/schemas/DemoContentPanelOptions-Output'
         }
     },
     type: 'object',
-    required: ['id', 'kind'],
-    title: 'DemoGenericPanelSpec'
+    required: ['id'],
+    title: 'DemoContentPanelSpec'
+} as const;
+
+export const DemoContextBlockSpec_InputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'context',
+            title: 'Type',
+            default: 'context'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        },
+        content_json: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContent-Input'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoContextBlockSpec'
+} as const;
+
+export const DemoContextBlockSpec_OutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'context',
+            title: 'Type',
+            default: 'context'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        },
+        content_json: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoContent-Output'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoContextBlockSpec'
+} as const;
+
+export const DemoContributionFeedBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'contributionFeed',
+            title: 'Type',
+            default: 'contributionFeed'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoContributionFeedBlockSpec'
+} as const;
+
+export const DemoDebugPanelOptionsSchema = {
+    properties: {},
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoDebugPanelOptions'
+} as const;
+
+export const DemoDebugPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'debug',
+            title: 'Kind',
+            default: 'debug'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoDebugPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoDebugPanelSpec'
+} as const;
+
+export const DemoFileExplorerBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'fileExplorer',
+            title: 'Type',
+            default: 'fileExplorer'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoFileExplorerBlockSpec'
+} as const;
+
+export const DemoGitViewBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'gitView',
+            title: 'Type',
+            default: 'gitView'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoGitViewBlockSpec'
 } as const;
 
 export const DemoLayoutModeSchema = {
@@ -1303,6 +2450,80 @@ export const DemoLayoutModeSchema = {
     enum: ['panels', 'tabs'],
     title: 'DemoLayoutMode',
     description: 'Preferred shell layout mode.'
+} as const;
+
+export const DemoOrchestratorStateBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'orchestratorState',
+            title: 'Type',
+            default: 'orchestratorState'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoOrchestratorStateBlockSpec'
 } as const;
 
 export const DemoPageCompositionBase_InputSchema = {
@@ -1374,7 +2595,7 @@ export const DemoPageCompositionBase_InputSchema = {
         },
         panels: {
             items: {
-                anyOf: [
+                oneOf: [
                     {
                         '$ref': '#/components/schemas/DemoChatPanelSpec-Input'
                     },
@@ -1382,19 +2603,106 @@ export const DemoPageCompositionBase_InputSchema = {
                         '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
                     },
                     {
-                        '$ref': '#/components/schemas/DemoContentPanelSpec'
+                        '$ref': '#/components/schemas/DemoContentPanelSpec-Input'
                     },
                     {
-                        '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                        '$ref': '#/components/schemas/DemoParticipantPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoCanvasPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoA2UIPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoDebugPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryEditorPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryPlayerPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryPlayerLegacyPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStrangePanelSpec'
                     }
-                ]
+                ],
+                discriminator: {
+                    propertyName: 'kind',
+                    mapping: {
+                        a2ui: '#/components/schemas/DemoA2UIPanelSpec',
+                        canvas: '#/components/schemas/DemoCanvasPanelSpec',
+                        chat: '#/components/schemas/DemoChatPanelSpec-Input',
+                        content: '#/components/schemas/DemoContentPanelSpec-Input',
+                        debug: '#/components/schemas/DemoDebugPanelSpec',
+                        participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
+                        storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
+                        storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
+                        storyPlayerPanel: '#/components/schemas/DemoStoryPlayerLegacyPanelSpec',
+                        storyRuntime: '#/components/schemas/DemoStoryRuntimePanelSpec',
+                        strange: '#/components/schemas/DemoStrangePanelSpec'
+                    }
+                }
             },
             type: 'array',
             title: 'Panels'
         },
         blocks: {
             items: {
-                '$ref': '#/components/schemas/DemoBlockSpec'
+                oneOf: [
+                    {
+                        '$ref': '#/components/schemas/DemoContextBlockSpec-Input'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContentBlockSpec-Input'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryMetadataBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoAgentRosterBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoOrchestratorStateBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoToolCapabilityBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContributionFeedBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGitViewBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStrangeBlockSpec'
+                    }
+                ],
+                discriminator: {
+                    propertyName: 'type',
+                    mapping: {
+                        agentRoster: '#/components/schemas/DemoAgentRosterBlockSpec',
+                        content: '#/components/schemas/DemoContentBlockSpec-Input',
+                        context: '#/components/schemas/DemoContextBlockSpec-Input',
+                        contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
+                        fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                        gitView: '#/components/schemas/DemoGitViewBlockSpec',
+                        orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
+                        story: '#/components/schemas/DemoStoryBlockSpec',
+                        storyMetadata: '#/components/schemas/DemoStoryMetadataBlockSpec',
+                        strange: '#/components/schemas/DemoStrangeBlockSpec',
+                        toolCapability: '#/components/schemas/DemoToolCapabilityBlockSpec'
+                    }
+                }
             },
             type: 'array',
             title: 'Blocks'
@@ -1483,7 +2791,7 @@ export const DemoPageCompositionBase_OutputSchema = {
         },
         panels: {
             items: {
-                anyOf: [
+                oneOf: [
                     {
                         '$ref': '#/components/schemas/DemoChatPanelSpec-Output'
                     },
@@ -1491,19 +2799,106 @@ export const DemoPageCompositionBase_OutputSchema = {
                         '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
                     },
                     {
-                        '$ref': '#/components/schemas/DemoContentPanelSpec'
+                        '$ref': '#/components/schemas/DemoContentPanelSpec-Output'
                     },
                     {
-                        '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                        '$ref': '#/components/schemas/DemoParticipantPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoCanvasPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoA2UIPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoDebugPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryEditorPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryPlayerPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryPlayerLegacyPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStrangePanelSpec'
                     }
-                ]
+                ],
+                discriminator: {
+                    propertyName: 'kind',
+                    mapping: {
+                        a2ui: '#/components/schemas/DemoA2UIPanelSpec',
+                        canvas: '#/components/schemas/DemoCanvasPanelSpec',
+                        chat: '#/components/schemas/DemoChatPanelSpec-Output',
+                        content: '#/components/schemas/DemoContentPanelSpec-Output',
+                        debug: '#/components/schemas/DemoDebugPanelSpec',
+                        participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
+                        storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
+                        storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
+                        storyPlayerPanel: '#/components/schemas/DemoStoryPlayerLegacyPanelSpec',
+                        storyRuntime: '#/components/schemas/DemoStoryRuntimePanelSpec',
+                        strange: '#/components/schemas/DemoStrangePanelSpec'
+                    }
+                }
             },
             type: 'array',
             title: 'Panels'
         },
         blocks: {
             items: {
-                '$ref': '#/components/schemas/DemoBlockSpec'
+                oneOf: [
+                    {
+                        '$ref': '#/components/schemas/DemoContextBlockSpec-Output'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContentBlockSpec-Output'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryMetadataBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoAgentRosterBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoOrchestratorStateBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoToolCapabilityBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContributionFeedBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGitViewBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStrangeBlockSpec'
+                    }
+                ],
+                discriminator: {
+                    propertyName: 'type',
+                    mapping: {
+                        agentRoster: '#/components/schemas/DemoAgentRosterBlockSpec',
+                        content: '#/components/schemas/DemoContentBlockSpec-Output',
+                        context: '#/components/schemas/DemoContextBlockSpec-Output',
+                        contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
+                        fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                        gitView: '#/components/schemas/DemoGitViewBlockSpec',
+                        orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
+                        story: '#/components/schemas/DemoStoryBlockSpec',
+                        storyMetadata: '#/components/schemas/DemoStoryMetadataBlockSpec',
+                        strange: '#/components/schemas/DemoStrangeBlockSpec',
+                        toolCapability: '#/components/schemas/DemoToolCapabilityBlockSpec'
+                    }
+                }
             },
             type: 'array',
             title: 'Blocks'
@@ -1592,7 +2987,7 @@ export const DemoPageCompositionPublicSchema = {
         },
         panels: {
             items: {
-                anyOf: [
+                oneOf: [
                     {
                         '$ref': '#/components/schemas/DemoChatPanelSpec-Output'
                     },
@@ -1600,19 +2995,106 @@ export const DemoPageCompositionPublicSchema = {
                         '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
                     },
                     {
-                        '$ref': '#/components/schemas/DemoContentPanelSpec'
+                        '$ref': '#/components/schemas/DemoContentPanelSpec-Output'
                     },
                     {
-                        '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                        '$ref': '#/components/schemas/DemoParticipantPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoCanvasPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoA2UIPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoDebugPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryEditorPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryPlayerPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryPlayerLegacyPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStrangePanelSpec'
                     }
-                ]
+                ],
+                discriminator: {
+                    propertyName: 'kind',
+                    mapping: {
+                        a2ui: '#/components/schemas/DemoA2UIPanelSpec',
+                        canvas: '#/components/schemas/DemoCanvasPanelSpec',
+                        chat: '#/components/schemas/DemoChatPanelSpec-Output',
+                        content: '#/components/schemas/DemoContentPanelSpec-Output',
+                        debug: '#/components/schemas/DemoDebugPanelSpec',
+                        participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
+                        storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
+                        storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
+                        storyPlayerPanel: '#/components/schemas/DemoStoryPlayerLegacyPanelSpec',
+                        storyRuntime: '#/components/schemas/DemoStoryRuntimePanelSpec',
+                        strange: '#/components/schemas/DemoStrangePanelSpec'
+                    }
+                }
             },
             type: 'array',
             title: 'Panels'
         },
         blocks: {
             items: {
-                '$ref': '#/components/schemas/DemoBlockSpec'
+                oneOf: [
+                    {
+                        '$ref': '#/components/schemas/DemoContextBlockSpec-Output'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContentBlockSpec-Output'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryMetadataBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoAgentRosterBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoOrchestratorStateBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoToolCapabilityBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContributionFeedBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGitViewBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStrangeBlockSpec'
+                    }
+                ],
+                discriminator: {
+                    propertyName: 'type',
+                    mapping: {
+                        agentRoster: '#/components/schemas/DemoAgentRosterBlockSpec',
+                        content: '#/components/schemas/DemoContentBlockSpec-Output',
+                        context: '#/components/schemas/DemoContextBlockSpec-Output',
+                        contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
+                        fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                        gitView: '#/components/schemas/DemoGitViewBlockSpec',
+                        orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
+                        story: '#/components/schemas/DemoStoryBlockSpec',
+                        storyMetadata: '#/components/schemas/DemoStoryMetadataBlockSpec',
+                        strange: '#/components/schemas/DemoStrangeBlockSpec',
+                        toolCapability: '#/components/schemas/DemoToolCapabilityBlockSpec'
+                    }
+                }
             },
             type: 'array',
             title: 'Blocks'
@@ -1766,7 +3248,7 @@ export const DemoPageCompositionUpdateSchema = {
             anyOf: [
                 {
                     items: {
-                        anyOf: [
+                        oneOf: [
                             {
                                 '$ref': '#/components/schemas/DemoChatPanelSpec-Input'
                             },
@@ -1774,12 +3256,49 @@ export const DemoPageCompositionUpdateSchema = {
                                 '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
                             },
                             {
-                                '$ref': '#/components/schemas/DemoContentPanelSpec'
+                                '$ref': '#/components/schemas/DemoContentPanelSpec-Input'
                             },
                             {
-                                '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                                '$ref': '#/components/schemas/DemoParticipantPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoCanvasPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoA2UIPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoDebugPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStoryEditorPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStoryPlayerPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStoryPlayerLegacyPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStrangePanelSpec'
                             }
-                        ]
+                        ],
+                        discriminator: {
+                            propertyName: 'kind',
+                            mapping: {
+                                a2ui: '#/components/schemas/DemoA2UIPanelSpec',
+                                canvas: '#/components/schemas/DemoCanvasPanelSpec',
+                                chat: '#/components/schemas/DemoChatPanelSpec-Input',
+                                content: '#/components/schemas/DemoContentPanelSpec-Input',
+                                debug: '#/components/schemas/DemoDebugPanelSpec',
+                                participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
+                                storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
+                                storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
+                                storyPlayerPanel: '#/components/schemas/DemoStoryPlayerLegacyPanelSpec',
+                                storyRuntime: '#/components/schemas/DemoStoryRuntimePanelSpec',
+                                strange: '#/components/schemas/DemoStrangePanelSpec'
+                            }
+                        }
                     },
                     type: 'array'
                 },
@@ -1793,7 +3312,57 @@ export const DemoPageCompositionUpdateSchema = {
             anyOf: [
                 {
                     items: {
-                        '$ref': '#/components/schemas/DemoBlockSpec'
+                        oneOf: [
+                            {
+                                '$ref': '#/components/schemas/DemoContextBlockSpec-Input'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoContentBlockSpec-Input'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStoryBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStoryMetadataBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoAgentRosterBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoOrchestratorStateBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoToolCapabilityBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoContributionFeedBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoGitViewBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStrangeBlockSpec'
+                            }
+                        ],
+                        discriminator: {
+                            propertyName: 'type',
+                            mapping: {
+                                agentRoster: '#/components/schemas/DemoAgentRosterBlockSpec',
+                                content: '#/components/schemas/DemoContentBlockSpec-Input',
+                                context: '#/components/schemas/DemoContextBlockSpec-Input',
+                                contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
+                                fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                                gitView: '#/components/schemas/DemoGitViewBlockSpec',
+                                orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
+                                story: '#/components/schemas/DemoStoryBlockSpec',
+                                storyMetadata: '#/components/schemas/DemoStoryMetadataBlockSpec',
+                                strange: '#/components/schemas/DemoStrangeBlockSpec',
+                                toolCapability: '#/components/schemas/DemoToolCapabilityBlockSpec'
+                            }
+                        }
                     },
                     type: 'array'
                 },
@@ -1820,17 +3389,143 @@ export const DemoPageCompositionUpdateSchema = {
     title: 'DemoPageCompositionUpdate'
 } as const;
 
-export const DemoPanelOptionsSchema = {
+export const DemoParticipantPanelOptionsSchema = {
     properties: {
-        data: {
+        showUsers: {
+            type: 'boolean',
+            title: 'Showusers',
+            default: true
+        },
+        showAgents: {
+            type: 'boolean',
+            title: 'Showagents',
+            default: true
+        },
+        compact: {
+            type: 'boolean',
+            title: 'Compact',
+            default: false
+        },
+        allowQuickAdd: {
+            type: 'boolean',
+            title: 'Allowquickadd',
+            default: true
+        }
+    },
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoParticipantPanelOptions'
+} as const;
+
+export const DemoParticipantPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'participantPanel',
+            title: 'Kind',
+            default: 'participantPanel'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
             additionalProperties: true,
             type: 'object',
-            title: 'Data'
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoParticipantPanelOptions'
         }
     },
     type: 'object',
-    title: 'DemoPanelOptions',
-    description: 'Generic options payload for panel kinds that do not yet have strict models.'
+    required: ['id'],
+    title: 'DemoParticipantPanelSpec'
 } as const;
 
 export const DemoPersonaPolicySchema = {
@@ -2071,6 +3766,520 @@ export const DemoSessionsPublicSchema = {
     title: 'DemoSessionsPublic'
 } as const;
 
+export const DemoStoryBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'story',
+            title: 'Type',
+            default: 'story'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStoryBlockSpec'
+} as const;
+
+export const DemoStoryEditorPanelOptionsSchema = {
+    properties: {},
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoStoryEditorPanelOptions'
+} as const;
+
+export const DemoStoryEditorPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'storyEditor',
+            title: 'Kind',
+            default: 'storyEditor'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoStoryEditorPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStoryEditorPanelSpec'
+} as const;
+
+export const DemoStoryMetadataBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'storyMetadata',
+            title: 'Type',
+            default: 'storyMetadata'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStoryMetadataBlockSpec'
+} as const;
+
+export const DemoStoryPlayerLegacyPanelOptionsSchema = {
+    properties: {
+        viewer_mode: {
+            type: 'boolean',
+            title: 'Viewer Mode',
+            default: false
+        }
+    },
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoStoryPlayerLegacyPanelOptions'
+} as const;
+
+export const DemoStoryPlayerLegacyPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'storyPlayerPanel',
+            title: 'Kind',
+            default: 'storyPlayerPanel'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoStoryPlayerLegacyPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStoryPlayerLegacyPanelSpec'
+} as const;
+
+export const DemoStoryPlayerPanelOptionsSchema = {
+    properties: {
+        viewer_mode: {
+            type: 'boolean',
+            title: 'Viewer Mode',
+            default: false
+        }
+    },
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoStoryPlayerPanelOptions'
+} as const;
+
+export const DemoStoryPlayerPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'storyPlayer',
+            title: 'Kind',
+            default: 'storyPlayer'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoStoryPlayerPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStoryPlayerPanelSpec'
+} as const;
+
 export const DemoStoryRuntimePanelOptionsSchema = {
     properties: {
         send_runtime_events_to_chat: {
@@ -2084,6 +4293,7 @@ export const DemoStoryRuntimePanelOptionsSchema = {
             default: false
         }
     },
+    additionalProperties: true,
     type: 'object',
     title: 'DemoStoryRuntimePanelOptions'
 } as const;
@@ -2197,6 +4407,272 @@ export const DemoStoryRuntimePanelSpecSchema = {
     type: 'object',
     required: ['id'],
     title: 'DemoStoryRuntimePanelSpec'
+} as const;
+
+export const DemoStrangeBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'strange',
+            title: 'Type',
+            default: 'strange'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStrangeBlockSpec'
+} as const;
+
+export const DemoStrangePanelOptionsSchema = {
+    properties: {},
+    additionalProperties: true,
+    type: 'object',
+    title: 'DemoStrangePanelOptions'
+} as const;
+
+export const DemoStrangePanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'strange',
+            title: 'Kind',
+            default: 'strange'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoStrangePanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStrangePanelSpec'
+} as const;
+
+export const DemoToolCapabilityBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'toolCapability',
+            title: 'Type',
+            default: 'toolCapability'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoToolCapabilityBlockSpec'
 } as const;
 
 export const EntityContextSchema = {

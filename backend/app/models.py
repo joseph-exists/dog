@@ -3833,7 +3833,7 @@ DemoBlockType = Literal[
     "strange",
 ]
 DemoBlockRegion = Literal["top", "primary", "auxiliary", "footer"]
-DemoBlockVisibility = Literal["visible", "hidden"]
+DemoBlockVisibility = Literal["visible", "hidden_unmounted", "hidden_mounted"]
 
 
 # =============================================================================

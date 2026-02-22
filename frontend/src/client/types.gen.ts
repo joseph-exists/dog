@@ -119,13 +119,44 @@ export type CurrentNodePublic = {
 } | null);
 };
 
-export type DemoBlockSpec = {
+export type DemoA2UIPanelOptions = {
+    [key: string]: unknown;
+};
+
+export type DemoA2UIPanelSpec = {
     id: string;
-    type: 'context' | 'story' | 'agentRoster' | 'orchestratorState' | 'toolCapability' | 'contributionFeed' | 'content';
+    kind?: "a2ui";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoA2UIPanelOptions;
+};
+
+export type prominence = 'primary' | 'auxiliary';
+
+export type viewport_mode = 'panel' | 'page';
+
+export type DemoAgentRosterBlockSpec = {
+    id: string;
+    type?: "agentRoster";
     region?: 'top' | 'primary' | 'auxiliary' | 'footer';
     order?: number;
     title?: (string | null);
-    visibility?: 'visible' | 'hidden';
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
     /**
      * Optional block-level theme override. If absent, composition/page theme resolution applies.
      */
@@ -139,16 +170,38 @@ export type DemoBlockSpec = {
     config_json?: {
         [key: string]: unknown;
     };
-    content_json?: {
-        [key: string]: unknown;
-    };
 };
-
-export type type = 'context' | 'story' | 'agentRoster' | 'orchestratorState' | 'toolCapability' | 'contributionFeed' | 'content';
 
 export type region = 'top' | 'primary' | 'auxiliary' | 'footer';
 
-export type visibility = 'visible' | 'hidden';
+export type visibility = 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+
+export type DemoCanvasPanelOptions = {
+    [key: string]: unknown;
+};
+
+export type DemoCanvasPanelSpec = {
+    id: string;
+    kind?: "canvas";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoCanvasPanelOptions;
+};
 
 /**
  * UI mode for chat surfaces in demo routes.
@@ -158,6 +211,7 @@ export type DemoChatMode = 'participant' | 'observer';
 export type DemoChatPanelOptions = {
     mode?: DemoChatMode;
     include_internal_messages?: boolean;
+    [key: string]: unknown | DemoChatMode | boolean;
 };
 
 export type DemoChatPanelSpec_Input = {
@@ -182,10 +236,6 @@ export type DemoChatPanelSpec_Input = {
     viewport_mode?: 'panel' | 'page';
     options?: DemoChatPanelOptions;
 };
-
-export type prominence = 'primary' | 'auxiliary';
-
-export type viewport_mode = 'panel' | 'page';
 
 export type DemoChatPanelSpec_Output = {
     id: string;
@@ -305,18 +355,118 @@ export type DemoConfigUpdate = {
 };
 
 /**
- * Content payload for 'content' panel kind.
+ * Canonical renderable content payload for demo panels and blocks.
  *
- * Expected format aligns with frontend ContentRenderer contract.
+ * This mirrors the frontend ContentRenderer contract:
+ * - format: canonical content format discriminator
+ * - value: renderable payload
+ * - metadata: optional display/configuration hints
  */
-export type DemoContentPanelOptions = {
-    sticky?: boolean;
-    content_json?: ({
+export type DemoContent_Input = {
+    metadata?: (DemoContentMetadata | null);
+    id?: (string | null);
+    format: ContentFormat;
+    value: (string | number | boolean | {
+    [key: string]: unknown;
+} | Array<unknown> | null);
+};
+
+/**
+ * Canonical renderable content payload for demo panels and blocks.
+ *
+ * This mirrors the frontend ContentRenderer contract:
+ * - format: canonical content format discriminator
+ * - value: renderable payload
+ * - metadata: optional display/configuration hints
+ */
+export type DemoContent_Output = {
+    metadata?: (DemoContentMetadata | null);
+    id?: (string | null);
+    format: ContentFormat;
+    value: (string | number | boolean | {
+    [key: string]: unknown;
+} | Array<unknown> | null);
+};
+
+export type DemoContentBlockSpec_Input = {
+    id: string;
+    type?: "content";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+    content_json?: (DemoContent_Input | null);
+};
+
+export type DemoContentBlockSpec_Output = {
+    id: string;
+    type?: "content";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+    content_json?: (DemoContent_Output | null);
+};
+
+/**
+ * Metadata envelope for renderer hints and formatting options.
+ */
+export type DemoContentMetadata = {
+    variant?: (string | null);
+    label?: (string | null);
+    constraints?: (DemoContentMetadataConstraints | null);
+    options?: ({
     [key: string]: unknown;
 } | null);
 };
 
-export type DemoContentPanelSpec = {
+/**
+ * Optional constraints applied by content renderers.
+ */
+export type DemoContentMetadataConstraints = {
+    isTrustedSource?: (boolean | null);
+    cacheKey?: (string | null);
+};
+
+export type DemoContentPanelOptions_Input = {
+    sticky?: boolean;
+    content_json?: (DemoContent_Input | null);
+    [key: string]: unknown | boolean;
+};
+
+export type DemoContentPanelOptions_Output = {
+    sticky?: boolean;
+    content_json?: (DemoContent_Output | null);
+    [key: string]: unknown | boolean;
+};
+
+export type DemoContentPanelSpec_Input = {
     id: string;
     kind?: "content";
     prominence?: 'primary' | 'auxiliary';
@@ -336,12 +486,12 @@ export type DemoContentPanelSpec = {
     min_size?: (number | null);
     max_size?: (number | null);
     viewport_mode?: 'panel' | 'page';
-    options?: DemoContentPanelOptions;
+    options?: DemoContentPanelOptions_Input;
 };
 
-export type DemoGenericPanelSpec = {
+export type DemoContentPanelSpec_Output = {
     id: string;
-    kind: 'chat' | 'storyRuntime' | 'participantPanel' | 'content' | 'a2ui' | 'debug' | 'canvas' | 'storyEditor' | 'storyPlayer';
+    kind?: "content";
     prominence?: 'primary' | 'auxiliary';
     order?: number;
     title?: (string | null);
@@ -359,15 +509,174 @@ export type DemoGenericPanelSpec = {
     min_size?: (number | null);
     max_size?: (number | null);
     viewport_mode?: 'panel' | 'page';
-    options?: DemoPanelOptions;
+    options?: DemoContentPanelOptions_Output;
 };
 
-export type kind = 'chat' | 'storyRuntime' | 'participantPanel' | 'content' | 'a2ui' | 'debug' | 'canvas' | 'storyEditor' | 'storyPlayer';
+export type DemoContextBlockSpec_Input = {
+    id: string;
+    type?: "context";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+    content_json?: (DemoContent_Input | null);
+};
+
+export type DemoContextBlockSpec_Output = {
+    id: string;
+    type?: "context";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+    content_json?: (DemoContent_Output | null);
+};
+
+export type DemoContributionFeedBlockSpec = {
+    id: string;
+    type?: "contributionFeed";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoDebugPanelOptions = {
+    [key: string]: unknown;
+};
+
+export type DemoDebugPanelSpec = {
+    id: string;
+    kind?: "debug";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoDebugPanelOptions;
+};
+
+export type DemoFileExplorerBlockSpec = {
+    id: string;
+    type?: "fileExplorer";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoGitViewBlockSpec = {
+    id: string;
+    type?: "gitView";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
 
 /**
  * Preferred shell layout mode.
  */
 export type DemoLayoutMode = 'panels' | 'tabs';
+
+export type DemoOrchestratorStateBlockSpec = {
+    id: string;
+    type?: "orchestratorState";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
 
 /**
  * Canonical demo composition contract consumed by frontend renderers.
@@ -394,8 +703,8 @@ export type DemoPageCompositionBase_Input = {
     presentation_json?: {
         [key: string]: unknown;
     };
-    panels?: Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)>;
-    blocks?: Array<DemoBlockSpec>;
+    panels?: Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Input | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)>;
+    blocks?: Array<(DemoContextBlockSpec_Input | DemoContentBlockSpec_Input | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)>;
     metadata_json?: {
         [key: string]: unknown;
     };
@@ -426,8 +735,8 @@ export type DemoPageCompositionBase_Output = {
     presentation_json?: {
         [key: string]: unknown;
     };
-    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)>;
-    blocks?: Array<DemoBlockSpec>;
+    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Output | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)>;
+    blocks?: Array<(DemoContextBlockSpec_Output | DemoContentBlockSpec_Output | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)>;
     metadata_json?: {
         [key: string]: unknown;
     };
@@ -451,8 +760,8 @@ export type DemoPageCompositionPublic = {
     presentation_json?: {
         [key: string]: unknown;
     };
-    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)>;
-    blocks?: Array<DemoBlockSpec>;
+    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Output | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)>;
+    blocks?: Array<(DemoContextBlockSpec_Output | DemoContentBlockSpec_Output | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)>;
     metadata_json?: {
         [key: string]: unknown;
     };
@@ -475,20 +784,42 @@ export type DemoPageCompositionUpdate = {
     presentation_json?: ({
     [key: string]: unknown;
 } | null);
-    panels?: (Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)> | null);
-    blocks?: (Array<DemoBlockSpec> | null);
+    panels?: (Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Input | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)> | null);
+    blocks?: (Array<(DemoContextBlockSpec_Input | DemoContentBlockSpec_Input | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)> | null);
     metadata_json?: ({
     [key: string]: unknown;
 } | null);
 };
 
-/**
- * Generic options payload for panel kinds that do not yet have strict models.
- */
-export type DemoPanelOptions = {
-    data?: {
+export type DemoParticipantPanelOptions = {
+    showUsers?: boolean;
+    showAgents?: boolean;
+    compact?: boolean;
+    allowQuickAdd?: boolean;
+    [key: string]: unknown | boolean;
+};
+
+export type DemoParticipantPanelSpec = {
+    id: string;
+    kind?: "participantPanel";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
         [key: string]: unknown;
     };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoParticipantPanelOptions;
 };
 
 /**
@@ -554,9 +885,137 @@ export type DemoSessionUpdate = {
     status?: (DemoSessionStatus | null);
 };
 
+export type DemoStoryBlockSpec = {
+    id: string;
+    type?: "story";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoStoryEditorPanelOptions = {
+    [key: string]: unknown;
+};
+
+export type DemoStoryEditorPanelSpec = {
+    id: string;
+    kind?: "storyEditor";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoStoryEditorPanelOptions;
+};
+
+export type DemoStoryMetadataBlockSpec = {
+    id: string;
+    type?: "storyMetadata";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoStoryPlayerLegacyPanelOptions = {
+    viewer_mode?: boolean;
+    [key: string]: unknown | boolean;
+};
+
+export type DemoStoryPlayerLegacyPanelSpec = {
+    id: string;
+    kind?: "storyPlayerPanel";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoStoryPlayerLegacyPanelOptions;
+};
+
+export type DemoStoryPlayerPanelOptions = {
+    viewer_mode?: boolean;
+    [key: string]: unknown | boolean;
+};
+
+export type DemoStoryPlayerPanelSpec = {
+    id: string;
+    kind?: "storyPlayer";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoStoryPlayerPanelOptions;
+};
+
 export type DemoStoryRuntimePanelOptions = {
     send_runtime_events_to_chat?: boolean;
     viewer_mode?: boolean;
+    [key: string]: unknown | boolean;
 };
 
 export type DemoStoryRuntimePanelSpec = {
@@ -580,6 +1039,77 @@ export type DemoStoryRuntimePanelSpec = {
     max_size?: (number | null);
     viewport_mode?: 'panel' | 'page';
     options?: DemoStoryRuntimePanelOptions;
+};
+
+export type DemoStrangeBlockSpec = {
+    id: string;
+    type?: "strange";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoStrangePanelOptions = {
+    [key: string]: unknown;
+};
+
+export type DemoStrangePanelSpec = {
+    id: string;
+    kind?: "strange";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoStrangePanelOptions;
+};
+
+export type DemoToolCapabilityBlockSpec = {
+    id: string;
+    type?: "toolCapability";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
 };
 
 /**

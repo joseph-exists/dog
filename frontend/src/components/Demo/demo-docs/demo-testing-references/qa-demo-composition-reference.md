@@ -359,7 +359,7 @@ Kind-specific `options`:
 | `region` | string | `"top"`, `"primary"`, `"auxiliary"`, `"footer"` | Placement hint |
 | `order` | number | integer `>= 1` | Sort order in region |
 | `title` | string/null | any | Optional |
-| `visibility` | string | `"visible"` or `"hidden"` | |
+| `visibility` | string | `"visible"`, `"hidden_unmounted"`, or `"hidden_mounted"` | |
 | `theme_id` | UUID/null | valid UUID or null | Block-level theme override |
 | `presentation_json` | object | free-form JSON object | Render/display hints |
 | `config_json` | object | free-form JSON object | Block config |
