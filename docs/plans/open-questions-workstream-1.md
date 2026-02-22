@@ -82,11 +82,15 @@
 - regenerated OpenAPI/client artifacts
 
 ## Next Work (After Workstream 1)
-1. Start Workstream 3 renderer coverage for active kinds only.
+1. Workstream 3 renderer coverage for active kinds is complete (panel + block mapping with dedicated block components).
 2. Keep compatibility fallback behavior for deferred kinds:
 - `storyPlayerPanel`
 - `strange` (panel and block)
-3. Revisit deferred kinds after renderer ownership and acceptance scope are defined.
+3. Prioritize WS3/WS4 validation work:
+- add renderer selection/fallback/visibility tests
+- run acceptance validation for demos A/B/C/D
+- update `active-demo-integration-snapshot.md` with completed coverage and remaining risks
+4. Revisit deferred kinds after renderer ownership and acceptance scope are defined.
 
 ## Evidence Required at Review
 1. OpenAPI schema diff showing visibility/options contract changes.

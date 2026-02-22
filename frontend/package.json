@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.build.json && vite build",
     "lint": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
     "preview": "vite preview",
+    "test:unit": "playwright test -c playwright.unit.config.ts",
     "generate-client": "openapi-ts"
   },
   "dependencies": {

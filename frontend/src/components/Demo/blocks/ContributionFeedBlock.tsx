@@ -9,7 +9,7 @@ interface ContributionFeedBlockProps {
   streamingMessage: { agent_name: string; content: string } | null
 }
 
-interface ContributionFeedConfig {
+export interface ContributionFeedConfig {
   max_items: number
   include_internal: boolean
   show_sender_type: boolean
@@ -17,7 +17,12 @@ interface ContributionFeedConfig {
   show_config_json: boolean
 }
 
-function toConfig(value: unknown): ContributionFeedConfig {
+interface ContributionFeedSelection {
+  filtered: MessageViewModel[]
+  recentMessages: MessageViewModel[]
+}
+
+export function parseContributionFeedConfig(value: unknown): ContributionFeedConfig {
   const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
 
   const maxItemsRaw = raw.max_items
@@ -35,7 +40,28 @@ function toConfig(value: unknown): ContributionFeedConfig {
   }
 }
 
-function formatSenderType(value: MessageViewModel["sender_type"]): string {
+export function selectContributionFeedMessages({
+  config,
+  messages,
+}: {
+  config: ContributionFeedConfig
+  messages: MessageViewModel[]
+}): ContributionFeedSelection {
+  const filtered = config.include_internal
+    ? messages
+    : messages.filter((message) => message.sender_type !== "agent_internal")
+
+  const recentMessages = [...filtered]
+    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+    .slice(0, config.max_items)
+
+  return {
+    filtered,
+    recentMessages,
+  }
+}
+
+export function formatContributionSenderType(value: MessageViewModel["sender_type"]): string {
   if (value === "agent_internal") return "agent/internal"
   return value
 }
@@ -50,15 +76,8 @@ export function ContributionFeedBlock({
   messages,
   streamingMessage,
 }: ContributionFeedBlockProps) {
-  const parsedConfig = toConfig(config)
-
-  const filtered = parsedConfig.include_internal
-    ? messages
-    : messages.filter((message) => message.sender_type !== "agent_internal")
-
-  const recentMessages = [...filtered]
-    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
-    .slice(0, parsedConfig.max_items)
+  const parsedConfig = parseContributionFeedConfig(config)
+  const selection = selectContributionFeedMessages({ config: parsedConfig, messages })
 
   return (
     <div className="p-4 space-y-4">
@@ -70,7 +89,7 @@ export function ContributionFeedBlock({
       <div className="flex flex-wrap gap-2">
         <Badge variant="outline" className="gap-1">
           <MessageSquare className="h-3 w-3" />
-          Messages: {filtered.length}
+          Messages: {selection.filtered.length}
         </Badge>
         <Badge variant={parsedConfig.include_internal ? "default" : "secondary"}>
           Internal {parsedConfig.include_internal ? "included" : "hidden"}
@@ -84,18 +103,18 @@ export function ContributionFeedBlock({
       </div>
 
       <div className="rounded-md border bg-muted/20 p-3">
-        {recentMessages.length === 0 ? (
+        {selection.recentMessages.length === 0 ? (
           <div className="text-xs text-muted-foreground">No contributions to display.</div>
         ) : (
           <div className="space-y-2">
-            {recentMessages.map((message) => (
+            {selection.recentMessages.map((message) => (
               <div key={message.message_id} className="rounded-md border bg-background/60 p-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-medium truncate">{message.sender_name}</div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {parsedConfig.show_sender_type && (
                       <Badge variant="secondary" className="text-[10px]">
-                        {formatSenderType(message.sender_type)}
+                        {formatContributionSenderType(message.sender_type)}
                       </Badge>
                     )}
                     {parsedConfig.show_timestamps && (

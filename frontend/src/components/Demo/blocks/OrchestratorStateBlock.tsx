@@ -12,18 +12,43 @@ interface OrchestratorStateBlockProps {
   roomAgents: DemoRoomAgentData[]
 }
 
-interface OrchestratorStateConfig {
+export interface OrchestratorStateConfig {
   show_agent_list: boolean
   only_active_agents: boolean
   show_config_json: boolean
 }
 
-function toConfig(value: unknown): OrchestratorStateConfig {
+interface OrchestratorStateSummary {
+  filteredAgents: DemoRoomAgentData[]
+  orchestrators: DemoRoomAgentData[]
+  activeAgents: DemoRoomAgentData[]
+}
+
+export function parseOrchestratorStateConfig(value: unknown): OrchestratorStateConfig {
   const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
   return {
     show_agent_list: raw.show_agent_list !== false,
     only_active_agents: raw.only_active_agents !== false,
     show_config_json: raw.show_config_json === true,
+  }
+}
+
+export function summarizeOrchestratorState({
+  config,
+  roomAgents,
+}: {
+  config: OrchestratorStateConfig
+  roomAgents: DemoRoomAgentData[]
+}): OrchestratorStateSummary {
+  const filteredAgents = config.only_active_agents
+    ? roomAgents.filter((agent) => agent.is_enabled)
+    : roomAgents
+  const orchestrators = filteredAgents.filter((agent) => agent.is_coordinator)
+  const activeAgents = roomAgents.filter((agent) => agent.is_enabled)
+  return {
+    filteredAgents,
+    orchestrators,
+    activeAgents,
   }
 }
 
@@ -36,13 +61,8 @@ export function OrchestratorStateBlock({
   runtimeHasRuntime,
   roomAgents,
 }: OrchestratorStateBlockProps) {
-  const parsedConfig = toConfig(config)
-  const filteredAgents = parsedConfig.only_active_agents
-    ? roomAgents.filter((agent) => agent.is_enabled)
-    : roomAgents
-
-  const orchestrators = filteredAgents.filter((agent) => agent.is_coordinator)
-  const activeAgents = roomAgents.filter((agent) => agent.is_enabled)
+  const parsedConfig = parseOrchestratorStateConfig(config)
+  const summary = summarizeOrchestratorState({ config: parsedConfig, roomAgents })
 
   return (
     <div className="p-4 space-y-4">
@@ -71,22 +91,22 @@ export function OrchestratorStateBlock({
         </div>
         <div className="rounded-md border bg-muted/20 p-3">
           <div className="text-xs text-muted-foreground">Active agents</div>
-          <div className="mt-1 text-lg font-semibold">{activeAgents.length}</div>
+          <div className="mt-1 text-lg font-semibold">{summary.activeAgents.length}</div>
         </div>
         <div className="rounded-md border bg-muted/20 p-3">
           <div className="text-xs text-muted-foreground">Orchestrators</div>
-          <div className="mt-1 text-lg font-semibold">{orchestrators.length}</div>
+          <div className="mt-1 text-lg font-semibold">{summary.orchestrators.length}</div>
         </div>
       </div>
 
       {parsedConfig.show_agent_list && (
         <div className="rounded-md border bg-muted/20 p-3">
           <div className="mb-2 text-xs text-muted-foreground">Orchestration agents</div>
-          {filteredAgents.length === 0 ? (
+          {summary.filteredAgents.length === 0 ? (
             <div className="text-xs text-muted-foreground">No agents available for orchestration summary.</div>
           ) : (
             <div className="space-y-2">
-              {filteredAgents.map((agent) => (
+              {summary.filteredAgents.map((agent) => (
                 <div key={agent.id} className="flex items-center justify-between gap-2 text-sm">
                   <div className="min-w-0 flex items-center gap-2">
                     {agent.is_coordinator ? (

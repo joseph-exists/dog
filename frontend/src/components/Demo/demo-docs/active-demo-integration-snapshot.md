@@ -58,50 +58,48 @@ Use this as the planning and execution artifact for the next demo integration sl
 1. Session payload contract cutover to `ResolveDemoEntryPayload`.
 2. Backend config composition CRUD endpoints.
 3. Route-native use of resolved composition data.
-4. Top-level block rendering path for `content` and `context`.
+4. Top-level block rendering path for all active block kinds:
+- `content`
+- `context`
+- `story`
+- `storyMetadata`
+- `agentRoster`
+- `orchestratorState`
+- `toolCapability`
+- `contributionFeed`
+- `gitView`
+- `fileExplorer`
 5. Session room isolation + autostart policy guardrails.
 6. Content rendering migration from showcase/demo content to authored composition payloads.
+7. Registry-based panel/block mapping in demo route with explicit fallback handling for unknown kinds.
 
 ### Partially Complete
 1. Panel coverage:
-- wired: `storyRuntime`, `chat`, `content`, `participantPanel`, `canvas`
-- not wired in demo route mapping yet: `a2ui`, `storyEditor`, `debug`, `storyPlayer`
-2. Block coverage:
-- wired: `content`, `context`
-- remaining for scaffolding goals: story/roster/orchestrator/tool/contribution-focused blocks
-3. DemoShell contract:
+- wired for active scope: `storyRuntime`, `chat`, `content`, `participantPanel`, `canvas`, `a2ui`, `storyEditor`, `debug`, `storyPlayer`
+- deferred compatibility kinds remain on fallback path: `storyPlayerPanel`, `strange`
+2. DemoShell contract:
 - supports block regions and mapped panel configs
 - still takes render-ready panel props, not a single composition/view-model contract
 
 ### Not Yet Complete
 1. User override management endpoints (read/write for per-user composition override lifecycle).
 2. Contract-level creator operations for clone/publish flows (optional in `todo-alpha`, not required for core route render).
-3. Demo C and D narrative-support primitives from scaffolding (`OrchestratorStateBlock`, `ToolCapabilityBlock`, contribution attribution).
+3. Renderer-focused test coverage for registry selection/fallback and visibility/runtime semantics.
+4. Acceptance-matrix execution evidence for demos A/B/C/D in this doc set.
 
 ## Remaining Delta (Prioritized)
 
-### Delta 1: Finish Panel Mapping Coverage
-1. Add route/shell render mappings for:
-- `a2ui`
-- `storyEditor`
-- `debug`
-- `storyPlayer`
-2. Ensure each mapping receives consistent runtime context (`roomId`, `storyId`, `canWrite`, runtime status).
-3. Add focused QA compositions that exercise each newly mapped panel kind.
-
-### Delta 2: Expand Composition Block Support
-1. Keep `context`/`content` path as baseline.
-2. Add first-class story metadata block support for Demo B presentation.
-3. Add roster/contribution/orchestration block path needed by Demo C/D narratives.
-4. Document block type-to-renderer mapping and fallback behavior.
-5. Convert the documented content rendering checks into a repeatable QA script/reference card set.
-
-### Delta 3: Tighten DemoShell Contract
+### Delta 1: Tighten DemoShell Contract
 1. Move from ad-hoc prop bundle toward a structured composition input model (`header`, `blocks`, `panels`, `status`).
 2. Keep current behavior stable while introducing adapter layer for compatibility.
 3. Make route simpler by reducing panel-specific prop drift and repeated context plumbing.
 
-### Delta 4: Close Creator-Flow Contract Gaps
+### Delta 2: Validate Renderer + Acceptance Behavior
+1. Add renderer tests for registry selection, unknown-kind fallback, and visibility mode behavior.
+2. Add QA evidence for A/B/C/D compositions using current active panel/block mappings.
+3. Add targeted checks for runtime-coupled blocks (`storyMetadata`, `orchestratorState`, `contributionFeed`) and agent-coupled blocks (`agentRoster`, `toolCapability`).
+
+### Delta 3: Close Creator-Flow Contract Gaps
 1. Add user override API surface if per-user composition edits are in scope for this slice.
 2. Decide whether clone/publish is required now or deferred; keep core path as:
 - create config
@@ -114,9 +112,11 @@ Use this as the planning and execution artifact for the next demo integration sl
 2. QA can validate at least one composition that includes:
 - top context/content block
 - `storyRuntime` + `chat` on same isolated room
-3. QA can validate expanded panel mapping set beyond baseline:
-- `participantPanel`, `canvas`, plus at least two of `a2ui`/`storyEditor`/`debug`/`storyPlayer`
-4. DemoShell continues to render composition-driven themes, blocks, and panels without local recomposition.
+3. QA can validate full active panel mapping set:
+- `storyRuntime`, `chat`, `content`, `participantPanel`, `canvas`, `a2ui`, `storyEditor`, `debug`, `storyPlayer`
+4. QA can validate active block mapping set with dedicated renderers:
+- `storyMetadata`, `agentRoster`, `orchestratorState`, `toolCapability`, `contributionFeed`, `gitView`, `fileExplorer`
+5. DemoShell continues to render composition-driven themes, blocks, and panels without local recomposition.
 
 ## Notes
 1. `todo-alpha.md` remains historical context but is no longer the active tracker.

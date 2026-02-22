@@ -317,29 +317,29 @@ This is not the concern of Workstream 1.
 2. Eliminate unsupported-kind fallbacks for intended A/B/C/D paths.
 
 ### Panel mapping checklist
-1. `storyRuntime`
-2. `chat`
-3. `content`
-4. `participantPanel`
-5. `canvas`
-6. `a2ui`
-7. `storyEditor`
-8. `storyPlayer`
-9. `debug`
+1. [x] `storyRuntime`
+2. [x] `chat`
+3. [x] `content`
+4. [x] `participantPanel`
+5. [x] `canvas`
+6. [x] `a2ui`
+7. [x] `storyEditor`
+8. [x] `storyPlayer`
+9. [x] `debug`
 
 ### Block mapping checklist
-1. `context`
-2. `content`
-3. `story`
-4. `storyMetadata`
-5. `agentRoster`
-6. `orchestratorState`
-7. `toolCapability`
-8. `contributionFeed`
-9. `gitView`
-10. `fileExplorer`
-11. Explicit fallback renderer for unknown types with non-fatal diagnostics
-12. Reuse existing fallback renderer path where possible.
+1. [x] `context`
+2. [x] `content`
+3. [x] `story`
+4. [x] `storyMetadata` (dedicated component)
+5. [x] `agentRoster` (dedicated component)
+6. [x] `orchestratorState` (dedicated component)
+7. [x] `toolCapability` (dedicated component)
+8. [x] `contributionFeed` (dedicated component)
+9. [x] `gitView` (dedicated component)
+10. [x] `fileExplorer` (dedicated component)
+11. [x] Explicit fallback renderer for unknown types with non-fatal diagnostics
+12. [x] Reuse existing fallback renderer path where possible.
 
 ### Deferred Compatibility Kinds (Not in Current WS3 Scope)
 1. Panel `storyPlayerPanel`
@@ -347,17 +347,31 @@ This is not the concern of Workstream 1.
 3. Block `strange`
 
 ### Plan
-1. Add renderer registry modules keyed by panel `kind` and block `type`.
-2. Route-level mapping delegates to registry, not long inline `if` chains.
-3. Route-level content rendering delegates to a `Common/ContentRenderer` adapter for canonical `Content`.
-4. Pass a normalized runtime context object to all renderers.
-5. Add unit tests for renderer selection, fallback behavior, and panel/block content parity.
-6. Add renderer tests for:
+1. [x] Add renderer registry modules keyed by panel `kind` and block `type`.
+2. [x] Route-level mapping delegates to registry, not long inline `if` chains.
+3. [x] Route-level content rendering delegates to a `Common/ContentRenderer` adapter for canonical `Content`.
+4. [x] Pass a normalized runtime context object to all renderers.
+5. [ ] Add unit tests for renderer selection, fallback behavior, and panel/block content parity.
+6. [ ] Add renderer tests for:
 - nested node rendering
 - hidden mounted/unmounted behavior
 - hidden-mounted subscription/listener + side-effect behavior
 - stacked container behavior
 - theme precedence resolution across composition/node/content layers
+
+### Workstream 3 Status (2026-02-22)
+1. Active-scope renderer coverage is implemented end-to-end.
+2. Dedicated block renderer components are in place for:
+- `storyMetadata`
+- `agentRoster`
+- `orchestratorState`
+- `toolCapability`
+- `contributionFeed`
+- `gitView`
+- `fileExplorer`
+3. Registry-based route wiring is complete for active panel and block kinds.
+4. Frontend build has been verified after WS3 mapping changes.
+5. Remaining WS3 scope is test coverage and acceptance validation, not additional active-kind mapping.
 
 ### Engineering quality value
 1. Reduces branching complexity in route code.
@@ -416,6 +430,7 @@ Must render `canvas` + participant/contribution context with stable layout and r
 ### Phase 3: Frontend renderer completion
 1. Implement registry-based mappings.
 2. Complete panel/block kind coverage for A/B/C/D scope.
+3. Add renderer-focused test coverage for selection, fallback behavior, and visibility/runtime semantics.
 
 ### Phase 4: Acceptance and release gating
 1. Execute A/B/C/D acceptance matrix.
@@ -452,7 +467,7 @@ Must render `canvas` + participant/contribution context with stable layout and r
 1. Hardened backend composition models with discriminators and validators.
 2. Updated demo endpoints with validated contract lifecycle behavior.
 3. Stable generated frontend SDK/types/schemas aligned with OpenAPI.
-4. Completed panel/block renderer mapping for scoped kinds.
+4. Completed panel/block renderer mapping for scoped kinds. (implemented)
 5. A/B/C/D acceptance suite and documented pass/fail outcomes.
 6. Updated `active-demo-integration-snapshot.md` reflecting new completion state.
 7. Canonical content contract documented and verified across demo and node render paths.
@@ -464,7 +479,7 @@ Must render `canvas` + participant/contribution context with stable layout and r
 
 1. Composition contract changes are implemented through the v2 hardened schema path.
 2. OpenAPI and generated frontend client artifacts are synchronized and CI-enforced.
-3. Demo route handles all scoped panel/block kinds through typed mapping paths.
+3. Demo route handles all scoped panel/block kinds through typed mapping paths. (implemented)
 4. A/B/C/D acceptance criteria pass in automated and QA validation flows.
 5. The active integration snapshot is updated with objective status changes and remaining deltas.
 6. Canonical content payload renders consistently across panel/block/node surfaces.

@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react"
 import { useRoomRuntime } from "@/hooks/useRoomRuntime"
+import type { RoomRuntimeViewModel } from "@/services/roomRuntimeService"
 
 interface StoryMetadataBlockProps {
   title?: string | null
@@ -12,10 +13,39 @@ interface StoryMetadataBlockProps {
   config: unknown
 }
 
-function shouldShowRawConfig(value: unknown): boolean {
+interface StoryMetadataRuntimeState {
+  isLoading: boolean
+  hasRuntime: boolean
+  statusLabel: "running" | "not started"
+  revisionLabel: string | number
+  currentNodeLabel: string
+  availableChoices: number
+}
+
+export function shouldShowRawStoryMetadataConfig(value: unknown): boolean {
   if (!value || typeof value !== "object") return false
   const raw = value as Record<string, unknown>
   return raw.show_config_json === true
+}
+
+export function deriveStoryMetadataRuntimeState({
+  runtime,
+  isLoading,
+  runtimeHasRuntime,
+}: {
+  runtime: RoomRuntimeViewModel | null
+  isLoading: boolean
+  runtimeHasRuntime: boolean
+}): StoryMetadataRuntimeState {
+  const hasRuntime = runtime?.hasRuntime ?? runtimeHasRuntime
+  return {
+    isLoading,
+    hasRuntime,
+    statusLabel: hasRuntime ? "running" : "not started",
+    revisionLabel: runtime?.revision ?? "-",
+    currentNodeLabel: runtime?.currentNode?.title ?? "-",
+    availableChoices: runtime?.availableChoices.length ?? 0,
+  }
 }
 
 export function StoryMetadataBlock({
@@ -29,7 +59,11 @@ export function StoryMetadataBlock({
   config,
 }: StoryMetadataBlockProps) {
   const { runtime, isLoading } = useRoomRuntime(roomId)
-  const hasRuntime = runtime?.hasRuntime ?? runtimeHasRuntime
+  const derived = deriveStoryMetadataRuntimeState({
+    runtime,
+    isLoading,
+    runtimeHasRuntime,
+  })
 
   return (
     <div className="p-4 space-y-4">
@@ -54,20 +88,20 @@ export function StoryMetadataBlock({
 
       <div className="rounded-md border bg-muted/20 p-3 space-y-2">
         <div className="text-xs text-muted-foreground">Runtime state</div>
-        {isLoading ? (
+        {derived.isLoading ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Loading runtime...
           </div>
         ) : (
           <>
-            <div className="text-sm">Status: {hasRuntime ? "running" : "not started"}</div>
-            <div className="text-xs text-muted-foreground">Revision: {runtime?.revision ?? "-"}</div>
+            <div className="text-sm">Status: {derived.statusLabel}</div>
+            <div className="text-xs text-muted-foreground">Revision: {derived.revisionLabel}</div>
             <div className="text-xs text-muted-foreground">
-              Current node: {runtime?.currentNode?.title ?? "-"}
+              Current node: {derived.currentNodeLabel}
             </div>
             <div className="text-xs text-muted-foreground">
-              Available choices: {runtime?.availableChoices.length ?? 0}
+              Available choices: {derived.availableChoices}
             </div>
           </>
         )}
@@ -78,7 +112,7 @@ export function StoryMetadataBlock({
         )}
       </div>
 
-      {shouldShowRawConfig(config) && (
+      {shouldShowRawStoryMetadataConfig(config) && (
         <pre className="max-h-64 overflow-auto rounded border bg-muted/40 p-3 text-xs">
           {JSON.stringify(config ?? {}, null, 2)}
         </pre>
