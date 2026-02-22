@@ -408,8 +408,14 @@ Used by players to understand their current position in a story.`
 } as const;
 
 export const DemoA2UIPanelOptionsSchema = {
-    properties: {},
-    additionalProperties: true,
+    properties: {
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
     type: 'object',
     title: 'DemoA2UIPanelOptions'
 } as const;
@@ -600,8 +606,14 @@ export const DemoAgentRosterBlockSpecSchema = {
 } as const;
 
 export const DemoCanvasPanelOptionsSchema = {
-    properties: {},
-    additionalProperties: true,
+    properties: {
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
     type: 'object',
     title: 'DemoCanvasPanelOptions'
 } as const;
@@ -736,7 +748,7 @@ export const DemoChatPanelOptionsSchema = {
             default: false
         }
     },
-    additionalProperties: true,
+    additionalProperties: false,
     type: 'object',
     title: 'DemoChatPanelOptions'
 } as const;
@@ -1687,7 +1699,7 @@ export const DemoContentPanelOptions_InputSchema = {
             ]
         }
     },
-    additionalProperties: true,
+    additionalProperties: false,
     type: 'object',
     title: 'DemoContentPanelOptions'
 } as const;
@@ -1710,7 +1722,7 @@ export const DemoContentPanelOptions_OutputSchema = {
             ]
         }
     },
-    additionalProperties: true,
+    additionalProperties: false,
     type: 'object',
     title: 'DemoContentPanelOptions'
 } as const;
@@ -2180,8 +2192,14 @@ export const DemoContributionFeedBlockSpecSchema = {
 } as const;
 
 export const DemoDebugPanelOptionsSchema = {
-    properties: {},
-    additionalProperties: true,
+    properties: {
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
     type: 'object',
     title: 'DemoDebugPanelOptions'
 } as const;
@@ -3412,7 +3430,7 @@ export const DemoParticipantPanelOptionsSchema = {
             default: true
         }
     },
-    additionalProperties: true,
+    additionalProperties: false,
     type: 'object',
     title: 'DemoParticipantPanelOptions'
 } as const;
@@ -3841,8 +3859,14 @@ export const DemoStoryBlockSpecSchema = {
 } as const;
 
 export const DemoStoryEditorPanelOptionsSchema = {
-    properties: {},
-    additionalProperties: true,
+    properties: {
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
     type: 'object',
     title: 'DemoStoryEditorPanelOptions'
 } as const;
@@ -4038,9 +4062,14 @@ export const DemoStoryPlayerLegacyPanelOptionsSchema = {
             type: 'boolean',
             title: 'Viewer Mode',
             default: false
+        },
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
         }
     },
-    additionalProperties: true,
+    additionalProperties: false,
     type: 'object',
     title: 'DemoStoryPlayerLegacyPanelOptions'
 } as const;
@@ -4162,9 +4191,14 @@ export const DemoStoryPlayerPanelOptionsSchema = {
             type: 'boolean',
             title: 'Viewer Mode',
             default: false
+        },
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
         }
     },
-    additionalProperties: true,
+    additionalProperties: false,
     type: 'object',
     title: 'DemoStoryPlayerPanelOptions'
 } as const;
@@ -4293,7 +4327,7 @@ export const DemoStoryRuntimePanelOptionsSchema = {
             default: false
         }
     },
-    additionalProperties: true,
+    additionalProperties: false,
     type: 'object',
     title: 'DemoStoryRuntimePanelOptions'
 } as const;
@@ -4484,8 +4518,14 @@ export const DemoStrangeBlockSpecSchema = {
 } as const;
 
 export const DemoStrangePanelOptionsSchema = {
-    properties: {},
-    additionalProperties: true,
+    properties: {
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
     type: 'object',
     title: 'DemoStrangePanelOptions'
 } as const;

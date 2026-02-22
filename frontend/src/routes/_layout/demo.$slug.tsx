@@ -12,10 +12,7 @@ import {
 } from "@/components/Page/primitives/ContentRenderer"
 import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
 import { DemoShell, type DemoShellBlockRenderItem } from "@/components/Demo/DemoShell"
-import { DemoStoryPanel } from "@/components/Demo/DemoStoryPanel"
-import { CanvasPanel, ParticipantPanel } from "@/components/Room"
-import MessageInput from "@/components/Room/RoomMessages/MessageInput"
-import MessageList from "@/components/Room/RoomMessages/MessageList"
+import { renderDemoBlock, renderDemoPanel } from "@/components/Demo/rendererRegistry"
 import useAuth from "@/hooks/useAuth"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useRoomMessages } from "@/hooks/useRoomMessages"
@@ -29,51 +26,6 @@ import { handleError } from "@/utils"
 export const Route = createFileRoute("/_layout/demo/$slug")({
   component: DemoRoute,
 })
-
-function DemoChatPanel({
-  roomId,
-  isConnected,
-  sendViaWebSocket,
-  streamingMessage,
-}: {
-  roomId: string
-  isConnected: boolean
-  sendViaWebSocket: (content: string) => void
-  streamingMessage: { agent_name: string; content: string } | null
-}) {
-  const {
-    messages,
-    sendMessage,
-    isSending,
-    hasMore,
-    loadMore,
-    isLoadingMore,
-    isLoading,
-  } = useRoomMessages(roomId)
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4">
-        <MessageList
-          roomId={roomId}
-          messages={messages}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          isLoadingMore={isLoadingMore}
-          isLoading={isLoading}
-          streamingMessage={streamingMessage}
-        />
-      </div>
-      <MessageInput
-        roomId={roomId}
-        onSendMessage={sendMessage}
-        isSending={isSending}
-        isConnected={isConnected}
-        sendViaWebSocket={sendViaWebSocket}
-      />
-    </div>
-  )
-}
 
 function DemoRoute() {
   const { slug } = Route.useParams()
@@ -137,12 +89,6 @@ function renderContentPayload(
   )
 }
 
-function getPanelContentPayload(panel: { options?: unknown }): unknown {
-  if (!panel.options || typeof panel.options !== "object") return undefined
-  const options = panel.options as Record<string, unknown>
-  return options.content_json
-}
-
 function normalizeBlockVisibility(
   visibility: unknown,
 ): "visible" | "hidden_unmounted" | "hidden_mounted" {
@@ -174,10 +120,12 @@ function ResolvedDemoRoute({
   const [autoStartError, setAutoStartError] = useState<string | null>(
     resolved.runtime.auto_start_error ?? null,
   )
+  const [showInternalMessages, setShowInternalMessages] = useState(false)
   const autoStartAttemptedRef = useRef(false)
   const { user } = useAuth()
 
   const { isConnected, sendMessage: sendViaWebSocket, streamingMessage } = useRoomStream(roomId)
+  const { messages: debugMessages = [] } = useRoomMessages(roomId)
   const participantsQueryKey = ["room", roomId, "participants", "demo"] as const
   const {
     data: participants = [],
@@ -408,65 +356,36 @@ function ResolvedDemoRoute({
           ((panel.prominence ?? "primary") === "primary" ? 30 : 20),
         maxSize: panel.max_size ?? undefined,
         viewportMode: panel.viewport_mode ?? "panel",
-        render: () => {
-          if (panel.kind === "storyRuntime") {
-            return (
-              <DemoStoryPanel
-                roomId={roomId}
-                roomTitle={roomTitle}
-                roomStoryId={roomStoryId}
-                canWrite={canWrite}
-                autoRespond={autoRespond}
-                onSendMessage={handleAutoRespondMessage}
-              />
-            )
-          }
-          if (panel.kind === "chat") {
-            return (
-              <DemoChatPanel
-                roomId={roomId}
-                isConnected={isConnected}
-                sendViaWebSocket={sendViaWebSocket}
-                streamingMessage={streamingMessage}
-              />
-            )
-          }
-          if (panel.kind === "content") {
-            return renderContentPayload(
-              getPanelContentPayload(panel),
-              "Content panel is configured, but no valid content_json payload was provided.",
-            )
-          }
-          if (panel.kind === "participantPanel") {
-            return (
-              <ParticipantPanel
-                activeUsers={activeUsers}
-                roomAgents={roomAgentsAsAgentData}
-                availableAgents={availableAgents}
-                existingAgentIds={existingAgentIds}
-                onAddAgent={handleAddAgent}
-                onRemoveAgent={handleRemoveAgent}
-                onToggleAgent={handleToggleAgent}
-                onRemoveParticipant={handleRemoveUser}
-                canManage={canWrite}
-                isLoading={
-                  isLoadingParticipants ||
-                  isLoadingAvailableAgents ||
-                  isAddingParticipant ||
-                  isRemovingParticipant
-                }
-              />
-            )
-          }
-          if (panel.kind === "canvas") {
-            return <CanvasPanel />
-          }
-          return (
-            <div className="h-full p-4 text-sm text-muted-foreground">
-              Unsupported panel kind: {panel.kind}
-            </div>
-          )
-        },
+        render: () =>
+          renderDemoPanel(panel, {
+            roomId,
+            roomTitle,
+            roomStoryId,
+            canWrite,
+            autoRespond,
+            onSendMessage: handleAutoRespondMessage,
+            isConnected,
+            sendViaWebSocket,
+            streamingMessage,
+            activeUsers,
+            roomAgentsAsAgentData,
+            debugActiveAgents: allRoomAgents,
+            availableAgents,
+            existingAgentIds,
+            onAddAgent: handleAddAgent,
+            onRemoveAgent: handleRemoveAgent,
+            onToggleAgent: handleToggleAgent,
+            onRemoveUser: handleRemoveUser,
+            isParticipantPanelLoading:
+              isLoadingParticipants ||
+              isLoadingAvailableAgents ||
+              isAddingParticipant ||
+              isRemovingParticipant,
+            debugMessages,
+            showInternalMessages,
+            onToggleInternalMessages: setShowInternalMessages,
+            renderContentPayload,
+          }),
       })),
     [
       autoRespond,
@@ -484,12 +403,14 @@ function ResolvedDemoRoute({
       isLoadingParticipants,
       isRemovingParticipant,
       activeUsers,
+      debugMessages,
       resolved.composition.panels,
       roomAgentsAsAgentData,
       roomStoryId,
       roomTitle,
       roomId,
       sendViaWebSocket,
+      showInternalMessages,
       streamingMessage,
     ],
   )
@@ -544,18 +465,22 @@ function ResolvedDemoRoute({
 
     for (const { block, visibilityMode } of orderedBlocks) {
       const region = (block.region ?? "top") as "top" | "primary" | "auxiliary" | "footer"
-      const fallback = `Block "${block.id}" has no supported content payload.`
-
-      let rendered: ReactNode
-      if (block.type === "content" || block.type === "context") {
-        rendered = renderContentPayload(block.content_json, fallback)
-      } else {
-        rendered = (
-          <div className="p-4 text-sm text-muted-foreground">
-            Block type "{block.type}" is not mapped yet.
-          </div>
-        )
-      }
+      const rendered = renderDemoBlock(block, {
+        renderContentPayload,
+        roomId,
+        roomTitle,
+        roomStoryId,
+        runtimePolicy,
+        runtimeHasRuntime,
+        autoStartError,
+        autoRespond,
+        isConnected,
+        debugMessages,
+        streamingMessage,
+        activeUsers,
+        roomAgentsAsAgentData,
+        availableAgents,
+      })
 
       regions[region].push({
         id: block.id,
@@ -565,7 +490,22 @@ function ResolvedDemoRoute({
     }
 
     return regions
-  }, [resolved.composition.blocks])
+  }, [
+    activeUsers,
+    autoRespond,
+    autoStartError,
+    availableAgents,
+    debugMessages,
+    isConnected,
+    resolved.composition.blocks,
+    roomAgentsAsAgentData,
+    roomId,
+    roomStoryId,
+    roomTitle,
+    runtimeHasRuntime,
+    runtimePolicy,
+    streamingMessage,
+  ])
 
   const roomHasStory = Boolean(roomStoryId)
   const demoExpectsStory = (resolved.composition.panels ?? []).some((panel) =>

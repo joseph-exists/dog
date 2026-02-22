@@ -120,7 +120,9 @@ export type CurrentNodePublic = {
 };
 
 export type DemoA2UIPanelOptions = {
-    [key: string]: unknown;
+    extras?: {
+        [key: string]: unknown;
+    };
 };
 
 export type DemoA2UIPanelSpec = {
@@ -177,7 +179,9 @@ export type region = 'top' | 'primary' | 'auxiliary' | 'footer';
 export type visibility = 'visible' | 'hidden_unmounted' | 'hidden_mounted';
 
 export type DemoCanvasPanelOptions = {
-    [key: string]: unknown;
+    extras?: {
+        [key: string]: unknown;
+    };
 };
 
 export type DemoCanvasPanelSpec = {
@@ -211,7 +215,6 @@ export type DemoChatMode = 'participant' | 'observer';
 export type DemoChatPanelOptions = {
     mode?: DemoChatMode;
     include_internal_messages?: boolean;
-    [key: string]: unknown | DemoChatMode | boolean;
 };
 
 export type DemoChatPanelSpec_Input = {
@@ -457,13 +460,11 @@ export type DemoContentMetadataConstraints = {
 export type DemoContentPanelOptions_Input = {
     sticky?: boolean;
     content_json?: (DemoContent_Input | null);
-    [key: string]: unknown | boolean;
 };
 
 export type DemoContentPanelOptions_Output = {
     sticky?: boolean;
     content_json?: (DemoContent_Output | null);
-    [key: string]: unknown | boolean;
 };
 
 export type DemoContentPanelSpec_Input = {
@@ -581,7 +582,9 @@ export type DemoContributionFeedBlockSpec = {
 };
 
 export type DemoDebugPanelOptions = {
-    [key: string]: unknown;
+    extras?: {
+        [key: string]: unknown;
+    };
 };
 
 export type DemoDebugPanelSpec = {
@@ -796,7 +799,6 @@ export type DemoParticipantPanelOptions = {
     showAgents?: boolean;
     compact?: boolean;
     allowQuickAdd?: boolean;
-    [key: string]: unknown | boolean;
 };
 
 export type DemoParticipantPanelSpec = {
@@ -908,7 +910,9 @@ export type DemoStoryBlockSpec = {
 };
 
 export type DemoStoryEditorPanelOptions = {
-    [key: string]: unknown;
+    extras?: {
+        [key: string]: unknown;
+    };
 };
 
 export type DemoStoryEditorPanelSpec = {
@@ -958,7 +962,9 @@ export type DemoStoryMetadataBlockSpec = {
 
 export type DemoStoryPlayerLegacyPanelOptions = {
     viewer_mode?: boolean;
-    [key: string]: unknown | boolean;
+    extras?: {
+        [key: string]: unknown;
+    };
 };
 
 export type DemoStoryPlayerLegacyPanelSpec = {
@@ -986,7 +992,9 @@ export type DemoStoryPlayerLegacyPanelSpec = {
 
 export type DemoStoryPlayerPanelOptions = {
     viewer_mode?: boolean;
-    [key: string]: unknown | boolean;
+    extras?: {
+        [key: string]: unknown;
+    };
 };
 
 export type DemoStoryPlayerPanelSpec = {
@@ -1015,7 +1023,6 @@ export type DemoStoryPlayerPanelSpec = {
 export type DemoStoryRuntimePanelOptions = {
     send_runtime_events_to_chat?: boolean;
     viewer_mode?: boolean;
-    [key: string]: unknown | boolean;
 };
 
 export type DemoStoryRuntimePanelSpec = {
@@ -1064,7 +1071,9 @@ export type DemoStrangeBlockSpec = {
 };
 
 export type DemoStrangePanelOptions = {
-    [key: string]: unknown;
+    extras?: {
+        [key: string]: unknown;
+    };
 };
 
 export type DemoStrangePanelSpec = {

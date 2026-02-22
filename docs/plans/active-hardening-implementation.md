@@ -257,26 +257,21 @@ Prevent implementation branches that silently fall back to weaker modeling patte
 3. Produces higher-quality generated frontend contracts.
 
 ### Workstream 1 Status (2026-02-22)
-1. Slice 1 is in progress and partially implemented in backend models:
+1. Slice 1 backend hardening is complete:
 - panel union converted to explicit discriminator branches
 - block union converted to explicit discriminator branches
 - canonical content contract introduced for panel/block content payloads
-2. Client artifacts are expected to drift until regeneration is run in all target environments.
+2. Slice 1.5 complete:
+- explicit visibility contract (`visible` / `hidden_unmounted` / `hidden_mounted`) implemented across backend + frontend render behavior
+3. Slice 1.6 complete:
+- strict unknown-key rejection for panel options implemented
+- constrained `extras` extension points allow-listed for selected kinds
+4. OpenAPI/client artifacts regenerated and frontend rebuild verified.
 
-### Next Slices (Recommended Resequence)
-1. **Slice 1.5: Visibility semantics alignment (frontend-first, then backend enum expansion)**
-- Document and lock behavior for:
-  - `visible`
-  - `hidden_unmounted` (not rendered)
-  - `hidden_mounted` (mounted but visually hidden)
-- Update frontend mapping/render paths to correctly handle all three values, including hidden-mounted subscription/listener and side-effect behavior requirements.
-- Expand backend block visibility contract and validators to explicit v2 values only (no legacy `hidden` compatibility alias).
-- Regenerate OpenAPI/client artifacts after this contract change.
-2. **Slice 1.6: Per-kind options strict hardening**
-- Inventory real options currently authored for each panel/block kind from QA payloads and stored compositions.
-- Add explicit typed option fields for each kind and constrained `extras` objects only where extension is intentionally supported.
-- Enforce strict unknown-key rejection in validators.
-- Keep only explicitly allow-listed extension points.
+### Next Workstream Focus
+1. Begin Workstream 3 renderer completion.
+2. Implement active renderer coverage for currently scoped kinds.
+3. Keep deferred compatibility kinds (`storyPlayerPanel`, `strange`) on fallback paths for now to minimize rework.
 
 ### OpenAPI/Client Regeneration Checkpoints (for Workstream 1)
 1. Run regeneration after Slice 1.5 (visibility enum/value expansion) and after Slice 1.6 (typed options tightening).
@@ -330,9 +325,7 @@ This is not the concern of Workstream 1.
 6. `a2ui`
 7. `storyEditor`
 8. `storyPlayer`
-9. `storyPlayerPanel`
-10. `debug`
-11. `strange`
+9. `debug`
 
 ### Block mapping checklist
 1. `context`
@@ -345,9 +338,13 @@ This is not the concern of Workstream 1.
 8. `contributionFeed`
 9. `gitView`
 10. `fileExplorer`
-11. `strange`
-12. Explicit fallback renderer for unknown types with non-fatal diagnostics
-13. Reuse existing fallback renderer path where possible.
+11. Explicit fallback renderer for unknown types with non-fatal diagnostics
+12. Reuse existing fallback renderer path where possible.
+
+### Deferred Compatibility Kinds (Not in Current WS3 Scope)
+1. Panel `storyPlayerPanel`
+2. Panel `strange`
+3. Block `strange`
 
 ### Plan
 1. Add renderer registry modules keyed by panel `kind` and block `type`.

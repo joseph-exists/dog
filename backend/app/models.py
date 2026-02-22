@@ -3874,21 +3874,21 @@ class DemoContent(SQLModel):
 
 
 class DemoChatPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
     mode: DemoChatMode = Field(default=DemoChatMode.participant)
     include_internal_messages: bool = Field(default=False)
 
 
 class DemoStoryRuntimePanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
     send_runtime_events_to_chat: bool = Field(default=True)
     viewer_mode: bool = Field(default=False)
 
 
 class DemoContentPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
     """
     Content payload for 'content' panel kind.
@@ -3901,7 +3901,7 @@ class DemoContentPanelOptions(SQLModel):
 
 
 class DemoParticipantPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
     showUsers: bool = Field(default=True)
     showAgents: bool = Field(default=True)
@@ -3910,35 +3910,47 @@ class DemoParticipantPanelOptions(SQLModel):
 
 
 class DemoCanvasPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
+
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 
 class DemoA2UIPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
+
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 
 class DemoDebugPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
+
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 
 class DemoStoryEditorPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
+
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 
 class DemoStoryPlayerPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
     viewer_mode: bool = Field(default=False)
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 
 class DemoStoryPlayerLegacyPanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
 
     viewer_mode: bool = Field(default=False)
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 
 class DemoStrangePanelOptions(SQLModel):
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "forbid"}
+
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 
 # =============================================================================

@@ -65,20 +65,28 @@
 2. **Recommendation:** treat both as compatibility values until renderer ownership and acceptance coverage are documented.
 3. **Owner:** product + frontend + backend.
 4. **Due before:** Workstream 3 mapping lock.
-5. **Status:** acknowledged; pending explicit ownership and lifecycle decision before Workstream 3 implementation begins.
+5. **Decision:** accepted as deferred compatibility kinds for minimal rework.
+6. **Execution note:** exclude `storyPlayerPanel` and `strange` from current Workstream 3 renderer implementation checklist; retain contract support and fallback behavior.
 
-## Action Checklist (Next 2 Slices)
+## Action Checklist (Completed Slices)
 1. Slice 1.5:
-- finalize Q-001 and Q-002
-- implement frontend hidden-mode behavior
-- implement backend visibility expansion with explicit v2 values only (no legacy `hidden` alias)
-- run OpenAPI/client regeneration
+- finalized Q-001 and Q-002
+- implemented frontend hidden-mode behavior
+- implemented backend visibility expansion with explicit v2 values only (no legacy `hidden` alias)
+- regenerated OpenAPI/client artifacts
 2. Slice 1.6:
-- finalize Q-003 and Q-004
-- land options key inventory by kind
-- enforce strict unknown-key rejection in validators
-- add typed options + constrained extras only where explicitly allow-listed
-- run OpenAPI/client regeneration
+- finalized Q-003 and Q-004
+- completed options key inventory by kind
+- enforced strict unknown-key rejection in validators
+- added typed options + constrained extras only where explicitly allow-listed
+- regenerated OpenAPI/client artifacts
+
+## Next Work (After Workstream 1)
+1. Start Workstream 3 renderer coverage for active kinds only.
+2. Keep compatibility fallback behavior for deferred kinds:
+- `storyPlayerPanel`
+- `strange` (panel and block)
+3. Revisit deferred kinds after renderer ownership and acceptance scope are defined.
 
 ## Evidence Required at Review
 1. OpenAPI schema diff showing visibility/options contract changes.
