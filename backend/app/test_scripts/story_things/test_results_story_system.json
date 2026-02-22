@@ -1,0 +1,97 @@
+{
+  "test_suite": "Story System Test Suite",
+  "start_time": "2026-02-21T12:42:01.647861",
+  "end_time": "2026-02-21T12:42:01.932881",
+  "duration_seconds": 0.285006,
+  "phases": {
+    "phase_1": {
+      "name": "Story & Node Management",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "phase_2": {
+      "name": "Progress & Choice Making",
+      "tests": 1,
+      "passed": 0,
+      "failed": 1
+    },
+    "phase_3": {
+      "name": "Timeline Navigation",
+      "tests": 0,
+      "passed": 0,
+      "failed": 0
+    },
+    "validation": {
+      "name": "Event Sourcing Validation",
+      "tests": 0,
+      "passed": 0,
+      "failed": 0
+    }
+  },
+  "total_tests": 5,
+  "passed": 4,
+  "failed": 1,
+  "success_rate": "80.0%",
+  "test_entities": {
+    "persona_id": "f7d3885b-646c-4066-9371-263c2c955a73",
+    "story_id": "02aa8270-347f-4724-a6e7-1fc17e299c0c",
+    "node_ids": [
+      "e2d950bd-ff81-4909-a3bc-095a868abdf2",
+      "3d6ba895-3e2f-4211-b5e8-9f3e2f8696ad",
+      "7dce3563-eec0-4e9d-b9d1-cb9a049022e7",
+      "df483369-bd21-400a-9613-03b7fc3ee3c2"
+    ],
+    "choice_ids": [
+      "cf847312-8823-4fad-ba5d-ae05599066dd",
+      "6d7d9c98-ca38-4191-a435-b386f3a1b46b",
+      "652a89e1-0366-46ff-ba7f-e2ea49bc1e3f",
+      "5c756f39-0c58-4061-8681-fa66f37b4dd5"
+    ]
+  },
+  "tests": [
+    {
+      "name": "create_story",
+      "phase": "phase_1",
+      "passed": true,
+      "message": "Story created: \"The Enchanted Forest 124201\" (ID: 02aa8270...), version 1",
+      "timestamp": "2026-02-21T12:42:01.744610"
+    },
+    {
+      "name": "create_start_node",
+      "phase": "phase_1",
+      "passed": true,
+      "message": "Start node: \"Forest Entrance\" (ID: e2d950bd...), is_start_node=True",
+      "timestamp": "2026-02-21T12:42:01.777859"
+    },
+    {
+      "name": "create_story_nodes",
+      "phase": "phase_1",
+      "passed": true,
+      "message": "Created 3 nodes: regular nodes + end node",
+      "timestamp": "2026-02-21T12:42:01.840195"
+    },
+    {
+      "name": "create_node_choices",
+      "phase": "phase_1",
+      "passed": true,
+      "message": "Created 4 choices with requirements and state changes",
+      "timestamp": "2026-02-21T12:42:01.924332"
+    },
+    {
+      "name": "publish_story",
+      "phase": "phase_2",
+      "passed": false,
+      "message": "HTTP ERROR: 422 Client Error: Unprocessable Entity for url: http://localhost:8000/api/v1/stories/02aa8270-347f-4724-a6e7-1fc17e299c0c/publish",
+      "timestamp": "2026-02-21T12:42:01.932796"
+    }
+  ],
+  "authentication": {
+    "status": "success",
+    "user": {
+      "id": "228d7ff2-960d-48b3-91a0-979034859cfe",
+      "email": "joseph@existentialdetectives.com",
+      "is_superuser": true
+    }
+  }
+}

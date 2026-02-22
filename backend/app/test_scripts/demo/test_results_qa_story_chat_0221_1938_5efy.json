@@ -1,0 +1,29 @@
+{
+  "test_name": "QA Story Chat Constant Content",
+  "start_time": "2026-02-21T19:38:58.936198",
+  "story_id": "172109da-8b5f-48f2-9e7a-4259657691dc",
+  "demo_slug": "qa-story-chat-0221-1938-5efy",
+  "steps": [
+    {
+      "step": "Create DemoConfig",
+      "success": true,
+      "details": "id=635f61a3-6613-4bef-a171-e4108dba9e30",
+      "timestamp": "2026-02-21T19:38:58.947515"
+    },
+    {
+      "step": "Set Composition",
+      "success": true,
+      "details": "3 panels, 1 blocks",
+      "timestamp": "2026-02-21T19:38:58.960000"
+    },
+    {
+      "step": "Create Session",
+      "success": true,
+      "details": "session=N/A..., runtime=True",
+      "timestamp": "2026-02-21T19:38:58.984935"
+    }
+  ],
+  "success": true,
+  "errors": [],
+  "end_time": "2026-02-21T19:38:58.985012"
+}

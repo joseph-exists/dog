@@ -407,6 +407,1798 @@ export const CurrentNodePublicSchema = {
 Used by players to understand their current position in a story.`
 } as const;
 
+export const DemoBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            enum: ['context', 'story', 'agentRoster', 'orchestratorState', 'toolCapability', 'contributionFeed', 'content'],
+            title: 'Type'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        },
+        content_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Content Json'
+        }
+    },
+    type: 'object',
+    required: ['id', 'type'],
+    title: 'DemoBlockSpec'
+} as const;
+
+export const DemoChatModeSchema = {
+    type: 'string',
+    enum: ['participant', 'observer'],
+    title: 'DemoChatMode',
+    description: 'UI mode for chat surfaces in demo routes.'
+} as const;
+
+export const DemoChatPanelOptionsSchema = {
+    properties: {
+        mode: {
+            '$ref': '#/components/schemas/DemoChatMode',
+            default: 'participant'
+        },
+        include_internal_messages: {
+            type: 'boolean',
+            title: 'Include Internal Messages',
+            default: false
+        }
+    },
+    type: 'object',
+    title: 'DemoChatPanelOptions'
+} as const;
+
+export const DemoChatPanelSpec_InputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'chat',
+            title: 'Kind',
+            default: 'chat'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoChatPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoChatPanelSpec'
+} as const;
+
+export const DemoChatPanelSpec_OutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'chat',
+            title: 'Kind',
+            default: 'chat'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoChatPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoChatPanelSpec'
+} as const;
+
+export const DemoCompositionSourceSchema = {
+    type: 'string',
+    enum: ['demo_config', 'session_override', 'type_defaults'],
+    title: 'DemoCompositionSource',
+    description: 'How a resolved composition was produced.'
+} as const;
+
+export const DemoConfigCreateSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Slug',
+            description: 'URL-safe identifier used by /demo/$slug'
+        },
+        title: {
+            type: 'string',
+            maxLength: 200,
+            minLength: 1,
+            title: 'Title'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        scope: {
+            '$ref': '#/components/schemas/DemoConfigScope',
+            default: 'system'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        default_auto_respond: {
+            type: 'boolean',
+            title: 'Default Auto Respond',
+            default: true
+        },
+        default_panels_json: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Default Panels Json',
+            description: 'Default panel composition for DemoShell'
+        },
+        default_layout_json: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Default Layout Json',
+            description: 'Default page block layout payload'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Metadata Json',
+            description: 'Extensible config for demo-specific integrations'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'title'],
+    title: 'DemoConfigCreate'
+} as const;
+
+export const DemoConfigPublicSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Slug',
+            description: 'URL-safe identifier used by /demo/$slug'
+        },
+        title: {
+            type: 'string',
+            maxLength: 200,
+            minLength: 1,
+            title: 'Title'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        scope: {
+            '$ref': '#/components/schemas/DemoConfigScope',
+            default: 'system'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        default_auto_respond: {
+            type: 'boolean',
+            title: 'Default Auto Respond',
+            default: true
+        },
+        default_panels_json: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Default Panels Json',
+            description: 'Default panel composition for DemoShell'
+        },
+        default_layout_json: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Default Layout Json',
+            description: 'Default page block layout payload'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Metadata Json',
+            description: 'Extensible config for demo-specific integrations'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'title', 'id', 'owner_id', 'created_at', 'updated_at'],
+    title: 'DemoConfigPublic'
+} as const;
+
+export const DemoConfigScopeSchema = {
+    type: 'string',
+    enum: ['system', 'personal', 'shared'],
+    title: 'DemoConfigScope'
+} as const;
+
+export const DemoConfigUpdateSchema = {
+    properties: {
+        slug: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        scope: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoConfigScope'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        is_active: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Active'
+        },
+        default_auto_respond: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Auto Respond'
+        },
+        default_panels_json: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Panels Json'
+        },
+        default_layout_json: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Layout Json'
+        },
+        metadata_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata Json'
+        }
+    },
+    type: 'object',
+    title: 'DemoConfigUpdate'
+} as const;
+
+export const DemoConfigsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/DemoConfigPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'DemoConfigsPublic'
+} as const;
+
+export const DemoContentPanelOptionsSchema = {
+    properties: {
+        sticky: {
+            type: 'boolean',
+            title: 'Sticky',
+            default: true
+        },
+        content_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content Json'
+        }
+    },
+    type: 'object',
+    title: 'DemoContentPanelOptions',
+    description: `Content payload for 'content' panel kind.
+
+Expected format aligns with frontend ContentRenderer contract.`
+} as const;
+
+export const DemoContentPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'content',
+            title: 'Kind',
+            default: 'content'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoContentPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoContentPanelSpec'
+} as const;
+
+export const DemoGenericPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            enum: ['chat', 'storyRuntime', 'participantPanel', 'content', 'a2ui', 'debug', 'canvas', 'storyEditor', 'storyPlayer'],
+            title: 'Kind'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id', 'kind'],
+    title: 'DemoGenericPanelSpec'
+} as const;
+
+export const DemoLayoutModeSchema = {
+    type: 'string',
+    enum: ['panels', 'tabs'],
+    title: 'DemoLayoutMode',
+    description: 'Preferred shell layout mode.'
+} as const;
+
+export const DemoPageCompositionBase_InputSchema = {
+    properties: {
+        schema_version: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Schema Version',
+            default: 1
+        },
+        layout_mode: {
+            '$ref': '#/components/schemas/DemoLayoutMode',
+            default: 'panels'
+        },
+        runtime_policy: {
+            '$ref': '#/components/schemas/DemoRuntimePolicy',
+            default: 'auto'
+        },
+        persona_policy: {
+            '$ref': '#/components/schemas/DemoPersonaPolicy',
+            default: 'first_available'
+        },
+        chat_mode: {
+            '$ref': '#/components/schemas/DemoChatMode',
+            default: 'participant'
+        },
+        fixed_user_persona_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fixed User Persona Id',
+            description: 'Required when persona_policy=fixed_user_persona. Ignored by other persona policies.'
+        },
+        page_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Page Theme Id'
+        },
+        cards_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cards Theme Id'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Composition-level presentation overrides for DemoShell/layout/header.'
+        },
+        panels: {
+            items: {
+                anyOf: [
+                    {
+                        '$ref': '#/components/schemas/DemoChatPanelSpec-Input'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContentPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                    }
+                ]
+            },
+            type: 'array',
+            title: 'Panels'
+        },
+        blocks: {
+            items: {
+                '$ref': '#/components/schemas/DemoBlockSpec'
+            },
+            type: 'array',
+            title: 'Blocks'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Metadata Json'
+        }
+    },
+    type: 'object',
+    title: 'DemoPageCompositionBase',
+    description: `Canonical demo composition contract consumed by frontend renderers.
+
+Notes:
+- panels and blocks are composable and independently ordered.
+- runtime/persona/chat policies are route-level behavior contracts.`
+} as const;
+
+export const DemoPageCompositionBase_OutputSchema = {
+    properties: {
+        schema_version: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Schema Version',
+            default: 1
+        },
+        layout_mode: {
+            '$ref': '#/components/schemas/DemoLayoutMode',
+            default: 'panels'
+        },
+        runtime_policy: {
+            '$ref': '#/components/schemas/DemoRuntimePolicy',
+            default: 'auto'
+        },
+        persona_policy: {
+            '$ref': '#/components/schemas/DemoPersonaPolicy',
+            default: 'first_available'
+        },
+        chat_mode: {
+            '$ref': '#/components/schemas/DemoChatMode',
+            default: 'participant'
+        },
+        fixed_user_persona_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fixed User Persona Id',
+            description: 'Required when persona_policy=fixed_user_persona. Ignored by other persona policies.'
+        },
+        page_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Page Theme Id'
+        },
+        cards_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cards Theme Id'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Composition-level presentation overrides for DemoShell/layout/header.'
+        },
+        panels: {
+            items: {
+                anyOf: [
+                    {
+                        '$ref': '#/components/schemas/DemoChatPanelSpec-Output'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContentPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                    }
+                ]
+            },
+            type: 'array',
+            title: 'Panels'
+        },
+        blocks: {
+            items: {
+                '$ref': '#/components/schemas/DemoBlockSpec'
+            },
+            type: 'array',
+            title: 'Blocks'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Metadata Json'
+        }
+    },
+    type: 'object',
+    title: 'DemoPageCompositionBase',
+    description: `Canonical demo composition contract consumed by frontend renderers.
+
+Notes:
+- panels and blocks are composable and independently ordered.
+- runtime/persona/chat policies are route-level behavior contracts.`
+} as const;
+
+export const DemoPageCompositionPublicSchema = {
+    properties: {
+        schema_version: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Schema Version',
+            default: 1
+        },
+        layout_mode: {
+            '$ref': '#/components/schemas/DemoLayoutMode',
+            default: 'panels'
+        },
+        runtime_policy: {
+            '$ref': '#/components/schemas/DemoRuntimePolicy',
+            default: 'auto'
+        },
+        persona_policy: {
+            '$ref': '#/components/schemas/DemoPersonaPolicy',
+            default: 'first_available'
+        },
+        chat_mode: {
+            '$ref': '#/components/schemas/DemoChatMode',
+            default: 'participant'
+        },
+        fixed_user_persona_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fixed User Persona Id',
+            description: 'Required when persona_policy=fixed_user_persona. Ignored by other persona policies.'
+        },
+        page_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Page Theme Id'
+        },
+        cards_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cards Theme Id'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Composition-level presentation overrides for DemoShell/layout/header.'
+        },
+        panels: {
+            items: {
+                anyOf: [
+                    {
+                        '$ref': '#/components/schemas/DemoChatPanelSpec-Output'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoContentPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                    }
+                ]
+            },
+            type: 'array',
+            title: 'Panels'
+        },
+        blocks: {
+            items: {
+                '$ref': '#/components/schemas/DemoBlockSpec'
+            },
+            type: 'array',
+            title: 'Blocks'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Metadata Json'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        demo_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Demo Config Id'
+        },
+        owner_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'demo_config_id', 'owner_id', 'created_at', 'updated_at'],
+    title: 'DemoPageCompositionPublic'
+} as const;
+
+export const DemoPageCompositionUpdateSchema = {
+    properties: {
+        schema_version: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Schema Version'
+        },
+        layout_mode: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoLayoutMode'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        runtime_policy: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoRuntimePolicy'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        persona_policy: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoPersonaPolicy'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        chat_mode: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoChatMode'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        fixed_user_persona_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fixed User Persona Id'
+        },
+        page_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Page Theme Id'
+        },
+        cards_theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cards Theme Id'
+        },
+        presentation_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation Json'
+        },
+        panels: {
+            anyOf: [
+                {
+                    items: {
+                        anyOf: [
+                            {
+                                '$ref': '#/components/schemas/DemoChatPanelSpec-Input'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoStoryRuntimePanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoContentPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoGenericPanelSpec'
+                            }
+                        ]
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Panels'
+        },
+        blocks: {
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/DemoBlockSpec'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Blocks'
+        },
+        metadata_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata Json'
+        }
+    },
+    type: 'object',
+    title: 'DemoPageCompositionUpdate'
+} as const;
+
+export const DemoPanelOptionsSchema = {
+    properties: {
+        data: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Data'
+        }
+    },
+    type: 'object',
+    title: 'DemoPanelOptions',
+    description: 'Generic options payload for panel kinds that do not yet have strict models.'
+} as const;
+
+export const DemoPersonaPolicySchema = {
+    type: 'string',
+    enum: ['first_available', 'fixed_user_persona', 'manual_prompt'],
+    title: 'DemoPersonaPolicy',
+    description: 'How a user persona is selected when runtime starts.'
+} as const;
+
+export const DemoResolvedRoomContextSchema = {
+    properties: {
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        story_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Story Id'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        can_write: {
+            type: 'boolean',
+            title: 'Can Write',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['room_id'],
+    title: 'DemoResolvedRoomContext'
+} as const;
+
+export const DemoResolvedRuntimeContextSchema = {
+    properties: {
+        has_runtime: {
+            type: 'boolean',
+            title: 'Has Runtime',
+            default: false
+        },
+        runtime_policy: {
+            '$ref': '#/components/schemas/DemoRuntimePolicy'
+        },
+        persona_policy: {
+            '$ref': '#/components/schemas/DemoPersonaPolicy'
+        },
+        auto_start_attempted: {
+            type: 'boolean',
+            title: 'Auto Start Attempted',
+            default: false
+        },
+        auto_start_succeeded: {
+            type: 'boolean',
+            title: 'Auto Start Succeeded',
+            default: false
+        },
+        auto_start_error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Auto Start Error'
+        }
+    },
+    type: 'object',
+    required: ['runtime_policy', 'persona_policy'],
+    title: 'DemoResolvedRuntimeContext'
+} as const;
+
+export const DemoRuntimePolicySchema = {
+    type: 'string',
+    enum: ['auto', 'manual', 'owner_only'],
+    title: 'DemoRuntimePolicy',
+    description: 'How room runtime is started for a demo session.'
+} as const;
+
+export const DemoSessionCreateSchema = {
+    properties: {
+        demo_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Demo Config Id',
+            description: 'Demo template to instantiate'
+        },
+        auto_respond: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Auto Respond'
+        }
+    },
+    type: 'object',
+    required: ['demo_config_id'],
+    title: 'DemoSessionCreate'
+} as const;
+
+export const DemoSessionPublicSchema = {
+    properties: {
+        auto_respond: {
+            type: 'boolean',
+            title: 'Auto Respond',
+            default: true
+        },
+        status: {
+            '$ref': '#/components/schemas/DemoSessionStatus',
+            default: 'active'
+        },
+        page_entity_type: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Page Entity Type',
+            default: 'demo'
+        },
+        page_entity_id: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Page Entity Id',
+            description: 'Stable entity_id used by PageService for demo layouts'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        demo_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Demo Config Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        last_accessed_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Last Accessed At'
+        }
+    },
+    type: 'object',
+    required: ['page_entity_id', 'id', 'demo_config_id', 'user_id', 'room_id', 'created_at', 'updated_at', 'last_accessed_at'],
+    title: 'DemoSessionPublic'
+} as const;
+
+export const DemoSessionStatusSchema = {
+    type: 'string',
+    enum: ['active', 'archived', 'ended'],
+    title: 'DemoSessionStatus'
+} as const;
+
+export const DemoSessionUpdateSchema = {
+    properties: {
+        auto_respond: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Auto Respond'
+        },
+        status: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/DemoSessionStatus'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    title: 'DemoSessionUpdate'
+} as const;
+
+export const DemoSessionsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/DemoSessionPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'DemoSessionsPublic'
+} as const;
+
+export const DemoStoryRuntimePanelOptionsSchema = {
+    properties: {
+        send_runtime_events_to_chat: {
+            type: 'boolean',
+            title: 'Send Runtime Events To Chat',
+            default: true
+        },
+        viewer_mode: {
+            type: 'boolean',
+            title: 'Viewer Mode',
+            default: false
+        }
+    },
+    type: 'object',
+    title: 'DemoStoryRuntimePanelOptions'
+} as const;
+
+export const DemoStoryRuntimePanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'storyRuntime',
+            title: 'Kind',
+            default: 'storyRuntime'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoStoryRuntimePanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoStoryRuntimePanelSpec'
+} as const;
+
 export const EntityContextSchema = {
     properties: {
         entity_type: {
@@ -2554,6 +4346,44 @@ export const ResolutionSourceSchema = {
     enum: ['authored', 'user_pref', 'system_default', 'none'],
     title: 'ResolutionSource',
     description: 'How a theme was resolved in the cascade.'
+} as const;
+
+export const ResolveDemoEntryPayloadSchema = {
+    properties: {
+        demo_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Demo Config Id'
+        },
+        demo_session_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Demo Session Id'
+        },
+        created: {
+            type: 'boolean',
+            title: 'Created'
+        },
+        composition: {
+            '$ref': '#/components/schemas/DemoPageCompositionBase-Output'
+        },
+        composition_source: {
+            '$ref': '#/components/schemas/DemoCompositionSource'
+        },
+        room: {
+            '$ref': '#/components/schemas/DemoResolvedRoomContext'
+        },
+        runtime: {
+            '$ref': '#/components/schemas/DemoResolvedRuntimeContext'
+        }
+    },
+    type: 'object',
+    required: ['demo_config_id', 'demo_session_id', 'created', 'composition', 'composition_source', 'room', 'runtime'],
+    title: 'ResolveDemoEntryPayload',
+    description: `Proposed route payload for /demos/{slug}/session resolution.
+
+This consolidates route orchestration data into one API response and
+avoids frontend-side recomposition drift.`
 } as const;
 
 export const ResolvedPanelConfigSchema = {

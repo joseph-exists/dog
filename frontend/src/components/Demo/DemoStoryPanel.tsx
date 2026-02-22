@@ -6,14 +6,18 @@ import { useRoomRuntime } from "@/hooks/useRoomRuntime"
 
 interface DemoStoryPanelProps {
   roomId: string
+  roomTitle?: string | null
   roomStoryId: string | null
+  canWrite?: boolean
   autoRespond: boolean
   onSendMessage: (message: string) => void
 }
 
 export function DemoStoryPanel({
   roomId,
+  roomTitle,
   roomStoryId,
+  canWrite = true,
   autoRespond,
   onSendMessage,
 }: DemoStoryPanelProps) {
@@ -66,8 +70,9 @@ export function DemoStoryPanel({
   return (
     <StoryPanel
       roomId={roomId}
+      roomTitle={roomTitle}
       roomStoryId={roomStoryId}
-      canWrite={true}
+      canWrite={canWrite}
       className="h-full"
     />
   )

@@ -1,0 +1,33 @@
+{
+  "test_suite": "Carroll Disamis Story (IAI-3)",
+  "start_time": "2026-02-20T17:19:36.866480",
+  "end_time": "2026-02-20T17:19:37.783779",
+  "story_id": "fcb933d6-6029-4bea-ba74-be495eb0cfc0",
+  "node_ids": {
+    "intro": "dea88110-d575-4af3-b331-94d0cb1d62fc",
+    "major_premise": "07189f05-0bcf-411a-9a45-9796e89969f9",
+    "minor_premise": "2fe6de1d-3c05-4f06-8b0c-a795c9c80584",
+    "conclusion_options": "7cd2d5e8-8984-4edd-bf7a-377dc2b87c96",
+    "valid_conclusion": "0c188da5-8e3f-4007-b569-7b326f1a81ea",
+    "fallacy_universal": "763969ab-2481-44e1-af31-7814d57f12fd",
+    "fallacy_existential": "0ea5de9d-d848-4d32-b531-109c2ce24350",
+    "retry": "16f3ef41-3fab-46e0-a232-5c3150a16ae4",
+    "skip_fallacy": "1ec5ee2c-4635-4526-a0fc-3f9631afb4dd"
+  },
+  "choice_ids": [
+    "c6d963b9-748c-416a-98e3-46fdf4893fb2",
+    "587c10e0-7839-4655-8373-16dc379d34c0",
+    "beae9e27-1c35-40db-a581-9039a429c40d",
+    "70764796-6a3a-40a6-a802-823e9d354c4f",
+    "b60a72a7-89e5-4f6c-a416-53fb6b0e7e8e",
+    "a204fbc9-e0ca-4eb7-bb1a-aabfbd472cf5",
+    "530ffa78-b949-4682-84c5-aa528774f1fb",
+    "579a0ac2-6254-4079-ac6f-f0a2a154861b",
+    "fb1ac057-f3b5-425b-8779-d5d0e0de34e2",
+    "94e7ff07-619b-4933-b5d3-bc890ed6f433",
+    "d23b2c5c-35a7-46bd-a5a5-581b7293c125"
+  ],
+  "state_variable_ids": {},
+  "success": false,
+  "errors": []
+}

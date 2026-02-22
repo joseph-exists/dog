@@ -4,7 +4,7 @@ from enum import Enum as PyEnum
 from typing import Any, Literal, Annotated, Union
 from uuid import UUID
 
-from pydantic import  EmailStr, field_validator
+from pydantic import  EmailStr, field_validator, model_validator
 from sqlalchemy import JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, Relationship, SQLModel
@@ -1574,6 +1574,18 @@ class ThemeScope(str, PyEnum):
     shared = "shared"
 
 
+class DemoConfigScope(str, PyEnum):
+    system = "system"
+    personal = "personal"
+    shared = "shared"
+
+
+class DemoSessionStatus(str, PyEnum):
+    active = "active"
+    archived = "archived"
+    ended = "ended"
+
+
 class BindingType(str, PyEnum):
     """
     Classification of theme binding ownership.
@@ -1784,23 +1796,6 @@ class ThemeBindingsPublic(SQLModel):
     """
     data: list[ThemeBindingPublic]
     count: int
-
-class DemoConfigScope(str, PyEnum):
-    """
-    Visibility and ownership rules for demo templates.
-    """
-    system = "system"
-    personal = "personal"
-    shared = "shared"
-
-
-class DemoSessionStatus(str, PyEnum):
-    """
-    Session lifecycle state.
-    """
-    active = "active"
-    archived = "archived"
-    ended = "ended"
 
 
 # -----------------------------------------------------------------------------
@@ -3189,6 +3184,154 @@ class PagesPublic(SQLModel):
     data: list[PagePublic]
     count: int
 
+
+# ============================================================================
+# DemoConfig / DemoSession Models
+# ============================================================================
+
+
+class DemoConfigBase(SQLModel):
+    """Shared properties for a demo template."""
+
+    slug: str = Field(
+        min_length=1,
+        max_length=100,
+        description="URL-safe identifier used by /demo/$slug",
+    )
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=1000)
+    scope: DemoConfigScope = Field(default=DemoConfigScope.system)
+    is_active: bool = Field(default=True)
+
+    default_auto_respond: bool = Field(default=True)
+    default_panels_json: list[dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB),
+        description="Default panel composition for DemoShell",
+    )
+    default_layout_json: list[dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB),
+        description="Default page block layout payload",
+    )
+    metadata_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB),
+        description="Extensible config for demo-specific integrations",
+    )
+
+
+class DemoConfigCreate(DemoConfigBase):
+    pass
+
+
+class DemoConfigUpdate(SQLModel):
+    slug: str | None = Field(default=None, min_length=1, max_length=100)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=1000)
+    scope: DemoConfigScope | None = None
+    is_active: bool | None = None
+    default_auto_respond: bool | None = None
+    default_panels_json: list[dict[str, Any]] | None = None
+    default_layout_json: list[dict[str, Any]] | None = None
+    metadata_json: dict[str, Any] | None = None
+
+
+class DemoConfig(DemoConfigBase, table=True):
+    __tablename__ = "demo_configs"
+    __table_args__ = (UniqueConstraint("slug", name="uq_demo_config_slug"),)
+
+    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        description="Null for system templates",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DemoConfigPublic(DemoConfigBase):
+    id: UUID
+    owner_id: UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DemoConfigsPublic(SQLModel):
+    data: list[DemoConfigPublic]
+    count: int
+
+
+class DemoSessionBase(SQLModel):
+    """Shared properties for per-user runtime demo sessions."""
+
+    auto_respond: bool = Field(default=True)
+    status: DemoSessionStatus = Field(default=DemoSessionStatus.active)
+    page_entity_type: str = Field(default="demo", max_length=50, index=True)
+    page_entity_id: str = Field(
+        min_length=1,
+        max_length=255,
+        index=True,
+        description="Stable entity_id used by PageService for demo layouts",
+    )
+
+
+class DemoSessionCreate(SQLModel):
+    demo_config_id: UUID = Field(description="Demo template to instantiate")
+    auto_respond: bool | None = None
+
+
+class DemoSessionUpdate(SQLModel):
+    auto_respond: bool | None = None
+    status: DemoSessionStatus | None = None
+
+
+class DemoSession(DemoSessionBase, table=True):
+    __tablename__ = "demo_sessions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "demo_config_id", name="uq_demo_session_user_demo"),
+    )
+
+    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    demo_config_id: UUID = Field(foreign_key="demo_configs.id", index=True)
+    user_id: UUID = Field(foreign_key="user.id", index=True)
+    room_id: UUID = Field(
+        foreign_key="rooms.room_id",
+        description="Per-user room backing this demo session",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    last_accessed_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DemoSessionPublic(DemoSessionBase):
+    id: UUID
+    demo_config_id: UUID
+    user_id: UUID
+    room_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    last_accessed_at: datetime
+
+
+class DemoSessionsPublic(SQLModel):
+    data: list[DemoSessionPublic]
+    count: int
+
+
+class ResolveDemoSessionRequest(SQLModel):
+    demo_slug: str = Field(min_length=1, max_length=100)
+
+
+class ResolveDemoSessionResponse(SQLModel):
+    demo_config: DemoConfigPublic
+    demo_session: DemoSessionPublic
+    created: bool = Field(
+        description="True if session (and room) were created during this request"
+    )
+
+
 # ============================================================================
 # Message Management Request Models (Phase 5)
 # ============================================================================
@@ -3613,6 +3756,502 @@ class UserAgentConfigPublic(UserAgentConfigBase):
 class UserAgentConfigsPublic(SQLModel):
     data: list[UserAgentConfigPublic]
     count: int
+
+
+
+# =============================================================================
+# Enums / Literals
+# =============================================================================
+
+
+class DemoRuntimePolicy(str, PyEnum):
+    """How room runtime is started for a demo session."""
+
+    auto = "auto"
+    manual = "manual"
+    owner_only = "owner_only"
+
+
+class DemoPersonaPolicy(str, PyEnum):
+    """How a user persona is selected when runtime starts."""
+
+    first_available = "first_available"
+    fixed_user_persona = "fixed_user_persona"
+    manual_prompt = "manual_prompt"
+
+
+class DemoChatMode(str, PyEnum):
+    """UI mode for chat surfaces in demo routes."""
+
+    participant = "participant"
+    observer = "observer"
+
+
+class DemoLayoutMode(str, PyEnum):
+    """Preferred shell layout mode."""
+
+    panels = "panels"
+    tabs = "tabs"
+
+
+class DemoCompositionSource(str, PyEnum):
+    """How a resolved composition was produced."""
+
+    demo_config = "demo_config"
+    session_override = "session_override"
+    type_defaults = "type_defaults"
+
+
+DemoPanelKind = Literal[
+    "chat",
+    "storyRuntime",
+    "participantPanel",
+    "content",
+    "a2ui",
+    "debug",
+    "canvas",
+    "storyEditor",
+    "storyPlayer",
+]
+
+DemoPanelProminence = Literal["primary", "auxiliary"]
+DemoPanelViewportMode = Literal["panel", "page"]
+
+DemoBlockType = Literal[
+    "context",
+    "story",
+    "agentRoster",
+    "orchestratorState",
+    "toolCapability",
+    "contributionFeed",
+    "content",
+]
+DemoBlockRegion = Literal["top", "primary", "auxiliary", "footer"]
+DemoBlockVisibility = Literal["visible", "hidden"]
+
+
+# =============================================================================
+# Panel Options
+# =============================================================================
+
+
+class DemoChatPanelOptions(SQLModel):
+    mode: DemoChatMode = Field(default=DemoChatMode.participant)
+    include_internal_messages: bool = Field(default=False)
+
+
+class DemoStoryRuntimePanelOptions(SQLModel):
+    send_runtime_events_to_chat: bool = Field(default=True)
+    viewer_mode: bool = Field(default=False)
+
+
+class DemoContentPanelOptions(SQLModel):
+    """
+    Content payload for 'content' panel kind.
+
+    Expected format aligns with frontend ContentRenderer contract.
+    """
+
+    sticky: bool = Field(default=True)
+    content_json: dict[str, Any] | None = Field(default=None)
+
+
+class DemoPanelOptions(SQLModel):
+    """
+    Generic options payload for panel kinds that do not yet have strict models.
+    """
+
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+# =============================================================================
+# Panel Specs
+# =============================================================================
+
+
+class DemoPanelSpecBase(SQLModel):
+    id: str = Field(min_length=1, max_length=100)
+    kind: DemoPanelKind
+    prominence: DemoPanelProminence = Field(default="primary")
+    order: int = Field(default=1, ge=1)
+    title: str | None = Field(default=None, max_length=200)
+    theme_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Optional panel-level theme override. "
+            "If absent, composition/page theme resolution applies."
+        ),
+    )
+    presentation_json: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Panel-level presentation overrides (e.g., viewer/compact/chrome mode)."
+        ),
+    )
+
+    default_size: int | None = Field(default=None, ge=1, le=100)
+    min_size: int | None = Field(default=None, ge=1, le=100)
+    max_size: int | None = Field(default=None, ge=1, le=100)
+    viewport_mode: DemoPanelViewportMode = Field(default="panel")
+
+    @model_validator(mode="after")
+    def validate_size_bounds(self) -> "DemoPanelSpecBase":
+        if (
+            self.min_size is not None
+            and self.max_size is not None
+            and self.min_size > self.max_size
+        ):
+            raise ValueError("Panel min_size cannot be greater than max_size")
+        if (
+            self.default_size is not None
+            and self.min_size is not None
+            and self.default_size < self.min_size
+        ):
+            raise ValueError("Panel default_size cannot be less than min_size")
+        if (
+            self.default_size is not None
+            and self.max_size is not None
+            and self.default_size > self.max_size
+        ):
+            raise ValueError("Panel default_size cannot be greater than max_size")
+        return self
+
+
+class DemoChatPanelSpec(DemoPanelSpecBase):
+    kind: Literal["chat"] = "chat"
+    options: DemoChatPanelOptions = Field(default_factory=DemoChatPanelOptions)
+
+
+class DemoStoryRuntimePanelSpec(DemoPanelSpecBase):
+    kind: Literal["storyRuntime"] = "storyRuntime"
+    options: DemoStoryRuntimePanelOptions = Field(
+        default_factory=DemoStoryRuntimePanelOptions
+    )
+
+
+class DemoContentPanelSpec(DemoPanelSpecBase):
+    kind: Literal["content"] = "content"
+    options: DemoContentPanelOptions = Field(default_factory=DemoContentPanelOptions)
+
+
+class DemoGenericPanelSpec(DemoPanelSpecBase):
+    options: DemoPanelOptions = Field(default_factory=DemoPanelOptions)
+
+
+DemoPanelSpec = (
+    DemoChatPanelSpec
+    | DemoStoryRuntimePanelSpec
+    | DemoContentPanelSpec
+    | DemoGenericPanelSpec
+)
+
+
+# =============================================================================
+# Block Specs
+# =============================================================================
+
+
+class DemoBlockSpec(SQLModel):
+    id: str = Field(min_length=1, max_length=100)
+    type: DemoBlockType
+    region: DemoBlockRegion = Field(default="top")
+    order: int = Field(default=1, ge=1)
+    title: str | None = Field(default=None, max_length=200)
+    visibility: DemoBlockVisibility = Field(default="visible")
+    theme_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Optional block-level theme override. "
+            "If absent, composition/page theme resolution applies."
+        ),
+    )
+    presentation_json: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Block-level presentation overrides (e.g., density, chrome, emphasis)."
+        ),
+    )
+    config_json: dict[str, Any] = Field(default_factory=dict)
+    content_json: dict[str, Any] = Field(default_factory=dict)
+
+
+# =============================================================================
+# Composition Models (Base / Create / Update / Public / Collection)
+# =============================================================================
+
+
+class DemoPageCompositionBase(SQLModel):
+    """
+    Canonical demo composition contract consumed by frontend renderers.
+
+    Notes:
+    - panels and blocks are composable and independently ordered.
+    - runtime/persona/chat policies are route-level behavior contracts.
+    """
+
+    schema_version: int = Field(default=1, ge=1)
+    layout_mode: DemoLayoutMode = Field(default=DemoLayoutMode.panels)
+
+    runtime_policy: DemoRuntimePolicy = Field(default=DemoRuntimePolicy.auto)
+    persona_policy: DemoPersonaPolicy = Field(default=DemoPersonaPolicy.first_available)
+    chat_mode: DemoChatMode = Field(default=DemoChatMode.participant)
+
+    fixed_user_persona_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Required when persona_policy=fixed_user_persona. "
+            "Ignored by other persona policies."
+        ),
+    )
+
+    page_theme_id: UUID | None = None
+    cards_theme_id: UUID | None = None
+    presentation_json: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Composition-level presentation overrides for DemoShell/layout/header."
+        ),
+    )
+
+    panels: list[DemoPanelSpec] = Field(default_factory=list)
+    blocks: list[DemoBlockSpec] = Field(default_factory=list)
+    metadata_json: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("panels", mode="after")
+    @classmethod
+    def validate_panels(cls, value: list[DemoPanelSpec]) -> list[DemoPanelSpec]:
+        panel_ids = [panel.id for panel in value]
+        if len(panel_ids) != len(set(panel_ids)):
+            raise ValueError("Panel IDs must be unique")
+
+        page_sized = [panel for panel in value if panel.viewport_mode == "page"]
+        if len(page_sized) > 1:
+            raise ValueError("At most one panel may use viewport_mode='page'")
+
+        return value
+
+    @field_validator("blocks", mode="after")
+    @classmethod
+    def validate_blocks(cls, value: list[DemoBlockSpec]) -> list[DemoBlockSpec]:
+        block_ids = [block.id for block in value]
+        if len(block_ids) != len(set(block_ids)):
+            raise ValueError("Block IDs must be unique")
+
+        return value
+
+    @model_validator(mode="after")
+    def validate_policy_dependencies(self) -> "DemoPageCompositionBase":
+        if (
+            self.persona_policy == DemoPersonaPolicy.fixed_user_persona
+            and self.fixed_user_persona_id is None
+        ):
+            raise ValueError(
+                "fixed_user_persona_id is required when "
+                "persona_policy=fixed_user_persona"
+            )
+
+        if not self.panels and not self.blocks:
+            raise ValueError(
+                "Composition must include at least one panel or one block"
+            )
+
+        return self
+
+
+class DemoPageCompositionCreate(DemoPageCompositionBase):
+    demo_config_id: UUID = Field(description="Owning DemoConfig ID")
+
+
+class DemoPageCompositionUpdate(SQLModel):
+    schema_version: int | None = Field(default=None, ge=1)
+    layout_mode: DemoLayoutMode | None = None
+
+    runtime_policy: DemoRuntimePolicy | None = None
+    persona_policy: DemoPersonaPolicy | None = None
+    chat_mode: DemoChatMode | None = None
+
+    fixed_user_persona_id: UUID | None = None
+    page_theme_id: UUID | None = None
+    cards_theme_id: UUID | None = None
+    presentation_json: dict[str, Any] | None = None
+
+    panels: list[DemoPanelSpec] | None = None
+    blocks: list[DemoBlockSpec] | None = None
+    metadata_json: dict[str, Any] | None = None
+
+
+class DemoPageCompositionPublic(DemoPageCompositionBase):
+    id: UUID
+    demo_config_id: UUID
+    owner_id: UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DemoPageCompositionsPublic(SQLModel):
+    data: list[DemoPageCompositionPublic]
+    count: int
+
+
+# =============================================================================
+# Persistence Models (table=True)
+# =============================================================================
+
+
+class DemoPageComposition(DemoPageCompositionBase, table=True):
+    """
+    Persisted composition template for a DemoConfig.
+
+    One composition record per demo_config_id. This acts as the canonical
+    template used to resolve DemoShell composition.
+    """
+
+    __tablename__ = "demo_page_compositions"
+    __table_args__ = (
+        UniqueConstraint(
+            "demo_config_id",
+            name="uq_demo_page_composition_demo_config",
+        ),
+    )
+
+    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    demo_config_id: UUID = Field(foreign_key="demo_configs.id", index=True)
+    owner_id: UUID | None = Field(default=None, foreign_key="user.id", index=True)
+
+    # Persist typed composition data as JSONB; API models validate the shape.
+    panels: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSONB))
+    blocks: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSONB))
+    presentation_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB),
+    )
+    metadata_json: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserDemoPageCompositionOverrideBase(SQLModel):
+    """
+    Per-user override record for a demo composition.
+
+    If use_composition_defaults=True, override_json is ignored.
+    """
+
+    use_composition_defaults: bool = Field(default=True)
+    override_json: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+    metadata_json: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+
+
+class UserDemoPageCompositionOverrideCreate(UserDemoPageCompositionOverrideBase):
+    demo_config_id: UUID
+    user_id: UUID
+
+
+class UserDemoPageCompositionOverrideUpdate(SQLModel):
+    use_composition_defaults: bool | None = None
+    override_json: dict[str, Any] | None = None
+    metadata_json: dict[str, Any] | None = None
+
+
+class UserDemoPageCompositionOverride(UserDemoPageCompositionOverrideBase, table=True):
+    """
+    Optional user-level composition override.
+
+    At most one override record per (user_id, demo_config_id).
+    """
+
+    __tablename__ = "user_demo_page_composition_overrides"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "demo_config_id",
+            name="uq_user_demo_page_composition_override",
+        ),
+    )
+
+    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="user.id", index=True)
+    demo_config_id: UUID = Field(foreign_key="demo_configs.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserDemoPageCompositionOverridePublic(UserDemoPageCompositionOverrideBase):
+    id: UUID
+    user_id: UUID
+    demo_config_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserDemoPageCompositionOverridesPublic(SQLModel):
+    data: list[UserDemoPageCompositionOverridePublic]
+    count: int
+
+
+# =============================================================================
+# Resolve / Runtime Shapes
+# =============================================================================
+
+
+class ResolveDemoPageCompositionResponse(SQLModel):
+    """
+    Resolved composition for route entry points.
+    """
+
+    demo_config_id: UUID
+    composition: DemoPageCompositionBase
+    source: DemoCompositionSource
+    created: bool = Field(
+        description=(
+            "True when a new composition record was created during resolution "
+            "(e.g., first-touch copy from defaults)."
+        )
+    )
+
+
+class DemoResolvedRoomContext(SQLModel):
+    room_id: UUID
+    story_id: UUID | None = None
+    title: str | None = None
+    can_write: bool = False
+
+
+class DemoResolvedRuntimeContext(SQLModel):
+    has_runtime: bool = False
+    runtime_policy: DemoRuntimePolicy
+    persona_policy: DemoPersonaPolicy
+    auto_start_attempted: bool = False
+    auto_start_succeeded: bool = False
+    auto_start_error: str | None = None
+
+
+class ResolveDemoEntryPayload(SQLModel):
+    """
+    Proposed route payload for /demos/{slug}/session resolution.
+
+    This consolidates route orchestration data into one API response and
+    avoids frontend-side recomposition drift.
+    """
+
+    # Existing response objects
+    demo_config_id: UUID
+    demo_session_id: UUID
+    created: bool
+
+    # Resolved composition and execution context
+    composition: DemoPageCompositionBase
+    composition_source: DemoCompositionSource
+    room: DemoResolvedRoomContext
+    runtime: DemoResolvedRuntimeContext
+
+
+# Resolution precedence (service-level contract):
+# 1) user_demo_page_composition_overrides where use_composition_defaults=False
+# 2) demo_page_compositions for demo_config_id
+# 3) fallback composition from DemoConfig defaults (panels/layout/metadata)
+
 
 # ==================== ShadowUser Models ====================
 
@@ -4223,205 +4862,15 @@ Room.panel_defaults = Relationship(
 User.pages = Relationship(back_populates="owner")
 Page.owner = Relationship(back_populates="pages")
 
+# DemoConfig <-> DemoSession relationship
+DemoConfig.sessions = Relationship(
+    back_populates="demo_config",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+)
+DemoSession.demo_config = Relationship(back_populates="sessions")
+
 
 # Theme -> User (many-to-one, optional)
 # Note: User model assumed to exist in models.py
 # owner relationship added where Theme is integrated into main models.py
 Theme.owner = Relationship(back_populates="themes")
-
-
-class DemoConfigBase(SQLModel):
-    """
-    Shared properties for a demo template.
-    """
-    slug: str = Field(
-        min_length=1,
-        max_length=100,
-        description="URL-safe identifier used by /demo/$slug",
-    )
-    title: str = Field(min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=1000)
-    scope: DemoConfigScope = Field(default=DemoConfigScope.system)
-    is_active: bool = Field(default=True)
-
-    # Defaults used when creating a DemoSession for a user
-    default_auto_respond: bool = Field(default=True)
-    default_panels_json: list[dict[str, Any]] = Field(
-        default_factory=list,
-        sa_column=Column(JSONB),
-        description="Default panel composition for DemoShell",
-    )
-    default_layout_json: list[dict[str, Any]] = Field(
-        default_factory=list,
-        sa_column=Column(JSONB),
-        description="Default page block layout (TemplateBlock-like payload)",
-    )
-    metadata_json: dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=Column(JSONB),
-        description="Extensible config for demo-specific integrations",
-    )
-
-
-class DemoConfigCreate(DemoConfigBase):
-    """
-    API input for creating a demo template.
-    """
-    pass
-
-
-class DemoConfigUpdate(SQLModel):
-    """
-    API input for updating an existing demo template.
-    """
-    slug: str | None = Field(default=None, min_length=1, max_length=100)
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=1000)
-    scope: DemoConfigScope | None = None
-    is_active: bool | None = None
-    default_auto_respond: bool | None = None
-    default_panels_json: list[dict[str, Any]] | None = None
-    default_layout_json: list[dict[str, Any]] | None = None
-    metadata_json: dict[str, Any] | None = None
-
-
-class DemoConfig(DemoConfigBase, table=True):
-    """
-    Database model for demo template config.
-    """
-    __tablename__ = "demo_configs"
-    __table_args__ = (UniqueConstraint("slug", name="uq_demo_config_slug"),)
-
-    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    owner_id: UUID | None = Field(
-        default=None,
-        foreign_key="user.id",
-        description="Null for system templates",
-    )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-
-class DemoConfigPublic(DemoConfigBase):
-    id: UUID
-    owner_id: UUID | None
-    created_at: datetime
-    updated_at: datetime
-
-
-class DemoConfigsPublic(SQLModel):
-    data: list[DemoConfigPublic]
-    count: int
-
-
-# -----------------------------------------------------------------------------
-# DemoSession Models (Base -> Create -> Update -> Database -> Public -> List)
-# -----------------------------------------------------------------------------
-
-class DemoSessionBase(SQLModel):
-    """
-    Shared properties for per-user runtime demo sessions.
-
-    page_entity_type/page_entity_id anchor page layout persistence.
-    """
-    auto_respond: bool = Field(default=True)
-    status: DemoSessionStatus = Field(default=DemoSessionStatus.active)
-    page_entity_type: str = Field(default="demo", max_length=50, index=True)
-    page_entity_id: str = Field(
-        min_length=1,
-        max_length=255,
-        index=True,
-        description="Stable entity_id used by PageService for demo layouts",
-    )
-
-
-class DemoSessionCreate(SQLModel):
-    """
-    API input for explicit session creation.
-    user_id is inferred from auth in normal API usage.
-    """
-    demo_config_id: UUID = Field(description="Demo template to instantiate")
-    auto_respond: bool | None = None
-
-
-class DemoSessionUpdate(SQLModel):
-    auto_respond: bool | None = None
-    status: DemoSessionStatus | None = None
-
-
-class DemoSession(DemoSessionBase, table=True):
-    """
-    Database model for a user's instantiated demo environment.
-
-    Invariant:
-    - One active session per (user_id, demo_config_id) pair by default.
-    """
-    __tablename__ = "demo_sessions"
-    __table_args__ = (
-        UniqueConstraint("user_id", "demo_config_id", name="uq_demo_session_user_demo"),
-    )
-
-    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    demo_config_id: UUID = Field(foreign_key="demo_configs.id", index=True)
-    user_id: UUID = Field(foreign_key="user.id", index=True)
-    room_id: UUID = Field(
-        foreign_key="rooms.room_id",
-        description="Per-user room backing this demo session",
-    )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-    last_accessed_at: datetime = Field(default_factory=datetime.utcnow)
-
-
-class DemoSessionPublic(DemoSessionBase):
-    id: UUID
-    demo_config_id: UUID
-    user_id: UUID
-    room_id: UUID
-    created_at: datetime
-    updated_at: datetime
-    last_accessed_at: datetime
-
-
-class DemoSessionsPublic(SQLModel):
-    data: list[DemoSessionPublic]
-    count: int
-
-
-# -----------------------------------------------------------------------------
-# Route/Service Resolution Shapes
-# -----------------------------------------------------------------------------
-
-class ResolveDemoSessionRequest(SQLModel):
-    """
-    Input for route-layer get-or-create resolution.
-    Used by /demo/{slug} and /d/{id}-style entry routes.
-    """
-    demo_slug: str = Field(min_length=1, max_length=100)
-
-
-class ResolveDemoSessionResponse(SQLModel):
-    """
-    Output from get-or-create resolution.
-    """
-    demo_config: DemoConfigPublic
-    demo_session: DemoSessionPublic
-    created: bool = Field(
-        description="True if session (and room) were created during this request"
-    )
-
-
-# -----------------------------------------------------------------------------
-# Post-Definition Relationship Bindings
-# -----------------------------------------------------------------------------
-# Define after all models to align with data_model_rules.md.
-# -----------------------------------------------------------------------------
-
-DemoConfig.sessions = Relationship(
-    back_populates="demo_config",
-    sa_relationship_kwargs={"cascade": "all, delete-orphan"},
-)
-
-DemoSession.demo_config = Relationship(back_populates="sessions")
-
-# Optional back-populates on User/Room should be added in backend app/models.py.

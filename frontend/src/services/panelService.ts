@@ -18,9 +18,11 @@ import {
   RoomPanelsService,
   type UserRoomPanelConfigPublic,
 } from "@/client"
-import type {
-  PanelKind,
-  PanelProminence,
+import {
+  getDefaultPanelConfig,
+  getPanelsForContext,
+  type PanelKind,
+  type PanelProminence,
 } from "@/components/Page/registry/panelTypes"
 
 // ============================================================================
@@ -41,7 +43,7 @@ export interface PanelConfig {
  * Supported entity types for panel configuration.
  * Add new types here as backend support is added.
  */
-export type PanelEntityType = "room" | "story"
+export type PanelEntityType = "room" | "story" | "demo"
 
 /**
  * Resolved panel configuration with source tracking.
@@ -54,6 +56,31 @@ export type PanelEntityType = "room" | "story"
 export interface ResolvedPanels {
   panels: PanelConfig[]
   source: "user_override" | "entity_defaults" | "type_defaults"
+}
+
+const DEMO_TYPE_DEFAULT_PANEL_KINDS: PanelKind[] = ["storyRuntime", "chat"]
+
+function buildDefaultPanels(kinds: PanelKind[]): PanelConfig[] {
+  return kinds
+    .map((kind) => getDefaultPanelConfig(kind))
+    .filter((panel): panel is PanelConfig => panel !== undefined)
+}
+
+function getTypeDefaultPanelsForEntityType(
+  entityType: PanelEntityType,
+): PanelConfig[] {
+  if (entityType === "demo") {
+    return buildDefaultPanels(DEMO_TYPE_DEFAULT_PANEL_KINDS)
+  }
+
+  if (entityType === "story") {
+    const storyPanelKinds = getPanelsForContext("story").map(
+      (panel) => panel.kind,
+    )
+    return buildDefaultPanels(storyPanelKinds)
+  }
+
+  return []
 }
 
 // Re-export API types for consumers that need them
@@ -106,10 +133,9 @@ export async function getResolvedPanels(
     }
   }
 
-  // Story: TODO when backend ready
-  // For now, return empty with type defaults
+  // Story/demo endpoints are not wired yet; provide registry-driven defaults.
   return {
-    panels: [],
+    panels: getTypeDefaultPanelsForEntityType(entityType),
     source: "type_defaults",
   }
 }
@@ -131,7 +157,7 @@ export async function getEntityPanelDefaults(
     return await RoomPanelsService.getRoomDefaults({ roomId: entityId })
   }
 
-  // Story: TODO when backend ready
+  // Story/demo defaults API is not implemented.
   return null
 }
 
@@ -160,7 +186,7 @@ export async function updateEntityPanelDefaults(
     })
   }
 
-  // Story: TODO when backend ready
+  // Story/demo defaults API is not implemented.
   throw new Error(
     `Panel defaults not yet supported for entity type: ${entityType}`,
   )
@@ -183,7 +209,7 @@ export async function getMyPanelConfig(
     return await RoomPanelsService.getMyPanelConfig({ roomId: entityId })
   }
 
-  // Story: TODO when backend ready
+  // Story/demo user overrides API is not implemented.
   return null
 }
 
@@ -215,7 +241,7 @@ export async function updateMyPanelConfig(
     })
   }
 
-  // Story: TODO when backend ready
+  // Story/demo user overrides API is not implemented.
   throw new Error(
     `Panel config not yet supported for entity type: ${entityType}`,
   )

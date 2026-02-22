@@ -4,6 +4,7 @@ import {
   redirect,
   useMatches,
 } from "@tanstack/react-router"
+import { useEffect, useState } from "react"
 
 import { Footer } from "@/components/Common/Footer"
 import { AppSidebar } from "@/components/Common/Sidebar"
@@ -58,6 +59,7 @@ const fullBleedRoutes = [
 function Layout() {
   const matches = useMatches()
   const currentPath = matches[matches.length - 1]?.pathname || "/"
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // Get title from exact match or find parent route
   const pageTitle =
@@ -72,8 +74,15 @@ function Layout() {
     currentPath.startsWith(route),
   )
 
+  // Demo pages should open with the app sidebar minimized to keep focus on content.
+  useEffect(() => {
+    if (currentPath.startsWith("/demo/")) {
+      setSidebarOpen(false)
+    }
+  }, [currentPath])
+
   return (
-    <SidebarProvider>
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <AppSidebar />
       <SidebarInset className="flex flex-col h-screen">
         {isFullBleed ? (

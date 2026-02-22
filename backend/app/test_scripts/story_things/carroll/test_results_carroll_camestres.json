@@ -1,0 +1,34 @@
+{
+  "test_suite": "Carroll Camestres Story (AEE-2)",
+  "start_time": "2026-02-21T12:42:51.204179",
+  "end_time": "2026-02-21T12:42:52.196781",
+  "story_id": "06ecc1f3-4c77-4deb-98d4-e4922f156d87",
+  "node_ids": {
+    "intro": "8391c7be-b7b8-4dcf-9eb5-29fccfd2877d",
+    "major_premise": "02771e76-2e0d-4826-ac4c-0f9a3c52d23f",
+    "minor_premise": "723f5a28-ce15-4fab-a9a9-64db0bfa13de",
+    "conclusion_options": "9c4f2420-b673-405b-8f87-e1783b98cb94",
+    "valid_conclusion": "d7399bd7-d6f4-4515-b14b-bc3d133d9e52",
+    "fallacy_undistributed": "0124fd3b-9db7-4c1e-acab-ea03353c99ec",
+    "fallacy_illicit_major": "6db1410e-894f-4204-874d-c4754a1004ab",
+    "fallacy_affirmative": "cf721b9b-9ff8-444c-b50d-288b4816e3e3",
+    "retry": "3f5019d9-f7a1-4cfd-837f-1078a666640e",
+    "skip_fallacy": "e668be09-e4de-43d9-a878-9d8835d7c528"
+  },
+  "choice_ids": [
+    "747e939a-ee6e-4568-b1b2-3a2595f13314",
+    "54f1054c-79c8-4728-958a-3b16064d6385",
+    "65cd0acd-f762-492a-93b6-42c68c556b7d",
+    "eff099de-87a8-49d3-8d3c-edca064eb05f",
+    "d0f2bdb9-ed4a-4e93-a5f9-b5cab1feb158",
+    "0e936664-a9bf-4dfd-bcc4-7b0482bb15a2",
+    "ad44dda8-98f4-4d1c-809c-2c6e8a6d8e25",
+    "1ffb272f-0283-4243-897f-ce3a5aa8a07b",
+    "14deb08b-ae05-4d7b-b8f2-2f925f9a9b01",
+    "6d0d22c8-93d9-404b-a97a-272719773662",
+    "ed987a51-6047-432c-8772-c6374d888540"
+  ],
+  "state_variable_ids": {},
+  "success": false,
+  "errors": []
+}

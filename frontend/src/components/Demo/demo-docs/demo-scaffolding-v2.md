@@ -1,9 +1,12 @@
 # Demo Scaffolding Requirements
 > **Status:** Planning artifact — working document, round 2 annotations  
-> **Last updated:** 2025-02-20  
+> **Last updated:** 2025-02-21  
 > **Purpose:** Map four demo surfaces against current Page/panel/block infrastructure. Identify gaps, composition requirements, and sequencing.
 
 ---
+
+deprecated: see demo-integration-snapshot.md for future work, this is product design intent only
+
 
 ## Framing
 
@@ -15,45 +18,36 @@ This document operates at two levels simultaneously:
 
 When crossing from one to the other, this document will signal explicitly.
 
-@claude-note: After reading demo-eng-reference.md, the framing holds but the ground has shifted. A working Demo system already exists: `DemoPage`, `DemoHeader`, `DemoStoryPanel`, seed scripts, slug-based routing. The gap is not "build from zero" but "generalize an existing specific implementation." That's different work. The ontological claim about multiple creation methods is already partially proven — seed scripts are API-based, importable, and composable via `--json` piping. The DemoConfig backend migration is the next step proving it from the other direction. This changes the urgency gradient across the phases below.
+
 
 ---
 
 ## Shared Infrastructure Requirements (all four demos)
 
-Before any demo-specific work, the following must be reliable:
-@josep-note: changed PageShell to DemoShell
 
-### DemoShell 
-- Must support a `demo` entity type cleanly — `entity_type: "demo"`, `entity_id: "<slug or uuid>"`  @josep-note: correct.  added DemoShell.tsx, refactoring now. working through slug vs id issues. 
+### DemoShell - 
+- Must support a `demo` entity type cleanly — `entity_type: "demo"`, `entity_id: "<slug or uuid>"`
 - Must handle panel-only layouts (no blocks) without layout thrash
-- Must handle mixed layouts (blocks describing the demo + panels showing it)
+- Must handle mixed layouts (with blocks describing the demo + panels showing it) - example: a ContentBlock - or panel containing a ContentBlock - that changes content dependent on the Node.
 - The `/demo` entry and `?id=` subpage routing pattern needs to resolve to DemoShell correctly 
 
-@claude-note: **Naming collision: DemoShell vs DemoPage.** The eng reference has `DemoPage` as the existing orchestrator (`Route → DemoPage → DemoHeader + ResizablePanelGroup`). `DemoShell` is being added now. Before these diverge further, the relationship needs to be explicit:
-- Option A: DemoShell *replaces* DemoPage - this is correct.  DemoShell is a hard refactor/iteration of DemoPage after lots of churn in the system since it was built.  DemoShell will use the new patterns for composition, inheritance, imports, and heirarchy.
 
-@claude-note: **Routing pattern resolved.** Eng reference confirms slug-based routing (`/demo/$slug`), already working. The `?id=` subpage pattern from the original scaffolding was incorrect framing — open question 4 below is answered. Slug vs ID tension Josep notes is likely about the backend DemoConfig model (does slug serve as primary key or is it alongside UUID?) — worth a single explicit decision before the config migration lands.
-
-@claude-note: **ResizablePanelGroup vs PanelContainer.** PanelContainer holds all ResizablePanelGroup objects.  RPG never exists outside of a PanelContainer (Old demos might reflect this, that's fine but should be cleaned up if/when we have the time. new demos should *not* use this pattern.)
 
 ### PanelContainer
 - Must be stable under real panel content — this is the primary load-bearing primitive 
 - Panel resize behavior needs to be predictable (not fight with panel content)
 - Must support a "presentation mode" state where chrome (edit controls, toolbars) is hidden
 
-@claude-note: The current DemoPage uses a hardcoded 60/40 split — two panels, fixed types (story left, chat right). The flexible panel composition this doc envisions (any panel in any slot) is aspirational and not yet implemented. This is probably the biggest structural gap between current state and the four-demo vision. The eng reference even acknowledges it explicitly under "Adding a Non-Story Demo" — replace the left panel content. The `panelType?: "story" | "custom"` extension to DemoConfig is the seed of this flexibility, but it's not built yet.
 
 ### Presentation / Theming 
-@josep-note: theming at this level is a solved problem. we will integrate as a second-order part of the sequence when we've stabilized the surface. all of the following (and more) already exist, will be integrated at the appropriate time.
+
 - Demo pages will need their own ambient theme — the demo surface should feel distinct from the app chrome 
-- The full variable set (per REFERENCE.md) must be set on the demo page container
+- The full variable set must be set on the demo shell container
 - Per-demo theming (each demo has its own visual identity) should compose cleanly via the existing specificity model
 
-@claude-note: Confirmed — theming is a solved layer. Agree with Josep: second-order concern. The surface needs to stabilize before theming is wired in. No new gap here.
 
-### New primitive needed: `DemoShell`
-@josep-note: in progress. pending DemoConfig definition and implementation.
+### New created:  `DemoShell`
+
 - Wraps a demo instance
 - Sets ambient theme from demo's presentation data
 - Provides the "entry" and "subpage" routing context
@@ -61,11 +55,12 @@ Before any demo-specific work, the following must be reliable:
 
 Capability requirements of DemoShell:
 - flexible panel slot composition, including:
-- room, chat, story, canvas, ??
+- room, chat, story, canvas, content, agentui
+- flexible content block management (any of our supported content types)
 - toggles for state
 - useEffect based runtime
-- connection management (legacy DemoPage used old model, fine(?) for demos, but significantly awful compared to our rewritten websockets library... if we have to, then fine)
-- DemoHeader, DemoLayout, Demo... etc
+- connection management 
+- DemoHeader, DemoLayout
 - block support for context/description blocks
 - entity type aware routing
 
@@ -81,32 +76,23 @@ Capability requirements of DemoShell:
 | `ChatPanel` | exists, needs (visual/layout) refinement | Primary surface |
 | `ParticipantPanel` | exists | Shows participant stack with agent/human distinction |
 
-@claude-note: The current DemoPage already has chat on the right (40%) and story on the left (60%). For Demo A, chat *is* the primary surface — the story panel slot becomes either ParticipantPanel or something else. This is the first case where the hardcoded 60/40 layout fights us. Demo A needs chat dominant, not chat secondary.
 
 ### Blocks required
 | Block | Status | Notes |
 |---|---|---|
 | A intro/description block | missing | Sets context for the viewer — "what am I looking at?" |
-| Participant identity display | partial (`IdentityBlock` is person-centric) | Needs to handle agent identity presentation |
-@josep-note: we will use the ParticipantsPanel - once we're set on it, we can theme/restyle/overload it however we need.
+
 
 ### Composition level
-Two-panel layout: ChatPanel (primary, large) + ParticipantPanel (secondary, sidebar or collapsible). A description block above or alongside.
-@todo : add mode prop to ChatPanel (`"participant" | "observer"`)
+multi-panel layout: ChatPanel (primary, large) + ParticipantPanel (secondary, sidebar or collapsible). A description block above or alongside.
+
+use mode prop on ChatPanel (`"participant" | "observer"`)
 
 ### Gaps
 - `ParticipantPanel` needs to render agent presentation (emoji, accent color) not just user avatars
-@todo add agent presentation flair back into ParticipantPanel
 
-- The intro block needs to be a general-purpose `DescriptionBlock` or `ContextBlock`, not a person-bio block
-@todo review ContextBlock
-
-### Open question
-Is Demo A best served as a live Room (join-able) or a replay? Both are valid. The answer changes whether we need real-time connection infrastructure or just playback.
-
-@josep-note: both are present in the same component. we'll change the visual display as needed - these toggles are easy once we have the frame ready.  
-
-@claude-note: **Resolved.** The WebSocket infrastructure is already live in DemoPage (the eng reference shows connection badge, WebSocket state). Demo A is live by default. The toggle Josep refers to is the auto-respond toggle already in DemoHeader. No new infrastructure needed.
+@todo review agent presentation flair on ParticipantPanel
+@todo review adding contextBlock 
 
 ---
 
@@ -114,7 +100,6 @@ Is Demo A best served as a live Room (join-able) or a replay? Both are valid. Th
 
 **Claim being demonstrated:** A story is a state machine. It can be paused, serialized, and resumed. The viewer can see this happen.
 
-@claude-note: **This demo is mostly working.** The eng reference describes exactly this: `StoryPanel` with `RuntimeControls.tsx` (advance/rewind/reset), `DemoStoryPanel` watching `runtime.revision` via `useEffect`, synthetic messages triggering agent responses on state change. The enchanted library seed is the live demo of this. The gaps here are presentation and legibility, not infrastructure.
 
 ### Panels required
 | Panel | Status | Notes |
@@ -122,7 +107,6 @@ Is Demo A best served as a live Room (join-able) or a replay? Both are valid. Th
 | `StoryPlayerPanel` | import from Story/panels/| Primary playback surface |
 | `StoryPlayerPanel` (runtime controls) |  | `RuntimeControls.tsx` — pause/resume/state display |
 
-@josep-note: use the right imports/websocket connections - all panels that require interactivity should provide them. @josep will wire in higher-level websocket connectivity when needed to bridge - but we have all the bridges I can think of at this time.  do not rewrite/add websockets without checking explicitly - getting one working in a bespoke location risks breaking other places, and it's not the right pattern.
 
 ### Visibility required
 | Display Element | Status | Notes |
@@ -131,7 +115,7 @@ Is Demo A best served as a live Room (join-able) or a replay? Both are valid. Th
 
 | State visualization | Visible - exists in panel.  needs refinement for demo | A readable representation of "where we are" in the state machine |
 
-we need a presentation mode for StoryStateCollapsible (mode?: "debug" | "viewer")
+@todo: need a presentation mode for StoryStateCollapsible (mode?: "debug" | "viewer")
 
 
 ### Composition level
@@ -140,15 +124,11 @@ StoryPlayerPanel is the dominant surface. RuntimeControls compose within or besi
 ### Gaps
 - `StoryPlayerPanel` — currently wired to real story data.
 
-legacy documentation may reference StoryPlayer: this happened because the StoryPlayer was written before the Panel architecture existed for it to be migrated into.  The StoryPlayerPanel is a legible, proven, tested and more comprehensive set of functionality - it exists in components/Page/StoryPlayerPanel as an import or to clone and extend (limited)
+- A `StoryBlock` (metadata/description) needs to exist — distinct from the player panel itself.
 
-- A `StoryBlock` (metadata/description) needs to exist — distinct from the player panel itself @josep-note : we can use ContextBlock for this purpose.
+- add ContextBlock as derived instantiation with relational association to Node?
 
-- The "pause and see the state" moment is the demo's climax — `StoryStateCollapsible` exists but needs presentation refinement for demo context (not debug context)
-
-### Open question
-Does the viewer interact with the story, or observe it?
-@josep-response: interaction possible, but not in full debug/author mode.  limited scope.
+- The "pause and see the state" moment is the demo's climax — `StoryStateCollapsible` 
 
 ---
 
@@ -158,7 +138,6 @@ Does the viewer interact with the story, or observe it?
 
 This is the most complex demo. It has the most moving parts and the most dependencies.
 
-@claude-note: The eng reference notes UAC (UserAgentConfig) should be first-class here but currently falls back to direct `build_agent_prompt()`. The multi-agent orchestration Josep described (orchestrator + sub-agents + tool refinement) depends on UAC-level configuration being in place, not just prompt-level. This is the "needs extended" note in the eng reference. Demo C may have a backend prerequisite (UAC as first-class) before the frontend composition work is meaningful.
 
 ### Panels required
 | Panel | Status | Notes |
@@ -167,7 +146,7 @@ This is the most complex demo. It has the most moving parts and the most depende
 | `A2UIPanel` | exists | Agent-generated UI elements |
 | `ChatPanel` | exists | Communication channel alongside execution |
 | `ParticipantPanel` | exists | Agent participant visibility |
-| `DebugPanel` | exists, needs caution | Useful for showing orchestrator state — "advanced, needs more tests" |
+| `DebugPanel` | exists | Useful for showing orchestrator state —  ensure demo can use|
 
 ### Blocks required
 | Block | Status | Notes |
@@ -187,13 +166,13 @@ The challenge here is not the panels but the **narrative thread** — the viewer
 - The "tool refinement" moment needs to be visually legible — currently no display primitive for this
 - `DebugPanel` note: "needs more tests before any changes are made" — treat as read-only for demo purposes
 
-### New primitive candidate: `AgentRosterBlock`
+### NOTE: IGNORE New primitive candidate: `AgentRosterBlock`
 - Shows active agents in a demo/story context
 - Uses existing Presentation-as-Data system for agent identity
 - Distinct from `ParticipantPanel` — static roster display vs. live participant management
 - Could serve Demo A as well
 
-(this exists too.)
+
 
 ---
 

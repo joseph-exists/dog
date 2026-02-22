@@ -6,25 +6,30 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import type { DemoConfig } from "@/config/demos"
 import { useRoomMessages } from "@/hooks/useRoomMessages"
 import { useRoomStream } from "@/hooks/useRoomStream"
+import type {
+  DemoConfigViewModel,
+  DemoSessionViewModel,
+} from "@/services/demoService"
 import { DemoHeader } from "./DemoHeader"
 import { DemoStoryPanel } from "./DemoStoryPanel"
 
 interface DemoPageProps {
-  config: DemoConfig
+  demoConfig: DemoConfigViewModel
+  demoSession: DemoSessionViewModel
 }
 
-export function DemoPage({ config }: DemoPageProps) {
-  const [autoRespond, setAutoRespond] = useState(config.autoRespond)
+export function DemoPage({ demoConfig, demoSession }: DemoPageProps) {
+  const [autoRespond, setAutoRespond] = useState(demoSession.autoRespond)
+  const roomId = demoSession.roomId
 
   // WebSocket connection for real-time messages
   const {
     isConnected,
     sendMessage: sendViaWebSocket,
     streamingMessage,
-  } = useRoomStream(config.roomId)
+  } = useRoomStream(roomId)
 
   // Room messages
   const {
@@ -35,7 +40,7 @@ export function DemoPage({ config }: DemoPageProps) {
     loadMore,
     isLoadingMore,
     isLoading,
-  } = useRoomMessages(config.roomId)
+  } = useRoomMessages(roomId)
 
   // Callback for DemoStoryPanel to send synthetic messages
   const handleAutoRespondMessage = useCallback(
@@ -52,20 +57,25 @@ export function DemoPage({ config }: DemoPageProps) {
   return (
     <div
       className="flex flex-col h-full"
-      {...(config.theme ? { "data-demo-theme": config.theme } : {})}
     >
       <DemoHeader
-        title={config.title}
-        description={config.description}
+        title={demoConfig.title}
+        description={demoConfig.description ?? ""}
         autoRespond={autoRespond}
         onAutoRespondChange={setAutoRespond}
         isConnected={isConnected}
+        pageTheme={null}
+        cardsTheme={null}
+        availablePageThemes={[]}
+        availableCardThemes={[]}
+        onPageThemeChange={() => {}}
+        onCardsThemeChange={() => {}}
       />
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left: Story Panel */}
         <ResizablePanel defaultSize={60} minSize={30}>
           <DemoStoryPanel
-            roomId={config.roomId}
+            roomId={roomId}
             roomStoryId={null}
             autoRespond={autoRespond}
             onSendMessage={handleAutoRespondMessage}
@@ -77,7 +87,7 @@ export function DemoPage({ config }: DemoPageProps) {
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4">
               <MessageList
-                roomId={config.roomId}
+                roomId={roomId}
                 messages={messages}
                 hasMore={hasMore}
                 onLoadMore={loadMore}
@@ -87,7 +97,7 @@ export function DemoPage({ config }: DemoPageProps) {
               />
             </div>
             <MessageInput
-              roomId={config.roomId}
+              roomId={roomId}
               onSendMessage={sendMessage}
               isSending={isSending}
               isConnected={isConnected}

@@ -22,6 +22,10 @@ export interface PanelConfig {
   kind: string
   prominence: "primary" | "auxiliary"
   title: string
+  defaultSize?: number
+  minSize?: number
+  maxSize?: number
+  viewportMode?: "panel" | "page"
   render: () => React.ReactNode
 }
 
@@ -36,6 +40,7 @@ interface DemoLayoutProps {
 
 export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
   const isMobile = useIsMobile()
+  const pageSizedPanel = panels.find((p) => p.viewportMode === "page")
 
   const primaryPanels = panels.filter((p) => p.prominence === "primary")
   const auxiliaryPanels = panels.filter((p) => p.prominence === "auxiliary")
@@ -73,6 +78,11 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
     )
   }
 
+  // Page-sized panels intentionally consume the full workspace.
+  if (pageSizedPanel) {
+    return <div className={cn("h-full overflow-hidden", className)}>{pageSizedPanel.render()}</div>
+  }
+
   // Desktop panel layout
   return (
     <ResizablePanelGroup
@@ -83,7 +93,13 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
       {primaryPanels.map((panel, index) => (
         <React.Fragment key={panel.id}>
           {index > 0 && <ResizableHandle withHandle />}
-          <ResizablePanel>{panel.render()}</ResizablePanel>
+          <ResizablePanel
+            defaultSize={panel.defaultSize}
+            minSize={panel.minSize ?? 10}
+            maxSize={panel.maxSize}
+          >
+            {panel.render()}
+          </ResizablePanel>
         </React.Fragment>
       ))}
 
@@ -91,14 +107,15 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
       {auxiliaryPanels.length > 0 && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel>
-            <ResizablePanelGroup direction="horizontal">
+          <ResizablePanel defaultSize={35} minSize={20}>
+            <ResizablePanelGroup direction="vertical">
               {auxiliaryPanels.map((panel, index) => (
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}
                   <ResizablePanel
-                    defaultSize={100 / auxiliaryPanels.length}
-                    minSize={10}
+                    defaultSize={panel.defaultSize ?? 100 / auxiliaryPanels.length}
+                    minSize={panel.minSize ?? 10}
+                    maxSize={panel.maxSize}
                   >
                     {panel.render()}
                   </ResizablePanel>

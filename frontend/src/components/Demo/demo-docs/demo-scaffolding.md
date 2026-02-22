@@ -103,6 +103,7 @@ Is Demo A best served as a live Room (join-able) or a replay? Both are valid. Th
 | Story metadata display | missing | Title, description, version, current state summary |
 | State visualization | missing | A readable representation of "where we are" in the state machine |
 
+
 ### Composition level
 StoryPlayerPanel is the dominant surface. RuntimeControls compose within or beside it. A metadata block contextualizes the story for the viewer before they engage.
 

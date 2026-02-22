@@ -392,7 +392,7 @@ musical and mathematical thinking, demonstrating existential reasoning patterns.
         self.debug("Created: understands_existential_import")
 
         self.state_vars["music_math_connection"] = self.create_state_variable(
-            key="appreciates_music_mathematics_connection",
+            key="music_math_connection",
             value_type="boolean",
             default_value=False,
             category="learning",

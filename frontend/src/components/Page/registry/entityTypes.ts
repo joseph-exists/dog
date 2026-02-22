@@ -6,13 +6,11 @@ import {
   type LucideIcon,
   MessageSquare,
   Smile,
+  SmilePlusIcon,
   Sparkles,
   User,
   Users,
 } from "lucide-react"
-
-import { PagesService } from "@/client/sdk.gen"
-import { PagePublicSchema } from "@/client/schemas.gen"
 
 /**
  * Entity type definition for the registry.
@@ -41,6 +39,14 @@ export const entityTypes: EntityTypeDefinition[] = [
     icon: User,
     color: "blue",
     pageRoutePattern: "/u/:slug",
+  },
+  {
+    id: "demo",
+    label: "Demo",
+    labelPlural: "Demos",
+    icon: SmilePlusIcon,
+    color: "yellow",
+    pageRoutePattern: "/demo/:slug",
   },
   {
     id: "agent",

@@ -119,6 +119,469 @@ export type CurrentNodePublic = {
 } | null);
 };
 
+export type DemoBlockSpec = {
+    id: string;
+    type: 'context' | 'story' | 'agentRoster' | 'orchestratorState' | 'toolCapability' | 'contributionFeed' | 'content';
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+    content_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type type = 'context' | 'story' | 'agentRoster' | 'orchestratorState' | 'toolCapability' | 'contributionFeed' | 'content';
+
+export type region = 'top' | 'primary' | 'auxiliary' | 'footer';
+
+export type visibility = 'visible' | 'hidden';
+
+/**
+ * UI mode for chat surfaces in demo routes.
+ */
+export type DemoChatMode = 'participant' | 'observer';
+
+export type DemoChatPanelOptions = {
+    mode?: DemoChatMode;
+    include_internal_messages?: boolean;
+};
+
+export type DemoChatPanelSpec_Input = {
+    id: string;
+    kind?: "chat";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoChatPanelOptions;
+};
+
+export type prominence = 'primary' | 'auxiliary';
+
+export type viewport_mode = 'panel' | 'page';
+
+export type DemoChatPanelSpec_Output = {
+    id: string;
+    kind?: "chat";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoChatPanelOptions;
+};
+
+/**
+ * How a resolved composition was produced.
+ */
+export type DemoCompositionSource = 'demo_config' | 'session_override' | 'type_defaults';
+
+export type DemoConfigCreate = {
+    /**
+     * URL-safe identifier used by /demo/$slug
+     */
+    slug: string;
+    title: string;
+    description?: (string | null);
+    scope?: DemoConfigScope;
+    is_active?: boolean;
+    default_auto_respond?: boolean;
+    /**
+     * Default panel composition for DemoShell
+     */
+    default_panels_json?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Default page block layout payload
+     */
+    default_layout_json?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Extensible config for demo-specific integrations
+     */
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoConfigPublic = {
+    /**
+     * URL-safe identifier used by /demo/$slug
+     */
+    slug: string;
+    title: string;
+    description?: (string | null);
+    scope?: DemoConfigScope;
+    is_active?: boolean;
+    default_auto_respond?: boolean;
+    /**
+     * Default panel composition for DemoShell
+     */
+    default_panels_json?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Default page block layout payload
+     */
+    default_layout_json?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Extensible config for demo-specific integrations
+     */
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+    id: string;
+    owner_id: (string | null);
+    created_at: string;
+    updated_at: string;
+};
+
+export type DemoConfigScope = 'system' | 'personal' | 'shared';
+
+export type DemoConfigsPublic = {
+    data: Array<DemoConfigPublic>;
+    count: number;
+};
+
+export type DemoConfigUpdate = {
+    slug?: (string | null);
+    title?: (string | null);
+    description?: (string | null);
+    scope?: (DemoConfigScope | null);
+    is_active?: (boolean | null);
+    default_auto_respond?: (boolean | null);
+    default_panels_json?: (Array<{
+    [key: string]: unknown;
+}> | null);
+    default_layout_json?: (Array<{
+    [key: string]: unknown;
+}> | null);
+    metadata_json?: ({
+    [key: string]: unknown;
+} | null);
+};
+
+/**
+ * Content payload for 'content' panel kind.
+ *
+ * Expected format aligns with frontend ContentRenderer contract.
+ */
+export type DemoContentPanelOptions = {
+    sticky?: boolean;
+    content_json?: ({
+    [key: string]: unknown;
+} | null);
+};
+
+export type DemoContentPanelSpec = {
+    id: string;
+    kind?: "content";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoContentPanelOptions;
+};
+
+export type DemoGenericPanelSpec = {
+    id: string;
+    kind: 'chat' | 'storyRuntime' | 'participantPanel' | 'content' | 'a2ui' | 'debug' | 'canvas' | 'storyEditor' | 'storyPlayer';
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoPanelOptions;
+};
+
+export type kind = 'chat' | 'storyRuntime' | 'participantPanel' | 'content' | 'a2ui' | 'debug' | 'canvas' | 'storyEditor' | 'storyPlayer';
+
+/**
+ * Preferred shell layout mode.
+ */
+export type DemoLayoutMode = 'panels' | 'tabs';
+
+/**
+ * Canonical demo composition contract consumed by frontend renderers.
+ *
+ * Notes:
+ * - panels and blocks are composable and independently ordered.
+ * - runtime/persona/chat policies are route-level behavior contracts.
+ */
+export type DemoPageCompositionBase_Input = {
+    schema_version?: number;
+    layout_mode?: DemoLayoutMode;
+    runtime_policy?: DemoRuntimePolicy;
+    persona_policy?: DemoPersonaPolicy;
+    chat_mode?: DemoChatMode;
+    /**
+     * Required when persona_policy=fixed_user_persona. Ignored by other persona policies.
+     */
+    fixed_user_persona_id?: (string | null);
+    page_theme_id?: (string | null);
+    cards_theme_id?: (string | null);
+    /**
+     * Composition-level presentation overrides for DemoShell/layout/header.
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    panels?: Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)>;
+    blocks?: Array<DemoBlockSpec>;
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * Canonical demo composition contract consumed by frontend renderers.
+ *
+ * Notes:
+ * - panels and blocks are composable and independently ordered.
+ * - runtime/persona/chat policies are route-level behavior contracts.
+ */
+export type DemoPageCompositionBase_Output = {
+    schema_version?: number;
+    layout_mode?: DemoLayoutMode;
+    runtime_policy?: DemoRuntimePolicy;
+    persona_policy?: DemoPersonaPolicy;
+    chat_mode?: DemoChatMode;
+    /**
+     * Required when persona_policy=fixed_user_persona. Ignored by other persona policies.
+     */
+    fixed_user_persona_id?: (string | null);
+    page_theme_id?: (string | null);
+    cards_theme_id?: (string | null);
+    /**
+     * Composition-level presentation overrides for DemoShell/layout/header.
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)>;
+    blocks?: Array<DemoBlockSpec>;
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoPageCompositionPublic = {
+    schema_version?: number;
+    layout_mode?: DemoLayoutMode;
+    runtime_policy?: DemoRuntimePolicy;
+    persona_policy?: DemoPersonaPolicy;
+    chat_mode?: DemoChatMode;
+    /**
+     * Required when persona_policy=fixed_user_persona. Ignored by other persona policies.
+     */
+    fixed_user_persona_id?: (string | null);
+    page_theme_id?: (string | null);
+    cards_theme_id?: (string | null);
+    /**
+     * Composition-level presentation overrides for DemoShell/layout/header.
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)>;
+    blocks?: Array<DemoBlockSpec>;
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+    id: string;
+    demo_config_id: string;
+    owner_id: (string | null);
+    created_at: string;
+    updated_at: string;
+};
+
+export type DemoPageCompositionUpdate = {
+    schema_version?: (number | null);
+    layout_mode?: (DemoLayoutMode | null);
+    runtime_policy?: (DemoRuntimePolicy | null);
+    persona_policy?: (DemoPersonaPolicy | null);
+    chat_mode?: (DemoChatMode | null);
+    fixed_user_persona_id?: (string | null);
+    page_theme_id?: (string | null);
+    cards_theme_id?: (string | null);
+    presentation_json?: ({
+    [key: string]: unknown;
+} | null);
+    panels?: (Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec | DemoGenericPanelSpec)> | null);
+    blocks?: (Array<DemoBlockSpec> | null);
+    metadata_json?: ({
+    [key: string]: unknown;
+} | null);
+};
+
+/**
+ * Generic options payload for panel kinds that do not yet have strict models.
+ */
+export type DemoPanelOptions = {
+    data?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * How a user persona is selected when runtime starts.
+ */
+export type DemoPersonaPolicy = 'first_available' | 'fixed_user_persona' | 'manual_prompt';
+
+export type DemoResolvedRoomContext = {
+    room_id: string;
+    story_id?: (string | null);
+    title?: (string | null);
+    can_write?: boolean;
+};
+
+export type DemoResolvedRuntimeContext = {
+    has_runtime?: boolean;
+    runtime_policy: DemoRuntimePolicy;
+    persona_policy: DemoPersonaPolicy;
+    auto_start_attempted?: boolean;
+    auto_start_succeeded?: boolean;
+    auto_start_error?: (string | null);
+};
+
+/**
+ * How room runtime is started for a demo session.
+ */
+export type DemoRuntimePolicy = 'auto' | 'manual' | 'owner_only';
+
+export type DemoSessionCreate = {
+    /**
+     * Demo template to instantiate
+     */
+    demo_config_id: string;
+    auto_respond?: (boolean | null);
+};
+
+export type DemoSessionPublic = {
+    auto_respond?: boolean;
+    status?: DemoSessionStatus;
+    page_entity_type?: string;
+    /**
+     * Stable entity_id used by PageService for demo layouts
+     */
+    page_entity_id: string;
+    id: string;
+    demo_config_id: string;
+    user_id: string;
+    room_id: string;
+    created_at: string;
+    updated_at: string;
+    last_accessed_at: string;
+};
+
+export type DemoSessionsPublic = {
+    data: Array<DemoSessionPublic>;
+    count: number;
+};
+
+export type DemoSessionStatus = 'active' | 'archived' | 'ended';
+
+export type DemoSessionUpdate = {
+    auto_respond?: (boolean | null);
+    status?: (DemoSessionStatus | null);
+};
+
+export type DemoStoryRuntimePanelOptions = {
+    send_runtime_events_to_chat?: boolean;
+    viewer_mode?: boolean;
+};
+
+export type DemoStoryRuntimePanelSpec = {
+    id: string;
+    kind?: "storyRuntime";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoStoryRuntimePanelOptions;
+};
+
 /**
  * Optional context for resolving authored bindings.
  * Provides information about the entity being viewed.
@@ -802,6 +1265,22 @@ export type QualityUpdate = {
  * How a theme was resolved in the cascade.
  */
 export type ResolutionSource = 'authored' | 'user_pref' | 'system_default' | 'none';
+
+/**
+ * Proposed route payload for /demos/{slug}/session resolution.
+ *
+ * This consolidates route orchestration data into one API response and
+ * avoids frontend-side recomposition drift.
+ */
+export type ResolveDemoEntryPayload = {
+    demo_config_id: string;
+    demo_session_id: string;
+    created: boolean;
+    composition: DemoPageCompositionBase_Output;
+    composition_source: DemoCompositionSource;
+    room: DemoResolvedRoomContext;
+    runtime: DemoResolvedRuntimeContext;
+};
 
 /**
  * Resolved panel config for a user in a room
@@ -2456,6 +2935,100 @@ export type CatalogReadCatalogStoryRequirementsData = {
 };
 
 export type CatalogReadCatalogStoryRequirementsResponse = (StoryRequirementsPublic);
+
+export type DemosListAllDemoConfigsData = {
+    includeInactive?: boolean;
+    includeSystem?: boolean;
+    limit?: number;
+    scope?: (DemoConfigScope | null);
+    skip?: number;
+};
+
+export type DemosListAllDemoConfigsResponse = (DemoConfigsPublic);
+
+export type DemosCreateNewDemoConfigData = {
+    requestBody: DemoConfigCreate;
+};
+
+export type DemosCreateNewDemoConfigResponse = (DemoConfigPublic);
+
+export type DemosGetDemoConfigData = {
+    demoConfigId: string;
+};
+
+export type DemosGetDemoConfigResponse = (DemoConfigPublic);
+
+export type DemosUpdateExistingDemoConfigData = {
+    demoConfigId: string;
+    requestBody: DemoConfigUpdate;
+};
+
+export type DemosUpdateExistingDemoConfigResponse = (DemoConfigPublic);
+
+export type DemosDeleteExistingDemoConfigData = {
+    demoConfigId: string;
+};
+
+export type DemosDeleteExistingDemoConfigResponse = (Message);
+
+export type DemosGetDemoCompositionData = {
+    demoConfigId: string;
+};
+
+export type DemosGetDemoCompositionResponse = (DemoPageCompositionPublic);
+
+export type DemosPutDemoCompositionData = {
+    demoConfigId: string;
+    requestBody: DemoPageCompositionBase_Input;
+};
+
+export type DemosPutDemoCompositionResponse = (DemoPageCompositionPublic);
+
+export type DemosPatchExistingDemoCompositionData = {
+    demoConfigId: string;
+    requestBody: DemoPageCompositionUpdate;
+};
+
+export type DemosPatchExistingDemoCompositionResponse = (DemoPageCompositionPublic);
+
+export type DemosListMyDemoSessionsData = {
+    limit?: number;
+    skip?: number;
+    statusFilter?: (DemoSessionStatus | null);
+};
+
+export type DemosListMyDemoSessionsResponse = (DemoSessionsPublic);
+
+export type DemosCreateMyDemoSessionData = {
+    requestBody: DemoSessionCreate;
+};
+
+export type DemosCreateMyDemoSessionResponse = (DemoSessionPublic);
+
+export type DemosGetMyDemoSessionData = {
+    demoSessionId: string;
+};
+
+export type DemosGetMyDemoSessionResponse = (DemoSessionPublic);
+
+export type DemosUpdateMyDemoSessionData = {
+    demoSessionId: string;
+    requestBody: DemoSessionUpdate;
+};
+
+export type DemosUpdateMyDemoSessionResponse = (DemoSessionPublic);
+
+export type DemosDeleteMyDemoSessionData = {
+    demoSessionId: string;
+};
+
+export type DemosDeleteMyDemoSessionResponse = (Message);
+
+export type DemosResolveDemoSessionForSlugData = {
+    demoSlug: string;
+};
+
+export type DemosResolveDemoSessionForSlugResponse = (ResolveDemoEntryPayload);
 
 export type EventsReadEventsData = {
     limit?: number;

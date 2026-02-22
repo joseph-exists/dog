@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Palette,
   Play,
+  StretchVertical,
   Users,
 } from "lucide-react"
 
@@ -36,6 +37,12 @@ export type PanelKind =
   | "storyRuntime"
   | "storyPlayer"
   | "storyDebug"
+  // Content Panels
+  | "content"
+  | "graph"
+  | "gallery"
+  | "strange"
+  
 
 /**
  * Where the panel appears in the layout.
@@ -48,7 +55,7 @@ export type PanelProminence = "primary" | "auxiliary"
  * Which Page constructs can use this panel.
  * Used for filtering available panels in layout dialogs.
  */
-export type PanelContext = "room" | "story" | "universal"
+export type PanelContext = "room" | "story" | "universal" | "demo" | "page"
 
 /**
  * Permission level required to use a panel.
@@ -159,7 +166,7 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
     description: "Real-time messaging with room participants",
     icon: MessageSquare,
     defaultProminence: "primary",
-    contexts: ["room"],
+    contexts: ["room", "demo"],
     permission: "participant",
     cardinality: "single",
   },
@@ -215,7 +222,7 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
     description: "Live story execution and state display",
     icon: Play,
     defaultProminence: "primary",
-    contexts: ["room"],
+    contexts: ["room", "demo"],
     permission: "participant",
     cardinality: "single",
     dependencies: ["storyEditor"],
@@ -256,6 +263,16 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
     permission: "admin", // Dev/admin only
     cardinality: "either",
   },
+  {
+    kind: "content",
+    label: "Content",
+    description: "display panel for showing content",
+    icon: StretchVertical,
+    defaultProminence: "primary",
+    contexts: ["room", "story", "page", "universal", "demo"],
+    permission: "none",
+    cardinality: "either",
+  }
 ]
 
 // ============================================================================
