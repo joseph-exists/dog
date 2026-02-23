@@ -308,10 +308,93 @@ Expected browser result:
 
 ---
 
+## Example 6: Hidden-Mounted + Runtime-Coupled Blocks (B/C Readiness)
+Step 1 payload:
+```json
+{
+  "slug": "qa-hidden-mounted-runtime-blocks",
+  "title": "QA Hidden Mounted Runtime Blocks",
+  "scope": "personal",
+  "is_active": true,
+  "default_auto_respond": true,
+  "metadata_json": {}
+}
+```
+
+Step 2 payload (replace `<story-id>`):
+```json
+{
+  "schema_version": 1,
+  "layout_mode": "panels",
+  "runtime_policy": "auto",
+  "persona_policy": "first_available",
+  "chat_mode": "participant",
+  "panels": [
+    { "id": "story", "kind": "storyRuntime", "prominence": "primary", "order": 1, "title": "Story" },
+    { "id": "chat", "kind": "chat", "prominence": "auxiliary", "order": 2, "title": "Chat" },
+    { "id": "participants", "kind": "participantPanel", "prominence": "auxiliary", "order": 3, "title": "Participants" }
+  ],
+  "blocks": [
+    {
+      "id": "story-meta",
+      "type": "storyMetadata",
+      "region": "top",
+      "order": 1,
+      "title": "Story Metadata"
+    },
+    {
+      "id": "orchestrator",
+      "type": "orchestratorState",
+      "region": "primary",
+      "order": 1,
+      "title": "Orchestrator State",
+      "config_json": {
+        "show_agent_list": true,
+        "only_active_agents": false
+      }
+    },
+    {
+      "id": "feed-mounted",
+      "type": "contributionFeed",
+      "region": "auxiliary",
+      "order": 1,
+      "title": "Contribution Feed (Mounted Hidden)",
+      "visibility": "hidden_mounted",
+      "config_json": {
+        "max_items": 8,
+        "include_internal": true,
+        "show_sender_type": true
+      }
+    },
+    {
+      "id": "feed-unmounted",
+      "type": "contributionFeed",
+      "region": "auxiliary",
+      "order": 2,
+      "title": "Contribution Feed (Unmounted Hidden)",
+      "visibility": "hidden_unmounted"
+    }
+  ],
+  "metadata_json": {
+    "story_id": "<story-id>",
+    "description": "Hidden mounted vs unmounted + runtime-coupled block validation"
+  }
+}
+```
+
+Expected browser result:
+1. `storyMetadata` and `orchestratorState` blocks render with runtime-aware status.
+2. `hidden_mounted` block stays in DOM but is visually hidden.
+3. `hidden_unmounted` block is not rendered.
+4. Story/chat/participants still behave normally while support blocks update.
+
+---
+
 ## Quick UX/QA Checklist
 1. Content payloads are rendered from authored JSON, not static demo examples.
 2. Code format uses syntax highlighting path and shows code options.
 3. Panel content and block content both work.
 4. Region and order behavior is predictable.
 5. Hidden modes are honored (`hidden_unmounted` and `hidden_mounted`).
-6. Demo URL composition works: `https://<frontend-host>/demo/<slug>`.
+6. Runtime-coupled blocks (`storyMetadata`, `orchestratorState`, `contributionFeed`) reflect live room/runtime context.
+7. Demo URL composition works: `https://<frontend-host>/demo/<slug>`.

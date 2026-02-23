@@ -22,6 +22,7 @@ import { Route as LayoutRoomsRouteImport } from './routes/_layout/rooms'
 import { Route as LayoutQualitiesRouteImport } from './routes/_layout/qualities'
 import { Route as LayoutPersonasRouteImport } from './routes/_layout/personas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
+import { Route as LayoutDemoBuilderRouteImport } from './routes/_layout/demo-builder'
 import { Route as LayoutChatsterRouteImport } from './routes/_layout/chatster'
 import { Route as LayoutArchetypesRouteImport } from './routes/_layout/archetypes'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
@@ -103,6 +104,11 @@ const LayoutPersonasRoute = LayoutPersonasRouteImport.update({
 const LayoutItemsRoute = LayoutItemsRouteImport.update({
   id: '/items',
   path: '/items',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDemoBuilderRoute = LayoutDemoBuilderRouteImport.update({
+  id: '/demo-builder',
+  path: '/demo-builder',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutChatsterRoute = LayoutChatsterRouteImport.update({
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof LayoutAgentsRoute
   '/archetypes': typeof LayoutArchetypesRoute
   '/chatster': typeof LayoutChatsterRoute
+  '/demo-builder': typeof LayoutDemoBuilderRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
   '/qualities': typeof LayoutQualitiesRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/agents': typeof LayoutAgentsRoute
   '/archetypes': typeof LayoutArchetypesRoute
   '/chatster': typeof LayoutChatsterRoute
+  '/demo-builder': typeof LayoutDemoBuilderRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
   '/qualities': typeof LayoutQualitiesRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/_layout/agents': typeof LayoutAgentsRoute
   '/_layout/archetypes': typeof LayoutArchetypesRoute
   '/_layout/chatster': typeof LayoutChatsterRoute
+  '/_layout/demo-builder': typeof LayoutDemoBuilderRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/personas': typeof LayoutPersonasRoute
   '/_layout/qualities': typeof LayoutQualitiesRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/archetypes'
     | '/chatster'
+    | '/demo-builder'
     | '/items'
     | '/personas'
     | '/qualities'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/archetypes'
     | '/chatster'
+    | '/demo-builder'
     | '/items'
     | '/personas'
     | '/qualities'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/_layout/agents'
     | '/_layout/archetypes'
     | '/_layout/chatster'
+    | '/_layout/demo-builder'
     | '/_layout/items'
     | '/_layout/personas'
     | '/_layout/qualities'
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/items'
       fullPath: '/items'
       preLoaderRoute: typeof LayoutItemsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/demo-builder': {
+      id: '/_layout/demo-builder'
+      path: '/demo-builder'
+      fullPath: '/demo-builder'
+      preLoaderRoute: typeof LayoutDemoBuilderRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/chatster': {
@@ -631,6 +650,7 @@ interface LayoutRouteChildren {
   LayoutAgentsRoute: typeof LayoutAgentsRoute
   LayoutArchetypesRoute: typeof LayoutArchetypesRoute
   LayoutChatsterRoute: typeof LayoutChatsterRoute
+  LayoutDemoBuilderRoute: typeof LayoutDemoBuilderRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPersonasRoute: typeof LayoutPersonasRoute
   LayoutQualitiesRoute: typeof LayoutQualitiesRoute
@@ -660,6 +680,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAgentsRoute: LayoutAgentsRoute,
   LayoutArchetypesRoute: LayoutArchetypesRoute,
   LayoutChatsterRoute: LayoutChatsterRoute,
+  LayoutDemoBuilderRoute: LayoutDemoBuilderRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPersonasRoute: LayoutPersonasRoute,
   LayoutQualitiesRoute: LayoutQualitiesRoute,

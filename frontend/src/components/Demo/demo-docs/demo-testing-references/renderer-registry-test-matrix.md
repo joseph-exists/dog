@@ -3,6 +3,7 @@
 **Last updated:** 2026-02-22  
 **Primary suite:** `frontend/tests-unit/demo-renderer-registry.spec.tsx`
 **Runtime behavior suite:** `frontend/tests-unit/demo-runtime-block-behavior.spec.ts`
+**Visibility semantics suite:** `frontend/tests-unit/demo-visibility-semantics.spec.ts`
 
 ## Purpose
 1. Make renderer mapping coverage explicit and auditable.
@@ -54,6 +55,23 @@
 - recency sort + truncation behavior
 - sender-type formatting permutations
 
+### Visibility semantics permutations
+1. visibility normalization:
+- `visible`
+- `hidden_unmounted`
+- `hidden_mounted`
+- invalid/legacy/empty values -> `visible`
+2. block region normalization:
+- explicit `top`/`primary`/`auxiliary`/`footer`
+- invalid/empty values -> `top`
+3. route-visible selection semantics:
+- `hidden_unmounted` filtered out
+- `hidden_mounted` retained and marked for hidden container state
+- order sorting with default order fallback
+4. `DemoShell` block container class behavior:
+- hidden class applied for `hidden_mounted`
+- no hidden class for `visible`
+
 ## Combinatorial Axes Exercised
 1. Kind/type dispatch axis:
 - active panel kinds
@@ -68,18 +86,17 @@
 - unsupported kind/type non-fatal behavior
 
 ## Gaps Requiring More Attention
-1. Visibility-mode integration (`visible` vs `hidden_mounted` vs `hidden_unmounted`) at route + `DemoShell` render level.
-2. Runtime-coupled block behavior under async state transitions:
+1. Runtime-coupled block behavior under async state transitions:
 - `storyMetadata` with runtime loading/error/started/not-started transitions
 - `orchestratorState` with socket connectivity flips
 - `contributionFeed` with streaming message updates
-3. Agent/capability data edge cases:
+2. Agent/capability data edge cases:
 - ambiguous agent matching precedence (`id` vs `slug` vs `name`)
 - very large capability sets and truncation behavior
 - empty/malformed `config_json` across dedicated blocks
-4. Theme and presentation override interactions:
+3. Theme and presentation override interactions:
 - composition-level theme vs block `presentation_json` behavior
-5. Deferred compatibility kinds:
+4. Deferred compatibility kinds:
 - `storyPlayerPanel`
 - `strange` (panel and block)
 

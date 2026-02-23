@@ -76,6 +76,8 @@ from auth_helper import get_authenticated_session, AuthenticationError
 BASE_URL = "http://localhost:8000/api/v1"
 DEFAULT_STORY_ID = "172109da-8b5f-48f2-9e7a-4259657691dc"
 SLUG_PREFIX = "qa-themes"
+DEFAULT_STORY_PANEL_SIZE = 70
+DEFAULT_CHAT_PANEL_SIZE = 30
 
 # Placeholder UUIDs (these won't work unless themes exist)
 # Replace with real theme UUIDs from your database
@@ -105,8 +107,8 @@ def get_themed_composition(
     cards_theme_id: str | None = None,
     story_panel_theme_id: str | None = None,
     context_block_theme_id: str | None = None,
-    story_panel_size: int = 65,
-    chat_panel_size: int = 35,
+    story_panel_size: int = DEFAULT_STORY_PANEL_SIZE,
+    chat_panel_size: int = DEFAULT_CHAT_PANEL_SIZE,
     with_participants: bool = False,
     participant_panel_size: int = 20,
     participant_options: dict | None = None
@@ -338,8 +340,8 @@ class DemoBuilder:
         cards_theme_id: str | None = None,
         story_panel_theme_id: str | None = None,
         context_block_theme_id: str | None = None,
-        story_panel_size: int = 65,
-        chat_panel_size: int = 35,
+        story_panel_size: int = DEFAULT_STORY_PANEL_SIZE,
+        chat_panel_size: int = DEFAULT_CHAT_PANEL_SIZE,
         with_participants: bool = False,
         participant_panel_size: int = 20,
         participant_options: dict | None = None
@@ -527,8 +529,8 @@ themes won't apply).
     parser.add_argument("--no-story", action="store_true")
 
     parser.add_argument("--slug", type=str, default=None)
-    parser.add_argument("--story-size", type=int, default=65)
-    parser.add_argument("--chat-size", type=int, default=35)
+    parser.add_argument("--story-size", type=int, default=DEFAULT_STORY_PANEL_SIZE)
+    parser.add_argument("--chat-size", type=int, default=DEFAULT_CHAT_PANEL_SIZE)
 
     # Theme options
     parser.add_argument("--page-theme", type=str, default=None,

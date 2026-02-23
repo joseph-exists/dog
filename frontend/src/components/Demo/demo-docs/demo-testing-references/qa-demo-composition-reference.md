@@ -9,6 +9,11 @@ Use these payloads with:
 
 This aligns with the current `DemoPageComposition` contract.
 
+## A/B/C Validation Notes
+- Composition A (baseline): story/chat plus constant instructional content.
+- Composition B (runtime-coupled): visible `storyMetadata`, `orchestratorState`, and `contributionFeed`.
+- Composition C (visibility semantics): same runtime-coupled blocks with `visible`, `hidden_mounted`, and `hidden_unmounted` permutations.
+
 ## 1) Base Template (Full Replace)
 ```json
 {
@@ -188,6 +193,121 @@ Use this to validate the product requirement: constant top content + story runti
 }
 ```
 
+## 3B) Example: Runtime-Coupled Block Coverage (Composition B)
+```json
+{
+  "schema_version": 1,
+  "layout_mode": "panels",
+  "runtime_policy": "auto",
+  "persona_policy": "first_available",
+  "chat_mode": "participant",
+  "panels": [
+    {
+      "id": "story",
+      "kind": "storyRuntime",
+      "prominence": "primary",
+      "order": 1,
+      "title": "Story Runtime"
+    },
+    {
+      "id": "chat",
+      "kind": "chat",
+      "prominence": "auxiliary",
+      "order": 2,
+      "title": "Room Chat"
+    },
+    {
+      "id": "participants",
+      "kind": "participantPanel",
+      "prominence": "auxiliary",
+      "order": 3,
+      "title": "Participants"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "story-meta",
+      "type": "storyMetadata",
+      "region": "top",
+      "order": 1,
+      "title": "Story Metadata"
+    },
+    {
+      "id": "orchestrator",
+      "type": "orchestratorState",
+      "region": "primary",
+      "order": 1,
+      "title": "Orchestrator State",
+      "config_json": {
+        "show_agent_list": true,
+        "only_active_agents": false
+      }
+    },
+    {
+      "id": "feed",
+      "type": "contributionFeed",
+      "region": "auxiliary",
+      "order": 1,
+      "title": "Contribution Feed",
+      "config_json": {
+        "max_items": 8,
+        "include_internal": true,
+        "show_sender_type": true
+      }
+    }
+  ],
+  "metadata_json": {
+    "story_id": "<story-id>",
+    "description": "Runtime-coupled block validation"
+  }
+}
+```
+
+## 3C) Example: Visibility Semantics Coverage (Composition C)
+```json
+{
+  "schema_version": 1,
+  "layout_mode": "panels",
+  "runtime_policy": "auto",
+  "persona_policy": "first_available",
+  "chat_mode": "participant",
+  "panels": [
+    { "id": "story", "kind": "storyRuntime", "prominence": "primary", "order": 1, "title": "Story" },
+    { "id": "chat", "kind": "chat", "prominence": "auxiliary", "order": 2, "title": "Chat" }
+  ],
+  "blocks": [
+    {
+      "id": "story-meta-visible",
+      "type": "storyMetadata",
+      "region": "top",
+      "order": 1,
+      "visibility": "visible"
+    },
+    {
+      "id": "orchestrator-mounted",
+      "type": "orchestratorState",
+      "region": "primary",
+      "order": 1,
+      "visibility": "hidden_mounted",
+      "config_json": {
+        "show_agent_list": true
+      }
+    },
+    {
+      "id": "feed-unmounted",
+      "type": "contributionFeed",
+      "region": "auxiliary",
+      "order": 1,
+      "visibility": "hidden_unmounted"
+    }
+  ],
+  "metadata_json": {
+    "story_id": "<story-id>",
+    "description": "Visibility semantics validation for runtime-coupled blocks"
+  }
+}
+```
+
 ## 4) Example: Page-Sized Panel
 Use to verify full-viewport panel behavior.
 
@@ -297,6 +417,8 @@ Change runtime policy and add one block without replacing the full composition.
 4. Constant content block remains visible through story/chat actions.
 5. Theme bindings + overrides apply at page/cards/panel/block levels.
 6. Runtime policy behavior matches `auto` / `manual` / `owner_only`.
+7. Runtime-coupled blocks (`storyMetadata`, `orchestratorState`, `contributionFeed`) update with room/runtime state.
+8. Visibility modes are honored: `visible` renders, `hidden_mounted` stays mounted but hidden, `hidden_unmounted` does not render.
 
 ## Appendix A: Field Domains and Combinatorics
 
@@ -332,7 +454,7 @@ If an invalid/non-existent story id is configured, resolve/create session return
 | Field | Type | Domain / Allowed Values | Notes |
 |---|---|---|---|
 | `id` | string | unique per panel list | Required |
-| `kind` | string | `"chat"`, `"storyRuntime"`, `"participantPanel"`, `"content"`, `"a2ui"`, `"debug"`, `"canvas"`, `"storyEditor"`, `"storyPlayer"` | Renderer support may vary by frontend wiring |
+| `kind` | string | `"chat"`, `"storyRuntime"`, `"participantPanel"`, `"content"`, `"a2ui"`, `"debug"`, `"canvas"`, `"storyEditor"`, `"storyPlayer"` | Active panel kinds are mapped in the demo shell registry |
 | `prominence` | string | `"primary"` or `"auxiliary"` | Controls layout grouping |
 | `order` | number | integer `>= 1` | Sort order |
 | `title` | string/null | any | Optional display label |
@@ -355,7 +477,7 @@ Kind-specific `options`:
 | Field | Type | Domain / Allowed Values | Notes |
 |---|---|---|---|
 | `id` | string | unique per block list | Required |
-| `type` | string | `"context"`, `"story"`, `"agentRoster"`, `"orchestratorState"`, `"toolCapability"`, `"contributionFeed"`, `"content"` | |
+| `type` | string | `"context"`, `"content"`, `"story"`, `"storyMetadata"`, `"agentRoster"`, `"orchestratorState"`, `"toolCapability"`, `"contributionFeed"`, `"gitView"`, `"fileExplorer"` | |
 | `region` | string | `"top"`, `"primary"`, `"auxiliary"`, `"footer"` | Placement hint |
 | `order` | number | integer `>= 1` | Sort order in region |
 | `title` | string/null | any | Optional |
@@ -381,6 +503,15 @@ Kind-specific `options`:
 
 5. Persona policy coverage
 - `first_available`, `fixed_user_persona` (with valid id), `manual_prompt`
+
+6. Runtime-coupled block update coverage
+- `storyMetadata` x `{with story, without story}`
+- `orchestratorState` x `{show_agent_list true/false}` x `{only_active_agents true/false}`
+- `contributionFeed` x `{empty, populated}` x `{include_internal true/false}`
+
+7. Visibility semantics
+- each runtime-coupled block with `visible`, `hidden_mounted`, `hidden_unmounted`
+- verify mounted-hidden blocks keep state while visually suppressed
 
 ## Appendix B: Web UI API Walkthroughs (Step-by-Step)
 
@@ -473,7 +604,7 @@ Step 4: Open:
 - `https://<frontend-host>/demo/qa-multiplayer-observer`
 
 Expected browser result:
-1. Chat-focused layout with participant panel (if mapped in current frontend panel wiring).
+1. Chat-focused layout with participant panel.
 2. Chat mode should reflect observer settings.
 3. Context block explains observer scenario.
 
@@ -531,3 +662,58 @@ Expected browser result:
 1. Page/cards theme cascade applied.
 2. Panel/block-level theme overrides applied where specified.
 3. Theme picker interactions still work on top of authored defaults.
+
+### Walkthrough 6: Composition B Runtime-Coupled Blocks
+
+Step 1: Call `POST /api/v1/demos/` with payload:
+```json
+{
+  "slug": "qa-composition-b-runtime-coupled",
+  "title": "QA Composition B Runtime Coupled",
+  "scope": "personal",
+  "is_active": true,
+  "default_auto_respond": true,
+  "metadata_json": {}
+}
+```
+
+Step 2: Call `PUT /api/v1/demos/configs/{demo_config_id}/composition` with the **Example: Runtime-Coupled Block Coverage (Composition B)** payload from Section 3B, and set:
+- `metadata_json.story_id = "<your-story-id>"`
+
+Step 3: Call `POST /api/v1/demos/qa-composition-b-runtime-coupled/session`.
+
+Step 4: Open:
+- `https://<frontend-host>/demo/qa-composition-b-runtime-coupled`
+
+Expected browser result:
+1. `storyMetadata`, `orchestratorState`, and `contributionFeed` all render.
+2. Runtime activity updates these blocks without manual refresh.
+3. Story/chat/participants remain interactive while support blocks update.
+
+### Walkthrough 7: Composition C Visibility Semantics
+
+Step 1: Call `POST /api/v1/demos/` with payload:
+```json
+{
+  "slug": "qa-composition-c-visibility",
+  "title": "QA Composition C Visibility",
+  "scope": "personal",
+  "is_active": true,
+  "default_auto_respond": true,
+  "metadata_json": {}
+}
+```
+
+Step 2: Call `PUT /api/v1/demos/configs/{demo_config_id}/composition` with the **Example: Visibility Semantics Coverage (Composition C)** payload from Section 3C, and set:
+- `metadata_json.story_id = "<your-story-id>"`
+
+Step 3: Call `POST /api/v1/demos/qa-composition-c-visibility/session`.
+
+Step 4: Open:
+- `https://<frontend-host>/demo/qa-composition-c-visibility`
+
+Expected browser result:
+1. `visible` block renders in its configured region.
+2. `hidden_mounted` block stays mounted in DOM but is visually hidden.
+3. `hidden_unmounted` block is omitted from render output.
+4. Runtime interactions do not break visibility behavior.

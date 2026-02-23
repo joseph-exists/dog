@@ -12,6 +12,7 @@ import {
 } from "@/components/Page/primitives/ContentRenderer"
 import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
 import { DemoShell, type DemoShellBlockRenderItem } from "@/components/Demo/DemoShell"
+import { getRenderableDemoBlocks } from "@/components/Demo/blockVisibility"
 import { renderDemoBlock, renderDemoPanel } from "@/components/Demo/rendererRegistry"
 import useAuth from "@/hooks/useAuth"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
@@ -87,15 +88,6 @@ function renderContentPayload(
       <ContentRenderer content={value} safeMode />
     </div>
   )
-}
-
-function normalizeBlockVisibility(
-  visibility: unknown,
-): "visible" | "hidden_unmounted" | "hidden_mounted" {
-  const rawVisibility = typeof visibility === "string" ? visibility : "visible"
-  if (rawVisibility === "hidden_unmounted") return "hidden_unmounted"
-  if (rawVisibility === "hidden_mounted") return "hidden_mounted"
-  return "visible"
 }
 
 function ResolvedDemoRoute({
@@ -445,13 +437,7 @@ function ResolvedDemoRoute({
   }, [panels, resolved.composition.panels])
 
   const renderedBlocksByRegion = useMemo(() => {
-    const orderedBlocks = (resolved.composition.blocks ?? [])
-      .map((block) => ({
-        block,
-        visibilityMode: normalizeBlockVisibility(block.visibility),
-      }))
-      .filter(({ visibilityMode }) => visibilityMode !== "hidden_unmounted")
-      .sort((a, b) => (a.block.order ?? 1) - (b.block.order ?? 1))
+    const orderedBlocks = getRenderableDemoBlocks(resolved.composition.blocks ?? [])
 
     const regions: Record<
       "top" | "primary" | "auxiliary" | "footer",
@@ -463,8 +449,7 @@ function ResolvedDemoRoute({
       footer: [],
     }
 
-    for (const { block, visibilityMode } of orderedBlocks) {
-      const region = (block.region ?? "top") as "top" | "primary" | "auxiliary" | "footer"
+    for (const { block, region, visibilityMode } of orderedBlocks) {
       const rendered = renderDemoBlock(block, {
         renderContentPayload,
         roomId,
@@ -485,7 +470,7 @@ function ResolvedDemoRoute({
       regions[region].push({
         id: block.id,
         content: rendered,
-        visibilityMode: visibilityMode === "hidden_mounted" ? "hidden_mounted" : "visible",
+        visibilityMode,
       })
     }
 

@@ -48,6 +48,15 @@ export interface DemoShellProps {
   className?: string
 }
 
+export function getDemoBlockContainerClassName(
+  visibilityMode: DemoShellBlockRenderItem["visibilityMode"],
+): string {
+  return cn(
+    "rounded-md border bg-card/50",
+    visibilityMode === "hidden_mounted" && "hidden",
+  )
+}
+
 export function DemoShell ({
   demoConfig,
   panels,
@@ -105,10 +114,7 @@ export function DemoShell ({
             {topBlocks.map((block) => (
               <div
                 key={`top-block-${block.id}`}
-                className={cn(
-                  "rounded-md border bg-card/50",
-                  block.visibilityMode === "hidden_mounted" && "hidden",
-                )}
+                className={getDemoBlockContainerClassName(block.visibilityMode)}
               >
                 {block.content}
               </div>
@@ -122,10 +128,7 @@ export function DemoShell ({
               {primaryBlocks.map((block) => (
                 <div
                   key={`primary-block-${block.id}`}
-                  className={cn(
-                    "rounded-md border bg-card/50",
-                    block.visibilityMode === "hidden_mounted" && "hidden",
-                  )}
+                  className={getDemoBlockContainerClassName(block.visibilityMode)}
                 >
                   {block.content}
                 </div>
@@ -135,10 +138,7 @@ export function DemoShell ({
               {auxiliaryBlocks.map((block) => (
                 <div
                   key={`aux-block-${block.id}`}
-                  className={cn(
-                    "rounded-md border bg-card/50",
-                    block.visibilityMode === "hidden_mounted" && "hidden",
-                  )}
+                  className={getDemoBlockContainerClassName(block.visibilityMode)}
                 >
                   {block.content}
                 </div>
@@ -156,10 +156,7 @@ export function DemoShell ({
             {footerBlocks.map((block) => (
               <div
                 key={`footer-block-${block.id}`}
-                className={cn(
-                  "rounded-md border bg-card/50",
-                  block.visibilityMode === "hidden_mounted" && "hidden",
-                )}
+                className={getDemoBlockContainerClassName(block.visibilityMode)}
               >
                 {block.content}
               </div>

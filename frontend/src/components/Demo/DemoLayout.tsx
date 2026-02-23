@@ -38,12 +38,26 @@ interface DemoLayoutProps {
   className?: string
 }
 
+function clampPanelSize(value: number | undefined, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback
+  return Math.min(90, Math.max(10, value))
+}
+
+function getAuxiliaryColumnDefaultSize(auxiliaryPanels: PanelConfig[]): number {
+  if (auxiliaryPanels.length === 0) return 35
+
+  // Treat the first auxiliary panel as the column width anchor.
+  // Additional auxiliary panels are stacked inside the column.
+  return clampPanelSize(auxiliaryPanels[0]?.defaultSize, 35)
+}
+
 export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
   const isMobile = useIsMobile()
   const pageSizedPanel = panels.find((p) => p.viewportMode === "page")
 
   const primaryPanels = panels.filter((p) => p.prominence === "primary")
   const auxiliaryPanels = panels.filter((p) => p.prominence === "auxiliary")
+  const auxiliaryColumnDefaultSize = getAuxiliaryColumnDefaultSize(auxiliaryPanels)
 
   // Mobile always uses tabs
   const effectiveMode = isMobile ? "tabs" : mode
@@ -107,7 +121,7 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
       {auxiliaryPanels.length > 0 && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={35} minSize={20}>
+          <ResizablePanel defaultSize={auxiliaryColumnDefaultSize} minSize={20}>
             <ResizablePanelGroup direction="vertical">
               {auxiliaryPanels.map((panel, index) => (
                 <React.Fragment key={panel.id}>

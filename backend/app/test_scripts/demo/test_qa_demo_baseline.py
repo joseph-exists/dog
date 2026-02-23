@@ -132,6 +132,7 @@ Browser verification:
 
 import argparse
 import json
+import os
 import random
 import string
 import sys
@@ -158,11 +159,17 @@ from auth_helper import get_authenticated_session, AuthenticationError
 # =============================================================================
 
 # API Base URL - the backend must be running at this address
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = os.getenv("QA_API_BASE_URL", "http://localhost:8000/api/v1")
 
-# Default story ID for testing - can be overridden via --story-id flag
-# This should be a valid Story UUID in your database
-DEFAULT_STORY_ID = "172109da-8b5f-48f2-9e7a-4259657691dc"
+# Frontend base URL for generated links in output
+FRONTEND_BASE_URL = os.getenv("QA_FRONTEND_BASE_URL", "http://localhost:5173")
+
+# Optional default story ID for testing. Prefer explicit --story-id in multi-env QA.
+DEFAULT_STORY_ID = os.getenv("QA_STORY_ID")
+
+# Sane default split for script-generated compositions
+DEFAULT_STORY_PANEL_SIZE = 70
+DEFAULT_CHAT_PANEL_SIZE = 30
 
 # Slug prefix for auto-generated slugs
 SLUG_PREFIX = "qa-baseline"
@@ -217,6 +224,22 @@ def generate_results_filename(slug: str) -> str:
     return f"test_results_{slug.replace('-', '_')}.json"
 
 
+def resolve_session_identifier(payload: dict[str, Any]) -> str:
+    """
+    Resolve session identifier from payload, preferring current contract.
+
+    Current contract key: demo_session_id
+    Backward-compatible fallback: session_id
+    """
+    return str(payload.get("demo_session_id") or payload.get("session_id") or "N/A")
+
+
+def validate_size_range(value: int, label: str) -> None:
+    """Validate panel size percentage in inclusive range [1, 100]."""
+    if value < 1 or value > 100:
+        raise ValueError(f"{label} must be between 1 and 100 (received {value}).")
+
+
 # =============================================================================
 # COMPOSITION PAYLOADS
 # =============================================================================
@@ -228,8 +251,8 @@ def generate_results_filename(slug: str) -> str:
 
 def get_baseline_composition(
     story_id: str | None = None,
-    story_panel_size: int = 65,
-    chat_panel_size: int = 35,
+    story_panel_size: int = DEFAULT_STORY_PANEL_SIZE,
+    chat_panel_size: int = DEFAULT_CHAT_PANEL_SIZE,
     with_participants: bool = False,
     participant_panel_size: int = 25,
     participant_options: dict | None = None
@@ -628,6 +651,163 @@ def get_baseline_composition(
     return composition
 
 
+def get_runtime_coupled_composition(story_id: str | None = None) -> dict[str, Any]:
+    """Build Composition B payload with runtime-coupled block coverage."""
+    composition: dict[str, Any] = {
+        "schema_version": 1,
+        "layout_mode": "panels",
+        "runtime_policy": "auto",
+        "persona_policy": "first_available",
+        "chat_mode": "participant",
+        "panels": [
+            {
+                "id": "story",
+                "kind": "storyRuntime",
+                "prominence": "primary",
+                "order": 1,
+                "title": "Story Runtime",
+            },
+            {
+                "id": "chat",
+                "kind": "chat",
+                "prominence": "auxiliary",
+                "order": 2,
+                "title": "Room Chat",
+            },
+            {
+                "id": "participants",
+                "kind": "participantPanel",
+                "prominence": "auxiliary",
+                "order": 3,
+                "title": "Participants",
+            },
+        ],
+        "blocks": [
+            {
+                "id": "story-meta",
+                "type": "storyMetadata",
+                "region": "top",
+                "order": 1,
+                "title": "Story Metadata",
+            },
+            {
+                "id": "orchestrator",
+                "type": "orchestratorState",
+                "region": "primary",
+                "order": 1,
+                "title": "Orchestrator State",
+                "config_json": {
+                    "show_agent_list": True,
+                    "only_active_agents": False,
+                },
+            },
+            {
+                "id": "feed",
+                "type": "contributionFeed",
+                "region": "auxiliary",
+                "order": 1,
+                "title": "Contribution Feed",
+                "config_json": {
+                    "max_items": 8,
+                    "include_internal": True,
+                    "show_sender_type": True,
+                },
+            },
+        ],
+        "metadata_json": {
+            "description": "Runtime-coupled block validation (composition B)",
+            "auto_respond": True,
+        },
+    }
+    if story_id:
+        composition["metadata_json"]["story_id"] = story_id
+    return composition
+
+
+def get_visibility_semantics_composition(story_id: str | None = None) -> dict[str, Any]:
+    """Build Composition C payload with explicit visibility semantics."""
+    composition: dict[str, Any] = {
+        "schema_version": 1,
+        "layout_mode": "panels",
+        "runtime_policy": "auto",
+        "persona_policy": "first_available",
+        "chat_mode": "participant",
+        "panels": [
+            {
+                "id": "story",
+                "kind": "storyRuntime",
+                "prominence": "primary",
+                "order": 1,
+                "title": "Story",
+            },
+            {
+                "id": "chat",
+                "kind": "chat",
+                "prominence": "auxiliary",
+                "order": 2,
+                "title": "Chat",
+            },
+        ],
+        "blocks": [
+            {
+                "id": "story-meta-visible",
+                "type": "storyMetadata",
+                "region": "top",
+                "order": 1,
+                "visibility": "visible",
+            },
+            {
+                "id": "orchestrator-mounted",
+                "type": "orchestratorState",
+                "region": "primary",
+                "order": 1,
+                "visibility": "hidden_mounted",
+                "config_json": {
+                    "show_agent_list": True,
+                },
+            },
+            {
+                "id": "feed-unmounted",
+                "type": "contributionFeed",
+                "region": "auxiliary",
+                "order": 1,
+                "visibility": "hidden_unmounted",
+            },
+        ],
+        "metadata_json": {
+            "description": "Visibility semantics validation (composition C)",
+            "auto_respond": True,
+        },
+    }
+    if story_id:
+        composition["metadata_json"]["story_id"] = story_id
+    return composition
+
+
+def get_composition_for_mode(
+    mode: str,
+    story_id: str | None,
+    story_panel_size: int,
+    chat_panel_size: int,
+    with_participants: bool,
+    participant_panel_size: int,
+    participant_options: dict | None,
+) -> dict[str, Any]:
+    """Select composition payload for the requested mode."""
+    if mode == "b":
+        return get_runtime_coupled_composition(story_id=story_id)
+    if mode == "c":
+        return get_visibility_semantics_composition(story_id=story_id)
+    return get_baseline_composition(
+        story_id=story_id,
+        story_panel_size=story_panel_size,
+        chat_panel_size=chat_panel_size,
+        with_participants=with_participants,
+        participant_panel_size=participant_panel_size,
+        participant_options=participant_options,
+    )
+
+
 def get_demo_config_payload(slug: str, title: str | None = None) -> dict[str, Any]:
     """
     Build the DemoConfig creation payload.
@@ -710,8 +890,11 @@ class DemoCompositionBuilder:
         story_id: str | None = None,
         demo_slug: str | None = None,
         verbose: bool = False,
-        story_panel_size: int = 65,
-        chat_panel_size: int = 35,
+        composition_mode: str = "baseline",
+        api_base_url: str = BASE_URL,
+        frontend_base_url: str = FRONTEND_BASE_URL,
+        story_panel_size: int = DEFAULT_STORY_PANEL_SIZE,
+        chat_panel_size: int = DEFAULT_CHAT_PANEL_SIZE,
         with_participants: bool = False,
         participant_panel_size: int = 25,
         participant_options: dict | None = None
@@ -734,11 +917,15 @@ class DemoCompositionBuilder:
         self.story_id = story_id
         self.demo_slug = demo_slug or generate_slug()
         self.verbose = verbose
+        self.composition_mode = composition_mode
+        self.api_base_url = api_base_url.rstrip("/")
+        self.frontend_base_url = frontend_base_url.rstrip("/")
         self.story_panel_size = story_panel_size
         self.chat_panel_size = chat_panel_size
         self.with_participants = with_participants
         self.participant_panel_size = participant_panel_size
         self.participant_options = participant_options
+        self.requested_composition: dict[str, Any] | None = None
 
         # Track created resources for cleanup
         self.demo_config_id: str | None = None
@@ -752,6 +939,9 @@ class DemoCompositionBuilder:
             "start_time": datetime.now().isoformat(),
             "story_id": story_id,
             "demo_slug": demo_slug,
+            "composition_mode": composition_mode,
+            "api_base_url": self.api_base_url,
+            "frontend_base_url": self.frontend_base_url,
             "steps": [],
             "success": False,
             "errors": []
@@ -781,6 +971,66 @@ class DemoCompositionBuilder:
         status = "✓" if success else "✗"
         self.log(f"{status} {step_name}" + (f" - {details}" if details else ""))
 
+    def _require(self, condition: bool, message: str):
+        """Raise an error when a required test condition fails."""
+        if not condition:
+            raise Exception(message)
+
+    def _validate_persisted_composition(self, composition: dict[str, Any]):
+        """Validate persisted composition shape and mode-specific expectations."""
+        panels = composition.get("panels")
+        blocks = composition.get("blocks")
+        metadata = composition.get("metadata_json", {})
+
+        self._require(isinstance(panels, list) and len(panels) > 0, "Composition missing non-empty panels array.")
+        self._require(isinstance(blocks, list), "Composition missing blocks array.")
+
+        panel_kinds = {str(panel.get("kind")) for panel in panels if isinstance(panel, dict)}
+        self._require("chat" in panel_kinds, "Composition missing required chat panel.")
+
+        if self.composition_mode in {"baseline", "b", "c"}:
+            self._require("storyRuntime" in panel_kinds, "Composition missing required storyRuntime panel.")
+
+        if self.story_id:
+            self._require(
+                isinstance(metadata, dict) and metadata.get("story_id") == self.story_id,
+                "Persisted composition metadata_json.story_id does not match requested story_id.",
+            )
+
+        block_types = [str(block.get("type")) for block in blocks if isinstance(block, dict)]
+        if self.composition_mode == "baseline":
+            self._require(
+                any(block_type in {"context", "content"} for block_type in block_types),
+                "Baseline composition missing context/content block.",
+            )
+        elif self.composition_mode == "b":
+            required = {"storyMetadata", "orchestratorState", "contributionFeed"}
+            self._require(required.issubset(set(block_types)), "Composition B missing runtime-coupled block types.")
+        elif self.composition_mode == "c":
+            required = {"storyMetadata", "orchestratorState", "contributionFeed"}
+            self._require(required.issubset(set(block_types)), "Composition C missing runtime-coupled block types.")
+            visibility_values = {
+                str(block.get("visibility", "visible"))
+                for block in blocks
+                if isinstance(block, dict)
+            }
+            self._require("hidden_mounted" in visibility_values, "Composition C missing hidden_mounted visibility.")
+            self._require("hidden_unmounted" in visibility_values, "Composition C missing hidden_unmounted visibility.")
+
+    def _validate_session_payload(self, payload: dict[str, Any]):
+        """Validate resolve-session payload contract for critical fields."""
+        self._require(isinstance(payload.get("composition"), dict), "Session payload missing composition object.")
+        self._require(isinstance(payload.get("room"), dict), "Session payload missing room object.")
+        self._require(isinstance(payload.get("runtime"), dict), "Session payload missing runtime object.")
+        self._require(isinstance(payload.get("composition_source"), str), "Session payload missing composition_source.")
+
+        session_identifier = resolve_session_identifier(payload)
+        self._require(session_identifier != "N/A", "Session payload missing demo_session_id/session_id.")
+
+        resolved_composition = payload.get("composition")
+        self._require(isinstance(resolved_composition.get("panels"), list), "Resolved composition missing panels.")
+        self._require(isinstance(resolved_composition.get("blocks"), list), "Resolved composition missing blocks.")
+
     # =========================================================================
     # API INTERACTION METHODS
     # =========================================================================
@@ -808,11 +1058,11 @@ class DemoCompositionBuilder:
 
         payload = get_demo_config_payload(self.demo_slug)
 
-        self.debug(f"POST {BASE_URL}/demos/")
+        self.debug(f"POST {self.api_base_url}/demos/")
         self.debug(f"Payload: {json.dumps(payload, indent=2)}")
 
         response = self.session.post(
-            f"{BASE_URL}/demos/",
+            f"{self.api_base_url}/demos/",
             json=payload
         )
 
@@ -875,20 +1125,22 @@ class DemoCompositionBuilder:
 
         self.log("\n🎨 Setting composition...")
 
-        composition = get_baseline_composition(
+        composition = get_composition_for_mode(
+            mode=self.composition_mode,
             story_id=self.story_id,
             story_panel_size=self.story_panel_size,
             chat_panel_size=self.chat_panel_size,
             with_participants=self.with_participants,
             participant_panel_size=self.participant_panel_size,
-            participant_options=self.participant_options
+            participant_options=self.participant_options,
         )
+        self.requested_composition = composition
 
-        self.debug(f"PUT {BASE_URL}/demos/configs/{self.demo_config_id}/composition")
+        self.debug(f"PUT {self.api_base_url}/demos/configs/{self.demo_config_id}/composition")
         self.debug(f"Composition: {json.dumps(composition, indent=2)}")
 
         response = self.session.put(
-            f"{BASE_URL}/demos/configs/{self.demo_config_id}/composition",
+            f"{self.api_base_url}/demos/configs/{self.demo_config_id}/composition",
             json=composition
         )
 
@@ -908,6 +1160,11 @@ class DemoCompositionBuilder:
             )
 
             self.debug(f"Response: {json.dumps(self.composition_response, indent=2)}")
+
+            persisted_composition = self.get_composition(self.demo_config_id)
+            self._require(persisted_composition is not None, "Unable to fetch persisted composition for validation.")
+            assert persisted_composition is not None
+            self._validate_persisted_composition(persisted_composition)
 
             return self.composition_response
 
@@ -958,10 +1215,10 @@ class DemoCompositionBuilder:
         """
         self.log("\n🚀 Creating demo session...")
 
-        self.debug(f"POST {BASE_URL}/demos/{self.demo_slug}/session")
+        self.debug(f"POST {self.api_base_url}/demos/{self.demo_slug}/session")
 
         response = self.session.post(
-            f"{BASE_URL}/demos/{self.demo_slug}/session"
+            f"{self.api_base_url}/demos/{self.demo_slug}/session"
         )
 
         # API may return 200 (existing session) or 201 (new session created)
@@ -969,15 +1226,16 @@ class DemoCompositionBuilder:
             self.session_response = response.json()
 
             # Extract key info for logging
-            session_id = self.session_response.get("session_id", "N/A")
+            session_id = resolve_session_identifier(self.session_response)
             has_room = "room" in self.session_response
             has_runtime = "runtime" in self.session_response
             composition_source = self.session_response.get("composition_source", "N/A")
+            self._validate_session_payload(self.session_response)
 
             self.log_step(
                 "Create Session",
                 True,
-                f"session={session_id[:8]}..., room={has_room}, runtime={has_runtime}"
+                f"session={session_id[:8]}..., source={composition_source}, room={has_room}, runtime={has_runtime}"
             )
 
             self.debug(f"Response: {json.dumps(self.session_response, indent=2)}")
@@ -1028,7 +1286,7 @@ class DemoCompositionBuilder:
         self.log(f"\n🗑️ Deleting DemoConfig {target_id}...")
 
         response = self.session.delete(
-            f"{BASE_URL}/demos/configs/{target_id}"
+            f"{self.api_base_url}/demos/configs/{target_id}"
         )
 
         # DELETE may return 200 (with body) or 204 (no content)
@@ -1058,7 +1316,7 @@ class DemoCompositionBuilder:
         self.log("\n📋 Listing demo configs...")
 
         response = self.session.get(
-            f"{BASE_URL}/demos/",
+            f"{self.api_base_url}/demos/",
             params={"limit": limit}
         )
 
@@ -1089,7 +1347,7 @@ class DemoCompositionBuilder:
         """
         self.log(f"\n🔍 Getting demo: {slug}")
 
-        response = self.session.get(f"{BASE_URL}/demos/{slug}")
+        response = self.session.get(f"{self.api_base_url}/demos/{slug}")
 
         if response.status_code == 200:
             return response.json()
@@ -1116,7 +1374,7 @@ class DemoCompositionBuilder:
             dict: Composition object or None if not found
         """
         response = self.session.get(
-            f"{BASE_URL}/demos/configs/{demo_config_id}/composition"
+            f"{self.api_base_url}/demos/configs/{demo_config_id}/composition"
         )
 
         if response.status_code == 200:
@@ -1215,7 +1473,7 @@ Panel size customization:
         "--story-id",
         type=str,
         default=DEFAULT_STORY_ID,
-        help=f"Story UUID to bind to the demo (default: {DEFAULT_STORY_ID})"
+        help=f"Story UUID to bind to the demo (default: {DEFAULT_STORY_ID or 'None'})"
     )
 
     story_group.add_argument(
@@ -1235,6 +1493,14 @@ Panel size customization:
         help="Explicit slug for the demo URL (default: auto-generated)"
     )
 
+    parser.add_argument(
+        "--composition",
+        type=str,
+        choices=["baseline", "b", "c"],
+        default="baseline",
+        help="Composition mode: baseline (A), b (runtime-coupled), c (visibility semantics)"
+    )
+
     # =========================================================================
     # PANEL CUSTOMIZATION
     # =========================================================================
@@ -1242,17 +1508,17 @@ Panel size customization:
     parser.add_argument(
         "--story-size",
         type=int,
-        default=65,
+        default=DEFAULT_STORY_PANEL_SIZE,
         metavar="PCT",
-        help="Default size for story panel, 1-100 (default: 65)"
+        help=f"Default size for story panel, 1-100 (default: {DEFAULT_STORY_PANEL_SIZE})"
     )
 
     parser.add_argument(
         "--chat-size",
         type=int,
-        default=35,
+        default=DEFAULT_CHAT_PANEL_SIZE,
         metavar="PCT",
-        help="Default size for chat panel, 1-100 (default: 35)"
+        help=f"Default size for chat panel, 1-100 (default: {DEFAULT_CHAT_PANEL_SIZE})"
     )
 
     parser.add_argument(
@@ -1293,6 +1559,12 @@ Panel size customization:
         help="Show what would be created without making API calls"
     )
 
+    parser.add_argument(
+        "--require-story",
+        action="store_true",
+        help="Fail fast if no story_id is provided or discovered via environment"
+    )
+
     # =========================================================================
     # INSPECTION MODES
     # =========================================================================
@@ -1318,6 +1590,20 @@ Panel size customization:
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose/debug output"
+    )
+
+    parser.add_argument(
+        "--api-base-url",
+        type=str,
+        default=BASE_URL,
+        help=f"API base URL (default: {BASE_URL})"
+    )
+
+    parser.add_argument(
+        "--frontend-base-url",
+        type=str,
+        default=FRONTEND_BASE_URL,
+        help=f"Frontend base URL for output links (default: {FRONTEND_BASE_URL})"
     )
 
     parser.add_argument(
@@ -1353,7 +1639,20 @@ Panel size customization:
     # 2. --story-id value → Use that UUID
     # 3. Default → DEFAULT_STORY_ID
     #
+    validate_size_range(args.story_size, "story-size")
+    validate_size_range(args.chat_size, "chat-size")
+    if args.with_participants:
+        validate_size_range(args.participant_size, "participant-size")
+
     story_id = None if args.no_story else args.story_id
+    if args.require_story and not story_id:
+        print("\n❌ --require-story is set but no story ID was provided.")
+        print("   Pass --story-id <uuid> or set QA_STORY_ID environment variable.")
+        return 1
+    if args.composition in {"b", "c"} and not story_id:
+        print(f"\n❌ Composition mode '{args.composition}' requires a story_id.")
+        print("   Pass --story-id <uuid> (or use --composition baseline / --no-story).")
+        return 1
 
     # =========================================================================
     # DETERMINE SLUG
@@ -1379,19 +1678,23 @@ Panel size customization:
 
     if args.dry_run:
         generated_slug = demo_slug or generate_slug()
-        composition = get_baseline_composition(
+        composition = get_composition_for_mode(
+            mode=args.composition,
             story_id=story_id,
             story_panel_size=args.story_size,
             chat_panel_size=args.chat_size,
             with_participants=args.with_participants,
             participant_panel_size=args.participant_size,
-            participant_options=participant_options
+            participant_options=participant_options,
         )
 
         print("\n" + "=" * 70)
         print("  DRY RUN - No API calls will be made")
         print("=" * 70)
         print(f"\n  Would create demo with slug: {generated_slug}")
+        print(f"  Composition Mode: {args.composition}")
+        print(f"  API Base URL: {args.api_base_url}")
+        print(f"  Frontend Base URL: {args.frontend_base_url}")
         print(f"  Story ID: {story_id or 'None (no story)'}")
         print(f"  Panel sizes: Story={args.story_size}%, Chat={args.chat_size}%")
         if args.with_participants:
@@ -1406,7 +1709,7 @@ Panel size customization:
     # =========================================================================
 
     print("\n" + "=" * 70)
-    print("  QA DEMO COMPOSITION TEST - BASELINE TEMPLATE")
+    print("  QA DEMO COMPOSITION TEST")
     print("  Testing demo composition system with panels and blocks")
     print("=" * 70)
 
@@ -1422,6 +1725,9 @@ Panel size customization:
             story_id=story_id,
             demo_slug=demo_slug,  # None triggers auto-generation
             verbose=args.verbose,
+            composition_mode=args.composition,
+            api_base_url=args.api_base_url,
+            frontend_base_url=args.frontend_base_url,
             story_panel_size=args.story_size,
             chat_panel_size=args.chat_size,
             with_participants=args.with_participants,
@@ -1523,6 +1829,7 @@ Panel size customization:
 
         print(f"\n  Demo Config ID: {builder.demo_config_id}")
         print(f"  Demo Slug: {builder.demo_slug}")
+        print(f"  Composition Mode: {args.composition}")
         print(f"  Story ID: {story_id or 'None (no story bound)'}")
         print(f"  Panel Sizes: Story={args.story_size}%, Chat={args.chat_size}%")
 
@@ -1537,10 +1844,10 @@ Panel size customization:
         print("  └───────────────────────────┴─────────────────────────┘")
 
         print(f"\n  🌐 Access the demo at:")
-        print(f"     http://localhost:5173/demo/{builder.demo_slug}")
+        print(f"     {builder.frontend_base_url}/demo/{builder.demo_slug}")
 
         if builder.session_response:
-            session_id = builder.session_response.get("session_id", "N/A")
+            session_id = resolve_session_identifier(builder.session_response)
             print(f"\n  📍 Session ID: {session_id}")
 
         # Save results with dynamic filename
@@ -1560,8 +1867,9 @@ Panel size customization:
             summary = {
                 "demo_config_id": builder.demo_config_id,
                 "slug": builder.demo_slug,
+                "composition_mode": args.composition,
                 "story_id": story_id,
-                "url": f"http://localhost:5173/demo/{builder.demo_slug}",
+                "url": f"{builder.frontend_base_url}/demo/{builder.demo_slug}",
                 "success": True
             }
             print(json.dumps(summary, indent=2))
