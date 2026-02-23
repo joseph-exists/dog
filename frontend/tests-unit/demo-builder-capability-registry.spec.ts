@@ -56,6 +56,10 @@ test.describe("demoBuilder capability registry", () => {
       id: "internal.plugin.demo-builder.v1",
       description: "Internal builder plugin spike pack (participantPanel/toolCapability overrides).",
     })
+    expect(inventory).toContainEqual({
+      id: "example.ux-enhancer.v1",
+      description: "UX-focused example pack for theme-oriented labels/placeholders and naming.",
+    })
   })
 
   test("resolveBuilderCapabilityPacks resolves explicit pack ids and reports unknown ids", async () => {
@@ -86,6 +90,21 @@ test.describe("demoBuilder capability registry", () => {
     })
     expect(byLegacyFlag.enabledPackIds).toEqual(["internal.plugin.demo-builder.v1"])
     expect(byLegacyFlag.packs).toHaveLength(1)
+  })
+
+  test("ux-enhancer example pack overrides theme-focused composition capability metadata", async () => {
+    const registry = buildCapabilityRegistry({
+      conflictPolicy: "replace_existing",
+      packs: resolveBuilderCapabilityPacks({
+        enabledPackIds: ["example.ux-enhancer.v1"],
+        includeLegacyInternalFlag: false,
+      }).packs,
+    })
+    const pageThemeCapability = registry.composition.find((capability) => capability.key === "page_theme_id")
+    const presentationCapability = registry.composition.find((capability) => capability.key === "presentation_json")
+    expect(pageThemeCapability?.label).toBe("Page Theme Preset")
+    expect(pageThemeCapability?.placeholder).toBe("e.g. ux-sunrise-canvas")
+    expect(presentationCapability?.label).toBe("Presentation JSON (Fonts/Motion/Overlays/SVG)")
   })
 
   test("buildCapabilityRegistry applies deterministic pack ordering (order then id)", async () => {
@@ -292,6 +311,44 @@ test.describe("demoBuilder capability registry", () => {
     expect(gaps.issues).toContainEqual(expect.objectContaining({
       code: "missing_semantic_validator",
       blockType: "toolCapability",
+    }))
+  })
+
+  test("invalid example pack triggers runtime expectation + safety issues", async () => {
+    const registry = buildCapabilityRegistry({
+      conflictPolicy: "replace_existing",
+      packs: resolveBuilderCapabilityPacks({
+        enabledPackIds: ["example.invalid.v1"],
+        includeLegacyInternalFlag: false,
+      }).packs,
+    })
+    const runtimeGaps = getBuilderRuntimeExpectationGaps(registry)
+    expect(runtimeGaps.issues).toContainEqual(expect.objectContaining({
+      code: "missing_editor_component",
+      blockType: "toolCapability",
+    }))
+    const safetyGaps = getBuilderCapabilitySafetyGaps(registry)
+    expect(safetyGaps.issues).toContainEqual(expect.objectContaining({
+      code: "unsupported_control",
+      key: "invalid_unsupported_toggle",
+      severity: "error",
+    }))
+  })
+
+  test("policy-guarded example pack triggers requirement escalation safety signal", async () => {
+    const registry = buildCapabilityRegistry({
+      conflictPolicy: "replace_existing",
+      packs: resolveBuilderCapabilityPacks({
+        enabledPackIds: ["example.policy-guarded.v1"],
+        includeLegacyInternalFlag: false,
+      }).packs,
+    })
+    const safetyGaps = getBuilderCapabilitySafetyGaps(registry)
+    expect(safetyGaps.issues).toContainEqual(expect.objectContaining({
+      code: "requirement_escalation",
+      scope: "panel",
+      key: "participantPanel",
+      severity: "error",
     }))
   })
 

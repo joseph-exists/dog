@@ -4,6 +4,7 @@ import type {
   DemoPersonaPolicy,
   DemoRuntimePolicy,
 } from "@/client/types.gen"
+import type { ThemeViewModel } from "@/services/themeService"
 import {
   type EditableComposition,
 } from "@/components/Demo/builder/demoBuilderSchema"
@@ -12,7 +13,9 @@ import {
   type BuilderCompositionCapability,
 } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -63,6 +66,16 @@ interface DemoTopLevelEditorProps {
   onCardsThemeIdChange: (value: string | null) => void
   onMetadataJsonBlur: (raw: string) => void
   onPresentationJsonBlur: (raw: string) => void
+  storyId: string | null
+  onStoryIdChange: (value: string | null) => void
+  onOpenStoryPicker: () => void
+  isThemeQuickAddEnabled: boolean
+  onThemeQuickAddEnabledChange: (enabled: boolean) => void
+  availablePageThemes: ThemeViewModel[]
+  availableCardThemes: ThemeViewModel[]
+  isLoadingThemeOptions: boolean
+  onPageThemeQuickSelect: (value: string | null) => void
+  onCardsThemeQuickSelect: (value: string | null) => void
 }
 
 export function DemoTopLevelEditor({
@@ -79,6 +92,16 @@ export function DemoTopLevelEditor({
   onCardsThemeIdChange,
   onMetadataJsonBlur,
   onPresentationJsonBlur,
+  storyId,
+  onStoryIdChange,
+  onOpenStoryPicker,
+  isThemeQuickAddEnabled,
+  onThemeQuickAddEnabledChange,
+  availablePageThemes,
+  availableCardThemes,
+  isLoadingThemeOptions,
+  onPageThemeQuickSelect,
+  onCardsThemeQuickSelect,
 }: DemoTopLevelEditorProps) {
   const nonJsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter((capability) => capability.control !== "json")
   const jsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter((capability) => capability.control === "json")
@@ -159,7 +182,7 @@ export function DemoTopLevelEditor({
                   <Input
                     key={capability.key}
                     value={String(getValue(capability.key) ?? "")}
-                    placeholder={capability.label}
+                    placeholder={capability.placeholder ?? capability.label}
                     onChange={(event) => handleScalarChange(capability.key, event.target.value)}
                   />
                 )
@@ -177,6 +200,88 @@ export function DemoTopLevelEditor({
                   })}
                 </div>
               ))}
+            </div>
+
+            <div className="rounded border p-3 space-y-2">
+              <div className="text-sm font-medium">Story Association</div>
+              <p className="text-xs text-muted-foreground">
+                Set `metadata_json.story_id` for story-coupled panels/blocks (for example `storyRuntime`).
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  value={storyId ?? ""}
+                  placeholder="metadata_json.story_id"
+                  className="max-w-md"
+                  onChange={(event) => {
+                    const value = event.target.value.trim()
+                    onStoryIdChange(value.length > 0 ? value : null)
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={onOpenStoryPicker}>
+                  Pick Story
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded border p-3 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium">Theme Quick Add</div>
+                  <p className="text-xs text-muted-foreground">
+                    Show title-based theme pickers for composition only. This does not change the Demo Builder page theme.
+                  </p>
+                </div>
+                <Switch
+                  checked={isThemeQuickAddEnabled}
+                  onCheckedChange={onThemeQuickAddEnabledChange}
+                />
+              </div>
+
+              {isThemeQuickAddEnabled && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Page Theme (title)</label>
+                    <Select
+                      value={composition.page_theme_id ?? "__none"}
+                      onValueChange={(value) => onPageThemeQuickSelect(value === "__none" ? null : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingThemeOptions ? "Loading page themes..." : "Select page theme"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None</SelectItem>
+                        {availablePageThemes.map((theme) => (
+                          <SelectItem key={theme.id} value={theme.id}>
+                            {theme.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Cards Theme (title)</label>
+                    <Select
+                      value={composition.cards_theme_id ?? "__none"}
+                      onValueChange={(value) => onCardsThemeQuickSelect(value === "__none" ? null : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingThemeOptions ? "Loading card themes..." : "Select cards theme"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None</SelectItem>
+                        {availableCardThemes.map((theme) => (
+                          <SelectItem key={theme.id} value={theme.id}>
+                            {theme.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground md:col-span-2">
+                    Quick add updates `page_theme_id` / `cards_theme_id` and mirrors selection into `presentation_json.theme_refs`.
+                  </p>
+                </div>
+              )}
             </div>
           </>
         )}

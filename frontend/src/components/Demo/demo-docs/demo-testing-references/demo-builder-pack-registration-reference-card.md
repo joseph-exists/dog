@@ -92,3 +92,64 @@ All of the above remain contract-safe as long as resulting composition still con
 - currently demonstrates:
   - `participantPanel` extension
   - `toolCapability` extension
+
+## Example Packs (Ready To Use)
+
+1. `example.runtime-safe.v1`
+- Runtime-coupled safe extension pattern.
+- Keeps required hooks/requirements for runtime-coupled blocks.
+
+2. `example.ux-enhancer.v1`
+- UX-focused metadata overrides for theme-oriented authoring.
+- Emphasizes `page_theme_id`, `cards_theme_id`, and `presentation_json` guidance for fonts, motion, overlays, and SVG background patterns.
+
+3. `example.policy-guarded.v1`
+- Demonstrates intentional requirement escalation for governance/policy-driven flows.
+- Expected to trigger safety analyzer escalation signals until explicitly approved.
+
+4. `example.invalid.v1`
+- Intentionally invalid for analyzer demos.
+- Triggers runtime-expectation and safety errors by design.
+
+## UX Starter Guide
+
+- Full walkthrough + snippet library:
+  - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-ux-enhancer-production-starter.md`
+
+## Copy/Paste Presets (A/B/C)
+
+- Ready-to-apply `presentation_json` bundles for Composition A/B/C:
+  - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-ux-enhancer-presentation-presets.md`
+
+## Quick Activate
+
+- Single pack:
+  - `VITE_DEMO_BUILDER_PACKS=example.ux-enhancer.v1`
+- Multiple packs:
+  - `VITE_DEMO_BUILDER_PACKS=example.runtime-safe.v1,example.ux-enhancer.v1`
+
+## Deployment Config Quick Reference
+
+Set pack activation at build time (Vite env).
+
+1. Local/default env file:
+- `frontend/.env`
+```env
+VITE_DEMO_BUILDER_PACKS=example.ux-enhancer.v1
+```
+
+2. Docker build wiring:
+- `frontend/Dockerfile` (build stage) should expose and pass through:
+```dockerfile
+ARG VITE_DEMO_BUILDER_PACKS=${VITE_DEMO_BUILDER_PACKS}
+ENV VITE_DEMO_BUILDER_PACKS=${VITE_DEMO_BUILDER_PACKS}
+```
+- Keep these before `RUN npm run build`.
+
+3. Build invocation example:
+```bash
+docker build \
+  --build-arg VITE_API_URL=https://api.example.com \
+  --build-arg VITE_DEMO_BUILDER_PACKS=example.runtime-safe.v1,example.ux-enhancer.v1 \
+  -t demo-frontend:latest frontend
+```

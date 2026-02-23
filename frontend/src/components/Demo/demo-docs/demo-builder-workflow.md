@@ -152,8 +152,13 @@ Goal: after a user applies template A/B/C, immediately collect the minimum runti
   - internal plugin pack with one block capability extension (`toolCapability`)
   - local flag gate for bootstrap (`VITE_DEMO_BUILDER_ENABLE_INTERNAL_PLUGIN_PACK`)
   - pack-id activation path (`VITE_DEMO_BUILDER_PACKS`) and registration inventory APIs
+  - example pack catalog:
+    - `example.runtime-safe.v1`
+    - `example.ux-enhancer.v1`
+    - `example.policy-guarded.v1`
+    - `example.invalid.v1`
 - Next:
-  - publish connector-facing pack authoring templates/examples beyond internal spike
+  - publish connector-facing pack authoring templates/examples beyond internal spike (using the example pack catalog as starting templates)
 
 5. **Then move to Embedded Preview**
 - Once registry extension points stabilize, add in-builder preview integration to avoid rework on preview/editor coupling.

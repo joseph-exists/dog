@@ -1117,7 +1117,7 @@ def main():
   └─────────────────────────────────────────────
 
   Play the story at:
-  http://localhost:5173/stories/{test_results['story_id']}/play
+  http://localhost:5173/story/{test_results['story_id']}
 
   Results saved to: test_results_carroll_darii.json
 """)

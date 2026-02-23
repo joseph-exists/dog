@@ -883,7 +883,7 @@ Sometimes the most profound truth is that ***the reader and the writer are the s
                 "first_page_read": "fragment_2",
                 "pages_read": 1,
                 "notices_formatting_degradation": True,
-                "existential_dread": "mild"
+                "experiencing_existential_dread": "mild"
             }
         ))
         self.debug("Created choice: discovery → fragment_2")
@@ -897,7 +897,7 @@ Sometimes the most profound truth is that ***the reader and the writer are the s
                 "first_page_read": "fragment_3",
                 "pages_read": 1,
                 "recognizes_strange_loop": True,
-                "existential_dread": "moderate",
+                "experiencing_existential_dread": "moderate",
                 "timeline_makes_sense": False
             }
         ))
@@ -926,7 +926,7 @@ Sometimes the most profound truth is that ***the reader and the writer are the s
             sets_state={
                 "pages_read": 2,
                 "recognizes_strange_loop": True,
-                "existential_dread": "mild"
+                "experiencing_existential_dread": "mild"
             }
         ))
 
@@ -954,7 +954,7 @@ Sometimes the most profound truth is that ***the reader and the writer are the s
             sets_state={
                 "pages_read": 2,
                 "notices_formatting_degradation": True,
-                "existential_dread": "severe"
+                "experiencing_existential_dread": "severe"
             }
         ))
 
@@ -989,13 +989,13 @@ Sometimes the most profound truth is that ***the reader and the writer are the s
             requires_state={
                 "$and": [
                     {"notices_formatting_degradation": True},
-                    {"existential_dread": {"$in": ["moderate", "severe", "overwhelming"]}}
+                    {"experiencing_existential_dread": {"$in": ["moderate", "severe", "overwhelming"]}}
                 ]
             },
             sets_state={
                 "believes_author_trapped": True,
                 "found_final_entry": True,
-                "existential_dread": "overwhelming"
+                "experiencing_existential_dread": "overwhelming"
             }
         ))
 
@@ -1024,13 +1024,13 @@ Sometimes the most profound truth is that ***the reader and the writer are the s
                 "$and": [
                     {"synchronicity_events_noticed": {"$gte": 2}},
                     {"recognizes_strange_loop": True},
-                    {"existential_dread": {"$in": ["severe", "overwhelming"]}}
+                    {"experiencing_existential_dread": {"$in": ["severe", "overwhelming"]}}
                 ]
             },
             sets_state={
                 "realizes_reader_is_author": True,
                 "found_final_entry": True,
-                "existential_dread": "overwhelming"
+                "experiencing_existential_dread": "overwhelming"
             }
         ))
 

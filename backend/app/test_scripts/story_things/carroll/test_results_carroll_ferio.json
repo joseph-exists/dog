@@ -1,0 +1,36 @@
+{
+  "test_suite": "Carroll Ferio Story (EIO-1)",
+  "start_time": "2026-02-23T15:13:22.741098",
+  "end_time": "2026-02-23T15:13:23.639778",
+  "story_id": "2e5fc806-9409-406b-864d-0422509a45f5",
+  "node_ids": {
+    "intro": "53e567b2-0520-487d-80de-0d51516e2bb3",
+    "major_premise": "33a52380-e600-49c6-8163-821651c0ef5d",
+    "minor_premise": "2ff8c1a5-ebdf-4bf7-b71c-effb09029198",
+    "conclusion_options": "37fbe233-464e-4b21-ab73-a8c660a4b4ec",
+    "valid_conclusion": "60f11797-e978-4321-8912-b6b4807fecee",
+    "fallacy_conversion": "524177ea-d849-4006-8fb4-891efc1222ce",
+    "fallacy_universal": "57db04fe-c02a-47a2-84ea-52e6d18cf5ec",
+    "fallacy_affirmative": "532aefe7-7955-4da1-9704-b3d4179856fb",
+    "retry": "8e235023-d0bf-4555-bf7d-b4396564954d",
+    "skip_fallacy": "078281a7-aa41-4f8f-adb3-eddacd023881"
+  },
+  "choice_ids": [
+    "fc86d576-adc3-44e0-a941-72290d23d874",
+    "cea73dbf-0cc4-4b4a-871b-9bf9c0dd1b7c",
+    "644f01d2-00bf-4336-acf9-8b7c08443b61",
+    "a7935e43-d353-44fd-a1af-e58c91ffbb87",
+    "f2a79f37-5da0-4ded-9f8b-f6e87601357c",
+    "d66c64f3-8d6f-431e-baf0-857383429229",
+    "43b99161-96a9-48c6-b758-43ee092f27b0",
+    "b8be4b75-3b5d-4d3c-bcfb-08c8140d0d56",
+    "6d7104d5-57ac-49da-8c3c-31fd643711d5",
+    "092792d8-82fe-45fe-b365-cdae38591a77",
+    "48b120cb-23f7-461e-9bed-19f067322261",
+    "f2213654-5261-453d-b898-261f93478620",
+    "9aa57666-161a-4f9d-8301-3bd4b4934a19"
+  ],
+  "state_variable_ids": {},
+  "success": true,
+  "errors": []
+}

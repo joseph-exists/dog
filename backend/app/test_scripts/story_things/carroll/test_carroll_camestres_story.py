@@ -1111,7 +1111,7 @@ with the insects and their characteristic leg count..."*
                 "syllogism_mood": "AE",
                 "syllogism_figure": "figure_2",
                 "understands_term_arrangement_matters": True,
-                "different_from_figure_1": True
+                "distinguishes_from_figure_1": True
             }
         ))
         self.debug("Created choice: minor_premise → conclusion_options")
@@ -1285,7 +1285,7 @@ def main():
         print(f"  🆕 Term arrangement affects reasoning pattern")
 
         print(f"\n  Play the story at:")
-        print(f"  http://localhost:5173/stories/{builder.story_id}/play")
+        print(f"  http://localhost:5173/story/{builder.story_id}")
 
         test_results["success"] = is_valid
         test_results["end_time"] = datetime.now().isoformat()

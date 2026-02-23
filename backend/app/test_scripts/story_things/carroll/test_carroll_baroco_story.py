@@ -1196,7 +1196,7 @@ ensures validity.
             sets_state={
                 "understands_indirect_proof": False,
                 "understands_reductio_ad_absurdum": False,
-                "historical_context": False
+                "appreciates_historical_context": False
             }
         ))
         self.debug("Created choice: intro → major_premise")
@@ -1221,7 +1221,7 @@ ensures validity.
             sets_state={
                 "all_english_swans_are_white": True,
                 "syllogism_mood": "A",
-                "historical_context": True
+                "appreciates_historical_context": True
             }
         ))
         self.debug("Created choice: major_premise → minor_premise")
@@ -1291,7 +1291,7 @@ ensures validity.
                 "conclusion_valid": True,
                 "syllogism_mood": "AOO",
                 "contradiction_discovered": True,
-                "baroco_mastery": True,
+                "mastered_baroco_reasoning": True,
                 "fallacy_committed": "none"
             }
         ))
@@ -1438,7 +1438,7 @@ def main():
         print(f"  🆕 Historical significance of swan whiteness example")
 
         print(f"\n  Play the story at:")
-        print(f"  http://localhost:5173/stories/{builder.story_id}/play")
+        print(f"  http://localhost:5173/story/{builder.story_id}")
 
         test_results["success"] = is_valid
         test_results["end_time"] = datetime.now().isoformat()

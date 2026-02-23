@@ -1,0 +1,33 @@
+{
+  "test_suite": "Carroll Syllogism Story Creation",
+  "start_time": "2026-02-23T15:13:24.728489",
+  "end_time": "2026-02-23T15:13:25.497190",
+  "story_id": "81cd4bee-d1aa-4cc0-8308-fc622247fa62",
+  "node_ids": {
+    "intro": "6206f170-9fba-4439-98af-7ccfec92755d",
+    "major_premise": "0b6b0959-0540-4419-a86f-4de934bd73ec",
+    "minor_premise": "f4c72089-718e-48c3-abf5-df18c5ed4c51",
+    "conclusion_options": "9957a7bb-a913-4377-963f-e3cdba1a4c9a",
+    "valid_conclusion": "a4091294-3656-4714-b5ed-3af2afcfe39b",
+    "fallacy_affirming": "3c4fd1df-eb35-4d26-b172-38dacf531ca7",
+    "fallacy_non_sequitur": "5e8b70de-4679-4d1a-9a53-4e41754987ed",
+    "retry": "cc330f77-6adb-4d84-b65a-8295cbe0d7d4",
+    "skip_fallacy": "f1eb2b77-38e0-4ceb-8d14-8f68209ea080"
+  },
+  "choice_ids": [
+    "905f18f5-e00f-4102-8ba6-c469f6261506",
+    "6691eda0-a86f-42df-ad81-43c02d04b6da",
+    "86c2a736-3290-4adf-a267-a47552ad2b12",
+    "5fc1c080-6cec-4d9f-996d-7182e69078df",
+    "7ff2f975-2f16-4020-a713-96d4d320c059",
+    "f7e2416f-8020-47b9-8760-7bf034c7f078",
+    "d5a2b104-6e5b-4b33-8168-6aca964b5f4c",
+    "623ddfba-d77c-443b-b454-d54e48745fe3",
+    "96edbf32-3eca-4174-a96b-3829372a662f",
+    "a8840162-8f4c-4c3f-bc2a-e23a63b1913a",
+    "a07215dd-74c4-48a8-81c9-e36e379469e0"
+  ],
+  "state_variable_ids": {},
+  "success": true,
+  "errors": []
+}

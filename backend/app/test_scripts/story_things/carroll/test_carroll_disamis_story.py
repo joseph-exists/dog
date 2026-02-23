@@ -1272,7 +1272,7 @@ def main():
         print(f"  🆕 Existential reasoning across category memberships")
 
         print(f"\n  Play the story at:")
-        print(f"  http://localhost:5173/stories/{builder.story_id}/play")
+        print(f"  http://localhost:5173/story/{builder.story_id}")
 
         test_results["success"] = is_valid
         test_results["end_time"] = datetime.now().isoformat()

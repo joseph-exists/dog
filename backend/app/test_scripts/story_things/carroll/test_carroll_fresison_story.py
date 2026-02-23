@@ -1255,7 +1255,7 @@ are sound even when the term arrangement feels backwards or artificial."""
                 "conclusion_valid": True,
                 "syllogism_mood": "EIO",
                 "understands_all_four_figures": True,
-                "fresison_mastery": True,
+                "mastered_fresison_reasoning": True,
                 "appreciates_historical_development": True,
                 "recognizes_artificial_nature": True,
                 "fallacy_committed": "none"
@@ -1394,7 +1394,7 @@ def main():
         print(f"  🆕 Complete four-figure syllogistic mastery")
 
         print(f"\n  Play the story at:")
-        print(f"  http://localhost:5173/stories/{builder.story_id}/play")
+        print(f"  http://localhost:5173/story/{builder.story_id}")
 
         test_results["success"] = is_valid
         test_results["end_time"] = datetime.now().isoformat()

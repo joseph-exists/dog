@@ -549,12 +549,151 @@ function buildInternalDemoBuilderPluginPack(): BuilderCapabilityRegistryPack {
   }
 }
 
+function buildRuntimeSafeExamplePack(): BuilderCapabilityRegistryPack {
+  const baseStoryMetadata = CORE_BUILDER_BLOCK_CAPABILITIES.find((capability) => capability.type === "storyMetadata")
+  if (!baseStoryMetadata) return { id: "example.runtime-safe.v1", order: 610 }
+  return {
+    id: "example.runtime-safe.v1",
+    order: 610,
+    blockCapabilities: [
+      {
+        ...baseStoryMetadata,
+        displayName: "Story Metadata (Runtime Safe)",
+        hooks: mergeCapabilityHooks(baseStoryMetadata.hooks, {
+          editorComponent: "StoryMetadataRuntimeSafeEditor",
+          semanticValidators: [
+            (context) => {
+              const matchingBlocks = getBlocksByType(context.composition, context.capabilityKey)
+              const hasConfig = matchingBlocks.some((block) => isObjectRecord(block.config_json))
+              if (hasConfig) return []
+              return [{
+                code: "story_metadata_missing_config",
+                severity: "warning",
+                message: "storyMetadata block is missing config_json object.",
+              }]
+            },
+          ],
+        }),
+      },
+    ],
+  }
+}
+
+function buildUxEnhancerExamplePack(): BuilderCapabilityRegistryPack {
+  return {
+    id: "example.ux-enhancer.v1",
+    order: 620,
+    compositionCapabilities: [
+      {
+        key: "page_theme_id",
+        label: "Page Theme Preset",
+        category: "theme",
+        control: "id",
+        enumValues: [],
+        placeholder: "e.g. ux-sunrise-canvas",
+      },
+      {
+        key: "cards_theme_id",
+        label: "Card Theme Preset",
+        category: "theme",
+        control: "id",
+        enumValues: [],
+        placeholder: "e.g. ux-glass-overlay",
+      },
+      {
+        key: "presentation_json",
+        label: "Presentation JSON (Fonts/Motion/Overlays/SVG)",
+        category: "theme",
+        control: "json",
+        enumValues: [],
+      },
+    ],
+    panelCapabilities: CORE_BUILDER_PANEL_CAPABILITIES.map((capability) => ({
+      ...capability,
+      displayName: `${capability.displayName} (UX)`,
+    })),
+    blockCapabilities: CORE_BUILDER_BLOCK_CAPABILITIES.map((capability) => ({
+      ...capability,
+      displayName: `${capability.displayName} (UX)`,
+    })),
+  }
+}
+
+function buildPolicyGuardedExamplePack(): BuilderCapabilityRegistryPack {
+  const participantPanel = CORE_BUILDER_PANEL_CAPABILITIES.find((capability) => capability.kind === "participantPanel")
+  if (!participantPanel) return { id: "example.policy-guarded.v1", order: 630 }
+  return {
+    id: "example.policy-guarded.v1",
+    order: 630,
+    panelCapabilities: [
+      {
+        ...participantPanel,
+        displayName: "Participant Panel (Policy Guarded)",
+        requirements: {
+          ...participantPanel.requirements,
+          requiresRuntime: true,
+        },
+      },
+    ],
+  }
+}
+
+function buildInvalidExamplePack(): BuilderCapabilityRegistryPack {
+  return {
+    id: "example.invalid.v1",
+    order: 640,
+    compositionCapabilities: [
+      {
+        key: "invalid_unsupported_toggle",
+        label: "Invalid Toggle",
+        category: "advanced",
+        control: "boolean",
+        enumValues: [],
+      },
+    ],
+    blockCapabilities: [
+      {
+        type: "toolCapability",
+        displayName: "Tool Capability (Invalid)",
+        requirements: {
+          requiresStory: false,
+          requiresRuntime: false,
+          requiresPersona: true,
+        },
+        hooks: {},
+      },
+    ],
+  }
+}
+
 function getBuiltinBuilderCapabilityPackRegistrations(): BuilderCapabilityPackRegistration[] {
-  return [{
-    id: "internal.plugin.demo-builder.v1",
-    description: "Internal builder plugin spike pack (participantPanel/toolCapability overrides).",
-    createPack: () => buildInternalDemoBuilderPluginPack(),
-  }]
+  return [
+    {
+      id: "internal.plugin.demo-builder.v1",
+      description: "Internal builder plugin spike pack (participantPanel/toolCapability overrides).",
+      createPack: () => buildInternalDemoBuilderPluginPack(),
+    },
+    {
+      id: "example.runtime-safe.v1",
+      description: "Reference runtime-coupled extension that preserves expectation/safety checks.",
+      createPack: () => buildRuntimeSafeExamplePack(),
+    },
+    {
+      id: "example.ux-enhancer.v1",
+      description: "UX-focused example pack for theme-oriented labels/placeholders and naming.",
+      createPack: () => buildUxEnhancerExamplePack(),
+    },
+    {
+      id: "example.policy-guarded.v1",
+      description: "Example showing policy-driven requirement escalation for gated rollouts.",
+      createPack: () => buildPolicyGuardedExamplePack(),
+    },
+    {
+      id: "example.invalid.v1",
+      description: "Intentionally invalid example pack for analyzer/testing demos.",
+      createPack: () => buildInvalidExamplePack(),
+    },
+  ]
 }
 
 export const BUILDER_CAPABILITY_PACK_REGISTRATIONS: BuilderCapabilityPackRegistration[] =

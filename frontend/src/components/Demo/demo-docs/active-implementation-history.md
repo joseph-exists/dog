@@ -1,5 +1,84 @@
 This is a history of builder-implementation with most recent first.
 
+**added companion copy/paste presentation_json presets for A/B/C compositions**
+
+### What changed
+
+- Added a dedicated preset reference for `example.ux-enhancer.v1` with ready-to-apply payloads:
+  - Composition A presets (`A1`/`A2`/`A3`)
+  - Composition B presets (`B1`/`B2`/`B3`)
+  - Composition C presets (`C1`/`C2`/`C3`)
+  - file:
+    - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-ux-enhancer-presentation-presets.md`
+
+- Linked presets from:
+  - pack registration reference card:
+    - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-pack-registration-reference-card.md`
+  - ux production starter:
+    - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-ux-enhancer-production-starter.md`
+
+### Validation
+
+- Documentation-only change (no runtime code changes required)
+
+**drafted ux-enhancer production starter with progressive presentation_json recipes**
+
+### What changed
+
+- Added a dedicated UX guide for `example.ux-enhancer.v1`:
+  - simple-to-complex snippet library
+  - fonts/motion/overlay/SVG background conventions
+  - panel/block scoped override examples
+  - rollout walkthrough + review checklist
+  - file:
+    - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-ux-enhancer-production-starter.md`
+
+- Linked the new guide from pack reference card:
+  - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-pack-registration-reference-card.md`
+
+### Validation
+
+- Documentation-only change (no runtime code changes required)
+
+**added example pack catalog (runtime-safe, ux-enhancer, policy-guarded, invalid)**
+
+### What changed
+
+- Added four concrete example pack registrations:
+  - `example.runtime-safe.v1`
+  - `example.ux-enhancer.v1`
+  - `example.policy-guarded.v1`
+  - `example.invalid.v1`
+  - file:
+    - `frontend/src/components/Demo/builder/demoBuilderCapabilityRegistry.ts`
+
+- `ux-enhancer` pack details:
+  - overrides theme-focused composition capability metadata for:
+    - `page_theme_id`
+    - `cards_theme_id`
+    - `presentation_json`
+  - intended to guide fonts/motion/overlay/SVG-background authoring via existing contract-safe theme fields
+
+- Updated top-level editor to honor capability placeholders:
+  - `DemoTopLevelEditor` now uses `capability.placeholder ?? capability.label`
+  - file:
+    - `frontend/src/components/Demo/builder/DemoTopLevelEditor.tsx`
+
+- Expanded tests for new example packs:
+  - `ux-enhancer` metadata override behavior
+  - `invalid` pack analyzer failure behavior
+  - `policy-guarded` escalation behavior
+  - file:
+    - `frontend/tests-unit/demo-builder-capability-registry.spec.ts`
+
+- Updated pack registration reference card with example-pack activation and purpose:
+  - `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-pack-registration-reference-card.md`
+
+### Validation
+
+- `cd frontend && npm run test:unit -- demo-builder-capability-registry.spec.ts` passed (`29` tests)
+- `cd frontend && npm run build` passed
+
 **added runtime-expectation and plugin-safety compatibility analyzers**
 
 ### What changed

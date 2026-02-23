@@ -63,6 +63,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
+import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 
 export const Route = createFileRoute("/_layout/demo-builder")({
   component: DemoBuilderPage,
@@ -100,6 +101,12 @@ function extractApiErrorDetail(error: unknown): string | null {
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function getCompositionStoryId(composition: EditableComposition): string | null {
+  if (!isObjectRecord(composition.metadata_json)) return null
+  const raw = composition.metadata_json.story_id
+  return typeof raw === "string" && raw.trim().length > 0 ? raw : null
 }
 
 function collectCapabilityValidationIssues(composition: EditableComposition): BuilderValidationIssue[] {
@@ -157,6 +164,7 @@ function DemoBuilderPage() {
   const [isPersonaPickerOpen, setIsPersonaPickerOpen] = useState(false)
   const [storyPickerSearch, setStoryPickerSearch] = useState("")
   const [personaPickerSearch, setPersonaPickerSearch] = useState("")
+  const [isThemeQuickAddEnabled, setIsThemeQuickAddEnabled] = useState(false)
 
   // Load all visible demo configs for builder selection.
   const { data: demosPayload, isLoading: isLoadingDemos } = useQuery({
@@ -179,6 +187,8 @@ function DemoBuilderPage() {
   })
   const stories: StoryPublic[] = storiesPayload?.data ?? []
   const personas: PersonaPublic[] = personasPayload?.data ?? []
+  const { themes: availablePageThemes, isLoading: isLoadingPageThemes } = useAvailableThemes("page")
+  const { themes: availableCardThemes, isLoading: isLoadingCardThemes } = useAvailableThemes("card")
   const filteredStories = useMemo(() => {
     const needle = storyPickerSearch.trim().toLowerCase()
     if (!needle) return stories
@@ -464,6 +474,51 @@ function DemoBuilderPage() {
     })
   }
 
+  function withPresentationThemeRefs(
+    input: EditableComposition,
+    nextPageThemeId: string | null | undefined,
+    nextCardsThemeId: string | null | undefined,
+  ): EditableComposition {
+    const presentationJson = isObjectRecord(input.presentation_json)
+      ? { ...input.presentation_json }
+      : {}
+
+    const effectivePageThemeId = typeof nextPageThemeId === "undefined"
+      ? (typeof input.page_theme_id === "string" ? input.page_theme_id : null)
+      : nextPageThemeId
+    const effectiveCardsThemeId = typeof nextCardsThemeId === "undefined"
+      ? (typeof input.cards_theme_id === "string" ? input.cards_theme_id : null)
+      : nextCardsThemeId
+
+    if (!effectivePageThemeId && !effectiveCardsThemeId) {
+      delete presentationJson.theme_refs
+      return { ...input, presentation_json: presentationJson }
+    }
+
+    presentationJson.theme_refs = {
+      page_theme_id: effectivePageThemeId,
+      cards_theme_id: effectiveCardsThemeId,
+    }
+    return { ...input, presentation_json: presentationJson }
+  }
+
+  function applyThemeQuickSelection(slot: "page" | "cards", themeId: string | null) {
+    updateComposition((current) => {
+      const next = {
+        ...current,
+        page_theme_id: slot === "page" ? themeId : current.page_theme_id,
+        cards_theme_id: slot === "cards" ? themeId : current.cards_theme_id,
+      }
+
+      if (!isThemeQuickAddEnabled) return next
+      return withPresentationThemeRefs(
+        next,
+        slot === "page" ? themeId : undefined,
+        slot === "cards" ? themeId : undefined,
+      )
+    })
+  }
+
   function applyPersonaFromPicker(personaId: string) {
     updateComposition((current) => ({
       ...current,
@@ -741,6 +796,16 @@ function DemoBuilderPage() {
         onPresentationJsonBlur={(raw) => commitJsonField("presentation_json", raw, (value) => {
           updateComposition((current) => ({ ...current, presentation_json: value ?? {} }))
         })}
+        storyId={getCompositionStoryId(composition)}
+        onStoryIdChange={setStoryId}
+        onOpenStoryPicker={() => setIsStoryPickerOpen(true)}
+        isThemeQuickAddEnabled={isThemeQuickAddEnabled}
+        onThemeQuickAddEnabledChange={setIsThemeQuickAddEnabled}
+        availablePageThemes={availablePageThemes}
+        availableCardThemes={availableCardThemes}
+        isLoadingThemeOptions={isLoadingPageThemes || isLoadingCardThemes}
+        onPageThemeQuickSelect={(value) => applyThemeQuickSelection("page", value)}
+        onCardsThemeQuickSelect={(value) => applyThemeQuickSelection("cards", value)}
       />
 
       <DemoValidationPanel issues={semanticIssues} />

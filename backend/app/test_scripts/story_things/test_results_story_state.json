@@ -1,0 +1,319 @@
+{
+  "test_suite": "Story State Schema E2E Test Suite",
+  "start_time": "2026-02-23T15:40:10.199490",
+  "end_time": "2026-02-23T15:40:13.132006",
+  "duration_seconds": 2.932516,
+  "total_tests": 43,
+  "passed": 43,
+  "failed": 0,
+  "success_rate": "100.0%",
+  "test_entities": {
+    "crud_story_id": "b9ef49b3-591b-4d38-a743-b559660b08d3",
+    "validation_story_id": "14f390de-0c99-4a7a-a0db-1e71c116b318",
+    "undefined_story_id": "84a9cc7e-bbbf-489d-a939-b499165b3af7",
+    "valid_story_id": "0982ed1b-7cd5-42a9-8eec-74ea1cf264c9"
+  },
+  "tests": [
+    {
+      "name": "create_boolean_variable",
+      "passed": true,
+      "message": "Created boolean var with default=False, category=inventory",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.443512"
+    },
+    {
+      "name": "create_number_variable",
+      "passed": true,
+      "message": "Created number var with default=0",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.462031"
+    },
+    {
+      "name": "create_string_variable",
+      "passed": true,
+      "message": "Created string var with default='Adventurer'",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.482944"
+    },
+    {
+      "name": "create_enum_variable",
+      "passed": true,
+      "message": "Created enum var with values=['rebel', 'empire', 'neutral']",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.506869"
+    },
+    {
+      "name": "read_all_variables",
+      "passed": true,
+      "message": "Retrieved all 4 variables successfully",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.514725"
+    },
+    {
+      "name": "update_variable_description",
+      "passed": true,
+      "message": "Updated description successfully",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.538238"
+    },
+    {
+      "name": "update_variable_default",
+      "passed": true,
+      "message": "Updated default_value from 0 to 50",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.557726"
+    },
+    {
+      "name": "update_enum_values",
+      "passed": true,
+      "message": "Added 'independent' to enum values",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.576228"
+    },
+    {
+      "name": "delete_variable",
+      "passed": true,
+      "message": "Deleted variable, count now 3",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.600996"
+    },
+    {
+      "name": "create_minimal_variable",
+      "passed": true,
+      "message": "Created variable with only required fields",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.623752"
+    },
+    {
+      "name": "enum_requires_values",
+      "passed": true,
+      "message": "Correctly rejected enum without enum_values (status 400)",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.657059"
+    },
+    {
+      "name": "enum_rejects_empty_values",
+      "passed": true,
+      "message": "Correctly rejected empty enum_values (status 400)",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.666037"
+    },
+    {
+      "name": "boolean_valid_defaults",
+      "passed": true,
+      "message": "Boolean accepts True and False defaults",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.719633"
+    },
+    {
+      "name": "number_valid_defaults",
+      "passed": true,
+      "message": "Number accepts 0, positive, negative, and float defaults",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.806844"
+    },
+    {
+      "name": "string_valid_defaults",
+      "passed": true,
+      "message": "String accepts empty, normal, and special char defaults",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.870179"
+    },
+    {
+      "name": "enum_valid_values",
+      "passed": true,
+      "message": "Enum accepts valid enum_values array",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:10.891316"
+    },
+    {
+      "name": "detect_undefined_in_sets_state",
+      "passed": true,
+      "message": "Detected undefined vars in sets_state: {'undefined_setter_1', 'undefined_setter_2'}",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.048602"
+    },
+    {
+      "name": "detect_undefined_in_requires_state",
+      "passed": true,
+      "message": "Detected undefined vars in requires_state: {'undefined_req_1', 'undefined_req_2'}",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.187988"
+    },
+    {
+      "name": "validation_error_details",
+      "passed": true,
+      "message": "Error details include: variable_key, used_in, choice_id, choice_text, from_node_id",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.188049"
+    },
+    {
+      "name": "recognize_defined_variables",
+      "passed": true,
+      "message": "Correctly recognized defined variable",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.188057"
+    },
+    {
+      "name": "track_used_variables",
+      "passed": true,
+      "message": "Tracked all used variables: {'undefined_setter_1', 'defined_var', 'undefined_setter_2'}",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.188069"
+    },
+    {
+      "name": "empty_schema_valid",
+      "passed": true,
+      "message": "Empty schema with no state usage passes validation",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.285902"
+    },
+    {
+      "name": "fully_defined_schema_valid",
+      "passed": true,
+      "message": "Fully defined schema passes with 0 undefined variables",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.497971"
+    },
+    {
+      "name": "multi_choice_all_defined",
+      "passed": true,
+      "message": "6 choices across 4 locations, all variables defined",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:11.848215"
+    },
+    {
+      "name": "mixed_valid_invalid_choices",
+      "passed": true,
+      "message": "Detected 2 undefined vars while recognizing 2 defined vars",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.084061"
+    },
+    {
+      "name": "deep_branching_validation",
+      "passed": true,
+      "message": "Detected undefined vars at depth 3: {'secret_found', 'treasure_value'}",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.385995"
+    },
+    {
+      "name": "same_variable_multiple_uses",
+      "passed": true,
+      "message": "Detected 'bonus' undefined in 2 places",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.542243"
+    },
+    {
+      "name": "publish_valid_schema",
+      "passed": true,
+      "message": "Story published successfully with valid schema",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.663446"
+    },
+    {
+      "name": "publish_blocked_undefined_vars",
+      "passed": true,
+      "message": "Publish correctly blocked due to undefined variables",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.784476"
+    },
+    {
+      "name": "pre_publish_validation",
+      "passed": true,
+      "message": "Pre-publish validation correctly identifies issues",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.793790"
+    },
+    {
+      "name": "key_with_underscores",
+      "passed": true,
+      "message": "Key 'player_health_points' accepted",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.838814"
+    },
+    {
+      "name": "key_with_numbers",
+      "passed": true,
+      "message": "Key 'level_2_complete' accepted",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.859573"
+    },
+    {
+      "name": "long_description",
+      "passed": true,
+      "message": "400-character description accepted",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.880703"
+    },
+    {
+      "name": "many_enum_values",
+      "passed": true,
+      "message": "Enum with 20 values accepted",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.901224"
+    },
+    {
+      "name": "category_organization",
+      "passed": true,
+      "message": "Variables organized by category (2 stats, 2 inventory)",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:12.995047"
+    },
+    {
+      "name": "empty_story_validation",
+      "passed": true,
+      "message": "Empty story validates with 0 used variables",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.051667"
+    },
+    {
+      "name": "unicode_string_default",
+      "passed": true,
+      "message": "Unicode characters preserved in default value",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.073817"
+    },
+    {
+      "name": "nonexistent_story_error",
+      "passed": true,
+      "message": "Correctly returned 404 for non-existent story",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.103664"
+    },
+    {
+      "name": "nonexistent_variable_error",
+      "passed": true,
+      "message": "Correctly returned 404 for non-existent variable",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.110472"
+    },
+    {
+      "name": "delete_nonexistent_error",
+      "passed": true,
+      "message": "Correctly returned 404 for non-existent variable",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.116907"
+    },
+    {
+      "name": "missing_key_error",
+      "passed": true,
+      "message": "Correctly rejected missing key (status 422)",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.122058"
+    },
+    {
+      "name": "invalid_value_type_error",
+      "passed": true,
+      "message": "Correctly rejected invalid value_type (status 422)",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.127049"
+    },
+    {
+      "name": "empty_key_error",
+      "passed": true,
+      "message": "Correctly rejected empty key (status 422)",
+      "details": {},
+      "timestamp": "2026-02-23T15:40:13.131945"
+    }
+  ]
+}

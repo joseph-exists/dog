@@ -10,6 +10,9 @@ RUN npm install
 COPY ./ /app/
 
 ARG VITE_API_URL=${VITE_API_URL}
+ARG VITE_DEMO_BUILDER_PACKS=internal.plugin.demo-builder.v1,example.runtime-safe.v1,example.ux-enhancer.v1,example.policy-guarded.v1,example.invalid.v1
+
+ENV VITE_DEMO_BUILDER_PACKS=${VITE_DEMO_BUILDER_PACKS}
 
 RUN npm run build
 
