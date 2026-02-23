@@ -1,7 +1,7 @@
 # Demo Integration Snapshot
 > **Status:** Source of truth for current implementation + remaining delta  
-> **Date:** 2026-02-22  
-> **Inputs merged:** `demo-scaffolding-v2.md`, `todo-alpha.md`, current backend/frontend implementation
+> **Last Revised Date:** 2026-02-23  
+> **Inputs merged:** `demo-scaffolding-v2.md`, `todo-alpha.md`, current backend/frontend implementation (:note: docs noted above have been revised/deprecated/integrated. they are no longer active sources of truth.  consider this document legible/accurate until otherwise noted)
 
 ## Purpose
 This document is the active integration checkpoint for demos. It distinguishes:
@@ -84,8 +84,9 @@ Use this as the planning and execution artifact for the next demo integration sl
 ### Not Yet Complete
 1. User override management endpoints (read/write for per-user composition override lifecycle).
 2. Contract-level creator operations for clone/publish flows (optional in `todo-alpha`, not required for core route render).
-3. Renderer-focused test coverage for registry selection/fallback and visibility/runtime semantics.
-4. Acceptance-matrix execution evidence for demos A/B/C/D in this doc set.
+
+3. Acceptance-matrix execution evidence for demo D in this doc set. 
+(A/B/C are complete.  Demo D execution pending external dev dependency.)
 
 ## Remaining Delta (Prioritized)
 
@@ -94,10 +95,12 @@ Use this as the planning and execution artifact for the next demo integration sl
 2. Keep current behavior stable while introducing adapter layer for compatibility.
 3. Make route simpler by reducing panel-specific prop drift and repeated context plumbing.
 
-### Delta 2: Validate Renderer + Acceptance Behavior
+### Delta 2: COMPLETE:  Validate Renderer + Acceptance Behavior
+(see demo-testing-references folder for the wonderful implementation)
 1. Add renderer tests for registry selection, unknown-kind fallback, and visibility mode behavior.
-2. Add QA evidence for A/B/C/D compositions using current active panel/block mappings.
+2. Add QA evidence for A/B/C compositions using current active panel/block mappings.
 3. Add targeted checks for runtime-coupled blocks (`storyMetadata`, `orchestratorState`, `contributionFeed`) and agent-coupled blocks (`agentRoster`, `toolCapability`).
+NOTE: Demo D delta requirement deferred from this plan.
 
 ### Delta 3: Close Creator-Flow Contract Gaps
 1. Add user override API surface if per-user composition edits are in scope for this slice.
@@ -119,6 +122,6 @@ Use this as the planning and execution artifact for the next demo integration sl
 5. DemoShell continues to render composition-driven themes, blocks, and panels without local recomposition.
 
 ## Notes
-1. `todo-alpha.md` remains historical context but is no longer the active tracker.
-2. `demo-scaffolding-v2.md` remains the product/experience target map; this file tracks integration reality against it.
-3. `frontend/src/components/Demo/fix-broken-content.md` is now treated as completed implementation context for authored content rendering and guardrails.
+1. (deprecated, moved to legacy)`todo-alpha.md` remains historical context but is no longer the active tracker.
+2. (moved to demo-docs/legacy and revised)`demo-scaffolding-v2.md` remains the product/experience target map; this file tracks integration reality against it.
+3. (deprecated, integrated)`frontend/src/components/Demo/fix-broken-content.md` is now treated as completed implementation context for authored content rendering and guardrails.

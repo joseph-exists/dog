@@ -12,32 +12,13 @@ import { StoryMetadataBlock } from "./blocks/StoryMetadataBlock"
 import { ToolCapabilityBlock } from "./blocks/ToolCapabilityBlock"
 import { DemoChatPanel } from "./DemoChatPanel"
 import { DemoStoryPanel } from "./DemoStoryPanel"
+import {
+  type RuntimeDemoBlockType,
+  type RuntimeDemoPanelKind,
+} from "./demoRuntimeCapabilities"
 
 type DemoPanelSpec = NonNullable<ResolvedDemoSessionViewModel["composition"]["panels"]>[number]
 type DemoBlockSpec = NonNullable<ResolvedDemoSessionViewModel["composition"]["blocks"]>[number]
-
-type ActiveDemoPanelKind =
-  | "storyRuntime"
-  | "chat"
-  | "content"
-  | "participantPanel"
-  | "canvas"
-  | "a2ui"
-  | "storyEditor"
-  | "storyPlayer"
-  | "debug"
-
-type ActiveDemoBlockType =
-  | "context"
-  | "content"
-  | "story"
-  | "storyMetadata"
-  | "agentRoster"
-  | "orchestratorState"
-  | "toolCapability"
-  | "contributionFeed"
-  | "gitView"
-  | "fileExplorer"
 
 export interface DemoRoomAgentData {
   id: string
@@ -131,7 +112,7 @@ function renderStructuredBlock(
   )
 }
 
-const panelRenderers: Record<ActiveDemoPanelKind, DemoPanelRenderer> = {
+const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
   storyRuntime: (_panel, ctx) => (
     <DemoStoryPanel
       roomId={ctx.roomId}
@@ -199,7 +180,7 @@ const panelRenderers: Record<ActiveDemoPanelKind, DemoPanelRenderer> = {
   ),
 }
 
-const blockRenderers: Record<ActiveDemoBlockType, DemoBlockRenderer> = {
+const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
   context: (block, ctx) =>
     ctx.renderContentPayload(
       (block as { content_json?: unknown }).content_json,
@@ -276,7 +257,7 @@ export function renderDemoPanel(
   panel: DemoPanelSpec,
   ctx: DemoPanelRendererContext,
 ): ReactNode {
-  const panelKind = panel.kind as ActiveDemoPanelKind
+  const panelKind = panel.kind as RuntimeDemoPanelKind
   const renderer = panelRenderers[panelKind]
   if (!renderer) {
     return (
@@ -292,7 +273,7 @@ export function renderDemoBlock(
   block: DemoBlockSpec,
   ctx: DemoBlockRendererContext,
 ): ReactNode {
-  const blockType = block.type as ActiveDemoBlockType
+  const blockType = block.type as RuntimeDemoBlockType
   const renderer = blockRenderers[blockType]
   if (!renderer) {
     return (

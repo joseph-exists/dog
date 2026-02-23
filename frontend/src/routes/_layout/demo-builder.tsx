@@ -1,19 +1,59 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { Loader2, Plus, RotateCcw, Save, Trash2 } from "lucide-react"
+import { Loader2, Plus } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { DemosService } from "@/client"
 import type {
   DemoChatMode,
   DemoConfigPublic,
-  DemoLayoutMode,
-  DemoPageCompositionBase_Input,
-  DemoPageCompositionPublic,
+  PersonaPublic,
   DemoPersonaPolicy,
-  DemoRuntimePolicy,
+  StoryPublic,
 } from "@/client/types.gen"
+import { PersonasService, StoriesService } from "@/client"
+import {
+  BUILDER_COMPOSITION_TEMPLATES,
+  createCompositionTemplate,
+  createBlockTemplate,
+  createEmptyComposition,
+  createPanelTemplate,
+  getTemplateSetupState,
+  getBuilderCompositionTemplateSchema,
+  normalizeComposition,
+  resolveTemplateChecklistStatus,
+  withTemplateSetupState,
+  type BuilderValidationIssue,
+  type BuilderTemplateConfirmations,
+  type BuilderTemplateId,
+  validateCompositionSemantics,
+  type EditableBlock,
+  type EditableComposition,
+  type EditablePanel,
+} from "@/components/Demo/builder/demoBuilderSchema"
+import {
+  getBlockCapabilityByType,
+  getPanelCapabilityByKind,
+  normalizeBlockCapabilityPatch,
+  normalizePanelCapabilityPatch,
+  runBlockCapabilitySemanticValidators,
+  runPanelCapabilitySemanticValidators,
+} from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import { DemoBlockEditor } from "@/components/Demo/builder/DemoBlockEditor"
+import { DemoPanelEditor } from "@/components/Demo/builder/DemoPanelEditor"
+import { DemoRawJsonEditor } from "@/components/Demo/builder/DemoRawJsonEditor"
+import { DemoSaveBar } from "@/components/Demo/builder/DemoSaveBar"
+import { DemoTemplateSetupChecklist } from "@/components/Demo/builder/DemoTemplateSetupChecklist"
+import { DemoTopLevelEditor } from "@/components/Demo/builder/DemoTopLevelEditor"
+import { DemoValidationPanel } from "@/components/Demo/builder/DemoValidationPanel"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -22,7 +62,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/demo-builder")({
@@ -32,118 +71,8 @@ export const Route = createFileRoute("/_layout/demo-builder")({
   }),
 })
 
-// ============================================================================
-// Builder Type Aliases
-// ============================================================================
-// These aliases keep the editor tightly coupled to generated OpenAPI types
-// while still being readable during UI implementation.
-type EditableComposition = DemoPageCompositionBase_Input
-type EditablePanel = NonNullable<EditableComposition["panels"]>[number]
-type EditableBlock = NonNullable<EditableComposition["blocks"]>[number]
-
-type PanelProminence = "primary" | "auxiliary"
-type BlockRegion = "top" | "primary" | "auxiliary" | "footer"
-type BlockVisibility = "visible" | "hidden_unmounted" | "hidden_mounted"
-
-// ============================================================================
-// Active Builder Domains
-// ============================================================================
-// The builder intentionally exposes current active kinds/types instead of every
-// compatibility variant from generated unions. This prevents accidental authoring
-// of deferred compatibility constructs.
-const ACTIVE_PANEL_KINDS = [
-  "storyRuntime",
-  "chat",
-  "content",
-  "participantPanel",
-  "canvas",
-  "a2ui",
-  "storyEditor",
-  "storyPlayer",
-  "debug",
-] as const
-
-const ACTIVE_BLOCK_TYPES = [
-  "context",
-  "content",
-  "story",
-  "storyMetadata",
-  "agentRoster",
-  "orchestratorState",
-  "toolCapability",
-  "contributionFeed",
-  "gitView",
-  "fileExplorer",
-] as const
-
-const LAYOUT_MODES: DemoLayoutMode[] = ["panels", "tabs"]
-const RUNTIME_POLICIES: DemoRuntimePolicy[] = ["auto", "manual", "owner_only"]
-const PERSONA_POLICIES: DemoPersonaPolicy[] = [
-  "first_available",
-  "fixed_user_persona",
-  "manual_prompt",
-]
-const CHAT_MODES: DemoChatMode[] = ["participant", "observer"]
-const PANEL_PROMINENCE: PanelProminence[] = ["primary", "auxiliary"]
-const VIEWPORT_MODES = ["panel", "page"] as const
-const BLOCK_REGIONS: BlockRegion[] = ["top", "primary", "auxiliary", "footer"]
-const BLOCK_VISIBILITY: BlockVisibility[] = [
-  "visible",
-  "hidden_unmounted",
-  "hidden_mounted",
-]
-
-// ============================================================================
-// Composition Helpers
-// ============================================================================
-// These helpers isolate normalization/defaulting concerns so the route remains
-// focused on user interactions.
-function createEmptyComposition(): EditableComposition {
-  return {
-    schema_version: 1,
-    layout_mode: "panels",
-    runtime_policy: "auto",
-    persona_policy: "first_available",
-    chat_mode: "participant",
-    fixed_user_persona_id: null,
-    page_theme_id: null,
-    cards_theme_id: null,
-    presentation_json: {},
-    metadata_json: {},
-    panels: [],
-    blocks: [],
-  }
-}
-
-function normalizeComposition(
-  value: DemoPageCompositionPublic | DemoPageCompositionBase_Input | null | undefined,
-): EditableComposition {
-  // Deep clone avoids mutating query cache payloads while editing.
-  const cloned = value
-    ? JSON.parse(JSON.stringify(value))
-    : {}
-
-  return {
-    ...createEmptyComposition(),
-    ...(cloned as EditableComposition),
-    panels: Array.isArray((cloned as EditableComposition).panels)
-      ? (cloned as EditableComposition).panels
-      : [],
-    blocks: Array.isArray((cloned as EditableComposition).blocks)
-      ? (cloned as EditableComposition).blocks
-      : [],
-  }
-}
-
 function toPrettyJson(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2)
-}
-
-function parseInteger(value: string): number | undefined {
-  const trimmed = value.trim()
-  if (!trimmed) return undefined
-  const parsed = Number.parseInt(trimmed, 10)
-  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function parseObjectJsonOrThrow(raw: string): Record<string, unknown> {
@@ -169,32 +98,40 @@ function extractApiErrorDetail(error: unknown): string | null {
   return typeof detail === "string" ? detail : null
 }
 
-function createPanelTemplate(kind: (typeof ACTIVE_PANEL_KINDS)[number]): EditablePanel {
-  return {
-    id: `${kind}-${Date.now()}`,
-    kind,
-    prominence: kind === "chat" || kind === "participantPanel" || kind === "debug"
-      ? "auxiliary"
-      : "primary",
-    order: 1,
-    title: kind,
-    viewport_mode: "panel",
-    options: {},
-    presentation_json: {},
-  }
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function createBlockTemplate(type: (typeof ACTIVE_BLOCK_TYPES)[number]): EditableBlock {
-  return {
-    id: `${type}-${Date.now()}`,
-    type,
-    region: "top",
-    order: 1,
-    title: type,
-    visibility: "visible",
-    config_json: {},
-    presentation_json: {},
+function collectCapabilityValidationIssues(composition: EditableComposition): BuilderValidationIssue[] {
+  const issues: BuilderValidationIssue[] = []
+  const panels = composition.panels ?? []
+  for (const [index, panel] of panels.entries()) {
+    const capability = getPanelCapabilityByKind(typeof panel.kind === "string" ? panel.kind : null)
+    if (!capability) continue
+    for (const validationIssue of runPanelCapabilitySemanticValidators(capability, composition)) {
+      issues.push({
+        code: "capability_validation",
+        severity: validationIssue.severity,
+        message: `[${validationIssue.code}] ${validationIssue.message}`,
+        path: `panels[${index}]`,
+      })
+    }
   }
+
+  const blocks = composition.blocks ?? []
+  for (const [index, block] of blocks.entries()) {
+    const capability = getBlockCapabilityByType(typeof block.type === "string" ? block.type : null)
+    if (!capability) continue
+    for (const validationIssue of runBlockCapabilitySemanticValidators(capability, composition)) {
+      issues.push({
+        code: "capability_validation",
+        severity: validationIssue.severity,
+        message: `[${validationIssue.code}] ${validationIssue.message}`,
+        path: `blocks[${index}]`,
+      })
+    }
+  }
+  return issues
 }
 
 // ============================================================================
@@ -207,12 +144,19 @@ function DemoBuilderPage() {
   const [selectedDemoConfigId, setSelectedDemoConfigId] = useState<string>("")
   const [newSlug, setNewSlug] = useState("")
   const [newTitle, setNewTitle] = useState("")
+  const [selectedTemplateId, setSelectedTemplateId] = useState<BuilderTemplateId>(
+    BUILDER_COMPOSITION_TEMPLATES[0].id,
+  )
 
   // Local editable composition state + raw JSON draft for power-edit mode.
   const [composition, setComposition] = useState<EditableComposition>(createEmptyComposition())
   const [rawJsonDraft, setRawJsonDraft] = useState<string>(toPrettyJson(createEmptyComposition()))
   const [isDirty, setIsDirty] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [isStoryPickerOpen, setIsStoryPickerOpen] = useState(false)
+  const [isPersonaPickerOpen, setIsPersonaPickerOpen] = useState(false)
+  const [storyPickerSearch, setStoryPickerSearch] = useState("")
+  const [personaPickerSearch, setPersonaPickerSearch] = useState("")
 
   // Load all visible demo configs for builder selection.
   const { data: demosPayload, isLoading: isLoadingDemos } = useQuery({
@@ -225,10 +169,56 @@ function DemoBuilderPage() {
       }),
   })
   const demoConfigs: DemoConfigPublic[] = demosPayload?.data ?? []
+  const { data: storiesPayload, isLoading: isLoadingStories } = useQuery({
+    queryKey: ["demo-builder", "stories"],
+    queryFn: () => StoriesService.readStories({ skip: 0, limit: 200 }),
+  })
+  const { data: personasPayload, isLoading: isLoadingPersonas } = useQuery({
+    queryKey: ["demo-builder", "personas"],
+    queryFn: () => PersonasService.readPersonas({ skip: 0, limit: 200 }),
+  })
+  const stories: StoryPublic[] = storiesPayload?.data ?? []
+  const personas: PersonaPublic[] = personasPayload?.data ?? []
+  const filteredStories = useMemo(() => {
+    const needle = storyPickerSearch.trim().toLowerCase()
+    if (!needle) return stories
+    return stories.filter((story) => story.title.toLowerCase().includes(needle))
+  }, [stories, storyPickerSearch])
+  const filteredPersonas = useMemo(() => {
+    const needle = personaPickerSearch.trim().toLowerCase()
+    if (!needle) return personas
+    return personas.filter((persona) => persona.name.toLowerCase().includes(needle))
+  }, [personas, personaPickerSearch])
 
   const selectedDemo = useMemo(
     () => demoConfigs.find((demo) => demo.id === selectedDemoConfigId) ?? null,
     [demoConfigs, selectedDemoConfigId],
+  )
+  const semanticIssues = useMemo(
+    () => [
+      ...validateCompositionSemantics(composition),
+      ...collectCapabilityValidationIssues(composition),
+    ],
+    [composition],
+  )
+  const blockingIssues = semanticIssues.filter((issue) => issue.severity === "error")
+  const templateSetupState = useMemo(
+    () => getTemplateSetupState(composition),
+    [composition],
+  )
+  const activeTemplateSetupId = templateSetupState?.templateId ?? null
+  const isTemplateSetupDismissed = templateSetupState?.dismissed ?? false
+  const templateConfirmations: BuilderTemplateConfirmations = templateSetupState?.confirmations ?? {}
+  const activeTemplateChecklist = useMemo(
+    () => activeTemplateSetupId
+      ? resolveTemplateChecklistStatus({
+        templateId: activeTemplateSetupId,
+        composition,
+        semanticIssues,
+        confirmations: templateConfirmations,
+      })
+      : null,
+    [activeTemplateSetupId, composition, semanticIssues, templateConfirmations],
   )
 
   // Load composition when a demo is selected.
@@ -261,6 +251,9 @@ function DemoBuilderPage() {
     mutationFn: async () => {
       if (!selectedDemoConfigId) {
         throw new Error("Select a demo before saving composition.")
+      }
+      if (blockingIssues.length > 0) {
+        throw new Error("Resolve semantic validation errors before saving.")
       }
       return DemosService.putDemoComposition({
         demoConfigId: selectedDemoConfigId,
@@ -336,7 +329,13 @@ function DemoBuilderPage() {
     updateComposition((current) => {
       const panels = [...(current.panels ?? [])]
       const existing = (panels[index] ?? {}) as EditablePanel
-      panels[index] = { ...existing, ...patch } as EditablePanel
+      const patchKind = typeof patch.kind === "string" ? patch.kind : null
+      const effectiveKind = patchKind ?? (typeof existing.kind === "string" ? existing.kind : null)
+      const capability = getPanelCapabilityByKind(effectiveKind)
+      const normalizedPatch = capability
+        ? normalizePanelCapabilityPatch(capability, patch, current)
+        : patch
+      panels[index] = { ...existing, ...normalizedPatch } as EditablePanel
       return { ...current, panels }
     })
   }
@@ -345,7 +344,13 @@ function DemoBuilderPage() {
     updateComposition((current) => {
       const blocks = [...(current.blocks ?? [])]
       const existing = (blocks[index] ?? {}) as EditableBlock
-      blocks[index] = { ...existing, ...patch } as EditableBlock
+      const patchType = typeof patch.type === "string" ? patch.type : null
+      const effectiveType = patchType ?? (typeof existing.type === "string" ? existing.type : null)
+      const capability = getBlockCapabilityByType(effectiveType)
+      const normalizedPatch = capability
+        ? normalizeBlockCapabilityPatch(capability, patch, current)
+        : patch
+      blocks[index] = { ...existing, ...normalizedPatch } as EditableBlock
       return { ...current, blocks }
     })
   }
@@ -403,6 +408,75 @@ function DemoBuilderPage() {
         raw_json: error instanceof Error ? error.message : "Invalid JSON.",
       }))
     }
+  }
+
+  function applyTemplateToEditor() {
+    const template = withTemplateSetupState(
+      createCompositionTemplate(selectedTemplateId),
+      {
+        templateId: selectedTemplateId,
+        dismissed: false,
+        confirmations: {},
+      },
+    )
+    setComposition(template)
+    setRawJsonDraft(toPrettyJson(template))
+    setFieldErrors({})
+    markDirty()
+    showSuccessToast(`Applied ${selectedTemplateId} template.`)
+  }
+
+  function updateTemplateSetupState(
+    updater: (
+      current: {
+        templateId: BuilderTemplateId
+        dismissed: boolean
+        confirmations: BuilderTemplateConfirmations
+      },
+    ) => {
+      templateId: BuilderTemplateId
+      dismissed: boolean
+      confirmations: BuilderTemplateConfirmations
+    },
+  ) {
+    if (!activeTemplateSetupId) return
+    updateComposition((current) => {
+      const setupState = getTemplateSetupState(current)
+      if (!setupState) return current
+      return withTemplateSetupState(current, updater(setupState))
+    })
+  }
+
+  function setStoryId(value: string | null) {
+    updateComposition((current) => {
+      const metadata = isObjectRecord(current.metadata_json)
+        ? { ...current.metadata_json }
+        : {}
+      if (value) {
+        metadata.story_id = value
+      } else {
+        delete metadata.story_id
+      }
+      return {
+        ...current,
+        metadata_json: metadata,
+      }
+    })
+  }
+
+  function applyPersonaFromPicker(personaId: string) {
+    updateComposition((current) => ({
+      ...current,
+      persona_policy: "fixed_user_persona",
+      fixed_user_persona_id: personaId,
+    }))
+    updateTemplateSetupState((current) => ({
+      ...current,
+      confirmations: {
+        ...current.confirmations,
+        persona_policy: true,
+      },
+    }))
   }
 
   return (
@@ -479,431 +553,249 @@ function DemoBuilderPage() {
                 Create Demo
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Composition</CardTitle>
-          <CardDescription>
-            Edit top-level composition behavior before tuning panels and blocks.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!selectedDemoConfigId ? (
-            <div className="text-sm text-muted-foreground">
-              Select or create a demo config to begin editing.
-            </div>
-          ) : isLoadingComposition ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading composition...
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-3 md:grid-cols-4">
-                <Select
-                  value={composition.layout_mode ?? "panels"}
-                  onValueChange={(value: DemoLayoutMode) => updateComposition((current) => ({
-                    ...current,
-                    layout_mode: value,
-                  }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="layout_mode" /></SelectTrigger>
-                  <SelectContent>
-                    {LAYOUT_MODES.map((mode) => (
-                      <SelectItem key={mode} value={mode}>{mode}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={composition.runtime_policy ?? "auto"}
-                  onValueChange={(value: DemoRuntimePolicy) => updateComposition((current) => ({
-                    ...current,
-                    runtime_policy: value,
-                  }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="runtime_policy" /></SelectTrigger>
-                  <SelectContent>
-                    {RUNTIME_POLICIES.map((policy) => (
-                      <SelectItem key={policy} value={policy}>{policy}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={composition.persona_policy ?? "first_available"}
-                  onValueChange={(value: DemoPersonaPolicy) => updateComposition((current) => ({
-                    ...current,
-                    persona_policy: value,
-                  }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="persona_policy" /></SelectTrigger>
-                  <SelectContent>
-                    {PERSONA_POLICIES.map((policy) => (
-                      <SelectItem key={policy} value={policy}>{policy}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={composition.chat_mode ?? "participant"}
-                  onValueChange={(value: DemoChatMode) => updateComposition((current) => ({
-                    ...current,
-                    chat_mode: value,
-                  }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="chat_mode" /></SelectTrigger>
-                  <SelectContent>
-                    {CHAT_MODES.map((mode) => (
-                      <SelectItem key={mode} value={mode}>{mode}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">metadata_json</label>
-                  <Textarea
-                    rows={6}
-                    defaultValue={toPrettyJson(composition.metadata_json ?? {})}
-                    onBlur={(event) => commitJsonField("metadata_json", event.target.value, (value) => {
-                      updateComposition((current) => ({ ...current, metadata_json: value ?? {} }))
-                    })}
-                  />
-                  {fieldErrors.metadata_json && (
-                    <p className="text-xs text-destructive">{fieldErrors.metadata_json}</p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">presentation_json</label>
-                  <Textarea
-                    rows={6}
-                    defaultValue={toPrettyJson(composition.presentation_json ?? {})}
-                    onBlur={(event) => commitJsonField("presentation_json", event.target.value, (value) => {
-                      updateComposition((current) => ({ ...current, presentation_json: value ?? {} }))
-                    })}
-                  />
-                  {fieldErrors.presentation_json && (
-                    <p className="text-xs text-destructive">{fieldErrors.presentation_json}</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Panels</CardTitle>
-          <CardDescription>
-            Add and tune panel specs. Each panel row mirrors shared composition primitives.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {ACTIVE_PANEL_KINDS.map((kind) => (
-              <Button
-                key={kind}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => updateComposition((current) => ({
-                  ...current,
-                  panels: [...(current.panels ?? []), createPanelTemplate(kind)],
-                }))}
+            <div className="pt-3 border-t mt-3 space-y-2">
+              <label className="text-sm font-medium">Composition Template</label>
+              <Select
+                value={selectedTemplateId}
+                onValueChange={(value) => setSelectedTemplateId(value as BuilderTemplateId)}
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                {kind}
+                <SelectTrigger>
+                  <SelectValue placeholder="Select template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {BUILDER_COMPOSITION_TEMPLATES.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {BUILDER_COMPOSITION_TEMPLATES.find((template) => template.id === selectedTemplateId)?.description}
+              </p>
+              <Button type="button" variant="secondary" onClick={applyTemplateToEditor}>
+                Apply Template To Editor
               </Button>
-            ))}
-          </div>
-
-          {(composition.panels ?? []).length === 0 ? (
-            <div className="text-sm text-muted-foreground">No panels configured.</div>
-          ) : (
-            (composition.panels ?? []).map((panel, index) => (
-              <Card key={`${String((panel as { id?: unknown }).id ?? index)}-${index}`}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-sm">Panel {index + 1}</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => removePanel(index)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-4">
-                  <Input
-                    value={String((panel as { id?: unknown }).id ?? "")}
-                    onChange={(event) => updatePanel(index, { id: event.target.value })}
-                    placeholder="id"
-                  />
-                  <Select
-                    value={String((panel as { kind?: unknown }).kind ?? "content")}
-                    onValueChange={(value) => updatePanel(index, { kind: value as EditablePanel["kind"] })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="kind" /></SelectTrigger>
-                    <SelectContent>
-                      {ACTIVE_PANEL_KINDS.map((kind) => (
-                        <SelectItem key={kind} value={kind}>{kind}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={String((panel as { prominence?: unknown }).prominence ?? "primary")}
-                    onValueChange={(value: PanelProminence) => updatePanel(index, { prominence: value })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="prominence" /></SelectTrigger>
-                    <SelectContent>
-                      {PANEL_PROMINENCE.map((prominence) => (
-                        <SelectItem key={prominence} value={prominence}>{prominence}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={String((panel as { title?: unknown }).title ?? "")}
-                    onChange={(event) => updatePanel(index, { title: event.target.value })}
-                    placeholder="title"
-                  />
-                  <Input
-                    value={String((panel as { order?: unknown }).order ?? "")}
-                    onChange={(event) => updatePanel(index, { order: parseInteger(event.target.value) })}
-                    placeholder="order"
-                  />
-                  <Input
-                    value={String((panel as { default_size?: unknown }).default_size ?? "")}
-                    onChange={(event) => updatePanel(index, { default_size: parseInteger(event.target.value) })}
-                    placeholder="default_size"
-                  />
-                  <Input
-                    value={String((panel as { min_size?: unknown }).min_size ?? "")}
-                    onChange={(event) => updatePanel(index, { min_size: parseInteger(event.target.value) })}
-                    placeholder="min_size"
-                  />
-                  <Input
-                    value={String((panel as { max_size?: unknown }).max_size ?? "")}
-                    onChange={(event) => updatePanel(index, { max_size: parseInteger(event.target.value) })}
-                    placeholder="max_size"
-                  />
-                  <Select
-                    value={String((panel as { viewport_mode?: unknown }).viewport_mode ?? "panel")}
-                    onValueChange={(value: "panel" | "page") => updatePanel(index, { viewport_mode: value })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="viewport_mode" /></SelectTrigger>
-                    <SelectContent>
-                      {VIEWPORT_MODES.map((mode) => (
-                        <SelectItem key={mode} value={mode}>{mode}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <div className="md:col-span-3 space-y-1">
-                    <label className="text-xs text-muted-foreground">options (JSON object)</label>
-                    <Textarea
-                      rows={4}
-                      defaultValue={toPrettyJson((panel as { options?: unknown }).options ?? {})}
-                      onBlur={(event) => commitJsonField(`panel:${index}:options`, event.target.value, (value) => {
-                        updatePanel(index, { options: (value ?? {}) as EditablePanel["options"] })
-                      })}
-                    />
-                    {fieldErrors[`panel:${index}:options`] && (
-                      <p className="text-xs text-destructive">{fieldErrors[`panel:${index}:options`]}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Blocks</CardTitle>
-          <CardDescription>
-            Add and tune block specs, including region and visibility semantics.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {ACTIVE_BLOCK_TYPES.map((type) => (
-              <Button
-                key={type}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => updateComposition((current) => ({
-                  ...current,
-                  blocks: [...(current.blocks ?? []), createBlockTemplate(type)],
-                }))}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                {type}
-              </Button>
-            ))}
-          </div>
-
-          {(composition.blocks ?? []).length === 0 ? (
-            <div className="text-sm text-muted-foreground">No blocks configured.</div>
-          ) : (
-            (composition.blocks ?? []).map((block, index) => (
-              <Card key={`${String((block as { id?: unknown }).id ?? index)}-${index}`}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-sm">Block {index + 1}</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => removeBlock(index)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-4">
-                  <Input
-                    value={String((block as { id?: unknown }).id ?? "")}
-                    onChange={(event) => updateBlock(index, { id: event.target.value })}
-                    placeholder="id"
-                  />
-                  <Select
-                    value={String((block as { type?: unknown }).type ?? "content")}
-                    onValueChange={(value) => updateBlock(index, { type: value as EditableBlock["type"] })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="type" /></SelectTrigger>
-                    <SelectContent>
-                      {ACTIVE_BLOCK_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={String((block as { region?: unknown }).region ?? "top")}
-                    onValueChange={(value: BlockRegion) => updateBlock(index, { region: value })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="region" /></SelectTrigger>
-                    <SelectContent>
-                      {BLOCK_REGIONS.map((region) => (
-                        <SelectItem key={region} value={region}>{region}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={String((block as { visibility?: unknown }).visibility ?? "visible")}
-                    onValueChange={(value: BlockVisibility) => updateBlock(index, { visibility: value })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="visibility" /></SelectTrigger>
-                    <SelectContent>
-                      {BLOCK_VISIBILITY.map((visibility) => (
-                        <SelectItem key={visibility} value={visibility}>{visibility}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={String((block as { title?: unknown }).title ?? "")}
-                    onChange={(event) => updateBlock(index, { title: event.target.value })}
-                    placeholder="title"
-                  />
-                  <Input
-                    value={String((block as { order?: unknown }).order ?? "")}
-                    onChange={(event) => updateBlock(index, { order: parseInteger(event.target.value) })}
-                    placeholder="order"
-                  />
-
-                  <div className="md:col-span-4 grid gap-3 md:grid-cols-3">
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">config_json</label>
-                      <Textarea
-                        rows={4}
-                        defaultValue={toPrettyJson((block as { config_json?: unknown }).config_json ?? {})}
-                        onBlur={(event) => commitJsonField(`block:${index}:config`, event.target.value, (value) => {
-                          updateBlock(index, { config_json: value ?? {} })
-                        })}
-                      />
-                      {fieldErrors[`block:${index}:config`] && (
-                        <p className="text-xs text-destructive">{fieldErrors[`block:${index}:config`]}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">content_json</label>
-                      <Textarea
-                        rows={4}
-                        defaultValue={toPrettyJson((block as { content_json?: unknown }).content_json ?? {})}
-                        onBlur={(event) => commitJsonField(`block:${index}:content`, event.target.value, (value) => {
-                          updateBlock(index, { content_json: value ?? null })
-                        })}
-                      />
-                      {fieldErrors[`block:${index}:content`] && (
-                        <p className="text-xs text-destructive">{fieldErrors[`block:${index}:content`]}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">presentation_json</label>
-                      <Textarea
-                        rows={4}
-                        defaultValue={toPrettyJson((block as { presentation_json?: unknown }).presentation_json ?? {})}
-                        onBlur={(event) => commitJsonField(`block:${index}:presentation`, event.target.value, (value) => {
-                          updateBlock(index, { presentation_json: value ?? {} })
-                        })}
-                      />
-                      {fieldErrors[`block:${index}:presentation`] && (
-                        <p className="text-xs text-destructive">{fieldErrors[`block:${index}:presentation`]}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Raw Composition JSON</CardTitle>
-          <CardDescription>
-            Power-user editor for bulk edits and copy/paste between environments.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Textarea
-            rows={16}
-            value={rawJsonDraft}
-            onChange={(event) => setRawJsonDraft(event.target.value)}
-          />
-          {fieldErrors.raw_json && (
-            <p className="text-xs text-destructive">{fieldErrors.raw_json}</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={() => setRawJsonDraft(toPrettyJson(composition))}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset Raw JSON From Current
-            </Button>
-            <Button type="button" variant="outline" onClick={applyRawJsonDraft}>
-              Apply Raw JSON To Editor
-            </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="sticky bottom-4 flex items-center justify-between rounded-md border bg-background/95 backdrop-blur px-4 py-3">
-        <div className="text-sm text-muted-foreground">
-          {selectedDemo
-            ? `${selectedDemo.slug} (${selectedDemo.id.slice(0, 8)}...)`
-            : "No demo selected"}
-          {isDirty ? " · unsaved changes" : " · saved"}
-        </div>
-        <Button
-          type="button"
-          onClick={() => saveCompositionMutation.mutate()}
-          disabled={!selectedDemoConfigId || saveCompositionMutation.isPending}
-        >
-          {saveCompositionMutation.isPending
-            ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            : <Save className="h-4 w-4 mr-2" />}
-          Save Composition
-        </Button>
-      </div>
+      {activeTemplateSetupId && activeTemplateChecklist && (
+        <DemoTemplateSetupChecklist
+          templateId={activeTemplateSetupId}
+          templateLabel={getBuilderCompositionTemplateSchema(activeTemplateSetupId).label}
+          checklistStatus={activeTemplateChecklist}
+          isDismissed={isTemplateSetupDismissed}
+          composition={composition}
+          confirmations={templateConfirmations}
+          onDismiss={() => updateTemplateSetupState((current) => ({ ...current, dismissed: true }))}
+          onResume={() => updateTemplateSetupState((current) => ({ ...current, dismissed: false }))}
+          onStoryIdChange={setStoryId}
+          onRuntimePolicyChange={(value) => updateComposition((current) => ({
+            ...current,
+            runtime_policy: value,
+          }))}
+          onPersonaPolicyChange={(value) => updateComposition((current) => ({
+            ...current,
+            persona_policy: value,
+          }))}
+          onChatModeChange={(value) => updateComposition((current) => ({
+            ...current,
+            chat_mode: value,
+          }))}
+          onFixedUserPersonaIdChange={(value) => updateComposition((current) => ({
+            ...current,
+            fixed_user_persona_id: value,
+          }))}
+          onAssumptionConfirmed={(assumption, checked) => {
+            updateTemplateSetupState((current) => ({
+              ...current,
+              confirmations: {
+                ...current.confirmations,
+                [assumption]: checked,
+              },
+            }))
+          }}
+          onOpenStoryPicker={() => setIsStoryPickerOpen(true)}
+          onOpenPersonaPicker={() => setIsPersonaPickerOpen(true)}
+        />
+      )}
+
+      <Dialog open={isStoryPickerOpen} onOpenChange={setIsStoryPickerOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Select Story</DialogTitle>
+            <DialogDescription>
+              Pick a story to populate `metadata_json.story_id`.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Search stories..."
+              value={storyPickerSearch}
+              onChange={(event) => setStoryPickerSearch(event.target.value)}
+            />
+            <div className="max-h-72 overflow-auto space-y-2">
+              {isLoadingStories && (
+                <p className="text-sm text-muted-foreground">Loading stories...</p>
+              )}
+              {!isLoadingStories && filteredStories.length === 0 && (
+                <p className="text-sm text-muted-foreground">No stories found.</p>
+              )}
+              {filteredStories.map((story) => (
+                <button
+                  key={story.id}
+                  type="button"
+                  className="w-full rounded border px-3 py-2 text-left hover:bg-muted"
+                  onClick={() => {
+                    setStoryId(story.id)
+                    setIsStoryPickerOpen(false)
+                  }}
+                >
+                  <div className="text-sm font-medium">{story.title}</div>
+                  <div className="text-xs text-muted-foreground font-mono">{story.id}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPersonaPickerOpen} onOpenChange={setIsPersonaPickerOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Select Persona</DialogTitle>
+            <DialogDescription>
+              Pick a persona to set `persona_policy=fixed_user_persona` and populate `fixed_user_persona_id`.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Search personas..."
+              value={personaPickerSearch}
+              onChange={(event) => setPersonaPickerSearch(event.target.value)}
+            />
+            <div className="max-h-72 overflow-auto space-y-2">
+              {isLoadingPersonas && (
+                <p className="text-sm text-muted-foreground">Loading personas...</p>
+              )}
+              {!isLoadingPersonas && filteredPersonas.length === 0 && (
+                <p className="text-sm text-muted-foreground">No personas found.</p>
+              )}
+              {filteredPersonas.map((persona) => (
+                <button
+                  key={persona.id}
+                  type="button"
+                  className="w-full rounded border px-3 py-2 text-left hover:bg-muted"
+                  onClick={() => {
+                    applyPersonaFromPicker(persona.id)
+                    setIsPersonaPickerOpen(false)
+                  }}
+                >
+                  <div className="text-sm font-medium">{persona.name}</div>
+                  <div className="text-xs text-muted-foreground font-mono">{persona.id}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <DemoTopLevelEditor
+        selectedDemoConfigId={selectedDemoConfigId}
+        isLoadingComposition={isLoadingComposition}
+        composition={composition}
+        fieldErrors={fieldErrors}
+        onLayoutModeChange={(value) => updateComposition((current) => ({
+          ...current,
+          layout_mode: value,
+        }))}
+        onRuntimePolicyChange={(value) => updateComposition((current) => ({
+          ...current,
+          runtime_policy: value,
+        }))}
+        onPersonaPolicyChange={(value: DemoPersonaPolicy) => updateComposition((current) => ({
+          ...current,
+          persona_policy: value,
+        }))}
+        onChatModeChange={(value: DemoChatMode) => updateComposition((current) => ({
+          ...current,
+          chat_mode: value,
+        }))}
+        onFixedUserPersonaIdChange={(value) => updateComposition((current) => ({
+          ...current,
+          fixed_user_persona_id: value,
+        }))}
+        onPageThemeIdChange={(value) => updateComposition((current) => ({
+          ...current,
+          page_theme_id: value,
+        }))}
+        onCardsThemeIdChange={(value) => updateComposition((current) => ({
+          ...current,
+          cards_theme_id: value,
+        }))}
+        onMetadataJsonBlur={(raw) => commitJsonField("metadata_json", raw, (value) => {
+          updateComposition((current) => ({ ...current, metadata_json: value ?? {} }))
+        })}
+        onPresentationJsonBlur={(raw) => commitJsonField("presentation_json", raw, (value) => {
+          updateComposition((current) => ({ ...current, presentation_json: value ?? {} }))
+        })}
+      />
+
+      <DemoValidationPanel issues={semanticIssues} />
+
+      <DemoPanelEditor
+        composition={composition}
+        panels={composition.panels ?? []}
+        fieldErrors={fieldErrors}
+        onAddPanel={(kind) => updateComposition((current) => ({
+          ...current,
+          panels: [...(current.panels ?? []), createPanelTemplate(kind)],
+        }))}
+        onRemovePanel={removePanel}
+        onUpdatePanel={updatePanel}
+        onCommitPanelJsonField={(index, fieldKey, raw) => commitJsonField(`panel:${index}:${fieldKey}`, raw, (value) => {
+          updatePanel(index, { [fieldKey]: value ?? {} })
+        })}
+      />
+
+      <DemoBlockEditor
+        composition={composition}
+        blocks={composition.blocks ?? []}
+        fieldErrors={fieldErrors}
+        onAddBlock={(type) => updateComposition((current) => ({
+          ...current,
+          blocks: [...(current.blocks ?? []), createBlockTemplate(type)],
+        }))}
+        onRemoveBlock={removeBlock}
+        onUpdateBlock={updateBlock}
+        onCommitBlockJsonField={(index, fieldKey, raw) => commitJsonField(`block:${index}:${fieldKey}`, raw, (value) => {
+          if (fieldKey === "content_json") {
+            updateBlock(index, { content_json: value ?? null })
+            return
+          }
+          updateBlock(index, { [fieldKey]: value ?? {} })
+        })}
+      />
+
+      <DemoRawJsonEditor
+        rawJsonDraft={rawJsonDraft}
+        rawJsonError={fieldErrors.raw_json}
+        onRawJsonDraftChange={setRawJsonDraft}
+        onResetFromCurrent={() => setRawJsonDraft(toPrettyJson(composition))}
+        onApplyRawJson={applyRawJsonDraft}
+      />
+
+      <DemoSaveBar
+        selectedDemoLabel={selectedDemo
+          ? `${selectedDemo.slug} (${selectedDemo.id.slice(0, 8)}...)`
+          : "No demo selected"}
+        isDirty={isDirty}
+        canSave={Boolean(selectedDemoConfigId) && blockingIssues.length === 0}
+        isSaving={saveCompositionMutation.isPending}
+        onSave={() => saveCompositionMutation.mutate()}
+      />
     </div>
   )
 }
