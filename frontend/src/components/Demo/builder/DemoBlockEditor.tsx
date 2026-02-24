@@ -8,9 +8,11 @@ import {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import {
   BUILDER_BLOCK_CAPABILITIES,
+  getBlockCapabilityByType,
   getBlockCapabilityAvailability,
   type BuilderBlockCapability,
 } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -159,6 +161,7 @@ export function DemoBlockEditor({
             (() => {
               const blockType = resolveBlockType(block)
               const blockSchema = getBuilderBlockTypeSchema(blockType)
+              const blockCapability = getBlockCapabilityByType(blockType)
               const scalarFields = blockSchema.fieldSpecs.filter((field) => field.control !== "json")
               const jsonFields = blockSchema.fieldSpecs.filter((field) => field.control === "json")
               return (
@@ -179,20 +182,37 @@ export function DemoBlockEditor({
                   onUpdateBlock,
                 }))}
 
-                <div className="md:col-span-4 grid gap-3 md:grid-cols-3">
-                  {jsonFields.map((field) => (
-                    <div key={field.key} className="space-y-1">
-                      <label className="text-xs text-muted-foreground">{field.label}</label>
-                      <Textarea
-                        rows={4}
-                        defaultValue={toPrettyJson((block as Record<string, unknown>)[field.key] ?? {})}
-                        onBlur={(event) => onCommitBlockJsonField(index, field.key, event.target.value)}
-                      />
-                      {fieldErrors[`block:${index}:${field.key}`] && (
-                        <p className="text-xs text-destructive">{fieldErrors[`block:${index}:${field.key}`]}</p>
-                      )}
-                    </div>
-                  ))}
+                <div className="md:col-span-4 space-y-3">
+                  {jsonFields.map((field) => {
+                    const currentJson = (block as Record<string, unknown>)[field.key] ?? {}
+                    const showGuidedPresentation = field.key === "presentation_json"
+                      && (blockCapability?.presentationFieldSpecs?.length ?? 0) > 0
+                    return (
+                      <div key={field.key} className="space-y-2">
+                        {showGuidedPresentation && (
+                          <DemoPresentationGuidedFields
+                            value={currentJson}
+                            fieldSpecs={blockCapability?.presentationFieldSpecs ?? []}
+                            onChange={(nextValue) => onUpdateBlock(index, { [field.key]: nextValue })}
+                          />
+                        )}
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">
+                            {showGuidedPresentation ? `${field.label} (Advanced JSON Fallback)` : field.label}
+                          </label>
+                          <Textarea
+                            key={`${field.key}-${toPrettyJson(currentJson)}`}
+                            rows={4}
+                            defaultValue={toPrettyJson(currentJson)}
+                            onBlur={(event) => onCommitBlockJsonField(index, field.key, event.target.value)}
+                          />
+                        </div>
+                        {fieldErrors[`block:${index}:${field.key}`] && (
+                          <p className="text-xs text-destructive">{fieldErrors[`block:${index}:${field.key}`]}</p>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>

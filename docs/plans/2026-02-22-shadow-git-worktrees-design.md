@@ -79,10 +79,10 @@ def get_latest_commit(repo_path: Path) -> str | None:
 ### Service Changes
 
 **`shadow_service.py`:**
-- Remove: `get_api_clients()`, `get_repo_api()`, `get_service_token()`, `openapi_client` imports
+- Remove: `get_api_clients()`, `get_repo_api()`, `get_service_token()`, all `openapi_client` imports
 - Remove: `ensure_shadow_repo()` Forgejo logic, `create_version()` Forgejo commits
 - Keep: `enqueue_entity_version()` (already DB-only), `ensure_shadow_repo_db_only()`
-- Add: `get_repo_path(entity_type, entity_id) -> Path`
+- Add: helper to compute repo path: `get_repo_path(entity_type, entity_id) -> Path`
 
 **`shadow_outbox_worker.py`:**
 - Remove: `_ensure_forgejo_repo()`, `_commit_snapshot()`, lease functions, `openapi_client`
@@ -96,7 +96,7 @@ def get_latest_commit(repo_path: Path) -> str | None:
 - Keep: DB fallback logic
 
 **Model changes:**
-- `ShadowRepo`: Remove `forgejo_repo_id`, consider removing/renaming `forgejo_repo_name`
+- `ShadowRepo`: Remove `forgejo_repo_id`, rename `forgejo_repo_name`
 - `ShadowOutboxAttempt`: Rename `forgejo_repo` → `repo_path`, `forgejo_commit_sha` → `commit_sha`
 
 ### Unchanged

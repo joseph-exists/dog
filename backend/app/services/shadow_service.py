@@ -33,15 +33,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-import openapi_client
+
 from sqlalchemy.exc import IntegrityError
-from openapi_client import (
-    ApiException,
-    CreateFileOptions,
-    CreateRepoOption,
-    RepositoryApi,
-    UpdateFileOptions,
-)
 from sqlmodel import Session, select
 
 from app.core.config import settings

@@ -54,10 +54,22 @@ export interface BuilderCapabilityHooks {
   semanticValidators?: BuilderCapabilitySemanticValidator[]
 }
 
+export type BuilderPresentationFieldControl = "text" | "number" | "boolean" | "enum"
+
+export interface BuilderPresentationFieldSpec {
+  path: string
+  label: string
+  control: BuilderPresentationFieldControl
+  description?: string
+  placeholder?: string
+  enumValues?: readonly string[]
+}
+
 export interface BuilderPanelCapability {
   kind: ActiveBuilderPanelKind
   displayName: string
   requirements: BuilderCapabilityRequirements
+  presentationFieldSpecs?: BuilderPresentationFieldSpec[]
   hooks?: BuilderCapabilityHooks
 }
 
@@ -65,6 +77,7 @@ export interface BuilderBlockCapability {
   type: ActiveBuilderBlockType
   displayName: string
   requirements: BuilderCapabilityRequirements
+  presentationFieldSpecs?: BuilderPresentationFieldSpec[]
   hooks?: BuilderCapabilityHooks
 }
 
@@ -370,6 +383,172 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
   return {}
 }
 
+function getPanelPresentationFieldSpecs(kind: ActiveBuilderPanelKind): BuilderPresentationFieldSpec[] {
+  if (kind === "storyRuntime") {
+    return [
+      {
+        path: "overlays.panel_header.css",
+        label: "Header Overlay CSS",
+        control: "text",
+        placeholder: "linear-gradient(...)",
+      },
+      {
+        path: "motion.panel_enter_ms",
+        label: "Panel Enter (ms)",
+        control: "number",
+      },
+      {
+        path: "tokens.surface_radius",
+        label: "Surface Radius",
+        control: "text",
+        placeholder: "12px",
+      },
+    ]
+  }
+  if (kind === "chat") {
+    return [
+      {
+        path: "typography.size",
+        label: "Message Size",
+        control: "enum",
+        enumValues: ["xs", "sm", "base", "lg"],
+      },
+      {
+        path: "tokens.feed_density",
+        label: "Feed Density",
+        control: "enum",
+        enumValues: ["comfortable", "compact"],
+      },
+      {
+        path: "effects.message_row_highlight.enable",
+        label: "Row Highlight",
+        control: "boolean",
+      },
+    ]
+  }
+  if (kind === "participantPanel") {
+    return [
+      {
+        path: "tokens.stack_density",
+        label: "Stack Density",
+        control: "enum",
+        enumValues: ["comfortable", "compact"],
+      },
+      {
+        path: "overlays.panel_header.css",
+        label: "Header Overlay CSS",
+        control: "text",
+        placeholder: "linear-gradient(...)",
+      },
+    ]
+  }
+  return []
+}
+
+function getBlockPresentationFieldSpecs(type: ActiveBuilderBlockType): BuilderPresentationFieldSpec[] {
+  if (type === "storyMetadata") {
+    return [
+      {
+        path: "typography.size",
+        label: "Text Size",
+        control: "enum",
+        enumValues: ["xs", "sm", "base", "lg"],
+      },
+      {
+        path: "typography.line_height",
+        label: "Line Height",
+        control: "enum",
+        enumValues: ["tight", "normal", "relaxed"],
+      },
+      {
+        path: "backgrounds.card_pattern.css",
+        label: "Card Pattern CSS",
+        control: "text",
+      },
+    ]
+  }
+  if (type === "orchestratorState") {
+    return [
+      {
+        path: "overlays.block_header.css",
+        label: "Header Overlay CSS",
+        control: "text",
+        placeholder: "linear-gradient(...)",
+      },
+      {
+        path: "tokens.status_badge_style",
+        label: "Status Badge Style",
+        control: "enum",
+        enumValues: ["default", "high-contrast", "minimal"],
+      },
+      {
+        path: "effects.card_glow.enable",
+        label: "Card Glow",
+        control: "boolean",
+      },
+    ]
+  }
+  if (type === "contributionFeed") {
+    return [
+      {
+        path: "typography.size",
+        label: "Text Size",
+        control: "enum",
+        enumValues: ["xs", "sm", "base", "lg"],
+      },
+      {
+        path: "tokens.feed_density",
+        label: "Feed Density",
+        control: "enum",
+        enumValues: ["comfortable", "compact"],
+      },
+      {
+        path: "effects.message_row_highlight.css",
+        label: "Row Highlight CSS",
+        control: "text",
+      },
+    ]
+  }
+  if (type === "toolCapability") {
+    return [
+      {
+        path: "tokens.matrix_density",
+        label: "Matrix Density",
+        control: "enum",
+        enumValues: ["comfortable", "compact"],
+      },
+      {
+        path: "overlays.block_header.css",
+        label: "Header Overlay CSS",
+        control: "text",
+        placeholder: "linear-gradient(...)",
+      },
+      {
+        path: "effects.card_glow.enable",
+        label: "Card Glow",
+        control: "boolean",
+      },
+    ]
+  }
+  if (type === "agentRoster") {
+    return [
+      {
+        path: "tokens.stack_density",
+        label: "Roster Density",
+        control: "enum",
+        enumValues: ["comfortable", "compact"],
+      },
+      {
+        path: "typography.size",
+        label: "Text Size",
+        control: "enum",
+        enumValues: ["xs", "sm", "base", "lg"],
+      },
+    ]
+  }
+  return []
+}
+
 function getPanelRequirements(kind: ActiveBuilderPanelKind): BuilderCapabilityRequirements {
   const schema = BUILDER_PANEL_KIND_SCHEMAS[kind]
   return {
@@ -443,6 +622,7 @@ const CORE_BUILDER_PANEL_CAPABILITIES: BuilderPanelCapability[] =
     kind,
     displayName: BUILDER_PANEL_KIND_SCHEMAS[kind].displayName,
     requirements: getPanelRequirements(kind),
+    presentationFieldSpecs: getPanelPresentationFieldSpecs(kind),
     hooks: {},
   }))
 
@@ -451,6 +631,7 @@ const CORE_BUILDER_BLOCK_CAPABILITIES: BuilderBlockCapability[] =
     type,
     displayName: BUILDER_BLOCK_TYPE_SCHEMAS[type].displayName,
     requirements: getBlockRequirements(type),
+    presentationFieldSpecs: getBlockPresentationFieldSpecs(type),
     hooks: getBlockHooks(type),
   }))
 

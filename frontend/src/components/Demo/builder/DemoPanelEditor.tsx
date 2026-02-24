@@ -8,9 +8,11 @@ import {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import {
   BUILDER_PANEL_CAPABILITIES,
+  getPanelCapabilityByKind,
   getPanelCapabilityAvailability,
   type BuilderPanelCapability,
 } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -159,6 +161,7 @@ export function DemoPanelEditor({
             (() => {
               const panelKind = resolvePanelKind(panel)
               const panelSchema = getBuilderPanelKindSchema(panelKind)
+              const panelCapability = getPanelCapabilityByKind(panelKind)
               const scalarFields = panelSchema.fieldSpecs.filter((field) => field.control !== "json")
               const jsonFields = panelSchema.fieldSpecs.filter((field) => field.control === "json")
               return (
@@ -179,19 +182,36 @@ export function DemoPanelEditor({
                   onUpdatePanel,
                 }))}
 
-                {jsonFields.map((field) => (
-                  <div key={field.key} className="md:col-span-3 space-y-1">
-                    <label className="text-xs text-muted-foreground">{field.label}</label>
-                    <Textarea
-                      rows={4}
-                      defaultValue={toPrettyJson((panel as Record<string, unknown>)[field.key] ?? {})}
-                      onBlur={(event) => onCommitPanelJsonField(index, field.key, event.target.value)}
-                    />
-                    {fieldErrors[`panel:${index}:${field.key}`] && (
-                      <p className="text-xs text-destructive">{fieldErrors[`panel:${index}:${field.key}`]}</p>
-                    )}
-                  </div>
-                ))}
+                {jsonFields.map((field) => {
+                  const currentJson = (panel as Record<string, unknown>)[field.key] ?? {}
+                  const showGuidedPresentation = field.key === "presentation_json"
+                    && (panelCapability?.presentationFieldSpecs?.length ?? 0) > 0
+                  return (
+                    <div key={field.key} className="md:col-span-4 space-y-2">
+                      {showGuidedPresentation && (
+                        <DemoPresentationGuidedFields
+                          value={currentJson}
+                          fieldSpecs={panelCapability?.presentationFieldSpecs ?? []}
+                          onChange={(nextValue) => onUpdatePanel(index, { [field.key]: nextValue })}
+                        />
+                      )}
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
+                          {showGuidedPresentation ? `${field.label} (Advanced JSON Fallback)` : field.label}
+                        </label>
+                        <Textarea
+                          key={`${field.key}-${toPrettyJson(currentJson)}`}
+                          rows={4}
+                          defaultValue={toPrettyJson(currentJson)}
+                          onBlur={(event) => onCommitPanelJsonField(index, field.key, event.target.value)}
+                        />
+                      </div>
+                      {fieldErrors[`panel:${index}:${field.key}`] && (
+                        <p className="text-xs text-destructive">{fieldErrors[`panel:${index}:${field.key}`]}</p>
+                      )}
+                    </div>
+                  )
+                })}
               </CardContent>
             </Card>
               )

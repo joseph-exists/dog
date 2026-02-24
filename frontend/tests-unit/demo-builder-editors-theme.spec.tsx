@@ -69,6 +69,16 @@ test.describe("Demo builder editor theme field round-trip", () => {
       onCardsThemeIdChange: (value) => cardsThemeValues.push(value),
       onMetadataJsonBlur: () => {},
       onPresentationJsonBlur: () => {},
+      storyId: null,
+      onStoryIdChange: () => {},
+      onOpenStoryPicker: () => {},
+      isThemeQuickAddEnabled: false,
+      onThemeQuickAddEnabledChange: () => {},
+      availablePageThemes: [],
+      availableCardThemes: [],
+      isLoadingThemeOptions: false,
+      onPageThemeQuickSelect: () => {},
+      onCardsThemeQuickSelect: () => {},
     })
 
     const pageThemeInput = findInputElement(
