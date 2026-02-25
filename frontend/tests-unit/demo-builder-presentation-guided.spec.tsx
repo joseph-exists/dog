@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test"
 import type { ReactNode } from "react"
 import { DemoBlockEditor } from "@/components/Demo/builder/DemoBlockEditor"
+import { DemoPanelEditor } from "@/components/Demo/builder/DemoPanelEditor"
 import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
-import { getBlockCapabilityByType } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
-import { createBlockTemplate, createEmptyComposition } from "@/components/Demo/builder/demoBuilderSchema"
+import { getBlockCapabilityByType, getPanelCapabilityByKind } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import { createBlockTemplate, createEmptyComposition, createPanelTemplate } from "@/components/Demo/builder/demoBuilderSchema"
 
 interface ElementLike {
   type: unknown
@@ -110,6 +111,7 @@ test.describe("Demo builder guided presentation controls", () => {
       onRemoveBlock: () => {},
       onUpdateBlock: () => {},
       onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
@@ -163,6 +165,7 @@ test.describe("Demo builder guided presentation controls", () => {
       onRemoveBlock: () => {},
       onUpdateBlock: () => {},
       onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
@@ -216,6 +219,7 @@ test.describe("Demo builder guided presentation controls", () => {
       onRemoveBlock: () => {},
       onUpdateBlock: () => {},
       onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
@@ -230,6 +234,114 @@ test.describe("Demo builder guided presentation controls", () => {
       index: 0,
       fieldKey: "presentation_json",
       raw: "{\"tokens\":{\"existing\":\"feed-updated\"}}",
+    })
+  })
+
+  test("toolCapability guided control updates nested presentation_json and keeps advanced fallback", async () => {
+    const block = createBlockTemplate("toolCapability")
+    block.presentation_json = { tokens: { existing: "tools" } }
+    const guidedPatches: Array<Record<string, unknown>> = []
+    const commits: Array<{ index: number; fieldKey: string; raw: string }> = []
+    const capability = getBlockCapabilityByType("toolCapability")
+
+    const guidedElement = DemoPresentationGuidedFields({
+      value: block.presentation_json ?? {},
+      fieldSpecs: capability?.presentationFieldSpecs ?? [],
+      onChange: (nextValue) => guidedPatches.push(nextValue),
+    })
+
+    const guidedInput = findInputElement(
+      guidedElement,
+      (candidate) => candidate.props.placeholder === "linear-gradient(...)",
+    )
+    guidedInput.props.onChange?.({ target: { value: "linear-gradient(90deg, rgba(9,9,9,0.4), rgba(99,99,99,0.2))" } })
+
+    expect(guidedPatches[0]).toEqual({
+      tokens: { existing: "tools" },
+      overlays: {
+        block_header: {
+          css: "linear-gradient(90deg, rgba(9,9,9,0.4), rgba(99,99,99,0.2))",
+        },
+      },
+    })
+
+    const editorElement = DemoBlockEditor({
+      composition: createEmptyComposition(),
+      blocks: [block],
+      fieldErrors: {},
+      onAddBlock: () => {},
+      onRemoveBlock: () => {},
+      onUpdateBlock: () => {},
+      onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      availableThemeOptions: [],
+    })
+
+    expectAdvancedFallbackLabel(editorElement)
+
+    const fallbackTextarea = findTextareaElement(
+      editorElement,
+      (candidate) => String(candidate.props.defaultValue ?? "").includes("\"existing\": \"tools\""),
+    )
+    fallbackTextarea.props.onBlur?.({ target: { value: "{\"tokens\":{\"existing\":\"tools-updated\"}}" } })
+
+    expect(commits).toContainEqual({
+      index: 0,
+      fieldKey: "presentation_json",
+      raw: "{\"tokens\":{\"existing\":\"tools-updated\"}}",
+    })
+  })
+
+  test("storyRuntime guided control updates nested presentation_json and keeps advanced fallback", async () => {
+    const panel = createPanelTemplate("storyRuntime")
+    panel.presentation_json = { tokens: { existing: "runtime" } }
+    const guidedPatches: Array<Record<string, unknown>> = []
+    const commits: Array<{ index: number; fieldKey: string; raw: string }> = []
+    const capability = getPanelCapabilityByKind("storyRuntime")
+
+    const guidedElement = DemoPresentationGuidedFields({
+      value: panel.presentation_json ?? {},
+      fieldSpecs: capability?.presentationFieldSpecs ?? [],
+      onChange: (nextValue) => guidedPatches.push(nextValue),
+    })
+
+    const guidedInput = findInputElement(
+      guidedElement,
+      (candidate) => candidate.props.placeholder === "linear-gradient(...)",
+    )
+    guidedInput.props.onChange?.({ target: { value: "linear-gradient(180deg, rgba(20,20,20,0.6), rgba(120,120,120,0.2))" } })
+
+    expect(guidedPatches[0]).toEqual({
+      tokens: { existing: "runtime" },
+      overlays: {
+        panel_header: {
+          css: "linear-gradient(180deg, rgba(20,20,20,0.6), rgba(120,120,120,0.2))",
+        },
+      },
+    })
+
+    const editorElement = DemoPanelEditor({
+      composition: createEmptyComposition(),
+      panels: [panel],
+      fieldErrors: {},
+      onAddPanel: () => {},
+      onRemovePanel: () => {},
+      onUpdatePanel: () => {},
+      onCommitPanelJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      availableThemeOptions: [],
+    })
+
+    expectAdvancedFallbackLabel(editorElement)
+
+    const fallbackTextarea = findTextareaElement(
+      editorElement,
+      (candidate) => String(candidate.props.defaultValue ?? "").includes("\"existing\": \"runtime\""),
+    )
+    fallbackTextarea.props.onBlur?.({ target: { value: "{\"tokens\":{\"existing\":\"runtime-updated\"}}" } })
+
+    expect(commits).toContainEqual({
+      index: 0,
+      fieldKey: "presentation_json",
+      raw: "{\"tokens\":{\"existing\":\"runtime-updated\"}}",
     })
   })
 })

@@ -10,6 +10,7 @@ interface OrchestratorStateBlockProps {
   runtimePolicy: "auto" | "manual" | "owner_only"
   runtimeHasRuntime: boolean
   roomAgents: DemoRoomAgentData[]
+  calloutLabel?: string | null
 }
 
 export interface OrchestratorStateConfig {
@@ -60,6 +61,7 @@ export function OrchestratorStateBlock({
   runtimePolicy,
   runtimeHasRuntime,
   roomAgents,
+  calloutLabel,
 }: OrchestratorStateBlockProps) {
   const parsedConfig = parseOrchestratorStateConfig(config)
   const summary = summarizeOrchestratorState({ config: parsedConfig, roomAgents })
@@ -70,6 +72,11 @@ export function OrchestratorStateBlock({
         <div className="text-sm font-medium">{title ?? "Orchestrator State"}</div>
         <div className="text-xs text-muted-foreground">Runtime and orchestrator health snapshot for this demo room.</div>
       </div>
+      {calloutLabel && (
+        <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+          {calloutLabel}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Badge variant={isConnected ? "default" : "secondary"} className="gap-1">

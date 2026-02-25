@@ -45,6 +45,7 @@ interface DemoPanelEditorProps {
   onRemovePanel: (index: number) => void
   onUpdatePanel: (index: number, patch: Record<string, unknown>) => void
   onCommitPanelJsonField: (index: number, fieldKey: string, raw: string) => void
+  availableThemeOptions: Array<{ id: string; name: string; category: "page" | "card" }>
 }
 
 function renderPanelScalarField(params: {
@@ -52,9 +53,39 @@ function renderPanelScalarField(params: {
   index: number
   field: BuilderPanelFieldSpec
   onUpdatePanel: (index: number, patch: Record<string, unknown>) => void
+  availableThemeOptions: Array<{ id: string; name: string; category: "page" | "card" }>
 }) {
-  const { panel, index, field, onUpdatePanel } = params
+  const { panel, index, field, onUpdatePanel, availableThemeOptions } = params
   const value = (panel as Record<string, unknown>)[field.key]
+  if (field.key === "theme_id" && field.control === "id") {
+    return (
+      <div key={field.key} className="space-y-1 md:col-span-2">
+        <label className="text-xs text-muted-foreground">Theme (title picker)</label>
+        <Select
+          value={typeof value === "string" && value.length > 0 ? value : "__none"}
+          onValueChange={(nextValue) => onUpdatePanel(index, { [field.key]: nextValue === "__none" ? null : nextValue })}
+        >
+          <SelectTrigger><SelectValue placeholder="Select theme" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none">None</SelectItem>
+            {availableThemeOptions.map((theme) => (
+              <SelectItem key={`${theme.category}:${theme.id}`} value={theme.id}>
+                {theme.name} ({theme.category})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          value={String(value ?? "")}
+          placeholder={field.label}
+          onChange={(event) => {
+            const normalized = event.target.value.trim()
+            onUpdatePanel(index, { [field.key]: normalized || null })
+          }}
+        />
+      </div>
+    )
+  }
   if (field.control === "enum") {
     return (
       <Select
@@ -121,6 +152,7 @@ export function DemoPanelEditor({
   onRemovePanel,
   onUpdatePanel,
   onCommitPanelJsonField,
+  availableThemeOptions,
 }: DemoPanelEditorProps) {
   return (
     <Card>
@@ -165,7 +197,7 @@ export function DemoPanelEditor({
               const scalarFields = panelSchema.fieldSpecs.filter((field) => field.control !== "json")
               const jsonFields = panelSchema.fieldSpecs.filter((field) => field.control === "json")
               return (
-            <Card key={`${String((panel as { id?: unknown }).id ?? index)}-${index}`}>
+            <Card id={`builder-panel-${index}`} key={`${String((panel as { id?: unknown }).id ?? index)}-${index}`}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-sm">Panel {index + 1}</CardTitle>
@@ -180,6 +212,7 @@ export function DemoPanelEditor({
                   index,
                   field,
                   onUpdatePanel,
+                  availableThemeOptions,
                 }))}
 
                 {jsonFields.map((field) => {

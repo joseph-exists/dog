@@ -13,6 +13,19 @@ This aligns with the current `DemoPageComposition` contract.
 - Composition A (baseline): story/chat plus constant instructional content.
 - Composition B (runtime-coupled): visible `storyMetadata`, `orchestratorState`, and `contributionFeed`.
 - Composition C (visibility semantics): same runtime-coupled blocks with `visible`, `hidden_mounted`, and `hidden_unmounted` permutations.
+- Composition D (stylized agent ops): seeded participant metadata + stylized chat/presentation + runtime-coupled ops blocks.
+- Composition E (tabs content studio): tabs layout with curated content, observer chat, and git/file explorer walkthrough blocks.
+- Composition F (presentation passthrough audit): full panel/block surface check for overlay/motion/background passthrough.
+- Composition G (UX style matrix): full-surface subjective review with capability callouts, row highlights, varied typography/motion/background combinations.
+
+Cross-team template authoring guide:
+- `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-template-authoring-reference-card.md`
+Composition G review checklist:
+- `frontend/src/components/Demo/demo-docs/demo-testing-references/composition-g-ux-style-matrix-evaluation-checklist.md`
+Composition G quick mode (1-page):
+- `frontend/src/components/Demo/demo-docs/demo-testing-references/composition-g-ux-style-matrix-quick-mode.md`
+Demo Builder style glossary:
+- `frontend/src/components/Demo/demo-docs/demo-testing-references/demo-builder-style-glossary.md`
 
 ## 1) Base Template (Full Replace)
 ```json

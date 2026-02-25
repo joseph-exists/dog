@@ -1,4 +1,6 @@
-This is a history of builder-implementation with most recent first.
+# Demo Builder Active Implementation History
+
+> Historical changelog. For current status and sequencing, use `frontend/src/components/Demo/demo-docs/current-key-priorities.md` and `frontend/src/components/Demo/demo-docs/demo-builder-workflow.md`.
 
 **added companion copy/paste presentation_json presets for A/B/C compositions**
 

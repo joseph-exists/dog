@@ -13,6 +13,13 @@ import {
   ACTIVE_RUNTIME_DEMO_BLOCK_TYPES,
   ACTIVE_RUNTIME_DEMO_PANEL_KINDS,
 } from "@/components/Demo/demoRuntimeCapabilities"
+import type { UserAgentConfigPublic } from "@/client/types.gen"
+import type { MessageViewModel } from "@/services/roomService"
+import type {
+  DemoBlockRendererContext,
+  DemoPanelRendererContext,
+  DemoRoomAgentData,
+} from "@/components/Demo/rendererRegistry"
 
 export interface BuilderCompositionCapability {
   key: string
@@ -38,6 +45,18 @@ export interface BuilderCapabilityHookContext {
   composition: EditableComposition
 }
 
+export interface BuilderPanelPreviewAdapterContext extends BuilderCapabilityHookContext {
+  scope: "panel"
+  capabilityKey: ActiveBuilderPanelKind
+  panel: Record<string, unknown>
+}
+
+export interface BuilderBlockPreviewAdapterContext extends BuilderCapabilityHookContext {
+  scope: "block"
+  capabilityKey: ActiveBuilderBlockType
+  block: Record<string, unknown>
+}
+
 export type BuilderCapabilityPatchNormalizer = (
   patch: Record<string, unknown>,
   context: BuilderCapabilityHookContext,
@@ -47,11 +66,21 @@ export type BuilderCapabilitySemanticValidator = (
   context: BuilderCapabilityHookContext,
 ) => BuilderCapabilitySemanticIssue[]
 
+export type BuilderCapabilityPanelPreviewAdapter = (
+  context: BuilderPanelPreviewAdapterContext,
+) => Partial<DemoPanelRendererContext>
+
+export type BuilderCapabilityBlockPreviewAdapter = (
+  context: BuilderBlockPreviewAdapterContext,
+) => Partial<DemoBlockRendererContext>
+
 export interface BuilderCapabilityHooks {
   // Identifier for future registry-provided custom editors.
   editorComponent?: string
   normalizeCompositionPatch?: BuilderCapabilityPatchNormalizer
   semanticValidators?: BuilderCapabilitySemanticValidator[]
+  panelPreviewAdapter?: BuilderCapabilityPanelPreviewAdapter
+  blockPreviewAdapter?: BuilderCapabilityBlockPreviewAdapter
 }
 
 export type BuilderPresentationFieldControl = "text" | "number" | "boolean" | "enum"
@@ -245,6 +274,138 @@ function normalizeToolCapabilityConfigJSON(value: unknown): Record<string, unkno
   return config
 }
 
+function createPreviewRoomAgents(): DemoRoomAgentData[] {
+  return [
+    {
+      id: "orchestrator",
+      name: "Orchestrator",
+      description: "Coordinates sequencing and hand-offs.",
+      participation_mode: "active",
+      scope: "room",
+      is_coordinator: true,
+      is_enabled: true,
+    },
+    {
+      id: "coder",
+      name: "Coder",
+      description: "Implements code and patches.",
+      participation_mode: "active",
+      scope: "room",
+      is_coordinator: false,
+      is_enabled: true,
+    },
+    {
+      id: "analyst",
+      name: "Analyst",
+      description: "Validates assumptions and summarizes outcomes.",
+      participation_mode: "active",
+      scope: "room",
+      is_coordinator: false,
+      is_enabled: false,
+    },
+  ]
+}
+
+function createPreviewDebugMessages(): MessageViewModel[] {
+  const now = Date.now()
+  return [
+    {
+      message_id: "preview-message-user",
+      room_id: "preview-room",
+      sender_type: "user",
+      sender_name: "Demo Creator",
+      sender_id: "preview-user",
+      agent_name: null,
+      content: "Can we summarize current runtime status?",
+      button_options: null,
+      ui_components: null,
+      created_at: new Date(now - 60_000),
+      is_own_message: true,
+      edited_at: null,
+      edited_by: null,
+      is_pinned: false,
+      pinned_at: null,
+      pinned_by: null,
+      active_for_context: true,
+      can_edit: true,
+      can_delete: true,
+      can_pin: true,
+    },
+    {
+      message_id: "preview-message-agent",
+      room_id: "preview-room",
+      sender_type: "agent",
+      sender_name: "Orchestrator",
+      sender_id: "orchestrator",
+      agent_name: "Orchestrator",
+      content: "Runtime is healthy and waiting for next action.",
+      button_options: null,
+      ui_components: null,
+      created_at: new Date(now - 30_000),
+      is_own_message: false,
+      edited_at: null,
+      edited_by: null,
+      is_pinned: false,
+      pinned_at: null,
+      pinned_by: null,
+      active_for_context: true,
+      can_edit: false,
+      can_delete: false,
+      can_pin: false,
+    },
+    {
+      message_id: "preview-message-internal",
+      room_id: "preview-room",
+      sender_type: "agent_internal",
+      sender_name: "Runtime",
+      sender_id: "runtime",
+      agent_name: "Runtime",
+      content: "planner->coder handoff completed",
+      button_options: null,
+      ui_components: null,
+      created_at: new Date(now - 10_000),
+      is_own_message: false,
+      edited_at: null,
+      edited_by: null,
+      is_pinned: false,
+      pinned_at: null,
+      pinned_by: null,
+      active_for_context: false,
+      can_edit: false,
+      can_delete: false,
+      can_pin: false,
+    },
+  ]
+}
+
+function parseToolCapabilityMap(value: unknown): Record<string, string[]> {
+  const normalized = normalizeToolCapabilityConfigJSON(value)
+  return isObjectRecord(normalized.capability_map)
+    ? normalized.capability_map as Record<string, string[]>
+    : {}
+}
+
+function createPreviewAvailableAgents(
+  roomAgents: DemoRoomAgentData[],
+  capabilityMap: Record<string, string[]>,
+): UserAgentConfigPublic[] {
+  const nowISO = new Date().toISOString()
+  return roomAgents.map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+    slug: agent.id,
+    description: agent.description,
+    scope: agent.scope,
+    participation_mode: agent.participation_mode,
+    is_coordinator: agent.is_coordinator,
+    is_enabled: agent.is_enabled,
+    capabilities: capabilityMap[agent.id] ?? [],
+    created_at: nowISO,
+    updated_at: nowISO,
+    version: 1,
+  }))
+}
+
 function getBlocksByType(composition: EditableComposition, type: string) {
   return (composition.blocks ?? []).filter((candidate) => candidate.type === type)
 }
@@ -275,6 +436,20 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
           }]
         },
       ],
+      blockPreviewAdapter: ({ composition }) => {
+        const storyId = getCompositionStoryId(composition)
+        const runtimePolicy = composition.runtime_policy ?? "auto"
+        const hasRuntime = Boolean(storyId) && runtimePolicy !== "manual"
+        return {
+          roomStoryId: storyId,
+          runtimePolicy,
+          runtimeHasRuntime: hasRuntime,
+          autoStartError:
+            !storyId && runtimePolicy === "auto"
+              ? "Preview requires metadata_json.story_id to auto-start runtime."
+              : null,
+        }
+      },
     }
   }
   if (type === "orchestratorState") {
@@ -302,6 +477,22 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
           }]
         },
       ],
+      blockPreviewAdapter: ({ composition }) => {
+        const runtimePolicy = composition.runtime_policy ?? "auto"
+        const roomAgents = createPreviewRoomAgents()
+        return {
+          isConnected: runtimePolicy !== "manual",
+          autoRespond: runtimePolicy === "auto",
+          runtimePolicy,
+          runtimeHasRuntime: Boolean(getCompositionStoryId(composition)) || runtimePolicy !== "manual",
+          roomAgentsAsAgentData: roomAgents,
+          availableAgents: createPreviewAvailableAgents(roomAgents, {
+            orchestrator: ["plan", "route"],
+            coder: ["code", "diff"],
+            analyst: ["review", "summarize"],
+          }),
+        }
+      },
     }
   }
   if (type === "contributionFeed") {
@@ -343,6 +534,19 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
           return warnings
         },
       ],
+      blockPreviewAdapter: ({ composition }) => {
+        const runtimePolicy = composition.runtime_policy ?? "auto"
+        return {
+          debugMessages: createPreviewDebugMessages(),
+          streamingMessage:
+            runtimePolicy === "auto"
+              ? {
+                agent_name: "Orchestrator",
+                content: "Synthesizing contribution preview...",
+              }
+              : null,
+        }
+      },
     }
   }
   if (type === "toolCapability") {
@@ -378,6 +582,28 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
           }]
         },
       ],
+      blockPreviewAdapter: ({ block }) => {
+        const roomAgents = createPreviewRoomAgents()
+        const capabilityMap = parseToolCapabilityMap(
+          isObjectRecord(block) ? block.config_json : undefined,
+        )
+        return {
+          roomAgentsAsAgentData: roomAgents,
+          availableAgents: createPreviewAvailableAgents(roomAgents, capabilityMap),
+        }
+      },
+    }
+  }
+  return {}
+}
+
+function getPanelHooks(kind: ActiveBuilderPanelKind): BuilderCapabilityHooks {
+  if (kind === "storyRuntime") {
+    return {
+      panelPreviewAdapter: ({ composition }) => ({
+        autoRespond: composition.runtime_policy === "auto",
+        roomStoryId: getCompositionStoryId(composition),
+      }),
     }
   }
   return {}
@@ -623,7 +849,7 @@ const CORE_BUILDER_PANEL_CAPABILITIES: BuilderPanelCapability[] =
     displayName: BUILDER_PANEL_KIND_SCHEMAS[kind].displayName,
     requirements: getPanelRequirements(kind),
     presentationFieldSpecs: getPanelPresentationFieldSpecs(kind),
-    hooks: {},
+    hooks: getPanelHooks(kind),
   }))
 
 const CORE_BUILDER_BLOCK_CAPABILITIES: BuilderBlockCapability[] =
@@ -1333,6 +1559,36 @@ function runCapabilitySemanticValidators(
   }))
 }
 
+function getPanelPreviewAdapterOverrides(
+  capability: BuilderPanelCapability,
+  panel: Record<string, unknown>,
+  composition: EditableComposition,
+): Partial<DemoPanelRendererContext> {
+  const adapter = capability.hooks?.panelPreviewAdapter
+  if (!adapter) return {}
+  return adapter({
+    scope: "panel",
+    capabilityKey: capability.kind,
+    composition,
+    panel,
+  })
+}
+
+function getBlockPreviewAdapterOverrides(
+  capability: BuilderBlockCapability,
+  block: Record<string, unknown>,
+  composition: EditableComposition,
+): Partial<DemoBlockRendererContext> {
+  const adapter = capability.hooks?.blockPreviewAdapter
+  if (!adapter) return {}
+  return adapter({
+    scope: "block",
+    capabilityKey: capability.type,
+    composition,
+    block,
+  })
+}
+
 export function normalizePanelCapabilityPatch(
   capability: BuilderPanelCapability,
   patch: Record<string, unknown>,
@@ -1361,4 +1617,20 @@ export function runBlockCapabilitySemanticValidators(
   composition: EditableComposition,
 ): BuilderCapabilitySemanticIssue[] {
   return runCapabilitySemanticValidators(capability, "block", capability.type, composition)
+}
+
+export function getPanelCapabilityPreviewAdapterOverrides(
+  capability: BuilderPanelCapability,
+  panel: Record<string, unknown>,
+  composition: EditableComposition,
+): Partial<DemoPanelRendererContext> {
+  return getPanelPreviewAdapterOverrides(capability, panel, composition)
+}
+
+export function getBlockCapabilityPreviewAdapterOverrides(
+  capability: BuilderBlockCapability,
+  block: Record<string, unknown>,
+  composition: EditableComposition,
+): Partial<DemoBlockRendererContext> {
+  return getBlockPreviewAdapterOverrides(capability, block, composition)
 }

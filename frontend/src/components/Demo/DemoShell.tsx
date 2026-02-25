@@ -12,6 +12,7 @@ export interface DemoShellBlockRenderItem {
   id: string
   content: React.ReactNode
   visibilityMode: "visible" | "hidden_mounted"
+  style?: React.CSSProperties
 }
 
 export interface DemoShellProps {
@@ -115,6 +116,7 @@ export function DemoShell ({
               <div
                 key={`top-block-${block.id}`}
                 className={getDemoBlockContainerClassName(block.visibilityMode)}
+                style={block.style}
               >
                 {block.content}
               </div>
@@ -129,6 +131,7 @@ export function DemoShell ({
                 <div
                   key={`primary-block-${block.id}`}
                   className={getDemoBlockContainerClassName(block.visibilityMode)}
+                  style={block.style}
                 >
                   {block.content}
                 </div>
@@ -139,6 +142,7 @@ export function DemoShell ({
                 <div
                   key={`aux-block-${block.id}`}
                   className={getDemoBlockContainerClassName(block.visibilityMode)}
+                  style={block.style}
                 >
                   {block.content}
                 </div>
@@ -157,6 +161,7 @@ export function DemoShell ({
               <div
                 key={`footer-block-${block.id}`}
                 className={getDemoBlockContainerClassName(block.visibilityMode)}
+                style={block.style}
               >
                 {block.content}
               </div>

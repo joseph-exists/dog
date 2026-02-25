@@ -11,6 +11,7 @@ interface StoryMetadataBlockProps {
   runtimeHasRuntime: boolean
   autoStartError: string | null
   config: unknown
+  calloutLabel?: string | null
 }
 
 interface StoryMetadataRuntimeState {
@@ -57,6 +58,7 @@ export function StoryMetadataBlock({
   runtimeHasRuntime,
   autoStartError,
   config,
+  calloutLabel,
 }: StoryMetadataBlockProps) {
   const { runtime, isLoading } = useRoomRuntime(roomId)
   const derived = deriveStoryMetadataRuntimeState({
@@ -71,6 +73,11 @@ export function StoryMetadataBlock({
         <div className="text-sm font-medium">{title ?? "Story Metadata"}</div>
         <div className="text-xs text-muted-foreground">Live metadata bound to room runtime.</div>
       </div>
+      {calloutLabel && (
+        <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+          {calloutLabel}
+        </div>
+      )}
 
       <div className="grid gap-2 text-sm md:grid-cols-2">
         <div className="rounded-md border bg-muted/20 p-3">

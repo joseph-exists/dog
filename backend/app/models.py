@@ -3758,6 +3758,275 @@ class UserAgentConfigsPublic(SQLModel):
     count: int
 
 
+# =============================================================================
+# Prompt Builder Models (M1)
+# =============================================================================
+
+
+class PromptProviderKind(str, PyEnum):
+    openai_compatible = "openai_compatible"
+    openai = "openai"
+    anthropic = "anthropic"
+    google = "google"
+    xai = "xai"
+    custom = "custom"
+
+
+class PromptInputKind(str, PyEnum):
+    simple_text = "simple_text"
+    messages = "messages"
+
+
+class PromptMessageRole(str, PyEnum):
+    system = "system"
+    user = "user"
+    assistant = "assistant"
+    tool = "tool"
+
+
+class PromptProviderBinding(SQLModel):
+    user_access_provider_id: uuid.UUID | None = Field(default=None)
+    provider_type_id: uuid.UUID | None = Field(default=None)
+    provider_kind: PromptProviderKind | None = Field(default=None)
+    base_url: str | None = Field(default=None, max_length=500)
+    account_label: str | None = Field(default=None, max_length=255)
+
+
+class PromptModelBinding(SQLModel):
+    model_catalog_id: uuid.UUID | None = Field(default=None)
+    model_id: str | None = Field(default=None, max_length=255)
+    model_name: str | None = Field(default=None, max_length=255)
+    model_family: str | None = Field(default=None, max_length=120)
+
+
+class PromptMessage(SQLModel):
+    role: PromptMessageRole
+    content: str = Field(default="", max_length=100000)
+
+
+class PromptInputPayload(SQLModel):
+    kind: PromptInputKind = Field(default=PromptInputKind.simple_text)
+    text: str | None = Field(default=None, max_length=100000)
+    system: str | None = Field(default=None, max_length=100000)
+    messages: list[PromptMessage] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_input_kind_shape(self) -> "PromptInputPayload":
+        if self.kind == PromptInputKind.simple_text:
+            if self.text is None:
+                self.text = ""
+            self.messages = []
+            return self
+
+        # messages mode
+        if self.messages is None:
+            self.messages = []
+        self.text = None
+        return self
+
+
+class PromptParams(SQLModel):
+    provider_kind: PromptProviderKind | None = Field(default=PromptProviderKind.openai_compatible)
+    temperature: float | None = Field(default=None)
+    top_p: float | None = Field(default=None)
+    max_output_tokens: int | None = Field(default=None)
+    stop: list[str] | None = Field(default=None)
+    seed: int | None = Field(default=None)
+    response_format_json: bool | None = Field(default=None)
+    parallel_tool_calls: bool | None = Field(default=None)
+    reasoning_effort: Literal["low", "medium", "high"] | None = Field(default=None)
+    top_k: int | None = Field(default=None)
+
+    @field_validator("temperature")
+    @classmethod
+    def validate_temperature(cls, value: float | None) -> float | None:
+        if value is None:
+            return value
+        if value < 0 or value > 2:
+            raise ValueError("temperature must be between 0 and 2")
+        return value
+
+    @field_validator("top_p")
+    @classmethod
+    def validate_top_p(cls, value: float | None) -> float | None:
+        if value is None:
+            return value
+        if value < 0 or value > 1:
+            raise ValueError("top_p must be between 0 and 1")
+        return value
+
+    @field_validator("max_output_tokens")
+    @classmethod
+    def validate_max_output_tokens(cls, value: int | None) -> int | None:
+        if value is None:
+            return value
+        if value <= 0:
+            raise ValueError("max_output_tokens must be greater than 0")
+        return value
+
+
+class PromptToolingConfig(SQLModel):
+    tool_mode: Literal["none", "optional", "required"] | None = Field(default="none")
+    tool_allowlist: list[str] | None = Field(default=None)
+    tool_choice: str | None = Field(default=None, max_length=255)
+
+
+class PromptBuilderMetadata(SQLModel):
+    tags: list[str] | None = Field(default=None)
+    notes: str | None = Field(default=None, max_length=5000)
+    template_id: str | None = Field(default=None, max_length=200)
+    template_setup: dict[str, Any] | None = Field(default=None)
+
+
+class PromptConfigDraft(SQLModel):
+    provider: PromptProviderBinding
+    model: PromptModelBinding
+    input: PromptInputPayload
+    params: PromptParams
+    tools: PromptToolingConfig | None = Field(default=None)
+    metadata: PromptBuilderMetadata | None = Field(default=None)
+
+
+class PromptConfigValidationIssue(SQLModel):
+    code: str
+    severity: Literal["warning", "error"]
+    message: str
+    path: str | None = None
+
+
+class PromptConfigValidationResponse(SQLModel):
+    issues: list[PromptConfigValidationIssue]
+
+
+class PromptConfigBase(SQLModel):
+    name: str = Field(max_length=150)
+    description: str | None = Field(default=None, max_length=1000)
+    metadata_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    is_archived: bool = Field(default=False)
+
+
+class PromptConfigCreate(SQLModel):
+    name: str = Field(max_length=150)
+    description: str | None = Field(default=None, max_length=1000)
+    metadata_json: dict[str, Any] | None = Field(default=None)
+    payload: PromptConfigDraft
+    commit_message: str | None = Field(default="Initial version", max_length=500)
+
+
+class PromptConfigUpdate(SQLModel):
+    name: str | None = Field(default=None, max_length=150)
+    description: str | None = Field(default=None, max_length=1000)
+    metadata_json: dict[str, Any] | None = Field(default=None)
+    is_archived: bool | None = Field(default=None)
+
+
+class PromptConfig(PromptConfigBase, table=True):
+    __tablename__ = "prompt_configs"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", index=True)
+    latest_version: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = Field(default=None, sa_column_kwargs={"onupdate": datetime.now})
+
+
+class PromptConfigPublic(PromptConfigBase):
+    id: uuid.UUID
+    owner_id: uuid.UUID | None
+    latest_version: int
+    created_at: datetime
+    updated_at: datetime | None
+
+
+class PromptConfigsPublic(SQLModel):
+    data: list[PromptConfigPublic]
+    count: int
+
+
+class PromptConfigVersionBase(SQLModel):
+    version_number: int = Field(ge=1)
+    parent_version_id: uuid.UUID | None = Field(default=None)
+    commit_message: str | None = Field(default=None, max_length=500)
+    payload_json: dict[str, Any] = Field(sa_column=Column(JSON))
+    created_by: uuid.UUID | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class PromptConfigVersion(PromptConfigVersionBase, table=True):
+    __tablename__ = "prompt_config_versions"
+    __table_args__ = (UniqueConstraint("prompt_config_id", "version_number"),)
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    prompt_config_id: uuid.UUID = Field(
+        foreign_key="prompt_configs.id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True,
+    )
+
+
+class PromptConfigVersionPublic(SQLModel):
+    id: uuid.UUID
+    prompt_config_id: uuid.UUID
+    version_number: int
+    parent_version_id: uuid.UUID | None = Field(default=None)
+    commit_message: str | None = Field(default=None)
+    payload: PromptConfigDraft
+    created_by: uuid.UUID | None = Field(default=None)
+    created_at: datetime
+
+
+class PromptConfigVersionsPublic(SQLModel):
+    data: list[PromptConfigVersionPublic]
+    count: int
+
+
+class PromptConfigWorkingCopyBase(SQLModel):
+    base_version: int | None = Field(default=None)
+    payload_json: dict[str, Any] = Field(sa_column=Column(JSON))
+    has_uncommitted_changes: bool = Field(default=True)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    updated_by: uuid.UUID | None = Field(default=None)
+
+
+class PromptConfigWorkingCopy(PromptConfigWorkingCopyBase, table=True):
+    __tablename__ = "prompt_config_working_copies"
+    __table_args__ = (UniqueConstraint("prompt_config_id"),)
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    prompt_config_id: uuid.UUID = Field(
+        foreign_key="prompt_configs.id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True,
+    )
+
+
+class PromptConfigWorkingCopyPublic(SQLModel):
+    id: uuid.UUID
+    prompt_config_id: uuid.UUID
+    base_version: int | None
+    payload: PromptConfigDraft
+    has_uncommitted_changes: bool
+    updated_at: datetime
+    updated_by: uuid.UUID | None = None
+
+
+class PromptConfigWorkingCopyUpdate(SQLModel):
+    payload: PromptConfigDraft
+    base_version: int | None = Field(default=None)
+    has_uncommitted_changes: bool | None = Field(default=True)
+
+
+class PromptConfigCommitRequest(SQLModel):
+    commit_message: str | None = Field(default=None, max_length=500)
+    parent_version_id: uuid.UUID | None = Field(default=None)
+
+
+class PromptConfigResetWorkingCopyRequest(SQLModel):
+    version_id: uuid.UUID | None = Field(default=None)
+
+
 
 # =============================================================================
 # Enums / Literals

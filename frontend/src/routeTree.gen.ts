@@ -20,6 +20,7 @@ import { Route as LayoutStoryRouteImport } from './routes/_layout/story'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRoomsRouteImport } from './routes/_layout/rooms'
 import { Route as LayoutQualitiesRouteImport } from './routes/_layout/qualities'
+import { Route as LayoutPromptBuilderRouteImport } from './routes/_layout/prompt-builder'
 import { Route as LayoutPersonasRouteImport } from './routes/_layout/personas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutDemoBuilderRouteImport } from './routes/_layout/demo-builder'
@@ -94,6 +95,11 @@ const LayoutRoomsRoute = LayoutRoomsRouteImport.update({
 const LayoutQualitiesRoute = LayoutQualitiesRouteImport.update({
   id: '/qualities',
   path: '/qualities',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPromptBuilderRoute = LayoutPromptBuilderRouteImport.update({
+  id: '/prompt-builder',
+  path: '/prompt-builder',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutPersonasRoute = LayoutPersonasRouteImport.update({
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/demo-builder': typeof LayoutDemoBuilderRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
+  '/prompt-builder': typeof LayoutPromptBuilderRoute
   '/qualities': typeof LayoutQualitiesRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/demo-builder': typeof LayoutDemoBuilderRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
+  '/prompt-builder': typeof LayoutPromptBuilderRoute
   '/qualities': typeof LayoutQualitiesRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/_layout/demo-builder': typeof LayoutDemoBuilderRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/personas': typeof LayoutPersonasRoute
+  '/_layout/prompt-builder': typeof LayoutPromptBuilderRoute
   '/_layout/qualities': typeof LayoutQualitiesRoute
   '/_layout/rooms': typeof LayoutRoomsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
@@ -320,6 +329,7 @@ export interface FileRouteTypes {
     | '/demo-builder'
     | '/items'
     | '/personas'
+    | '/prompt-builder'
     | '/qualities'
     | '/rooms'
     | '/settings'
@@ -352,6 +362,7 @@ export interface FileRouteTypes {
     | '/demo-builder'
     | '/items'
     | '/personas'
+    | '/prompt-builder'
     | '/qualities'
     | '/rooms'
     | '/settings'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/_layout/demo-builder'
     | '/_layout/items'
     | '/_layout/personas'
+    | '/_layout/prompt-builder'
     | '/_layout/qualities'
     | '/_layout/rooms'
     | '/_layout/settings'
@@ -493,6 +505,13 @@ declare module '@tanstack/react-router' {
       path: '/qualities'
       fullPath: '/qualities'
       preLoaderRoute: typeof LayoutQualitiesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/prompt-builder': {
+      id: '/_layout/prompt-builder'
+      path: '/prompt-builder'
+      fullPath: '/prompt-builder'
+      preLoaderRoute: typeof LayoutPromptBuilderRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/personas': {
@@ -653,6 +672,7 @@ interface LayoutRouteChildren {
   LayoutDemoBuilderRoute: typeof LayoutDemoBuilderRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPersonasRoute: typeof LayoutPersonasRoute
+  LayoutPromptBuilderRoute: typeof LayoutPromptBuilderRoute
   LayoutQualitiesRoute: typeof LayoutQualitiesRoute
   LayoutRoomsRoute: typeof LayoutRoomsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
@@ -683,6 +703,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDemoBuilderRoute: LayoutDemoBuilderRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPersonasRoute: LayoutPersonasRoute,
+  LayoutPromptBuilderRoute: LayoutPromptBuilderRoute,
   LayoutQualitiesRoute: LayoutQualitiesRoute,
   LayoutRoomsRoute: LayoutRoomsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,

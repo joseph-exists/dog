@@ -70,11 +70,15 @@ test.describe("demoBuilderSchema v2 field specs", () => {
     }
   })
 
-  test("template options expose the expected A/B/C entries", async () => {
+  test("template options expose the expected A/B/C/D/E/F/G entries", async () => {
     expect(BUILDER_COMPOSITION_TEMPLATES.map((template) => template.id)).toEqual([
       "composition_a_baseline",
       "composition_b_runtime_coupled",
       "composition_c_visibility_semantics",
+      "composition_d_stylized_agent_ops",
+      "composition_e_tabs_content_studio",
+      "composition_f_presentation_passthrough_audit",
+      "composition_g_ux_style_matrix",
     ])
   })
 })
@@ -150,6 +154,65 @@ test.describe("demoBuilderSchema semantic validation", () => {
       "hidden_mounted",
       "hidden_unmounted",
     ]))
+    expect(validateCompositionSemantics(composition).every((issue) => issue.severity !== "error")).toBeTruthy()
+  })
+
+  test("composition D template includes stylized chat and preloaded participant metadata", async () => {
+    const composition = createCompositionTemplate("composition_d_stylized_agent_ops")
+    const chatPanel = (composition.panels ?? []).find((panel) => panel.kind === "chat")
+    const metadata = composition.metadata_json as Record<string, unknown>
+
+    expect(chatPanel).toBeTruthy()
+    expect(chatPanel?.title).toBe("Stylized Chat")
+    expect(chatPanel?.theme_id).toBeNull()
+    expect(chatPanel?.presentation_json).toEqual(expect.objectContaining({
+      effects: expect.any(Object),
+    }))
+    expect(metadata.template_id).toBe("composition_d_stylized_agent_ops")
+    expect(metadata.theme_title_hints).toEqual(expect.objectContaining({
+      panel_theme_title: "qa-chat-neon",
+    }))
+    expect(metadata.preloaded_participants).toEqual(expect.objectContaining({
+      user_agent_config_ids: ["orchestrator", "coder", "analyst"],
+    }))
+    expect(validateCompositionSemantics(composition).every((issue) => issue.severity !== "error")).toBeTruthy()
+  })
+
+  test("composition E template uses tabs layout with content + git/file coverage", async () => {
+    const composition = createCompositionTemplate("composition_e_tabs_content_studio")
+    const panelKinds = (composition.panels ?? []).map((panel) => panel.kind)
+    const blockTypes = (composition.blocks ?? []).map((block) => block.type)
+
+    expect(composition.layout_mode).toBe("tabs")
+    expect(panelKinds).toEqual(expect.arrayContaining(["content", "chat", "debug"]))
+    expect(blockTypes).toEqual(expect.arrayContaining(["gitView", "fileExplorer", "context", "content"]))
+    expect(validateCompositionSemantics(composition).every((issue) => issue.severity !== "error")).toBeTruthy()
+  })
+
+  test("composition F template covers all active panel kinds and block types for passthrough auditing", async () => {
+    const composition = createCompositionTemplate("composition_f_presentation_passthrough_audit")
+    const panelKinds = new Set((composition.panels ?? []).map((panel) => panel.kind))
+    const blockTypes = new Set((composition.blocks ?? []).map((block) => block.type))
+
+    expect(composition.layout_mode).toBe("tabs")
+    expect(panelKinds).toEqual(new Set(ACTIVE_BUILDER_PANEL_KINDS))
+    expect(blockTypes).toEqual(new Set(ACTIVE_BUILDER_BLOCK_TYPES))
+    expect(validateCompositionSemantics(composition).every((issue) => issue.severity !== "error")).toBeTruthy()
+  })
+
+  test("composition G template provides full-surface UX style matrix coverage", async () => {
+    const composition = createCompositionTemplate("composition_g_ux_style_matrix")
+    const panelKinds = new Set((composition.panels ?? []).map((panel) => panel.kind))
+    const blockTypes = new Set((composition.blocks ?? []).map((block) => block.type))
+    const metadata = composition.metadata_json as Record<string, unknown>
+    const presentation = composition.presentation_json as Record<string, unknown>
+
+    expect(panelKinds).toEqual(new Set(ACTIVE_BUILDER_PANEL_KINDS))
+    expect(blockTypes).toEqual(new Set(ACTIVE_BUILDER_BLOCK_TYPES))
+    expect(metadata.template_id).toBe("composition_g_ux_style_matrix")
+    expect(metadata.audit_goal).toBeTruthy()
+    expect(presentation.motion).toBeTruthy()
+    expect(presentation.backgrounds).toBeTruthy()
     expect(validateCompositionSemantics(composition).every((issue) => issue.severity !== "error")).toBeTruthy()
   })
 })

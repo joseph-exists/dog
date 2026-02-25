@@ -144,7 +144,7 @@ export function DemoTopLevelEditor({
   }
 
   return (
-    <Card>
+    <Card id="builder-composition-editor">
       <CardHeader>
         <CardTitle>Composition</CardTitle>
         <CardDescription>

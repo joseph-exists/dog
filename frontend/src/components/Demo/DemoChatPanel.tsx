@@ -7,6 +7,9 @@ interface DemoChatPanelProps {
   isConnected: boolean
   sendViaWebSocket: (content: string) => void
   streamingMessage: { agent_name: string; content: string } | null
+  feedDensity?: "comfortable" | "compact"
+  messageRowHighlightCss?: string
+  calloutLabel?: string | null
 }
 
 export function DemoChatPanel({
@@ -14,6 +17,9 @@ export function DemoChatPanel({
   isConnected,
   sendViaWebSocket,
   streamingMessage,
+  feedDensity = "comfortable",
+  messageRowHighlightCss,
+  calloutLabel,
 }: DemoChatPanelProps) {
   const {
     messages,
@@ -27,7 +33,15 @@ export function DemoChatPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4">
+      {calloutLabel && (
+        <div className="px-3 py-2 text-xs border-b bg-muted/30 text-muted-foreground">
+          {calloutLabel}
+        </div>
+      )}
+      <div
+        className={feedDensity === "compact" ? "flex-1 overflow-y-auto p-2" : "flex-1 overflow-y-auto p-4"}
+        style={messageRowHighlightCss ? { boxShadow: messageRowHighlightCss } : undefined}
+      >
         <MessageList
           roomId={roomId}
           messages={messages}

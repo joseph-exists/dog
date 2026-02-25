@@ -19,6 +19,7 @@ from app.api.routes import (
     persona_traits,
     personas,
     pages,
+    prompt_configs,
     presets,
     private,
     qualities,
@@ -76,6 +77,7 @@ api_router.include_router(room_contexts.router)
 api_router.include_router(room_agent_settings.router)
 api_router.include_router(room_runtime.router)
 api_router.include_router(pages.router)
+api_router.include_router(prompt_configs.router)
 api_router.include_router(room_panels.router, prefix="/rooms", tags=["room-panels"])
 api_router.include_router(room_participant_bindings.router)
 api_router.include_router(node_choices.router)

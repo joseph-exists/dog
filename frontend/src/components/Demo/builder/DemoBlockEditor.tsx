@@ -45,6 +45,7 @@ interface DemoBlockEditorProps {
   onRemoveBlock: (index: number) => void
   onUpdateBlock: (index: number, patch: Record<string, unknown>) => void
   onCommitBlockJsonField: (index: number, fieldKey: string, raw: string) => void
+  availableThemeOptions: Array<{ id: string; name: string; category: "page" | "card" }>
 }
 
 function renderBlockScalarField(params: {
@@ -52,9 +53,39 @@ function renderBlockScalarField(params: {
   index: number
   field: BuilderBlockFieldSpec
   onUpdateBlock: (index: number, patch: Record<string, unknown>) => void
+  availableThemeOptions: Array<{ id: string; name: string; category: "page" | "card" }>
 }) {
-  const { block, index, field, onUpdateBlock } = params
+  const { block, index, field, onUpdateBlock, availableThemeOptions } = params
   const value = (block as Record<string, unknown>)[field.key]
+  if (field.key === "theme_id" && field.control === "id") {
+    return (
+      <div key={field.key} className="space-y-1 md:col-span-2">
+        <label className="text-xs text-muted-foreground">Theme (title picker)</label>
+        <Select
+          value={typeof value === "string" && value.length > 0 ? value : "__none"}
+          onValueChange={(nextValue) => onUpdateBlock(index, { [field.key]: nextValue === "__none" ? null : nextValue })}
+        >
+          <SelectTrigger><SelectValue placeholder="Select theme" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none">None</SelectItem>
+            {availableThemeOptions.map((theme) => (
+              <SelectItem key={`${theme.category}:${theme.id}`} value={theme.id}>
+                {theme.name} ({theme.category})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          value={String(value ?? "")}
+          placeholder={field.label}
+          onChange={(event) => {
+            const normalized = event.target.value.trim()
+            onUpdateBlock(index, { [field.key]: normalized || null })
+          }}
+        />
+      </div>
+    )
+  }
   if (field.control === "enum") {
     return (
       <Select
@@ -121,6 +152,7 @@ export function DemoBlockEditor({
   onRemoveBlock,
   onUpdateBlock,
   onCommitBlockJsonField,
+  availableThemeOptions,
 }: DemoBlockEditorProps) {
   return (
     <Card>
@@ -165,7 +197,7 @@ export function DemoBlockEditor({
               const scalarFields = blockSchema.fieldSpecs.filter((field) => field.control !== "json")
               const jsonFields = blockSchema.fieldSpecs.filter((field) => field.control === "json")
               return (
-            <Card key={`${String((block as { id?: unknown }).id ?? index)}-${index}`}>
+            <Card id={`builder-block-${index}`} key={`${String((block as { id?: unknown }).id ?? index)}-${index}`}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-sm">Block {index + 1}</CardTitle>
@@ -180,6 +212,7 @@ export function DemoBlockEditor({
                   index,
                   field,
                   onUpdateBlock,
+                  availableThemeOptions,
                 }))}
 
                 <div className="md:col-span-4 space-y-3">

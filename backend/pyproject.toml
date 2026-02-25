@@ -26,7 +26,6 @@ dependencies = [
     "pydantic-ai[ag-ui]>=0.4.3",
     "redis>=7.1.0",
     "cryptography>=43.0.0",
-    "openapi-client",
     "asyncpg>=0.31.0",
     "logfire>=4.16.0",
     "coolname>=2.2.0",
@@ -42,9 +41,6 @@ dev-dependencies = [
     "coverage<8.0.0,>=7.4.3",
     "pytest-asyncio>=0.23.8",
 ]
-
-[tool.uv.sources]
-openapi-client = { git = "https://github.com/joseph-exists/forgejo-openapi.git" }
 
 [build-system]
 requires = ["hatchling"]

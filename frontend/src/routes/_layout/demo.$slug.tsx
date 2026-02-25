@@ -11,8 +11,13 @@ import {
   type Content,
 } from "@/components/Page/primitives/ContentRenderer"
 import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
+import { DemoPresentationFrame } from "@/components/Demo/DemoPresentationFrame"
 import { DemoShell, type DemoShellBlockRenderItem } from "@/components/Demo/DemoShell"
 import { getRenderableDemoBlocks } from "@/components/Demo/blockVisibility"
+import {
+  buildDemoThemeIndex,
+  resolveDemoPresentationFrame,
+} from "@/components/Demo/demoPresentationResolver"
 import { renderDemoBlock, renderDemoPanel } from "@/components/Demo/rendererRegistry"
 import useAuth from "@/hooks/useAuth"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
@@ -257,6 +262,20 @@ function ResolvedDemoRoute({
   const { setBinding } = useUserThemeBindings(contextKey)
   const { themes: availablePageThemes } = useAvailableThemes("page")
   const { themes: availableCardThemes } = useAvailableThemes("card")
+  const themeIndex = useMemo(
+    () => buildDemoThemeIndex(availablePageThemes, availableCardThemes),
+    [availableCardThemes, availablePageThemes],
+  )
+  const compositionFrame = useMemo(
+    () =>
+      resolveDemoPresentationFrame({
+        scope: "composition",
+        themeId: null,
+        presentationJson: resolved.composition.presentation_json,
+        themeIndex,
+      }),
+    [resolved.composition.presentation_json, themeIndex],
+  )
 
   const handlePageThemeChange = useCallback(
     (themeId: string) => {
@@ -348,36 +367,51 @@ function ResolvedDemoRoute({
           ((panel.prominence ?? "primary") === "primary" ? 30 : 20),
         maxSize: panel.max_size ?? undefined,
         viewportMode: panel.viewport_mode ?? "panel",
-        render: () =>
-          renderDemoPanel(panel, {
-            roomId,
-            roomTitle,
-            roomStoryId,
-            canWrite,
-            autoRespond,
-            onSendMessage: handleAutoRespondMessage,
-            isConnected,
-            sendViaWebSocket,
-            streamingMessage,
-            activeUsers,
-            roomAgentsAsAgentData,
-            debugActiveAgents: allRoomAgents,
-            availableAgents,
-            existingAgentIds,
-            onAddAgent: handleAddAgent,
-            onRemoveAgent: handleRemoveAgent,
-            onToggleAgent: handleToggleAgent,
-            onRemoveUser: handleRemoveUser,
-            isParticipantPanelLoading:
-              isLoadingParticipants ||
-              isLoadingAvailableAgents ||
-              isAddingParticipant ||
-              isRemovingParticipant,
-            debugMessages,
-            showInternalMessages,
-            onToggleInternalMessages: setShowInternalMessages,
-            renderContentPayload,
-          }),
+        render: () => {
+          const panelFrame = resolveDemoPresentationFrame({
+            scope: "panel",
+            themeId: panel.theme_id,
+            presentationJson: panel.presentation_json,
+            themeIndex,
+          })
+          return (
+            <DemoPresentationFrame
+              frame={panelFrame}
+              className="h-full min-h-0"
+              contentClassName="h-full min-h-0"
+            >
+              {renderDemoPanel(panel, {
+                roomId,
+                roomTitle,
+                roomStoryId,
+                canWrite,
+                autoRespond,
+                onSendMessage: handleAutoRespondMessage,
+                isConnected,
+                sendViaWebSocket,
+                streamingMessage,
+                activeUsers,
+                roomAgentsAsAgentData,
+                debugActiveAgents: allRoomAgents,
+                availableAgents,
+                existingAgentIds,
+                onAddAgent: handleAddAgent,
+                onRemoveAgent: handleRemoveAgent,
+                onToggleAgent: handleToggleAgent,
+                onRemoveUser: handleRemoveUser,
+                isParticipantPanelLoading:
+                  isLoadingParticipants ||
+                  isLoadingAvailableAgents ||
+                  isAddingParticipant ||
+                  isRemovingParticipant,
+                debugMessages,
+                showInternalMessages,
+                onToggleInternalMessages: setShowInternalMessages,
+                renderContentPayload,
+              })}
+            </DemoPresentationFrame>
+          )
+        },
       })),
     [
       autoRespond,
@@ -401,6 +435,7 @@ function ResolvedDemoRoute({
       roomStoryId,
       roomTitle,
       roomId,
+      themeIndex,
       sendViaWebSocket,
       showInternalMessages,
       streamingMessage,
@@ -467,9 +502,19 @@ function ResolvedDemoRoute({
         availableAgents,
       })
 
+      const blockFrame = resolveDemoPresentationFrame({
+        scope: "block",
+        themeId: block.theme_id,
+        presentationJson: block.presentation_json,
+        themeIndex,
+      })
       regions[region].push({
         id: block.id,
-        content: rendered,
+        content: (
+          <DemoPresentationFrame frame={blockFrame}>
+            {rendered}
+          </DemoPresentationFrame>
+        ),
         visibilityMode,
       })
     }
@@ -490,6 +535,7 @@ function ResolvedDemoRoute({
     runtimeHasRuntime,
     runtimePolicy,
     streamingMessage,
+    themeIndex,
   ])
 
   const roomHasStory = Boolean(roomStoryId)
@@ -524,40 +570,46 @@ function ResolvedDemoRoute({
         </div>
       )}
       <div className="flex-1 min-h-0">
-        <DemoShell
-          demoConfig={{
-            id: resolved.demo_config_id,
-            slug: resolved.demo_config_id,
-            title: roomTitle,
-            description:
-              typeof resolved.composition.metadata_json?.description === "string"
-                ? resolved.composition.metadata_json.description
-                : null,
-            scope: "personal",
-            isActive: true,
-            defaultAutoRespond: autoRespond,
-            defaultPanelsJson: [],
-            defaultLayoutJson: [],
-            metadataJson: resolved.composition.metadata_json ?? {},
-            ownerId: user?.id ?? null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }}
-          panels={panels}
-          topBlocks={renderedBlocksByRegion.top}
-          primaryBlocks={renderedBlocksByRegion.primary}
-          auxiliaryBlocks={renderedBlocksByRegion.auxiliary}
-          footerBlocks={renderedBlocksByRegion.footer}
-          autoRespond={autoRespond}
-          onAutoRespondChange={setAutoRespond}
-          isConnected={isConnected}
-          pageTheme={themes.page?.theme ?? null}
-          cardsTheme={themes.cards?.theme ?? null}
-          availablePageThemes={availablePageThemes}
-          availableCardThemes={availableCardThemes}
-          onPageThemeChange={handlePageThemeChange}
-          onCardsThemeChange={handleCardsThemeChange}
-        />
+        <DemoPresentationFrame
+          frame={compositionFrame}
+          className="h-full min-h-0"
+          contentClassName="h-full min-h-0"
+        >
+          <DemoShell
+            demoConfig={{
+              id: resolved.demo_config_id,
+              slug: resolved.demo_config_id,
+              title: roomTitle,
+              description:
+                typeof resolved.composition.metadata_json?.description === "string"
+                  ? resolved.composition.metadata_json.description
+                  : null,
+              scope: "personal",
+              isActive: true,
+              defaultAutoRespond: autoRespond,
+              defaultPanelsJson: [],
+              defaultLayoutJson: [],
+              metadataJson: resolved.composition.metadata_json ?? {},
+              ownerId: user?.id ?? null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }}
+            panels={panels}
+            topBlocks={renderedBlocksByRegion.top}
+            primaryBlocks={renderedBlocksByRegion.primary}
+            auxiliaryBlocks={renderedBlocksByRegion.auxiliary}
+            footerBlocks={renderedBlocksByRegion.footer}
+            autoRespond={autoRespond}
+            onAutoRespondChange={setAutoRespond}
+            isConnected={isConnected}
+            pageTheme={themes.page?.theme ?? null}
+            cardsTheme={themes.cards?.theme ?? null}
+            availablePageThemes={availablePageThemes}
+            availableCardThemes={availableCardThemes}
+            onPageThemeChange={handlePageThemeChange}
+            onCardsThemeChange={handleCardsThemeChange}
+          />
+        </DemoPresentationFrame>
       </div>
     </div>
   )

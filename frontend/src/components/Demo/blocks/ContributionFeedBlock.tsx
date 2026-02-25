@@ -7,6 +7,8 @@ interface ContributionFeedBlockProps {
   config: unknown
   messages: MessageViewModel[]
   streamingMessage: { agent_name: string; content: string } | null
+  rowHighlightCss?: string
+  calloutLabel?: string | null
 }
 
 export interface ContributionFeedConfig {
@@ -75,6 +77,8 @@ export function ContributionFeedBlock({
   config,
   messages,
   streamingMessage,
+  rowHighlightCss,
+  calloutLabel,
 }: ContributionFeedBlockProps) {
   const parsedConfig = parseContributionFeedConfig(config)
   const selection = selectContributionFeedMessages({ config: parsedConfig, messages })
@@ -85,6 +89,11 @@ export function ContributionFeedBlock({
         <div className="text-sm font-medium">{title ?? "Contribution Feed"}</div>
         <div className="text-xs text-muted-foreground">Recent room contributions from users and agents.</div>
       </div>
+      {calloutLabel && (
+        <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+          {calloutLabel}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Badge variant="outline" className="gap-1">
@@ -108,7 +117,11 @@ export function ContributionFeedBlock({
         ) : (
           <div className="space-y-2">
             {selection.recentMessages.map((message) => (
-              <div key={message.message_id} className="rounded-md border bg-background/60 p-2.5">
+              <div
+                key={message.message_id}
+                className="rounded-md border bg-background/60 p-2.5"
+                style={rowHighlightCss ? { boxShadow: rowHighlightCss } : undefined}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-medium truncate">{message.sender_name}</div>
                   <div className="flex items-center gap-1.5 shrink-0">

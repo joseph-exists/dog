@@ -5,8 +5,8 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app/
 
 # Minimal OS deps:
-# - git: needed for uv to install `openapi-client` from a git source
-# - ca-certificates: TLS for git/http
+# - git: needed for shadow versioning (local git subprocess calls)
+# - ca-certificates: TLS for any https operations
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*

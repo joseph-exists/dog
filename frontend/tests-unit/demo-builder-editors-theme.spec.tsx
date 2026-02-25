@@ -112,6 +112,7 @@ test.describe("Demo builder editor theme field round-trip", () => {
       onRemovePanel: () => {},
       onUpdatePanel: (index, patch) => patches.push({ index, patch }),
       onCommitPanelJsonField: () => {},
+      availableThemeOptions: [],
     })
 
     const panelThemeInput = findInputElement(
@@ -140,6 +141,7 @@ test.describe("Demo builder editor theme field round-trip", () => {
       onRemoveBlock: () => {},
       onUpdateBlock: (index, patch) => patches.push({ index, patch }),
       onCommitBlockJsonField: () => {},
+      availableThemeOptions: [],
     })
 
     const blockThemeInput = findInputElement(

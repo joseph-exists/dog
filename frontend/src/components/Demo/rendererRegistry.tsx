@@ -83,6 +83,95 @@ type DemoBlockRenderer = (
   ctx: DemoBlockRendererContext,
 ) => ReactNode
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function getNestedRecord(value: unknown, path: string[]): Record<string, unknown> | null {
+  let cursor: unknown = value
+  for (const segment of path) {
+    if (!isObjectRecord(cursor)) return null
+    cursor = cursor[segment]
+  }
+  return isObjectRecord(cursor) ? cursor : null
+}
+
+function getNestedString(value: unknown, path: string[]): string | null {
+  let cursor: unknown = value
+  for (const segment of path) {
+    if (!isObjectRecord(cursor)) return null
+    cursor = cursor[segment]
+  }
+  return typeof cursor === "string" && cursor.trim().length > 0 ? cursor : null
+}
+
+function getNestedBoolean(value: unknown, path: string[]): boolean | null {
+  let cursor: unknown = value
+  for (const segment of path) {
+    if (!isObjectRecord(cursor)) return null
+    cursor = cursor[segment]
+  }
+  return typeof cursor === "boolean" ? cursor : null
+}
+
+function getFirstCalloutStyleLabel(presentationJson: unknown): string | null {
+  const callouts = getNestedRecord(presentationJson, ["callouts"])
+  if (!callouts) return null
+  for (const calloutValue of Object.values(callouts)) {
+    if (!isObjectRecord(calloutValue)) continue
+    const style = calloutValue.style
+    if (typeof style === "string" && style.trim().length > 0) {
+      return style
+    }
+  }
+  return null
+}
+
+function parseChatPresentation(presentationJson: unknown): {
+  feedDensity: "comfortable" | "compact"
+  messageRowHighlightCss: string | null
+  calloutLabel: string | null
+} {
+  const density = getNestedString(presentationJson, ["tokens", "feed_density"])
+  const feedDensity = density === "compact" ? "compact" : "comfortable"
+  const highlightEnabled = getNestedBoolean(
+    presentationJson,
+    ["effects", "message_row_highlight", "enable"],
+  )
+  const highlightCss = getNestedString(
+    presentationJson,
+    ["effects", "message_row_highlight", "css"],
+  )
+  const calloutStyle = getFirstCalloutStyleLabel(presentationJson)
+  return {
+    feedDensity,
+    messageRowHighlightCss:
+      highlightCss
+      ?? (highlightEnabled === true ? "inset 0 0 0 1px rgba(59, 130, 246, 0.35)" : null),
+    calloutLabel: calloutStyle ? `Chat callout style: ${calloutStyle}` : null,
+  }
+}
+
+function parseContributionFeedPresentation(presentationJson: unknown): {
+  rowHighlightCss: string | null
+  calloutLabel: string | null
+} {
+  const rowHighlightCss = getNestedString(
+    presentationJson,
+    ["effects", "message_row_highlight", "css"],
+  )
+  const calloutStyle = getFirstCalloutStyleLabel(presentationJson)
+  return {
+    rowHighlightCss,
+    calloutLabel: calloutStyle ? `Contribution callout style: ${calloutStyle}` : null,
+  }
+}
+
+function parseCapabilityCalloutLabel(presentationJson: unknown, prefix: string): string | null {
+  const style = getFirstCalloutStyleLabel(presentationJson)
+  return style ? `${prefix}: ${style}` : null
+}
+
 function getPanelContentPayload(panel: DemoPanelSpec): unknown {
   const options = panel.options as { content_json?: unknown } | undefined
   return options?.content_json
@@ -123,14 +212,20 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
       onSendMessage={ctx.onSendMessage}
     />
   ),
-  chat: (_panel, ctx) => (
-    <DemoChatPanel
-      roomId={ctx.roomId}
-      isConnected={ctx.isConnected}
-      sendViaWebSocket={ctx.sendViaWebSocket}
-      streamingMessage={ctx.streamingMessage}
-    />
-  ),
+  chat: (panel, ctx) => {
+    const parsed = parseChatPresentation((panel as { presentation_json?: unknown }).presentation_json)
+    return (
+      <DemoChatPanel
+        roomId={ctx.roomId}
+        isConnected={ctx.isConnected}
+        sendViaWebSocket={ctx.sendViaWebSocket}
+        streamingMessage={ctx.streamingMessage}
+        feedDensity={parsed.feedDensity}
+        messageRowHighlightCss={parsed.messageRowHighlightCss ?? undefined}
+        calloutLabel={parsed.calloutLabel}
+      />
+    )
+  },
   content: (panel, ctx) =>
     ctx.renderContentPayload(
       getPanelContentPayload(panel),
@@ -202,6 +297,10 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
       runtimeHasRuntime={ctx.runtimeHasRuntime}
       autoStartError={ctx.autoStartError}
       config={(block as { config_json?: unknown }).config_json}
+      calloutLabel={parseCapabilityCalloutLabel(
+        (block as { presentation_json?: unknown }).presentation_json,
+        "Story metadata callout",
+      )}
     />
   ),
   agentRoster: (block, ctx) => (
@@ -221,6 +320,10 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
       runtimePolicy={ctx.runtimePolicy}
       runtimeHasRuntime={ctx.runtimeHasRuntime}
       roomAgents={ctx.roomAgentsAsAgentData}
+      calloutLabel={parseCapabilityCalloutLabel(
+        (block as { presentation_json?: unknown }).presentation_json,
+        "Orchestrator callout",
+      )}
     />
   ),
   toolCapability: (block, ctx) => (
@@ -229,16 +332,27 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
       config={(block as { config_json?: unknown }).config_json}
       roomAgents={ctx.roomAgentsAsAgentData}
       availableAgents={ctx.availableAgents}
+      calloutLabel={parseCapabilityCalloutLabel(
+        (block as { presentation_json?: unknown }).presentation_json,
+        "Tool capability callout",
+      )}
     />
   ),
-  contributionFeed: (block, ctx) => (
-    <ContributionFeedBlock
-      title={block.title}
-      config={(block as { config_json?: unknown }).config_json}
-      messages={ctx.debugMessages}
-      streamingMessage={ctx.streamingMessage}
-    />
-  ),
+  contributionFeed: (block, ctx) => {
+    const parsed = parseContributionFeedPresentation(
+      (block as { presentation_json?: unknown }).presentation_json,
+    )
+    return (
+      <ContributionFeedBlock
+        title={block.title}
+        config={(block as { config_json?: unknown }).config_json}
+        messages={ctx.debugMessages}
+        streamingMessage={ctx.streamingMessage}
+        rowHighlightCss={parsed.rowHighlightCss ?? undefined}
+        calloutLabel={parsed.calloutLabel}
+      />
+    )
+  },
   gitView: (block) => (
     <GitViewBlock
       title={block.title}

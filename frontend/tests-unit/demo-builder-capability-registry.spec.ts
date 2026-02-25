@@ -13,11 +13,15 @@ import {
   getBuilderCapabilityRegistrySnapshot,
   getBuilderRuntimeExpectationGaps,
   getBuilderRuntimeCompatibilityGaps,
+  getBlockCapabilityByType,
+  getPanelCapabilityByKind,
+  getBlockCapabilityPreviewAdapterOverrides,
+  getPanelCapabilityPreviewAdapterOverrides,
   normalizeBlockCapabilityPatch,
   normalizePanelCapabilityPatch,
   resolveBuilderCapabilityPacks,
-  getPanelCapabilityAvailability,
   runBlockCapabilitySemanticValidators,
+  getPanelCapabilityAvailability,
   runPanelCapabilitySemanticValidators,
 } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
 import {
@@ -745,5 +749,82 @@ test.describe("demoBuilder capability registry", () => {
         severity: "warning",
       },
     ])
+  })
+
+  test("storyRuntime panel preview adapter reflects story and runtime policy", async () => {
+    const composition = createEmptyComposition()
+    composition.runtime_policy = "manual"
+    composition.metadata_json = { story_id: "story-123" }
+    const capability = getPanelCapabilityByKind("storyRuntime")
+    expect(capability).toBeTruthy()
+
+    const overrides = getPanelCapabilityPreviewAdapterOverrides(
+      capability!,
+      { kind: "storyRuntime" },
+      composition,
+    )
+
+    expect(overrides.roomStoryId).toBe("story-123")
+    expect(overrides.autoRespond).toBeFalsy()
+  })
+
+  test("storyMetadata block preview adapter emits auto-start guidance when story is missing", async () => {
+    const composition = createEmptyComposition()
+    composition.runtime_policy = "auto"
+    composition.metadata_json = {}
+    const capability = getBlockCapabilityByType("storyMetadata")
+    expect(capability).toBeTruthy()
+
+    const overrides = getBlockCapabilityPreviewAdapterOverrides(
+      capability!,
+      { type: "storyMetadata", config_json: {} },
+      composition,
+    )
+
+    expect(overrides.roomStoryId).toBeNull()
+    expect(overrides.runtimePolicy).toBe("auto")
+    expect(overrides.runtimeHasRuntime).toBeFalsy()
+    expect(overrides.autoStartError).toContain("metadata_json.story_id")
+  })
+
+  test("contributionFeed block preview adapter injects synthetic messages", async () => {
+    const composition = createEmptyComposition()
+    composition.runtime_policy = "auto"
+    const capability = getBlockCapabilityByType("contributionFeed")
+    expect(capability).toBeTruthy()
+
+    const overrides = getBlockCapabilityPreviewAdapterOverrides(
+      capability!,
+      { type: "contributionFeed", config_json: {} },
+      composition,
+    )
+
+    expect((overrides.debugMessages ?? []).length).toBeGreaterThan(0)
+    expect(overrides.streamingMessage?.agent_name).toBe("Orchestrator")
+  })
+
+  test("toolCapability block preview adapter maps capability_map to available agents", async () => {
+    const composition = createEmptyComposition()
+    const capability = getBlockCapabilityByType("toolCapability")
+    expect(capability).toBeTruthy()
+
+    const overrides = getBlockCapabilityPreviewAdapterOverrides(
+      capability!,
+      {
+        type: "toolCapability",
+        config_json: {
+          capability_map: {
+            coder: ["diff", "code"],
+          },
+        },
+      },
+      composition,
+    )
+
+    const availableAgents = overrides.availableAgents ?? []
+    expect(availableAgents.length).toBeGreaterThan(0)
+    const coder = availableAgents.find((agent) => agent.id === "coder")
+    expect(coder).toBeTruthy()
+    expect(coder?.capabilities).toEqual(["diff", "code"])
   })
 })

@@ -8,6 +8,7 @@ interface ToolCapabilityBlockProps {
   config: unknown
   roomAgents: DemoRoomAgentData[]
   availableAgents: UserAgentConfigPublic[]
+  calloutLabel?: string | null
 }
 
 interface ToolCapabilityConfig {
@@ -42,6 +43,7 @@ export function ToolCapabilityBlock({
   config,
   roomAgents,
   availableAgents,
+  calloutLabel,
 }: ToolCapabilityBlockProps) {
   const parsedConfig = toConfig(config)
   const scopedAgents = parsedConfig.only_active_agents
@@ -76,6 +78,11 @@ export function ToolCapabilityBlock({
         <div className="text-sm font-medium">{title ?? "Tool Capability"}</div>
         <div className="text-xs text-muted-foreground">Capabilities available from agents currently scoped into this demo.</div>
       </div>
+      {calloutLabel && (
+        <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+          {calloutLabel}
+        </div>
+      )}
 
       <div className="grid gap-2 md:grid-cols-3">
         <div className="rounded-md border bg-muted/20 p-3">

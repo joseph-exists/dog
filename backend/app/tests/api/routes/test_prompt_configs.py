@@ -1,0 +1,179 @@
+from fastapi.testclient import TestClient
+
+from app.core.config import settings
+
+
+def _draft_payload(*, model_id: str = "gpt-4o-mini", text: str = "Hello") -> dict:
+    return {
+        "provider": {
+            "user_access_provider_id": None,
+            "provider_type_id": None,
+            "provider_kind": "openai_compatible",
+            "base_url": "https://api.example.test/v1",
+            "account_label": "test-provider",
+        },
+        "model": {
+            "model_catalog_id": None,
+            "model_id": model_id,
+            "model_name": model_id,
+            "model_family": "gpt-4o",
+        },
+        "input": {
+            "kind": "simple_text",
+            "text": text,
+            "system": "You are a helpful assistant.",
+            "messages": [],
+        },
+        "params": {
+            "provider_kind": "openai_compatible",
+            "temperature": 0.2,
+            "top_p": 1,
+            "max_output_tokens": 256,
+            "response_format_json": False,
+            "parallel_tool_calls": True,
+        },
+        "tools": {
+            "tool_mode": "none",
+            "tool_allowlist": [],
+            "tool_choice": None,
+        },
+        "metadata": {
+            "tags": ["test"],
+            "notes": "integration test payload",
+            "template_id": "prompt-builder-m1-test",
+            "template_setup": {"ready": True},
+        },
+    }
+
+
+def _create_prompt_config(
+    client: TestClient,
+    token_headers: dict[str, str],
+    *,
+    name: str = "Prompt Config Test",
+) -> dict:
+    response = client.post(
+        f"{settings.API_V1_STR}/prompt-configs/",
+        headers=token_headers,
+        json={
+            "name": name,
+            "description": "Prompt config integration test",
+            "payload": _draft_payload(),
+            "metadata_json": {"source": "tests"},
+            "commit_message": "Initial version",
+        },
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_prompt_config_owner_access_controls(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    normal_user_token_headers: dict[str, str],
+) -> None:
+    created = _create_prompt_config(client, superuser_token_headers, name="Owner Access")
+    prompt_config_id = created["id"]
+
+    # Owner (superuser creator) can access.
+    owner_response = client.get(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}",
+        headers=superuser_token_headers,
+    )
+    assert owner_response.status_code == 200
+
+    # Another non-superuser account is denied.
+    denied_response = client.get(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}",
+        headers=normal_user_token_headers,
+    )
+    assert denied_response.status_code == 403
+    assert denied_response.json()["detail"] == "Access denied"
+
+
+def test_prompt_config_commit_creates_next_version_and_resets_working_copy(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    created = _create_prompt_config(client, superuser_token_headers, name="Commit Flow")
+    prompt_config_id = created["id"]
+
+    # Update working copy so we have uncommitted changes before commit.
+    put_response = client.put(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/working-copy",
+        headers=superuser_token_headers,
+        json={
+            "base_version": 1,
+            "has_uncommitted_changes": True,
+            "payload": _draft_payload(model_id="gpt-4.1-mini", text="Updated draft"),
+        },
+    )
+    assert put_response.status_code == 200
+    updated_working_copy = put_response.json()
+    assert updated_working_copy["base_version"] == 1
+    assert updated_working_copy["has_uncommitted_changes"] is True
+    assert updated_working_copy["payload"]["model"]["model_id"] == "gpt-4.1-mini"
+
+    # Commit a new immutable version.
+    commit_response = client.post(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/versions",
+        headers=superuser_token_headers,
+        json={"commit_message": "Add updated prompt settings"},
+    )
+    assert commit_response.status_code == 200
+    committed_version = commit_response.json()
+    assert committed_version["version_number"] == 2
+    assert committed_version["commit_message"] == "Add updated prompt settings"
+    assert committed_version["payload"]["model"]["model_id"] == "gpt-4.1-mini"
+
+    # PromptConfig latest_version advances.
+    config_response = client.get(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}",
+        headers=superuser_token_headers,
+    )
+    assert config_response.status_code == 200
+    assert config_response.json()["latest_version"] == 2
+
+    # Working copy is rebased and marked clean after commit.
+    working_copy_response = client.get(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/working-copy",
+        headers=superuser_token_headers,
+    )
+    assert working_copy_response.status_code == 200
+    committed_working_copy = working_copy_response.json()
+    assert committed_working_copy["base_version"] == 2
+    assert committed_working_copy["has_uncommitted_changes"] is False
+
+
+def test_prompt_config_working_copy_conflict_returns_409(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    created = _create_prompt_config(client, superuser_token_headers, name="Conflict Flow")
+    prompt_config_id = created["id"]
+
+    # First write moves working copy base_version to 2.
+    first_update = client.put(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/working-copy",
+        headers=superuser_token_headers,
+        json={
+            "base_version": 2,
+            "has_uncommitted_changes": True,
+            "payload": _draft_payload(text="first writer"),
+        },
+    )
+    assert first_update.status_code == 200
+    assert first_update.json()["base_version"] == 2
+
+    # Stale write with outdated base_version should be rejected.
+    conflict_update = client.put(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/working-copy",
+        headers=superuser_token_headers,
+        json={
+            "base_version": 1,
+            "has_uncommitted_changes": True,
+            "payload": _draft_payload(text="stale writer"),
+        },
+    )
+    assert conflict_update.status_code == 409
+    assert "base_version conflict" in conflict_update.json()["detail"]

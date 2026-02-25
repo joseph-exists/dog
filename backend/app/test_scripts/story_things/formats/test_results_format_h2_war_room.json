@@ -1,0 +1,46 @@
+{
+  "test_suite": "Format Test H-2: The War Room (HTML Data & Layout)",
+  "start_time": "2026-02-23T17:34:07.416361",
+  "end_time": "2026-02-23T17:34:08.355087",
+  "story_id": "f892dd1a-9b89-45ba-a461-eeba72b638e8",
+  "node_ids": {
+    "briefing": "78c16925-c9c4-4eae-976a-cd79c226b405",
+    "sigint": "01c4d3d7-f6b9-4291-95b6-0587a8fdb8b9",
+    "humint": "3394c979-80ab-4dc4-868e-811f074b5482",
+    "satint": "075809b2-7e0c-4795-9f01-f839420a041f",
+    "synthesis": "c1d91bd9-ac45-4bc8-a40e-61b72747c52f",
+    "ending_correct": "8128948a-0689-40d1-97f0-9efadd85efec",
+    "ending_missed": "9c205461-96c0-4195-a66c-97f8571a4286",
+    "ending_false_alarm": "e0478c25-aeda-47a4-a844-de74955a2e1d"
+  },
+  "choice_ids": [
+    "74219b79-abaf-4716-ba3e-96cd676bf2b5",
+    "b3750873-456e-4278-9b82-fcbbffb79c9d",
+    "c2faca3b-3aac-45d8-87e7-e53a3ea53994",
+    "3fc746df-a078-4b88-823e-446fdb0a9cbe",
+    "bf5c9301-c252-4a33-aab7-0ce2daac2eac",
+    "12fa178c-aa2c-47d9-925f-6cc2c85cae00",
+    "14bd219c-75c1-4161-b4dd-da4825a6af99",
+    "cf5a970f-76ea-42da-8efe-f3790ec4e6e0",
+    "372542a0-da78-45ad-b881-0b527b820db5",
+    "2c1ff4d9-ad43-4a7f-8172-8bb0138be244",
+    "a0f3dfef-e759-4acd-ac84-fea82f708ae4",
+    "cefa6fcf-6ae7-496b-86c2-6428ecbf61a6",
+    "f1d643be-284d-494d-8c01-381596e3117f",
+    "0a8677e7-2a4c-4076-9b32-8c379e6ca0b5",
+    "680103fe-4b2c-4974-96c5-df084788530d"
+  ],
+  "state_variable_ids": {
+    "signals_analyzed": "b71ff2d1-d870-46a8-b595-aa68cbfa69e7",
+    "humint_analyzed": "2c1c1d65-6bda-4a76-bb98-9eb63fd8e784",
+    "satellite_analyzed": "0a3ef12d-25da-4548-af43-050907f0a4bc",
+    "identified_primary_threat": "d2c858c3-5b9d-48af-bbb8-48a22d3a3ec7",
+    "false_positive_count": "dc012648-f184-4efe-806b-a2ba99407da9",
+    "disciplines_completed": "16470f4b-d092-4cff-b4ba-32e9456fb3ec",
+    "threat_assessment": "cdfd2b6f-3c68-4704-a494-34c065b5d016",
+    "correct_assessment": "72e4e058-dc53-464b-92d8-5239fae47cfd",
+    "weighted_mirror": "c6b2a8ad-99f0-428a-ae93-1745b07cface"
+  },
+  "success": true,
+  "errors": []
+}

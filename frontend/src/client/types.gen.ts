@@ -1754,6 +1754,184 @@ export type ProgressSnapshotsPublic = {
     count: number;
 };
 
+export type PromptBuilderMetadata = {
+    tags?: (Array<(string)> | null);
+    notes?: (string | null);
+    template_id?: (string | null);
+    template_setup?: ({
+    [key: string]: unknown;
+} | null);
+};
+
+export type PromptConfigCommitRequest = {
+    commit_message?: (string | null);
+    parent_version_id?: (string | null);
+};
+
+export type PromptConfigCreate = {
+    name: string;
+    description?: (string | null);
+    metadata_json?: ({
+    [key: string]: unknown;
+} | null);
+    payload: PromptConfigDraft_Input;
+    commit_message?: (string | null);
+};
+
+export type PromptConfigDraft_Input = {
+    metadata?: (PromptBuilderMetadata | null);
+    provider: PromptProviderBinding;
+    model: PromptModelBinding;
+    input: PromptInputPayload_Input;
+    params: PromptParams;
+    tools?: (PromptToolingConfig | null);
+};
+
+export type PromptConfigDraft_Output = {
+    metadata?: (PromptBuilderMetadata | null);
+    provider: PromptProviderBinding;
+    model: PromptModelBinding;
+    input: PromptInputPayload_Output;
+    params: PromptParams;
+    tools?: (PromptToolingConfig | null);
+};
+
+export type PromptConfigPublic = {
+    name: string;
+    description?: (string | null);
+    metadata_json?: ({
+    [key: string]: unknown;
+} | null);
+    is_archived?: boolean;
+    id: string;
+    owner_id: (string | null);
+    latest_version: number;
+    created_at: string;
+    updated_at: (string | null);
+};
+
+export type PromptConfigResetWorkingCopyRequest = {
+    version_id?: (string | null);
+};
+
+export type PromptConfigsPublic = {
+    data: Array<PromptConfigPublic>;
+    count: number;
+};
+
+export type PromptConfigUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    metadata_json?: ({
+    [key: string]: unknown;
+} | null);
+    is_archived?: (boolean | null);
+};
+
+export type PromptConfigValidationIssue = {
+    code: string;
+    severity: 'warning' | 'error';
+    message: string;
+    path?: (string | null);
+};
+
+export type severity = 'warning' | 'error';
+
+export type PromptConfigValidationResponse = {
+    issues: Array<PromptConfigValidationIssue>;
+};
+
+export type PromptConfigVersionPublic = {
+    id: string;
+    prompt_config_id: string;
+    version_number: number;
+    parent_version_id?: (string | null);
+    commit_message?: (string | null);
+    payload: PromptConfigDraft_Output;
+    created_by?: (string | null);
+    created_at: string;
+};
+
+export type PromptConfigVersionsPublic = {
+    data: Array<PromptConfigVersionPublic>;
+    count: number;
+};
+
+export type PromptConfigWorkingCopyPublic = {
+    id: string;
+    prompt_config_id: string;
+    base_version: (number | null);
+    payload: PromptConfigDraft_Output;
+    has_uncommitted_changes: boolean;
+    updated_at: string;
+    updated_by?: (string | null);
+};
+
+export type PromptConfigWorkingCopyUpdate = {
+    payload: PromptConfigDraft_Input;
+    base_version?: (number | null);
+    has_uncommitted_changes?: (boolean | null);
+};
+
+export type PromptInputKind = 'simple_text' | 'messages';
+
+export type PromptInputPayload_Input = {
+    kind?: PromptInputKind;
+    text?: (string | null);
+    system?: (string | null);
+    messages?: Array<PromptMessage>;
+};
+
+export type PromptInputPayload_Output = {
+    kind?: PromptInputKind;
+    text?: (string | null);
+    system?: (string | null);
+    messages?: Array<PromptMessage>;
+};
+
+export type PromptMessage = {
+    role: PromptMessageRole;
+    content?: string;
+};
+
+export type PromptMessageRole = 'system' | 'user' | 'assistant' | 'tool';
+
+export type PromptModelBinding = {
+    model_catalog_id?: (string | null);
+    model_id?: (string | null);
+    model_name?: (string | null);
+    model_family?: (string | null);
+};
+
+export type PromptParams = {
+    provider_kind?: (PromptProviderKind | null);
+    temperature?: (number | null);
+    top_p?: (number | null);
+    max_output_tokens?: (number | null);
+    stop?: (Array<(string)> | null);
+    seed?: (number | null);
+    response_format_json?: (boolean | null);
+    parallel_tool_calls?: (boolean | null);
+    reasoning_effort?: ('low' | 'medium' | 'high' | null);
+    top_k?: (number | null);
+};
+
+export type PromptProviderBinding = {
+    user_access_provider_id?: (string | null);
+    provider_type_id?: (string | null);
+    provider_kind?: (PromptProviderKind | null);
+    base_url?: (string | null);
+    account_label?: (string | null);
+};
+
+export type PromptProviderKind = 'openai_compatible' | 'openai' | 'anthropic' | 'google' | 'xai' | 'custom';
+
+export type PromptToolingConfig = {
+    tool_mode?: ('none' | 'optional' | 'required' | null);
+    tool_allowlist?: (Array<(string)> | null);
+    tool_choice?: (string | null);
+};
+
 /**
  * Collection model for Quality API responses.
  */
@@ -3920,6 +4098,80 @@ export type PrivateCreateUserData = {
 };
 
 export type PrivateCreateUserResponse = (UserPublic);
+
+export type PromptConfigsListPromptConfigsData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type PromptConfigsListPromptConfigsResponse = (PromptConfigsPublic);
+
+export type PromptConfigsCreatePromptConfigData = {
+    requestBody: PromptConfigCreate;
+};
+
+export type PromptConfigsCreatePromptConfigResponse = (PromptConfigPublic);
+
+export type PromptConfigsGetPromptConfigData = {
+    promptConfigId: string;
+};
+
+export type PromptConfigsGetPromptConfigResponse = (PromptConfigPublic);
+
+export type PromptConfigsUpdatePromptConfigData = {
+    promptConfigId: string;
+    requestBody: PromptConfigUpdate;
+};
+
+export type PromptConfigsUpdatePromptConfigResponse = (PromptConfigPublic);
+
+export type PromptConfigsGetPromptConfigWorkingCopyData = {
+    promptConfigId: string;
+};
+
+export type PromptConfigsGetPromptConfigWorkingCopyResponse = (PromptConfigWorkingCopyPublic);
+
+export type PromptConfigsPutPromptConfigWorkingCopyData = {
+    promptConfigId: string;
+    requestBody: PromptConfigWorkingCopyUpdate;
+};
+
+export type PromptConfigsPutPromptConfigWorkingCopyResponse = (PromptConfigWorkingCopyPublic);
+
+export type PromptConfigsCommitPromptConfigVersionData = {
+    promptConfigId: string;
+    requestBody: PromptConfigCommitRequest;
+};
+
+export type PromptConfigsCommitPromptConfigVersionResponse = (PromptConfigVersionPublic);
+
+export type PromptConfigsListPromptConfigVersionsData = {
+    limit?: number;
+    promptConfigId: string;
+    skip?: number;
+};
+
+export type PromptConfigsListPromptConfigVersionsResponse = (PromptConfigVersionsPublic);
+
+export type PromptConfigsGetPromptConfigVersionData = {
+    promptConfigId: string;
+    versionId: string;
+};
+
+export type PromptConfigsGetPromptConfigVersionResponse = (PromptConfigVersionPublic);
+
+export type PromptConfigsResetPromptConfigWorkingCopyData = {
+    promptConfigId: string;
+    requestBody: PromptConfigResetWorkingCopyRequest;
+};
+
+export type PromptConfigsResetPromptConfigWorkingCopyResponse = (PromptConfigWorkingCopyPublic);
+
+export type PromptConfigsValidatePromptConfigPayloadData = {
+    requestBody: PromptConfigDraft_Input;
+};
+
+export type PromptConfigsValidatePromptConfigPayloadResponse = (PromptConfigValidationResponse);
 
 export type QualitiesReadQualitiesData = {
     limit?: number;

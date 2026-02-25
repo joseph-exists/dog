@@ -63,22 +63,11 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "127.0.0.1"
     REDIS_PORT: int = 6379
 
-    # Shadow Forgejo Configuration (git-based entity versioning)
-    # All shadow operations are invisible to end users - they never
-    # interact with Forgejo directly. Service accounts own all repos.
+    # Shadow Configuration (git-based entity versioning)
+    # Each entity gets a local git repo at {SHADOW_REPOS_PATH}/{entity_type}/{entity_id}/
+    # All shadow operations are invisible to end users.
     SHADOW_ENABLED: bool = True
-    SHADOW_FORGEJO_URL: str = "http://localhost:3000/api/v1"
-    # Service account tokens (one per entity type)
-    SHADOW_USERS_TOKEN: str | None = None   # shadow-users account
-    SHADOW_AGENTS_TOKEN: str | None = None  # shadow-agents account
-    SHADOW_STORIES_TOKEN: str | None = None # shadow-stories account
-    SHADOW_ROOMS_TOKEN: str | None = None   # shadow-rooms account
-    SHADOW_PERSONAS_TOKEN: str | None = None  # shadow-personas account
-    SHADOW_QUALITIES_TOKEN: str | None = None  # shadow-qualities account
-    SHADOW_TRAITS_TOKEN: str | None = None  # shadow-traits account
-    SHADOW_LLM_MODELS_TOKEN: str | None = None  # shadow-llm-models account
-    SHADOW_USER_LLM_PROVIDERS_TOKEN: str | None = None  # shadow-user-llm-providers account
-    SHADOW_PROMPTS_TOKEN: str | None = None  # shadow-prompts account
+    SHADOW_REPOS_PATH: str = "/data/shadows"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

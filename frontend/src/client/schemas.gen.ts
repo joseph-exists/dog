@@ -6658,6 +6658,1023 @@ export const ProgressSnapshotsPublicSchema = {
     description: 'Collection response for ProgressSnapshots'
 } as const;
 
+export const PromptBuilderMetadataSchema = {
+    properties: {
+        tags: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tags'
+        },
+        notes: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 5000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Notes'
+        },
+        template_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Template Id'
+        },
+        template_setup: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Template Setup'
+        }
+    },
+    type: 'object',
+    title: 'PromptBuilderMetadata'
+} as const;
+
+export const PromptConfigCommitRequestSchema = {
+    properties: {
+        commit_message: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Commit Message'
+        },
+        parent_version_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parent Version Id'
+        }
+    },
+    type: 'object',
+    title: 'PromptConfigCommitRequest'
+} as const;
+
+export const PromptConfigCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 150,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        metadata_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata Json'
+        },
+        payload: {
+            '$ref': '#/components/schemas/PromptConfigDraft-Input'
+        },
+        commit_message: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Commit Message',
+            default: 'Initial version'
+        }
+    },
+    type: 'object',
+    required: ['name', 'payload'],
+    title: 'PromptConfigCreate'
+} as const;
+
+export const PromptConfigDraft_InputSchema = {
+    properties: {
+        metadata: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PromptBuilderMetadata'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        provider: {
+            '$ref': '#/components/schemas/PromptProviderBinding'
+        },
+        model: {
+            '$ref': '#/components/schemas/PromptModelBinding'
+        },
+        input: {
+            '$ref': '#/components/schemas/PromptInputPayload-Input'
+        },
+        params: {
+            '$ref': '#/components/schemas/PromptParams'
+        },
+        tools: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PromptToolingConfig'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['provider', 'model', 'input', 'params'],
+    title: 'PromptConfigDraft'
+} as const;
+
+export const PromptConfigDraft_OutputSchema = {
+    properties: {
+        metadata: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PromptBuilderMetadata'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        provider: {
+            '$ref': '#/components/schemas/PromptProviderBinding'
+        },
+        model: {
+            '$ref': '#/components/schemas/PromptModelBinding'
+        },
+        input: {
+            '$ref': '#/components/schemas/PromptInputPayload-Output'
+        },
+        params: {
+            '$ref': '#/components/schemas/PromptParams'
+        },
+        tools: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PromptToolingConfig'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['provider', 'model', 'input', 'params'],
+    title: 'PromptConfigDraft'
+} as const;
+
+export const PromptConfigPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 150,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        metadata_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata Json'
+        },
+        is_archived: {
+            type: 'boolean',
+            title: 'Is Archived',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner Id'
+        },
+        latest_version: {
+            type: 'integer',
+            title: 'Latest Version'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'owner_id', 'latest_version', 'created_at', 'updated_at'],
+    title: 'PromptConfigPublic'
+} as const;
+
+export const PromptConfigResetWorkingCopyRequestSchema = {
+    properties: {
+        version_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version Id'
+        }
+    },
+    type: 'object',
+    title: 'PromptConfigResetWorkingCopyRequest'
+} as const;
+
+export const PromptConfigUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 150
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        metadata_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata Json'
+        },
+        is_archived: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Archived'
+        }
+    },
+    type: 'object',
+    title: 'PromptConfigUpdate'
+} as const;
+
+export const PromptConfigValidationIssueSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        severity: {
+            type: 'string',
+            enum: ['warning', 'error'],
+            title: 'Severity'
+        },
+        message: {
+            type: 'string',
+            title: 'Message'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        }
+    },
+    type: 'object',
+    required: ['code', 'severity', 'message'],
+    title: 'PromptConfigValidationIssue'
+} as const;
+
+export const PromptConfigValidationResponseSchema = {
+    properties: {
+        issues: {
+            items: {
+                '$ref': '#/components/schemas/PromptConfigValidationIssue'
+            },
+            type: 'array',
+            title: 'Issues'
+        }
+    },
+    type: 'object',
+    required: ['issues'],
+    title: 'PromptConfigValidationResponse'
+} as const;
+
+export const PromptConfigVersionPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        prompt_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Prompt Config Id'
+        },
+        version_number: {
+            type: 'integer',
+            title: 'Version Number'
+        },
+        parent_version_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parent Version Id'
+        },
+        commit_message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Commit Message'
+        },
+        payload: {
+            '$ref': '#/components/schemas/PromptConfigDraft-Output'
+        },
+        created_by: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created By'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'prompt_config_id', 'version_number', 'payload', 'created_at'],
+    title: 'PromptConfigVersionPublic'
+} as const;
+
+export const PromptConfigVersionsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PromptConfigVersionPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PromptConfigVersionsPublic'
+} as const;
+
+export const PromptConfigWorkingCopyPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        prompt_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Prompt Config Id'
+        },
+        base_version: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Version'
+        },
+        payload: {
+            '$ref': '#/components/schemas/PromptConfigDraft-Output'
+        },
+        has_uncommitted_changes: {
+            type: 'boolean',
+            title: 'Has Uncommitted Changes'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        updated_by: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated By'
+        }
+    },
+    type: 'object',
+    required: ['id', 'prompt_config_id', 'base_version', 'payload', 'has_uncommitted_changes', 'updated_at'],
+    title: 'PromptConfigWorkingCopyPublic'
+} as const;
+
+export const PromptConfigWorkingCopyUpdateSchema = {
+    properties: {
+        payload: {
+            '$ref': '#/components/schemas/PromptConfigDraft-Input'
+        },
+        base_version: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Version'
+        },
+        has_uncommitted_changes: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Uncommitted Changes',
+            default: true
+        }
+    },
+    type: 'object',
+    required: ['payload'],
+    title: 'PromptConfigWorkingCopyUpdate'
+} as const;
+
+export const PromptConfigsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PromptConfigPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PromptConfigsPublic'
+} as const;
+
+export const PromptInputKindSchema = {
+    type: 'string',
+    enum: ['simple_text', 'messages'],
+    title: 'PromptInputKind'
+} as const;
+
+export const PromptInputPayload_InputSchema = {
+    properties: {
+        kind: {
+            '$ref': '#/components/schemas/PromptInputKind',
+            default: 'simple_text'
+        },
+        text: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Text'
+        },
+        system: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System'
+        },
+        messages: {
+            items: {
+                '$ref': '#/components/schemas/PromptMessage'
+            },
+            type: 'array',
+            title: 'Messages'
+        }
+    },
+    type: 'object',
+    title: 'PromptInputPayload'
+} as const;
+
+export const PromptInputPayload_OutputSchema = {
+    properties: {
+        kind: {
+            '$ref': '#/components/schemas/PromptInputKind',
+            default: 'simple_text'
+        },
+        text: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Text'
+        },
+        system: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System'
+        },
+        messages: {
+            items: {
+                '$ref': '#/components/schemas/PromptMessage'
+            },
+            type: 'array',
+            title: 'Messages'
+        }
+    },
+    type: 'object',
+    title: 'PromptInputPayload'
+} as const;
+
+export const PromptMessageSchema = {
+    properties: {
+        role: {
+            '$ref': '#/components/schemas/PromptMessageRole'
+        },
+        content: {
+            type: 'string',
+            maxLength: 100000,
+            title: 'Content',
+            default: ''
+        }
+    },
+    type: 'object',
+    required: ['role'],
+    title: 'PromptMessage'
+} as const;
+
+export const PromptMessageRoleSchema = {
+    type: 'string',
+    enum: ['system', 'user', 'assistant', 'tool'],
+    title: 'PromptMessageRole'
+} as const;
+
+export const PromptModelBindingSchema = {
+    properties: {
+        model_catalog_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Catalog Id'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id'
+        },
+        model_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name'
+        },
+        model_family: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Family'
+        }
+    },
+    type: 'object',
+    title: 'PromptModelBinding'
+} as const;
+
+export const PromptParamsSchema = {
+    properties: {
+        provider_kind: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PromptProviderKind'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            default: 'openai_compatible'
+        },
+        temperature: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Temperature'
+        },
+        top_p: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Top P'
+        },
+        max_output_tokens: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Output Tokens'
+        },
+        stop: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Stop'
+        },
+        seed: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Seed'
+        },
+        response_format_json: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Response Format Json'
+        },
+        parallel_tool_calls: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parallel Tool Calls'
+        },
+        reasoning_effort: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['low', 'medium', 'high']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reasoning Effort'
+        },
+        top_k: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Top K'
+        }
+    },
+    type: 'object',
+    title: 'PromptParams'
+} as const;
+
+export const PromptProviderBindingSchema = {
+    properties: {
+        user_access_provider_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider Id'
+        },
+        provider_type_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Type Id'
+        },
+        provider_kind: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PromptProviderKind'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Url'
+        },
+        account_label: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Account Label'
+        }
+    },
+    type: 'object',
+    title: 'PromptProviderBinding'
+} as const;
+
+export const PromptProviderKindSchema = {
+    type: 'string',
+    enum: ['openai_compatible', 'openai', 'anthropic', 'google', 'xai', 'custom'],
+    title: 'PromptProviderKind'
+} as const;
+
+export const PromptToolingConfigSchema = {
+    properties: {
+        tool_mode: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['none', 'optional', 'required']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Mode',
+            default: 'none'
+        },
+        tool_allowlist: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Allowlist'
+        },
+        tool_choice: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Choice'
+        }
+    },
+    type: 'object',
+    title: 'PromptToolingConfig'
+} as const;
+
 export const QualitiesPublicSchema = {
     properties: {
         data: {

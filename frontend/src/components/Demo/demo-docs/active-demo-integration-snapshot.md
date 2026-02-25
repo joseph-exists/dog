@@ -1,7 +1,9 @@
 # Demo Integration Snapshot
 > **Status:** Source of truth for current implementation + remaining delta  
-> **Last Revised Date:** 2026-02-23  
-> **Inputs merged:** `demo-scaffolding-v2.md`, `todo-alpha.md`, current backend/frontend implementation (:note: docs noted above have been revised/deprecated/integrated. they are no longer active sources of truth.  consider this document legible/accurate until otherwise noted)
+> **Last Revised Date:** 2026-02-24  
+
+> Planning ownership: use `frontend/src/components/Demo/demo-docs/current-key-priorities.md` for milestone sequencing and handoff decisions. This file remains the integration reality checkpoint.
+
 
 ## Purpose
 This document is the active integration checkpoint for demos. It distinguishes:
@@ -10,7 +12,7 @@ This document is the active integration checkpoint for demos. It distinguishes:
 
 Use this as the planning and execution artifact for the next demo integration slice.
 
-## Desired Outcomes (from `demo-scaffolding-v2.md` + `todo-alpha.md`)
+## Desired Outcomes 
 1. Demo routing is composition-native and entity-aware.
 2. Session resolution returns room/runtime/composition context without frontend recomposition drift.
 3. DemoShell can render block + panel compositions with demo-aware theming/presentation.
@@ -73,7 +75,7 @@ Use this as the planning and execution artifact for the next demo integration sl
 6. Content rendering migration from showcase/demo content to authored composition payloads.
 7. Registry-based panel/block mapping in demo route with explicit fallback handling for unknown kinds.
 
-### Partially Complete
+### Extended: Complete
 1. Panel coverage:
 - wired for active scope: `storyRuntime`, `chat`, `content`, `participantPanel`, `canvas`, `a2ui`, `storyEditor`, `debug`, `storyPlayer`
 - deferred compatibility kinds remain on fallback path: `storyPlayerPanel`, `strange`
@@ -83,14 +85,14 @@ Use this as the planning and execution artifact for the next demo integration sl
 
 ### Not Yet Complete
 1. User override management endpoints (read/write for per-user composition override lifecycle).
-2. Contract-level creator operations for clone/publish flows (optional in `todo-alpha`, not required for core route render).
 
-3. Acceptance-matrix execution evidence for demo D in this doc set. 
-(A/B/C are complete.  Demo D execution pending external dev dependency.)
+2. Contract-level creator operations for clone/publish flows 
 
-## Remaining Delta (Prioritized)
 
-### Delta 1: Tighten DemoShell Contract
+
+## Pre-existing Delta (Prioritized)
+
+### COMPLETE: Delta 1: Tighten DemoShell Contract
 1. Move from ad-hoc prop bundle toward a structured composition input model (`header`, `blocks`, `panels`, `status`).
 2. Keep current behavior stable while introducing adapter layer for compatibility.
 3. Make route simpler by reducing panel-specific prop drift and repeated context plumbing.
