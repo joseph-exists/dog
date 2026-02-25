@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { useEffect, useMemo, useState } from "react"
+import { OpenAPI } from "@/client"
+import { request } from "@/client/core/request"
 import { AgentsService, LlmCatalogService, LlmProvidersService, PromptConfigsService } from "@/client/sdk.gen"
 import { PromptTopLevelEditor } from "@/components/Prompt/builder/PromptTopLevelEditor"
 import {
@@ -11,6 +13,16 @@ import {
   hydratePromptDraftProviderAndModel,
   mapUserAgentConfigToPromptDraft,
 } from "@/components/Prompt/builder/promptBuilderAdapters"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   createEmptyPromptDraft,
   normalizePromptDraft,
@@ -65,6 +77,7 @@ function PromptBuilderPage() {
   const [selectedPromptConfigId, setSelectedPromptConfigId] = useState<string>("")
   const [selectedAgentId, setSelectedAgentId] = useState<string>("")
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  const [isResetFromAgentConfirmOpen, setIsResetFromAgentConfirmOpen] = useState(false)
   const selectedProviderId = draft.provider.user_access_provider_id
   const selectedProviderIdForCatalog = isUuid(selectedProviderId) ? selectedProviderId : null
   const workingCopyStorageKey = useMemo(
@@ -163,10 +176,45 @@ function PromptBuilderPage() {
       setRawJsonDraft(JSON.stringify(nextDraft, null, 2))
       setRawJsonError(null)
       setFieldErrors({})
-      showSuccessToast("Loaded prompt draft from selected agent.")
+      showSuccessToast("Loaded local draft from selected agent (no PromptConfig changes yet).")
     },
     onError: () => {
       showErrorToast("Failed to load selected agent into Prompt Builder.")
+    },
+  })
+  const resetFromAgentMutation = useMutation({
+    mutationFn: async (input: { promptConfigId: string; agentId: string }) => {
+      const agent = await AgentsService.getAgent({ agentId: input.agentId })
+      const nextDraft = mapUserAgentConfigToPromptDraft(agent)
+      await request(OpenAPI, {
+        method: "DELETE",
+        url: "/api/v1/prompt-configs/{prompt_config_id}",
+        path: {
+          prompt_config_id: input.promptConfigId,
+        },
+        errors: {
+          404: "PromptConfig not found",
+          422: "Validation Error",
+        },
+      })
+      return nextDraft
+    },
+    onSuccess: async (nextDraft, variables) => {
+      setDraft(nextDraft)
+      setBaselineDraft(nextDraft)
+      setRawJsonDraft(JSON.stringify(nextDraft, null, 2))
+      setRawJsonError(null)
+      setFieldErrors({})
+      setLastSavedAt(null)
+      setSelectedPromptConfigId("")
+      setIsResetFromAgentConfirmOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ["prompt-builder", "prompt-configs"] })
+      await queryClient.invalidateQueries({ queryKey: ["prompt-builder", "working-copy", variables.promptConfigId] })
+      showSuccessToast("Deleted PromptConfig and loaded a fresh local draft from selected agent.")
+    },
+    onError: (error: unknown) => {
+      const detail = extractApiErrorDetail(error)
+      showErrorToast(detail ?? "Failed to reset from agent.")
     },
   })
   const createPromptConfigMutation = useMutation({
@@ -302,7 +350,22 @@ function PromptBuilderPage() {
       showErrorToast("Select an agent before reset.")
       return
     }
-    loadFromAgentMutation.mutate(selectedAgentId)
+    if (!selectedPromptConfigId) {
+      showErrorToast("Select a PromptConfig before reset.")
+      return
+    }
+    setIsResetFromAgentConfirmOpen(true)
+  }
+
+  function confirmResetFromAgent() {
+    if (!selectedAgentId || !selectedPromptConfigId) {
+      showErrorToast("Select both PromptConfig and source agent before reset.")
+      return
+    }
+    resetFromAgentMutation.mutate({
+      promptConfigId: selectedPromptConfigId,
+      agentId: selectedAgentId,
+    })
   }
 
   function saveToPromptConfig() {
@@ -354,10 +417,14 @@ function PromptBuilderPage() {
         <CardHeader>
           <CardTitle>PromptConfig Persistence</CardTitle>
           <CardDescription>
-            API-backed save/load/commit using PromptConfig working-copy and version endpoints.
+            A PromptConfig is the saved prompt recipe for one run profile (provider/model/input/params/tools), with API-backed working-copy + version history.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+            Load a PromptConfig when you want to continue work, compare versions, or make edits without starting from scratch.
+            Source Agent is your starting template: loading from an agent copies its current settings into the draft, then you save those edits into a PromptConfig for persistent versioned prompt authoring.
+          </div>
           <div className="space-y-1">
             <Label>Prompt Config</Label>
             <Select
@@ -416,14 +483,19 @@ function PromptBuilderPage() {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              disabled={!selectedAgentId || loadFromAgentMutation.isPending}
+              disabled={!selectedAgentId || loadFromAgentMutation.isPending || resetFromAgentMutation.isPending}
               onClick={() => loadFromAgentMutation.mutate(selectedAgentId)}
             >
               Load From Agent
             </Button>
             <Button
-              variant="outline"
-              disabled={!selectedAgentId || loadFromAgentMutation.isPending}
+              variant="destructive"
+              disabled={
+                !selectedAgentId
+                || !selectedPromptConfigId
+                || loadFromAgentMutation.isPending
+                || resetFromAgentMutation.isPending
+              }
               onClick={resetFromAgent}
             >
               Reset From Agent
@@ -435,6 +507,12 @@ function PromptBuilderPage() {
               Load Working Copy (Browser)
             </Button>
           </div>
+          <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+            Use <strong>Load From Agent</strong> when you want a fresh local draft from the selected agent without changing the selected PromptConfig.
+            Use <strong>Reset From Agent</strong> when you intentionally want to delete the selected PromptConfig and its version history, then restart from the selected agent.
+            Use browser working copy save/load when you want fast local checkpoints before committing.
+            Avoid reset if you need to keep existing PromptConfig history. Reset is destructive and cannot be undone.
+          </div>
           <p className="text-xs text-muted-foreground">
             {selectedPromptConfig
               ? `PromptConfig: ${selectedPromptConfig.name}`
@@ -445,6 +523,30 @@ function PromptBuilderPage() {
             {lastSavedAt ? ` Last persisted: ${new Date(lastSavedAt).toLocaleString()}.` : ""}{" "}
             {activeWorkingCopy?.base_version != null ? `Base version: ${activeWorkingCopy.base_version}.` : ""}
           </p>
+          <AlertDialog
+            open={isResetFromAgentConfirmOpen}
+            onOpenChange={setIsResetFromAgentConfirmOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset From Agent (Destructive)</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete PromptConfig "{selectedPromptConfig?.name ?? "selected config"}" and its full version history, then load a new local draft from the selected source agent.
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={resetFromAgentMutation.isPending}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmResetFromAgent}
+                  disabled={resetFromAgentMutation.isPending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {resetFromAgentMutation.isPending ? "Resetting..." : "Delete And Reset"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
 

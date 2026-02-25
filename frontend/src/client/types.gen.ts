@@ -4125,6 +4125,12 @@ export type PromptConfigsUpdatePromptConfigData = {
 
 export type PromptConfigsUpdatePromptConfigResponse = (PromptConfigPublic);
 
+export type PromptConfigsDeletePromptConfigData = {
+    promptConfigId: string;
+};
+
+export type PromptConfigsDeletePromptConfigResponse = (Message);
+
 export type PromptConfigsGetPromptConfigWorkingCopyData = {
     promptConfigId: string;
 };

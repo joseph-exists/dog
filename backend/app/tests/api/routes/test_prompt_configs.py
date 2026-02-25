@@ -177,3 +177,43 @@ def test_prompt_config_working_copy_conflict_returns_409(
     )
     assert conflict_update.status_code == 409
     assert "base_version conflict" in conflict_update.json()["detail"]
+
+
+def test_delete_prompt_config_removes_working_copy_and_versions(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    created = _create_prompt_config(client, superuser_token_headers, name="Delete Flow")
+    prompt_config_id = created["id"]
+
+    commit_response = client.post(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/versions",
+        headers=superuser_token_headers,
+        json={"commit_message": "Second version before delete"},
+    )
+    assert commit_response.status_code == 200
+
+    delete_response = client.delete(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}",
+        headers=superuser_token_headers,
+    )
+    assert delete_response.status_code == 200
+    assert delete_response.json()["message"] == "PromptConfig deleted"
+
+    get_deleted = client.get(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}",
+        headers=superuser_token_headers,
+    )
+    assert get_deleted.status_code == 404
+
+    get_deleted_working_copy = client.get(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/working-copy",
+        headers=superuser_token_headers,
+    )
+    assert get_deleted_working_copy.status_code == 404
+
+    list_deleted_versions = client.get(
+        f"{settings.API_V1_STR}/prompt-configs/{prompt_config_id}/versions",
+        headers=superuser_token_headers,
+    )
+    assert list_deleted_versions.status_code == 404

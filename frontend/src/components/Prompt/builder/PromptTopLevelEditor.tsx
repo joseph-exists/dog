@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import {
   PROMPT_CAPABILITIES,
   normalizePromptCapabilityValue,
@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -72,6 +73,7 @@ const CATEGORY_ORDER = [
 ] as const
 
 type PromptCategory = (typeof CATEGORY_ORDER)[number]
+type PromptEditorMode = "guided" | "full"
 
 const CATEGORY_LABELS: Record<PromptCategory, string> = {
   provider: "Provider",
@@ -81,6 +83,64 @@ const CATEGORY_LABELS: Record<PromptCategory, string> = {
   tools: "Tools",
   advanced: "Advanced",
 }
+
+interface GuidedSectionSpec {
+  id: string
+  title: string
+  why: string
+  when: string
+  avoid: string
+  keys: string[]
+}
+
+const GUIDED_SECTION_SPECS: GuidedSectionSpec[] = [
+  {
+    id: "runtime",
+    title: "1. Choose Runtime",
+    why: "Provider and model determine capability coverage, quality profile, latency, and cost.",
+    when: "Set this first for new configs or when moving prompts between accounts/providers.",
+    avoid: "Avoid changing this mid-tuning unless you are intentionally re-baselining behavior.",
+    keys: [
+      "provider.user_access_provider_id",
+      "provider.provider_kind",
+      "model.model_id",
+    ],
+  },
+  {
+    id: "behavior",
+    title: "2. Define Behavior",
+    why: "Input structure tells the model what role to take and what task to perform.",
+    when: "Use simple text for straightforward tasks, or messages when conversation structure matters.",
+    avoid: "Avoid mixing input styles accidentally; keep one clear authoring pattern per config.",
+    keys: [
+      "input.kind",
+      "input.text",
+      "input.messages",
+    ],
+  },
+  {
+    id: "output",
+    title: "3. Tune Output",
+    why: "Parameters control creativity, response length, and sampling behavior.",
+    when: "Adjust after baseline quality is acceptable and you need consistency or exploration.",
+    avoid: "Avoid heavy parameter changes before prompt intent is stable.",
+    keys: [
+      "params.temperature",
+      "params.top_p",
+      "params.max_output_tokens",
+    ],
+  },
+  {
+    id: "tools",
+    title: "4. Configure Tool Use",
+    why: "Tool settings control whether the model can call external functions and how strict that requirement is.",
+    when: "Enable when tasks require retrieval, actions, or structured operations beyond plain text generation.",
+    avoid: "Avoid required tool mode unless your tool list and orchestration path are ready.",
+    keys: [
+      "tools",
+    ],
+  },
+]
 
 interface PromptTopLevelEditorProps {
   draft: PromptConfigDraft
@@ -102,7 +162,12 @@ export function PromptTopLevelEditor({
   capabilityOptions = {},
   loadingCapabilityOptions = {},
 }: PromptTopLevelEditorProps) {
+  const [editorMode, setEditorMode] = useState<PromptEditorMode>("guided")
   const draftRecord = draft as unknown as Record<string, unknown>
+  const capabilityByKey = useMemo(
+    () => new Map(PROMPT_CAPABILITIES.map((capability) => [capability.key, capability])),
+    [],
+  )
 
   function clearFieldError(key: string) {
     if (!fieldErrors[key]) return
@@ -128,6 +193,42 @@ export function PromptTopLevelEditor({
         [capability.key]: "Invalid JSON.",
       })
     }
+  }
+
+  function renderCapabilityField(capability: PromptCapability): ReactNode {
+    return (
+      <div key={capability.key} className="space-y-1">
+        <label className="text-xs text-muted-foreground">{capability.label}</label>
+        {renderCapability(capability)}
+        {fieldErrors[capability.key] && (
+          <p className="text-xs text-destructive">{fieldErrors[capability.key]}</p>
+        )}
+      </div>
+    )
+  }
+
+  function renderGuidedSection(section: GuidedSectionSpec): ReactNode {
+    const sectionCapabilities = section.keys
+      .map((key) => capabilityByKey.get(key))
+      .filter((capability): capability is PromptCapability => Boolean(capability))
+    if (sectionCapabilities.length === 0) return null
+    return (
+      <div key={section.id} className="space-y-3 rounded-md border bg-muted/30 p-3">
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">{section.title}</h3>
+          <p className="text-xs text-muted-foreground">{section.why}</p>
+          <p className="text-xs text-muted-foreground">
+            <strong>When to use:</strong> {section.when}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            <strong>Avoid when:</strong> {section.avoid}
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {sectionCapabilities.map((capability) => renderCapabilityField(capability))}
+        </div>
+      </div>
+    )
   }
 
   function renderCapability(capability: PromptCapability): ReactNode {
@@ -254,30 +355,44 @@ export function PromptTopLevelEditor({
       <CardHeader>
         <CardTitle>Prompt Composition</CardTitle>
         <CardDescription>
-          Registry-driven controls for provider/model/input/parameters with normalization hooks.
+          Build prompts in Guided mode for step-by-step authoring, or use Full Editor for complete registry-driven controls.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        {CATEGORY_ORDER.map((category) => {
-          const capabilities = PROMPT_CAPABILITIES.filter((capability) => capability.category === category)
-          if (capabilities.length === 0) return null
-          return (
-            <div key={category} className="space-y-3">
-              <h3 className="text-sm font-medium">{CATEGORY_LABELS[category]}</h3>
-              <div className="grid gap-3 md:grid-cols-2">
-                {capabilities.map((capability) => (
-                  <div key={capability.key} className="space-y-1">
-                    <label className="text-xs text-muted-foreground">{capability.label}</label>
-                    {renderCapability(capability)}
-                    {fieldErrors[capability.key] && (
-                      <p className="text-xs text-destructive">{fieldErrors[capability.key]}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
+        <Tabs
+          value={editorMode}
+          onValueChange={(next) => setEditorMode(next as PromptEditorMode)}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="guided">Guided</TabsTrigger>
+            <TabsTrigger value="full">Full Editor</TabsTrigger>
+          </TabsList>
+          <TabsContent value="guided" className="mt-4 space-y-4">
+            <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+              Guided mode prioritizes the highest-impact settings in authoring order. Use it to build and tune quickly,
+              then switch to Full Editor when you need low-level fields such as stop sequences or metadata.
             </div>
-          )
-        })}
+            {GUIDED_SECTION_SPECS.map((section) => renderGuidedSection(section))}
+          </TabsContent>
+          <TabsContent value="full" className="mt-4 space-y-4">
+            <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+              Full Editor exposes all registered fields mapped to the underlying JSON draft. Use this mode for
+              provider-specific or advanced tuning workflows.
+            </div>
+            {CATEGORY_ORDER.map((category) => {
+              const capabilities = PROMPT_CAPABILITIES.filter((capability) => capability.category === category)
+              if (capabilities.length === 0) return null
+              return (
+                <div key={category} className="space-y-3">
+                  <h3 className="text-sm font-medium">{CATEGORY_LABELS[category]}</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {capabilities.map((capability) => renderCapabilityField(capability))}
+                  </div>
+                </div>
+              )
+            })}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   )

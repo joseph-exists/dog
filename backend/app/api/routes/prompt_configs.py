@@ -6,6 +6,7 @@ from sqlmodel import desc, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    Message,
     PromptConfig,
     PromptConfigCommitRequest,
     PromptConfigCreate,
@@ -143,6 +144,22 @@ def update_prompt_config(
     session.commit()
     session.refresh(prompt_config)
     return PromptConfigPublic.model_validate(prompt_config)
+
+
+@router.delete("/{prompt_config_id}", response_model=Message)
+def delete_prompt_config(
+    session: SessionDep,
+    current_user: CurrentUser,
+    prompt_config_id: uuid.UUID,
+) -> Message:
+    prompt_config = _require_prompt_config_access(
+        session=session,
+        current_user=current_user,
+        prompt_config_id=prompt_config_id,
+    )
+    session.delete(prompt_config)
+    session.commit()
+    return Message(message="PromptConfig deleted")
 
 
 @router.get("/{prompt_config_id}/working-copy", response_model=PromptConfigWorkingCopyPublic)
