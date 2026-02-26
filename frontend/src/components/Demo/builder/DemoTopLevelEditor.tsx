@@ -166,8 +166,17 @@ export function DemoTopLevelEditor({
   onPageThemeQuickSelect,
   onCardsThemeQuickSelect,
 }: DemoTopLevelEditorProps) {
+  const hiddenCompositionKeys = new Set([
+    "layout_mode",
+    "runtime_policy",
+    "persona_policy",
+    "chat_mode",
+    "fixed_user_persona_id",
+  ])
   const nonJsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter(
-    (capability) => capability.control !== "json",
+    (capability) =>
+      capability.control !== "json" &&
+      !hiddenCompositionKeys.has(capability.key),
   )
   const jsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter(
     (capability) => capability.control === "json",

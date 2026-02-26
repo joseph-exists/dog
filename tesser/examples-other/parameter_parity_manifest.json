@@ -1,0 +1,212 @@
+{
+  "examples": [
+    {
+      "example": "examples-other/static/lineage/static_data_lineage_map.py",
+      "required_high_impact": [
+        "--output",
+        "--format",
+        "--seed"
+      ],
+      "rows": [
+        {
+          "legacy_param": "--output",
+          "new_api": "RenderConfig.output_path",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--format",
+          "new_api": "RenderConfig.format",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "canvas.fit(padding=26, crop=False)",
+          "new_api": "RenderConfig.fit_padding=26, RenderConfig.fit_crop=False",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--seed",
+          "new_api": "RenderConfig.timing.seed (captured in result metadata)",
+          "status": "aliased"
+        },
+        {
+          "legacy_param": "--report-json",
+          "new_api": "RenderConfig.report_json_path and/or report_hook",
+          "status": "aliased"
+        }
+      ]
+    },
+    {
+      "example": "examples-other/animation/physics/animation_physics_overlay.py",
+      "required_high_impact": [
+        "--output",
+        "--format",
+        "--fps",
+        "--duration",
+        "--seed"
+      ],
+      "rows": [
+        {
+          "legacy_param": "--output",
+          "new_api": "RenderConfig.output_path",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--format",
+          "new_api": "RenderConfig.format",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--fps",
+          "new_api": "RenderConfig.timing.fps",
+          "status": "aliased"
+        },
+        {
+          "legacy_param": "--duration",
+          "new_api": "RenderConfig.timing.duration",
+          "status": "aliased"
+        },
+        {
+          "legacy_param": "--seed",
+          "new_api": "RenderConfig.timing.seed (captured in result metadata)",
+          "status": "aliased"
+        }
+      ]
+    },
+    {
+      "example": "examples-other/animation/topology/graph_routing_showcase.py",
+      "required_high_impact": [
+        "--output",
+        "--format",
+        "--fps",
+        "--duration",
+        "--seed"
+      ],
+      "rows": [
+        {
+          "legacy_param": "--output",
+          "new_api": "RenderConfig.output_path",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--format",
+          "new_api": "RenderConfig.format",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--fps",
+          "new_api": "RenderConfig.timing.fps",
+          "status": "aliased"
+        },
+        {
+          "legacy_param": "--duration",
+          "new_api": "RenderConfig.timing.duration",
+          "status": "aliased"
+        },
+        {
+          "legacy_param": "--seed",
+          "new_api": "RenderConfig.timing.seed (captured in result metadata)",
+          "status": "aliased"
+        },
+        {
+          "legacy_param": "--report-json",
+          "new_api": "RenderConfig.report_json_path and/or report_hook",
+          "status": "aliased"
+        }
+      ]
+    },
+    {
+      "example": "examples-other/static/core/design_patterns_gallery.py",
+      "required_high_impact": [
+        "--output-prefix",
+        "--format",
+        "--seed",
+        "--width",
+        "--height"
+      ],
+      "rows": [
+        {
+          "legacy_param": "--output-prefix",
+          "new_api": "ParameterSchema export.output_prefix -> RenderConfig.output_path",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--format",
+          "new_api": "ParameterSchema export.format -> RenderConfig.format",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--seed",
+          "new_api": "ParameterSchema motion.seed -> TimingSpec.seed",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--width",
+          "new_api": "ParameterSchema layout.width",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--height",
+          "new_api": "ParameterSchema layout.height",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--report-dir",
+          "new_api": "ParameterSchema export.report_dir",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--summary-report",
+          "new_api": "ParameterSchema export.summary_report",
+          "status": "preserved"
+        }
+      ]
+    },
+    {
+      "example": "examples-other/data/storyboard/dataset_storyboard.py",
+      "required_high_impact": [
+        "--output-prefix",
+        "--format",
+        "--seed",
+        "--width",
+        "--height"
+      ],
+      "rows": [
+        {
+          "legacy_param": "--output-prefix",
+          "new_api": "RenderConfig.output_path (scene-specific suffixes)",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--format",
+          "new_api": "RenderConfig.format",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--seed",
+          "new_api": "TimingSpec.seed",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--width",
+          "new_api": "canvas width input to scene builders",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--height",
+          "new_api": "canvas height input to scene builders",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--report-dir",
+          "new_api": "RenderConfig.report_json_path",
+          "status": "preserved"
+        },
+        {
+          "legacy_param": "--summary-report",
+          "new_api": "summary report from report_hook aggregation",
+          "status": "preserved"
+        }
+      ]
+    }
+  ]
+}

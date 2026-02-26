@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { CopyPlus, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
 import {
   BUILDER_PANEL_CAPABILITIES,
@@ -49,6 +49,7 @@ interface DemoPanelEditorProps {
   panels: EditablePanel[]
   fieldErrors: Record<string, string>
   onAddPanel: (kind: ActiveBuilderPanelKind) => void
+  onOpenCloneDialog?: () => void
   onRemovePanel: (index: number) => void
   onUpdatePanel: (index: number, patch: Record<string, unknown>) => void
   onCommitPanelJsonField: (index: number, fieldKey: string, raw: string) => void
@@ -62,6 +63,7 @@ interface DemoPanelEditorProps {
 function renderPanelScalarField(params: {
   panel: EditablePanel
   index: number
+  rootPath: string
   field: BuilderPanelFieldSpec
   onUpdatePanel: (index: number, patch: Record<string, unknown>) => void
   availableThemeOptions: Array<{
@@ -70,11 +72,16 @@ function renderPanelScalarField(params: {
     category: "page" | "card"
   }>
 }) {
-  const { panel, index, field, onUpdatePanel, availableThemeOptions } = params
+  const { panel, index, rootPath, field, onUpdatePanel, availableThemeOptions } =
+    params
   const value = (panel as Record<string, unknown>)[field.key]
   if (field.key === "theme_id" && field.control === "id") {
     return (
-      <div key={field.key} className="space-y-1 md:col-span-2">
+      <div
+        key={field.key}
+        className="space-y-1 md:col-span-2"
+        data-builder-path={`${rootPath}.${field.key}`}
+      >
         <label className="text-xs text-muted-foreground">
           Theme (title picker)
         </label>
@@ -116,55 +123,61 @@ function renderPanelScalarField(params: {
   }
   if (field.control === "enum") {
     return (
-      <Select
-        key={field.key}
-        value={String(value ?? field.enumValues?.[0] ?? "")}
-        onValueChange={(nextValue) =>
-          onUpdatePanel(index, { [field.key]: nextValue })
-        }
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={field.label} />
-        </SelectTrigger>
-        <SelectContent>
-          {(field.enumValues ?? []).map((enumValue) => (
-            <SelectItem key={enumValue} value={enumValue}>
-              {enumValue}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div data-builder-path={`${rootPath}.${field.key}`}>
+        <Select
+          key={field.key}
+          value={String(value ?? field.enumValues?.[0] ?? "")}
+          onValueChange={(nextValue) =>
+            onUpdatePanel(index, { [field.key]: nextValue })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={field.label} />
+          </SelectTrigger>
+          <SelectContent>
+            {(field.enumValues ?? []).map((enumValue) => (
+              <SelectItem key={enumValue} value={enumValue}>
+                {enumValue}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     )
   }
   if (field.control === "number") {
     return (
+      <div data-builder-path={`${rootPath}.${field.key}`}>
+        <Input
+          key={field.key}
+          value={String(value ?? "")}
+          placeholder={field.label}
+          onChange={(event) =>
+            onUpdatePanel(index, {
+              [field.key]: parseInteger(event.target.value),
+            })
+          }
+        />
+      </div>
+    )
+  }
+  return (
+    <div data-builder-path={`${rootPath}.${field.key}`}>
       <Input
         key={field.key}
         value={String(value ?? "")}
         placeholder={field.label}
-        onChange={(event) =>
-          onUpdatePanel(index, {
-            [field.key]: parseInteger(event.target.value),
-          })
-        }
+        onChange={(event) => {
+          const rawValue = event.target.value
+          if (field.control === "id") {
+            const normalized = rawValue.trim()
+            onUpdatePanel(index, { [field.key]: normalized || null })
+            return
+          }
+          onUpdatePanel(index, { [field.key]: rawValue })
+        }}
       />
-    )
-  }
-  return (
-    <Input
-      key={field.key}
-      value={String(value ?? "")}
-      placeholder={field.label}
-      onChange={(event) => {
-        const rawValue = event.target.value
-        if (field.control === "id") {
-          const normalized = rawValue.trim()
-          onUpdatePanel(index, { [field.key]: normalized || null })
-          return
-        }
-        onUpdatePanel(index, { [field.key]: rawValue })
-      }}
-    />
+    </div>
   )
 }
 
@@ -263,6 +276,7 @@ export function DemoPanelEditor({
   panels,
   fieldErrors,
   onAddPanel,
+  onOpenCloneDialog,
   onRemovePanel,
   onUpdatePanel,
   onCommitPanelJsonField,
@@ -279,6 +293,12 @@ export function DemoPanelEditor({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
+          {onOpenCloneDialog && (
+            <Button type="button" variant="secondary" size="sm" onClick={onOpenCloneDialog}>
+              <CopyPlus className="h-3.5 w-3.5 mr-1" />
+              Clone Existing Panel
+            </Button>
+          )}
           {BUILDER_PANEL_CAPABILITIES.map((capability) => {
             const requirementText = getCapabilityRequirementText(
               capability,
@@ -317,6 +337,7 @@ export function DemoPanelEditor({
               const panelSchema = getBuilderPanelKindSchema(panelKind)
               const panelCapability = getPanelCapabilityByKind(panelKind)
               const titleText = toDisplayTitle(panel.title)
+              const rootPath = `panels[${index}]`
               const prominence =
                 panel.prominence === "auxiliary" ? "Auxiliary" : "Primary"
               const scalarFields = panelSchema.fieldSpecs.filter(
@@ -328,6 +349,7 @@ export function DemoPanelEditor({
               return (
                 <Card
                   id={`builder-panel-${index}`}
+                  data-builder-path={rootPath}
                   key={`${String((panel as { id?: unknown }).id ?? index)}-${index}`}
                 >
                   <details open className="group">
@@ -366,6 +388,7 @@ export function DemoPanelEditor({
                         renderPanelScalarField({
                           panel,
                           index,
+                          rootPath,
                           field,
                           onUpdatePanel,
                           availableThemeOptions,
@@ -383,6 +406,7 @@ export function DemoPanelEditor({
                           <div
                             key={field.key}
                             className="md:col-span-4 space-y-2"
+                            data-builder-path={`${rootPath}.${field.key}`}
                           >
                             {showGuidedPresentation && (
                               <DemoPresentationGuidedFields
@@ -433,7 +457,10 @@ export function DemoPanelEditor({
                                         }}
                                       />
                                     </div>
-                                    <div className="space-y-1">
+                                    <div
+                                      className="space-y-1"
+                                      data-builder-path={`${rootPath}.options.interaction_receiver`}
+                                    >
                                       <label className="text-xs text-muted-foreground">
                                         Receiver ID (defaults to panel id)
                                       </label>

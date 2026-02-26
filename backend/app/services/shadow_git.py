@@ -1,10 +1,8 @@
-"""shadow_git.py - Local git operations for shadow versioning.
+"""shadow_git.py - Git operations for shadow versioning.
 
 Thin wrapper around git subprocess calls. Each entity gets its own
-git repository at {SHADOW_REPOS_PATH}/{entity_type}/{entity_id}/.
-
-This replaces the previous Forgejo HTTP API approach with direct
-local git operations for simplicity and performance.
+git repository cached at {SHADOW_REPOS_PATH}/{entity_type}/{entity_id}/.
+When configured, repos are synced with remote URLs derived from a template.
 """
 
 from __future__ import annotations
@@ -36,7 +34,66 @@ class CommitError(ShadowGitError):
     pass
 
 
-def ensure_repo(repo_path: Path) -> None:
+def _run_git(
+    repo_path: Path,
+    args: list[str],
+    *,
+    check: bool = True,
+    text: bool = False,
+) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
+    """Run a git command in repo_path."""
+    return subprocess.run(
+        ["git", *args],
+        cwd=repo_path,
+        check=check,
+        capture_output=True,
+        text=text,
+    )
+
+
+def _ensure_local_identity(repo_path: Path) -> None:
+    """Configure local git identity for automated commits."""
+    _run_git(repo_path, ["config", "user.name", "shadow-system"])
+    _run_git(repo_path, ["config", "user.email", "shadow@localhost"])
+
+
+def _checkout_tracking_branch(
+    repo_path: Path,
+    *,
+    remote_name: str,
+    branch: str,
+) -> None:
+    """Ensure local working tree is on the expected branch."""
+    local_branch = _run_git(
+        repo_path,
+        ["rev-parse", "--abbrev-ref", "HEAD"],
+        check=False,
+        text=True,
+    ).stdout.strip()
+    if local_branch != branch:
+        _run_git(repo_path, ["checkout", "-B", branch])
+
+    remote_branch_exists = _run_git(
+        repo_path,
+        ["rev-parse", "--verify", f"{remote_name}/{branch}"],
+        check=False,
+    ).returncode == 0
+    if remote_branch_exists:
+        _run_git(
+            repo_path,
+            ["branch", "--set-upstream-to", f"{remote_name}/{branch}", branch],
+            check=False,
+        )
+        _run_git(repo_path, ["pull", "--ff-only", remote_name, branch], check=False)
+
+
+def ensure_repo(
+    repo_path: Path,
+    *,
+    remote_url: str | None = None,
+    remote_name: str = "origin",
+    default_branch: str = "main",
+) -> None:
     """Initialize git repo if it doesn't exist.
 
     Creates the directory structure and initializes a git repository
@@ -45,33 +102,54 @@ def ensure_repo(repo_path: Path) -> None:
     Args:
         repo_path: Path where the git repo should exist.
     """
-    if (repo_path / ".git").exists():
-        return
+    if not (repo_path / ".git").exists():
+        repo_path.parent.mkdir(parents=True, exist_ok=True)
+        if remote_url:
+            subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    "--origin",
+                    remote_name,
+                    remote_url,
+                    str(repo_path),
+                ],
+                check=True,
+                capture_output=True,
+            )
+        else:
+            repo_path.mkdir(parents=True, exist_ok=True)
+            _run_git(repo_path, ["init", "-b", default_branch])
 
-    repo_path.mkdir(parents=True, exist_ok=True)
+    if remote_url:
+        current_remote = _run_git(
+            repo_path,
+            ["remote", "get-url", remote_name],
+            check=False,
+            text=True,
+        )
+        if current_remote.returncode != 0:
+            _run_git(repo_path, ["remote", "add", remote_name, remote_url])
+        elif current_remote.stdout.strip() != remote_url:
+            _run_git(repo_path, ["remote", "set-url", remote_name, remote_url])
 
-    # Initialize repo
-    subprocess.run(
-        ["git", "init"],
-        cwd=repo_path,
-        check=True,
-        capture_output=True,
-    )
+        _run_git(repo_path, ["fetch", remote_name, "--prune"], check=False)
+        _checkout_tracking_branch(
+            repo_path,
+            remote_name=remote_name,
+            branch=default_branch,
+        )
+    else:
+        current_branch = _run_git(
+            repo_path,
+            ["rev-parse", "--abbrev-ref", "HEAD"],
+            check=False,
+            text=True,
+        )
+        if current_branch.returncode != 0 or current_branch.stdout.strip() != default_branch:
+            _run_git(repo_path, ["checkout", "-B", default_branch], check=False)
 
-    # Configure git identity for this repo (required for commits)
-    # Using repo-local config so it doesn't affect system/global settings
-    subprocess.run(
-        ["git", "config", "user.name", "shadow-system"],
-        cwd=repo_path,
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ["git", "config", "user.email", "shadow@localhost"],
-        cwd=repo_path,
-        check=True,
-        capture_output=True,
-    )
+    _ensure_local_identity(repo_path)
 
     logger.debug("Initialized shadow repo at %s", repo_path)
 
@@ -83,6 +161,9 @@ def commit_snapshot(
     message: str,
     author: str = "shadow-system",
     filename: str | None = None,
+    remote_url: str | None = None,
+    remote_name: str = "origin",
+    default_branch: str = "main",
 ) -> str:
     """Write snapshot to JSON file, commit, and return SHA.
 
@@ -100,7 +181,12 @@ def commit_snapshot(
     Raises:
         CommitError: If the commit operation fails.
     """
-    ensure_repo(repo_path)
+    ensure_repo(
+        repo_path,
+        remote_url=remote_url,
+        remote_name=remote_name,
+        default_branch=default_branch,
+    )
 
     resolved_filename = filename or f"{entity_type}.json"
     file_path = repo_path / resolved_filename
@@ -108,42 +194,47 @@ def commit_snapshot(
 
     try:
         # Stage the file
-        subprocess.run(
-            ["git", "add", resolved_filename],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-        )
+        _run_git(repo_path, ["add", resolved_filename])
 
         # Commit with author info
-        subprocess.run(
+        commit_result = _run_git(
+            repo_path,
             [
-                "git",
                 "commit",
                 "-m",
                 message,
                 "--author",
                 f"{author} <{author}@shadow>",
             ],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
+            check=False,
+            text=True,
         )
+        if commit_result.returncode != 0:
+            # Treat no-op commits as success and reuse current HEAD.
+            if "nothing to commit" not in (commit_result.stdout + commit_result.stderr):
+                raise CommitError(
+                    "Failed to commit snapshot: "
+                    f"{(commit_result.stderr or commit_result.stdout).strip()}"
+                )
 
         # Get the commit SHA
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_path,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        result = _run_git(repo_path, ["rev-parse", "HEAD"], text=True)
         sha = result.stdout.strip()
+
+        if remote_url:
+            _run_git(
+                repo_path,
+                ["push", remote_name, f"HEAD:{default_branch}"],
+            )
+
         logger.debug("Committed snapshot to %s: %s", repo_path, sha[:8])
         return sha
 
     except subprocess.CalledProcessError as e:
-        stderr = e.stderr.decode() if e.stderr else str(e)
+        if isinstance(e.stderr, bytes):
+            stderr = e.stderr.decode()
+        else:
+            stderr = e.stderr or str(e)
         raise CommitError(f"Failed to commit snapshot: {stderr}") from e
 
 
@@ -151,6 +242,9 @@ def read_snapshot(
     repo_path: Path,
     entity_type: str,
     commit_sha: str,
+    remote_url: str | None = None,
+    remote_name: str = "origin",
+    default_branch: str = "main",
 ) -> dict[str, Any]:
     """Read snapshot at a specific commit.
 
@@ -166,6 +260,12 @@ def read_snapshot(
         SnapshotNotFoundError: If the commit or file doesn't exist.
     """
     try:
+        ensure_repo(
+            repo_path,
+            remote_url=remote_url,
+            remote_name=remote_name,
+            default_branch=default_branch,
+        )
         result = subprocess.run(
             ["git", "show", f"{commit_sha}:{entity_type}.json"],
             cwd=repo_path,
@@ -223,3 +323,14 @@ def get_repo_path(base_path: Path, entity_type: str, entity_id: str) -> Path:
         Path to the entity's git repository.
     """
     return base_path / entity_type / entity_id
+
+
+def get_repo_remote_url(
+    repo_url_template: str | None,
+    entity_type: str,
+    entity_id: str,
+) -> str | None:
+    """Build a repo URL from template if configured."""
+    if not repo_url_template:
+        return None
+    return repo_url_template.format(entity_type=entity_type, entity_id=entity_id)

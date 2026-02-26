@@ -1,0 +1,104 @@
+<svg width="1280" height="720" viewBox="-20.0 -20.0 1320.0 760.0" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arrow" viewBox="-10 -4 10 8" refX="0" refY="0" orient="auto" markerWidth="10" markerHeight="8"><path d="M -10 -4 L 0 0 L -10 4 Z" fill="rgba(0,0,0,1.0)" stroke="rgba(0,0,0,0.0)" stroke-width="1.0"   /></marker></defs>
+  <g transform="translate(640.0 360.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-640.0" y="-360.0" width="1280" height="720" stroke="rgba(0,0,0,0.0)" fill="rgba(255,255,255,1.0)" />
+</g>
+  <g transform="translate(640.0 52.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="26" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">Design Patterns Gallery</text>
+</g>
+  <g transform="translate(640.0 84.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="18" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Recipe: Network Diagnostics Panel</text>
+</g>
+  <g transform="translate(640.0 108.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(128,128,128,1.0)" text-anchor="middle" dominant-baseline="middle">Service nodes, risk links, and compact score overlays</text>
+</g>
+  <g transform="translate(220.0 230.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-63.0" y="-28.0" width="126" height="56" stroke="rgba(169,169,169,0.7)" fill="rgba(224,255,255,1.0)" />
+</g>
+  <g transform="translate(220.0 220.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Ingress</text>
+</g>
+  <g transform="translate(220.0 242.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">risk=0.29</text>
+</g>
+  <g transform="translate(430.0 180.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-63.0" y="-28.0" width="126" height="56" stroke="rgba(169,169,169,0.7)" fill="rgba(255,228,225,1.0)" />
+</g>
+  <g transform="translate(430.0 170.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Auth</text>
+</g>
+  <g transform="translate(430.0 192.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">risk=0.48</text>
+</g>
+  <g transform="translate(430.0 290.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-63.0" y="-28.0" width="126" height="56" stroke="rgba(169,169,169,0.7)" fill="rgba(224,255,255,1.0)" />
+</g>
+  <g transform="translate(430.0 280.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Catalog</text>
+</g>
+  <g transform="translate(430.0 302.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">risk=0.09</text>
+</g>
+  <g transform="translate(640.0 180.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-63.0" y="-28.0" width="126" height="56" stroke="rgba(169,169,169,0.7)" fill="rgba(255,228,225,1.0)" />
+</g>
+  <g transform="translate(640.0 170.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Cart</text>
+</g>
+  <g transform="translate(640.0 192.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">risk=0.71</text>
+</g>
+  <g transform="translate(640.0 290.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-63.0" y="-28.0" width="126" height="56" stroke="rgba(169,169,169,0.7)" fill="rgba(255,228,225,1.0)" />
+</g>
+  <g transform="translate(640.0 280.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Checkout</text>
+</g>
+  <g transform="translate(640.0 302.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">risk=0.61</text>
+</g>
+  <g transform="translate(860.0 230.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-63.0" y="-28.0" width="126" height="56" stroke="rgba(169,169,169,0.7)" fill="rgba(255,228,225,1.0)" />
+</g>
+  <g transform="translate(860.0 220.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Payments</text>
+</g>
+  <g transform="translate(860.0 242.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">risk=0.72</text>
+</g>
+  <g transform="translate(1030.0 290.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-63.0" y="-28.0" width="126" height="56" stroke="rgba(169,169,169,0.7)" fill="rgba(224,255,255,1.0)" />
+</g>
+  <g transform="translate(1030.0 280.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Warehouse</text>
+</g>
+  <g transform="translate(1030.0 302.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">risk=0.25</text>
+</g>
+  <path d="M 284 230 L 366 180" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3757929036949138)" stroke-width="1.4472636575819156"   />
+  <path d="M 284 230 L 366 290" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.31716887973813546)" stroke-width="1.2388226835133707"   />
+  <path d="M 494 180 L 576 180" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3734899620296442)" stroke-width="1.439075420549846"   />
+  <path d="M 494 290 L 576 180" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.30479521787969754)" stroke-width="1.1948274413500357"   />
+  <path d="M 494 290 L 576 290" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.5751539014527705)" stroke-width="2.156102760720962"   />
+  <path d="M 704 180 L 796 230" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.44309622728871023)" stroke-width="1.686564363693192"   />
+  <path d="M 704 290 L 796 230" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.625302464478692)" stroke-width="2.334408762590905"   />
+  <path d="M 924 230 L 966 290" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.6030721706724052)" stroke-width="2.2553677179463296"   />
+  <g transform="translate(1090.0 250.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-150.0" y="-90.0" width="300" height="180" stroke="rgba(169,169,169,0.65)" fill="rgba(255,255,255,0.94)" />
+</g>
+  <g transform="translate(1090.0 182.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="13" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Diagnostics</text>
+</g>
+  <g transform="translate(1030.0 220.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(139,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">error_rate=0.037</text>
+</g>
+  <g transform="translate(1030.0 246.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">p95_ms=184</text>
+</g>
+  <g transform="translate(1030.0 272.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,100,0,1.0)" text-anchor="middle" dominant-baseline="middle">queue_depth=43</text>
+</g>
+  <g transform="translate(1030.0 298.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">blast_radius=3</text>
+</g>
+</svg>

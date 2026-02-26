@@ -1,0 +1,29 @@
+[project]
+name = "tesserax"
+version = "0.9.2"
+description = "A pure-Python library for rendering professional CS graphics."
+readme = "README.md"
+authors = [
+    { name = "Alejandro Piad", email = "apiad@apiad.net" }
+]
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+export = [
+    "imageio[ffmpeg]>=2.37.2",
+    "cairosvg>=2.8.2",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.1.0",
+    "ipython>=9.9.0",
+    "jupyter>=1.1.1",
+    "pytest>=9.0.2",
+    "pytest-coverage>=0.0",
+    "ruff>=0.14.14",
+]

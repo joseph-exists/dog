@@ -2,6 +2,56 @@
 
 > Historical changelog. For current status and sequencing, use `frontend/src/components/Demo/demo-docs/current-key-priorities.md` and `frontend/src/components/Demo/demo-docs/demo-builder-workflow.md`.
 
+**implemented path-aware composition-tree focus into panel/block editors**
+
+### What changed
+
+- Added best-match path focus logic for tree nodes:
+  - matches tree node path to nearest editor anchor using `data-builder-path`
+  - expands collapsed parent `<details>` containers before focus/scroll
+  - keeps top-level fallback target (`builder-panel-*` / `builder-block-*`) when no deeper anchor exists
+  - file:
+    - `frontend/src/routes/_layout/demo-builder.tsx`
+
+- Added editor anchors for focus targeting:
+  - panel card + scalar/json sections now expose `data-builder-path`
+  - block card + scalar/json sections now expose `data-builder-path`
+  - files:
+    - `frontend/src/components/Demo/builder/DemoPanelEditor.tsx`
+    - `frontend/src/components/Demo/builder/DemoBlockEditor.tsx`
+
+### Validation
+
+- `cd frontend && npm run test:unit -- demo-builder-editors-theme.spec.tsx demo-template-setup-checklist.spec.tsx demo-interaction-handlers.spec.ts` passed
+- `cd frontend && npm run build` passed
+
+**added composition tree nested add-child actions and editor focus affordance**
+
+### What changed
+
+- Added composition tree UI as a first-class builder section:
+  - renders root + nested panel/block nodes discovered from composition JSON
+  - file:
+    - `frontend/src/components/Demo/builder/DemoCompositionTree.tsx`
+    - `frontend/src/routes/_layout/demo-builder.tsx`
+
+- Added nested child creation from tree:
+  - `Add Block Child` / `Add Panel Child` on nodes appends to `${parentPath}.children`
+  - new child ids/orders are normalized for uniqueness/ordering
+  - file:
+    - `frontend/src/routes/_layout/demo-builder.tsx`
+
+- Added node-to-editor focus affordance:
+  - `Focus In Editor` button on tree nodes, wired through route focus handler
+  - file:
+    - `frontend/src/components/Demo/builder/DemoCompositionTree.tsx`
+    - `frontend/src/routes/_layout/demo-builder.tsx`
+
+### Validation
+
+- `cd frontend && npm run test:unit -- demo-builder-editors-theme.spec.tsx demo-template-setup-checklist.spec.tsx demo-interaction-handlers.spec.ts` passed
+- `cd frontend && npm run build` passed
+
 **added explicit interaction receiver registration + enforced hidden-chat routing**
 
 ### What changed

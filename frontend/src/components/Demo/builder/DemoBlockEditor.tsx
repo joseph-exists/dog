@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { CopyPlus, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
 import {
   BUILDER_BLOCK_CAPABILITIES,
@@ -54,6 +54,7 @@ interface DemoBlockEditorProps {
   blocks: EditableBlock[]
   fieldErrors: Record<string, string>
   onAddBlock: (type: ActiveBuilderBlockType) => void
+  onOpenCloneDialog?: () => void
   onRemoveBlock: (index: number) => void
   onUpdateBlock: (index: number, patch: Record<string, unknown>) => void
   onCommitBlockJsonField: (index: number, fieldKey: string, raw: string) => void
@@ -67,6 +68,7 @@ interface DemoBlockEditorProps {
 function renderBlockScalarField(params: {
   block: EditableBlock
   index: number
+  rootPath: string
   field: BuilderBlockFieldSpec
   onUpdateBlock: (index: number, patch: Record<string, unknown>) => void
   availableThemeOptions: Array<{
@@ -75,11 +77,16 @@ function renderBlockScalarField(params: {
     category: "page" | "card"
   }>
 }) {
-  const { block, index, field, onUpdateBlock, availableThemeOptions } = params
+  const { block, index, rootPath, field, onUpdateBlock, availableThemeOptions } =
+    params
   const value = (block as Record<string, unknown>)[field.key]
   if (field.key === "theme_id" && field.control === "id") {
     return (
-      <div key={field.key} className="space-y-1 md:col-span-2">
+      <div
+        key={field.key}
+        className="space-y-1 md:col-span-2"
+        data-builder-path={`${rootPath}.${field.key}`}
+      >
         <label className="text-xs text-muted-foreground">
           Theme (title picker)
         </label>
@@ -121,55 +128,61 @@ function renderBlockScalarField(params: {
   }
   if (field.control === "enum") {
     return (
-      <Select
-        key={field.key}
-        value={String(value ?? field.enumValues?.[0] ?? "")}
-        onValueChange={(nextValue) =>
-          onUpdateBlock(index, { [field.key]: nextValue })
-        }
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={field.label} />
-        </SelectTrigger>
-        <SelectContent>
-          {(field.enumValues ?? []).map((enumValue) => (
-            <SelectItem key={enumValue} value={enumValue}>
-              {enumValue}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div data-builder-path={`${rootPath}.${field.key}`}>
+        <Select
+          key={field.key}
+          value={String(value ?? field.enumValues?.[0] ?? "")}
+          onValueChange={(nextValue) =>
+            onUpdateBlock(index, { [field.key]: nextValue })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={field.label} />
+          </SelectTrigger>
+          <SelectContent>
+            {(field.enumValues ?? []).map((enumValue) => (
+              <SelectItem key={enumValue} value={enumValue}>
+                {enumValue}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     )
   }
   if (field.control === "number") {
     return (
+      <div data-builder-path={`${rootPath}.${field.key}`}>
+        <Input
+          key={field.key}
+          value={String(value ?? "")}
+          placeholder={field.label}
+          onChange={(event) =>
+            onUpdateBlock(index, {
+              [field.key]: parseInteger(event.target.value),
+            })
+          }
+        />
+      </div>
+    )
+  }
+  return (
+    <div data-builder-path={`${rootPath}.${field.key}`}>
       <Input
         key={field.key}
         value={String(value ?? "")}
         placeholder={field.label}
-        onChange={(event) =>
-          onUpdateBlock(index, {
-            [field.key]: parseInteger(event.target.value),
-          })
-        }
+        onChange={(event) => {
+          const rawValue = event.target.value
+          if (field.control === "id") {
+            const normalized = rawValue.trim()
+            onUpdateBlock(index, { [field.key]: normalized || null })
+            return
+          }
+          onUpdateBlock(index, { [field.key]: rawValue })
+        }}
       />
-    )
-  }
-  return (
-    <Input
-      key={field.key}
-      value={String(value ?? "")}
-      placeholder={field.label}
-      onChange={(event) => {
-        const rawValue = event.target.value
-        if (field.control === "id") {
-          const normalized = rawValue.trim()
-          onUpdateBlock(index, { [field.key]: normalized || null })
-          return
-        }
-        onUpdateBlock(index, { [field.key]: rawValue })
-      }}
-    />
+    </div>
   )
 }
 
@@ -275,6 +288,7 @@ export function DemoBlockEditor({
   blocks,
   fieldErrors,
   onAddBlock,
+  onOpenCloneDialog,
   onRemoveBlock,
   onUpdateBlock,
   onCommitBlockJsonField,
@@ -290,6 +304,12 @@ export function DemoBlockEditor({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
+          {onOpenCloneDialog && (
+            <Button type="button" variant="secondary" size="sm" onClick={onOpenCloneDialog}>
+              <CopyPlus className="h-3.5 w-3.5 mr-1" />
+              Clone Existing Block
+            </Button>
+          )}
           {BUILDER_BLOCK_CAPABILITIES.map((capability) => {
             const requirementText = getCapabilityRequirementText(
               capability,
@@ -327,6 +347,7 @@ export function DemoBlockEditor({
               const blockType = resolveBlockType(block)
               const blockSchema = getBuilderBlockTypeSchema(blockType)
               const blockCapability = getBlockCapabilityByType(blockType)
+              const rootPath = `blocks[${index}]`
               const titleText = toDisplayTitle(block.title)
               const region =
                 typeof block.region === "string" ? block.region : "top"
@@ -344,6 +365,7 @@ export function DemoBlockEditor({
               return (
                 <Card
                   id={`builder-block-${index}`}
+                  data-builder-path={rootPath}
                   key={`${String((block as { id?: unknown }).id ?? index)}-${index}`}
                 >
                   <details open className="group">
@@ -383,6 +405,7 @@ export function DemoBlockEditor({
                         renderBlockScalarField({
                           block,
                           index,
+                          rootPath,
                           field,
                           onUpdateBlock,
                           availableThemeOptions,
@@ -398,7 +421,11 @@ export function DemoBlockEditor({
                             (blockCapability?.presentationFieldSpecs?.length ??
                               0) > 0
                           return (
-                            <div key={field.key} className="space-y-2">
+                            <div
+                              key={field.key}
+                              className="space-y-2"
+                              data-builder-path={`${rootPath}.${field.key}`}
+                            >
                               {showGuidedPresentation && (
                                 <DemoPresentationGuidedFields
                                   value={currentJson}
@@ -445,7 +472,10 @@ export function DemoBlockEditor({
                                           )
                                         if (!parsedInteraction) return null
                                         return (
-                                          <div className="rounded border p-2 space-y-2">
+                                          <div
+                                            className="rounded border p-2 space-y-2"
+                                            data-builder-path={`${rootPath}.config_json.interaction.dispatch`}
+                                          >
                                             <div className="flex items-center justify-between gap-2">
                                               <label className="text-xs text-muted-foreground">
                                                 Enforce Registered Receiver

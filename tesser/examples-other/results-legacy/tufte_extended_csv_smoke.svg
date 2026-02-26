@@ -1,0 +1,58 @@
+<svg width="2100" height="1320" viewBox="-14.0 -14.0 2128.0 1348.0" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arrow" viewBox="-10 -4 10 8" refX="0" refY="0" orient="auto" markerWidth="10" markerHeight="8"><path d="M -10 -4 L 0 0 L -10 4 Z" fill="rgba(0,0,0,1.0)" stroke="rgba(0,0,0,0.0)" stroke-width="1.0"   /></marker></defs>
+  <g transform="translate(1050.0 660.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-1050.0" y="-660.0" width="2100" height="1320" stroke="rgba(0,0,0,0.0)" fill="rgba(255,255,255,1.0)" />
+</g>
+  <g transform="translate(1050.0 52.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="34" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">Extended Tufte Small Multiples</text>
+</g>
+  <g transform="translate(1050.0 82.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="13" fill="rgba(128,128,128,1.0)" text-anchor="middle" dominant-baseline="middle">source=csv panels=2 cohorts=2 highlight=C1</text>
+</g>
+  <g transform="translate(1930.0 154.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Global Rank Shift</text>
+</g>
+  <g transform="translate(554.0 690.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-482.0" y="-558.0" width="964.0" height="1116.0" stroke="rgba(211,211,211,0.72)" fill="rgba(255,255,255,1.0)" />
+</g>
+  <g transform="translate(55.2 144.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Metric A</text>
+</g>
+  <path d="M 554.0 160.0 L 554.0 1180.0" fill="rgba(0,0,0,0.0)" stroke="rgba(211,211,211,0.5)" stroke-width="0.8"   />
+  <path d="M 92.0 840.0 L 92.0 613.3333333333334 L 554.0 160.0 L 1016.0 386.66666666666686 L 1016.0 840.0 L 554.0 726.6666666666665 L 92.0 1066.6666666666665 Z" fill="rgba(30,144,255,0.14)" stroke="rgba(30,144,255,0.12)" stroke-width="0.5"   />
+  <path d="M 92.0 840.0 L 489.720405844789 449.7404387092981 Q 554.0 386.66666666666686, 634.85 426.3333333333335 L 1016.0 613.3333333333334" fill="rgba(0,0,0,0.0)" stroke="rgba(30,144,255,0.85)" stroke-width="2.0"   />
+  <g transform="translate(1014.0 613.3333333333334) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(30,144,255,1.0)" text-anchor="start" dominant-baseline="middle">C1</text>
+</g>
+  <path d="M 92.0 953.3333333333333 L 473.15 859.8333333333334 Q 554.0 840.0, 621.0477525386827 790.6574981317053 L 1016.0 500.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,0.35)" stroke-width="1.0"   />
+  <path d="M 976.0 577.3333333333334 L 1016.0 613.3333333333334" fill="rgba(0,0,0,0.0)" stroke="rgba(169,169,169,0.8)" stroke-width="0.9"   />
+  <g transform="translate(964.5 569.3333333333334) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Δ0.10</text>
+</g>
+  <path d="M 98.0 1190.0 L 1010.0 1238.0" fill="rgba(0,0,0,0.0)" stroke="rgba(30,144,255,0.9)" stroke-width="1.4"   />
+  <path d="M 98.0 1238.0 L 1010.0 1190.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,0.4)" stroke-width="1.0"   />
+  <g transform="translate(1546.0 690.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-482.0" y="-558.0" width="964.0" height="1116.0" stroke="rgba(211,211,211,0.72)" fill="rgba(255,255,255,1.0)" />
+</g>
+  <g transform="translate(1047.2 144.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Metric B</text>
+</g>
+  <path d="M 1546.0 160.0 L 1546.0 1180.0" fill="rgba(0,0,0,0.0)" stroke="rgba(211,211,211,0.5)" stroke-width="0.8"   />
+  <path d="M 1084.0 500.0000000000001 L 1084.0 273.3333333333335 L 1546.0 613.3333333333333 L 2008.0 386.6666666666664 L 2008.0 953.3333333333334 L 1546.0 1066.6666666666665 L 1084.0 726.6666666666667 Z" fill="rgba(30,144,255,0.14)" stroke="rgba(30,144,255,0.12)" stroke-width="0.5"   />
+  <path d="M 1084.0 499.9999999999998 L 1473.4679613011926 786.62144338183 Q 1546.0 839.9999999999999, 1626.85 800.3333333333333 L 2008.0 613.3333333333333" fill="rgba(0,0,0,0.0)" stroke="rgba(30,144,255,0.85)" stroke-width="2.0"   />
+  <g transform="translate(2006.0 613.3333333333333) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(30,144,255,1.0)" text-anchor="start" dominant-baseline="middle">C1</text>
+</g>
+  <path d="M 1084.0 953.3333333333334 L 1465.15 766.3333333333334 Q 1546.0 726.6666666666667, 1618.5320386988074 673.2881100484968 L 2008.0 386.6666666666664" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,0.35)" stroke-width="1.0"   />
+  <path d="M 1968.0 577.3333333333333 L 2008.0 613.3333333333333" fill="rgba(0,0,0,0.0)" stroke="rgba(169,169,169,0.8)" stroke-width="0.9"   />
+  <g transform="translate(1956.5 569.3333333333333) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Δ0.20</text>
+</g>
+  <path d="M 1090.0 1190.0 L 2002.0 1238.0" fill="rgba(0,0,0,0.0)" stroke="rgba(30,144,255,0.9)" stroke-width="1.4"   />
+  <path d="M 1090.0 1238.0 L 2002.0 1190.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,0.4)" stroke-width="1.0"   />
+  <path d="M 1890 180.0 L 1970 370.0" fill="rgba(0,0,0,0.0)" stroke="rgba(30,144,255,0.95)" stroke-width="1.4"   />
+  <g transform="translate(1970.0 370.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(30,144,255,1.0)" text-anchor="start" dominant-baseline="middle">C1</text>
+</g>
+  <path d="M 1890 370.0 L 1970 180.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,0.55)" stroke-width="1.0"   />
+</svg>

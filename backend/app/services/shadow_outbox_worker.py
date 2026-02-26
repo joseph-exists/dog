@@ -41,6 +41,7 @@ from app.models import (
 from app.services.shadow_git import (
     CommitError,
     commit_snapshot,
+    get_repo_remote_url,
     get_repo_path,
 )
 
@@ -153,6 +154,11 @@ def _process_job(job_id: uuid.UUID, worker_id: str) -> None:
         session.flush()
 
         repo_path = _get_entity_repo_path(shadow_repo.entity_type, shadow_repo.entity_id)
+        repo_remote_url = get_repo_remote_url(
+            settings.SHADOW_REPO_URL_TEMPLATE,
+            shadow_repo.entity_type,
+            str(shadow_repo.entity_id),
+        )
 
         try:
             # Commit the main entity snapshot
@@ -161,6 +167,8 @@ def _process_job(job_id: uuid.UUID, worker_id: str) -> None:
                 entity_type=shadow_repo.entity_type,
                 snapshot_json=shadow_version.snapshot_json,
                 message=shadow_version.message,
+                remote_url=repo_remote_url,
+                default_branch=settings.SHADOW_REPO_DEFAULT_BRANCH,
             )
 
             # For rooms, also commit the events snapshot
@@ -175,6 +183,8 @@ def _process_job(job_id: uuid.UUID, worker_id: str) -> None:
                     snapshot_json=room_snapshot,
                     message=f"{shadow_version.message} (redis events)",
                     filename="room_events.redis.json",
+                    remote_url=repo_remote_url,
+                    default_branch=settings.SHADOW_REPO_DEFAULT_BRANCH,
                 )
 
             # Update version record

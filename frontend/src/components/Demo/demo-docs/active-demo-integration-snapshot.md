@@ -1,6 +1,6 @@
 # Demo Integration Snapshot
 > **Status:** Source of truth for current implementation + remaining delta  
-> **Last Revised Date:** 2026-02-25  
+> **Last Revised Date:** 2026-02-26  
 
 > Planning ownership: use `frontend/src/components/Demo/demo-docs/current-key-priorities.md` for milestone sequencing and handoff decisions. This file remains the integration reality checkpoint.
 
@@ -61,6 +61,12 @@ Use this as the planning and execution artifact for the next demo integration sl
 - chat panels can register receivers via `panel.options.interaction_receiver`
 - block dispatch can require registration via `dispatch.enforce_registered_receiver`
 - runtime dispatch is blocked when receiver is missing/mismatched/not-accepting
+12. Demo Builder nested composition navigation is active:
+- composition tree detects nested panel/block nodes from composition JSON
+- users can add nested panel/block children directly from the tree (`children[]`)
+13. Path-aware focus from tree to editor is active:
+- tree focus resolves best matching `data-builder-path` anchor
+- builder auto-expands collapsed sections/details before scroll/highlight
 
 ## Completion Matrix
 

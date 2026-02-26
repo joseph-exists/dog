@@ -64,10 +64,12 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
 
     # Shadow Configuration (git-based entity versioning)
-    # Each entity gets a local git repo at {SHADOW_REPOS_PATH}/{entity_type}/{entity_id}/
-    # All shadow operations are invisible to end users.
+    # Repos are cached locally at SHADOW_REPOS_PATH and optionally synced to
+    # remote URLs generated from SHADOW_REPO_URL_TEMPLATE.
     SHADOW_ENABLED: bool = True
-    SHADOW_REPOS_PATH: str = "/data/shadows"
+    SHADOW_REPOS_PATH: str = "/tmp/shadows"
+    SHADOW_REPO_URL_TEMPLATE: str | None = None
+    SHADOW_REPO_DEFAULT_BRANCH: str = "main"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

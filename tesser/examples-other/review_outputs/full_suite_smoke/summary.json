@@ -1,0 +1,190 @@
+{
+  "output_dir": "/home/josep/tesserax/examples-other/review_outputs/full_suite_smoke",
+  "total": 26,
+  "ok": 26,
+  "fail": 0,
+  "results": [
+    {
+      "script": "examples-other/static/core/simple_convolution.py",
+      "kind": "static",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/static/core/simple_convolution.py"
+    },
+    {
+      "script": "examples-other/static/core/advanced_examples.py",
+      "kind": "static",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/static/core/advanced_examples.py"
+    },
+    {
+      "script": "examples-other/static/core/neural_network_refined.py",
+      "kind": "static",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/static/core/neural_network_refined.py --output-prefix /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/neural_network_refined --format svg"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_flow_dag.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_flow_dag.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_flow_dag.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_attention_heads.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_attention_heads.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_attention_heads.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_packet_ring.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_packet_ring.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_packet_ring.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_residual_pipeline.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_residual_pipeline.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_residual_pipeline.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_topology_morph.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_topology_morph.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_topology_morph.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/feynman_like_interactions.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/feynman_like_interactions.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/feynman_like_interactions.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_sugiyama_story_workflow.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_sugiyama_story_workflow.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_sugiyama_story_workflow.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_grid_contingency_cascade.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_grid_contingency_cascade.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_grid_contingency_cascade.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_cicd_dependency_risk.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_cicd_dependency_risk.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_cicd_dependency_risk.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/graph_routing_showcase.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/graph_routing_showcase.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/graph_routing_showcase.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/topology/animation_regression_suite.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/topology/animation_regression_suite.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_regression_suite.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/operations/animation_state_machine_cinematics.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/operations/animation_state_machine_cinematics.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_state_machine_cinematics.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/operations/hybrid_control_systems.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/operations/hybrid_control_systems.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/hybrid_control_systems.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/operations/animation_supply_chain_resilience.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/operations/animation_supply_chain_resilience.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_supply_chain_resilience.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/operations/animation_incident_response_playbook.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/operations/animation_incident_response_playbook.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_incident_response_playbook.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/operations/animation_service_blast_radius.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/operations/animation_service_blast_radius.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_service_blast_radius.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/operations/animation_supply_chain_network_stress.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/operations/animation_supply_chain_network_stress.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_supply_chain_network_stress.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/camera/animation_camera_track.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/camera/animation_camera_track.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_camera_track.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/camera/animation_camera_zoom_stress.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/camera/animation_camera_zoom_stress.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_camera_zoom_stress.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/animation/physics/animation_physics_overlay.py",
+      "kind": "animation",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/animation/physics/animation_physics_overlay.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_physics_overlay.gif --format gif --duration 4 --fps 12"
+    },
+    {
+      "script": "examples-other/data/tufte/tufte_small_multiples.py",
+      "kind": "static",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/data/tufte/tufte_small_multiples.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/tufte_small_multiples.svg --format svg"
+    },
+    {
+      "script": "examples-other/data/tufte/tufte_small_multiples_extended.py",
+      "kind": "static",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/data/tufte/tufte_small_multiples_extended.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/tufte_small_multiples_extended.svg"
+    },
+    {
+      "script": "examples-other/static/lineage/static_data_lineage_map.py",
+      "kind": "static",
+      "status": "ok",
+      "returncode": 0,
+      "command": "/home/josep/tesserax/.venv/bin/python /home/josep/tesserax/examples-other/static/lineage/static_data_lineage_map.py --output /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/static_data_lineage_map.svg --format svg"
+    }
+  ]
+}

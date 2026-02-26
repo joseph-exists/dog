@@ -1,0 +1,178 @@
+<svg width="1360" height="840" viewBox="-16.0 -16.0 1392.0 872.0" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arrow" viewBox="-10 -4 10 8" refX="0" refY="0" orient="auto" markerWidth="10" markerHeight="8"><path d="M -10 -4 L 0 0 L -10 4 Z" fill="rgba(0,0,0,1.0)" stroke="rgba(0,0,0,0.0)" stroke-width="1.0"   /></marker></defs>
+  <g transform="translate(680.0 420.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-680.0" y="-420.0" width="1360" height="840" stroke="rgba(0,0,0,0.0)" fill="rgba(255,255,255,1.0)" />
+</g>
+  <g transform="translate(680.0 52.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="30" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">Dataset Storyboard</text>
+</g>
+  <g transform="translate(680.0 82.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="18" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Scene A: Dataset Profile</text>
+</g>
+  <g transform="translate(680.0 106.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(128,128,128,1.0)" text-anchor="middle" dominant-baseline="middle">source=synthetic:g4 c5 p18</text>
+</g>
+  <g transform="translate(278.0 170.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-125.0" y="-43.0" width="250" height="86" stroke="rgba(169,169,169,0.4)" fill="rgba(224,255,255,0.55)" />
+</g>
+  <g transform="translate(278.0 152.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">rows</text>
+</g>
+  <g transform="translate(278.0 178.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="26" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">360</text>
+</g>
+  <g transform="translate(546.0 170.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-125.0" y="-43.0" width="250" height="86" stroke="rgba(169,169,169,0.4)" fill="rgba(224,255,255,0.55)" />
+</g>
+  <g transform="translate(546.0 152.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">groups</text>
+</g>
+  <g transform="translate(546.0 178.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="26" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">4</text>
+</g>
+  <g transform="translate(814.0 170.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-125.0" y="-43.0" width="250" height="86" stroke="rgba(169,169,169,0.4)" fill="rgba(224,255,255,0.55)" />
+</g>
+  <g transform="translate(814.0 152.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">categories</text>
+</g>
+  <g transform="translate(814.0 178.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="26" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">5</text>
+</g>
+  <g transform="translate(1082.0 170.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-125.0" y="-43.0" width="250" height="86" stroke="rgba(169,169,169,0.4)" fill="rgba(224,255,255,0.55)" />
+</g>
+  <g transform="translate(1082.0 152.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">time points</text>
+</g>
+  <g transform="translate(1082.0 178.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="26" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">18</text>
+</g>
+  <path d="M 130 278 L 1230 278" fill="rgba(0,0,0,0.0)" stroke="rgba(169,169,169,1.0)" stroke-width="1.8"   />
+  <g transform="translate(662.5839416611487 278.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-223.80804173160615" y="-8.0" width="447.6160834632123" height="16" stroke="rgba(0,0,0,0.0)" fill="rgba(144,238,144,0.7)" />
+</g>
+  <g transform="translate(662.5839416611487 278.0) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="5.5" stroke="rgba(255,255,255,1.0)" fill="rgba(0,0,139,1.0)" />
+</g>
+  <g transform="translate(662.5839416611487 262.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">mean</text>
+</g>
+  <g transform="translate(100.0 296.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">min=-2.695</text>
+</g>
+  <g transform="translate(1121.0 296.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">max=3.596</text>
+</g>
+  <g transform="translate(680.0 296.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">std=1.280</text>
+</g>
+  <g transform="translate(41.2 350.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Top groups by row count</text>
+</g>
+  <g transform="translate(390.0 388.25) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-25.25" width="400.0" height="50.5" stroke="rgba(0,0,0,0.0)" fill="rgba(106,90,205,0.65)" />
+</g>
+  <g transform="translate(118.6 390.25) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">G1</text>
+</g>
+  <g transform="translate(598.6 390.25) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">90</text>
+</g>
+  <g transform="translate(390.0 444.75) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-25.25" width="400.0" height="50.5" stroke="rgba(0,0,0,0.0)" fill="rgba(106,90,205,0.65)" />
+</g>
+  <g transform="translate(118.6 446.75) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">G2</text>
+</g>
+  <g transform="translate(598.6 446.75) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">90</text>
+</g>
+  <g transform="translate(390.0 501.25) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-25.25" width="400.0" height="50.5" stroke="rgba(0,0,0,0.0)" fill="rgba(106,90,205,0.65)" />
+</g>
+  <g transform="translate(118.6 503.25) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">G3</text>
+</g>
+  <g transform="translate(598.6 503.25) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">90</text>
+</g>
+  <g transform="translate(390.0 557.75) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-25.25" width="400.0" height="50.5" stroke="rgba(0,0,0,0.0)" fill="rgba(106,90,205,0.65)" />
+</g>
+  <g transform="translate(118.6 559.75) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">G4</text>
+</g>
+  <g transform="translate(598.6 559.75) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">90</text>
+</g>
+  <g transform="translate(576.8 350.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Top categories by row count</text>
+</g>
+  <g transform="translate(940.0 382.6) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-19.6" width="400.0" height="39.2" stroke="rgba(0,0,0,0.0)" fill="rgba(46,139,87,0.65)" />
+</g>
+  <g transform="translate(668.6 384.6) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">C1</text>
+</g>
+  <g transform="translate(1148.6 384.6) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">72</text>
+</g>
+  <g transform="translate(940.0 427.8) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-19.6" width="400.0" height="39.2" stroke="rgba(0,0,0,0.0)" fill="rgba(46,139,87,0.65)" />
+</g>
+  <g transform="translate(668.6 429.8) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">C2</text>
+</g>
+  <g transform="translate(1148.6 429.8) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">72</text>
+</g>
+  <g transform="translate(940.0 473.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-19.6" width="400.0" height="39.2" stroke="rgba(0,0,0,0.0)" fill="rgba(46,139,87,0.65)" />
+</g>
+  <g transform="translate(668.6 475.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">C3</text>
+</g>
+  <g transform="translate(1148.6 475.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">72</text>
+</g>
+  <g transform="translate(940.0 518.2) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-19.6" width="400.0" height="39.2" stroke="rgba(0,0,0,0.0)" fill="rgba(46,139,87,0.65)" />
+</g>
+  <g transform="translate(668.6 520.2) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">C4</text>
+</g>
+  <g transform="translate(1148.6 520.2) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">72</text>
+</g>
+  <g transform="translate(940.0 563.4) rotate(0.0) scale(1.0 1.0)">
+<rect x="-200.0" y="-19.6" width="400.0" height="39.2" stroke="rgba(0,0,0,0.0)" fill="rgba(46,139,87,0.65)" />
+</g>
+  <g transform="translate(668.6 565.4) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">C5</text>
+</g>
+  <g transform="translate(1148.6 565.4) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">72</text>
+</g>
+  <g transform="translate(97.1 676.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="11" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Time coverage</text>
+</g>
+  <path d="M 140.0 688.0 L 203.52941176470588 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 203.52941176470588 688.0 L 267.05882352941177 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 267.05882352941177 688.0 L 330.5882352941177 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 330.5882352941177 688.0 L 394.11764705882354 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 394.11764705882354 688.0 L 457.64705882352945 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 457.64705882352945 688.0 L 521.1764705882354 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 521.1764705882354 688.0 L 584.7058823529412 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 584.7058823529412 688.0 L 648.2352941176471 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 648.2352941176471 688.0 L 711.7647058823529 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 711.7647058823529 688.0 L 775.2941176470589 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 775.2941176470589 688.0 L 838.8235294117648 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 838.8235294117648 688.0 L 902.3529411764706 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 902.3529411764706 688.0 L 965.8823529411765 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 965.8823529411765 688.0 L 1029.4117647058824 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 1029.4117647058824 688.0 L 1092.9411764705883 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 1092.9411764705883 688.0 L 1156.4705882352941 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 1156.4705882352941 688.0 L 1220.0 688.0" fill="rgba(0,0,0,0.0)" stroke="rgba(255,140,0,1.0)" stroke-width="1.2"   />
+  <path d="M 140 750 L 1220 750" fill="rgba(0,0,0,0.0)" stroke="rgba(128,128,128,0.55)" stroke-width="0.8"   />
+</svg>

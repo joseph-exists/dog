@@ -23,6 +23,7 @@ import type {
 } from "@/client/types.gen"
 import { DemoBlockEditor } from "@/components/Demo/builder/DemoBlockEditor"
 import { DemoBuilderPreview } from "@/components/Demo/builder/DemoBuilderPreview"
+import { DemoCompositionTree } from "@/components/Demo/builder/DemoCompositionTree"
 import { DemoPanelEditor } from "@/components/Demo/builder/DemoPanelEditor"
 import { DemoRawJsonEditor } from "@/components/Demo/builder/DemoRawJsonEditor"
 import { DemoSaveBar } from "@/components/Demo/builder/DemoSaveBar"
@@ -135,33 +136,97 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
+function isArrayValue(value: unknown): value is unknown[] {
+  return Array.isArray(value)
+}
+
+function toPathTokens(path: string): Array<string | number> {
+  const tokens: Array<string | number> = []
+  const matcher = /([^[.\]]+)|\[(\d+)\]/g
+  let match: RegExpExecArray | null = matcher.exec(path)
+  while (match) {
+    if (typeof match[1] === "string") {
+      tokens.push(match[1])
+    } else if (typeof match[2] === "string") {
+      tokens.push(Number.parseInt(match[2], 10))
+    }
+    match = matcher.exec(path)
+  }
+  return tokens
+}
+
+function getValueAtPath(source: unknown, path: string): unknown {
+  const tokens = toPathTokens(path)
+  let cursor: unknown = source
+  for (const token of tokens) {
+    if (typeof token === "number") {
+      if (!isArrayValue(cursor)) return undefined
+      cursor = cursor[token]
+      continue
+    }
+    if (!isObjectRecord(cursor)) return undefined
+    cursor = cursor[token]
+  }
+  return cursor
+}
+
 function setValueAtPath(
   source: Record<string, unknown>,
   path: string,
   value: unknown,
 ): Record<string, unknown> {
-  const segments = path.split(".").filter((segment) => segment.length > 0)
-  if (segments.length === 0) return source
+  const tokens = toPathTokens(path)
+  if (tokens.length === 0) return source
 
-  const next = { ...source }
-  let cursor: Record<string, unknown> = next
+  const root: Record<string, unknown> = { ...source }
+  let cursor: unknown = root
 
-  for (let index = 0; index < segments.length - 1; index += 1) {
-    const segment = segments[index]!
-    const existing = cursor[segment]
-    const branch = isObjectRecord(existing) ? { ...existing } : {}
-    cursor[segment] = branch
+  for (let index = 0; index < tokens.length - 1; index += 1) {
+    const token = tokens[index]!
+    const nextToken = tokens[index + 1]
+    if (typeof token === "number") {
+      if (!isArrayValue(cursor)) return root
+      const existing = cursor[token]
+      const branch =
+        typeof nextToken === "number"
+          ? isArrayValue(existing)
+            ? [...existing]
+            : []
+          : isObjectRecord(existing)
+            ? { ...existing }
+            : {}
+      cursor[token] = branch
+      cursor = branch
+      continue
+    }
+
+    if (!isObjectRecord(cursor)) return root
+    const existing = cursor[token]
+    const branch =
+      typeof nextToken === "number"
+        ? isArrayValue(existing)
+          ? [...existing]
+          : []
+        : isObjectRecord(existing)
+          ? { ...existing }
+          : {}
+    cursor[token] = branch
     cursor = branch
   }
 
-  const leaf = segments[segments.length - 1]!
+  const leaf = tokens[tokens.length - 1]!
+  if (typeof leaf === "number") {
+    if (!isArrayValue(cursor)) return root
+    cursor[leaf] = value
+    return root
+  }
+  if (!isObjectRecord(cursor)) return root
   if (value === null || typeof value === "undefined") {
     delete cursor[leaf]
   } else {
     cursor[leaf] = value
   }
-
-  return next
+  return root
 }
 
 function getCompositionStoryId(
@@ -170,6 +235,95 @@ function getCompositionStoryId(
   if (!isObjectRecord(composition.metadata_json)) return null
   const raw = composition.metadata_json.story_id
   return typeof raw === "string" && raw.trim().length > 0 ? raw : null
+}
+
+function deepCloneJsonLike<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+function pathMatchesCandidate(path: string, candidate: string): boolean {
+  return (
+    path === candidate ||
+    path.startsWith(`${candidate}.`) ||
+    path.startsWith(`${candidate}[`)
+  )
+}
+
+function findBestPathFocusTarget(path: string): HTMLElement | null {
+  const candidates = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-builder-path]"),
+  )
+  let bestMatch: HTMLElement | null = null
+  let bestLength = -1
+  for (const candidate of candidates) {
+    const candidatePath = candidate.dataset.builderPath
+    if (!candidatePath) continue
+    if (!pathMatchesCandidate(path, candidatePath)) continue
+    if (candidatePath.length > bestLength) {
+      bestMatch = candidate
+      bestLength = candidatePath.length
+    }
+  }
+  return bestMatch
+}
+
+function openParentDetails(target: HTMLElement) {
+  let cursor: HTMLElement | null = target
+  while (cursor) {
+    if (cursor instanceof HTMLDetailsElement) {
+      cursor.open = true
+    }
+    cursor = cursor.parentElement
+  }
+}
+
+function focusBuilderTarget(target: HTMLElement) {
+  openParentDetails(target)
+  target.scrollIntoView({ behavior: "smooth", block: "center" })
+  target.animate(
+    [
+      { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.0)" },
+      { boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.55)" },
+      { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.0)" },
+    ],
+    {
+      duration: 1100,
+      easing: "ease-out",
+    },
+  )
+}
+
+function deriveUniqueId(
+  candidate: string | null | undefined,
+  existingIds: Set<string>,
+  prefix: "panel" | "block",
+): string {
+  const base =
+    typeof candidate === "string" && candidate.trim().length > 0
+      ? candidate.trim()
+      : `${prefix}`
+  if (!existingIds.has(base)) return base
+  let suffix = 1
+  let next = `${base}-copy-${suffix}`
+  while (existingIds.has(next)) {
+    suffix += 1
+    next = `${base}-copy-${suffix}`
+  }
+  return next
+}
+
+function collectIdsFromValue(value: unknown, output: Set<string>) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectIdsFromValue(item, output)
+    return
+  }
+  if (!isObjectRecord(value)) return
+  if (typeof value.id === "string" && value.id.trim().length > 0) {
+    output.add(value.id.trim())
+  }
+  for (const nested of Object.values(value)) {
+    collectIdsFromValue(nested, output)
+  }
 }
 
 function collectCapabilityValidationIssues(
@@ -223,6 +377,7 @@ function DemoBuilderPage() {
   const queryClient = useQueryClient()
   type BuilderSectionKey =
     | "top_level"
+    | "composition_tree"
     | "theme_manager"
     | "validation"
     | "panels"
@@ -233,6 +388,7 @@ function DemoBuilderPage() {
   const SECTION_VISIBILITY_STORAGE_KEY = "demo-builder-section-visibility-v1"
   const defaultSectionVisibility: Record<BuilderSectionKey, boolean> = {
     top_level: true,
+    composition_tree: true,
     theme_manager: false,
     validation: true,
     panels: true,
@@ -295,6 +451,14 @@ function DemoBuilderPage() {
   )
   const [isRefreshingThemeOptions, setIsRefreshingThemeOptions] =
     useState(false)
+  const [cloneScope, setCloneScope] = useState<"panel" | "block" | null>(null)
+  const [cloneSourceKind, setCloneSourceKind] = useState<"demo" | "template">(
+    "demo",
+  )
+  const [cloneSourceDemoConfigId, setCloneSourceDemoConfigId] = useState("")
+  const [cloneSourceTemplateId, setCloneSourceTemplateId] =
+    useState<BuilderTemplateId>(BUILDER_COMPOSITION_TEMPLATES[0].id)
+  const [cloneSourceItemKey, setCloneSourceItemKey] = useState("")
 
   // Load all visible demo configs for builder selection.
   const { data: demosPayload, isLoading: isLoadingDemos } = useQuery({
@@ -307,6 +471,17 @@ function DemoBuilderPage() {
       }),
   })
   const demoConfigs: DemoConfigPublic[] = demosPayload?.data ?? []
+  const {
+    data: cloneSourceDemoCompositionRaw,
+    isLoading: isLoadingCloneSourceDemoComposition,
+  } = useQuery({
+    queryKey: ["demo-builder", "clone-source-composition", cloneSourceDemoConfigId],
+    queryFn: () =>
+      DemosService.getDemoComposition({
+        demoConfigId: cloneSourceDemoConfigId,
+      }),
+    enabled: Boolean(cloneScope) && cloneSourceKind === "demo" && Boolean(cloneSourceDemoConfigId),
+  })
   const { data: storiesPayload, isLoading: isLoadingStories } = useQuery({
     queryKey: ["demo-builder", "stories"],
     queryFn: () => StoriesService.readStories({ skip: 0, limit: 200 }),
@@ -374,6 +549,30 @@ function DemoBuilderPage() {
         : null,
     [activeTemplateSetupId, composition, semanticIssues, templateConfirmations],
   )
+  const cloneSourceComposition = useMemo(() => {
+    if (cloneSourceKind === "template") {
+      return createCompositionTemplate(cloneSourceTemplateId)
+    }
+    if (!cloneSourceDemoCompositionRaw) return null
+    return normalizeComposition(cloneSourceDemoCompositionRaw)
+  }, [
+    cloneSourceDemoCompositionRaw,
+    cloneSourceKind,
+    cloneSourceTemplateId,
+  ])
+  const cloneSourceItems = useMemo(() => {
+    if (!cloneScope || !cloneSourceComposition) return []
+    if (cloneScope === "block") {
+      return (cloneSourceComposition.blocks ?? []).map((block, index) => ({
+        key: String(index),
+        label: `${block.title ?? block.type ?? "Block"} · ${block.type ?? "unknown"} · ${block.id}`,
+      }))
+    }
+    return (cloneSourceComposition.panels ?? []).map((panel, index) => ({
+      key: String(index),
+      label: `${panel.title ?? panel.kind ?? "Panel"} · ${panel.kind ?? "unknown"} · ${panel.id}`,
+    }))
+  }, [cloneScope, cloneSourceComposition])
 
   // Load composition when a demo is selected.
   const { data: selectedComposition, isLoading: isLoadingComposition } =
@@ -419,7 +618,9 @@ function DemoBuilderPage() {
 
   const fetchSlug = useCallback(async () => {
     const slug = await generateSlugValue()
-    if (slug) setNewSlug(slug)
+    if (!slug) return
+    setNewSlug(slug)
+    setNewTitle(slug)
   }, [generateSlugValue])
 
   useEffect(() => {
@@ -568,6 +769,177 @@ function DemoBuilderPage() {
       blocks.splice(index, 1)
       return { ...current, blocks }
     })
+  }
+
+  function openCloneDialog(scope: "panel" | "block") {
+    setCloneScope(scope)
+    setCloneSourceKind("demo")
+    setCloneSourceDemoConfigId(selectedDemoConfigId || "")
+    setCloneSourceTemplateId(selectedTemplateId)
+    setCloneSourceItemKey("")
+  }
+
+  function closeCloneDialog() {
+    setCloneScope(null)
+    setCloneSourceItemKey("")
+  }
+
+  function cloneSelectedItemIntoCurrentComposition() {
+    if (!cloneScope) return
+    const parsedIndex = Number.parseInt(cloneSourceItemKey, 10)
+    if (!Number.isFinite(parsedIndex) || parsedIndex < 0) {
+      showErrorToast("Select a source item to clone.")
+      return
+    }
+    if (!cloneSourceComposition) {
+      showErrorToast("Source composition is not loaded yet.")
+      return
+    }
+
+    if (cloneScope === "block") {
+      const sourceBlock = cloneSourceComposition.blocks?.[parsedIndex]
+      if (!sourceBlock) {
+        showErrorToast("Selected source block is not available.")
+        return
+      }
+      updateComposition((current) => {
+        const blocks = [...(current.blocks ?? [])]
+        const cloned = deepCloneJsonLike(sourceBlock)
+        const existingIds = new Set(
+          blocks
+            .map((item) => (typeof item.id === "string" ? item.id : ""))
+            .filter((id) => id.length > 0),
+        )
+        cloned.id = deriveUniqueId(
+          typeof cloned.id === "string" ? cloned.id : null,
+          existingIds,
+          "block",
+        )
+        const maxOrder = blocks.reduce(
+          (max, item) =>
+            typeof item.order === "number" && Number.isFinite(item.order)
+              ? Math.max(max, item.order)
+              : max,
+          0,
+        )
+        cloned.order = maxOrder + 1
+        blocks.push(cloned)
+        return { ...current, blocks }
+      })
+      showSuccessToast("Cloned block into current composition.")
+      closeCloneDialog()
+      return
+    }
+
+    const sourcePanel = cloneSourceComposition.panels?.[parsedIndex]
+    if (!sourcePanel) {
+      showErrorToast("Selected source panel is not available.")
+      return
+    }
+    updateComposition((current) => {
+      const panels = [...(current.panels ?? [])]
+      const cloned = deepCloneJsonLike(sourcePanel)
+      const existingIds = new Set(
+        panels
+          .map((item) => (typeof item.id === "string" ? item.id : ""))
+          .filter((id) => id.length > 0),
+      )
+      cloned.id = deriveUniqueId(
+        typeof cloned.id === "string" ? cloned.id : null,
+        existingIds,
+        "panel",
+      )
+      const maxOrder = panels.reduce(
+        (max, item) =>
+          typeof item.order === "number" && Number.isFinite(item.order)
+            ? Math.max(max, item.order)
+            : max,
+        0,
+      )
+      cloned.order = maxOrder + 1
+      panels.push(cloned)
+      return { ...current, panels }
+    })
+    showSuccessToast("Cloned panel into current composition.")
+    closeCloneDialog()
+  }
+
+  function addChildFromTree(params: {
+    parentPath: string
+    childKind: "panel" | "block"
+  }) {
+    const { parentPath, childKind } = params
+    updateComposition((current) => {
+      const parent = getValueAtPath(current, parentPath)
+      if (!isObjectRecord(parent)) return current
+
+      const existingChildrenRaw = parent.children
+      const existingChildren = Array.isArray(existingChildrenRaw)
+        ? [...existingChildrenRaw]
+        : []
+
+      const nextChild =
+        childKind === "panel"
+          ? createPanelTemplate("content")
+          : createBlockTemplate("content")
+
+      const existingIds = new Set<string>()
+      collectIdsFromValue(current, existingIds)
+      nextChild.id = deriveUniqueId(
+        typeof nextChild.id === "string" ? nextChild.id : null,
+        existingIds,
+        childKind,
+      )
+      const maxOrder = existingChildren.reduce((max, child) => {
+        if (!isObjectRecord(child)) return max
+        const order = child.order
+        return typeof order === "number" && Number.isFinite(order)
+          ? Math.max(max, order)
+          : max
+      }, 0)
+      nextChild.order = maxOrder + 1
+      if (typeof nextChild.title !== "string" || nextChild.title.trim().length === 0) {
+        nextChild.title = childKind === "panel" ? "Nested Panel" : "Nested Block"
+      }
+
+      const updatedChildren = [...existingChildren, deepCloneJsonLike(nextChild)]
+      return setValueAtPath(
+        current as Record<string, unknown>,
+        `${parentPath}.children`,
+        updatedChildren,
+      ) as EditableComposition
+    })
+    showSuccessToast(
+      `Added nested ${childKind} under ${parentPath}.`,
+    )
+  }
+
+  function focusNodeFromTree(params: { nodePath: string }) {
+    const { nodePath } = params
+    let targetId: string | null = null
+    const panelMatch = nodePath.match(/^panels\[(\d+)\]/)
+    const blockMatch = nodePath.match(/^blocks\[(\d+)\]/)
+    if (panelMatch) {
+      const index = panelMatch[1]
+      targetId = `builder-panel-${index}`
+      setSectionVisibility((current) => ({ ...current, panels: true }))
+    } else if (blockMatch) {
+      const index = blockMatch[1]
+      targetId = `builder-block-${index}`
+      setSectionVisibility((current) => ({ ...current, blocks: true }))
+    }
+    if (!targetId) return
+
+    window.setTimeout(() => {
+      const nestedTarget = findBestPathFocusTarget(nodePath)
+      if (nestedTarget) {
+        focusBuilderTarget(nestedTarget)
+        return
+      }
+      const fallback = document.getElementById(targetId)
+      if (!fallback) return
+      focusBuilderTarget(fallback)
+    }, 120)
   }
 
   function commitJsonField(
@@ -929,15 +1301,30 @@ function DemoBuilderPage() {
   const editorSections = (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle>Select Or Create Demo</CardTitle>
-          <CardDescription>
-            Load an existing demo config or create a new one before editing
-            composition.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
+        <details open className="group">
+          <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+            <CardHeader>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Select Or Create Demo</CardTitle>
+                  <CardDescription>
+                    Load an existing demo config or create a new one before
+                    editing composition.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-1 pt-1">
+                  <ChevronRight className="h-4 w-4 group-open:hidden" />
+                  <ChevronDown className="h-4 w-4 hidden group-open:block" />
+                  <span className="text-xs text-muted-foreground">
+                    <span className="group-open:hidden">Expand</span>
+                    <span className="hidden group-open:inline">Collapse</span>
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+          </summary>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
             <label className="text-sm font-medium">Create New Demo</label>
             <div className="grid gap-2">
               <div className="space-y-2">
@@ -1075,8 +1462,9 @@ function DemoBuilderPage() {
                 }
               </p>
             </div>
-          </div>
-        </CardContent>
+            </div>
+          </CardContent>
+        </details>
       </Card>
 
       {activeTemplateSetupId && activeTemplateChecklist && (
@@ -1233,6 +1621,153 @@ function DemoBuilderPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={Boolean(cloneScope)} onOpenChange={(open) => !open && closeCloneDialog()}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
+              Clone Existing {cloneScope === "panel" ? "Panel" : "Block"}
+            </DialogTitle>
+            <DialogDescription>
+              Copy one item from another DemoConfig or composition template into
+              this working composition. Cloned items are detached and get a
+              unique id/order in the current draft.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Source Type</label>
+                <Select
+                  value={cloneSourceKind}
+                  onValueChange={(value) => {
+                    setCloneSourceKind(value as "demo" | "template")
+                    setCloneSourceItemKey("")
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="demo">Demo Config</SelectItem>
+                    <SelectItem value="template">Composition Template</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {cloneSourceKind === "demo" ? (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Source Demo Config
+                  </label>
+                  <Select
+                    value={cloneSourceDemoConfigId || "_none"}
+                    onValueChange={(value) => {
+                      setCloneSourceDemoConfigId(value === "_none" ? "" : value)
+                      setCloneSourceItemKey("")
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select source demo config" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">None</SelectItem>
+                      {demoConfigs.map((demo) => (
+                        <SelectItem key={demo.id} value={demo.id}>
+                          {demo.slug} · {demo.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Source Template
+                  </label>
+                  <Select
+                    value={cloneSourceTemplateId}
+                    onValueChange={(value) => {
+                      setCloneSourceTemplateId(value as BuilderTemplateId)
+                      setCloneSourceItemKey("")
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select source template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BUILDER_COMPOSITION_TEMPLATES.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                Select {cloneScope === "panel" ? "Panel" : "Block"} To Clone
+              </label>
+              <Select
+                value={cloneSourceItemKey || "_none"}
+                onValueChange={(value) =>
+                  setCloneSourceItemKey(value === "_none" ? "" : value)
+                }
+                disabled={
+                  cloneSourceKind === "demo" &&
+                  (isLoadingCloneSourceDemoComposition ||
+                    !cloneSourceDemoConfigId)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      cloneSourceKind === "demo" &&
+                      isLoadingCloneSourceDemoComposition
+                        ? "Loading source composition..."
+                        : "Select item"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">None</SelectItem>
+                  {cloneSourceItems.map((item) => (
+                    <SelectItem key={item.key} value={item.key}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {cloneSourceItems.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No {cloneScope === "panel" ? "panels" : "blocks"} available
+                  in selected source.
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button type="button" variant="outline" onClick={closeCloneDialog}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={cloneSelectedItemIntoCurrentComposition}
+                disabled={
+                  cloneSourceItemKey.length === 0 ||
+                  (cloneSourceKind === "demo" &&
+                    (isLoadingCloneSourceDemoComposition ||
+                      !cloneSourceDemoConfigId))
+                }
+              >
+                Clone Into Current Composition
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Collapsible
         open={sectionVisibility.top_level}
         onOpenChange={(open) =>
@@ -1370,6 +1905,45 @@ function DemoBuilderPage() {
             onCardsThemeQuickSelect={(value) =>
               applyThemeQuickSelection("cards", value)
             }
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Collapsible
+        open={sectionVisibility.composition_tree}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({
+            ...current,
+            composition_tree: open,
+          }))
+        }
+      >
+        <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
+          <div>
+            <p className="text-sm font-medium">Composition Tree</p>
+            <p className="text-xs text-muted-foreground">
+              Read-only map of roots and detected nested panel/block nodes.
+            </p>
+          </div>
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="outline" size="sm">
+              {sectionVisibility.composition_tree ? (
+                <ChevronDown className="h-4 w-4 mr-1" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-1" />
+              )}
+              {sectionVisibility.composition_tree ? "Collapse" : "Expand"}
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden mt-3"
+        >
+          <DemoCompositionTree
+            composition={composition}
+            onAddChild={addChildFromTree}
+            onFocusNode={focusNodeFromTree}
           />
         </CollapsibleContent>
       </Collapsible>
@@ -1546,6 +2120,7 @@ function DemoBuilderPage() {
                 panels: [...(current.panels ?? []), createPanelTemplate(kind)],
               }))
             }
+            onOpenCloneDialog={() => openCloneDialog("panel")}
             onRemovePanel={removePanel}
             onUpdatePanel={updatePanel}
             onCommitPanelJsonField={(index, fieldKey, raw) =>
@@ -1596,6 +2171,7 @@ function DemoBuilderPage() {
                 blocks: [...(current.blocks ?? []), createBlockTemplate(type)],
               }))
             }
+            onOpenCloneDialog={() => openCloneDialog("block")}
             onRemoveBlock={removeBlock}
             onUpdateBlock={updateBlock}
             onCommitBlockJsonField={(index, fieldKey, raw) =>

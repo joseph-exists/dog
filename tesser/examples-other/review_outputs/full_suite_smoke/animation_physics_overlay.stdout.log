@@ -1,0 +1,4 @@
+✅ Saved: /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_physics_overlay.gif
+   balls=8, duration=4.0s, dt=0.020, frames=48
+   events=before:200 after:200 start:53 persist:62 end:50 joint_limits:0
+   hooks=before_play,before_save,after_save after_frame=48

@@ -100,19 +100,30 @@ export function DemoTemplateSetupChecklist({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between gap-2">
-          <span>Template Setup Checklist</span>
-          <Badge variant={unresolvedCount === 0 ? "default" : "secondary"}>
-            {checklistStatus.resolvedCount}/{checklistStatus.totalCount}{" "}
-            complete
-          </Badge>
-        </CardTitle>
-        <CardDescription>
-          {templateLabel} ({templateId}) assumptions and prompts.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+      <details open className="group">
+        <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-2">
+              <span>Template Setup Checklist</span>
+              <div className="flex items-center gap-2">
+                <Badge variant={unresolvedCount === 0 ? "default" : "secondary"}>
+                  {checklistStatus.resolvedCount}/{checklistStatus.totalCount}{" "}
+                  complete
+                </Badge>
+                <span className="text-xs text-muted-foreground group-open:hidden">
+                  Expand
+                </span>
+                <span className="text-xs text-muted-foreground hidden group-open:inline">
+                  Collapse
+                </span>
+              </div>
+            </CardTitle>
+            <CardDescription>
+              {templateLabel} ({templateId}) assumptions and prompts.
+            </CardDescription>
+          </CardHeader>
+        </summary>
+        <CardContent className="space-y-3">
         {unresolvedCount === 0 ? (
           <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2">
             <p className="text-sm text-emerald-800 font-medium">
@@ -372,6 +383,7 @@ export function DemoTemplateSetupChecklist({
           </>
         )}
       </CardContent>
+      </details>
     </Card>
   )
 }

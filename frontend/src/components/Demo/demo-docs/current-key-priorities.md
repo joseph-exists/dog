@@ -1,117 +1,94 @@
 # Demo Builder Milestone Handoff
-> **Status:** Canonical handoff for next engineers  
-> **Last Revised:** 2026-02-24
+> **Status:** Canonical handoff for next engineers
+> **Last Revised:** 2026-02-26
 
 ## Milestone Outcome
-The Demo Builder milestone is functionally complete for guided composition authoring and capability-driven editing. The next milestone should build on this foundation rather than reworking it.
-
-## Next Builder RFC
-1. Prompt Builder kickoff RFC:
-- `docs/plans/2026-02-24-prompt-builder-rfc.md`
+Demo Builder is now beyond baseline guided authoring. It includes nested composition affordances (tree + add-child + path-aware focus), clone-from-source workflows, interaction dispatch configuration, and checklist-guided setup. Next work should tighten nested authoring UX and runtime diagnostics, not rebuild core architecture.
 
 ## Source-Of-Truth Doc Map
 1. `frontend/src/components/Demo/demo-docs/current-key-priorities.md`
-- Canonical status, sequencing, and handoff guidance.
+- Canonical status, priorities, and handoff decisions.
 2. `frontend/src/components/Demo/demo-docs/demo-builder-workflow.md`
-- Architecture and implementation workflow details.
+- Architecture, schema, capability, and workflow model.
 3. `frontend/src/components/Demo/demo-docs/active-demo-integration-snapshot.md`
-- Runtime/backend integration checkpoint.
+- Runtime/backend integration checkpoint and contract reality.
 4. `frontend/src/components/Demo/demo-docs/active-implementation-history.md`
-- Historical changelog (archive), not planning source-of-truth.
+- Chronological implementation log.
 
 ## Implemented Foundation
-1. Builder decomposition and reusable editors:
+1. Reusable editor decomposition:
 - `DemoTopLevelEditor`
-- `DemoValidationPanel`
+- `DemoTemplateSetupChecklist`
 - `DemoPanelEditor`
 - `DemoBlockEditor`
+- `DemoCompositionTree`
+- `DemoValidationPanel`
 - `DemoRawJsonEditor`
 - `DemoSaveBar`
 
-2. Canonical builder schema layer (`demoBuilderSchema.ts`):
-- active panel/block kinds and defaults
-- template constructors (A/B/C/D/E/F/G)
-- semantic validation model and issue codes
-- field-spec descriptors powering guided controls
+2. Canonical builder schema + validation:
+- active panel/block kinds, defaults, templates (A/B/C/D/E/F/G)
+- semantic validation model + issue paths
+- template setup persistence (`metadata_json.template_setup`)
+- interaction handler schema helpers (`click_prompt_dispatch.v1`)
 
-3. Capability registry layer (`demoBuilderCapabilityRegistry.ts`):
-- deterministic registry composition API
-- pack registration/inventory and env-gated activation
-- capability-level normalization and validator hooks
-- requirement compatibility/safety analyzers
+3. Capability registry and safety model:
+- deterministic pack composition + env activation
+- compatibility/safety analyzers
+- normalization + semantic validator hooks
 
-4. Guided template setup workflow:
-- post-apply checklist
-- persistent setup state in `metadata_json.template_setup`
-- unresolved deep links
-- in-context story/persona pickers
+4. High-value UX slices now shipped:
+- collapsible setup/checklist/editor sections
+- panel/block cards are collapsible with richer labels (kind/title/status context)
+- clone existing panel/block from demo config or template
+- composition tree with nested node detection
+- add child panel/block directly from tree
+- path-aware tree focus into editor (best-path matching + auto-expand)
 
-5. Theming/presentation progress:
-- theme pickers for composition/panel/block surfaces
-- guided + JSON fallback editing for presentation fields
-- shared presentation resolver wiring
-- capability-level runtime-coupled preview effects for key blocks
+5. Interaction routing vertical slice (runtime + builder):
+- block interaction contract UI + starter action
+- chat receiver registration UI
+- enforcement toggle for registered receiver routing
 
 ## What Is Stable Enough To Reuse
 1. Two-layer model:
-- persisted contract stays `DemoPageCompositionBase_Input`
-- builder schema is a view-model/authoring layer
+- persisted contract remains `DemoPageCompositionBase_Input`
+- builder schema remains authoring/view-model layer
 
 2. Registry separation:
-- runtime registry (`rendererRegistry.tsx`) remains renderer-facing
+- runtime registry remains renderer-facing
 - builder registry remains authoring/validation-facing
 
-3. Extension pattern:
-- add/override capability behavior via registry hooks and pack composition
-- avoid editing persisted payload shape for builder UX changes
+3. Contract-safe extension pattern:
+- prefer descriptor/registry additions over payload-shape changes
 
 ## Remaining Work (Priority Order)
-1. P1: Capability descriptor maturity
-- finish descriptor-driven controls for edge field types and specialized widgets
-- continue moving residual editor conditionals behind capability descriptors
+1. P1: Nested authoring ergonomics (highest impact)
+- add explicit child-slot editing (`slot`) and visibility controls in guided UI
+- add cycle/depth guardrails and clearer nested constraints
+- add dedicated nested-child management on panel/block cards (not tree-only)
 
-2. P1: Live preview fidelity
-- expand capability-level preview adapters so guided presentation fields match runtime rendering more closely
-- keep preview toggleable to reduce builder UI clutter
+2. P1: Tree-to-editor fidelity completion
+- add more `data-builder-path` anchors for deeper advanced JSON controls
+- improve fallback targeting when no exact nested field control exists
 
-3. P1: Diagnostics overlays
-- add capability-aware diagnostics in preview/editor (missing dependency, unsupported presentation key, fallback mode)
+3. P1: Descriptor completeness
+- continue removing editor-specific branches by promoting behavior into capability descriptors
 
-4. P1: Theme system convergence
-- continue alignment with shared cascade/token system in `src/components/Common/Themes/`
-- document precedence and unsupported keys explicitly per capability
+4. P1: Diagnostics + preview confidence
+- capability-aware inline diagnostics for nested/interactions/theme constraints
+- expand preview parity where guided controls still diverge from runtime behavior
 
-## Agent-Builder Reuse Guidance
-If the next team is building Agent-Builder, reuse these pieces directly:
-1. Schema pattern from `demoBuilderSchema.ts`:
-- field specs
-- defaults/constructors
-- semantic validator surface
-
-2. Registry pattern from `demoBuilderCapabilityRegistry.ts`:
-- capability descriptors
-- normalization/validation hooks
-- pack composition and compatibility gates
-
-3. Editor composition pattern:
-- split top-level/panel/block/raw-json/validation components
-- keep handlers contract-safe and patch-based
-
-4. Template setup pattern:
-- assumption checklist + persisted setup state + deep links + dependency pickers
-
-Likely Agent-Builder-specific replacements:
-1. capability catalog and dependency requirements
-2. template constructors and guided setup prompts
-3. runtime preview adapters for agent-specific surfaces
+5. P2: Creator-flow contract enhancements
+- decide scope/timing for publish/clone-at-contract level and per-user override lifecycle APIs
 
 ## Risks To Track
-1. Presentation passthrough expectations can exceed what current runtime renderers implement.
-2. Pack-level overrides can drift from runtime capability semantics if compatibility checks are bypassed.
-3. Theme cascade convergence is ongoing; partial migration can cause UX inconsistency.
+1. Nested JSON capability is ahead of guided UX, which can cause user confusion.
+2. Interaction routing can appear broken without explicit receiver registration + acceptance settings.
+3. Theme/cascade convergence is still in progress and can create preview/runtime mismatch.
 
 ## Definition Of Done For This Milestone
-1. Next engineer can identify canonical docs in under 2 minutes.
-2. Next engineer can extend a capability without changing persisted contract shape.
-3. QA/UX can apply templates and complete setup without raw JSON dependency.
-4. Handoff clearly identifies the next sequencing for Agent-Builder reuse.
+1. Engineers can identify canonical docs in under 2 minutes.
+2. Engineers can extend capabilities without persisted-contract churn.
+3. QA/UX can create, clone, nest, focus, and save demos without raw JSON for common paths.
+4. Remaining work is focused on nested UX hardening and diagnostics rather than architecture rework.

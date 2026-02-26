@@ -79,7 +79,6 @@ services:
     # TODO: remove once coverage is done locally
     volumes:
       - ./backend/htmlcov:/app/htmlcov
-      - ./volumes/shadows:/data/shadows  # Local git repos for shadow versioning
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
@@ -93,8 +92,8 @@ services:
   #   - "1025:1025"
 
   # shadow-outbox-worker:
-  #   volumes:
-  #     - ./volumes/shadows:/data/shadows  # Local git repos for shadow versioning
+  #   environment:
+  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE}
 
   frontend:
     restart: "no"

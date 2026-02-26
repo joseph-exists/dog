@@ -122,9 +122,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT:-6379}
       - SENTRY_DSN=${SENTRY_DSN}
-      - SHADOW_REPOS_PATH=/data/shadows
-    volumes:
-      - shadow-repos:/data/shadows
+      - SHADOW_REPOS_PATH=/tmp/shadows
+      - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE}
+      - SHADOW_REPO_DEFAULT_BRANCH=${SHADOW_REPO_DEFAULT_BRANCH:-main}
 
     healthcheck:
       test:
@@ -171,9 +171,9 @@ services:
   #   env_file:
   #     - .env
   #   environment:
-  #     - SHADOW_REPOS_PATH=/data/shadows
-  #   volumes:
-  #     - shadow-repos:/data/shadows
+  #     - SHADOW_REPOS_PATH=/tmp/shadows
+  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE}
+  #     - SHADOW_REPO_DEFAULT_BRANCH=${SHADOW_REPO_DEFAULT_BRANCH:-main}
   #   build:
   #     context: ./backend
   #     dockerfile: Dockerfile.worker
@@ -274,7 +274,6 @@ services:
 
 volumes:
   app-db-data:
-  shadow-repos:  # Local git repos for shadow versioning
   # forgejo-db-data:  # Commented out - Forgejo replaced by local git
 
 

@@ -18,6 +18,7 @@ from app.core.config import settings
 from app.models import ShadowRepo, ShadowVersion
 from app.services.shadow_git import (
     SnapshotNotFoundError,
+    get_repo_remote_url,
     get_repo_path,
     read_snapshot,
 )
@@ -270,12 +271,19 @@ class ShadowReadService:
             entity_type,
             str(entity_id),
         )
+        repo_remote_url = get_repo_remote_url(
+            settings.SHADOW_REPO_URL_TEMPLATE,
+            entity_type,
+            str(entity_id),
+        )
 
         try:
             snapshot_json = read_snapshot(
                 repo_path=repo_path,
                 entity_type=entity_type,
                 commit_sha=shadow_version.commit_sha,
+                remote_url=repo_remote_url,
+                default_branch=settings.SHADOW_REPO_DEFAULT_BRANCH,
             )
             return ShadowSnapshotResult(
                 entity_type=entity_type,

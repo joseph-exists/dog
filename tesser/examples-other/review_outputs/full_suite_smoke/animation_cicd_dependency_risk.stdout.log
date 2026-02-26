@@ -1,0 +1,3 @@
+✅ Saved: /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_cicd_dependency_risk.gif
+   scenario=flaky_tests policy=balanced phase=MITIGATE packets=75 transitions=2
+   success_rate=0.832 peak_stage_risk=0.659 blocked_stage_count=3 mttd=0.89s mttr=3.12s
