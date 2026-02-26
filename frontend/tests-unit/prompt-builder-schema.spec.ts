@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test"
 
 import {
-  PROMPT_BUILDER_FIELD_SPECS,
   createEmptyPromptDraft,
   normalizePromptDraft,
+  PROMPT_BUILDER_FIELD_SPECS,
   validatePromptDraftSemantics,
 } from "@/components/Prompt/builder/promptBuilderSchema"
 
@@ -40,20 +40,35 @@ test.describe("promptBuilderSchema defaults", () => {
     expect(normalized.model.model_id).toBe("gpt-4o")
     expect(normalized.model.model_name).toBe("GPT 4o")
   })
+
+  test("normalizePromptDraft hydrates input shape when kind switches to messages", async () => {
+    const normalized = normalizePromptDraft({
+      input: {
+        kind: "messages",
+      } as any,
+    })
+    expect(normalized.input.kind).toBe("messages")
+    if (normalized.input.kind !== "messages")
+      throw new Error("Expected messages input")
+    expect(Array.isArray(normalized.input.messages)).toBeTruthy()
+    expect(normalized.input.messages).toEqual([])
+  })
 })
 
 test.describe("promptBuilderSchema field specs", () => {
   test("exposes required provider/model/input controls", async () => {
     const keys = PROMPT_BUILDER_FIELD_SPECS.map((field) => field.key)
-    expect(keys).toEqual(expect.arrayContaining([
-      "provider.user_access_provider_id",
-      "provider.provider_kind",
-      "model.model_id",
-      "input.kind",
-      "input.text",
-      "params.temperature",
-      "metadata",
-    ]))
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "provider.user_access_provider_id",
+        "provider.provider_kind",
+        "model.model_id",
+        "input.kind",
+        "input.text",
+        "params.temperature",
+        "metadata",
+      ]),
+    )
   })
 })
 
@@ -61,7 +76,9 @@ test.describe("promptBuilderSchema semantic validation", () => {
   test("flags required fields when missing", async () => {
     const draft = createEmptyPromptDraft()
     const issues = validatePromptDraftSemantics(draft)
-    expect(issues.some((issue) => issue.code === "provider_required")).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "provider_required"),
+    ).toBeTruthy()
     expect(issues.some((issue) => issue.code === "model_required")).toBeTruthy()
     expect(issues.some((issue) => issue.code === "input_required")).toBeTruthy()
   })
@@ -128,9 +145,15 @@ test.describe("promptBuilderSchema semantic validation", () => {
       },
     })
 
-    expect(issues.some((issue) => issue.code === "provider_disabled")).toBeTruthy()
-    expect(issues.some((issue) => issue.code === "provider_unvalidated")).toBeTruthy()
-    expect(issues.some((issue) => issue.code === "provider_model_mismatch")).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "provider_disabled"),
+    ).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "provider_unvalidated"),
+    ).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "provider_model_mismatch"),
+    ).toBeTruthy()
   })
 
   test("flags out-of-range common parameters", async () => {
@@ -160,7 +183,9 @@ test.describe("promptBuilderSchema semantic validation", () => {
       },
     })
     const issues = validatePromptDraftSemantics(draft)
-    expect(issues.filter((issue) => issue.code === "param_out_of_range").length).toBe(3)
+    expect(
+      issues.filter((issue) => issue.code === "param_out_of_range").length,
+    ).toBe(3)
   })
 
   test("flags provider/model capability compatibility issues", async () => {
@@ -209,9 +234,19 @@ test.describe("promptBuilderSchema semantic validation", () => {
         has_function_calling: false,
       },
     })
-    expect(issues.some((issue) => issue.code === "provider_kind_mismatch")).toBeTruthy()
-    expect(issues.some((issue) => issue.code === "json_mode_not_supported")).toBeTruthy()
-    expect(issues.some((issue) => issue.code === "function_calling_not_supported")).toBeTruthy()
-    expect(issues.some((issue) => issue.code === "reasoning_effort_without_openai_provider")).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "provider_kind_mismatch"),
+    ).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "json_mode_not_supported"),
+    ).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "function_calling_not_supported"),
+    ).toBeTruthy()
+    expect(
+      issues.some(
+        (issue) => issue.code === "reasoning_effort_without_openai_provider",
+      ),
+    ).toBeTruthy()
   })
 })

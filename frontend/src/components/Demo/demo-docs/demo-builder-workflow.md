@@ -1,6 +1,6 @@
 # Demo Builder Workflow
 > **Status:** Active architecture + implementation workflow  
-> **Last Revised:** 2026-02-24
+> **Last Revised:** 2026-02-25
 
 ## Goal
 Composable, guided Demo Builder authoring with reusable editors, schema-driven validation, and capability-driven extension.
@@ -33,6 +33,55 @@ Composable, guided Demo Builder authoring with reusable editors, schema-driven v
 - `toolCapability`
 8. Baseline capability compatibility/safety analyzers.
 9. Guided + fallback presentation editing path with targeted unit coverage.
+10. Interactive block handler vertical slice:
+- `config_json.interaction.kind = "click_prompt_dispatch.v1"` on `content`/`context` blocks
+- click source capture (`trigger.selector`)
+- inline spawned input modal (`modal.*`)
+- submit dispatch envelope to chat socket (`dispatch.*`)
+
+## Interaction Schema (V1)
+Use this in block `config_json` for `content` or `context` blocks:
+
+```json
+{
+  "interaction": {
+    "kind": "click_prompt_dispatch.v1",
+    "enabled": true,
+    "trigger": {
+      "selector": "pre code, code",
+      "max_source_chars": 1200
+    },
+    "modal": {
+      "title": "Ask about selected code",
+      "helper_text": "This sends your message plus clicked-code context to the configured chat receiver.",
+      "placeholder": "What should the invisible chat analyze or explain?",
+      "submit_label": "Send",
+      "cancel_label": "Cancel",
+      "multiline": false,
+      "max_message_chars": 1000
+    },
+    "dispatch": {
+      "target": "hidden_chat_panel",
+      "target_panel_id": null,
+      "format": "json",
+      "text_prefix": "[demo-block-interaction]",
+      "enforce_registered_receiver": false
+    }
+  }
+}
+```
+
+Register chat receivers in panel `options`:
+
+```json
+{
+  "interaction_receiver": {
+    "enabled": true,
+    "receiver_id": "hidden-chat-panel",
+    "accepts": ["click_prompt_dispatch.v1"]
+  }
+}
+```
 
 ### In Progress
 1. Theme/token cascade convergence with shared theme system.

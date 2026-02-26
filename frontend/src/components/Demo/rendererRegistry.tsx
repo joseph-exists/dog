@@ -1,8 +1,18 @@
 import type { ReactNode } from "react"
-import { A2UIPanel, CanvasPanel, DebugPanel, ParticipantPanel, StoryEditorPanel, StoryPlayerPanel } from "@/components/Room"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
-import type { MessageViewModel, ParticipantViewModel } from "@/services/roomService"
+import {
+  A2UIPanel,
+  CanvasPanel,
+  DebugPanel,
+  ParticipantPanel,
+  StoryEditorPanel,
+  StoryPlayerPanel,
+} from "@/components/Room"
 import type { ResolvedDemoSessionViewModel } from "@/services/demoService"
+import type {
+  MessageViewModel,
+  ParticipantViewModel,
+} from "@/services/roomService"
 import { AgentRosterBlock } from "./blocks/AgentRosterBlock"
 import { ContributionFeedBlock } from "./blocks/ContributionFeedBlock"
 import { FileExplorerBlock } from "./blocks/FileExplorerBlock"
@@ -12,13 +22,17 @@ import { StoryMetadataBlock } from "./blocks/StoryMetadataBlock"
 import { ToolCapabilityBlock } from "./blocks/ToolCapabilityBlock"
 import { DemoChatPanel } from "./DemoChatPanel"
 import { DemoStoryPanel } from "./DemoStoryPanel"
-import {
-  type RuntimeDemoBlockType,
-  type RuntimeDemoPanelKind,
+import type {
+  RuntimeDemoBlockType,
+  RuntimeDemoPanelKind,
 } from "./demoRuntimeCapabilities"
 
-type DemoPanelSpec = NonNullable<ResolvedDemoSessionViewModel["composition"]["panels"]>[number]
-type DemoBlockSpec = NonNullable<ResolvedDemoSessionViewModel["composition"]["blocks"]>[number]
+type DemoPanelSpec = NonNullable<
+  ResolvedDemoSessionViewModel["composition"]["panels"]
+>[number]
+type DemoBlockSpec = NonNullable<
+  ResolvedDemoSessionViewModel["composition"]["blocks"]
+>[number]
 
 export interface DemoRoomAgentData {
   id: string
@@ -87,7 +101,10 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function getNestedRecord(value: unknown, path: string[]): Record<string, unknown> | null {
+function getNestedRecord(
+  value: unknown,
+  path: string[],
+): Record<string, unknown> | null {
   let cursor: unknown = value
   for (const segment of path) {
     if (!isObjectRecord(cursor)) return null
@@ -134,40 +151,97 @@ function parseChatPresentation(presentationJson: unknown): {
 } {
   const density = getNestedString(presentationJson, ["tokens", "feed_density"])
   const feedDensity = density === "compact" ? "compact" : "comfortable"
-  const highlightEnabled = getNestedBoolean(
-    presentationJson,
-    ["effects", "message_row_highlight", "enable"],
-  )
-  const highlightCss = getNestedString(
-    presentationJson,
-    ["effects", "message_row_highlight", "css"],
-  )
+  const highlightEnabled = getNestedBoolean(presentationJson, [
+    "effects",
+    "message_row_highlight",
+    "enable",
+  ])
+  const highlightCss = getNestedString(presentationJson, [
+    "effects",
+    "message_row_highlight",
+    "css",
+  ])
   const calloutStyle = getFirstCalloutStyleLabel(presentationJson)
   return {
     feedDensity,
     messageRowHighlightCss:
-      highlightCss
-      ?? (highlightEnabled === true ? "inset 0 0 0 1px rgba(59, 130, 246, 0.35)" : null),
+      highlightCss ??
+      (highlightEnabled === true
+        ? "inset 0 0 0 1px rgba(59, 130, 246, 0.35)"
+        : null),
     calloutLabel: calloutStyle ? `Chat callout style: ${calloutStyle}` : null,
   }
 }
 
 function parseContributionFeedPresentation(presentationJson: unknown): {
+  feedDensity: "comfortable" | "compact"
   rowHighlightCss: string | null
   calloutLabel: string | null
 } {
-  const rowHighlightCss = getNestedString(
-    presentationJson,
-    ["effects", "message_row_highlight", "css"],
-  )
+  // Read feed_density token; defaults to "comfortable"
+  // Future: If per-property overrides are needed, add tokens like
+  // tokens.feed_container_padding that take precedence over preset values
+  const density = getNestedString(presentationJson, ["tokens", "feed_density"])
+  const feedDensity = density === "compact" ? "compact" : "comfortable"
+
+  const rowHighlightCss = getNestedString(presentationJson, [
+    "effects",
+    "message_row_highlight",
+    "css",
+  ])
   const calloutStyle = getFirstCalloutStyleLabel(presentationJson)
   return {
+    feedDensity,
     rowHighlightCss,
-    calloutLabel: calloutStyle ? `Contribution callout style: ${calloutStyle}` : null,
+    calloutLabel: calloutStyle
+      ? `Contribution callout style: ${calloutStyle}`
+      : null,
   }
 }
 
-function parseCapabilityCalloutLabel(presentationJson: unknown, prefix: string): string | null {
+function parseOrchestratorStatePresentation(presentationJson: unknown): {
+  stackDensity: "comfortable" | "compact"
+  calloutLabel: string | null
+} {
+  // Read stack_density token; defaults to "comfortable"
+  // Future: If per-property overrides are needed, add tokens like
+  // tokens.stack_container_padding that take precedence over preset values
+  const density = getNestedString(presentationJson, ["tokens", "stack_density"])
+  const stackDensity = density === "compact" ? "compact" : "comfortable"
+
+  const calloutStyle = getFirstCalloutStyleLabel(presentationJson)
+  return {
+    stackDensity,
+    calloutLabel: calloutStyle ? `Orchestrator callout: ${calloutStyle}` : null,
+  }
+}
+
+function parseToolCapabilityPresentation(presentationJson: unknown): {
+  matrixDensity: "standard" | "compact"
+  calloutLabel: string | null
+} {
+  // Read matrix_density token; defaults to "standard"
+  // Future: If per-property overrides are needed, add tokens like
+  // tokens.matrix_container_padding that take precedence over preset values
+  const density = getNestedString(presentationJson, [
+    "tokens",
+    "matrix_density",
+  ])
+  const matrixDensity = density === "compact" ? "compact" : "standard"
+
+  const calloutStyle = getFirstCalloutStyleLabel(presentationJson)
+  return {
+    matrixDensity,
+    calloutLabel: calloutStyle
+      ? `Tool capability callout: ${calloutStyle}`
+      : null,
+  }
+}
+
+function parseCapabilityCalloutLabel(
+  presentationJson: unknown,
+  prefix: string,
+): string | null {
   const style = getFirstCalloutStyleLabel(presentationJson)
   return style ? `${prefix}: ${style}` : null
 }
@@ -185,10 +259,7 @@ function renderJSON(payload: unknown): ReactNode {
   )
 }
 
-function renderStructuredBlock(
-  block: DemoBlockSpec,
-  label: string,
-): ReactNode {
+function renderStructuredBlock(block: DemoBlockSpec, label: string): ReactNode {
   const configJSON = (block as { config_json?: unknown }).config_json ?? {}
   return (
     <div className="p-4">
@@ -213,7 +284,9 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
     />
   ),
   chat: (panel, ctx) => {
-    const parsed = parseChatPresentation((panel as { presentation_json?: unknown }).presentation_json)
+    const parsed = parseChatPresentation(
+      (panel as { presentation_json?: unknown }).presentation_json,
+    )
     return (
       <DemoChatPanel
         roomId={ctx.roomId}
@@ -311,33 +384,39 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
       roomAgents={ctx.roomAgentsAsAgentData}
     />
   ),
-  orchestratorState: (block, ctx) => (
-    <OrchestratorStateBlock
-      title={block.title}
-      config={(block as { config_json?: unknown }).config_json}
-      isConnected={ctx.isConnected}
-      autoRespond={ctx.autoRespond}
-      runtimePolicy={ctx.runtimePolicy}
-      runtimeHasRuntime={ctx.runtimeHasRuntime}
-      roomAgents={ctx.roomAgentsAsAgentData}
-      calloutLabel={parseCapabilityCalloutLabel(
-        (block as { presentation_json?: unknown }).presentation_json,
-        "Orchestrator callout",
-      )}
-    />
-  ),
-  toolCapability: (block, ctx) => (
-    <ToolCapabilityBlock
-      title={block.title}
-      config={(block as { config_json?: unknown }).config_json}
-      roomAgents={ctx.roomAgentsAsAgentData}
-      availableAgents={ctx.availableAgents}
-      calloutLabel={parseCapabilityCalloutLabel(
-        (block as { presentation_json?: unknown }).presentation_json,
-        "Tool capability callout",
-      )}
-    />
-  ),
+  orchestratorState: (block, ctx) => {
+    const parsed = parseOrchestratorStatePresentation(
+      (block as { presentation_json?: unknown }).presentation_json,
+    )
+    return (
+      <OrchestratorStateBlock
+        title={block.title}
+        config={(block as { config_json?: unknown }).config_json}
+        isConnected={ctx.isConnected}
+        autoRespond={ctx.autoRespond}
+        runtimePolicy={ctx.runtimePolicy}
+        runtimeHasRuntime={ctx.runtimeHasRuntime}
+        roomAgents={ctx.roomAgentsAsAgentData}
+        stackDensity={parsed.stackDensity}
+        calloutLabel={parsed.calloutLabel}
+      />
+    )
+  },
+  toolCapability: (block, ctx) => {
+    const parsed = parseToolCapabilityPresentation(
+      (block as { presentation_json?: unknown }).presentation_json,
+    )
+    return (
+      <ToolCapabilityBlock
+        title={block.title}
+        config={(block as { config_json?: unknown }).config_json}
+        roomAgents={ctx.roomAgentsAsAgentData}
+        availableAgents={ctx.availableAgents}
+        matrixDensity={parsed.matrixDensity}
+        calloutLabel={parsed.calloutLabel}
+      />
+    )
+  },
   contributionFeed: (block, ctx) => {
     const parsed = parseContributionFeedPresentation(
       (block as { presentation_json?: unknown }).presentation_json,
@@ -348,6 +427,7 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
         config={(block as { config_json?: unknown }).config_json}
         messages={ctx.debugMessages}
         streamingMessage={ctx.streamingMessage}
+        feedDensity={parsed.feedDensity}
         rowHighlightCss={parsed.rowHighlightCss ?? undefined}
         calloutLabel={parsed.calloutLabel}
       />

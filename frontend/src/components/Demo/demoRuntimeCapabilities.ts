@@ -23,5 +23,7 @@ export const ACTIVE_RUNTIME_DEMO_BLOCK_TYPES = [
   "fileExplorer",
 ] as const
 
-export type RuntimeDemoPanelKind = (typeof ACTIVE_RUNTIME_DEMO_PANEL_KINDS)[number]
-export type RuntimeDemoBlockType = (typeof ACTIVE_RUNTIME_DEMO_BLOCK_TYPES)[number]
+export type RuntimeDemoPanelKind =
+  (typeof ACTIVE_RUNTIME_DEMO_PANEL_KINDS)[number]
+export type RuntimeDemoBlockType =
+  (typeof ACTIVE_RUNTIME_DEMO_BLOCK_TYPES)[number]

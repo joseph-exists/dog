@@ -1,5 +1,20 @@
 import { expect, test } from "@playwright/test"
 import type { ReactNode } from "react"
+import { AgentRosterBlock } from "@/components/Demo/blocks/AgentRosterBlock"
+import { ContributionFeedBlock } from "@/components/Demo/blocks/ContributionFeedBlock"
+import { FileExplorerBlock } from "@/components/Demo/blocks/FileExplorerBlock"
+import { GitViewBlock } from "@/components/Demo/blocks/GitViewBlock"
+import { OrchestratorStateBlock } from "@/components/Demo/blocks/OrchestratorStateBlock"
+import { StoryMetadataBlock } from "@/components/Demo/blocks/StoryMetadataBlock"
+import { ToolCapabilityBlock } from "@/components/Demo/blocks/ToolCapabilityBlock"
+import { DemoChatPanel } from "@/components/Demo/DemoChatPanel"
+import { DemoStoryPanel } from "@/components/Demo/DemoStoryPanel"
+import {
+  type DemoBlockRendererContext,
+  type DemoPanelRendererContext,
+  renderDemoBlock,
+  renderDemoPanel,
+} from "@/components/Demo/rendererRegistry"
 import {
   A2UIPanel,
   CanvasPanel,
@@ -8,21 +23,6 @@ import {
   StoryEditorPanel,
   StoryPlayerPanel,
 } from "@/components/Room"
-import { DemoChatPanel } from "@/components/Demo/DemoChatPanel"
-import { DemoStoryPanel } from "@/components/Demo/DemoStoryPanel"
-import { AgentRosterBlock } from "@/components/Demo/blocks/AgentRosterBlock"
-import { ContributionFeedBlock } from "@/components/Demo/blocks/ContributionFeedBlock"
-import { FileExplorerBlock } from "@/components/Demo/blocks/FileExplorerBlock"
-import { GitViewBlock } from "@/components/Demo/blocks/GitViewBlock"
-import { OrchestratorStateBlock } from "@/components/Demo/blocks/OrchestratorStateBlock"
-import { StoryMetadataBlock } from "@/components/Demo/blocks/StoryMetadataBlock"
-import { ToolCapabilityBlock } from "@/components/Demo/blocks/ToolCapabilityBlock"
-import {
-  type DemoBlockRendererContext,
-  type DemoPanelRendererContext,
-  renderDemoBlock,
-  renderDemoPanel,
-} from "@/components/Demo/rendererRegistry"
 
 interface ElementLike {
   type: unknown
@@ -33,10 +33,10 @@ interface ElementLike {
 
 function isElementLike(node: unknown): node is ElementLike {
   return Boolean(
-    node
-      && typeof node === "object"
-      && "type" in (node as Record<string, unknown>)
-      && "props" in (node as Record<string, unknown>),
+    node &&
+      typeof node === "object" &&
+      "type" in (node as Record<string, unknown>) &&
+      "props" in (node as Record<string, unknown>),
   )
 }
 
@@ -46,14 +46,17 @@ function toElement(node: ReactNode): ElementLike {
 }
 
 function flattenText(node: ReactNode): string {
-  if (node === null || node === undefined || typeof node === "boolean") return ""
+  if (node === null || node === undefined || typeof node === "boolean")
+    return ""
   if (typeof node === "string" || typeof node === "number") return String(node)
   if (Array.isArray(node)) return node.map(flattenText).join(" ")
   if (isElementLike(node)) return flattenText(node.props.children as ReactNode)
   return ""
 }
 
-function makePanelContext(overrides?: Partial<DemoPanelRendererContext>): DemoPanelRendererContext {
+function makePanelContext(
+  overrides?: Partial<DemoPanelRendererContext>,
+): DemoPanelRendererContext {
   return {
     roomId: "room-1",
     roomTitle: "Demo Room",
@@ -77,14 +80,20 @@ function makePanelContext(overrides?: Partial<DemoPanelRendererContext>): DemoPa
     debugMessages: [],
     showInternalMessages: false,
     onToggleInternalMessages: () => {},
-    renderContentPayload: () => <div data-testid="content-panel-sentinel">content-sentinel</div>,
+    renderContentPayload: () => (
+      <div data-testid="content-panel-sentinel">content-sentinel</div>
+    ),
     ...overrides,
   }
 }
 
-function makeBlockContext(overrides?: Partial<DemoBlockRendererContext>): DemoBlockRendererContext {
+function makeBlockContext(
+  overrides?: Partial<DemoBlockRendererContext>,
+): DemoBlockRendererContext {
   return {
-    renderContentPayload: () => <div data-testid="content-block-sentinel">content-sentinel</div>,
+    renderContentPayload: () => (
+      <div data-testid="content-block-sentinel">content-sentinel</div>
+    ),
     roomId: "room-1",
     roomTitle: "Demo Room",
     roomStoryId: "story-1",
@@ -117,7 +126,9 @@ test.describe("Demo renderer registry panel mapping", () => {
   for (const { kind, expectedType } of supportedCases) {
     test(`maps panel kind "${kind}" to expected component`, async () => {
       const panel = { id: `panel-${kind}`, kind } as const
-      const element = toElement(renderDemoPanel(panel as never, makePanelContext()))
+      const element = toElement(
+        renderDemoPanel(panel as never, makePanelContext()),
+      )
       expect(element.type).toBe(expectedType)
     })
   }
@@ -137,7 +148,9 @@ test.describe("Demo renderer registry panel mapping", () => {
     })
 
     const element = toElement(renderDemoPanel(panel as never, ctx))
-    expect(flattenText(element.props.children as ReactNode)).toContain("content-hit")
+    expect(flattenText(element.props.children as ReactNode)).toContain(
+      "content-hit",
+    )
     expect(calls).toHaveLength(1)
     expect(calls[0]?.payload).toEqual({ format: "markdown", value: "hello" })
     expect(calls[0]?.label).toContain("Content panel is configured")
@@ -156,7 +169,9 @@ test.describe("Demo renderer registry panel mapping", () => {
 
   test("unsupported panel kind returns non-fatal fallback", async () => {
     const panel = { id: "panel-unknown", kind: "futurePanelKind" }
-    const element = toElement(renderDemoPanel(panel as never, makePanelContext()))
+    const element = toElement(
+      renderDemoPanel(panel as never, makePanelContext()),
+    )
     expect(element.type).toBe("div")
     expect(flattenText(element.props.children as ReactNode)).toContain(
       "Unsupported panel kind",
@@ -181,15 +196,18 @@ test.describe("Demo renderer registry block mapping", () => {
   for (const { type, expectedType } of dedicatedCases) {
     test(`maps block type "${type}" to dedicated component`, async () => {
       const block = { id: `block-${type}`, type, config_json: {} }
-      const element = toElement(renderDemoBlock(block as never, makeBlockContext()))
+      const element = toElement(
+        renderDemoBlock(block as never, makeBlockContext()),
+      )
       expect(element.type).toBe(expectedType)
     })
   }
 
-  const contentCases: Array<{ type: "context" | "content"; payload: unknown }> = [
-    { type: "context", payload: { format: "text", value: "ctx payload" } },
-    { type: "content", payload: { format: "markdown", value: "# header" } },
-  ]
+  const contentCases: Array<{ type: "context" | "content"; payload: unknown }> =
+    [
+      { type: "context", payload: { format: "text", value: "ctx payload" } },
+      { type: "content", payload: { format: "markdown", value: "# header" } },
+    ]
 
   for (const { type, payload } of contentCases) {
     test(`block type "${type}" delegates payload to renderContentPayload callback`, async () => {
@@ -208,7 +226,9 @@ test.describe("Demo renderer registry block mapping", () => {
         ),
       )
 
-      expect(flattenText(element.props.children as ReactNode)).toContain("content-path")
+      expect(flattenText(element.props.children as ReactNode)).toContain(
+        "content-path",
+      )
       expect(calls).toHaveLength(1)
       expect(calls[0]?.inPayload).toEqual(payload)
       expect(calls[0]?.inLabel).toContain(block.id)
@@ -216,10 +236,18 @@ test.describe("Demo renderer registry block mapping", () => {
   }
 
   test("story block uses structured fallback renderer path", async () => {
-    const block = { id: "block-story", type: "story", config_json: { theme: "dense" } }
-    const element = toElement(renderDemoBlock(block as never, makeBlockContext()))
+    const block = {
+      id: "block-story",
+      type: "story",
+      config_json: { theme: "dense" },
+    }
+    const element = toElement(
+      renderDemoBlock(block as never, makeBlockContext()),
+    )
     expect(element.type).toBe("div")
-    expect(flattenText(element.props.children as ReactNode)).toContain("Story Block")
+    expect(flattenText(element.props.children as ReactNode)).toContain(
+      "Story Block",
+    )
     expect(flattenText(element.props.children as ReactNode)).toContain(
       "awaiting dedicated presentation",
     )
@@ -227,7 +255,9 @@ test.describe("Demo renderer registry block mapping", () => {
 
   test("unsupported block type returns non-fatal fallback", async () => {
     const block = { id: "block-unknown", type: "futureBlockType" }
-    const element = toElement(renderDemoBlock(block as never, makeBlockContext()))
+    const element = toElement(
+      renderDemoBlock(block as never, makeBlockContext()),
+    )
     expect(element.type).toBe("div")
     expect(flattenText(element.props.children as ReactNode)).toContain(
       "is not mapped yet",

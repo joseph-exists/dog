@@ -1,6 +1,4 @@
-import {
-  type BuilderPresentationFieldSpec,
-} from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import type { BuilderPresentationFieldSpec } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -15,7 +13,10 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function getValueAtPath(source: Record<string, unknown>, path: string): unknown {
+function getValueAtPath(
+  source: Record<string, unknown>,
+  path: string,
+): unknown {
   const segments = path.split(".").filter((segment) => segment.length > 0)
   let current: unknown = source
   for (const segment of segments) {
@@ -79,18 +80,28 @@ export function DemoPresentationGuidedFields({
           const currentValue = getValueAtPath(objectValue, field.path)
           return (
             <div key={field.path} className="space-y-1">
-              <label className="text-xs text-muted-foreground">{field.label}</label>
+              <label className="text-xs text-muted-foreground">
+                {field.label}
+              </label>
               {field.control === "boolean" ? (
                 <div className="h-9 flex items-center">
                   <Switch
                     checked={currentValue === true}
-                    onCheckedChange={(checked) => updatePath(field.path, checked)}
+                    onCheckedChange={(checked) =>
+                      updatePath(field.path, checked)
+                    }
                   />
                 </div>
               ) : field.control === "enum" ? (
                 <Select
-                  value={typeof currentValue === "string" && currentValue.length > 0 ? currentValue : "__none"}
-                  onValueChange={(next) => updatePath(field.path, next === "__none" ? null : next)}
+                  value={
+                    typeof currentValue === "string" && currentValue.length > 0
+                      ? currentValue
+                      : "__none"
+                  }
+                  onValueChange={(next) =>
+                    updatePath(field.path, next === "__none" ? null : next)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={field.label} />
@@ -98,13 +109,17 @@ export function DemoPresentationGuidedFields({
                   <SelectContent>
                     <SelectItem value="__none">None</SelectItem>
                     {(field.enumValues ?? []).map((option) => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : field.control === "number" ? (
                 <Input
-                  value={typeof currentValue === "number" ? String(currentValue) : ""}
+                  value={
+                    typeof currentValue === "number" ? String(currentValue) : ""
+                  }
                   placeholder={field.placeholder ?? "number"}
                   onChange={(event) => {
                     const raw = event.target.value.trim()
@@ -113,7 +128,10 @@ export function DemoPresentationGuidedFields({
                       return
                     }
                     const parsed = Number.parseInt(raw, 10)
-                    updatePath(field.path, Number.isFinite(parsed) ? parsed : null)
+                    updatePath(
+                      field.path,
+                      Number.isFinite(parsed) ? parsed : null,
+                    )
                   }}
                 />
               ) : (
@@ -127,7 +145,9 @@ export function DemoPresentationGuidedFields({
                 />
               )}
               {field.description && (
-                <p className="text-[11px] text-muted-foreground">{field.description}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {field.description}
+                </p>
               )}
             </div>
           )

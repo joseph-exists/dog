@@ -1,6 +1,34 @@
 import { Activity, Bot, Crown, Radio } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import type { DemoRoomAgentData } from "@/components/Demo/rendererRegistry"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+
+/**
+ * Density class mappings for OrchestratorState layout.
+ *
+ * Controls spacing/padding based on presentation_json tokens.
+ * Currently preset-based; if per-property overrides are needed,
+ * add tokens like `tokens.stack_container_padding` that
+ * take precedence over these preset values.
+ */
+const STACK_DENSITY_CLASSES = {
+  comfortable: {
+    container: "p-4",
+    sections: "space-y-4",
+    card: "p-3",
+    agentRows: "space-y-2",
+    badgeGap: "gap-2",
+  },
+  compact: {
+    container: "p-2",
+    sections: "space-y-2",
+    card: "p-2",
+    agentRows: "space-y-1",
+    badgeGap: "gap-1",
+  },
+} as const
+
+type StackDensity = keyof typeof STACK_DENSITY_CLASSES
 
 interface OrchestratorStateBlockProps {
   title?: string | null
@@ -10,6 +38,7 @@ interface OrchestratorStateBlockProps {
   runtimePolicy: "auto" | "manual" | "owner_only"
   runtimeHasRuntime: boolean
   roomAgents: DemoRoomAgentData[]
+  stackDensity?: StackDensity
   calloutLabel?: string | null
 }
 
@@ -25,8 +54,11 @@ interface OrchestratorStateSummary {
   activeAgents: DemoRoomAgentData[]
 }
 
-export function parseOrchestratorStateConfig(value: unknown): OrchestratorStateConfig {
-  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
+export function parseOrchestratorStateConfig(
+  value: unknown,
+): OrchestratorStateConfig {
+  const raw =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {}
   return {
     show_agent_list: raw.show_agent_list !== false,
     only_active_agents: raw.only_active_agents !== false,
@@ -61,16 +93,25 @@ export function OrchestratorStateBlock({
   runtimePolicy,
   runtimeHasRuntime,
   roomAgents,
+  stackDensity = "comfortable",
   calloutLabel,
 }: OrchestratorStateBlockProps) {
   const parsedConfig = parseOrchestratorStateConfig(config)
-  const summary = summarizeOrchestratorState({ config: parsedConfig, roomAgents })
+  const summary = summarizeOrchestratorState({
+    config: parsedConfig,
+    roomAgents,
+  })
+  const density = STACK_DENSITY_CLASSES[stackDensity]
 
   return (
-    <div className="p-4 space-y-4">
+    <div className={cn(density.container, density.sections)}>
       <div className="space-y-1">
-        <div className="text-sm font-medium">{title ?? "Orchestrator State"}</div>
-        <div className="text-xs text-muted-foreground">Runtime and orchestrator health snapshot for this demo room.</div>
+        <div className="text-sm font-medium">
+          {title ?? "Orchestrator State"}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Runtime and orchestrator health snapshot for this demo room.
+        </div>
       </div>
       {calloutLabel && (
         <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
@@ -78,43 +119,62 @@ export function OrchestratorStateBlock({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <Badge variant={isConnected ? "default" : "secondary"} className="gap-1">
+      <div className={cn("flex flex-wrap", density.badgeGap)}>
+        <Badge
+          variant={isConnected ? "default" : "secondary"}
+          className="gap-1"
+        >
           <Radio className="h-3 w-3" />
           Socket {isConnected ? "connected" : "disconnected"}
         </Badge>
-        <Badge variant={runtimeHasRuntime ? "default" : "outline"} className="gap-1">
+        <Badge
+          variant={runtimeHasRuntime ? "default" : "outline"}
+          className="gap-1"
+        >
           <Activity className="h-3 w-3" />
           Runtime {runtimeHasRuntime ? "running" : "idle"}
         </Badge>
-        <Badge variant={autoRespond ? "default" : "outline"}>Auto-respond {autoRespond ? "on" : "off"}</Badge>
+        <Badge variant={autoRespond ? "default" : "outline"}>
+          Auto-respond {autoRespond ? "on" : "off"}
+        </Badge>
         <Badge variant="outline">Policy: {runtimePolicy}</Badge>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-3">
-        <div className="rounded-md border bg-muted/20 p-3">
+      <div className={cn("grid md:grid-cols-3", density.badgeGap)}>
+        <div className={cn("rounded-md border bg-muted/20", density.card)}>
           <div className="text-xs text-muted-foreground">Agents in room</div>
           <div className="mt-1 text-lg font-semibold">{roomAgents.length}</div>
         </div>
-        <div className="rounded-md border bg-muted/20 p-3">
+        <div className={cn("rounded-md border bg-muted/20", density.card)}>
           <div className="text-xs text-muted-foreground">Active agents</div>
-          <div className="mt-1 text-lg font-semibold">{summary.activeAgents.length}</div>
+          <div className="mt-1 text-lg font-semibold">
+            {summary.activeAgents.length}
+          </div>
         </div>
-        <div className="rounded-md border bg-muted/20 p-3">
+        <div className={cn("rounded-md border bg-muted/20", density.card)}>
           <div className="text-xs text-muted-foreground">Orchestrators</div>
-          <div className="mt-1 text-lg font-semibold">{summary.orchestrators.length}</div>
+          <div className="mt-1 text-lg font-semibold">
+            {summary.orchestrators.length}
+          </div>
         </div>
       </div>
 
       {parsedConfig.show_agent_list && (
-        <div className="rounded-md border bg-muted/20 p-3">
-          <div className="mb-2 text-xs text-muted-foreground">Orchestration agents</div>
+        <div className={cn("rounded-md border bg-muted/20", density.card)}>
+          <div className="mb-2 text-xs text-muted-foreground">
+            Orchestration agents
+          </div>
           {summary.filteredAgents.length === 0 ? (
-            <div className="text-xs text-muted-foreground">No agents available for orchestration summary.</div>
+            <div className="text-xs text-muted-foreground">
+              No agents available for orchestration summary.
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className={density.agentRows}>
               {summary.filteredAgents.map((agent) => (
-                <div key={agent.id} className="flex items-center justify-between gap-2 text-sm">
+                <div
+                  key={agent.id}
+                  className="flex items-center justify-between gap-2 text-sm"
+                >
                   <div className="min-w-0 flex items-center gap-2">
                     {agent.is_coordinator ? (
                       <Crown className="h-4 w-4 text-amber-600" />

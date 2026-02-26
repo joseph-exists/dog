@@ -25,7 +25,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 
 import { AgentsService } from "@/client/sdk.gen"
-import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 import type {
   LLMModelPublic,
   UserAccessProviderPublic,
@@ -57,6 +56,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 import { cn } from "@/lib/utils"
 import { ProviderModelSelector } from "./FormSelectors/ProviderModelSelector"
 
@@ -258,17 +258,24 @@ function PresentationSection({
     ? safeJsonParse(presentationRaw)
     : defaultPresentation
 
-  const selectedCardThemeId = currentPresentation?.card_theme_id as string | undefined
+  const selectedCardThemeId = currentPresentation?.card_theme_id as
+    | string
+    | undefined
 
   const handleCardThemeChange = (themeId: string) => {
     // Merge with existing presentation data, preserving non-token fields
-    const existing = presentationRaw ? safeJsonParse(presentationRaw) ?? {} : {}
+    const existing = presentationRaw
+      ? (safeJsonParse(presentationRaw) ?? {})
+      : {}
 
     if (themeId === "none") {
       // Clear theme: remove card_theme_id and all token overrides
-      const { card_theme_id, tokens, ...rest } = existing as Record<string, unknown>
+      const { card_theme_id, tokens, ...rest } = existing as Record<
+        string,
+        unknown
+      >
       onPresentationChange(
-        Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : ""
+        Object.keys(rest).length > 0 ? JSON.stringify(rest, null, 2) : "",
       )
       return
     }
@@ -302,7 +309,9 @@ function PresentationSection({
         >
           <SelectTrigger>
             <SelectValue
-              placeholder={isLoading ? "Loading themes..." : "Select card theme..."}
+              placeholder={
+                isLoading ? "Loading themes..." : "Select card theme..."
+              }
             />
           </SelectTrigger>
           <SelectContent>
@@ -823,7 +832,9 @@ export default function AgentForm({
           onPresentationChange={(value) =>
             form.setValue("presentation_raw", value, { shouldValidate: true })
           }
-          defaultPresentation={dv?.presentation as Record<string, unknown> | undefined}
+          defaultPresentation={
+            dv?.presentation as Record<string, unknown> | undefined
+          }
         />
 
         {/* ════════════════════════════════════════════════════════════════

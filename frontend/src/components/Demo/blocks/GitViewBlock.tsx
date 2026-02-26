@@ -1,4 +1,9 @@
-import { GitBranch, GitCommitHorizontal, GitPullRequest, Plus } from "lucide-react"
+import {
+  GitBranch,
+  GitCommitHorizontal,
+  GitPullRequest,
+  Plus,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 interface GitViewBlockProps {
@@ -28,7 +33,9 @@ interface GitViewConfig {
 
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
-  return value.filter((item): item is string => typeof item === "string" && item.length > 0)
+  return value.filter(
+    (item): item is string => typeof item === "string" && item.length > 0,
+  )
 }
 
 function asGitFiles(value: unknown): GitFileItem[] {
@@ -68,14 +75,17 @@ function asGitCommits(value: unknown): GitCommitItem[] {
 }
 
 function toConfig(value: unknown): GitViewConfig {
-  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
+  const raw =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {}
 
-  const repoName = typeof raw.repo_name === "string" && raw.repo_name.length > 0
-    ? raw.repo_name
-    : "demo-repo"
-  const activeBranch = typeof raw.active_branch === "string" && raw.active_branch.length > 0
-    ? raw.active_branch
-    : "main"
+  const repoName =
+    typeof raw.repo_name === "string" && raw.repo_name.length > 0
+      ? raw.repo_name
+      : "demo-repo"
+  const activeBranch =
+    typeof raw.active_branch === "string" && raw.active_branch.length > 0
+      ? raw.active_branch
+      : "main"
 
   return {
     repo_name: repoName,
@@ -94,7 +104,9 @@ export function GitViewBlock({ title, config }: GitViewBlockProps) {
     <div className="p-4 space-y-4">
       <div className="space-y-1">
         <div className="text-sm font-medium">{title ?? "Git View"}</div>
-        <div className="text-xs text-muted-foreground">Repository state snapshot for this demo context.</div>
+        <div className="text-xs text-muted-foreground">
+          Repository state snapshot for this demo context.
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -106,15 +118,24 @@ export function GitViewBlock({ title, config }: GitViewBlockProps) {
           <GitPullRequest className="h-3 w-3" />
           {parsedConfig.active_branch}
         </Badge>
-        <Badge variant="secondary">Branches: {parsedConfig.branches.length || 1}</Badge>
-        <Badge variant="secondary">Staged: {parsedConfig.staged_files.length}</Badge>
+        <Badge variant="secondary">
+          Branches: {parsedConfig.branches.length || 1}
+        </Badge>
+        <Badge variant="secondary">
+          Staged: {parsedConfig.staged_files.length}
+        </Badge>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-md border bg-muted/20 p-3">
           <div className="mb-2 text-xs text-muted-foreground">Branches</div>
           <div className="space-y-1">
-            {[parsedConfig.active_branch, ...parsedConfig.branches.filter((b) => b !== parsedConfig.active_branch)].map((branch) => (
+            {[
+              parsedConfig.active_branch,
+              ...parsedConfig.branches.filter(
+                (b) => b !== parsedConfig.active_branch,
+              ),
+            ].map((branch) => (
               <div key={branch} className="flex items-center gap-2 text-xs">
                 {branch === parsedConfig.active_branch ? (
                   <Plus className="h-3 w-3 text-emerald-600" />
@@ -130,11 +151,16 @@ export function GitViewBlock({ title, config }: GitViewBlockProps) {
         <div className="rounded-md border bg-muted/20 p-3">
           <div className="mb-2 text-xs text-muted-foreground">Staged files</div>
           {parsedConfig.staged_files.length === 0 ? (
-            <div className="text-xs text-muted-foreground">No staged changes.</div>
+            <div className="text-xs text-muted-foreground">
+              No staged changes.
+            </div>
           ) : (
             <div className="space-y-1">
               {parsedConfig.staged_files.map((file) => (
-                <div key={file.path} className="flex items-center justify-between gap-2 text-xs">
+                <div
+                  key={file.path}
+                  className="flex items-center justify-between gap-2 text-xs"
+                >
                   <span className="truncate">{file.path}</span>
                   {file.status && (
                     <Badge variant="outline" className="text-[10px]">
@@ -151,7 +177,9 @@ export function GitViewBlock({ title, config }: GitViewBlockProps) {
       <div className="rounded-md border bg-muted/20 p-3">
         <div className="mb-2 text-xs text-muted-foreground">Recent commits</div>
         {parsedConfig.recent_commits.length === 0 ? (
-          <div className="text-xs text-muted-foreground">No commits supplied in config.</div>
+          <div className="text-xs text-muted-foreground">
+            No commits supplied in config.
+          </div>
         ) : (
           <div className="space-y-2">
             {parsedConfig.recent_commits.map((commit) => (

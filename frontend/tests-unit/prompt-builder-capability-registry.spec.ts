@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test"
 
 import {
-  PROMPT_CAPABILITIES,
   buildPromptCapabilityRegistry,
   createPromptDraftForCapabilityTests,
   getPromptCapabilityByKey,
@@ -25,14 +24,18 @@ test.describe("promptBuilder capability registry", () => {
   })
 
   test("getPromptCapabilityByKey resolves known key", async () => {
-    const capability = getPromptCapabilityByKey("provider.user_access_provider_id")
+    const capability = getPromptCapabilityByKey(
+      "provider.user_access_provider_id",
+    )
     expect(capability).toBeTruthy()
     expect(capability?.label).toBe("Access Provider")
   })
 
   test("normalizes provider/model string ids and stop sequences via capability hooks", async () => {
     const draft = createPromptDraftForCapabilityTests()
-    const providerCapability = getPromptCapabilityByKey("provider.user_access_provider_id")
+    const providerCapability = getPromptCapabilityByKey(
+      "provider.user_access_provider_id",
+    )
     const modelCapability = getPromptCapabilityByKey("model.model_id")
     const stopCapability = getPromptCapabilityByKey("params.stop")
     expect(providerCapability).toBeTruthy()
@@ -61,7 +64,11 @@ test.describe("promptBuilder capability registry", () => {
 
   test("tool config semantic hook warns for required tool mode without allowlist", async () => {
     const draft = createPromptDraftForCapabilityTests()
-    draft.tools = { tool_mode: "required", tool_allowlist: [], tool_choice: null }
+    draft.tools = {
+      tool_mode: "required",
+      tool_allowlist: [],
+      tool_choice: null,
+    }
     const capability = getPromptCapabilityByKey("tools")
     expect(capability).toBeTruthy()
 
@@ -79,11 +86,21 @@ test.describe("promptBuilder capability registry", () => {
   test("validatePromptDraftWithCapabilityHooks includes both base and hook issues", async () => {
     const draft = createPromptDraftForCapabilityTests()
     draft.provider.user_access_provider_id = null
-    draft.tools = { tool_mode: "required", tool_allowlist: [], tool_choice: null }
+    draft.tools = {
+      tool_mode: "required",
+      tool_allowlist: [],
+      tool_choice: null,
+    }
 
     const issues = validatePromptDraftWithCapabilityHooks(draft)
-    expect(issues.some((issue) => issue.code === "provider_required")).toBeTruthy()
-    expect(issues.some((issue) => issue.code === "tool_mode_required_without_allowlist")).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "provider_required"),
+    ).toBeTruthy()
+    expect(
+      issues.some(
+        (issue) => issue.code === "tool_mode_required_without_allowlist",
+      ),
+    ).toBeTruthy()
   })
 
   test("buildPromptCapabilityRegistry keeps existing on collision by default", async () => {
@@ -92,32 +109,38 @@ test.describe("promptBuilder capability registry", () => {
       packs: [
         {
           id: "first",
-          capabilities: [{
-            key: "shared",
-            label: "First",
-            control: "text",
-            category: "advanced",
-          }],
+          capabilities: [
+            {
+              key: "shared",
+              label: "First",
+              control: "text",
+              category: "advanced",
+            },
+          ],
         },
         {
           id: "second",
-          capabilities: [{
-            key: "shared",
-            label: "Second",
-            control: "text",
-            category: "advanced",
-          }],
+          capabilities: [
+            {
+              key: "shared",
+              label: "Second",
+              control: "text",
+              category: "advanced",
+            },
+          ],
         },
       ],
     })
     expect(registry.capabilities).toHaveLength(1)
     expect(registry.capabilities[0].label).toBe("First")
-    expect(registry.conflicts).toEqual([{
-      key: "shared",
-      existingPackId: "first",
-      incomingPackId: "second",
-      policy: "keep_existing",
-    }])
+    expect(registry.conflicts).toEqual([
+      {
+        key: "shared",
+        existingPackId: "first",
+        incomingPackId: "second",
+        policy: "keep_existing",
+      },
+    ])
   })
 
   test("buildPromptCapabilityRegistry replaces entry on replace_existing", async () => {
@@ -127,21 +150,25 @@ test.describe("promptBuilder capability registry", () => {
       packs: [
         {
           id: "first",
-          capabilities: [{
-            key: "shared",
-            label: "First",
-            control: "text",
-            category: "advanced",
-          }],
+          capabilities: [
+            {
+              key: "shared",
+              label: "First",
+              control: "text",
+              category: "advanced",
+            },
+          ],
         },
         {
           id: "second",
-          capabilities: [{
-            key: "shared",
-            label: "Second",
-            control: "text",
-            category: "advanced",
-          }],
+          capabilities: [
+            {
+              key: "shared",
+              label: "Second",
+              control: "text",
+              category: "advanced",
+            },
+          ],
         },
       ],
     })

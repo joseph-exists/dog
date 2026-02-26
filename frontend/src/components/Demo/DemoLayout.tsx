@@ -57,7 +57,8 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
 
   const primaryPanels = panels.filter((p) => p.prominence === "primary")
   const auxiliaryPanels = panels.filter((p) => p.prominence === "auxiliary")
-  const auxiliaryColumnDefaultSize = getAuxiliaryColumnDefaultSize(auxiliaryPanels)
+  const auxiliaryColumnDefaultSize =
+    getAuxiliaryColumnDefaultSize(auxiliaryPanels)
 
   // Mobile always uses tabs
   const effectiveMode = isMobile ? "tabs" : mode
@@ -94,7 +95,11 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
 
   // Page-sized panels intentionally consume the full workspace.
   if (pageSizedPanel) {
-    return <div className={cn("h-full overflow-hidden", className)}>{pageSizedPanel.render()}</div>
+    return (
+      <div className={cn("h-full overflow-hidden", className)}>
+        {pageSizedPanel.render()}
+      </div>
+    )
   }
 
   // Desktop panel layout
@@ -127,7 +132,9 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}
                   <ResizablePanel
-                    defaultSize={panel.defaultSize ?? 100 / auxiliaryPanels.length}
+                    defaultSize={
+                      panel.defaultSize ?? 100 / auxiliaryPanels.length
+                    }
                     minSize={panel.minSize ?? 10}
                     maxSize={panel.maxSize}
                   >

@@ -1,31 +1,52 @@
-import { createFileRoute } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { createFileRoute } from "@tanstack/react-router"
 import type { ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ApiError } from "@/client"
+import {
+  PersonasService,
+  RoomRuntimeService,
+  UserPersonasService,
+} from "@/client"
 import { AgentsService } from "@/client/sdk.gen"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
-import { PersonasService, RoomRuntimeService, UserPersonasService } from "@/client"
+import { getRenderableDemoBlocks } from "@/components/Demo/blockVisibility"
 import {
-  ContentRenderer,
-  type Content,
-} from "@/components/Page/primitives/ContentRenderer"
+  DemoInteractiveBlock,
+  type DemoInteractiveDispatchRequest,
+} from "@/components/Demo/DemoInteractiveBlock"
 import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
 import { DemoPresentationFrame } from "@/components/Demo/DemoPresentationFrame"
-import { DemoShell, type DemoShellBlockRenderItem } from "@/components/Demo/DemoShell"
-import { getRenderableDemoBlocks } from "@/components/Demo/blockVisibility"
+import {
+  DemoShell,
+  type DemoShellBlockRenderItem,
+} from "@/components/Demo/DemoShell"
+import { resolveInteractionReceiverRegistration } from "@/components/Demo/demoInteractionHandlers"
 import {
   buildDemoThemeIndex,
   resolveDemoPresentationFrame,
 } from "@/components/Demo/demoPresentationResolver"
-import { renderDemoBlock, renderDemoPanel } from "@/components/Demo/rendererRegistry"
+import {
+  renderDemoBlock,
+  renderDemoPanel,
+} from "@/components/Demo/rendererRegistry"
+import {
+  type Content,
+  ContentRenderer,
+} from "@/components/Page/primitives/ContentRenderer"
 import useAuth from "@/hooks/useAuth"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useRoomMessages } from "@/hooks/useRoomMessages"
 import { useRoomStream } from "@/hooks/useRoomStream"
 import { usePageThemes } from "@/hooks/useThemeBinding"
-import { useAvailableThemes, useUserThemeBindings } from "@/hooks/useThemeRegistry"
-import { DemoService, type ResolvedDemoSessionViewModel } from "@/services/demoService"
+import {
+  useAvailableThemes,
+  useUserThemeBindings,
+} from "@/hooks/useThemeRegistry"
+import {
+  DemoService,
+  type ResolvedDemoSessionViewModel,
+} from "@/services/demoService"
 import { RoomService } from "@/services/roomService"
 import { handleError } from "@/utils"
 
@@ -74,7 +95,7 @@ function DemoRoute() {
 function isRenderableContentPayload(value: unknown): value is Content {
   if (!value || typeof value !== "object") return false
   const data = value as Record<string, unknown>
-  return typeof data.format === "string" && Object.prototype.hasOwnProperty.call(data, "value")
+  return typeof data.format === "string" && Object.hasOwn(data, "value")
 }
 
 function renderContentPayload(
@@ -83,9 +104,7 @@ function renderContentPayload(
 ): ReactNode {
   if (!isRenderableContentPayload(value)) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">
-        {fallbackLabel}
-      </div>
+      <div className="p-4 text-sm text-muted-foreground">{fallbackLabel}</div>
     )
   }
   return (
@@ -121,23 +140,23 @@ function ResolvedDemoRoute({
   const autoStartAttemptedRef = useRef(false)
   const { user } = useAuth()
 
-  const { isConnected, sendMessage: sendViaWebSocket, streamingMessage } = useRoomStream(roomId)
+  const {
+    isConnected,
+    sendMessage: sendViaWebSocket,
+    streamingMessage,
+  } = useRoomStream(roomId)
   const { messages: debugMessages = [] } = useRoomMessages(roomId)
   const participantsQueryKey = ["room", roomId, "participants", "demo"] as const
-  const {
-    data: participants = [],
-    isLoading: isLoadingParticipants,
-  } = useQuery({
-    queryKey: participantsQueryKey,
-    queryFn: () => RoomService.getParticipants(roomId),
-  })
-  const {
-    data: availableAgentsData,
-    isLoading: isLoadingAvailableAgents,
-  } = useQuery({
-    queryKey: ["agents", "available", "demo"],
-    queryFn: () => AgentsService.listAvailableAgents(),
-  })
+  const { data: participants = [], isLoading: isLoadingParticipants } =
+    useQuery({
+      queryKey: participantsQueryKey,
+      queryFn: () => RoomService.getParticipants(roomId),
+    })
+  const { data: availableAgentsData, isLoading: isLoadingAvailableAgents } =
+    useQuery({
+      queryKey: ["agents", "available", "demo"],
+      queryFn: () => AgentsService.listAvailableAgents(),
+    })
   const { mutateAsync: startRuntime, isPending: isStarting } = useMutation({
     mutationFn: async (userPersonaId: string) =>
       RoomRuntimeService.putRoomRuntime({
@@ -145,45 +164,46 @@ function ResolvedDemoRoute({
         requestBody: { user_persona_id: userPersonaId, story_version: null },
       }),
   })
-  const { mutateAsync: addParticipant, isPending: isAddingParticipant } = useMutation({
-    mutationFn: async ({
-      participantId,
-      type,
-    }: {
-      participantId: string
-      type: "user" | "agent"
-    }) =>
-      RoomService.addParticipant(roomId, {
-        participant_id: participantId,
-        participant_type: type,
-        role: "member",
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: participantsQueryKey })
-    },
-    onError: (err: ApiError) => {
-      handleError.call(showErrorToast, err)
-    },
-  })
-  const { mutateAsync: removeParticipant, isPending: isRemovingParticipant } = useMutation({
-    mutationFn: async (participantId: string) =>
-      RoomService.removeParticipant(roomId, participantId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: participantsQueryKey })
-    },
-    onError: (err: ApiError) => {
-      handleError.call(showErrorToast, err)
-    },
-  })
+  const { mutateAsync: addParticipant, isPending: isAddingParticipant } =
+    useMutation({
+      mutationFn: async ({
+        participantId,
+        type,
+      }: {
+        participantId: string
+        type: "user" | "agent"
+      }) =>
+        RoomService.addParticipant(roomId, {
+          participant_id: participantId,
+          participant_type: type,
+          role: "member",
+        }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: participantsQueryKey })
+      },
+      onError: (err: ApiError) => {
+        handleError.call(showErrorToast, err)
+      },
+    })
+  const { mutateAsync: removeParticipant, isPending: isRemovingParticipant } =
+    useMutation({
+      mutationFn: async (participantId: string) =>
+        RoomService.removeParticipant(roomId, participantId),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: participantsQueryKey })
+      },
+      onError: (err: ApiError) => {
+        handleError.call(showErrorToast, err)
+      },
+    })
 
-  const {
-    data: userPersonasData,
-    isLoading: isLoadingUserPersonas,
-  } = useQuery({
-    queryKey: ["user-personas", "demo-autostart"],
-    queryFn: () => UserPersonasService.readUserPersonas({ limit: 100 }),
-    enabled: Boolean(roomStoryId),
-  })
+  const { data: userPersonasData, isLoading: isLoadingUserPersonas } = useQuery(
+    {
+      queryKey: ["user-personas", "demo-autostart"],
+      queryFn: () => UserPersonasService.readUserPersonas({ limit: 100 }),
+      enabled: Boolean(roomStoryId),
+    },
+  )
 
   const { mutateAsync: createBasicUserPersona, isPending: isCreatingPersona } =
     useMutation({
@@ -227,7 +247,10 @@ function ResolvedDemoRoute({
         await startRuntime(userPersonaId)
         setRuntimeHasRuntime(true)
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to auto-start runtime."
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to auto-start runtime."
         setAutoStartError(message)
       }
     })()
@@ -330,7 +353,9 @@ function ResolvedDemoRoute({
   const availableAgents = (availableAgentsData?.data ??
     []) as UserAgentConfigPublic[]
   const activeUsers = participants.filter((p) => p.participant_type === "user")
-  const allRoomAgents = participants.filter((p) => p.participant_type === "agent")
+  const allRoomAgents = participants.filter(
+    (p) => p.participant_type === "agent",
+  )
   const roomAgentsAsAgentData = allRoomAgents.map((p) => {
     const agentConfig = availableAgents.find(
       (a) => a.id === p.participant_id || a.name === p.participant_id,
@@ -439,6 +464,7 @@ function ResolvedDemoRoute({
       sendViaWebSocket,
       showInternalMessages,
       streamingMessage,
+      allRoomAgents,
     ],
   )
 
@@ -471,8 +497,70 @@ function ResolvedDemoRoute({
     console.debug("[DemoRoute] mapped layout panels", mappedPanels)
   }, [panels, resolved.composition.panels])
 
+  const interactionReceiverRegistry = useMemo(() => {
+    const registry = new Map<
+      string,
+      {
+        panelId: string
+        panelKind: string
+        accepts: string[]
+      }
+    >()
+    for (const panel of resolved.composition.panels ?? []) {
+      const registration = resolveInteractionReceiverRegistration({
+        id: panel.id,
+        kind: panel.kind,
+        options: panel.options,
+      })
+      if (!registration) continue
+      registry.set(registration.receiverId, {
+        panelId: registration.panelId,
+        panelKind: registration.panelKind,
+        accepts: registration.accepts,
+      })
+    }
+    return registry
+  }, [resolved.composition.panels])
+
+  const handleDispatchInteraction = useCallback(
+    (request: DemoInteractiveDispatchRequest) => {
+      if (request.enforceRegisteredReceiver) {
+        const targetId = request.targetPanelId?.trim() ?? ""
+        if (targetId.length === 0) {
+          showErrorToast(
+            "Interaction dispatch blocked: target_panel_id is required when receiver enforcement is enabled.",
+          )
+          return
+        }
+        const receiver = interactionReceiverRegistry.get(targetId)
+        if (!receiver) {
+          showErrorToast(
+            `Interaction dispatch blocked: receiver "${targetId}" is not registered.`,
+          )
+          return
+        }
+        if (receiver.panelKind !== "chat") {
+          showErrorToast(
+            `Interaction dispatch blocked: receiver "${targetId}" is not a chat panel.`,
+          )
+          return
+        }
+        if (!receiver.accepts.includes(request.interactionKind)) {
+          showErrorToast(
+            `Interaction dispatch blocked: receiver "${targetId}" does not accept ${request.interactionKind}.`,
+          )
+          return
+        }
+      }
+      sendViaWebSocket(request.message)
+    },
+    [interactionReceiverRegistry, sendViaWebSocket],
+  )
+
   const renderedBlocksByRegion = useMemo(() => {
-    const orderedBlocks = getRenderableDemoBlocks(resolved.composition.blocks ?? [])
+    const orderedBlocks = getRenderableDemoBlocks(
+      resolved.composition.blocks ?? [],
+    )
 
     const regions: Record<
       "top" | "primary" | "auxiliary" | "footer",
@@ -512,7 +600,12 @@ function ResolvedDemoRoute({
         id: block.id,
         content: (
           <DemoPresentationFrame frame={blockFrame}>
-            {rendered}
+            <DemoInteractiveBlock
+              block={block}
+              onDispatchInteraction={handleDispatchInteraction}
+            >
+              {rendered}
+            </DemoInteractiveBlock>
           </DemoPresentationFrame>
         ),
         visibilityMode,
@@ -529,6 +622,7 @@ function ResolvedDemoRoute({
     isConnected,
     resolved.composition.blocks,
     roomAgentsAsAgentData,
+    handleDispatchInteraction,
     roomId,
     roomStoryId,
     roomTitle,
@@ -539,13 +633,20 @@ function ResolvedDemoRoute({
   ])
 
   const roomHasStory = Boolean(roomStoryId)
-  const demoExpectsStory = (resolved.composition.panels ?? []).some((panel) =>
-    panel.kind === "storyRuntime" || panel.kind === "storyPlayer" || panel.kind === "storyEditor",
+  const demoExpectsStory = (resolved.composition.panels ?? []).some(
+    (panel) =>
+      panel.kind === "storyRuntime" ||
+      panel.kind === "storyPlayer" ||
+      panel.kind === "storyEditor",
   )
   const runtimeMissing = !runtimeHasRuntime
-  const isAutoStartInFlight = roomHasStory && runtimeMissing && (isStarting || isCreatingPersona)
+  const isAutoStartInFlight =
+    roomHasStory && runtimeMissing && (isStarting || isCreatingPersona)
   const showRuntimeNotStartedState =
-    roomHasStory && runtimeMissing && !isAutoStartInFlight && autoStartError === null
+    roomHasStory &&
+    runtimeMissing &&
+    !isAutoStartInFlight &&
+    autoStartError === null
 
   return (
     <div className="flex flex-col h-full">
@@ -561,12 +662,14 @@ function ResolvedDemoRoute({
       )}
       {showRuntimeNotStartedState && (
         <div className="px-4 py-2 text-sm border-b bg-amber-50 text-amber-900">
-          Story attached, but runtime is not started yet. Use the story panel to start runtime.
+          Story attached, but runtime is not started yet. Use the story panel to
+          start runtime.
         </div>
       )}
       {autoStartError && (
         <div className="px-4 py-2 text-sm border-b bg-red-50 text-red-900">
-          Auto-start failed. You can still start runtime manually in the story panel.
+          Auto-start failed. You can still start runtime manually in the story
+          panel.
         </div>
       )}
       <div className="flex-1 min-h-0">
@@ -581,7 +684,8 @@ function ResolvedDemoRoute({
               slug: resolved.demo_config_id,
               title: roomTitle,
               description:
-                typeof resolved.composition.metadata_json?.description === "string"
+                typeof resolved.composition.metadata_json?.description ===
+                "string"
                   ? resolved.composition.metadata_json.description
                   : null,
               scope: "personal",

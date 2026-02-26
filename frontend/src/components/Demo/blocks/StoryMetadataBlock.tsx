@@ -71,7 +71,9 @@ export function StoryMetadataBlock({
     <div className="p-4 space-y-4">
       <div className="space-y-1">
         <div className="text-sm font-medium">{title ?? "Story Metadata"}</div>
-        <div className="text-xs text-muted-foreground">Live metadata bound to room runtime.</div>
+        <div className="text-xs text-muted-foreground">
+          Live metadata bound to room runtime.
+        </div>
       </div>
       {calloutLabel && (
         <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
@@ -88,8 +90,12 @@ export function StoryMetadataBlock({
 
         <div className="rounded-md border bg-muted/20 p-3">
           <div className="text-xs text-muted-foreground">Story</div>
-          <div className="mt-1 font-medium">{roomStoryId ?? "No story attached"}</div>
-          <div className="mt-1 text-xs text-muted-foreground">Runtime policy: {runtimePolicy}</div>
+          <div className="mt-1 font-medium">
+            {roomStoryId ?? "No story attached"}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Runtime policy: {runtimePolicy}
+          </div>
         </div>
       </div>
 
@@ -103,7 +109,9 @@ export function StoryMetadataBlock({
         ) : (
           <>
             <div className="text-sm">Status: {derived.statusLabel}</div>
-            <div className="text-xs text-muted-foreground">Revision: {derived.revisionLabel}</div>
+            <div className="text-xs text-muted-foreground">
+              Revision: {derived.revisionLabel}
+            </div>
             <div className="text-xs text-muted-foreground">
               Current node: {derived.currentNodeLabel}
             </div>

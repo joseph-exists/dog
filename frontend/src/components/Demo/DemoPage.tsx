@@ -55,9 +55,7 @@ export function DemoPage({ demoConfig, demoSession }: DemoPageProps) {
   )
 
   return (
-    <div
-      className="flex flex-col h-full"
-    >
+    <div className="flex flex-col h-full">
       <DemoHeader
         title={demoConfig.title}
         description={demoConfig.description ?? ""}

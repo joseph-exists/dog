@@ -1,12 +1,41 @@
 import { MessageSquare, Radio } from "lucide-react"
-import type { MessageViewModel } from "@/services/roomService"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+import type { MessageViewModel } from "@/services/roomService"
+
+/**
+ * Density class mappings for ContributionFeed layout.
+ *
+ * Controls spacing/padding based on presentation_json tokens.
+ * Currently preset-based; if per-property overrides are needed,
+ * add tokens like `tokens.feed_container_padding` that
+ * take precedence over these preset values.
+ */
+const FEED_DENSITY_CLASSES = {
+  comfortable: {
+    container: "p-4",
+    sections: "space-y-4",
+    card: "p-3",
+    cardInner: "p-2.5",
+    items: "space-y-2",
+  },
+  compact: {
+    container: "p-2",
+    sections: "space-y-2",
+    card: "p-2",
+    cardInner: "p-1.5",
+    items: "space-y-1",
+  },
+} as const
+
+type FeedDensity = keyof typeof FEED_DENSITY_CLASSES
 
 interface ContributionFeedBlockProps {
   title?: string | null
   config: unknown
   messages: MessageViewModel[]
   streamingMessage: { agent_name: string; content: string } | null
+  feedDensity?: FeedDensity
   rowHighlightCss?: string
   calloutLabel?: string | null
 }
@@ -24,12 +53,17 @@ interface ContributionFeedSelection {
   recentMessages: MessageViewModel[]
 }
 
-export function parseContributionFeedConfig(value: unknown): ContributionFeedConfig {
-  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
+export function parseContributionFeedConfig(
+  value: unknown,
+): ContributionFeedConfig {
+  const raw =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {}
 
   const maxItemsRaw = raw.max_items
   const maxItems =
-    typeof maxItemsRaw === "number" && Number.isFinite(maxItemsRaw) && maxItemsRaw > 0
+    typeof maxItemsRaw === "number" &&
+    Number.isFinite(maxItemsRaw) &&
+    maxItemsRaw > 0
       ? Math.floor(maxItemsRaw)
       : 12
 
@@ -63,7 +97,9 @@ export function selectContributionFeedMessages({
   }
 }
 
-export function formatContributionSenderType(value: MessageViewModel["sender_type"]): string {
+export function formatContributionSenderType(
+  value: MessageViewModel["sender_type"],
+): string {
   if (value === "agent_internal") return "agent/internal"
   return value
 }
@@ -77,17 +113,26 @@ export function ContributionFeedBlock({
   config,
   messages,
   streamingMessage,
+  feedDensity = "comfortable",
   rowHighlightCss,
   calloutLabel,
 }: ContributionFeedBlockProps) {
   const parsedConfig = parseContributionFeedConfig(config)
-  const selection = selectContributionFeedMessages({ config: parsedConfig, messages })
+  const selection = selectContributionFeedMessages({
+    config: parsedConfig,
+    messages,
+  })
+  const density = FEED_DENSITY_CLASSES[feedDensity]
 
   return (
-    <div className="p-4 space-y-4">
+    <div className={cn(density.container, density.sections)}>
       <div className="space-y-1">
-        <div className="text-sm font-medium">{title ?? "Contribution Feed"}</div>
-        <div className="text-xs text-muted-foreground">Recent room contributions from users and agents.</div>
+        <div className="text-sm font-medium">
+          {title ?? "Contribution Feed"}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Recent room contributions from users and agents.
+        </div>
       </div>
       {calloutLabel && (
         <div className="rounded border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
@@ -100,7 +145,9 @@ export function ContributionFeedBlock({
           <MessageSquare className="h-3 w-3" />
           Messages: {selection.filtered.length}
         </Badge>
-        <Badge variant={parsedConfig.include_internal ? "default" : "secondary"}>
+        <Badge
+          variant={parsedConfig.include_internal ? "default" : "secondary"}
+        >
           Internal {parsedConfig.include_internal ? "included" : "hidden"}
         </Badge>
         {streamingMessage && (
@@ -111,19 +158,28 @@ export function ContributionFeedBlock({
         )}
       </div>
 
-      <div className="rounded-md border bg-muted/20 p-3">
+      <div className={cn("rounded-md border bg-muted/20", density.card)}>
         {selection.recentMessages.length === 0 ? (
-          <div className="text-xs text-muted-foreground">No contributions to display.</div>
+          <div className="text-xs text-muted-foreground">
+            No contributions to display.
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className={density.items}>
             {selection.recentMessages.map((message) => (
               <div
                 key={message.message_id}
-                className="rounded-md border bg-background/60 p-2.5"
-                style={rowHighlightCss ? { boxShadow: rowHighlightCss } : undefined}
+                className={cn(
+                  "rounded-md border bg-background/60",
+                  density.cardInner,
+                )}
+                style={
+                  rowHighlightCss ? { boxShadow: rowHighlightCss } : undefined
+                }
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-medium truncate">{message.sender_name}</div>
+                  <div className="text-xs font-medium truncate">
+                    {message.sender_name}
+                  </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {parsedConfig.show_sender_type && (
                       <Badge variant="secondary" className="text-[10px]">

@@ -36,10 +36,10 @@ export function inferProviderKindFromProviderTypeName(
   if (normalized === "google") return "google"
   if (normalized === "xai") return "xai"
   if (
-    normalized.includes("openai")
-    || normalized.includes("azure")
-    || normalized.includes("openrouter")
-    || normalized.includes("ollama")
+    normalized.includes("openai") ||
+    normalized.includes("azure") ||
+    normalized.includes("openrouter") ||
+    normalized.includes("ollama")
   ) {
     return "openai_compatible"
   }
@@ -70,7 +70,9 @@ function parseToolingConfig(
           ? "optional"
           : "none",
     tool_allowlist: Array.isArray(toolConfig.allowed_tools)
-      ? toolConfig.allowed_tools.filter((item): item is string => typeof item === "string")
+      ? toolConfig.allowed_tools.filter(
+          (item): item is string => typeof item === "string",
+        )
       : null,
     tool_choice: asNullableString(toolConfig.tool_choice),
   }
@@ -79,19 +81,21 @@ function parseToolingConfig(
 export function mapUserAgentConfigToPromptDraft(
   agent: UserAgentConfigPublic,
 ): PromptConfigDraft {
-  const modelId = asNullableString(agent.model_id)
-    ?? asNullableString(agent.model)
-    ?? asNullableString(agent.model_name)
+  const modelId =
+    asNullableString(agent.model_id) ??
+    asNullableString(agent.model) ??
+    asNullableString(agent.model_name)
 
   const systemPrompt =
-    asNullableString(agent.custom_system_prompt)
-    ?? asNullableString(agent.system_prompt)
-    ?? ""
+    asNullableString(agent.custom_system_prompt) ??
+    asNullableString(agent.system_prompt) ??
+    ""
   const instructions = asNullableString(agent.instructions)
 
   const paramsSeed = createEmptyPromptDraft().params
   const providerKind =
-    inferProviderKindFromProviderTypeName(agent.provider_type) ?? paramsSeed.provider_kind
+    inferProviderKindFromProviderTypeName(agent.provider_type) ??
+    paramsSeed.provider_kind
 
   return normalizePromptDraft({
     id: agent.id,
@@ -112,9 +116,7 @@ export function mapUserAgentConfigToPromptDraft(
     input: {
       kind: "messages",
       system: systemPrompt,
-      messages: instructions
-        ? [{ role: "user", content: instructions }]
-        : [],
+      messages: instructions ? [{ role: "user", content: instructions }] : [],
     },
     params: {
       ...paramsSeed,
@@ -142,34 +144,46 @@ export function hydratePromptDraftProviderAndModel(
   models: LLMModelPublic[],
 ): PromptDraftHydrationResult {
   const draft = normalizePromptDraft(input)
-  const selectedProvider = providers.find(
-    (provider) => provider.id === draft.provider.user_access_provider_id,
-  ) ?? null
+  const selectedProvider =
+    providers.find(
+      (provider) => provider.id === draft.provider.user_access_provider_id,
+    ) ?? null
 
-  const selectedModel = models.find((model) => {
-    if (draft.model.model_catalog_id && model.id === draft.model.model_catalog_id) {
-      return true
-    }
-    if (draft.model.model_id && model.model_id === draft.model.model_id) {
-      return true
-    }
-    return false
-  }) ?? null
+  const selectedModel =
+    models.find((model) => {
+      if (
+        draft.model.model_catalog_id &&
+        model.id === draft.model.model_catalog_id
+      ) {
+        return true
+      }
+      if (draft.model.model_id && model.model_id === draft.model.model_id) {
+        return true
+      }
+      return false
+    }) ?? null
 
   const hydrated: PromptConfigDraft = {
     ...draft,
     provider: {
       ...draft.provider,
-      provider_type_id: selectedProvider?.alpha_provider_type_id ?? draft.provider.provider_type_id ?? null,
+      provider_type_id:
+        selectedProvider?.alpha_provider_type_id ??
+        draft.provider.provider_type_id ??
+        null,
       base_url: selectedProvider?.base_url ?? draft.provider.base_url ?? null,
-      account_label: selectedProvider?.name ?? draft.provider.account_label ?? null,
+      account_label:
+        selectedProvider?.name ?? draft.provider.account_label ?? null,
     },
     model: {
       ...draft.model,
-      model_catalog_id: selectedModel?.id ?? draft.model.model_catalog_id ?? null,
+      model_catalog_id:
+        selectedModel?.id ?? draft.model.model_catalog_id ?? null,
       model_id: selectedModel?.model_id ?? draft.model.model_id ?? null,
       model_name: selectedModel?.display_name ?? draft.model.model_name ?? null,
-      model_family: inferModelFamily(selectedModel?.model_id ?? draft.model.model_id),
+      model_family: inferModelFamily(
+        selectedModel?.model_id ?? draft.model.model_id,
+      ),
     },
   }
 
@@ -189,9 +203,7 @@ export function buildPromptValidationContext(
   }
 }
 
-function inputToAgentInstructionFields(
-  input: PromptConfigDraft["input"],
-): {
+function inputToAgentInstructionFields(input: PromptConfigDraft["input"]): {
   custom_system_prompt: string | null
   instructions: string | null
 } {
@@ -215,7 +227,8 @@ function promptToolsToAgentToolConfig(
 ): Record<string, unknown> | null {
   if (!tools) return null
   return {
-    enable_tools: tools.tool_mode === "optional" || tools.tool_mode === "required",
+    enable_tools:
+      tools.tool_mode === "optional" || tools.tool_mode === "required",
     require_tools: tools.tool_mode === "required",
     allowed_tools: tools.tool_allowlist ?? [],
     tool_choice: asNullableString(tools.tool_choice),
@@ -237,9 +250,12 @@ export function mapPromptDraftToAgentUpdatePayload(
 ): Type1Update | Type3Update {
   const draft = normalizePromptDraft(draftInput)
   const providerTypeLiteral =
-    resolveAgentProviderTypeLiteral(selectedProvider?.alpha_provider_type_id ?? draft.provider.provider_type_id)
-    ?? resolveAgentProviderTypeLiteral(sourceAgent.provider_type)
-    ?? TYPE1_PROVIDER_TYPE_ID
+    resolveAgentProviderTypeLiteral(
+      selectedProvider?.alpha_provider_type_id ??
+        draft.provider.provider_type_id,
+    ) ??
+    resolveAgentProviderTypeLiteral(sourceAgent.provider_type) ??
+    TYPE1_PROVIDER_TYPE_ID
   const mappedInput = inputToAgentInstructionFields(draft.input)
 
   return {
@@ -257,7 +273,9 @@ export function mapPromptDraftToAgentUpdatePayload(
     tool_config: promptToolsToAgentToolConfig(draft.tools),
     deps_config: sourceAgent.deps_config ?? null,
     agent_metadata: {
-      ...(isObjectRecord(sourceAgent.agent_metadata) ? sourceAgent.agent_metadata : {}),
+      ...(isObjectRecord(sourceAgent.agent_metadata)
+        ? sourceAgent.agent_metadata
+        : {}),
       prompt_builder: {
         metadata: draft.metadata ?? null,
         params: draft.params,
@@ -270,7 +288,8 @@ export function mapPromptDraftToAgentUpdatePayload(
     is_clonable: sourceAgent.is_clonable ?? true,
     is_visible: sourceAgent.is_visible ?? true,
     scope: asNullableString(sourceAgent.scope) ?? "personal",
-    participation_mode: asNullableString(sourceAgent.participation_mode) ?? "manual",
+    participation_mode:
+      asNullableString(sourceAgent.participation_mode) ?? "manual",
     is_coordinator: sourceAgent.is_coordinator ?? false,
     max_tool_iterations: sourceAgent.max_tool_iterations ?? 8,
     capabilities: sourceAgent.capabilities ?? [],

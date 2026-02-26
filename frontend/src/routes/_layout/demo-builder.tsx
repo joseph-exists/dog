@@ -1,35 +1,34 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { ChevronDown, ChevronRight, Loader2, Plus, RefreshCcw } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Plus,
+  RefreshCcw,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AgentsService, DemosService } from "@/client"
+import {
+  AgentsService,
+  DemosService,
+  PersonasService,
+  StoriesService,
+} from "@/client"
 import type {
   DemoChatMode,
   DemoConfigPublic,
-  PersonaPublic,
   DemoPersonaPolicy,
+  PersonaPublic,
   StoryPublic,
 } from "@/client/types.gen"
-import { PersonasService, StoriesService } from "@/client"
-import {
-  BUILDER_COMPOSITION_TEMPLATES,
-  createCompositionTemplate,
-  createBlockTemplate,
-  createEmptyComposition,
-  createPanelTemplate,
-  getTemplateSetupState,
-  getBuilderCompositionTemplateSchema,
-  normalizeComposition,
-  resolveTemplateChecklistStatus,
-  withTemplateSetupState,
-  type BuilderValidationIssue,
-  type BuilderTemplateConfirmations,
-  type BuilderTemplateId,
-  validateCompositionSemantics,
-  type EditableBlock,
-  type EditableComposition,
-  type EditablePanel,
-} from "@/components/Demo/builder/demoBuilderSchema"
+import { DemoBlockEditor } from "@/components/Demo/builder/DemoBlockEditor"
+import { DemoBuilderPreview } from "@/components/Demo/builder/DemoBuilderPreview"
+import { DemoPanelEditor } from "@/components/Demo/builder/DemoPanelEditor"
+import { DemoRawJsonEditor } from "@/components/Demo/builder/DemoRawJsonEditor"
+import { DemoSaveBar } from "@/components/Demo/builder/DemoSaveBar"
+import { DemoTemplateSetupChecklist } from "@/components/Demo/builder/DemoTemplateSetupChecklist"
+import { DemoTopLevelEditor } from "@/components/Demo/builder/DemoTopLevelEditor"
+import { DemoValidationPanel } from "@/components/Demo/builder/DemoValidationPanel"
 import {
   getBlockCapabilityAvailability,
   getBlockCapabilityByType,
@@ -40,17 +39,39 @@ import {
   runBlockCapabilitySemanticValidators,
   runPanelCapabilitySemanticValidators,
 } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
-import { DemoBlockEditor } from "@/components/Demo/builder/DemoBlockEditor"
-import { DemoPanelEditor } from "@/components/Demo/builder/DemoPanelEditor"
-import { DemoRawJsonEditor } from "@/components/Demo/builder/DemoRawJsonEditor"
-import { DemoSaveBar } from "@/components/Demo/builder/DemoSaveBar"
-import { DemoTemplateSetupChecklist } from "@/components/Demo/builder/DemoTemplateSetupChecklist"
-import { DemoTopLevelEditor } from "@/components/Demo/builder/DemoTopLevelEditor"
-import { DemoValidationPanel } from "@/components/Demo/builder/DemoValidationPanel"
-import { DemoBuilderPreview } from "@/components/Demo/builder/DemoBuilderPreview"
+import {
+  BUILDER_COMPOSITION_TEMPLATES,
+  type BuilderTemplateConfirmations,
+  type BuilderTemplateId,
+  type BuilderValidationIssue,
+  createBlockTemplate,
+  createCompositionTemplate,
+  createEmptyComposition,
+  createPanelTemplate,
+  type EditableBlock,
+  type EditableComposition,
+  type EditablePanel,
+  getBuilderCompositionTemplateSchema,
+  getTemplateSetupState,
+  normalizeComposition,
+  resolveTemplateChecklistStatus,
+  validateCompositionSemantics,
+  withTemplateSetupState,
+} from "@/components/Demo/builder/demoBuilderSchema"
 import { ThemeManagerPanel } from "@/components/Themes"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Dialog,
   DialogContent,
@@ -60,22 +81,17 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 
@@ -98,7 +114,9 @@ function parseObjectJsonOrThrow(raw: string): Record<string, unknown> {
   return parsed as Record<string, unknown>
 }
 
-function parseNullableObjectJsonOrThrow(raw: string): Record<string, unknown> | null {
+function parseNullableObjectJsonOrThrow(
+  raw: string,
+): Record<string, unknown> | null {
   const trimmed = raw.trim()
   if (!trimmed) return {}
   if (trimmed === "null") return null
@@ -117,19 +135,57 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function getCompositionStoryId(composition: EditableComposition): string | null {
+function setValueAtPath(
+  source: Record<string, unknown>,
+  path: string,
+  value: unknown,
+): Record<string, unknown> {
+  const segments = path.split(".").filter((segment) => segment.length > 0)
+  if (segments.length === 0) return source
+
+  const next = { ...source }
+  let cursor: Record<string, unknown> = next
+
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    const segment = segments[index]!
+    const existing = cursor[segment]
+    const branch = isObjectRecord(existing) ? { ...existing } : {}
+    cursor[segment] = branch
+    cursor = branch
+  }
+
+  const leaf = segments[segments.length - 1]!
+  if (value === null || typeof value === "undefined") {
+    delete cursor[leaf]
+  } else {
+    cursor[leaf] = value
+  }
+
+  return next
+}
+
+function getCompositionStoryId(
+  composition: EditableComposition,
+): string | null {
   if (!isObjectRecord(composition.metadata_json)) return null
   const raw = composition.metadata_json.story_id
   return typeof raw === "string" && raw.trim().length > 0 ? raw : null
 }
 
-function collectCapabilityValidationIssues(composition: EditableComposition): BuilderValidationIssue[] {
+function collectCapabilityValidationIssues(
+  composition: EditableComposition,
+): BuilderValidationIssue[] {
   const issues: BuilderValidationIssue[] = []
   const panels = composition.panels ?? []
   for (const [index, panel] of panels.entries()) {
-    const capability = getPanelCapabilityByKind(typeof panel.kind === "string" ? panel.kind : null)
+    const capability = getPanelCapabilityByKind(
+      typeof panel.kind === "string" ? panel.kind : null,
+    )
     if (!capability) continue
-    for (const validationIssue of runPanelCapabilitySemanticValidators(capability, composition)) {
+    for (const validationIssue of runPanelCapabilitySemanticValidators(
+      capability,
+      composition,
+    )) {
       issues.push({
         code: "capability_validation",
         severity: validationIssue.severity,
@@ -141,9 +197,14 @@ function collectCapabilityValidationIssues(composition: EditableComposition): Bu
 
   const blocks = composition.blocks ?? []
   for (const [index, block] of blocks.entries()) {
-    const capability = getBlockCapabilityByType(typeof block.type === "string" ? block.type : null)
+    const capability = getBlockCapabilityByType(
+      typeof block.type === "string" ? block.type : null,
+    )
     if (!capability) continue
-    for (const validationIssue of runBlockCapabilitySemanticValidators(capability, composition)) {
+    for (const validationIssue of runBlockCapabilitySemanticValidators(
+      capability,
+      composition,
+    )) {
       issues.push({
         code: "capability_validation",
         severity: validationIssue.severity,
@@ -179,12 +240,16 @@ function DemoBuilderPage() {
     raw_json: false,
     local_preview: true,
   }
-  const [sectionVisibility, setSectionVisibility] = useState<Record<BuilderSectionKey, boolean>>(() => {
+  const [sectionVisibility, setSectionVisibility] = useState<
+    Record<BuilderSectionKey, boolean>
+  >(() => {
     if (typeof window === "undefined") return defaultSectionVisibility
     try {
       const raw = window.localStorage.getItem(SECTION_VISIBILITY_STORAGE_KEY)
       if (!raw) return defaultSectionVisibility
-      const parsed = JSON.parse(raw) as Partial<Record<BuilderSectionKey, boolean>>
+      const parsed = JSON.parse(raw) as Partial<
+        Record<BuilderSectionKey, boolean>
+      >
       return {
         ...defaultSectionVisibility,
         ...parsed,
@@ -208,13 +273,16 @@ function DemoBuilderPage() {
   const [newTitle, setNewTitle] = useState("")
   const [isSlugLoading, setIsSlugLoading] = useState(false)
   const slugFetched = useRef(false)
-  const [selectedTemplateId, setSelectedTemplateId] = useState<BuilderTemplateId>(
-    BUILDER_COMPOSITION_TEMPLATES[0].id,
-  )
+  const [selectedTemplateId, setSelectedTemplateId] =
+    useState<BuilderTemplateId>(BUILDER_COMPOSITION_TEMPLATES[0].id)
 
   // Local editable composition state + raw JSON draft for power-edit mode.
-  const [composition, setComposition] = useState<EditableComposition>(createEmptyComposition())
-  const [rawJsonDraft, setRawJsonDraft] = useState<string>(toPrettyJson(createEmptyComposition()))
+  const [composition, setComposition] = useState<EditableComposition>(
+    createEmptyComposition(),
+  )
+  const [rawJsonDraft, setRawJsonDraft] = useState<string>(
+    toPrettyJson(createEmptyComposition()),
+  )
   const [isDirty, setIsDirty] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [isStoryPickerOpen, setIsStoryPickerOpen] = useState(false)
@@ -222,8 +290,11 @@ function DemoBuilderPage() {
   const [storyPickerSearch, setStoryPickerSearch] = useState("")
   const [personaPickerSearch, setPersonaPickerSearch] = useState("")
   const [isThemeQuickAddEnabled, setIsThemeQuickAddEnabled] = useState(false)
-  const [previewMode, setPreviewMode] = useState<"off" | "global" | "local">("off")
-  const [isRefreshingThemeOptions, setIsRefreshingThemeOptions] = useState(false)
+  const [previewMode, setPreviewMode] = useState<"off" | "global" | "local">(
+    "off",
+  )
+  const [isRefreshingThemeOptions, setIsRefreshingThemeOptions] =
+    useState(false)
 
   // Load all visible demo configs for builder selection.
   const { data: demosPayload, isLoading: isLoadingDemos } = useQuery({
@@ -264,7 +335,9 @@ function DemoBuilderPage() {
   const filteredPersonas = useMemo(() => {
     const needle = personaPickerSearch.trim().toLowerCase()
     if (!needle) return personas
-    return personas.filter((persona) => persona.name.toLowerCase().includes(needle))
+    return personas.filter((persona) =>
+      persona.name.toLowerCase().includes(needle),
+    )
   }, [personas, personaPickerSearch])
 
   const selectedDemo = useMemo(
@@ -278,38 +351,40 @@ function DemoBuilderPage() {
     ],
     [composition],
   )
-  const blockingIssues = semanticIssues.filter((issue) => issue.severity === "error")
+  const blockingIssues = semanticIssues.filter(
+    (issue) => issue.severity === "error",
+  )
   const templateSetupState = useMemo(
     () => getTemplateSetupState(composition),
     [composition],
   )
   const activeTemplateSetupId = templateSetupState?.templateId ?? null
   const isTemplateSetupDismissed = templateSetupState?.dismissed ?? false
-  const templateConfirmations: BuilderTemplateConfirmations = templateSetupState?.confirmations ?? {}
+  const templateConfirmations: BuilderTemplateConfirmations =
+    templateSetupState?.confirmations ?? {}
   const activeTemplateChecklist = useMemo(
-    () => activeTemplateSetupId
-      ? resolveTemplateChecklistStatus({
-        templateId: activeTemplateSetupId,
-        composition,
-        semanticIssues,
-        confirmations: templateConfirmations,
-      })
-      : null,
+    () =>
+      activeTemplateSetupId
+        ? resolveTemplateChecklistStatus({
+            templateId: activeTemplateSetupId,
+            composition,
+            semanticIssues,
+            confirmations: templateConfirmations,
+          })
+        : null,
     [activeTemplateSetupId, composition, semanticIssues, templateConfirmations],
   )
 
   // Load composition when a demo is selected.
-  const {
-    data: selectedComposition,
-    isLoading: isLoadingComposition,
-  } = useQuery({
-    queryKey: ["demo-builder", "composition", selectedDemoConfigId],
-    queryFn: () =>
-      DemosService.getDemoComposition({
-        demoConfigId: selectedDemoConfigId,
-      }),
-    enabled: Boolean(selectedDemoConfigId),
-  })
+  const { data: selectedComposition, isLoading: isLoadingComposition } =
+    useQuery({
+      queryKey: ["demo-builder", "composition", selectedDemoConfigId],
+      queryFn: () =>
+        DemosService.getDemoComposition({
+          demoConfigId: selectedDemoConfigId,
+        }),
+      enabled: Boolean(selectedDemoConfigId),
+    })
 
   // Keep local editor state synchronized to latest server payload.
   useEffect(() => {
@@ -324,8 +399,8 @@ function DemoBuilderPage() {
   // --------------------------------------------------------------------------
   // Slug Auto-Generation
   // --------------------------------------------------------------------------
-  const fetchSlug = useCallback(async () => {
-    if (isSlugLoading) return
+  const generateSlugValue = useCallback(async (): Promise<string> => {
+    if (isSlugLoading) return ""
     setIsSlugLoading(true)
     try {
       const generated = await AgentsService.generateAgentSlug()
@@ -333,15 +408,19 @@ function DemoBuilderPage() {
         typeof generated === "string"
           ? generated
           : (generated as { slug?: string })?.slug
-      if (slug) {
-        setNewSlug(slug)
-      }
+      return typeof slug === "string" ? slug.trim() : ""
     } catch (error) {
       console.error("Failed to generate slug:", error)
+      return ""
     } finally {
       setIsSlugLoading(false)
     }
   }, [isSlugLoading])
+
+  const fetchSlug = useCallback(async () => {
+    const slug = await generateSlugValue()
+    if (slug) setNewSlug(slug)
+  }, [generateSlugValue])
 
   useEffect(() => {
     if (slugFetched.current || newSlug) return
@@ -371,20 +450,29 @@ function DemoBuilderPage() {
       setRawJsonDraft(toPrettyJson(normalized))
       setFieldErrors({})
       setIsDirty(false)
-      queryClient.invalidateQueries({ queryKey: ["demo-builder", "composition", selectedDemoConfigId] })
+      queryClient.invalidateQueries({
+        queryKey: ["demo-builder", "composition", selectedDemoConfigId],
+      })
       showSuccessToast("Composition saved.")
     },
     onError: (error: unknown) => {
       const detail = extractApiErrorDetail(error)
-      const message = error instanceof Error ? error.message : "Failed to save composition."
+      const message =
+        error instanceof Error ? error.message : "Failed to save composition."
       showErrorToast(detail ?? message)
     },
   })
 
+  interface CreateDemoMutationVars {
+    slug?: string
+    title?: string
+    suppressFeedback?: boolean
+  }
+
   const createDemoMutation = useMutation({
-    mutationFn: async () => {
-      const slug = newSlug.trim()
-      const title = newTitle.trim()
+    mutationFn: async (variables?: CreateDemoMutationVars) => {
+      const slug = (variables?.slug ?? newSlug).trim()
+      const title = (variables?.title ?? newTitle).trim()
       if (!slug || !title) {
         throw new Error("Slug and title are required.")
       }
@@ -401,16 +489,20 @@ function DemoBuilderPage() {
         },
       })
     },
-    onSuccess: (created) => {
-      showSuccessToast("Demo created.")
+    onSuccess: (created, variables) => {
+      if (!variables?.suppressFeedback) {
+        showSuccessToast("Demo created.")
+      }
       setNewSlug("")
       setNewTitle("")
       queryClient.invalidateQueries({ queryKey: ["demo-builder", "configs"] })
       setSelectedDemoConfigId(created.id)
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, variables) => {
+      if (variables?.suppressFeedback) return
       const detail = extractApiErrorDetail(error)
-      const message = error instanceof Error ? error.message : "Failed to create demo."
+      const message =
+        error instanceof Error ? error.message : "Failed to create demo."
       showErrorToast(detail ?? message)
     },
   })
@@ -435,7 +527,8 @@ function DemoBuilderPage() {
       const panels = [...(current.panels ?? [])]
       const existing = (panels[index] ?? {}) as EditablePanel
       const patchKind = typeof patch.kind === "string" ? patch.kind : null
-      const effectiveKind = patchKind ?? (typeof existing.kind === "string" ? existing.kind : null)
+      const effectiveKind =
+        patchKind ?? (typeof existing.kind === "string" ? existing.kind : null)
       const capability = getPanelCapabilityByKind(effectiveKind)
       const normalizedPatch = capability
         ? normalizePanelCapabilityPatch(capability, patch, current)
@@ -450,7 +543,8 @@ function DemoBuilderPage() {
       const blocks = [...(current.blocks ?? [])]
       const existing = (blocks[index] ?? {}) as EditableBlock
       const patchType = typeof patch.type === "string" ? patch.type : null
-      const effectiveType = patchType ?? (typeof existing.type === "string" ? existing.type : null)
+      const effectiveType =
+        patchType ?? (typeof existing.type === "string" ? existing.type : null)
       const capability = getBlockCapabilityByType(effectiveType)
       const normalizedPatch = capability
         ? normalizeBlockCapabilityPatch(capability, patch, current)
@@ -491,7 +585,8 @@ function DemoBuilderPage() {
     } catch (error) {
       setFieldErrors((current) => ({
         ...current,
-        [fieldKey]: error instanceof Error ? error.message : "Invalid JSON object.",
+        [fieldKey]:
+          error instanceof Error ? error.message : "Invalid JSON object.",
       }))
     }
   }
@@ -531,14 +626,70 @@ function DemoBuilderPage() {
     showSuccessToast(`Applied ${selectedTemplateId} template.`)
   }
 
-  function updateTemplateSetupState(
-    updater: (
-      current: {
-        templateId: BuilderTemplateId
-        dismissed: boolean
-        confirmations: BuilderTemplateConfirmations
+  async function createFromTemplate() {
+    const existingSlug = newSlug.trim()
+    const slug = existingSlug || (await generateSlugValue())
+    if (!slug) {
+      showErrorToast("Failed to generate slug for template creation.")
+      return
+    }
+
+    if (!existingSlug) {
+      setNewSlug(slug)
+    }
+
+    const template = withTemplateSetupState(
+      createCompositionTemplate(selectedTemplateId),
+      {
+        templateId: selectedTemplateId,
+        dismissed: false,
+        confirmations: {},
       },
-    ) => {
+    )
+
+    try {
+      const created = await createDemoMutation.mutateAsync({
+        slug,
+        title: slug,
+        suppressFeedback: true,
+      })
+
+      await DemosService.putDemoComposition({
+        demoConfigId: created.id,
+        requestBody: template,
+      })
+
+      const normalized = normalizeComposition(template)
+      setComposition(normalized)
+      setRawJsonDraft(toPrettyJson(normalized))
+      setFieldErrors({})
+      setIsDirty(false)
+      setSelectedDemoConfigId(created.id)
+
+      queryClient.invalidateQueries({ queryKey: ["demo-builder", "configs"] })
+      queryClient.invalidateQueries({
+        queryKey: ["demo-builder", "composition", created.id],
+      })
+
+      showSuccessToast(
+        `Created "${slug}" from ${selectedTemplateId} template and saved composition.`,
+      )
+    } catch (error) {
+      const detail = extractApiErrorDetail(error)
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to create demo from template."
+      showErrorToast(detail ?? message)
+    }
+  }
+
+  function updateTemplateSetupState(
+    updater: (current: {
+      templateId: BuilderTemplateId
+      dismissed: boolean
+      confirmations: BuilderTemplateConfirmations
+    }) => {
       templateId: BuilderTemplateId
       dismissed: boolean
       confirmations: BuilderTemplateConfirmations
@@ -578,12 +729,18 @@ function DemoBuilderPage() {
       ? { ...input.presentation_json }
       : {}
 
-    const effectivePageThemeId = typeof nextPageThemeId === "undefined"
-      ? (typeof input.page_theme_id === "string" ? input.page_theme_id : null)
-      : nextPageThemeId
-    const effectiveCardsThemeId = typeof nextCardsThemeId === "undefined"
-      ? (typeof input.cards_theme_id === "string" ? input.cards_theme_id : null)
-      : nextCardsThemeId
+    const effectivePageThemeId =
+      typeof nextPageThemeId === "undefined"
+        ? typeof input.page_theme_id === "string"
+          ? input.page_theme_id
+          : null
+        : nextPageThemeId
+    const effectiveCardsThemeId =
+      typeof nextCardsThemeId === "undefined"
+        ? typeof input.cards_theme_id === "string"
+          ? input.cards_theme_id
+          : null
+        : nextCardsThemeId
 
     if (!effectivePageThemeId && !effectiveCardsThemeId) {
       delete presentationJson.theme_refs
@@ -597,7 +754,10 @@ function DemoBuilderPage() {
     return { ...input, presentation_json: presentationJson }
   }
 
-  function applyThemeQuickSelection(slot: "page" | "cards", themeId: string | null) {
+  function applyThemeQuickSelection(
+    slot: "page" | "cards",
+    themeId: string | null,
+  ) {
     updateComposition((current) => {
       const next = {
         ...current,
@@ -643,8 +803,16 @@ function DemoBuilderPage() {
 
   const availableThemeOptions = useMemo(
     () => [
-      ...availablePageThemes.map((theme) => ({ id: theme.id, name: theme.name, category: "page" as const })),
-      ...availableCardThemes.map((theme) => ({ id: theme.id, name: theme.name, category: "card" as const })),
+      ...availablePageThemes.map((theme) => ({
+        id: theme.id,
+        name: theme.name,
+        category: "page" as const,
+      })),
+      ...availableCardThemes.map((theme) => ({
+        id: theme.id,
+        name: theme.name,
+        category: "card" as const,
+      })),
     ],
     [availableCardThemes, availablePageThemes],
   )
@@ -675,27 +843,37 @@ function DemoBuilderPage() {
     }
 
     for (const [index, panel] of (composition.panels ?? []).entries()) {
-      const capability = getPanelCapabilityByKind(typeof panel.kind === "string" ? panel.kind : null)
+      const capability = getPanelCapabilityByKind(
+        typeof panel.kind === "string" ? panel.kind : null,
+      )
       if (!capability) continue
-      const availability = getPanelCapabilityAvailability(capability, composition)
+      const availability = getPanelCapabilityAvailability(
+        capability,
+        composition,
+      )
       if (availability.available) continue
       items.push({
         id: `panel-req-${index}`,
         severity: "warning",
-        message: `Panel \"${panel.title ?? panel.kind ?? `#${index + 1}`}\" requires ${availability.unmetRequirements.join(" + ")}.`,
+        message: `Panel "${panel.title ?? panel.kind ?? `#${index + 1}`}" requires ${availability.unmetRequirements.join(" + ")}.`,
         targetId: `builder-panel-${index}`,
       })
     }
 
     for (const [index, block] of (composition.blocks ?? []).entries()) {
-      const capability = getBlockCapabilityByType(typeof block.type === "string" ? block.type : null)
+      const capability = getBlockCapabilityByType(
+        typeof block.type === "string" ? block.type : null,
+      )
       if (!capability) continue
-      const availability = getBlockCapabilityAvailability(capability, composition)
+      const availability = getBlockCapabilityAvailability(
+        capability,
+        composition,
+      )
       if (availability.available) continue
       items.push({
         id: `block-req-${index}`,
         severity: "warning",
-        message: `Block \"${block.title ?? block.type ?? `#${index + 1}`}\" requires ${availability.unmetRequirements.join(" + ")}.`,
+        message: `Block "${block.title ?? block.type ?? `#${index + 1}`}" requires ${availability.unmetRequirements.join(" + ")}.`,
         targetId: `builder-block-${index}`,
       })
     }
@@ -718,7 +896,11 @@ function DemoBuilderPage() {
               <div key={diagnostic.id} className="text-xs">
                 <a
                   href={`#${diagnostic.targetId}`}
-                  className={diagnostic.severity === "error" ? "text-red-700 underline" : "text-amber-700 underline"}
+                  className={
+                    diagnostic.severity === "error"
+                      ? "text-red-700 underline"
+                      : "text-amber-700 underline"
+                  }
                 >
                   [{diagnostic.severity}] {diagnostic.message}
                 </a>
@@ -733,8 +915,12 @@ function DemoBuilderPage() {
           demoTitle={selectedDemo?.title ?? "Demo Builder Preview"}
           availablePageThemes={availablePageThemes}
           availableCardThemes={availableCardThemes}
-          onPageThemeChange={(themeId) => applyThemeQuickSelection("page", themeId)}
-          onCardsThemeChange={(themeId) => applyThemeQuickSelection("cards", themeId)}
+          onPageThemeChange={(themeId) =>
+            applyThemeQuickSelection("page", themeId)
+          }
+          onCardsThemeChange={(themeId) =>
+            applyThemeQuickSelection("cards", themeId)
+          }
         />
       </div>
     </div>
@@ -746,43 +932,11 @@ function DemoBuilderPage() {
         <CardHeader>
           <CardTitle>Select Or Create Demo</CardTitle>
           <CardDescription>
-            Load an existing demo config or create a new one before editing composition.
+            Load an existing demo config or create a new one before editing
+            composition.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Demo Config</label>
-            <Select
-              value={selectedDemoConfigId || "_none"}
-              onValueChange={(value) => setSelectedDemoConfigId(value === "_none" ? "" : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select demo config..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">None</SelectItem>
-                {isLoadingDemos && (
-                  <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                )}
-                {demoConfigs.map((demo) => (
-                  <SelectItem key={demo.id} value={demo.id}>
-                    {demo.slug} · {demo.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedDemo?.slug && (
-              <a
-                href={`/demo/${selectedDemo.slug}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-primary underline"
-              >
-                Open Preview: /demo/{selectedDemo.slug}
-              </a>
-            )}
-          </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium">Create New Demo</label>
             <div className="grid gap-2">
@@ -807,7 +961,11 @@ function DemoBuilderPage() {
                   </Button>
                 </div>
                 <Input
-                  placeholder={isSlugLoading ? "Generating..." : "slug (e.g. qa-builder-demo)"}
+                  placeholder={
+                    isSlugLoading
+                      ? "Generating..."
+                      : "slug (e.g. qa-builder-demo)"
+                  }
                   value={newSlug}
                   onChange={(event) => setNewSlug(event.target.value)}
                   className="font-mono"
@@ -820,38 +978,102 @@ function DemoBuilderPage() {
               />
               <Button
                 type="button"
-                onClick={() => createDemoMutation.mutate()}
+                onClick={() => createDemoMutation.mutate({})}
                 disabled={createDemoMutation.isPending || isSlugLoading}
               >
-                {createDemoMutation.isPending
-                  ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  : <Plus className="h-4 w-4 mr-2" />}
+                {createDemoMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
                 Create Demo
               </Button>
             </div>
             <div className="pt-3 border-t mt-3 space-y-2">
-              <label className="text-sm font-medium">Composition Template</label>
-              <Select
-                value={selectedTemplateId}
-                onValueChange={(value) => setSelectedTemplateId(value as BuilderTemplateId)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select template..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUILDER_COMPOSITION_TEMPLATES.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium">
+                Composition Template
+              </label>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Demo Config
+                  </label>
+                  <Select
+                    value={selectedDemoConfigId || "_none"}
+                    onValueChange={(value) =>
+                      setSelectedDemoConfigId(value === "_none" ? "" : value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select demo config..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">None</SelectItem>
+                      {isLoadingDemos && (
+                        <SelectItem value="_loading" disabled>
+                          Loading...
+                        </SelectItem>
+                      )}
+                      {demoConfigs.map((demo) => (
+                        <SelectItem key={demo.id} value={demo.id}>
+                          {demo.slug} · {demo.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Template
+                  </label>
+                  <Select
+                    value={selectedTemplateId}
+                    onValueChange={(value) =>
+                      setSelectedTemplateId(value as BuilderTemplateId)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BUILDER_COMPOSITION_TEMPLATES.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void createFromTemplate()}
+                  disabled={createDemoMutation.isPending || isSlugLoading}
+                >
+                  {createDemoMutation.isPending || isSlugLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Create From Template
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={applyTemplateToEditor}
+                >
+                  Apply Template To Editor
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
-                {BUILDER_COMPOSITION_TEMPLATES.find((template) => template.id === selectedTemplateId)?.description}
+                {
+                  BUILDER_COMPOSITION_TEMPLATES.find(
+                    (template) => template.id === selectedTemplateId,
+                  )?.description
+                }
               </p>
-              <Button type="button" variant="secondary" onClick={applyTemplateToEditor}>
-                Apply Template To Editor
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -860,30 +1082,50 @@ function DemoBuilderPage() {
       {activeTemplateSetupId && activeTemplateChecklist && (
         <DemoTemplateSetupChecklist
           templateId={activeTemplateSetupId}
-          templateLabel={getBuilderCompositionTemplateSchema(activeTemplateSetupId).label}
+          templateLabel={
+            getBuilderCompositionTemplateSchema(activeTemplateSetupId).label
+          }
           checklistStatus={activeTemplateChecklist}
           isDismissed={isTemplateSetupDismissed}
           composition={composition}
           confirmations={templateConfirmations}
-          onDismiss={() => updateTemplateSetupState((current) => ({ ...current, dismissed: true }))}
-          onResume={() => updateTemplateSetupState((current) => ({ ...current, dismissed: false }))}
+          onDismiss={() =>
+            updateTemplateSetupState((current) => ({
+              ...current,
+              dismissed: true,
+            }))
+          }
+          onResume={() =>
+            updateTemplateSetupState((current) => ({
+              ...current,
+              dismissed: false,
+            }))
+          }
           onStoryIdChange={setStoryId}
-          onRuntimePolicyChange={(value) => updateComposition((current) => ({
-            ...current,
-            runtime_policy: value,
-          }))}
-          onPersonaPolicyChange={(value) => updateComposition((current) => ({
-            ...current,
-            persona_policy: value,
-          }))}
-          onChatModeChange={(value) => updateComposition((current) => ({
-            ...current,
-            chat_mode: value,
-          }))}
-          onFixedUserPersonaIdChange={(value) => updateComposition((current) => ({
-            ...current,
-            fixed_user_persona_id: value,
-          }))}
+          onRuntimePolicyChange={(value) =>
+            updateComposition((current) => ({
+              ...current,
+              runtime_policy: value,
+            }))
+          }
+          onPersonaPolicyChange={(value) =>
+            updateComposition((current) => ({
+              ...current,
+              persona_policy: value,
+            }))
+          }
+          onChatModeChange={(value) =>
+            updateComposition((current) => ({
+              ...current,
+              chat_mode: value,
+            }))
+          }
+          onFixedUserPersonaIdChange={(value) =>
+            updateComposition((current) => ({
+              ...current,
+              fixed_user_persona_id: value,
+            }))
+          }
           onAssumptionConfirmed={(assumption, checked) => {
             updateTemplateSetupState((current) => ({
               ...current,
@@ -914,10 +1156,14 @@ function DemoBuilderPage() {
             />
             <div className="max-h-72 overflow-auto space-y-2">
               {isLoadingStories && (
-                <p className="text-sm text-muted-foreground">Loading stories...</p>
+                <p className="text-sm text-muted-foreground">
+                  Loading stories...
+                </p>
               )}
               {!isLoadingStories && filteredStories.length === 0 && (
-                <p className="text-sm text-muted-foreground">No stories found.</p>
+                <p className="text-sm text-muted-foreground">
+                  No stories found.
+                </p>
               )}
               {filteredStories.map((story) => (
                 <button
@@ -930,7 +1176,9 @@ function DemoBuilderPage() {
                   }}
                 >
                   <div className="text-sm font-medium">{story.title}</div>
-                  <div className="text-xs text-muted-foreground font-mono">{story.id}</div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {story.id}
+                  </div>
                 </button>
               ))}
             </div>
@@ -943,7 +1191,8 @@ function DemoBuilderPage() {
           <DialogHeader>
             <DialogTitle>Select Persona</DialogTitle>
             <DialogDescription>
-              Pick a persona to set `persona_policy=fixed_user_persona` and populate `fixed_user_persona_id`.
+              Pick a persona to set `persona_policy=fixed_user_persona` and
+              populate `fixed_user_persona_id`.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -954,10 +1203,14 @@ function DemoBuilderPage() {
             />
             <div className="max-h-72 overflow-auto space-y-2">
               {isLoadingPersonas && (
-                <p className="text-sm text-muted-foreground">Loading personas...</p>
+                <p className="text-sm text-muted-foreground">
+                  Loading personas...
+                </p>
               )}
               {!isLoadingPersonas && filteredPersonas.length === 0 && (
-                <p className="text-sm text-muted-foreground">No personas found.</p>
+                <p className="text-sm text-muted-foreground">
+                  No personas found.
+                </p>
               )}
               {filteredPersonas.map((persona) => (
                 <button
@@ -970,7 +1223,9 @@ function DemoBuilderPage() {
                   }}
                 >
                   <div className="text-sm font-medium">{persona.name}</div>
-                  <div className="text-xs text-muted-foreground font-mono">{persona.id}</div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {persona.id}
+                  </div>
                 </button>
               ))}
             </div>
@@ -980,60 +1235,127 @@ function DemoBuilderPage() {
 
       <Collapsible
         open={sectionVisibility.top_level}
-        onOpenChange={(open) => setSectionVisibility((current) => ({ ...current, top_level: open }))}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({ ...current, top_level: open }))
+        }
       >
         <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
           <div>
             <p className="text-sm font-medium">Composition Editor</p>
-            <p className="text-xs text-muted-foreground">Top-level demo composition fields and theme quick-add controls.</p>
+            <p className="text-xs text-muted-foreground">
+              Top-level demo composition fields and theme quick-add controls.
+            </p>
           </div>
           <CollapsibleTrigger asChild>
             <Button type="button" variant="outline" size="sm">
-              {sectionVisibility.top_level ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+              {sectionVisibility.top_level ? (
+                <ChevronDown className="h-4 w-4 mr-1" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-1" />
+              )}
               {sectionVisibility.top_level ? "Collapse" : "Expand"}
             </Button>
           </CollapsibleTrigger>
         </div>
-        <CollapsibleContent forceMount className="data-[state=closed]:hidden mt-3">
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden mt-3"
+        >
+          <div className="rounded border p-3 mb-3 space-y-2 max-w-md">
+            <div className="text-sm font-medium">Preview Mode</div>
+            <p className="text-xs text-muted-foreground">
+              Choose one preview instance at a time. Global mode uses
+              split-pane; local mode renders inline.
+            </p>
+            <Select
+              value={previewMode}
+              onValueChange={(value) =>
+                setPreviewMode(value as "off" | "global" | "local")
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select preview mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">Off</SelectItem>
+                <SelectItem value="global">Global Split Pane</SelectItem>
+                <SelectItem value="local">Local Inline</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <DemoTopLevelEditor
             selectedDemoConfigId={selectedDemoConfigId}
             isLoadingComposition={isLoadingComposition}
             composition={composition}
             fieldErrors={fieldErrors}
-            onLayoutModeChange={(value) => updateComposition((current) => ({
-              ...current,
-              layout_mode: value,
-            }))}
-            onRuntimePolicyChange={(value) => updateComposition((current) => ({
-              ...current,
-              runtime_policy: value,
-            }))}
-            onPersonaPolicyChange={(value: DemoPersonaPolicy) => updateComposition((current) => ({
-              ...current,
-              persona_policy: value,
-            }))}
-            onChatModeChange={(value: DemoChatMode) => updateComposition((current) => ({
-              ...current,
-              chat_mode: value,
-            }))}
-            onFixedUserPersonaIdChange={(value) => updateComposition((current) => ({
-              ...current,
-              fixed_user_persona_id: value,
-            }))}
-            onPageThemeIdChange={(value) => updateComposition((current) => ({
-              ...current,
-              page_theme_id: value,
-            }))}
-            onCardsThemeIdChange={(value) => updateComposition((current) => ({
-              ...current,
-              cards_theme_id: value,
-            }))}
-            onMetadataJsonBlur={(raw) => commitJsonField("metadata_json", raw, (value) => {
-              updateComposition((current) => ({ ...current, metadata_json: value ?? {} }))
-            })}
-            onPresentationJsonBlur={(raw) => commitJsonField("presentation_json", raw, (value) => {
-              updateComposition((current) => ({ ...current, presentation_json: value ?? {} }))
-            })}
+            onLayoutModeChange={(value) =>
+              updateComposition((current) => ({
+                ...current,
+                layout_mode: value,
+              }))
+            }
+            onRuntimePolicyChange={(value) =>
+              updateComposition((current) => ({
+                ...current,
+                runtime_policy: value,
+              }))
+            }
+            onPersonaPolicyChange={(value: DemoPersonaPolicy) =>
+              updateComposition((current) => ({
+                ...current,
+                persona_policy: value,
+              }))
+            }
+            onChatModeChange={(value: DemoChatMode) =>
+              updateComposition((current) => ({
+                ...current,
+                chat_mode: value,
+              }))
+            }
+            onFixedUserPersonaIdChange={(value) =>
+              updateComposition((current) => ({
+                ...current,
+                fixed_user_persona_id: value,
+              }))
+            }
+            onPageThemeIdChange={(value) =>
+              updateComposition((current) => ({
+                ...current,
+                page_theme_id: value,
+              }))
+            }
+            onCardsThemeIdChange={(value) =>
+              updateComposition((current) => ({
+                ...current,
+                cards_theme_id: value,
+              }))
+            }
+            onCapabilityFieldChange={(key, value) =>
+              updateComposition(
+                (current) =>
+                  setValueAtPath(
+                    current as Record<string, unknown>,
+                    key,
+                    value,
+                  ) as EditableComposition,
+              )
+            }
+            onMetadataJsonBlur={(raw) =>
+              commitJsonField("metadata_json", raw, (value) => {
+                updateComposition((current) => ({
+                  ...current,
+                  metadata_json: value ?? {},
+                }))
+              })
+            }
+            onPresentationJsonBlur={(raw) =>
+              commitJsonField("presentation_json", raw, (value) => {
+                updateComposition((current) => ({
+                  ...current,
+                  presentation_json: value ?? {},
+                }))
+              })
+            }
             storyId={getCompositionStoryId(composition)}
             onStoryIdChange={setStoryId}
             onOpenStoryPicker={() => setIsStoryPickerOpen(true)}
@@ -1042,20 +1364,31 @@ function DemoBuilderPage() {
             availablePageThemes={availablePageThemes}
             availableCardThemes={availableCardThemes}
             isLoadingThemeOptions={isLoadingPageThemes || isLoadingCardThemes}
-            onPageThemeQuickSelect={(value) => applyThemeQuickSelection("page", value)}
-            onCardsThemeQuickSelect={(value) => applyThemeQuickSelection("cards", value)}
+            onPageThemeQuickSelect={(value) =>
+              applyThemeQuickSelection("page", value)
+            }
+            onCardsThemeQuickSelect={(value) =>
+              applyThemeQuickSelection("cards", value)
+            }
           />
         </CollapsibleContent>
       </Collapsible>
 
       <Collapsible
         open={sectionVisibility.theme_manager}
-        onOpenChange={(open) => setSectionVisibility((current) => ({ ...current, theme_manager: open }))}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({
+            ...current,
+            theme_manager: open,
+          }))
+        }
       >
         <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
           <div>
             <p className="text-sm font-medium">Theme Manager</p>
-            <p className="text-xs text-muted-foreground">Create and edit themes without leaving Demo Builder.</p>
+            <p className="text-xs text-muted-foreground">
+              Create and edit themes without leaving Demo Builder.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -1065,24 +1398,34 @@ function DemoBuilderPage() {
               onClick={refreshThemeOptions}
               disabled={isRefreshingThemeOptions}
             >
-              {isRefreshingThemeOptions
-                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                : <RefreshCcw className="h-4 w-4 mr-2" />}
+              {isRefreshingThemeOptions ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCcw className="h-4 w-4 mr-2" />
+              )}
               Refresh
             </Button>
             <CollapsibleTrigger asChild>
               <Button type="button" variant="outline" size="sm">
-                {sectionVisibility.theme_manager ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+                {sectionVisibility.theme_manager ? (
+                  <ChevronDown className="h-4 w-4 mr-1" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 mr-1" />
+                )}
                 {sectionVisibility.theme_manager ? "Collapse" : "Expand"}
               </Button>
             </CollapsibleTrigger>
           </div>
         </div>
-        <CollapsibleContent forceMount className="data-[state=closed]:hidden mt-3">
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden mt-3"
+        >
           <Card>
             <CardHeader>
               <CardDescription>
-                Create/edit themes in-context, then apply them to composition, panels, and blocks.
+                Create/edit themes in-context, then apply them to composition,
+                panels, and blocks.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1095,21 +1438,35 @@ function DemoBuilderPage() {
       {previewMode === "local" && (
         <Collapsible
           open={sectionVisibility.local_preview}
-          onOpenChange={(open) => setSectionVisibility((current) => ({ ...current, local_preview: open }))}
+          onOpenChange={(open) =>
+            setSectionVisibility((current) => ({
+              ...current,
+              local_preview: open,
+            }))
+          }
         >
           <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
             <div>
               <p className="text-sm font-medium">Live Preview (Local)</p>
-              <p className="text-xs text-muted-foreground">Inline preview of current unsaved composition.</p>
+              <p className="text-xs text-muted-foreground">
+                Inline preview of current unsaved composition.
+              </p>
             </div>
             <CollapsibleTrigger asChild>
               <Button type="button" variant="outline" size="sm">
-                {sectionVisibility.local_preview ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+                {sectionVisibility.local_preview ? (
+                  <ChevronDown className="h-4 w-4 mr-1" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 mr-1" />
+                )}
                 {sectionVisibility.local_preview ? "Collapse" : "Expand"}
               </Button>
             </CollapsibleTrigger>
           </div>
-          <CollapsibleContent forceMount className="data-[state=closed]:hidden mt-3">
+          <CollapsibleContent
+            forceMount
+            className="data-[state=closed]:hidden mt-3"
+          >
             <Card>
               <CardContent className="h-[560px] min-h-0 pt-6">
                 {previewPane}
@@ -1121,55 +1478,81 @@ function DemoBuilderPage() {
 
       <Collapsible
         open={sectionVisibility.validation}
-        onOpenChange={(open) => setSectionVisibility((current) => ({ ...current, validation: open }))}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({ ...current, validation: open }))
+        }
       >
         <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
           <div>
             <p className="text-sm font-medium">Validation</p>
-            <p className="text-xs text-muted-foreground">Semantic and capability-level validation issues.</p>
+            <p className="text-xs text-muted-foreground">
+              Semantic and capability-level validation issues.
+            </p>
           </div>
           <CollapsibleTrigger asChild>
             <Button type="button" variant="outline" size="sm">
-              {sectionVisibility.validation ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+              {sectionVisibility.validation ? (
+                <ChevronDown className="h-4 w-4 mr-1" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-1" />
+              )}
               {sectionVisibility.validation ? "Collapse" : "Expand"}
             </Button>
           </CollapsibleTrigger>
         </div>
-        <CollapsibleContent forceMount className="data-[state=closed]:hidden mt-3">
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden mt-3"
+        >
           <DemoValidationPanel issues={semanticIssues} />
         </CollapsibleContent>
       </Collapsible>
 
       <Collapsible
         open={sectionVisibility.panels}
-        onOpenChange={(open) => setSectionVisibility((current) => ({ ...current, panels: open }))}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({ ...current, panels: open }))
+        }
       >
         <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
           <div>
             <p className="text-sm font-medium">Panel Editor</p>
-            <p className="text-xs text-muted-foreground">Configure panel kinds, layout, and panel presentation.</p>
+            <p className="text-xs text-muted-foreground">
+              Configure panel kinds, layout, and panel presentation.
+            </p>
           </div>
           <CollapsibleTrigger asChild>
             <Button type="button" variant="outline" size="sm">
-              {sectionVisibility.panels ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+              {sectionVisibility.panels ? (
+                <ChevronDown className="h-4 w-4 mr-1" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-1" />
+              )}
               {sectionVisibility.panels ? "Collapse" : "Expand"}
             </Button>
           </CollapsibleTrigger>
         </div>
-        <CollapsibleContent forceMount className="data-[state=closed]:hidden mt-3">
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden mt-3"
+        >
           <DemoPanelEditor
             composition={composition}
             panels={composition.panels ?? []}
             fieldErrors={fieldErrors}
-            onAddPanel={(kind) => updateComposition((current) => ({
-              ...current,
-              panels: [...(current.panels ?? []), createPanelTemplate(kind)],
-            }))}
+            onAddPanel={(kind) =>
+              updateComposition((current) => ({
+                ...current,
+                panels: [...(current.panels ?? []), createPanelTemplate(kind)],
+              }))
+            }
             onRemovePanel={removePanel}
             onUpdatePanel={updatePanel}
-            onCommitPanelJsonField={(index, fieldKey, raw) => commitJsonField(`panel:${index}:${fieldKey}`, raw, (value) => {
-              updatePanel(index, { [fieldKey]: value ?? {} })
-            })}
+            onCommitPanelJsonField={(index, fieldKey, raw) =>
+              commitJsonField(`panel:${index}:${fieldKey}`, raw, (value) => {
+                updatePanel(index, { [fieldKey]: value ?? {} })
+              })
+            }
             availableThemeOptions={availableThemeOptions}
           />
         </CollapsibleContent>
@@ -1177,38 +1560,53 @@ function DemoBuilderPage() {
 
       <Collapsible
         open={sectionVisibility.blocks}
-        onOpenChange={(open) => setSectionVisibility((current) => ({ ...current, blocks: open }))}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({ ...current, blocks: open }))
+        }
       >
         <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
           <div>
             <p className="text-sm font-medium">Block Editor</p>
-            <p className="text-xs text-muted-foreground">Configure block regions, visibility, and block presentation.</p>
+            <p className="text-xs text-muted-foreground">
+              Configure block regions, visibility, and block presentation.
+            </p>
           </div>
           <CollapsibleTrigger asChild>
             <Button type="button" variant="outline" size="sm">
-              {sectionVisibility.blocks ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+              {sectionVisibility.blocks ? (
+                <ChevronDown className="h-4 w-4 mr-1" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-1" />
+              )}
               {sectionVisibility.blocks ? "Collapse" : "Expand"}
             </Button>
           </CollapsibleTrigger>
         </div>
-        <CollapsibleContent forceMount className="data-[state=closed]:hidden mt-3">
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden mt-3"
+        >
           <DemoBlockEditor
             composition={composition}
             blocks={composition.blocks ?? []}
             fieldErrors={fieldErrors}
-            onAddBlock={(type) => updateComposition((current) => ({
-              ...current,
-              blocks: [...(current.blocks ?? []), createBlockTemplate(type)],
-            }))}
+            onAddBlock={(type) =>
+              updateComposition((current) => ({
+                ...current,
+                blocks: [...(current.blocks ?? []), createBlockTemplate(type)],
+              }))
+            }
             onRemoveBlock={removeBlock}
             onUpdateBlock={updateBlock}
-            onCommitBlockJsonField={(index, fieldKey, raw) => commitJsonField(`block:${index}:${fieldKey}`, raw, (value) => {
-              if (fieldKey === "content_json") {
-                updateBlock(index, { content_json: value ?? null })
-                return
-              }
-              updateBlock(index, { [fieldKey]: value ?? {} })
-            })}
+            onCommitBlockJsonField={(index, fieldKey, raw) =>
+              commitJsonField(`block:${index}:${fieldKey}`, raw, (value) => {
+                if (fieldKey === "content_json") {
+                  updateBlock(index, { content_json: value ?? null })
+                  return
+                }
+                updateBlock(index, { [fieldKey]: value ?? {} })
+              })
+            }
             availableThemeOptions={availableThemeOptions}
           />
         </CollapsibleContent>
@@ -1216,35 +1614,50 @@ function DemoBuilderPage() {
 
       <Collapsible
         open={sectionVisibility.raw_json}
-        onOpenChange={(open) => setSectionVisibility((current) => ({ ...current, raw_json: open }))}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({ ...current, raw_json: open }))
+        }
       >
         <div className="flex items-center justify-between rounded border px-3 py-2 bg-muted/20">
           <div>
             <p className="text-sm font-medium">Raw JSON Editor</p>
-            <p className="text-xs text-muted-foreground">Advanced direct editing fallback for the full composition payload.</p>
+            <p className="text-xs text-muted-foreground">
+              Advanced direct editing fallback for the full composition payload.
+            </p>
           </div>
           <CollapsibleTrigger asChild>
             <Button type="button" variant="outline" size="sm">
-              {sectionVisibility.raw_json ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+              {sectionVisibility.raw_json ? (
+                <ChevronDown className="h-4 w-4 mr-1" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-1" />
+              )}
               {sectionVisibility.raw_json ? "Collapse" : "Expand"}
             </Button>
           </CollapsibleTrigger>
         </div>
-        <CollapsibleContent forceMount className="data-[state=closed]:hidden mt-3">
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden mt-3"
+        >
           <DemoRawJsonEditor
             rawJsonDraft={rawJsonDraft}
             rawJsonError={fieldErrors.raw_json}
             onRawJsonDraftChange={setRawJsonDraft}
-            onResetFromCurrent={() => setRawJsonDraft(toPrettyJson(composition))}
+            onResetFromCurrent={() =>
+              setRawJsonDraft(toPrettyJson(composition))
+            }
             onApplyRawJson={applyRawJsonDraft}
           />
         </CollapsibleContent>
       </Collapsible>
 
       <DemoSaveBar
-        selectedDemoLabel={selectedDemo
-          ? `${selectedDemo.slug} (${selectedDemo.id.slice(0, 8)}...)`
-          : "No demo selected"}
+        selectedDemoLabel={
+          selectedDemo
+            ? `${selectedDemo.slug} (${selectedDemo.id.slice(0, 8)}...)`
+            : "No demo selected"
+        }
         isDirty={isDirty}
         canSave={Boolean(selectedDemoConfigId) && blockingIssues.length === 0}
         isSaving={saveCompositionMutation.isPending}
@@ -1256,35 +1669,24 @@ function DemoBuilderPage() {
   return (
     <div className="flex flex-col gap-4 pb-6">
       <div>
-        <h1 className="text-2xl font-semibold">Demo Builder (MVP)</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold">Demo Builder (MVP)</h1>
+          {selectedDemo?.slug && (
+            <a
+              href={`/demo/${selectedDemo.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-primary underline"
+            >
+              Open Preview: /demo/{selectedDemo.slug}
+            </a>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
-          Build and save demo compositions using generated OpenAPI contract types.
+          Build and save demo compositions using generated OpenAPI contract
+          types.
         </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Preview Mode</CardTitle>
-          <CardDescription>
-            Choose one preview instance at a time. Global mode uses split-pane; local mode renders inline.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="max-w-sm">
-          <Select
-            value={previewMode}
-            onValueChange={(value) => setPreviewMode(value as "off" | "global" | "local")}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select preview mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="off">Off</SelectItem>
-              <SelectItem value="global">Global Split Pane</SelectItem>
-              <SelectItem value="local">Local Inline</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
 
       {previewMode === "global" ? (
         <ResizablePanelGroup direction="horizontal" className="min-h-[80vh]">
@@ -1309,9 +1711,7 @@ function DemoBuilderPage() {
           </ResizablePanel>
         </ResizablePanelGroup>
       ) : (
-        <div className="space-y-4">
-          {editorSections}
-        </div>
+        <div className="space-y-4">{editorSections}</div>
       )}
     </div>
   )

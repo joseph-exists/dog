@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react"
 import { StoryPanel } from "@/components/Page/panels/StoryPanel"
 import { useRoomRuntime } from "@/hooks/useRoomRuntime"
 
-// TODO: we need to finish revising the DemoPages to use the 'rest' of the functionality in StoryPanel that is currently overloaded.  
+// TODO: we need to finish revising the DemoPages to use the 'rest' of the functionality in StoryPanel that is currently overloaded.
 
 interface DemoStoryPanelProps {
   roomId: string

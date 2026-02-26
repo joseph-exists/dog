@@ -3,7 +3,12 @@ import type { ReactNode } from "react"
 import { DemoBlockEditor } from "@/components/Demo/builder/DemoBlockEditor"
 import { DemoPanelEditor } from "@/components/Demo/builder/DemoPanelEditor"
 import { DemoTopLevelEditor } from "@/components/Demo/builder/DemoTopLevelEditor"
-import { createBlockTemplate, createEmptyComposition, createPanelTemplate } from "@/components/Demo/builder/demoBuilderSchema"
+import { BUILDER_COMPOSITION_CAPABILITIES } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import {
+  createBlockTemplate,
+  createEmptyComposition,
+  createPanelTemplate,
+} from "@/components/Demo/builder/demoBuilderSchema"
 
 interface ElementLike {
   type: unknown
@@ -12,20 +17,25 @@ interface ElementLike {
     placeholder?: string
     value?: unknown
     onChange?: (event: { target: { value: string } }) => void
+    onValueChange?: (value: string) => void
   }
 }
 
 function isElementLike(node: unknown): node is ElementLike {
   return Boolean(
-    node
-      && typeof node === "object"
-      && "type" in (node as Record<string, unknown>)
-      && "props" in (node as Record<string, unknown>),
+    node &&
+      typeof node === "object" &&
+      "type" in (node as Record<string, unknown>) &&
+      "props" in (node as Record<string, unknown>),
   )
 }
 
-function collectElements(node: ReactNode, out: ElementLike[] = []): ElementLike[] {
-  if (node === null || node === undefined || typeof node === "boolean") return out
+function collectElements(
+  node: ReactNode,
+  out: ElementLike[] = [],
+): ElementLike[] {
+  if (node === null || node === undefined || typeof node === "boolean")
+    return out
   if (Array.isArray(node)) {
     for (const child of node) collectElements(child as ReactNode, out)
     return out
@@ -41,7 +51,23 @@ function findInputElement(
   predicate: (element: ElementLike) => boolean,
 ): ElementLike {
   const elements = collectElements(root)
-  const found = elements.find((element) => typeof element.props.onChange === "function" && predicate(element))
+  const found = elements.find(
+    (element) =>
+      typeof element.props.onChange === "function" && predicate(element),
+  )
+  expect(found).toBeTruthy()
+  return found as ElementLike
+}
+
+function findSelectElement(
+  root: ReactNode,
+  predicate: (element: ElementLike) => boolean,
+): ElementLike {
+  const elements = collectElements(root)
+  const found = elements.find(
+    (element) =>
+      typeof element.props.onValueChange === "function" && predicate(element),
+  )
   expect(found).toBeTruthy()
   return found as ElementLike
 }
@@ -67,6 +93,7 @@ test.describe("Demo builder editor theme field round-trip", () => {
       onFixedUserPersonaIdChange: () => {},
       onPageThemeIdChange: (value) => pageThemeValues.push(value),
       onCardsThemeIdChange: (value) => cardsThemeValues.push(value),
+      onCapabilityFieldChange: () => {},
       onMetadataJsonBlur: () => {},
       onPresentationJsonBlur: () => {},
       storyId: null,
@@ -99,6 +126,80 @@ test.describe("Demo builder editor theme field round-trip", () => {
     expect(cardsThemeValues).toEqual(["cards-next", null])
   })
 
+  test("top-level nested capability select routes changes through capability handler", async () => {
+    const injectedCapability = {
+      key: "presentation_json.typography.heading_font",
+      label: "Heading Font (Unit Test)",
+      category: "theme" as const,
+      control: "enum",
+      enumValues: ["unit-font-a", "unit-font-b"] as const,
+      placeholder: "Select heading font family",
+      required: false,
+    }
+    const existingIndex = BUILDER_COMPOSITION_CAPABILITIES.findIndex(
+      (capability) => capability.key === injectedCapability.key,
+    )
+    if (existingIndex === -1) {
+      BUILDER_COMPOSITION_CAPABILITIES.push(injectedCapability)
+    }
+
+    try {
+      const composition = createEmptyComposition()
+      composition.presentation_json = {
+        typography: {
+          heading_font: "unit-font-a",
+        },
+      }
+
+      const capabilityChanges: Array<{ key: string; value: string | null }> = []
+
+      const element = DemoTopLevelEditor({
+        selectedDemoConfigId: "demo-1",
+        isLoadingComposition: false,
+        composition,
+        fieldErrors: {},
+        onLayoutModeChange: () => {},
+        onRuntimePolicyChange: () => {},
+        onPersonaPolicyChange: () => {},
+        onChatModeChange: () => {},
+        onFixedUserPersonaIdChange: () => {},
+        onPageThemeIdChange: () => {},
+        onCardsThemeIdChange: () => {},
+        onCapabilityFieldChange: (key, value) =>
+          capabilityChanges.push({ key, value }),
+        onMetadataJsonBlur: () => {},
+        onPresentationJsonBlur: () => {},
+        storyId: null,
+        onStoryIdChange: () => {},
+        onOpenStoryPicker: () => {},
+        isThemeQuickAddEnabled: false,
+        onThemeQuickAddEnabledChange: () => {},
+        availablePageThemes: [],
+        availableCardThemes: [],
+        isLoadingThemeOptions: false,
+        onPageThemeQuickSelect: () => {},
+        onCardsThemeQuickSelect: () => {},
+      })
+
+      const nestedCapabilitySelect = findSelectElement(
+        element,
+        (candidate) => candidate.props.value === "unit-font-a",
+      )
+      nestedCapabilitySelect.props.onValueChange?.("unit-font-b")
+
+      expect(capabilityChanges).toEqual([
+        {
+          key: "presentation_json.typography.heading_font",
+          value: "unit-font-b",
+        },
+      ])
+    } finally {
+      if (existingIndex === -1) {
+        BUILDER_COMPOSITION_CAPABILITIES.pop()
+      }
+    }
+  })
+
   test("panel theme input updates patch payload with string and null values", async () => {
     const panel = createPanelTemplate("chat")
     panel.theme_id = "panel-old"
@@ -117,7 +218,9 @@ test.describe("Demo builder editor theme field round-trip", () => {
 
     const panelThemeInput = findInputElement(
       element,
-      (candidate) => candidate.props.placeholder === "Theme ID" && candidate.props.value === "panel-old",
+      (candidate) =>
+        candidate.props.placeholder === "Theme ID" &&
+        candidate.props.value === "panel-old",
     )
     panelThemeInput.props.onChange?.({ target: { value: "panel-next" } })
     panelThemeInput.props.onChange?.({ target: { value: "  " } })
@@ -146,7 +249,9 @@ test.describe("Demo builder editor theme field round-trip", () => {
 
     const blockThemeInput = findInputElement(
       element,
-      (candidate) => candidate.props.placeholder === "Theme ID" && candidate.props.value === "block-old",
+      (candidate) =>
+        candidate.props.placeholder === "Theme ID" &&
+        candidate.props.value === "block-old",
     )
     blockThemeInput.props.onChange?.({ target: { value: "block-next" } })
     blockThemeInput.props.onChange?.({ target: { value: "" } })

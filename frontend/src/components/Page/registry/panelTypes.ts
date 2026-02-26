@@ -42,7 +42,6 @@ export type PanelKind =
   | "graph"
   | "gallery"
   | "strange"
-  
 
 /**
  * Where the panel appears in the layout.
@@ -272,7 +271,7 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
     contexts: ["room", "story", "page", "universal", "demo"],
     permission: "none",
     cardinality: "either",
-  }
+  },
 ]
 
 // ============================================================================

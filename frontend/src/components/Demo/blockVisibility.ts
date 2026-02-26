@@ -1,4 +1,7 @@
-export type DemoResolvedVisibility = "visible" | "hidden_unmounted" | "hidden_mounted"
+export type DemoResolvedVisibility =
+  | "visible"
+  | "hidden_unmounted"
+  | "hidden_mounted"
 export type DemoShellVisibility = "visible" | "hidden_mounted"
 export type DemoBlockRegion = "top" | "primary" | "auxiliary" | "footer"
 
@@ -40,12 +43,14 @@ export function getRenderableDemoBlocks<TBlock extends DemoBlockLike>(
       region: resolveDemoBlockRegion(block.region),
       resolvedVisibility: normalizeBlockVisibility(block.visibility),
     }))
-    .filter(({ resolvedVisibility }) => resolvedVisibility !== "hidden_unmounted")
+    .filter(
+      ({ resolvedVisibility }) => resolvedVisibility !== "hidden_unmounted",
+    )
     .sort((a, b) => (a.block.order ?? 1) - (b.block.order ?? 1))
     .map(({ block, region, resolvedVisibility }) => ({
       block,
       region,
-      visibilityMode: resolvedVisibility === "hidden_mounted" ? "hidden_mounted" : "visible",
+      visibilityMode:
+        resolvedVisibility === "hidden_mounted" ? "hidden_mounted" : "visible",
     }))
 }
-

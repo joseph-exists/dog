@@ -94,7 +94,8 @@ test.describe("demoPresentationResolver", () => {
     expect(frame.easing).toBe("ease-in-out")
     expect(frame.style).toEqual(
       expect.objectContaining({
-        backgroundImage: "repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 8px, transparent 8px 16px)",
+        backgroundImage:
+          "repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 8px, transparent 8px 16px)",
       }),
     )
   })

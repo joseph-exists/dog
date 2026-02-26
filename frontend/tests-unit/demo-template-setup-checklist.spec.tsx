@@ -14,8 +14,12 @@ interface ElementLike {
   }
 }
 
-function collectElements(node: ReactNode, out: ElementLike[] = []): ElementLike[] {
-  if (node === null || node === undefined || typeof node === "boolean") return out
+function collectElements(
+  node: ReactNode,
+  out: ElementLike[] = [],
+): ElementLike[] {
+  if (node === null || node === undefined || typeof node === "boolean")
+    return out
   if (Array.isArray(node)) {
     for (const child of node) collectElements(child as ReactNode, out)
     return out
@@ -29,7 +33,8 @@ function collectElements(node: ReactNode, out: ElementLike[] = []): ElementLike[
 
 function hasText(node: ReactNode, text: string): boolean {
   if (typeof node === "string") return node.includes(text)
-  if (Array.isArray(node)) return node.some((child) => hasText(child as ReactNode, text))
+  if (Array.isArray(node))
+    return node.some((child) => hasText(child as ReactNode, text))
   if (!node || typeof node !== "object") return false
   return hasText((node as ElementLike).props?.children as ReactNode, text)
 }
@@ -112,7 +117,9 @@ test.describe("DemoTemplateSetupChecklist", () => {
   })
 
   test("shows persona quick action for persona-related assumptions", async () => {
-    const composition = createCompositionTemplate("composition_b_runtime_coupled")
+    const composition = createCompositionTemplate(
+      "composition_b_runtime_coupled",
+    )
     composition.persona_policy = "fixed_user_persona"
     composition.fixed_user_persona_id = null
     const checklistStatus = resolveTemplateChecklistStatus({

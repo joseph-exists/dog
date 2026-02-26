@@ -15,15 +15,19 @@ interface ElementLike {
 
 function isElementLike(node: unknown): node is ElementLike {
   return Boolean(
-    node
-      && typeof node === "object"
-      && "type" in (node as Record<string, unknown>)
-      && "props" in (node as Record<string, unknown>),
+    node &&
+      typeof node === "object" &&
+      "type" in (node as Record<string, unknown>) &&
+      "props" in (node as Record<string, unknown>),
   )
 }
 
-function collectElements(node: ReactNode, out: ElementLike[] = []): ElementLike[] {
-  if (node === null || node === undefined || typeof node === "boolean") return out
+function collectElements(
+  node: ReactNode,
+  out: ElementLike[] = [],
+): ElementLike[] {
+  if (node === null || node === undefined || typeof node === "boolean")
+    return out
   if (Array.isArray(node)) {
     for (const child of node) collectElements(child as ReactNode, out)
     return out
@@ -36,9 +40,11 @@ function collectElements(node: ReactNode, out: ElementLike[] = []): ElementLike[
 
 function findInputElement(root: ReactNode, placeholder: string): ElementLike {
   const elements = collectElements(root)
-  const found = elements.find((element) =>
-    typeof element.props.onChange === "function"
-    && element.props.placeholder === placeholder)
+  const found = elements.find(
+    (element) =>
+      typeof element.props.onChange === "function" &&
+      element.props.placeholder === placeholder,
+  )
   expect(found).toBeTruthy()
   return found as ElementLike
 }
@@ -60,7 +66,9 @@ test.describe("PromptTopLevelEditor", () => {
     input.props.onChange?.({ target: { value: "  provider-next  " } })
 
     expect(nextDrafts).toHaveLength(1)
-    expect(nextDrafts[0]?.provider.user_access_provider_id).toBe("provider-next")
+    expect(nextDrafts[0]?.provider.user_access_provider_id).toBe(
+      "provider-next",
+    )
     expect(fieldErrors).toEqual([])
   })
 
@@ -81,8 +89,10 @@ test.describe("PromptTopLevelEditor", () => {
       },
     })
 
-    const selectElement = collectElements(element).find((candidate) =>
-      typeof (candidate.props as any).onValueChange === "function")
+    const selectElement = collectElements(element).find(
+      (candidate) =>
+        typeof (candidate.props as any).onValueChange === "function",
+    )
     expect(selectElement).toBeTruthy()
     ;(selectElement!.props as any).onValueChange("provider-b")
 

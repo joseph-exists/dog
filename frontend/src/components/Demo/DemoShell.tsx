@@ -2,8 +2,8 @@ import React from "react"
 import { cn } from "@/lib/utils"
 import type { DemoConfigViewModel } from "@/services/demoService"
 import {
-  themeTokensToStyle,
   type ThemeViewModel,
+  themeTokensToStyle,
 } from "@/services/themeService"
 import { DemoHeader } from "./DemoHeader"
 import { DemoLayout, type PanelConfig } from "./DemoLayout"
@@ -58,7 +58,7 @@ export function getDemoBlockContainerClassName(
   )
 }
 
-export function DemoShell ({
+export function DemoShell({
   demoConfig,
   panels,
   topBlocks = [],
@@ -88,7 +88,7 @@ export function DemoShell ({
     // Downstream components (Header, PanelContainer) render with inherited variables
     <div
       style={pageThemeStyle}
-      className={cn("flex flex-col h-full min-h-0", className)}
+      className={cn("demo-shell flex flex-col h-full min-h-0", className)}
     >
       <DemoHeader
         title={demoConfig.title}
@@ -130,7 +130,9 @@ export function DemoShell ({
               {primaryBlocks.map((block) => (
                 <div
                   key={`primary-block-${block.id}`}
-                  className={getDemoBlockContainerClassName(block.visibilityMode)}
+                  className={getDemoBlockContainerClassName(
+                    block.visibilityMode,
+                  )}
                   style={block.style}
                 >
                   {block.content}
@@ -141,7 +143,9 @@ export function DemoShell ({
               {auxiliaryBlocks.map((block) => (
                 <div
                   key={`aux-block-${block.id}`}
-                  className={getDemoBlockContainerClassName(block.visibilityMode)}
+                  className={getDemoBlockContainerClassName(
+                    block.visibilityMode,
+                  )}
                   style={block.style}
                 >
                   {block.content}

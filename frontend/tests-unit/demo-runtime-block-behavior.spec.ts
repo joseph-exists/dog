@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test"
-import type { DemoRoomAgentData } from "@/components/Demo/rendererRegistry"
 import {
-  parseContributionFeedConfig,
   formatContributionSenderType,
+  parseContributionFeedConfig,
   selectContributionFeedMessages,
 } from "@/components/Demo/blocks/ContributionFeedBlock"
 import {
@@ -13,10 +12,13 @@ import {
   deriveStoryMetadataRuntimeState,
   shouldShowRawStoryMetadataConfig,
 } from "@/components/Demo/blocks/StoryMetadataBlock"
-import type { MessageViewModel } from "@/services/roomService"
+import type { DemoRoomAgentData } from "@/components/Demo/rendererRegistry"
 import type { RoomRuntimeViewModel } from "@/services/roomRuntimeService"
+import type { MessageViewModel } from "@/services/roomService"
 
-function makeRuntime(overrides?: Partial<RoomRuntimeViewModel>): RoomRuntimeViewModel {
+function makeRuntime(
+  overrides?: Partial<RoomRuntimeViewModel>,
+): RoomRuntimeViewModel {
   return {
     roomId: "room-1",
     storyId: "story-1",
@@ -137,8 +139,12 @@ test.describe("StoryMetadataBlock derived runtime behavior", () => {
       runtimeHasRuntime: false,
     })
     expect(derived.isLoading).toBe(true)
-    expect(shouldShowRawStoryMetadataConfig({ show_config_json: true })).toBe(true)
-    expect(shouldShowRawStoryMetadataConfig({ show_config_json: false })).toBe(false)
+    expect(shouldShowRawStoryMetadataConfig({ show_config_json: true })).toBe(
+      true,
+    )
+    expect(shouldShowRawStoryMetadataConfig({ show_config_json: false })).toBe(
+      false,
+    )
   })
 })
 
@@ -174,7 +180,10 @@ test.describe("OrchestratorStateBlock config and summary behavior", () => {
     ]
     const summary = summarizeOrchestratorState({ config, roomAgents: agents })
 
-    expect(summary.filteredAgents.map((agent) => agent.id)).toEqual(["a1", "a2"])
+    expect(summary.filteredAgents.map((agent) => agent.id)).toEqual([
+      "a1",
+      "a2",
+    ])
     expect(summary.activeAgents.map((agent) => agent.id)).toEqual(["a1", "a2"])
     expect(summary.orchestrators.map((agent) => agent.id)).toEqual(["a2"])
   })
@@ -187,7 +196,10 @@ test.describe("OrchestratorStateBlock config and summary behavior", () => {
     ]
     const summary = summarizeOrchestratorState({ config, roomAgents: agents })
 
-    expect(summary.filteredAgents.map((agent) => agent.id)).toEqual(["a1", "a2"])
+    expect(summary.filteredAgents.map((agent) => agent.id)).toEqual([
+      "a1",
+      "a2",
+    ])
     expect(summary.activeAgents.map((agent) => agent.id)).toEqual(["a1"])
     expect(summary.orchestrators.map((agent) => agent.id)).toEqual(["a2"])
   })
@@ -216,8 +228,14 @@ test.describe("ContributionFeedBlock config and message selection behavior", () 
     ]
     const selection = selectContributionFeedMessages({ config, messages })
 
-    expect(selection.filtered.map((msg) => msg.message_id)).toEqual(["u1", "a1"])
-    expect(selection.recentMessages.map((msg) => msg.message_id)).toEqual(["u1", "a1"])
+    expect(selection.filtered.map((msg) => msg.message_id)).toEqual([
+      "u1",
+      "a1",
+    ])
+    expect(selection.recentMessages.map((msg) => msg.message_id)).toEqual([
+      "u1",
+      "a1",
+    ])
   })
 
   test("include_internal=true keeps internal messages", async () => {
@@ -227,25 +245,44 @@ test.describe("ContributionFeedBlock config and message selection behavior", () 
       makeMessage({ message_id: "i1", sender_type: "agent_internal" }),
     ]
     const selection = selectContributionFeedMessages({ config, messages })
-    expect(selection.filtered.map((msg) => msg.message_id)).toEqual(["u1", "i1"])
+    expect(selection.filtered.map((msg) => msg.message_id)).toEqual([
+      "u1",
+      "i1",
+    ])
   })
 
   test("sorts by recency descending and enforces max_items", async () => {
-    const config = parseContributionFeedConfig({ max_items: 2, include_internal: true })
+    const config = parseContributionFeedConfig({
+      max_items: 2,
+      include_internal: true,
+    })
     const messages = [
-      makeMessage({ message_id: "m1", created_at: new Date("2026-02-22T09:00:00.000Z") }),
-      makeMessage({ message_id: "m2", created_at: new Date("2026-02-22T11:00:00.000Z") }),
-      makeMessage({ message_id: "m3", created_at: new Date("2026-02-22T10:00:00.000Z") }),
+      makeMessage({
+        message_id: "m1",
+        created_at: new Date("2026-02-22T09:00:00.000Z"),
+      }),
+      makeMessage({
+        message_id: "m2",
+        created_at: new Date("2026-02-22T11:00:00.000Z"),
+      }),
+      makeMessage({
+        message_id: "m3",
+        created_at: new Date("2026-02-22T10:00:00.000Z"),
+      }),
     ]
     const selection = selectContributionFeedMessages({ config, messages })
 
-    expect(selection.recentMessages.map((msg) => msg.message_id)).toEqual(["m2", "m3"])
+    expect(selection.recentMessages.map((msg) => msg.message_id)).toEqual([
+      "m2",
+      "m3",
+    ])
   })
 
   test("sender type formatting normalizes agent_internal label", async () => {
-    expect(formatContributionSenderType("agent_internal")).toBe("agent/internal")
+    expect(formatContributionSenderType("agent_internal")).toBe(
+      "agent/internal",
+    )
     expect(formatContributionSenderType("agent")).toBe("agent")
     expect(formatContributionSenderType("user")).toBe("user")
   })
 })
-

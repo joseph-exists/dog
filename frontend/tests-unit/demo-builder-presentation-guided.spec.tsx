@@ -3,8 +3,15 @@ import type { ReactNode } from "react"
 import { DemoBlockEditor } from "@/components/Demo/builder/DemoBlockEditor"
 import { DemoPanelEditor } from "@/components/Demo/builder/DemoPanelEditor"
 import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
-import { getBlockCapabilityByType, getPanelCapabilityByKind } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
-import { createBlockTemplate, createEmptyComposition, createPanelTemplate } from "@/components/Demo/builder/demoBuilderSchema"
+import {
+  getBlockCapabilityByType,
+  getPanelCapabilityByKind,
+} from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import {
+  createBlockTemplate,
+  createEmptyComposition,
+  createPanelTemplate,
+} from "@/components/Demo/builder/demoBuilderSchema"
 
 interface ElementLike {
   type: unknown
@@ -19,15 +26,19 @@ interface ElementLike {
 
 function isElementLike(node: unknown): node is ElementLike {
   return Boolean(
-    node
-      && typeof node === "object"
-      && "type" in (node as Record<string, unknown>)
-      && "props" in (node as Record<string, unknown>),
+    node &&
+      typeof node === "object" &&
+      "type" in (node as Record<string, unknown>) &&
+      "props" in (node as Record<string, unknown>),
   )
 }
 
-function collectElements(node: ReactNode, out: ElementLike[] = []): ElementLike[] {
-  if (node === null || node === undefined || typeof node === "boolean") return out
+function collectElements(
+  node: ReactNode,
+  out: ElementLike[] = [],
+): ElementLike[] {
+  if (node === null || node === undefined || typeof node === "boolean")
+    return out
   if (Array.isArray(node)) {
     for (const child of node) collectElements(child as ReactNode, out)
     return out
@@ -43,7 +54,8 @@ function collectText(node: ReactNode, out: string[] = []): string[] {
     out.push(node)
     return out
   }
-  if (node === null || node === undefined || typeof node === "boolean") return out
+  if (node === null || node === undefined || typeof node === "boolean")
+    return out
   if (Array.isArray(node)) {
     for (const child of node) collectText(child as ReactNode, out)
     return out
@@ -58,7 +70,10 @@ function findInputElement(
   predicate: (element: ElementLike) => boolean,
 ): ElementLike {
   const elements = collectElements(root)
-  const found = elements.find((element) => typeof element.props.onChange === "function" && predicate(element))
+  const found = elements.find(
+    (element) =>
+      typeof element.props.onChange === "function" && predicate(element),
+  )
   expect(found).toBeTruthy()
   return found as ElementLike
 }
@@ -68,7 +83,10 @@ function findTextareaElement(
   predicate: (element: ElementLike) => boolean,
 ): ElementLike {
   const elements = collectElements(root)
-  const found = elements.find((element) => typeof element.props.onBlur === "function" && predicate(element))
+  const found = elements.find(
+    (element) =>
+      typeof element.props.onBlur === "function" && predicate(element),
+  )
   expect(found).toBeTruthy()
   return found as ElementLike
 }
@@ -96,7 +114,9 @@ test.describe("Demo builder guided presentation controls", () => {
       guidedElement,
       (candidate) => candidate.props.placeholder === "Card Pattern CSS",
     )
-    guidedInput.props.onChange?.({ target: { value: "repeating-linear-gradient(...)" } })
+    guidedInput.props.onChange?.({
+      target: { value: "repeating-linear-gradient(...)" },
+    })
 
     expect(guidedPatches[0]).toEqual({
       tokens: { existing: "story" },
@@ -110,22 +130,26 @@ test.describe("Demo builder guided presentation controls", () => {
       onAddBlock: () => {},
       onRemoveBlock: () => {},
       onUpdateBlock: () => {},
-      onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      onCommitBlockJsonField: (index, fieldKey, raw) =>
+        commits.push({ index, fieldKey, raw }),
       availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
 
-    const fallbackTextarea = findTextareaElement(
-      editorElement,
-      (candidate) => String(candidate.props.defaultValue ?? "").includes("\"existing\": \"story\""),
+    const fallbackTextarea = findTextareaElement(editorElement, (candidate) =>
+      String(candidate.props.defaultValue ?? "").includes(
+        '"existing": "story"',
+      ),
     )
-    fallbackTextarea.props.onBlur?.({ target: { value: "{\"tokens\":{\"existing\":\"story-updated\"}}" } })
+    fallbackTextarea.props.onBlur?.({
+      target: { value: '{"tokens":{"existing":"story-updated"}}' },
+    })
 
     expect(commits).toContainEqual({
       index: 0,
       fieldKey: "presentation_json",
-      raw: "{\"tokens\":{\"existing\":\"story-updated\"}}",
+      raw: '{"tokens":{"existing":"story-updated"}}',
     })
   })
 
@@ -146,7 +170,11 @@ test.describe("Demo builder guided presentation controls", () => {
       guidedElement,
       (candidate) => candidate.props.placeholder === "linear-gradient(...)",
     )
-    guidedInput.props.onChange?.({ target: { value: "linear-gradient(120deg, rgba(1,2,3,0.5), rgba(4,5,6,0.2))" } })
+    guidedInput.props.onChange?.({
+      target: {
+        value: "linear-gradient(120deg, rgba(1,2,3,0.5), rgba(4,5,6,0.2))",
+      },
+    })
 
     expect(guidedPatches[0]).toEqual({
       tokens: { existing: "orchestrator" },
@@ -164,22 +192,26 @@ test.describe("Demo builder guided presentation controls", () => {
       onAddBlock: () => {},
       onRemoveBlock: () => {},
       onUpdateBlock: () => {},
-      onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      onCommitBlockJsonField: (index, fieldKey, raw) =>
+        commits.push({ index, fieldKey, raw }),
       availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
 
-    const fallbackTextarea = findTextareaElement(
-      editorElement,
-      (candidate) => String(candidate.props.defaultValue ?? "").includes("\"existing\": \"orchestrator\""),
+    const fallbackTextarea = findTextareaElement(editorElement, (candidate) =>
+      String(candidate.props.defaultValue ?? "").includes(
+        '"existing": "orchestrator"',
+      ),
     )
-    fallbackTextarea.props.onBlur?.({ target: { value: "{\"tokens\":{\"existing\":\"orchestrator-updated\"}}" } })
+    fallbackTextarea.props.onBlur?.({
+      target: { value: '{"tokens":{"existing":"orchestrator-updated"}}' },
+    })
 
     expect(commits).toContainEqual({
       index: 0,
       fieldKey: "presentation_json",
-      raw: "{\"tokens\":{\"existing\":\"orchestrator-updated\"}}",
+      raw: '{"tokens":{"existing":"orchestrator-updated"}}',
     })
   })
 
@@ -200,7 +232,9 @@ test.describe("Demo builder guided presentation controls", () => {
       guidedElement,
       (candidate) => candidate.props.placeholder === "Row Highlight CSS",
     )
-    guidedInput.props.onChange?.({ target: { value: "inset 0 0 0 1px rgba(255,255,255,0.06)" } })
+    guidedInput.props.onChange?.({
+      target: { value: "inset 0 0 0 1px rgba(255,255,255,0.06)" },
+    })
 
     expect(guidedPatches[0]).toEqual({
       tokens: { existing: "feed" },
@@ -218,22 +252,24 @@ test.describe("Demo builder guided presentation controls", () => {
       onAddBlock: () => {},
       onRemoveBlock: () => {},
       onUpdateBlock: () => {},
-      onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      onCommitBlockJsonField: (index, fieldKey, raw) =>
+        commits.push({ index, fieldKey, raw }),
       availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
 
-    const fallbackTextarea = findTextareaElement(
-      editorElement,
-      (candidate) => String(candidate.props.defaultValue ?? "").includes("\"existing\": \"feed\""),
+    const fallbackTextarea = findTextareaElement(editorElement, (candidate) =>
+      String(candidate.props.defaultValue ?? "").includes('"existing": "feed"'),
     )
-    fallbackTextarea.props.onBlur?.({ target: { value: "{\"tokens\":{\"existing\":\"feed-updated\"}}" } })
+    fallbackTextarea.props.onBlur?.({
+      target: { value: '{"tokens":{"existing":"feed-updated"}}' },
+    })
 
     expect(commits).toContainEqual({
       index: 0,
       fieldKey: "presentation_json",
-      raw: "{\"tokens\":{\"existing\":\"feed-updated\"}}",
+      raw: '{"tokens":{"existing":"feed-updated"}}',
     })
   })
 
@@ -254,7 +290,11 @@ test.describe("Demo builder guided presentation controls", () => {
       guidedElement,
       (candidate) => candidate.props.placeholder === "linear-gradient(...)",
     )
-    guidedInput.props.onChange?.({ target: { value: "linear-gradient(90deg, rgba(9,9,9,0.4), rgba(99,99,99,0.2))" } })
+    guidedInput.props.onChange?.({
+      target: {
+        value: "linear-gradient(90deg, rgba(9,9,9,0.4), rgba(99,99,99,0.2))",
+      },
+    })
 
     expect(guidedPatches[0]).toEqual({
       tokens: { existing: "tools" },
@@ -272,22 +312,26 @@ test.describe("Demo builder guided presentation controls", () => {
       onAddBlock: () => {},
       onRemoveBlock: () => {},
       onUpdateBlock: () => {},
-      onCommitBlockJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      onCommitBlockJsonField: (index, fieldKey, raw) =>
+        commits.push({ index, fieldKey, raw }),
       availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
 
-    const fallbackTextarea = findTextareaElement(
-      editorElement,
-      (candidate) => String(candidate.props.defaultValue ?? "").includes("\"existing\": \"tools\""),
+    const fallbackTextarea = findTextareaElement(editorElement, (candidate) =>
+      String(candidate.props.defaultValue ?? "").includes(
+        '"existing": "tools"',
+      ),
     )
-    fallbackTextarea.props.onBlur?.({ target: { value: "{\"tokens\":{\"existing\":\"tools-updated\"}}" } })
+    fallbackTextarea.props.onBlur?.({
+      target: { value: '{"tokens":{"existing":"tools-updated"}}' },
+    })
 
     expect(commits).toContainEqual({
       index: 0,
       fieldKey: "presentation_json",
-      raw: "{\"tokens\":{\"existing\":\"tools-updated\"}}",
+      raw: '{"tokens":{"existing":"tools-updated"}}',
     })
   })
 
@@ -308,7 +352,12 @@ test.describe("Demo builder guided presentation controls", () => {
       guidedElement,
       (candidate) => candidate.props.placeholder === "linear-gradient(...)",
     )
-    guidedInput.props.onChange?.({ target: { value: "linear-gradient(180deg, rgba(20,20,20,0.6), rgba(120,120,120,0.2))" } })
+    guidedInput.props.onChange?.({
+      target: {
+        value:
+          "linear-gradient(180deg, rgba(20,20,20,0.6), rgba(120,120,120,0.2))",
+      },
+    })
 
     expect(guidedPatches[0]).toEqual({
       tokens: { existing: "runtime" },
@@ -326,22 +375,26 @@ test.describe("Demo builder guided presentation controls", () => {
       onAddPanel: () => {},
       onRemovePanel: () => {},
       onUpdatePanel: () => {},
-      onCommitPanelJsonField: (index, fieldKey, raw) => commits.push({ index, fieldKey, raw }),
+      onCommitPanelJsonField: (index, fieldKey, raw) =>
+        commits.push({ index, fieldKey, raw }),
       availableThemeOptions: [],
     })
 
     expectAdvancedFallbackLabel(editorElement)
 
-    const fallbackTextarea = findTextareaElement(
-      editorElement,
-      (candidate) => String(candidate.props.defaultValue ?? "").includes("\"existing\": \"runtime\""),
+    const fallbackTextarea = findTextareaElement(editorElement, (candidate) =>
+      String(candidate.props.defaultValue ?? "").includes(
+        '"existing": "runtime"',
+      ),
     )
-    fallbackTextarea.props.onBlur?.({ target: { value: "{\"tokens\":{\"existing\":\"runtime-updated\"}}" } })
+    fallbackTextarea.props.onBlur?.({
+      target: { value: '{"tokens":{"existing":"runtime-updated"}}' },
+    })
 
     expect(commits).toContainEqual({
       index: 0,
       fieldKey: "presentation_json",
-      raw: "{\"tokens\":{\"existing\":\"runtime-updated\"}}",
+      raw: '{"tokens":{"existing":"runtime-updated"}}',
     })
   })
 })

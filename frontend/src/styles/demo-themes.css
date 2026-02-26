@@ -1521,3 +1521,139 @@
   border-radius: 12px;
   color: #01cdfe;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY FONT VARIABLES
+   ═══════════════════════════════════════════════════════════════════════════
+
+   CSS custom properties for custom font families, set by demoPresentationResolver
+   when presentation_json.typography.heading_font or typography.body_font is
+   specified. These cascade through the DemoPresentationFrame component tree.
+
+   ## How It Works
+
+   1. demoPresentationResolver reads typography.heading_font / typography.body_font
+   2. Resolver outputs CSS custom properties: --font-heading, --font-body
+   3. DemoPresentationFrame applies these via inline styles
+   4. These CSS rules consume the variables with fallback to --font-sans
+
+   ## Font Stack Fallback Chain
+
+   When a custom font is specified:
+     "Space Grotesk", var(--font-sans)
+
+   When "system" is selected (or nothing specified):
+     var(--font-sans) (from Tailwind theme)
+
+   ## Supported Font Presets
+
+   See TYPOGRAPHY_FONT_PRESETS in demoBuilderCapabilityRegistry.ts:
+   - system (uses default --font-sans stack)
+   - Inter
+   - Space Grotesk
+   - IBM Plex Sans
+   - JetBrains Mono
+   - Playfair Display
+   - Source Sans Pro
+   - Lora
+   - Fira Code
+   - Work Sans
+
+   ## Dynamic Loading
+
+   Non-system fonts are loaded on-demand via Google Fonts. The useFontLoader
+   hook in DemoPresentationFrame handles injection of <link> stylesheet tags.
+
+   ## Example
+
+   With presentation_json:
+   {
+     "typography": {
+       "heading_font": "Space Grotesk",
+       "body_font": "Inter"
+     }
+   }
+
+   The DemoPresentationFrame will have inline styles:
+   --font-heading: "Space Grotesk", var(--font-sans);
+   --font-body: "Inter", var(--font-sans);
+
+   And these rules will apply those fonts to headings and body text.
+
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Heading Typography
+ *
+ * Applies --font-heading to heading elements within demo components.
+ * Falls back to --font-sans (Tailwind default) when not specified.
+ *
+ * Note: The .demo-shell selector scopes these rules to demo contexts,
+ * preventing conflicts with non-demo parts of the application.
+ */
+.demo-shell h1,
+.demo-shell h2,
+.demo-shell h3,
+.demo-shell [class*="heading"],
+.demo-shell [class*="title"] {
+  font-family: var(--font-heading, var(--font-sans));
+}
+
+/**
+ * Body Typography
+ *
+ * Applies --font-body to body text elements within demo components.
+ * Falls back to --font-sans (Tailwind default) when not specified.
+ *
+ * The selector list covers common body text containers while avoiding
+ * overly broad selectors that could cause performance issues.
+ */
+.demo-shell p,
+.demo-shell span,
+.demo-shell li,
+.demo-shell label,
+.demo-shell [class*="content"],
+.demo-shell [class*="description"],
+.demo-shell [class*="text"] {
+  font-family: var(--font-body, var(--font-sans));
+}
+
+/**
+ * Code/Monospace Override
+ *
+ * Preserve monospace font for code elements regardless of body font setting.
+ * This ensures code blocks, inline code, and pre elements remain readable
+ * with appropriate monospace typography.
+ */
+.demo-shell code,
+.demo-shell pre,
+.demo-shell kbd,
+.demo-shell samp,
+.demo-shell [class*="mono"],
+.demo-shell [class*="code"] {
+  font-family: var(--font-mono);
+}
+
+/**
+ * Form Elements
+ *
+ * Apply body font to interactive form elements for consistency.
+ * Inputs and buttons should match the surrounding body text style.
+ */
+.demo-shell input,
+.demo-shell textarea,
+.demo-shell select,
+.demo-shell button {
+  font-family: var(--font-body, var(--font-sans));
+}
+
+/**
+ * Panel and Block Headers
+ *
+ * Explicit heading font for panel and block header components.
+ * These are key structural elements that benefit from distinct typography.
+ */
+.demo-shell .demo-panel-header,
+.demo-shell .demo-block-header {
+  font-family: var(--font-heading, var(--font-sans));
+}

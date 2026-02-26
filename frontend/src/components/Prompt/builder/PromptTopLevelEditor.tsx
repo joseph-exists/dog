@@ -1,14 +1,20 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import {
-  PROMPT_CAPABILITIES,
   normalizePromptCapabilityValue,
+  PROMPT_CAPABILITIES,
   type PromptCapability,
 } from "@/components/Prompt/builder/promptBuilderCapabilityRegistry"
 import {
   normalizePromptDraft,
   type PromptConfigDraft,
 } from "@/components/Prompt/builder/promptBuilderSchema"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -25,7 +31,10 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function getValueAtPath(source: Record<string, unknown>, path: string): unknown {
+function getValueAtPath(
+  source: Record<string, unknown>,
+  path: string,
+): unknown {
   const segments = path.split(".").filter((segment) => segment.length > 0)
   let current: unknown = source
   for (const segment of segments) {
@@ -99,7 +108,8 @@ const GUIDED_SECTION_SPECS: GuidedSectionSpec[] = [
     title: "1. Choose Runtime",
     why: "Provider and model determine capability coverage, quality profile, latency, and cost.",
     when: "Set this first for new configs or when moving prompts between accounts/providers.",
-    avoid: "Avoid changing this mid-tuning unless you are intentionally re-baselining behavior.",
+    avoid:
+      "Avoid changing this mid-tuning unless you are intentionally re-baselining behavior.",
     keys: [
       "provider.user_access_provider_id",
       "provider.provider_kind",
@@ -111,12 +121,9 @@ const GUIDED_SECTION_SPECS: GuidedSectionSpec[] = [
     title: "2. Define Behavior",
     why: "Input structure tells the model what role to take and what task to perform.",
     when: "Use simple text for straightforward tasks, or messages when conversation structure matters.",
-    avoid: "Avoid mixing input styles accidentally; keep one clear authoring pattern per config.",
-    keys: [
-      "input.kind",
-      "input.text",
-      "input.messages",
-    ],
+    avoid:
+      "Avoid mixing input styles accidentally; keep one clear authoring pattern per config.",
+    keys: ["input.kind", "input.text", "input.messages"],
   },
   {
     id: "output",
@@ -124,21 +131,16 @@ const GUIDED_SECTION_SPECS: GuidedSectionSpec[] = [
     why: "Parameters control creativity, response length, and sampling behavior.",
     when: "Adjust after baseline quality is acceptable and you need consistency or exploration.",
     avoid: "Avoid heavy parameter changes before prompt intent is stable.",
-    keys: [
-      "params.temperature",
-      "params.top_p",
-      "params.max_output_tokens",
-    ],
+    keys: ["params.temperature", "params.top_p", "params.max_output_tokens"],
   },
   {
     id: "tools",
     title: "4. Configure Tool Use",
     why: "Tool settings control whether the model can call external functions and how strict that requirement is.",
     when: "Enable when tasks require retrieval, actions, or structured operations beyond plain text generation.",
-    avoid: "Avoid required tool mode unless your tool list and orchestration path are ready.",
-    keys: [
-      "tools",
-    ],
+    avoid:
+      "Avoid required tool mode unless your tool list and orchestration path are ready.",
+    keys: ["tools"],
   },
 ]
 
@@ -165,7 +167,10 @@ export function PromptTopLevelEditor({
   const [editorMode, setEditorMode] = useState<PromptEditorMode>("guided")
   const draftRecord = draft as unknown as Record<string, unknown>
   const capabilityByKey = useMemo(
-    () => new Map(PROMPT_CAPABILITIES.map((capability) => [capability.key, capability])),
+    () =>
+      new Map(
+        PROMPT_CAPABILITIES.map((capability) => [capability.key, capability]),
+      ),
     [],
   )
 
@@ -176,10 +181,23 @@ export function PromptTopLevelEditor({
     onFieldErrorsChange(next)
   }
 
-  function applyCapabilityValue(capability: PromptCapability, rawValue: unknown) {
-    const normalizedValue = normalizePromptCapabilityValue(capability, rawValue, draft)
-    const nextDraftRecord = setValueAtPath(draftRecord, capability.key, normalizedValue)
-    onDraftChange(normalizePromptDraft(nextDraftRecord as Partial<PromptConfigDraft>))
+  function applyCapabilityValue(
+    capability: PromptCapability,
+    rawValue: unknown,
+  ) {
+    const normalizedValue = normalizePromptCapabilityValue(
+      capability,
+      rawValue,
+      draft,
+    )
+    const nextDraftRecord = setValueAtPath(
+      draftRecord,
+      capability.key,
+      normalizedValue,
+    )
+    onDraftChange(
+      normalizePromptDraft(nextDraftRecord as Partial<PromptConfigDraft>),
+    )
     clearFieldError(capability.key)
   }
 
@@ -198,10 +216,14 @@ export function PromptTopLevelEditor({
   function renderCapabilityField(capability: PromptCapability): ReactNode {
     return (
       <div key={capability.key} className="space-y-1">
-        <label className="text-xs text-muted-foreground">{capability.label}</label>
+        <label className="text-xs text-muted-foreground">
+          {capability.label}
+        </label>
         {renderCapability(capability)}
         {fieldErrors[capability.key] && (
-          <p className="text-xs text-destructive">{fieldErrors[capability.key]}</p>
+          <p className="text-xs text-destructive">
+            {fieldErrors[capability.key]}
+          </p>
         )}
       </div>
     )
@@ -210,10 +232,15 @@ export function PromptTopLevelEditor({
   function renderGuidedSection(section: GuidedSectionSpec): ReactNode {
     const sectionCapabilities = section.keys
       .map((key) => capabilityByKey.get(key))
-      .filter((capability): capability is PromptCapability => Boolean(capability))
+      .filter((capability): capability is PromptCapability =>
+        Boolean(capability),
+      )
     if (sectionCapabilities.length === 0) return null
     return (
-      <div key={section.id} className="space-y-3 rounded-md border bg-muted/30 p-3">
+      <div
+        key={section.id}
+        className="space-y-3 rounded-md border bg-muted/30 p-3"
+      >
         <div className="space-y-1">
           <h3 className="text-sm font-medium">{section.title}</h3>
           <p className="text-xs text-muted-foreground">{section.why}</p>
@@ -225,7 +252,9 @@ export function PromptTopLevelEditor({
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          {sectionCapabilities.map((capability) => renderCapabilityField(capability))}
+          {sectionCapabilities.map((capability) =>
+            renderCapabilityField(capability),
+          )}
         </div>
       </div>
     )
@@ -237,8 +266,8 @@ export function PromptTopLevelEditor({
     const hasDynamicOptions = keyedOptions.length > 0
 
     if (
-      hasDynamicOptions
-      && (capability.control === "text" || capability.control === "id")
+      hasDynamicOptions &&
+      (capability.control === "text" || capability.control === "id")
     ) {
       const currentString =
         typeof currentValue === "string" && currentValue.length > 0
@@ -246,8 +275,8 @@ export function PromptTopLevelEditor({
           : "__none"
       const normalizedOptions = [...keyedOptions]
       if (
-        currentString !== "__none"
-        && !normalizedOptions.some((option) => option.value === currentString)
+        currentString !== "__none" &&
+        !normalizedOptions.some((option) => option.value === currentString)
       ) {
         normalizedOptions.unshift({
           value: currentString,
@@ -258,7 +287,8 @@ export function PromptTopLevelEditor({
         <Select
           value={currentString}
           onValueChange={(value) =>
-            applyCapabilityValue(capability, value === "__none" ? null : value)}
+            applyCapabilityValue(capability, value === "__none" ? null : value)
+          }
         >
           <SelectTrigger>
             <SelectValue
@@ -290,7 +320,9 @@ export function PromptTopLevelEditor({
         <div className="h-9 flex items-center">
           <Switch
             checked={currentValue === true}
-            onCheckedChange={(checked) => applyCapabilityValue(capability, checked)}
+            onCheckedChange={(checked) =>
+              applyCapabilityValue(capability, checked)
+            }
           />
         </div>
       )
@@ -298,8 +330,14 @@ export function PromptTopLevelEditor({
     if (capability.control === "enum") {
       return (
         <Select
-          value={typeof currentValue === "string" && currentValue.length > 0 ? currentValue : "__none"}
-          onValueChange={(value) => applyCapabilityValue(capability, value === "__none" ? null : value)}
+          value={
+            typeof currentValue === "string" && currentValue.length > 0
+              ? currentValue
+              : "__none"
+          }
+          onValueChange={(value) =>
+            applyCapabilityValue(capability, value === "__none" ? null : value)
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder={capability.label} />
@@ -327,7 +365,10 @@ export function PromptTopLevelEditor({
               return
             }
             const parsed = Number(raw)
-            applyCapabilityValue(capability, Number.isFinite(parsed) ? parsed : null)
+            applyCapabilityValue(
+              capability,
+              Number.isFinite(parsed) ? parsed : null,
+            )
           }}
         />
       )
@@ -345,7 +386,9 @@ export function PromptTopLevelEditor({
       <Input
         value={typeof currentValue === "string" ? currentValue : ""}
         placeholder={capability.placeholder ?? capability.label}
-        onChange={(event) => applyCapabilityValue(capability, event.target.value)}
+        onChange={(event) =>
+          applyCapabilityValue(capability, event.target.value)
+        }
       />
     )
   }
@@ -355,7 +398,8 @@ export function PromptTopLevelEditor({
       <CardHeader>
         <CardTitle>Prompt Composition</CardTitle>
         <CardDescription>
-          Build prompts in Guided mode for step-by-step authoring, or use Full Editor for complete registry-driven controls.
+          Build prompts in Guided mode for step-by-step authoring, or use Full
+          Editor for complete registry-driven controls.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -369,24 +413,35 @@ export function PromptTopLevelEditor({
           </TabsList>
           <TabsContent value="guided" className="mt-4 space-y-4">
             <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Guided mode prioritizes the highest-impact settings in authoring order. Use it to build and tune quickly,
-              then switch to Full Editor when you need low-level fields such as stop sequences or metadata.
+              Guided mode prioritizes the highest-impact settings in authoring
+              order. Use it to build and tune quickly, then switch to Full
+              Editor when you need low-level fields such as stop sequences or
+              metadata.
             </div>
-            {GUIDED_SECTION_SPECS.map((section) => renderGuidedSection(section))}
+            {GUIDED_SECTION_SPECS.map((section) =>
+              renderGuidedSection(section),
+            )}
           </TabsContent>
           <TabsContent value="full" className="mt-4 space-y-4">
             <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Full Editor exposes all registered fields mapped to the underlying JSON draft. Use this mode for
-              provider-specific or advanced tuning workflows.
+              Full Editor exposes all registered fields mapped to the underlying
+              JSON draft. Use this mode for provider-specific or advanced tuning
+              workflows.
             </div>
             {CATEGORY_ORDER.map((category) => {
-              const capabilities = PROMPT_CAPABILITIES.filter((capability) => capability.category === category)
+              const capabilities = PROMPT_CAPABILITIES.filter(
+                (capability) => capability.category === category,
+              )
               if (capabilities.length === 0) return null
               return (
                 <div key={category} className="space-y-3">
-                  <h3 className="text-sm font-medium">{CATEGORY_LABELS[category]}</h3>
+                  <h3 className="text-sm font-medium">
+                    {CATEGORY_LABELS[category]}
+                  </h3>
                   <div className="grid gap-3 md:grid-cols-2">
-                    {capabilities.map((capability) => renderCapabilityField(capability))}
+                    {capabilities.map((capability) =>
+                      renderCapabilityField(capability),
+                    )}
                   </div>
                 </div>
               )

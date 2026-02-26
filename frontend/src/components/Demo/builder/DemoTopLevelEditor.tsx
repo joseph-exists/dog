@@ -1,21 +1,24 @@
+import { Loader2 } from "lucide-react"
 import type {
   DemoChatMode,
   DemoLayoutMode,
   DemoPersonaPolicy,
   DemoRuntimePolicy,
 } from "@/client/types.gen"
-import type { ThemeViewModel } from "@/services/themeService"
-import {
-  type EditableComposition,
-} from "@/components/Demo/builder/demoBuilderSchema"
 import {
   BUILDER_COMPOSITION_CAPABILITIES,
   type BuilderCompositionCapability,
 } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import type { EditableComposition } from "@/components/Demo/builder/demoBuilderSchema"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -23,11 +26,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
+import type { ThemeViewModel } from "@/services/themeService"
 
 function toPrettyJson(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2)
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function getValueAtPath(
+  source: Record<string, unknown>,
+  path: string,
+): unknown {
+  const segments = path.split(".").filter((segment) => segment.length > 0)
+  let current: unknown = source
+  for (const segment of segments) {
+    if (!isObjectRecord(current)) return undefined
+    current = current[segment]
+  }
+  return current
+}
+
+function getCapabilityCopy(capability: BuilderCompositionCapability): string {
+  const key = capability.key
+  if (key === "layout_mode") {
+    return "Controls panel arrangement (split panels vs tabs). Impacts navigation density and side-by-side visibility."
+  }
+  if (key === "runtime_policy") {
+    return "Controls runtime start policy. Impacts whether session automation starts immediately, manually, or owner-gated."
+  }
+  if (key === "persona_policy") {
+    return "Controls how user persona is selected. Impacts runtime context consistency across sessions."
+  }
+  if (key === "chat_mode") {
+    return "Controls participant vs observer chat posture. Impacts whether the user is expected to send messages."
+  }
+  if (key === "presentation_json.typography.heading_font") {
+    return "Changes heading font family for demo surfaces. Useful for tone and hierarchy shifts."
+  }
+  if (key === "presentation_json.typography.body_font") {
+    return "Changes body font family for readability and brand tone across panels/blocks."
+  }
+  if (key === "presentation_json.callouts.header.style") {
+    return "Sets header callout visual treatment. Useful for top-of-surface status emphasis."
+  }
+  if (key === "presentation_json.callouts.footer.style") {
+    return "Sets footer callout visual treatment. Useful for persistent status or completion signals."
+  }
+  if (key === "presentation_json.backgrounds.svg_overlay") {
+    return "Applies a composition-level SVG pattern preset. Impacts overall page atmosphere."
+  }
+  if (capability.category === "theme") {
+    return "Theme/presentation control. Changes visual treatment rather than runtime behavior."
+  }
+  if (capability.category === "advanced") {
+    return "Advanced contract field. Change when you need explicit control over payload behavior."
+  }
+  return "Core composition control. Changing this affects runtime or layout behavior for the full demo."
 }
 
 function renderCompositionJsonField(props: {
@@ -37,17 +96,19 @@ function renderCompositionJsonField(props: {
   onBlur: (raw: string) => void
 }) {
   const { capability, value, error, onBlur } = props
+  const prettyJson = toPrettyJson(value ?? {})
   return (
     <div className="space-y-1">
-      <label className="text-xs text-muted-foreground">{capability.label}</label>
+      <label className="text-xs text-muted-foreground">
+        {capability.label}
+      </label>
       <Textarea
+        key={`${capability.key}-${prettyJson}`}
         rows={6}
-        defaultValue={toPrettyJson(value ?? {})}
+        defaultValue={prettyJson}
         onBlur={(event) => onBlur(event.target.value)}
       />
-      {error && (
-        <p className="text-xs text-destructive">{error}</p>
-      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }
@@ -64,6 +125,7 @@ interface DemoTopLevelEditorProps {
   onFixedUserPersonaIdChange: (value: string | null) => void
   onPageThemeIdChange: (value: string | null) => void
   onCardsThemeIdChange: (value: string | null) => void
+  onCapabilityFieldChange: (key: string, value: string | null) => void
   onMetadataJsonBlur: (raw: string) => void
   onPresentationJsonBlur: (raw: string) => void
   storyId: string | null
@@ -90,6 +152,7 @@ export function DemoTopLevelEditor({
   onFixedUserPersonaIdChange,
   onPageThemeIdChange,
   onCardsThemeIdChange,
+  onCapabilityFieldChange,
   onMetadataJsonBlur,
   onPresentationJsonBlur,
   storyId,
@@ -103,14 +166,22 @@ export function DemoTopLevelEditor({
   onPageThemeQuickSelect,
   onCardsThemeQuickSelect,
 }: DemoTopLevelEditorProps) {
-  const nonJsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter((capability) => capability.control !== "json")
-  const jsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter((capability) => capability.control === "json")
+  const nonJsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter(
+    (capability) => capability.control !== "json",
+  )
+  const jsonCapabilities = BUILDER_COMPOSITION_CAPABILITIES.filter(
+    (capability) => capability.control === "json",
+  )
 
   function getValue(key: string): unknown {
-    return (composition as Record<string, unknown>)[key]
+    return getValueAtPath(composition as Record<string, unknown>, key)
   }
 
-  function handleScalarChange(key: string, value: string) {
+  function handleScalarChange(
+    key: string,
+    value: string,
+    control: BuilderCompositionCapability["control"],
+  ) {
     if (key === "layout_mode") {
       onLayoutModeChange(value as DemoLayoutMode)
       return
@@ -135,6 +206,8 @@ export function DemoTopLevelEditor({
       onPageThemeIdChange(nullableValue)
     } else if (key === "cards_theme_id") {
       onCardsThemeIdChange(nullableValue)
+    } else {
+      onCapabilityFieldChange(key, control === "enum" ? value : nullableValue)
     }
   }
 
@@ -149,6 +222,8 @@ export function DemoTopLevelEditor({
         <CardTitle>Composition</CardTitle>
         <CardDescription>
           Edit top-level composition behavior before tuning panels and blocks.
+          Changes update local draft state immediately; API persistence happens
+          when you click Save Composition.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -165,27 +240,53 @@ export function DemoTopLevelEditor({
           <>
             <div className="grid gap-3 md:grid-cols-4">
               {nonJsonCapabilities.map((capability) => (
-                capability.control === "enum" ? (
-                  <Select
-                    key={capability.key}
-                    value={String(getValue(capability.key) ?? capability.enumValues[0] ?? "")}
-                    onValueChange={(value) => handleScalarChange(capability.key, value)}
-                  >
-                    <SelectTrigger><SelectValue placeholder={capability.label} /></SelectTrigger>
-                    <SelectContent>
-                      {capability.enumValues.map((enumValue) => (
-                        <SelectItem key={enumValue} value={enumValue}>{enumValue}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    key={capability.key}
-                    value={String(getValue(capability.key) ?? "")}
-                    placeholder={capability.placeholder ?? capability.label}
-                    onChange={(event) => handleScalarChange(capability.key, event.target.value)}
-                  />
-                )
+                <div key={capability.key} className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    {capability.label}
+                  </label>
+                  {capability.control === "enum" ? (
+                    <Select
+                      value={String(
+                        getValue(capability.key) ??
+                          capability.enumValues[0] ??
+                          "",
+                      )}
+                      onValueChange={(value) =>
+                        handleScalarChange(
+                          capability.key,
+                          value,
+                          capability.control,
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={capability.label} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {capability.enumValues.map((enumValue) => (
+                          <SelectItem key={enumValue} value={enumValue}>
+                            {enumValue}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={String(getValue(capability.key) ?? "")}
+                      placeholder={capability.placeholder ?? capability.label}
+                      onChange={(event) =>
+                        handleScalarChange(
+                          capability.key,
+                          event.target.value,
+                          capability.control,
+                        )
+                      }
+                    />
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    {getCapabilityCopy(capability)}
+                  </p>
+                </div>
               ))}
             </div>
 
@@ -205,7 +306,8 @@ export function DemoTopLevelEditor({
             <div className="rounded border p-3 space-y-2">
               <div className="text-sm font-medium">Story Association</div>
               <p className="text-xs text-muted-foreground">
-                Set `metadata_json.story_id` for story-coupled panels/blocks (for example `storyRuntime`).
+                Set `metadata_json.story_id` for story-coupled panels/blocks
+                (for example `storyRuntime`).
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Input
@@ -217,7 +319,11 @@ export function DemoTopLevelEditor({
                     onStoryIdChange(value.length > 0 ? value : null)
                   }}
                 />
-                <Button type="button" variant="outline" onClick={onOpenStoryPicker}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onOpenStoryPicker}
+                >
                   Pick Story
                 </Button>
               </div>
@@ -228,7 +334,8 @@ export function DemoTopLevelEditor({
                 <div>
                   <div className="text-sm font-medium">Theme Quick Add</div>
                   <p className="text-xs text-muted-foreground">
-                    Show title-based theme pickers for composition only. This does not change the Demo Builder page theme.
+                    Show title-based theme pickers for composition only. This
+                    does not change the Demo Builder page theme.
                   </p>
                 </div>
                 <Switch
@@ -240,13 +347,25 @@ export function DemoTopLevelEditor({
               {isThemeQuickAddEnabled && (
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Page Theme (title)</label>
+                    <label className="text-xs text-muted-foreground">
+                      Page Theme (title)
+                    </label>
                     <Select
                       value={composition.page_theme_id ?? "__none"}
-                      onValueChange={(value) => onPageThemeQuickSelect(value === "__none" ? null : value)}
+                      onValueChange={(value) =>
+                        onPageThemeQuickSelect(
+                          value === "__none" ? null : value,
+                        )
+                      }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={isLoadingThemeOptions ? "Loading page themes..." : "Select page theme"} />
+                        <SelectValue
+                          placeholder={
+                            isLoadingThemeOptions
+                              ? "Loading page themes..."
+                              : "Select page theme"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none">None</SelectItem>
@@ -259,13 +378,25 @@ export function DemoTopLevelEditor({
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Cards Theme (title)</label>
+                    <label className="text-xs text-muted-foreground">
+                      Cards Theme (title)
+                    </label>
                     <Select
                       value={composition.cards_theme_id ?? "__none"}
-                      onValueChange={(value) => onCardsThemeQuickSelect(value === "__none" ? null : value)}
+                      onValueChange={(value) =>
+                        onCardsThemeQuickSelect(
+                          value === "__none" ? null : value,
+                        )
+                      }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={isLoadingThemeOptions ? "Loading card themes..." : "Select cards theme"} />
+                        <SelectValue
+                          placeholder={
+                            isLoadingThemeOptions
+                              ? "Loading card themes..."
+                              : "Select cards theme"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none">None</SelectItem>
@@ -278,7 +409,8 @@ export function DemoTopLevelEditor({
                     </Select>
                   </div>
                   <p className="text-xs text-muted-foreground md:col-span-2">
-                    Quick add updates `page_theme_id` / `cards_theme_id` and mirrors selection into `presentation_json.theme_refs`.
+                    Quick add updates `page_theme_id` / `cards_theme_id` and
+                    mirrors selection into `presentation_json.theme_refs`.
                   </p>
                 </div>
               )}

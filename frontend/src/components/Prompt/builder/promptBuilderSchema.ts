@@ -66,6 +66,18 @@ export type PromptInputPayload =
       messages: Array<{ role: PromptMessageRole; content: string }>
     }
 
+function normalizePromptMessageRole(value: unknown): PromptMessageRole {
+  if (
+    value === "system" ||
+    value === "user" ||
+    value === "assistant" ||
+    value === "tool"
+  ) {
+    return value
+  }
+  return "user"
+}
+
 export interface PromptParamsCommon {
   temperature?: number | null
   top_p?: number | null
@@ -78,15 +90,15 @@ export type PromptParamsByProvider =
   | ({
       provider_kind: "openai_compatible" | "openai"
     } & PromptParamsCommon & {
-      response_format_json?: boolean | null
-      parallel_tool_calls?: boolean | null
-      reasoning_effort?: "low" | "medium" | "high" | null
-    })
+        response_format_json?: boolean | null
+        parallel_tool_calls?: boolean | null
+        reasoning_effort?: "low" | "medium" | "high" | null
+      })
   | ({
       provider_kind: "anthropic"
     } & PromptParamsCommon & {
-      top_k?: number | null
-    })
+        top_k?: number | null
+      })
   | ({
       provider_kind: "google" | "xai" | "custom"
     } & PromptParamsCommon)
@@ -233,12 +245,49 @@ export const PROMPT_BUILDER_FIELD_SPECS: PromptBuilderFieldSpec[] = [
   },
 ]
 
-export function createEmptyPromptDraft(overrides?: Partial<PromptConfigDraft>): PromptConfigDraft {
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function normalizePromptInputPayload(input: unknown): PromptInputPayload {
+  if (!isObjectRecord(input)) {
+    return {
+      kind: "simple_text",
+      text: "",
+    }
+  }
+
+  const kind = input.kind === "messages" ? "messages" : "simple_text"
+  if (kind === "messages") {
+    const rawMessages = Array.isArray(input.messages) ? input.messages : []
+    const messages = rawMessages
+      .filter((msg): msg is Record<string, unknown> => isObjectRecord(msg))
+      .map((msg) => ({
+        role: normalizePromptMessageRole(msg.role),
+        content: typeof msg.content === "string" ? msg.content : "",
+      }))
+    return {
+      kind: "messages",
+      system: typeof input.system === "string" ? input.system : undefined,
+      messages,
+    }
+  }
+
+  return {
+    kind: "simple_text",
+    text: typeof input.text === "string" ? input.text : "",
+  }
+}
+
+export function createEmptyPromptDraft(
+  overrides?: Partial<PromptConfigDraft>,
+): PromptConfigDraft {
   return {
     id: overrides?.id ?? "",
     owner_id: overrides?.owner_id ?? null,
     provider: {
-      user_access_provider_id: overrides?.provider?.user_access_provider_id ?? null,
+      user_access_provider_id:
+        overrides?.provider?.user_access_provider_id ?? null,
       provider_type_id: overrides?.provider?.provider_type_id ?? null,
       provider_kind: overrides?.provider?.provider_kind ?? null,
       base_url: overrides?.provider?.base_url ?? null,
@@ -250,10 +299,7 @@ export function createEmptyPromptDraft(overrides?: Partial<PromptConfigDraft>): 
       model_name: overrides?.model?.model_name ?? null,
       model_family: overrides?.model?.model_family ?? null,
     },
-    input: overrides?.input ?? {
-      kind: "simple_text",
-      text: "",
-    },
+    input: normalizePromptInputPayload(overrides?.input),
     params: overrides?.params ?? {
       provider_kind: "openai_compatible",
       temperature: 0.7,
@@ -267,7 +313,9 @@ export function createEmptyPromptDraft(overrides?: Partial<PromptConfigDraft>): 
   }
 }
 
-export function normalizePromptDraft(input?: Partial<PromptConfigDraft> | null): PromptConfigDraft {
+export function normalizePromptDraft(
+  input?: Partial<PromptConfigDraft> | null,
+): PromptConfigDraft {
   const base = createEmptyPromptDraft(input ?? undefined)
   return {
     ...base,
@@ -309,6 +357,7 @@ export function normalizePromptDraft(input?: Partial<PromptConfigDraft> | null):
           ? base.model.model_family.trim() || null
           : null,
     },
+    input: normalizePromptInputPayload(base.input),
   }
 }
 
@@ -331,12 +380,21 @@ function validateCommonParameterRanges(
     key: string
     label: string
   }> = [
-    { value: params.temperature, min: 0, max: 2, key: "temperature", label: "temperature" },
+    {
+      value: params.temperature,
+      min: 0,
+      max: 2,
+      key: "temperature",
+      label: "temperature",
+    },
     { value: params.top_p, min: 0, max: 1, key: "top_p", label: "top_p" },
   ]
   for (const check of numericChecks) {
     if (check.value == null) continue
-    if (Number.isFinite(check.value) && (check.value < check.min || check.value > check.max)) {
+    if (
+      Number.isFinite(check.value) &&
+      (check.value < check.min || check.value > check.max)
+    ) {
       issues.push({
         code: "param_out_of_range",
         severity: "error",
@@ -345,7 +403,11 @@ function validateCommonParameterRanges(
       })
     }
   }
-  if (params.max_output_tokens != null && (!Number.isFinite(params.max_output_tokens) || params.max_output_tokens <= 0)) {
+  if (
+    params.max_output_tokens != null &&
+    (!Number.isFinite(params.max_output_tokens) ||
+      params.max_output_tokens <= 0)
+  ) {
     issues.push({
       code: "param_out_of_range",
       severity: "error",
@@ -366,9 +428,9 @@ function validateProviderSpecificParamsStub(
   const paramsProviderKind = draft.params.provider_kind
 
   if (
-    providerKind
-    && paramsProviderKind
-    && providerKind !== paramsProviderKind
+    providerKind &&
+    paramsProviderKind &&
+    providerKind !== paramsProviderKind
   ) {
     issues.push({
       code: "provider_kind_mismatch",
@@ -379,9 +441,9 @@ function validateProviderSpecificParamsStub(
   }
 
   if (
-    "response_format_json" in draft.params
-    && draft.params.response_format_json === true
-    && selectedModel?.has_json_mode === false
+    "response_format_json" in draft.params &&
+    draft.params.response_format_json === true &&
+    selectedModel?.has_json_mode === false
   ) {
     issues.push({
       code: "json_mode_not_supported",
@@ -392,10 +454,14 @@ function validateProviderSpecificParamsStub(
   }
 
   const requiresFunctionCalling =
-    ("parallel_tool_calls" in draft.params && draft.params.parallel_tool_calls === true)
-    || draft.tools?.tool_mode === "required"
+    ("parallel_tool_calls" in draft.params &&
+      draft.params.parallel_tool_calls === true) ||
+    draft.tools?.tool_mode === "required"
 
-  if (requiresFunctionCalling && selectedModel?.has_function_calling === false) {
+  if (
+    requiresFunctionCalling &&
+    selectedModel?.has_function_calling === false
+  ) {
     issues.push({
       code: "function_calling_not_supported",
       severity: "error",
@@ -404,26 +470,32 @@ function validateProviderSpecificParamsStub(
     })
   }
 
-  if ("top_k" in draft.params && draft.params.top_k != null && providerKind !== "anthropic") {
+  if (
+    "top_k" in draft.params &&
+    draft.params.top_k != null &&
+    providerKind !== "anthropic"
+  ) {
     issues.push({
       code: "anthropic_top_k_without_anthropic_provider",
       severity: "warning",
-      message: 'Parameter "top_k" is typically valid only for anthropic providers.',
+      message:
+        'Parameter "top_k" is typically valid only for anthropic providers.',
       path: "params.top_k",
     })
   }
 
   if (
-    "reasoning_effort" in draft.params
-    && draft.params.reasoning_effort != null
-    && providerKind
-    && providerKind !== "openai"
-    && providerKind !== "openai_compatible"
+    "reasoning_effort" in draft.params &&
+    draft.params.reasoning_effort != null &&
+    providerKind &&
+    providerKind !== "openai" &&
+    providerKind !== "openai_compatible"
   ) {
     issues.push({
       code: "reasoning_effort_without_openai_provider",
       severity: "warning",
-      message: 'Parameter "reasoning_effort" is primarily intended for openai/openai_compatible providers.',
+      message:
+        'Parameter "reasoning_effort" is primarily intended for openai/openai_compatible providers.',
       path: "params.reasoning_effort",
     })
   }
@@ -483,12 +555,14 @@ export function validatePromptDraftSemantics(
     })
   }
 
-  const providerTypeId = context?.selectedProvider?.alpha_provider_type_id ?? null
-  const modelProviderTypeId = context?.selectedModel?.primary_provider_type_id ?? null
+  const providerTypeId =
+    context?.selectedProvider?.alpha_provider_type_id ?? null
+  const modelProviderTypeId =
+    context?.selectedModel?.primary_provider_type_id ?? null
   if (
-    providerTypeId
-    && modelProviderTypeId
-    && providerTypeId !== modelProviderTypeId
+    providerTypeId &&
+    modelProviderTypeId &&
+    providerTypeId !== modelProviderTypeId
   ) {
     issues.push({
       code: "provider_model_mismatch",

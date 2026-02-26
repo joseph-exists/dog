@@ -1,15 +1,17 @@
 import { expect, test } from "@playwright/test"
-import { getDemoBlockContainerClassName } from "@/components/Demo/DemoShell"
 import {
   getRenderableDemoBlocks,
   normalizeBlockVisibility,
   resolveDemoBlockRegion,
 } from "@/components/Demo/blockVisibility"
+import { getDemoBlockContainerClassName } from "@/components/Demo/DemoShell"
 
 test.describe("Demo visibility semantics helpers", () => {
   test("normalizeBlockVisibility supports explicit v2 values only", async () => {
     expect(normalizeBlockVisibility("visible")).toBe("visible")
-    expect(normalizeBlockVisibility("hidden_unmounted")).toBe("hidden_unmounted")
+    expect(normalizeBlockVisibility("hidden_unmounted")).toBe(
+      "hidden_unmounted",
+    )
     expect(normalizeBlockVisibility("hidden_mounted")).toBe("hidden_mounted")
     expect(normalizeBlockVisibility("hidden")).toBe("visible")
     expect(normalizeBlockVisibility(null)).toBe("visible")
@@ -73,4 +75,3 @@ test.describe("DemoShell visibility class behavior", () => {
     expect(className.endsWith("hidden")).toBeFalsy()
   })
 })
-

@@ -2,6 +2,108 @@
 
 > Historical changelog. For current status and sequencing, use `frontend/src/components/Demo/demo-docs/current-key-priorities.md` and `frontend/src/components/Demo/demo-docs/demo-builder-workflow.md`.
 
+**added explicit interaction receiver registration + enforced hidden-chat routing**
+
+### What changed
+
+- Extended click interaction dispatch contract with optional enforcement flag:
+  - `config_json.interaction.dispatch.enforce_registered_receiver`
+  - file:
+    - `frontend/src/components/Demo/demoInteractionHandlers.ts`
+
+- Added panel-side receiver registration contract:
+  - `panel.options.interaction_receiver = { enabled, receiver_id, accepts }`
+  - file:
+    - `frontend/src/components/Demo/demoInteractionHandlers.ts`
+
+- Enforced receiver routing in runtime dispatch path:
+  - when enforcement is enabled, dispatch is blocked unless target receiver is registered, chat-kind, and accepts the interaction kind
+  - file:
+    - `frontend/src/routes/_layout/demo.$slug.tsx`
+
+- Added builder controls for both sides:
+  - block `config_json` controls:
+    - `enforce_registered_receiver` toggle
+    - target chat receiver panel selector
+  - chat panel `options` controls:
+    - register receiver toggle
+    - receiver id field
+    - accepts `click_prompt_dispatch.v1` toggle
+  - files:
+    - `frontend/src/components/Demo/builder/DemoBlockEditor.tsx`
+    - `frontend/src/components/Demo/builder/DemoPanelEditor.tsx`
+
+**implemented click-to-input-to-chat interaction handler vertical slice**
+
+### What changed
+
+- Added interaction schema parsing + starter contract for block-level handlers:
+  - `config_json.interaction.kind = "click_prompt_dispatch.v1"`
+  - file:
+    - `frontend/src/components/Demo/demoInteractionHandlers.ts`
+
+- Added runtime wrapper for interactive blocks:
+  - click source capture from configured selector (default `pre code, code`)
+  - inline spawned input modal
+  - submit dispatch to demo websocket as structured envelope, then close
+  - file:
+    - `frontend/src/components/Demo/DemoInteractiveBlock.tsx`
+
+- Wired interaction wrapper into demo runtime block rendering path:
+  - file:
+    - `frontend/src/routes/_layout/demo.$slug.tsx`
+
+- Added demo-builder guided copy + starter action in Block Editor for `content`/`context` `config_json`:
+  - file:
+    - `frontend/src/components/Demo/builder/DemoBlockEditor.tsx`
+
+- Added interaction schema tests:
+  - file:
+    - `frontend/tests-unit/demo-interaction-handlers.spec.ts`
+
+**updated callout system reference for implementation accuracy and link integrity**
+
+### What changed
+
+- Updated `CALLOUT_SYSTEM_REFERENCE.md` to reflect current implementation details:
+  - clarified guided editor scope by level:
+    - composition: `style` + `text`
+    - panel/block: `style` + `text` + `icon`
+  - documented that `visible` is currently raw-JSON-only (`presentation_json.callouts.*.visible`)
+  - added troubleshooting note for missing composition icon field in guided editor
+  - fixed Theme Cascade Reference relative link to `../../Agents/docs/THEME-CASCADE-REFERENCE.md`
+  - file:
+    - `frontend/src/components/Demo/demo-docs/CALLOUT_SYSTEM_REFERENCE.md`
+
+- Synced integration checkpoint note to capture the above callout runtime-vs-guided behavior:
+  - file:
+    - `frontend/src/components/Demo/demo-docs/active-demo-integration-snapshot.md`
+
+### Validation
+
+- Verified callout guided/runtime scope against:
+  - `frontend/src/components/Demo/builder/demoBuilderCapabilityRegistry.ts`
+  - `frontend/src/components/Demo/demoPresentationResolver.ts`
+  - `frontend/src/components/Demo/DemoPresentationFrame.tsx`
+
+**aligned demo typography scope and verified matrix_density normalization**
+
+### What changed
+
+- Added the `demo-shell` scope class to `DemoShell` root wrapper so demo typography CSS selectors apply as intended:
+  - file:
+    - `frontend/src/components/Demo/DemoShell.tsx`
+
+- Reviewed `matrix_density` contract consistency across builder + runtime surfaces:
+  - builder field descriptor: `tokens.matrix_density` enum values are `standard`, `compact`
+  - runtime parse: `matrixDensity` resolves to `standard | compact`
+  - `ToolCapabilityBlock` prop + density class map uses `standard | compact`
+  - docs/plans + roadmap references match `standard` default
+
+### Validation
+
+- `rg -n "matrix_density|Matrix Density|matrixDensity|standard\\\" \\| \\\"compact|comfortable.*matrix" frontend/src/components/Demo frontend/src/components/Demo/demo-docs docs/plans -S` confirms normalized contract.
+
 **added companion copy/paste presentation_json presets for A/B/C compositions**
 
 ### What changed

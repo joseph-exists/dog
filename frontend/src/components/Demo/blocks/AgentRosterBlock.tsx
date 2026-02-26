@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react"
-import { ParticipantStack, PresetPicker, SYSTEM_PRESETS } from "@/components/Page/primitives"
+import {
+  ParticipantStack,
+  PresetPicker,
+  SYSTEM_PRESETS,
+} from "@/components/Page/primitives"
 import type { ParticipantViewModel } from "@/services/roomService"
 
 export interface DemoAgentRosterAgent {
@@ -27,16 +31,20 @@ interface AgentRosterBlockConfig {
 }
 
 function toAgentRosterConfig(value: unknown): AgentRosterBlockConfig {
-  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
+  const raw =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {}
 
   const maxVisibleRaw = raw.participant_stack_max_visible
   const maxVisible =
-    typeof maxVisibleRaw === "number" && Number.isFinite(maxVisibleRaw) && maxVisibleRaw > 0
+    typeof maxVisibleRaw === "number" &&
+    Number.isFinite(maxVisibleRaw) &&
+    maxVisibleRaw > 0
       ? Math.floor(maxVisibleRaw)
       : 5
 
   const variant =
-    raw.preset_picker_variant === "buttons" || raw.preset_picker_variant === "dropdown"
+    raw.preset_picker_variant === "buttons" ||
+    raw.preset_picker_variant === "dropdown"
       ? raw.preset_picker_variant
       : "dropdown"
 
@@ -81,13 +89,16 @@ export function AgentRosterBlock({
       <div className="space-y-1">
         <div className="text-sm font-medium">{title ?? "Agent Roster"}</div>
         <div className="text-xs text-muted-foreground">
-          {activeUsers.length} user{activeUsers.length === 1 ? "" : "s"}, {roomAgents.length} agent{roomAgents.length === 1 ? "" : "s"}
+          {activeUsers.length} user{activeUsers.length === 1 ? "" : "s"},{" "}
+          {roomAgents.length} agent{roomAgents.length === 1 ? "" : "s"}
         </div>
       </div>
 
       {parsedConfig.show_participant_stack && participants.length > 0 && (
         <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/20 p-2">
-          <span className="text-xs text-muted-foreground">Participant stack</span>
+          <span className="text-xs text-muted-foreground">
+            Participant stack
+          </span>
           <ParticipantStack
             participants={participants}
             maxVisible={parsedConfig.participant_stack_max_visible}
@@ -97,7 +108,9 @@ export function AgentRosterBlock({
 
       {parsedConfig.show_preset_picker && (
         <div className="space-y-2 rounded-md border bg-muted/20 p-3">
-          <div className="text-xs text-muted-foreground">Layout preset preview</div>
+          <div className="text-xs text-muted-foreground">
+            Layout preset preview
+          </div>
           <PresetPicker
             presets={SYSTEM_PRESETS}
             currentPresetId={selectedPresetId}
@@ -109,9 +122,13 @@ export function AgentRosterBlock({
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="mb-2 text-xs font-medium text-muted-foreground">Users</div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">
+            Users
+          </div>
           {activeUsers.length === 0 ? (
-            <div className="text-xs text-muted-foreground">No users in room.</div>
+            <div className="text-xs text-muted-foreground">
+              No users in room.
+            </div>
           ) : (
             <div className="space-y-1.5">
               {activeUsers.map((user) => (
@@ -124,9 +141,13 @@ export function AgentRosterBlock({
         </div>
 
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="mb-2 text-xs font-medium text-muted-foreground">Agents</div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">
+            Agents
+          </div>
           {roomAgents.length === 0 ? (
-            <div className="text-xs text-muted-foreground">No agents in room.</div>
+            <div className="text-xs text-muted-foreground">
+              No agents in room.
+            </div>
           ) : (
             <div className="space-y-2">
               {roomAgents.map((agent) => (

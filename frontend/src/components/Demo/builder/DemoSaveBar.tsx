@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button"
 import { Loader2, Save } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface DemoSaveBarProps {
   selectedDemoLabel: string
@@ -22,14 +22,12 @@ export function DemoSaveBar({
         {selectedDemoLabel}
         {isDirty ? " · unsaved changes" : " · saved"}
       </div>
-      <Button
-        type="button"
-        onClick={onSave}
-        disabled={!canSave || isSaving}
-      >
-        {isSaving
-          ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          : <Save className="h-4 w-4 mr-2" />}
+      <Button type="button" onClick={onSave} disabled={!canSave || isSaving}>
+        {isSaving ? (
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        ) : (
+          <Save className="h-4 w-4 mr-2" />
+        )}
         Save Composition
       </Button>
     </div>

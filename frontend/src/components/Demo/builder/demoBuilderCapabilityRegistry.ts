@@ -1,25 +1,26 @@
+import type { UserAgentConfigPublic } from "@/client/types.gen"
 import {
   ACTIVE_BUILDER_BLOCK_TYPES,
   ACTIVE_BUILDER_PANEL_KINDS,
+  type ActiveBuilderBlockType,
+  type ActiveBuilderPanelKind,
   BUILDER_BLOCK_TYPE_SCHEMAS,
   BUILDER_COMPOSITION_FIELD_SPECS,
   BUILDER_PANEL_KIND_SCHEMAS,
-  getCompositionStoryId,
   type EditableComposition,
-  type ActiveBuilderBlockType,
-  type ActiveBuilderPanelKind,
+  getCompositionStoryId,
 } from "@/components/Demo/builder/demoBuilderSchema"
 import {
   ACTIVE_RUNTIME_DEMO_BLOCK_TYPES,
   ACTIVE_RUNTIME_DEMO_PANEL_KINDS,
 } from "@/components/Demo/demoRuntimeCapabilities"
-import type { UserAgentConfigPublic } from "@/client/types.gen"
-import type { MessageViewModel } from "@/services/roomService"
 import type {
   DemoBlockRendererContext,
   DemoPanelRendererContext,
   DemoRoomAgentData,
 } from "@/components/Demo/rendererRegistry"
+import { SVG_OVERLAY_PRESETS } from "@/components/Demo/svgOverlayRegistry"
+import type { MessageViewModel } from "@/services/roomService"
 
 export interface BuilderCompositionCapability {
   key: string
@@ -45,13 +46,15 @@ export interface BuilderCapabilityHookContext {
   composition: EditableComposition
 }
 
-export interface BuilderPanelPreviewAdapterContext extends BuilderCapabilityHookContext {
+export interface BuilderPanelPreviewAdapterContext
+  extends BuilderCapabilityHookContext {
   scope: "panel"
   capabilityKey: ActiveBuilderPanelKind
   panel: Record<string, unknown>
 }
 
-export interface BuilderBlockPreviewAdapterContext extends BuilderCapabilityHookContext {
+export interface BuilderBlockPreviewAdapterContext
+  extends BuilderCapabilityHookContext {
   scope: "block"
   capabilityKey: ActiveBuilderBlockType
   block: Record<string, unknown>
@@ -83,7 +86,11 @@ export interface BuilderCapabilityHooks {
   blockPreviewAdapter?: BuilderCapabilityBlockPreviewAdapter
 }
 
-export type BuilderPresentationFieldControl = "text" | "number" | "boolean" | "enum"
+export type BuilderPresentationFieldControl =
+  | "text"
+  | "number"
+  | "boolean"
+  | "enum"
 
 export interface BuilderPresentationFieldSpec {
   path: string
@@ -121,7 +128,10 @@ export interface BuilderCapabilityAvailability {
   unmetRequirements: string[]
 }
 
-export type BuilderCapabilityConflictPolicy = "error" | "keep_existing" | "replace_existing"
+export type BuilderCapabilityConflictPolicy =
+  | "error"
+  | "keep_existing"
+  | "replace_existing"
 
 export interface BuilderCapabilityRegistryPack {
   id: string
@@ -186,7 +196,10 @@ export interface BuilderCapabilityRuntimeExpectationGaps {
 }
 
 export interface BuilderCapabilitySafetyIssue {
-  code: "unsupported_control" | "requirement_escalation" | "requirement_relaxation"
+  code:
+    | "unsupported_control"
+    | "requirement_escalation"
+    | "requirement_relaxation"
   scope: BuilderCapabilityScope
   key: string
   severity: "warning" | "error"
@@ -209,25 +222,25 @@ export interface BuilderCapabilityPackResolution {
   unknownPackIds: string[]
 }
 
-const SUPPORTED_COMPOSITION_CONTROLS = new Set<BuilderCompositionCapability["control"]>([
-  "text",
-  "number",
-  "enum",
-  "json",
-  "id",
-])
+const SUPPORTED_COMPOSITION_CONTROLS = new Set<
+  BuilderCompositionCapability["control"]
+>(["text", "number", "enum", "json", "id"])
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-function normalizeStoryMetadataConfigJSON(value: unknown): Record<string, unknown> {
+function normalizeStoryMetadataConfigJSON(
+  value: unknown,
+): Record<string, unknown> {
   const config = isObjectRecord(value) ? { ...value } : {}
   config.show_config_json = config.show_config_json === true
   return config
 }
 
-function normalizeOrchestratorStateConfigJSON(value: unknown): Record<string, unknown> {
+function normalizeOrchestratorStateConfigJSON(
+  value: unknown,
+): Record<string, unknown> {
   const config = isObjectRecord(value) ? { ...value } : {}
   config.show_agent_list = config.show_agent_list !== false
   config.only_active_agents = config.only_active_agents !== false
@@ -235,11 +248,15 @@ function normalizeOrchestratorStateConfigJSON(value: unknown): Record<string, un
   return config
 }
 
-function normalizeContributionFeedConfigJSON(value: unknown): Record<string, unknown> {
+function normalizeContributionFeedConfigJSON(
+  value: unknown,
+): Record<string, unknown> {
   const config = isObjectRecord(value) ? { ...value } : {}
   const maxItemsRaw = config.max_items
   config.max_items =
-    typeof maxItemsRaw === "number" && Number.isFinite(maxItemsRaw) && maxItemsRaw > 0
+    typeof maxItemsRaw === "number" &&
+    Number.isFinite(maxItemsRaw) &&
+    maxItemsRaw > 0
       ? Math.floor(maxItemsRaw)
       : 12
   config.include_internal = config.include_internal === true
@@ -249,7 +266,9 @@ function normalizeContributionFeedConfigJSON(value: unknown): Record<string, unk
   return config
 }
 
-function normalizeToolCapabilityConfigJSON(value: unknown): Record<string, unknown> {
+function normalizeToolCapabilityConfigJSON(
+  value: unknown,
+): Record<string, unknown> {
   const config = isObjectRecord(value) ? { ...value } : {}
   config.only_active_agents = config.only_active_agents !== false
   config.show_agent_matrix = config.show_agent_matrix !== false
@@ -381,7 +400,7 @@ function createPreviewDebugMessages(): MessageViewModel[] {
 function parseToolCapabilityMap(value: unknown): Record<string, string[]> {
   const normalized = normalizeToolCapabilityConfigJSON(value)
   return isObjectRecord(normalized.capability_map)
-    ? normalized.capability_map as Record<string, string[]>
+    ? (normalized.capability_map as Record<string, string[]>)
     : {}
 }
 
@@ -407,7 +426,9 @@ function createPreviewAvailableAgents(
 }
 
 function getBlocksByType(composition: EditableComposition, type: string) {
-  return (composition.blocks ?? []).filter((candidate) => candidate.type === type)
+  return (composition.blocks ?? []).filter(
+    (candidate) => candidate.type === type,
+  )
 }
 
 function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
@@ -415,7 +436,7 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
     return {
       editorComponent: "StoryMetadataBlockEditor",
       normalizeCompositionPatch: (patch) => {
-        if (!Object.prototype.hasOwnProperty.call(patch, "config_json")) return patch
+        if (!Object.hasOwn(patch, "config_json")) return patch
         return {
           ...patch,
           config_json: normalizeStoryMetadataConfigJSON(patch.config_json),
@@ -423,17 +444,23 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
       },
       semanticValidators: [
         (context) => {
-          const matchingBlocks = getBlocksByType(context.composition, context.capabilityKey)
+          const matchingBlocks = getBlocksByType(
+            context.composition,
+            context.capabilityKey,
+          )
           const hasVisibleDebugConfig = matchingBlocks.some((block) => {
             const config = normalizeStoryMetadataConfigJSON(block?.config_json)
             return config.show_config_json === true
           })
           if (!hasVisibleDebugConfig) return []
-          return [{
-            code: "story_metadata_config_visible",
-            severity: "warning" as const,
-            message: "storyMetadata config_json debug output is enabled (show_config_json=true).",
-          }]
+          return [
+            {
+              code: "story_metadata_config_visible",
+              severity: "warning" as const,
+              message:
+                "storyMetadata config_json debug output is enabled (show_config_json=true).",
+            },
+          ]
         },
       ],
       blockPreviewAdapter: ({ composition }) => {
@@ -456,7 +483,7 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
     return {
       editorComponent: "OrchestratorStateBlockEditor",
       normalizeCompositionPatch: (patch) => {
-        if (!Object.prototype.hasOwnProperty.call(patch, "config_json")) return patch
+        if (!Object.hasOwn(patch, "config_json")) return patch
         return {
           ...patch,
           config_json: normalizeOrchestratorStateConfigJSON(patch.config_json),
@@ -464,17 +491,25 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
       },
       semanticValidators: [
         (context) => {
-          const matchingBlocks = getBlocksByType(context.composition, context.capabilityKey)
+          const matchingBlocks = getBlocksByType(
+            context.composition,
+            context.capabilityKey,
+          )
           const hidesAgentList = matchingBlocks.some((block) => {
-            const config = normalizeOrchestratorStateConfigJSON(block?.config_json)
+            const config = normalizeOrchestratorStateConfigJSON(
+              block?.config_json,
+            )
             return config.show_agent_list === false
           })
           if (!hidesAgentList) return []
-          return [{
-            code: "orchestrator_agent_list_hidden",
-            severity: "warning" as const,
-            message: "orchestratorState hides agent list (show_agent_list=false); orchestration visibility is reduced.",
-          }]
+          return [
+            {
+              code: "orchestrator_agent_list_hidden",
+              severity: "warning" as const,
+              message:
+                "orchestratorState hides agent list (show_agent_list=false); orchestration visibility is reduced.",
+            },
+          ]
         },
       ],
       blockPreviewAdapter: ({ composition }) => {
@@ -484,7 +519,9 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
           isConnected: runtimePolicy !== "manual",
           autoRespond: runtimePolicy === "auto",
           runtimePolicy,
-          runtimeHasRuntime: Boolean(getCompositionStoryId(composition)) || runtimePolicy !== "manual",
+          runtimeHasRuntime:
+            Boolean(getCompositionStoryId(composition)) ||
+            runtimePolicy !== "manual",
           roomAgentsAsAgentData: roomAgents,
           availableAgents: createPreviewAvailableAgents(roomAgents, {
             orchestrator: ["plan", "route"],
@@ -499,7 +536,7 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
     return {
       editorComponent: "ContributionFeedBlockEditor",
       normalizeCompositionPatch: (patch) => {
-        if (!Object.prototype.hasOwnProperty.call(patch, "config_json")) return patch
+        if (!Object.hasOwn(patch, "config_json")) return patch
         return {
           ...patch,
           config_json: normalizeContributionFeedConfigJSON(patch.config_json),
@@ -507,28 +544,37 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
       },
       semanticValidators: [
         (context) => {
-          const matchingBlocks = getBlocksByType(context.composition, context.capabilityKey)
+          const matchingBlocks = getBlocksByType(
+            context.composition,
+            context.capabilityKey,
+          )
           const warnings: BuilderCapabilitySemanticIssue[] = []
           const includesInternal = matchingBlocks.some((block) => {
-            const config = normalizeContributionFeedConfigJSON(block?.config_json)
+            const config = normalizeContributionFeedConfigJSON(
+              block?.config_json,
+            )
             return config.include_internal === true
           })
           if (includesInternal) {
             warnings.push({
               code: "contribution_feed_internal_enabled",
               severity: "warning",
-              message: "contributionFeed includes internal messages (include_internal=true).",
+              message:
+                "contributionFeed includes internal messages (include_internal=true).",
             })
           }
           const largeWindow = matchingBlocks.some((block) => {
-            const config = normalizeContributionFeedConfigJSON(block?.config_json)
+            const config = normalizeContributionFeedConfigJSON(
+              block?.config_json,
+            )
             return typeof config.max_items === "number" && config.max_items > 50
           })
           if (largeWindow) {
             warnings.push({
               code: "contribution_feed_large_window",
               severity: "warning",
-              message: "contributionFeed max_items is high (>50) and may add UI noise.",
+              message:
+                "contributionFeed max_items is high (>50) and may add UI noise.",
             })
           }
           return warnings
@@ -541,9 +587,9 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
           streamingMessage:
             runtimePolicy === "auto"
               ? {
-                agent_name: "Orchestrator",
-                content: "Synthesizing contribution preview...",
-              }
+                  agent_name: "Orchestrator",
+                  content: "Synthesizing contribution preview...",
+                }
               : null,
         }
       },
@@ -553,7 +599,7 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
     return {
       editorComponent: "ToolCapabilityBlockEditor",
       normalizeCompositionPatch: (patch) => {
-        if (!Object.prototype.hasOwnProperty.call(patch, "config_json")) return patch
+        if (!Object.hasOwn(patch, "config_json")) return patch
         return {
           ...patch,
           config_json: normalizeToolCapabilityConfigJSON(patch.config_json),
@@ -561,25 +607,39 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
       },
       semanticValidators: [
         (context) => {
-          const matchingBlocks = getBlocksByType(context.composition, context.capabilityKey)
+          const matchingBlocks = getBlocksByType(
+            context.composition,
+            context.capabilityKey,
+          )
           const hasInvalidMapping = matchingBlocks.some((block) => {
             const rawConfig = block.config_json
             if (!isObjectRecord(rawConfig)) return false
-            if (!Object.prototype.hasOwnProperty.call(rawConfig, "capability_map")) return false
+            if (!Object.hasOwn(rawConfig, "capability_map")) return false
             if (!isObjectRecord(rawConfig.capability_map)) return true
-            const rawCapabilityMap = rawConfig.capability_map as Record<string, unknown>
+            const rawCapabilityMap = rawConfig.capability_map as Record<
+              string,
+              unknown
+            >
             const normalized = normalizeToolCapabilityConfigJSON(rawConfig)
-            const normalizedCapabilityMap = isObjectRecord(normalized.capability_map)
+            const normalizedCapabilityMap = isObjectRecord(
+              normalized.capability_map,
+            )
               ? normalized.capability_map
               : {}
-            return Object.keys(rawCapabilityMap).length > 0 && Object.keys(normalizedCapabilityMap).length === 0
+            return (
+              Object.keys(rawCapabilityMap).length > 0 &&
+              Object.keys(normalizedCapabilityMap).length === 0
+            )
           })
           if (!hasInvalidMapping) return []
-          return [{
-            code: "tool_capability_invalid_mapping",
-            severity: "warning",
-            message: "toolCapability capability_map contains invalid entries and was normalized.",
-          }]
+          return [
+            {
+              code: "tool_capability_invalid_mapping",
+              severity: "warning",
+              message:
+                "toolCapability capability_map contains invalid entries and was normalized.",
+            },
+          ]
         },
       ],
       blockPreviewAdapter: ({ block }) => {
@@ -589,7 +649,10 @@ function getBlockHooks(type: ActiveBuilderBlockType): BuilderCapabilityHooks {
         )
         return {
           roomAgentsAsAgentData: roomAgents,
-          availableAgents: createPreviewAvailableAgents(roomAgents, capabilityMap),
+          availableAgents: createPreviewAvailableAgents(
+            roomAgents,
+            capabilityMap,
+          ),
         }
       },
     }
@@ -609,7 +672,9 @@ function getPanelHooks(kind: ActiveBuilderPanelKind): BuilderCapabilityHooks {
   return {}
 }
 
-function getPanelPresentationFieldSpecs(kind: ActiveBuilderPanelKind): BuilderPresentationFieldSpec[] {
+function getPanelPresentationFieldSpecs(
+  kind: ActiveBuilderPanelKind,
+): BuilderPresentationFieldSpec[] {
   if (kind === "storyRuntime") {
     return [
       {
@@ -671,7 +736,9 @@ function getPanelPresentationFieldSpecs(kind: ActiveBuilderPanelKind): BuilderPr
   return []
 }
 
-function getBlockPresentationFieldSpecs(type: ActiveBuilderBlockType): BuilderPresentationFieldSpec[] {
+function getBlockPresentationFieldSpecs(
+  type: ActiveBuilderBlockType,
+): BuilderPresentationFieldSpec[] {
   if (type === "storyMetadata") {
     return [
       {
@@ -741,7 +808,7 @@ function getBlockPresentationFieldSpecs(type: ActiveBuilderBlockType): BuilderPr
         path: "tokens.matrix_density",
         label: "Matrix Density",
         control: "enum",
-        enumValues: ["comfortable", "compact"],
+        enumValues: ["standard", "compact"],
       },
       {
         path: "overlays.block_header.css",
@@ -775,7 +842,9 @@ function getBlockPresentationFieldSpecs(type: ActiveBuilderBlockType): BuilderPr
   return []
 }
 
-function getPanelRequirements(kind: ActiveBuilderPanelKind): BuilderCapabilityRequirements {
+function getPanelRequirements(
+  kind: ActiveBuilderPanelKind,
+): BuilderCapabilityRequirements {
   const schema = BUILDER_PANEL_KIND_SCHEMAS[kind]
   return {
     requiresStory: Boolean(schema.requiresStoryId),
@@ -784,12 +853,20 @@ function getPanelRequirements(kind: ActiveBuilderPanelKind): BuilderCapabilityRe
   }
 }
 
-function getBlockRequirements(type: ActiveBuilderBlockType): BuilderCapabilityRequirements {
+function getBlockRequirements(
+  type: ActiveBuilderBlockType,
+): BuilderCapabilityRequirements {
   const schema = BUILDER_BLOCK_TYPE_SCHEMAS[type]
   return {
     requiresStory: Boolean(schema.requiresStoryId),
-    requiresRuntime: type === "storyMetadata" || type === "orchestratorState" || type === "contributionFeed",
-    requiresPersona: type === "agentRoster" || type === "orchestratorState" || type === "toolCapability",
+    requiresRuntime:
+      type === "storyMetadata" ||
+      type === "orchestratorState" ||
+      type === "contributionFeed",
+    requiresPersona:
+      type === "agentRoster" ||
+      type === "orchestratorState" ||
+      type === "toolCapability",
   }
 }
 
@@ -805,14 +882,20 @@ function mergeCapabilityHooks(
   return {
     ...base,
     ...extension,
-    semanticValidators: mergedValidators.length > 0 ? mergedValidators : undefined,
+    semanticValidators:
+      mergedValidators.length > 0 ? mergedValidators : undefined,
   }
 }
 
 function isTruthyEnvFlag(value: string | undefined): boolean {
   if (!value) return false
   const normalized = value.trim().toLowerCase()
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on"
+  return (
+    normalized === "1" ||
+    normalized === "true" ||
+    normalized === "yes" ||
+    normalized === "on"
+  )
 }
 
 function toEnvString(value: unknown): string | undefined {
@@ -820,7 +903,8 @@ function toEnvString(value: unknown): string | undefined {
 }
 
 function getImportMetaEnv(): Record<string, unknown> {
-  const env = (import.meta as ImportMeta & { env?: Record<string, unknown> }).env
+  const env = (import.meta as ImportMeta & { env?: Record<string, unknown> })
+    .env
   return env ?? {}
 }
 
@@ -861,12 +945,24 @@ const CORE_BUILDER_BLOCK_CAPABILITIES: BuilderBlockCapability[] =
     hooks: getBlockHooks(type),
   }))
 
-const CORE_PANEL_REQUIREMENTS_BY_KIND = new Map<string, BuilderCapabilityRequirements>(
-  CORE_BUILDER_PANEL_CAPABILITIES.map((capability) => [capability.kind, capability.requirements]),
+const CORE_PANEL_REQUIREMENTS_BY_KIND = new Map<
+  string,
+  BuilderCapabilityRequirements
+>(
+  CORE_BUILDER_PANEL_CAPABILITIES.map((capability) => [
+    capability.kind,
+    capability.requirements,
+  ]),
 )
 
-const CORE_BLOCK_REQUIREMENTS_BY_TYPE = new Map<string, BuilderCapabilityRequirements>(
-  CORE_BUILDER_BLOCK_CAPABILITIES.map((capability) => [capability.type, capability.requirements]),
+const CORE_BLOCK_REQUIREMENTS_BY_TYPE = new Map<
+  string,
+  BuilderCapabilityRequirements
+>(
+  CORE_BUILDER_BLOCK_CAPABILITIES.map((capability) => [
+    capability.type,
+    capability.requirements,
+  ]),
 )
 
 type RuntimeCoupledBlockType =
@@ -875,32 +971,51 @@ type RuntimeCoupledBlockType =
   | "contributionFeed"
   | "toolCapability"
 
-const RUNTIME_COUPLED_BLOCK_EXPECTATIONS: Record<RuntimeCoupledBlockType, {
-  requirements: BuilderCapabilityRequirements
-  requiresEditorComponent: boolean
-  requiresPatchNormalizer: boolean
-  requiresSemanticValidator: boolean
-}> = {
+const RUNTIME_COUPLED_BLOCK_EXPECTATIONS: Record<
+  RuntimeCoupledBlockType,
+  {
+    requirements: BuilderCapabilityRequirements
+    requiresEditorComponent: boolean
+    requiresPatchNormalizer: boolean
+    requiresSemanticValidator: boolean
+  }
+> = {
   storyMetadata: {
-    requirements: { requiresStory: true, requiresRuntime: true, requiresPersona: false },
+    requirements: {
+      requiresStory: true,
+      requiresRuntime: true,
+      requiresPersona: false,
+    },
     requiresEditorComponent: true,
     requiresPatchNormalizer: true,
     requiresSemanticValidator: true,
   },
   orchestratorState: {
-    requirements: { requiresStory: false, requiresRuntime: true, requiresPersona: true },
+    requirements: {
+      requiresStory: false,
+      requiresRuntime: true,
+      requiresPersona: true,
+    },
     requiresEditorComponent: true,
     requiresPatchNormalizer: true,
     requiresSemanticValidator: true,
   },
   contributionFeed: {
-    requirements: { requiresStory: false, requiresRuntime: true, requiresPersona: false },
+    requirements: {
+      requiresStory: false,
+      requiresRuntime: true,
+      requiresPersona: false,
+    },
     requiresEditorComponent: true,
     requiresPatchNormalizer: true,
     requiresSemanticValidator: true,
   },
   toolCapability: {
-    requirements: { requiresStory: false, requiresRuntime: false, requiresPersona: true },
+    requirements: {
+      requiresStory: false,
+      requiresRuntime: false,
+      requiresPersona: true,
+    },
     requiresEditorComponent: true,
     requiresPatchNormalizer: true,
     requiresSemanticValidator: true,
@@ -908,8 +1023,12 @@ const RUNTIME_COUPLED_BLOCK_EXPECTATIONS: Record<RuntimeCoupledBlockType, {
 }
 
 function buildInternalDemoBuilderPluginPack(): BuilderCapabilityRegistryPack {
-  const basePanel = CORE_BUILDER_PANEL_CAPABILITIES.find((capability) => capability.kind === "participantPanel")
-  const baseBlock = CORE_BUILDER_BLOCK_CAPABILITIES.find((capability) => capability.type === "toolCapability")
+  const basePanel = CORE_BUILDER_PANEL_CAPABILITIES.find(
+    (capability) => capability.kind === "participantPanel",
+  )
+  const baseBlock = CORE_BUILDER_BLOCK_CAPABILITIES.find(
+    (capability) => capability.type === "toolCapability",
+  )
   if (!basePanel || !baseBlock) {
     return {
       id: "internal.plugin.demo-builder.v1",
@@ -936,18 +1055,26 @@ function buildInternalDemoBuilderPluginPack(): BuilderCapabilityRegistryPack {
           editorComponent: "ToolCapabilityPluginEditor",
           semanticValidators: [
             (context) => {
-              const matchingBlocks = getBlocksByType(context.composition, context.capabilityKey)
+              const matchingBlocks = getBlocksByType(
+                context.composition,
+                context.capabilityKey,
+              )
               const missingMap = matchingBlocks.some((block) => {
                 if (!isObjectRecord(block.config_json)) return true
                 const rawMap = block.config_json.capability_map
-                return !isObjectRecord(rawMap) || Object.keys(rawMap).length === 0
+                return (
+                  !isObjectRecord(rawMap) || Object.keys(rawMap).length === 0
+                )
               })
               if (!missingMap) return []
-              return [{
-                code: "tool_capability_mapping_missing",
-                severity: "warning",
-                message: "toolCapability has no capability_map entries; matrix rendering may appear empty.",
-              }]
+              return [
+                {
+                  code: "tool_capability_mapping_missing",
+                  severity: "warning",
+                  message:
+                    "toolCapability has no capability_map entries; matrix rendering may appear empty.",
+                },
+              ]
             },
           ],
         }),
@@ -957,7 +1084,9 @@ function buildInternalDemoBuilderPluginPack(): BuilderCapabilityRegistryPack {
 }
 
 function buildRuntimeSafeExamplePack(): BuilderCapabilityRegistryPack {
-  const baseStoryMetadata = CORE_BUILDER_BLOCK_CAPABILITIES.find((capability) => capability.type === "storyMetadata")
+  const baseStoryMetadata = CORE_BUILDER_BLOCK_CAPABILITIES.find(
+    (capability) => capability.type === "storyMetadata",
+  )
   if (!baseStoryMetadata) return { id: "example.runtime-safe.v1", order: 610 }
   return {
     id: "example.runtime-safe.v1",
@@ -970,14 +1099,21 @@ function buildRuntimeSafeExamplePack(): BuilderCapabilityRegistryPack {
           editorComponent: "StoryMetadataRuntimeSafeEditor",
           semanticValidators: [
             (context) => {
-              const matchingBlocks = getBlocksByType(context.composition, context.capabilityKey)
-              const hasConfig = matchingBlocks.some((block) => isObjectRecord(block.config_json))
+              const matchingBlocks = getBlocksByType(
+                context.composition,
+                context.capabilityKey,
+              )
+              const hasConfig = matchingBlocks.some((block) =>
+                isObjectRecord(block.config_json),
+              )
               if (hasConfig) return []
-              return [{
-                code: "story_metadata_missing_config",
-                severity: "warning",
-                message: "storyMetadata block is missing config_json object.",
-              }]
+              return [
+                {
+                  code: "story_metadata_missing_config",
+                  severity: "warning",
+                  message: "storyMetadata block is missing config_json object.",
+                },
+              ]
             },
           ],
         }),
@@ -1027,7 +1163,9 @@ function buildUxEnhancerExamplePack(): BuilderCapabilityRegistryPack {
 }
 
 function buildPolicyGuardedExamplePack(): BuilderCapabilityRegistryPack {
-  const participantPanel = CORE_BUILDER_PANEL_CAPABILITIES.find((capability) => capability.kind === "participantPanel")
+  const participantPanel = CORE_BUILDER_PANEL_CAPABILITIES.find(
+    (capability) => capability.kind === "participantPanel",
+  )
   if (!participantPanel) return { id: "example.policy-guarded.v1", order: 630 }
   return {
     id: "example.policy-guarded.v1",
@@ -1073,31 +1211,557 @@ function buildInvalidExamplePack(): BuilderCapabilityRegistryPack {
   }
 }
 
-function getBuiltinBuilderCapabilityPackRegistrations(): BuilderCapabilityPackRegistration[] {
-  return [
+// ============================================================================
+// TYPOGRAPHY FONT CAPABILITY PACK
+// ============================================================================
+//
+// This pack provides presentation field specs for custom typography fonts at
+// the composition, panel, and block levels. Fonts are resolved through the
+// demoPresentationResolver and loaded dynamically via DemoPresentationFrame.
+//
+// ## Architecture Overview
+//
+// 1. **Capability Pack** (this file)
+//    - Defines available font presets via BuilderPresentationFieldSpec
+//    - Font values are stored in presentation_json.typography.heading_font
+//      and presentation_json.typography.body_font
+//
+// 2. **Presentation Resolver** (demoPresentationResolver.ts)
+//    - Reads font values from presentation_json
+//    - Outputs CSS custom properties: --font-heading, --font-body
+//    - Properties cascade: composition → panel → block
+//
+// 3. **Presentation Frame** (DemoPresentationFrame.tsx)
+//    - Detects font names in resolved style
+//    - Dynamically injects Google Fonts <link> tags
+//    - Handles deduplication across multiple frames
+//
+// 4. **CSS Consumption** (demo-themes.css)
+//    - Applies --font-heading to h1-h3 elements
+//    - Applies --font-body to p, span, li elements
+//    - Falls back to var(--font-sans) when not specified
+//
+// ## Extending Font Presets
+//
+// To add new fonts:
+// 1. Add the font name to TYPOGRAPHY_FONT_PRESETS below
+// 2. Ensure the font is available on Google Fonts (or pre-loaded in CSS)
+// 3. The font loader will automatically fetch it when used
+//
+// ## Font Loading Strategy
+//
+// Fonts are loaded on-demand when they appear in presentation_json. This
+// avoids loading unused fonts but may cause a brief FOUT (Flash of Unstyled
+// Text) on first use. For production, consider:
+// - Pre-loading frequently used fonts in index.html
+// - Using font-display: swap for graceful degradation
+//
+// ============================================================================
+
+/**
+ * Available font presets for typography customization.
+ *
+ * "system" uses the default system font stack (no custom loading).
+ * Other values must match Google Fonts family names exactly.
+ *
+ * @remarks
+ * When adding fonts, ensure they support the character sets your content needs.
+ * Most Google Fonts support Latin; check individual fonts for extended support.
+ */
+export const TYPOGRAPHY_FONT_PRESETS = [
+  "system",
+  "Inter",
+  "Space Grotesk",
+  "IBM Plex Sans",
+  "JetBrains Mono",
+  "Playfair Display",
+  "Source Sans Pro",
+  "Lora",
+  "Fira Code",
+  "Work Sans",
+] as const
+
+export type TypographyFontPreset = (typeof TYPOGRAPHY_FONT_PRESETS)[number]
+
+/**
+ * Presentation field specs for typography fonts.
+ *
+ * These are shared across composition, panel, and block scopes to enable
+ * granular font customization at each level of the demo hierarchy.
+ */
+const TYPOGRAPHY_FONT_PRESENTATION_FIELD_SPECS: BuilderPresentationFieldSpec[] =
+  [
     {
-      id: "internal.plugin.demo-builder.v1",
-      description: "Internal builder plugin spike pack (participantPanel/toolCapability overrides).",
-      createPack: () => buildInternalDemoBuilderPluginPack(),
+      path: "typography.heading_font",
+      label: "Heading Font",
+      control: "enum",
+      enumValues: TYPOGRAPHY_FONT_PRESETS,
+      description:
+        "Font family for headings (h1, h2, h3). Inherits from parent scope if not set.",
     },
     {
+      path: "typography.body_font",
+      label: "Body Font",
+      control: "enum",
+      enumValues: TYPOGRAPHY_FONT_PRESETS,
+      description:
+        "Font family for body text (p, span, li). Inherits from parent scope if not set.",
+    },
+  ]
+
+/**
+ * Creates the typography font capability pack.
+ *
+ * This pack extends presentation_json support to include custom font selection
+ * at composition, panel, and block levels. The fonts are resolved into CSS
+ * custom properties by demoPresentationResolver and loaded dynamically by
+ * DemoPresentationFrame's useFontLoader hook.
+ *
+ * @returns A BuilderCapabilityRegistryPack with typography font field specs
+ *
+ * @example
+ * ```typescript
+ * // Enable typography fonts in your environment:
+ * // .env: VITE_DEMO_BUILDER_PACKS=typography.fonts.v1
+ *
+ * // Or programmatically:
+ * const registry = buildCapabilityRegistry({
+ *   packs: [buildTypographyFontsPack()],
+ * })
+ * ```
+ */
+// ============================================================================
+// CALLOUTS CAPABILITY PACK
+// ============================================================================
+//
+// This pack provides presentation field specs for callout banners at the
+// composition, panel, and block levels. Callouts are decorative/informational
+// elements that can be positioned at header or footer slots.
+//
+// ## Architecture Overview
+//
+// 1. **Capability Pack** (this file)
+//    - Defines available callout style presets via BuilderPresentationFieldSpec
+//    - Callout values are stored in presentation_json.callouts.header and
+//      presentation_json.callouts.footer
+//
+// 2. **Presentation Resolver** (demoPresentationResolver.ts)
+//    - Reads callout configs from presentation_json
+//    - Validates and resolves callout configs into CalloutSlotMap
+//    - Properties cascade: composition → panel → block
+//
+// 3. **Presentation Frame** (DemoPresentationFrame.tsx)
+//    - Detects callout configs in resolved frame
+//    - Renders CalloutBanner components at header/footer slots
+//    - Handles visibility toggling via config.visible
+//
+// 4. **Callout Primitives** (Page/primitives/Callout/)
+//    - CalloutBanner component renders the visual output
+//    - Style presets define Tailwind classes for each style
+//    - Icon support via Lucide icons
+//
+// ## Extending Callout Presets
+//
+// To add new callout styles:
+// 1. Add the style name to CALLOUT_CALLOUT_STYLE_PRESETS below
+// 2. Add corresponding Tailwind classes in calloutStylePresets.ts
+// 3. The style will be available in presentation_json editors
+//
+// ============================================================================
+
+/**
+ * Available callout style presets for presentation customization.
+ *
+ * These must match the keys defined in CALLOUT_STYLE_PRESETS in
+ * Page/primitives/Callout/calloutStylePresets.ts
+ *
+ * @remarks
+ * When adding styles, ensure the visual design works well across both
+ * light and dark theme contexts.
+ */
+export const CALLOUT_STYLE_PRESETS = [
+  "frosted",
+  "neon-frame",
+  "glass-pill",
+  "framed-note",
+  "status-pill",
+  "runtime-banner",
+] as const
+
+export type CalloutStylePresetOption = (typeof CALLOUT_STYLE_PRESETS)[number]
+
+/**
+ * Common Lucide icon names for callout icons.
+ *
+ * This is a curated subset of commonly useful icons for callouts.
+ * Users can still use any valid Lucide icon name via the text input.
+ */
+export const CALLOUT_ICON_SUGGESTIONS = [
+  "eye",
+  "info",
+  "alert-triangle",
+  "check-circle",
+  "clock",
+  "zap",
+  "sparkles",
+  "lightbulb",
+  "bell",
+  "message-circle",
+] as const
+
+/**
+ * Presentation field specs for callout configuration.
+ *
+ * These define the header and footer callout configuration options
+ * available in the presentation_json editor.
+ */
+const CALLOUT_PRESENTATION_FIELD_SPECS: BuilderPresentationFieldSpec[] = [
+  // Header callout fields
+  {
+    path: "callouts.header.style",
+    label: "Header Callout Style",
+    control: "enum",
+    enumValues: CALLOUT_STYLE_PRESETS,
+    description: "Visual style preset for the header callout banner.",
+  },
+  {
+    path: "callouts.header.text",
+    label: "Header Callout Text",
+    control: "text",
+    placeholder: "e.g., Preview Mode",
+    description: "Text content displayed in the header callout.",
+  },
+  {
+    path: "callouts.header.icon",
+    label: "Header Callout Icon",
+    control: "text",
+    placeholder: "e.g., eye, info, alert-triangle",
+    description: "Lucide icon name for the header callout (optional).",
+  },
+  // Footer callout fields
+  {
+    path: "callouts.footer.style",
+    label: "Footer Callout Style",
+    control: "enum",
+    enumValues: CALLOUT_STYLE_PRESETS,
+    description: "Visual style preset for the footer callout banner.",
+  },
+  {
+    path: "callouts.footer.text",
+    label: "Footer Callout Text",
+    control: "text",
+    placeholder: "e.g., Runtime Active",
+    description: "Text content displayed in the footer callout.",
+  },
+  {
+    path: "callouts.footer.icon",
+    label: "Footer Callout Icon",
+    control: "text",
+    placeholder: "e.g., check-circle, zap, sparkles",
+    description: "Lucide icon name for the footer callout (optional).",
+  },
+]
+
+/**
+ * Creates the callouts capability pack.
+ *
+ * This pack extends presentation_json support to include callout banner
+ * configuration at composition, panel, and block levels. The callouts are
+ * resolved by demoPresentationResolver and rendered by DemoPresentationFrame
+ * using the CalloutBanner component from Page/primitives/Callout.
+ *
+ * @returns A BuilderCapabilityRegistryPack with callout field specs
+ *
+ * @example
+ * ```typescript
+ * // Enable callouts in your environment:
+ * // .env: VITE_DEMO_BUILDER_PACKS=presentation.callouts.v1
+ *
+ * // Or programmatically:
+ * const registry = buildCapabilityRegistry({
+ *   packs: [buildCalloutsPack()],
+ * })
+ * ```
+ */
+function buildCalloutsPack(): BuilderCapabilityRegistryPack {
+  return {
+    id: "presentation.callouts.v1",
+    // Order 210: After typography fonts (200), before example packs (600+)
+    order: 210,
+    compositionCapabilities: [
+      {
+        key: "presentation_json.callouts.header.style",
+        label: "Header Callout Style",
+        category: "theme",
+        control: "enum",
+        enumValues: CALLOUT_STYLE_PRESETS,
+        placeholder: "Select header callout style",
+      },
+      {
+        key: "presentation_json.callouts.header.text",
+        label: "Header Callout Text",
+        category: "theme",
+        control: "text",
+        enumValues: [],
+        placeholder: "e.g., Preview Mode",
+      },
+      {
+        key: "presentation_json.callouts.footer.style",
+        label: "Footer Callout Style",
+        category: "theme",
+        control: "enum",
+        enumValues: CALLOUT_STYLE_PRESETS,
+        placeholder: "Select footer callout style",
+      },
+      {
+        key: "presentation_json.callouts.footer.text",
+        label: "Footer Callout Text",
+        category: "theme",
+        control: "text",
+        enumValues: [],
+        placeholder: "e.g., Runtime Active",
+      },
+    ],
+    // Panel capabilities: Extend all panel kinds with callout field specs
+    panelCapabilities: ACTIVE_BUILDER_PANEL_KINDS.map((kind) => {
+      const coreCapability = CORE_BUILDER_PANEL_CAPABILITIES.find(
+        (c) => c.kind === kind,
+      )
+      return {
+        kind,
+        displayName: coreCapability?.displayName ?? kind,
+        requirements: coreCapability?.requirements ?? {
+          requiresStory: false,
+          requiresRuntime: false,
+          requiresPersona: false,
+        },
+        presentationFieldSpecs: [
+          ...(coreCapability?.presentationFieldSpecs ?? []),
+          ...CALLOUT_PRESENTATION_FIELD_SPECS,
+        ],
+        hooks: coreCapability?.hooks,
+      }
+    }),
+    // Block capabilities: Extend all block types with callout field specs
+    blockCapabilities: ACTIVE_BUILDER_BLOCK_TYPES.map((type) => {
+      const coreCapability = CORE_BUILDER_BLOCK_CAPABILITIES.find(
+        (c) => c.type === type,
+      )
+      return {
+        type,
+        displayName: coreCapability?.displayName ?? type,
+        requirements: coreCapability?.requirements ?? {
+          requiresStory: false,
+          requiresRuntime: false,
+          requiresPersona: false,
+        },
+        presentationFieldSpecs: [
+          ...(coreCapability?.presentationFieldSpecs ?? []),
+          ...CALLOUT_PRESENTATION_FIELD_SPECS,
+        ],
+        hooks: coreCapability?.hooks,
+      }
+    }),
+  }
+}
+
+// ============================================================================
+// SVG OVERLAYS CAPABILITY PACK
+// ============================================================================
+//
+// This pack provides a composition-level capability for selecting SVG overlay
+// background patterns. SVG overlays are decorative tiled patterns that layer
+// between page_gradient (top) and card_pattern (bottom) in the background.
+//
+// ## Architecture Overview
+//
+// 1. **Capability Pack** (this file)
+//    - Exposes backgrounds.svg_overlay as an enum field for composition editing
+//    - Preset values come from SVG_OVERLAY_PRESETS in svgOverlayRegistry.ts
+//
+// 2. **SVG Overlay Registry** (svgOverlayRegistry.ts)
+//    - Stores SVG patterns as inline data URIs
+//    - Provides getSvgOverlayUrl() lookup function
+//    - Patterns use currentColor for theme adaptation
+//
+// 3. **Presentation Resolver** (demoPresentationResolver.ts)
+//    - Reads backgrounds.svg_overlay from presentation_json
+//    - Calls getSvgOverlayUrl() to get the data URI
+//    - Layers with page_gradient and card_pattern in backgroundImage
+//
+// ## Cascade Behavior
+//
+// Each scope (composition, panel, block) resolves independently. If a panel
+// specifies svg_overlay, it uses that value; it does not inherit from
+// composition. This matches the existing cascade behavior for other
+// presentation_json fields.
+//
+// ============================================================================
+
+/**
+ * Creates the SVG overlays capability pack.
+ *
+ * This pack adds a composition-level capability for selecting SVG overlay
+ * background patterns. The overlays are resolved into CSS backgroundImage
+ * layers by demoPresentationResolver.
+ *
+ * @returns A BuilderCapabilityRegistryPack with svg_overlay field spec
+ *
+ * @example
+ * ```typescript
+ * // Enable SVG overlays in your environment:
+ * // .env: VITE_DEMO_BUILDER_PACKS=presentation.svg-overlays.v1
+ *
+ * // Or programmatically:
+ * const registry = buildCapabilityRegistry({
+ *   packs: [buildSvgOverlaysPack()],
+ * })
+ * ```
+ */
+function buildSvgOverlaysPack(): BuilderCapabilityRegistryPack {
+  return {
+    id: "presentation.svg-overlays.v1",
+    // Order 220: After callouts (210), before example packs (600+)
+    order: 220,
+    compositionCapabilities: [
+      {
+        key: "presentation_json.backgrounds.svg_overlay",
+        label: "SVG Overlay Pattern",
+        category: "theme",
+        control: "enum",
+        enumValues: SVG_OVERLAY_PRESETS,
+        placeholder: "Select background pattern",
+      },
+    ],
+  }
+}
+
+function buildTypographyFontsPack(): BuilderCapabilityRegistryPack {
+  return {
+    id: "typography.fonts.v1",
+    // Order 200: After core capabilities (100) but before example packs (600+)
+    order: 200,
+    compositionCapabilities: [
+      {
+        key: "presentation_json.typography.heading_font",
+        label: "Heading Font",
+        category: "theme",
+        control: "enum",
+        enumValues: TYPOGRAPHY_FONT_PRESETS,
+        placeholder: "Select heading font family",
+      },
+      {
+        key: "presentation_json.typography.body_font",
+        label: "Body Font",
+        category: "theme",
+        control: "enum",
+        enumValues: TYPOGRAPHY_FONT_PRESETS,
+        placeholder: "Select body font family",
+      },
+    ],
+    // Panel capabilities: Extend all panel kinds with font field specs
+    panelCapabilities: ACTIVE_BUILDER_PANEL_KINDS.map((kind) => {
+      const coreCapability = CORE_BUILDER_PANEL_CAPABILITIES.find(
+        (c) => c.kind === kind,
+      )
+      return {
+        kind,
+        displayName: coreCapability?.displayName ?? kind,
+        requirements: coreCapability?.requirements ?? {
+          requiresStory: false,
+          requiresRuntime: false,
+          requiresPersona: false,
+        },
+        presentationFieldSpecs: [
+          ...(coreCapability?.presentationFieldSpecs ?? []),
+          ...TYPOGRAPHY_FONT_PRESENTATION_FIELD_SPECS,
+        ],
+        hooks: coreCapability?.hooks,
+      }
+    }),
+    // Block capabilities: Extend all block types with font field specs
+    blockCapabilities: ACTIVE_BUILDER_BLOCK_TYPES.map((type) => {
+      const coreCapability = CORE_BUILDER_BLOCK_CAPABILITIES.find(
+        (c) => c.type === type,
+      )
+      return {
+        type,
+        displayName: coreCapability?.displayName ?? type,
+        requirements: coreCapability?.requirements ?? {
+          requiresStory: false,
+          requiresRuntime: false,
+          requiresPersona: false,
+        },
+        presentationFieldSpecs: [
+          ...(coreCapability?.presentationFieldSpecs ?? []),
+          ...TYPOGRAPHY_FONT_PRESENTATION_FIELD_SPECS,
+        ],
+        hooks: coreCapability?.hooks,
+      }
+    }),
+  }
+}
+
+function getBuiltinBuilderCapabilityPackRegistrations(): BuilderCapabilityPackRegistration[] {
+  return [
+    // -------------------------------------------------------------------------
+    // Production Packs (order 200-299)
+    // -------------------------------------------------------------------------
+    {
+      id: "typography.fonts.v1",
+      description:
+        "Typography font customization for headings and body text. Enables font selection via presentation_json at composition, panel, and block levels.",
+      createPack: () => buildTypographyFontsPack(),
+    },
+    {
+      id: "presentation.callouts.v1",
+      description:
+        "Callout banner customization for header and footer slots. Enables decorative/informational callouts via presentation_json at composition, panel, and block levels.",
+      createPack: () => buildCalloutsPack(),
+    },
+    {
+      id: "presentation.svg-overlays.v1",
+      description:
+        "SVG overlay background patterns for composition-level styling. Enables decorative tiled patterns via presentation_json.backgrounds.svg_overlay.",
+      createPack: () => buildSvgOverlaysPack(),
+    },
+
+    // -------------------------------------------------------------------------
+    // Internal/Plugin Packs (order 500-599)
+    // -------------------------------------------------------------------------
+    {
+      id: "internal.plugin.demo-builder.v1",
+      description:
+        "Internal builder plugin spike pack (participantPanel/toolCapability overrides).",
+      createPack: () => buildInternalDemoBuilderPluginPack(),
+    },
+
+    // -------------------------------------------------------------------------
+    // Example Packs (order 600-699)
+    // These demonstrate pack extension patterns and are not for production use.
+    // -------------------------------------------------------------------------
+    {
       id: "example.runtime-safe.v1",
-      description: "Reference runtime-coupled extension that preserves expectation/safety checks.",
+      description:
+        "Reference runtime-coupled extension that preserves expectation/safety checks.",
       createPack: () => buildRuntimeSafeExamplePack(),
     },
     {
       id: "example.ux-enhancer.v1",
-      description: "UX-focused example pack for theme-oriented labels/placeholders and naming.",
+      description:
+        "UX-focused example pack for theme-oriented labels/placeholders and naming.",
       createPack: () => buildUxEnhancerExamplePack(),
     },
     {
       id: "example.policy-guarded.v1",
-      description: "Example showing policy-driven requirement escalation for gated rollouts.",
+      description:
+        "Example showing policy-driven requirement escalation for gated rollouts.",
       createPack: () => buildPolicyGuardedExamplePack(),
     },
     {
       id: "example.invalid.v1",
-      description: "Intentionally invalid example pack for analyzer/testing demos.",
+      description:
+        "Intentionally invalid example pack for analyzer/testing demos.",
       createPack: () => buildInvalidExamplePack(),
     },
   ]
@@ -1121,22 +1785,33 @@ export function resolveBuilderCapabilityPacks(
 ): BuilderCapabilityPackResolution {
   const env = options.env ?? getImportMetaEnv()
   const includeLegacyInternalFlag = options.includeLegacyInternalFlag !== false
-  const packIdsFromEnv = parsePackIdsCSV(toEnvString(env.VITE_DEMO_BUILDER_PACKS))
+  const packIdsFromEnv = parsePackIdsCSV(
+    toEnvString(env.VITE_DEMO_BUILDER_PACKS),
+  )
   const enabledPackIds = options.enabledPackIds ?? packIdsFromEnv
   const catalog = new Map(
-    BUILDER_CAPABILITY_PACK_REGISTRATIONS.map((registration) => [registration.id, registration]),
+    BUILDER_CAPABILITY_PACK_REGISTRATIONS.map((registration) => [
+      registration.id,
+      registration,
+    ]),
   )
 
   const resolvedIds = new Set(enabledPackIds)
   if (includeLegacyInternalFlag) {
-    const legacyFlag = toEnvString(env.VITE_DEMO_BUILDER_ENABLE_INTERNAL_PLUGIN_PACK)
+    const legacyFlag = toEnvString(
+      env.VITE_DEMO_BUILDER_ENABLE_INTERNAL_PLUGIN_PACK,
+    )
     if (isTruthyEnvFlag(legacyFlag)) {
       resolvedIds.add("internal.plugin.demo-builder.v1")
     }
   }
 
-  const knownPackIds = Array.from(resolvedIds).filter((packId) => catalog.has(packId))
-  const unknownPackIds = Array.from(resolvedIds).filter((packId) => !catalog.has(packId))
+  const knownPackIds = Array.from(resolvedIds).filter((packId) =>
+    catalog.has(packId),
+  )
+  const unknownPackIds = Array.from(resolvedIds).filter(
+    (packId) => !catalog.has(packId),
+  )
   const packs = knownPackIds.map((packId) => {
     const registration = catalog.get(packId)!
     return registration.createPack()
@@ -1149,8 +1824,12 @@ export function resolveBuilderCapabilityPacks(
   }
 }
 
-function getScopeEntryKey(scope: BuilderCapabilityScope, entry: unknown): string {
-  if (scope === "composition") return (entry as BuilderCompositionCapability).key
+function getScopeEntryKey(
+  scope: BuilderCapabilityScope,
+  entry: unknown,
+): string {
+  if (scope === "composition")
+    return (entry as BuilderCompositionCapability).key
   if (scope === "panel") return (entry as BuilderPanelCapability).kind
   return (entry as BuilderBlockCapability).type
 }
@@ -1166,7 +1845,9 @@ function mergeCapabilityEntries<TEntry>(
 ): void {
   for (const entry of entries) {
     const key = getScopeEntryKey(scope, entry)
-    const existingIndex = destination.findIndex((candidate) => getScopeEntryKey(scope, candidate) === key)
+    const existingIndex = destination.findIndex(
+      (candidate) => getScopeEntryKey(scope, candidate) === key,
+    )
     if (existingIndex === -1) {
       destination.push(entry)
       sourceByKey.set(key, entryPackId)
@@ -1194,16 +1875,17 @@ function mergeCapabilityEntries<TEntry>(
   }
 }
 
-export function buildCapabilityRegistry(options: BuilderCapabilityRegistryBuildOptions = {}): BuilderCapabilityRegistry {
+export function buildCapabilityRegistry(
+  options: BuilderCapabilityRegistryBuildOptions = {},
+): BuilderCapabilityRegistry {
   const includeCoreCapabilities = options.includeCoreCapabilities !== false
   const conflictPolicy = options.conflictPolicy ?? "keep_existing"
-  const packs = [...(options.packs ?? [])]
-    .sort((a, b) => {
-      const aOrder = a.order ?? 100
-      const bOrder = b.order ?? 100
-      if (aOrder !== bOrder) return aOrder - bOrder
-      return a.id.localeCompare(b.id)
-    })
+  const packs = [...(options.packs ?? [])].sort((a, b) => {
+    const aOrder = a.order ?? 100
+    const bOrder = b.order ?? 100
+    if (aOrder !== bOrder) return aOrder - bOrder
+    return a.id.localeCompare(b.id)
+  })
 
   const composition: BuilderCompositionCapability[] = []
   const panels: BuilderPanelCapability[] = []
@@ -1290,21 +1972,35 @@ const DEFAULT_BUILDER_CAPABILITY_REGISTRY = buildCapabilityRegistry({
 export const BUILDER_COMPOSITION_CAPABILITIES: BuilderCompositionCapability[] =
   DEFAULT_BUILDER_CAPABILITY_REGISTRY.composition
 
-export const BUILDER_PANEL_CAPABILITIES: BuilderPanelCapability[] = DEFAULT_BUILDER_CAPABILITY_REGISTRY.panels
+export const BUILDER_PANEL_CAPABILITIES: BuilderPanelCapability[] =
+  DEFAULT_BUILDER_CAPABILITY_REGISTRY.panels
 
-export const BUILDER_BLOCK_CAPABILITIES: BuilderBlockCapability[] = DEFAULT_BUILDER_CAPABILITY_REGISTRY.blocks
+export const BUILDER_BLOCK_CAPABILITIES: BuilderBlockCapability[] =
+  DEFAULT_BUILDER_CAPABILITY_REGISTRY.blocks
 
-export function getPanelCapabilityByKind(kind: string | null | undefined): BuilderPanelCapability | null {
+export function getPanelCapabilityByKind(
+  kind: string | null | undefined,
+): BuilderPanelCapability | null {
   if (!kind) return null
-  return BUILDER_PANEL_CAPABILITIES.find((capability) => capability.kind === kind) ?? null
+  return (
+    BUILDER_PANEL_CAPABILITIES.find((capability) => capability.kind === kind) ??
+    null
+  )
 }
 
-export function getBlockCapabilityByType(type: string | null | undefined): BuilderBlockCapability | null {
+export function getBlockCapabilityByType(
+  type: string | null | undefined,
+): BuilderBlockCapability | null {
   if (!type) return null
-  return BUILDER_BLOCK_CAPABILITIES.find((capability) => capability.type === type) ?? null
+  return (
+    BUILDER_BLOCK_CAPABILITIES.find((capability) => capability.type === type) ??
+    null
+  )
 }
 
-export function getBuilderCapabilityRegistrySnapshot(registry: BuilderCapabilityRegistry = DEFAULT_BUILDER_CAPABILITY_REGISTRY) {
+export function getBuilderCapabilityRegistrySnapshot(
+  registry: BuilderCapabilityRegistry = DEFAULT_BUILDER_CAPABILITY_REGISTRY,
+) {
   return {
     composition: registry.composition,
     panels: registry.panels,
@@ -1315,10 +2011,14 @@ export function getBuilderCapabilityRegistrySnapshot(registry: BuilderCapability
 
 export function getBuilderCapabilityCoverageGaps() {
   const missingPanelCapabilities = ACTIVE_BUILDER_PANEL_KINDS.filter((kind) => {
-    return !BUILDER_PANEL_CAPABILITIES.some((capability) => capability.kind === kind)
+    return !BUILDER_PANEL_CAPABILITIES.some(
+      (capability) => capability.kind === kind,
+    )
   })
   const missingBlockCapabilities = ACTIVE_BUILDER_BLOCK_TYPES.filter((type) => {
-    return !BUILDER_BLOCK_CAPABILITIES.some((capability) => capability.type === type)
+    return !BUILDER_BLOCK_CAPABILITIES.some(
+      (capability) => capability.type === type,
+    )
   })
   return {
     missingPanelCapabilities,
@@ -1339,15 +2039,19 @@ export function getBuilderRuntimeCompatibilityGaps(
   const missingBuilderPanelsInRuntime = builderPanelKinds.filter((kind) => {
     return !runtimePanels.has(kind)
   })
-  const missingRuntimePanelsInBuilder = ACTIVE_RUNTIME_DEMO_PANEL_KINDS.filter((kind) => {
-    return !builderPanels.has(kind)
-  })
+  const missingRuntimePanelsInBuilder = ACTIVE_RUNTIME_DEMO_PANEL_KINDS.filter(
+    (kind) => {
+      return !builderPanels.has(kind)
+    },
+  )
   const missingBuilderBlocksInRuntime = builderBlockTypes.filter((type) => {
     return !runtimeBlocks.has(type)
   })
-  const missingRuntimeBlocksInBuilder = ACTIVE_RUNTIME_DEMO_BLOCK_TYPES.filter((type) => {
-    return !builderBlocks.has(type)
-  })
+  const missingRuntimeBlocksInBuilder = ACTIVE_RUNTIME_DEMO_BLOCK_TYPES.filter(
+    (type) => {
+      return !builderBlocks.has(type)
+    },
+  )
 
   return {
     missingBuilderPanelsInRuntime,
@@ -1365,7 +2069,11 @@ export function getBuilderRequirementCompatibilityGaps(
   for (const panelCapability of registry.panels) {
     const expected = CORE_PANEL_REQUIREMENTS_BY_KIND.get(panelCapability.kind)
     if (!expected) continue
-    for (const requirement of ["requiresStory", "requiresRuntime", "requiresPersona"] as const) {
+    for (const requirement of [
+      "requiresStory",
+      "requiresRuntime",
+      "requiresPersona",
+    ] as const) {
       const actualValue = panelCapability.requirements[requirement]
       const expectedValue = expected[requirement]
       if (actualValue !== expectedValue) {
@@ -1383,7 +2091,11 @@ export function getBuilderRequirementCompatibilityGaps(
   for (const blockCapability of registry.blocks) {
     const expected = CORE_BLOCK_REQUIREMENTS_BY_TYPE.get(blockCapability.type)
     if (!expected) continue
-    for (const requirement of ["requiresStory", "requiresRuntime", "requiresPersona"] as const) {
+    for (const requirement of [
+      "requiresStory",
+      "requiresRuntime",
+      "requiresPersona",
+    ] as const) {
       const actualValue = blockCapability.requirements[requirement]
       const expectedValue = expected[requirement]
       if (actualValue !== expectedValue) {
@@ -1405,9 +2117,13 @@ export function getBuilderRuntimeExpectationGaps(
   registry: BuilderCapabilityRegistry = DEFAULT_BUILDER_CAPABILITY_REGISTRY,
 ): BuilderCapabilityRuntimeExpectationGaps {
   const issues: BuilderCapabilityRuntimeExpectationIssue[] = []
-  const blockByType = new Map(registry.blocks.map((capability) => [capability.type, capability]))
+  const blockByType = new Map(
+    registry.blocks.map((capability) => [capability.type, capability]),
+  )
 
-  for (const blockType of Object.keys(RUNTIME_COUPLED_BLOCK_EXPECTATIONS) as RuntimeCoupledBlockType[]) {
+  for (const blockType of Object.keys(
+    RUNTIME_COUPLED_BLOCK_EXPECTATIONS,
+  ) as RuntimeCoupledBlockType[]) {
     const expectation = RUNTIME_COUPLED_BLOCK_EXPECTATIONS[blockType]
     const capability = blockByType.get(blockType)
     if (!capability) {
@@ -1420,7 +2136,11 @@ export function getBuilderRuntimeExpectationGaps(
     }
 
     const requirements = capability.requirements
-    for (const requirement of ["requiresStory", "requiresRuntime", "requiresPersona"] as const) {
+    for (const requirement of [
+      "requiresStory",
+      "requiresRuntime",
+      "requiresPersona",
+    ] as const) {
       if (requirements[requirement] !== expectation.requirements[requirement]) {
         issues.push({
           code: "requirement_mismatch",
@@ -1438,14 +2158,20 @@ export function getBuilderRuntimeExpectationGaps(
         message: `Block "${blockType}" is missing hooks.editorComponent.`,
       })
     }
-    if (expectation.requiresPatchNormalizer && !hooks.normalizeCompositionPatch) {
+    if (
+      expectation.requiresPatchNormalizer &&
+      !hooks.normalizeCompositionPatch
+    ) {
       issues.push({
         code: "missing_patch_normalizer",
         blockType,
         message: `Block "${blockType}" is missing hooks.normalizeCompositionPatch.`,
       })
     }
-    if (expectation.requiresSemanticValidator && (hooks.semanticValidators?.length ?? 0) === 0) {
+    if (
+      expectation.requiresSemanticValidator &&
+      (hooks.semanticValidators?.length ?? 0) === 0
+    ) {
       issues.push({
         code: "missing_semantic_validator",
         blockType,
@@ -1490,13 +2216,19 @@ export function getBuilderCapabilitySafetyGaps(
 }
 
 function hasRuntimeSetup(composition: EditableComposition): boolean {
-  return typeof composition.runtime_policy === "string" && composition.runtime_policy.length > 0
+  return (
+    typeof composition.runtime_policy === "string" &&
+    composition.runtime_policy.length > 0
+  )
 }
 
 function hasPersonaSetup(composition: EditableComposition): boolean {
   const policy = composition.persona_policy
   if (policy === "fixed_user_persona") {
-    return typeof composition.fixed_user_persona_id === "string" && composition.fixed_user_persona_id.trim().length > 0
+    return (
+      typeof composition.fixed_user_persona_id === "string" &&
+      composition.fixed_user_persona_id.trim().length > 0
+    )
   }
   return typeof policy === "string" && policy.length > 0
 }
@@ -1506,9 +2238,12 @@ function getAvailabilityForRequirements(
   composition: EditableComposition,
 ): BuilderCapabilityAvailability {
   const unmetRequirements: string[] = []
-  if (requirements.requiresStory && !getCompositionStoryId(composition)) unmetRequirements.push("story setup")
-  if (requirements.requiresRuntime && !hasRuntimeSetup(composition)) unmetRequirements.push("runtime setup")
-  if (requirements.requiresPersona && !hasPersonaSetup(composition)) unmetRequirements.push("persona setup")
+  if (requirements.requiresStory && !getCompositionStoryId(composition))
+    unmetRequirements.push("story setup")
+  if (requirements.requiresRuntime && !hasRuntimeSetup(composition))
+    unmetRequirements.push("runtime setup")
+  if (requirements.requiresPersona && !hasPersonaSetup(composition))
+    unmetRequirements.push("persona setup")
   return {
     available: unmetRequirements.length === 0,
     unmetRequirements,
@@ -1552,11 +2287,13 @@ function runCapabilitySemanticValidators(
   composition: EditableComposition,
 ): BuilderCapabilitySemanticIssue[] {
   const validators = capability.hooks?.semanticValidators ?? []
-  return validators.flatMap((validator) => validator({
-    scope,
-    capabilityKey,
-    composition,
-  }))
+  return validators.flatMap((validator) =>
+    validator({
+      scope,
+      capabilityKey,
+      composition,
+    }),
+  )
 }
 
 function getPanelPreviewAdapterOverrides(
@@ -1594,7 +2331,13 @@ export function normalizePanelCapabilityPatch(
   patch: Record<string, unknown>,
   composition: EditableComposition,
 ): Record<string, unknown> {
-  return normalizeCapabilityPatch(capability, "panel", capability.kind, patch, composition)
+  return normalizeCapabilityPatch(
+    capability,
+    "panel",
+    capability.kind,
+    patch,
+    composition,
+  )
 }
 
 export function normalizeBlockCapabilityPatch(
@@ -1602,21 +2345,37 @@ export function normalizeBlockCapabilityPatch(
   patch: Record<string, unknown>,
   composition: EditableComposition,
 ): Record<string, unknown> {
-  return normalizeCapabilityPatch(capability, "block", capability.type, patch, composition)
+  return normalizeCapabilityPatch(
+    capability,
+    "block",
+    capability.type,
+    patch,
+    composition,
+  )
 }
 
 export function runPanelCapabilitySemanticValidators(
   capability: BuilderPanelCapability,
   composition: EditableComposition,
 ): BuilderCapabilitySemanticIssue[] {
-  return runCapabilitySemanticValidators(capability, "panel", capability.kind, composition)
+  return runCapabilitySemanticValidators(
+    capability,
+    "panel",
+    capability.kind,
+    composition,
+  )
 }
 
 export function runBlockCapabilitySemanticValidators(
   capability: BuilderBlockCapability,
   composition: EditableComposition,
 ): BuilderCapabilitySemanticIssue[] {
-  return runCapabilitySemanticValidators(capability, "block", capability.type, composition)
+  return runCapabilitySemanticValidators(
+    capability,
+    "block",
+    capability.type,
+    composition,
+  )
 }
 
 export function getPanelCapabilityPreviewAdapterOverrides(

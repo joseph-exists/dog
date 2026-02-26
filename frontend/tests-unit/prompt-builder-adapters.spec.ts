@@ -33,7 +33,9 @@ const MODELS: LLMModelPublic[] = [
   },
 ]
 
-function createAgent(overrides?: Partial<UserAgentConfigPublic>): UserAgentConfigPublic {
+function createAgent(
+  overrides?: Partial<UserAgentConfigPublic>,
+): UserAgentConfigPublic {
   return {
     id: "agent-1",
     created_at: "2026-02-24T00:00:00Z",
@@ -47,8 +49,12 @@ test.describe("promptBuilderAdapters inference", () => {
   test("maps known provider names to provider kind", async () => {
     expect(inferProviderKindFromProviderTypeName("openai")).toBe("openai")
     expect(inferProviderKindFromProviderTypeName("anthropic")).toBe("anthropic")
-    expect(inferProviderKindFromProviderTypeName("Azure OpenAI")).toBe("openai_compatible")
-    expect(inferProviderKindFromProviderTypeName("unknown-provider")).toBe("custom")
+    expect(inferProviderKindFromProviderTypeName("Azure OpenAI")).toBe(
+      "openai_compatible",
+    )
+    expect(inferProviderKindFromProviderTypeName("unknown-provider")).toBe(
+      "custom",
+    )
     expect(inferProviderKindFromProviderTypeName(null)).toBeNull()
   })
 })
@@ -78,7 +84,8 @@ test.describe("promptBuilderAdapters mapping", () => {
     expect(draft.provider.provider_kind).toBe("openai")
     expect(draft.model.model_id).toBe("gpt-4o")
     expect(draft.input.kind).toBe("messages")
-    if (draft.input.kind !== "messages") throw new Error("Expected messages input")
+    if (draft.input.kind !== "messages")
+      throw new Error("Expected messages input")
     expect(draft.input.system).toBe("You are concise.")
     expect(draft.input.messages[0]?.content).toBe("Answer in one paragraph.")
     expect(draft.tools?.tool_mode).toBe("required")
@@ -89,12 +96,18 @@ test.describe("promptBuilderAdapters mapping", () => {
 
 test.describe("promptBuilderAdapters hydration", () => {
   test("hydrates provider/model details from catalogs", async () => {
-    const draft = mapUserAgentConfigToPromptDraft(createAgent({
-      user_access_provider: "provider-1",
-      model_id: "gpt-4o",
-    }))
+    const draft = mapUserAgentConfigToPromptDraft(
+      createAgent({
+        user_access_provider: "provider-1",
+        model_id: "gpt-4o",
+      }),
+    )
 
-    const hydrated = hydratePromptDraftProviderAndModel(draft, PROVIDERS, MODELS)
+    const hydrated = hydratePromptDraftProviderAndModel(
+      draft,
+      PROVIDERS,
+      MODELS,
+    )
     expect(hydrated.selectedProvider?.id).toBe("provider-1")
     expect(hydrated.selectedModel?.id).toBe("model-1")
     expect(hydrated.draft.provider.provider_type_id).toBe("ptype-openai")
@@ -105,12 +118,18 @@ test.describe("promptBuilderAdapters hydration", () => {
   })
 
   test("builds semantic validation context from hydration result", async () => {
-    const draft = mapUserAgentConfigToPromptDraft(createAgent({
-      user_access_provider: "provider-1",
-      model_id: "gpt-4o",
-    }))
+    const draft = mapUserAgentConfigToPromptDraft(
+      createAgent({
+        user_access_provider: "provider-1",
+        model_id: "gpt-4o",
+      }),
+    )
 
-    const hydrated = hydratePromptDraftProviderAndModel(draft, PROVIDERS, MODELS)
+    const hydrated = hydratePromptDraftProviderAndModel(
+      draft,
+      PROVIDERS,
+      MODELS,
+    )
     const context = buildPromptValidationContext(hydrated)
 
     expect(context.selectedProvider?.id).toBe("provider-1")
@@ -132,13 +151,19 @@ test.describe("promptBuilderAdapters reverse mapping", () => {
       max_tool_iterations: 8,
       capabilities: ["summarize"],
     })
-    const draft = mapUserAgentConfigToPromptDraft(createAgent({
-      user_access_provider: "provider-1",
-      provider_type: "openai",
-      model_id: "gpt-4o",
-      instructions: "Respond in two bullet points.",
-    }))
-    const payload = mapPromptDraftToAgentUpdatePayload(draft, sourceAgent, PROVIDERS[0]!)
+    const draft = mapUserAgentConfigToPromptDraft(
+      createAgent({
+        user_access_provider: "provider-1",
+        provider_type: "openai",
+        model_id: "gpt-4o",
+        instructions: "Respond in two bullet points.",
+      }),
+    )
+    const payload = mapPromptDraftToAgentUpdatePayload(
+      draft,
+      sourceAgent,
+      PROVIDERS[0]!,
+    )
 
     expect(payload.name).toBe("Prompt Agent")
     expect(payload.slug).toBe("prompt-agent")

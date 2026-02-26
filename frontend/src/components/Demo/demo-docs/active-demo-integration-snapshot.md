@@ -1,6 +1,6 @@
 # Demo Integration Snapshot
 > **Status:** Source of truth for current implementation + remaining delta  
-> **Last Revised Date:** 2026-02-24  
+> **Last Revised Date:** 2026-02-25  
 
 > Planning ownership: use `frontend/src/components/Demo/demo-docs/current-key-priorities.md` for milestone sequencing and handoff decisions. This file remains the integration reality checkpoint.
 
@@ -53,6 +53,14 @@ Use this as the planning and execution artifact for the next demo integration sl
 - `block.content_json` for `content`/`context` blocks
 - invalid payloads are handled with non-fatal fallback cards
 - hidden blocks are filtered and block ordering is respected
+7. Demo typography scope class is now explicit on `DemoShell` root (`demo-shell`), which activates the intended demo-only font selector scope in `demo-themes.css`.
+8. Density token contract for `toolCapability` is normalized to `matrix_density: "standard" | "compact"` across builder descriptor, runtime parser, and block component consumption.
+9. Callout runtime path is active at composition/panel/block scope (resolver + frame), while guided composition fields currently expose `style`/`text` only (`icon`/`visible` remain raw JSON paths). Reference docs now reflect this behavior.
+10. Block-level interactive handler path is active for configured blocks (`config_json.interaction.kind = "click_prompt_dispatch.v1"`): click source capture -> inline input modal -> websocket dispatch envelope -> modal close.
+11. Explicit receiver registration + enforcement is active:
+- chat panels can register receivers via `panel.options.interaction_receiver`
+- block dispatch can require registration via `dispatch.enforce_registered_receiver`
+- runtime dispatch is blocked when receiver is missing/mismatched/not-accepting
 
 ## Completion Matrix
 

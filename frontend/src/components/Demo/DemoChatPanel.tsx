@@ -39,8 +39,16 @@ export function DemoChatPanel({
         </div>
       )}
       <div
-        className={feedDensity === "compact" ? "flex-1 overflow-y-auto p-2" : "flex-1 overflow-y-auto p-4"}
-        style={messageRowHighlightCss ? { boxShadow: messageRowHighlightCss } : undefined}
+        className={
+          feedDensity === "compact"
+            ? "flex-1 overflow-y-auto p-2"
+            : "flex-1 overflow-y-auto p-4"
+        }
+        style={
+          messageRowHighlightCss
+            ? { boxShadow: messageRowHighlightCss }
+            : undefined
+        }
       >
         <MessageList
           roomId={roomId}

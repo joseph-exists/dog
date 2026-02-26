@@ -34,9 +34,10 @@ function toEntries(value: unknown): ExplorerEntry[] {
     const rawType = raw.type
     const type: ExplorerEntryType = rawType === "dir" ? "dir" : "file"
     const depthRaw = raw.depth
-    const depth = typeof depthRaw === "number" && Number.isFinite(depthRaw) && depthRaw >= 0
-      ? Math.floor(depthRaw)
-      : 0
+    const depth =
+      typeof depthRaw === "number" && Number.isFinite(depthRaw) && depthRaw >= 0
+        ? Math.floor(depthRaw)
+        : 0
 
     entries.push({
       path,
@@ -50,9 +51,13 @@ function toEntries(value: unknown): ExplorerEntry[] {
 }
 
 function toConfig(value: unknown): FileExplorerConfig {
-  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
+  const raw =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {}
   return {
-    root_label: typeof raw.root_label === "string" && raw.root_label.length > 0 ? raw.root_label : "workspace",
+    root_label:
+      typeof raw.root_label === "string" && raw.root_label.length > 0
+        ? raw.root_label
+        : "workspace",
     entries: toEntries(raw.entries),
     show_config_json: raw.show_config_json === true,
   }
@@ -60,14 +65,18 @@ function toConfig(value: unknown): FileExplorerConfig {
 
 export function FileExplorerBlock({ title, config }: FileExplorerBlockProps) {
   const parsedConfig = toConfig(config)
-  const dirCount = parsedConfig.entries.filter((entry) => entry.type === "dir").length
+  const dirCount = parsedConfig.entries.filter(
+    (entry) => entry.type === "dir",
+  ).length
   const fileCount = parsedConfig.entries.length - dirCount
 
   return (
     <div className="p-4 space-y-4">
       <div className="space-y-1">
         <div className="text-sm font-medium">{title ?? "File Explorer"}</div>
-        <div className="text-xs text-muted-foreground">File tree projection for configured demo resources.</div>
+        <div className="text-xs text-muted-foreground">
+          File tree projection for configured demo resources.
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -78,7 +87,9 @@ export function FileExplorerBlock({ title, config }: FileExplorerBlockProps) {
 
       <div className="rounded-md border bg-muted/20 p-3">
         {parsedConfig.entries.length === 0 ? (
-          <div className="text-xs text-muted-foreground">No entries supplied in config.</div>
+          <div className="text-xs text-muted-foreground">
+            No entries supplied in config.
+          </div>
         ) : (
           <div className="space-y-1">
             {parsedConfig.entries.map((entry) => (
@@ -97,7 +108,9 @@ export function FileExplorerBlock({ title, config }: FileExplorerBlockProps) {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {entry.size && (
-                    <span className="text-[10px] text-muted-foreground">{entry.size}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {entry.size}
+                    </span>
                   )}
                   {entry.status && (
                     <Badge variant="outline" className="text-[10px]">

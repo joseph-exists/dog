@@ -23,15 +23,17 @@ export interface ContextBlockProps {
  * Returns null if no text content exists.
  * View-only block - no edit functionality.
  */
-export function ContextBlock({ config, content, className }: ContextBlockProps) {
+export function ContextBlock({
+  config,
+  content,
+  className,
+}: ContextBlockProps) {
   // Empty state — show placeholder so block is visible in edit mode
   if (!content?.text) {
     return (
       <BlockContainer title="Details" className={className}>
         <div className="p-4">
-          <p className="text-sm text-muted-foreground italic">
-            no text yet.
-          </p>
+          <p className="text-sm text-muted-foreground italic">no text yet.</p>
         </div>
       </BlockContainer>
     )

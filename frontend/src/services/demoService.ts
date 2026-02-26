@@ -4,10 +4,7 @@
  * Resolve payloads are now consumed directly from generated SDK types.
  */
 
-import {
-  DemosService,
-  type ResolveDemoEntryPayload,
-} from "@/client"
+import { DemosService, type ResolveDemoEntryPayload } from "@/client"
 
 // ============================================================================
 // ViewModel Types

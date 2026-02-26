@@ -1,35 +1,46 @@
 import { useMemo } from "react"
-import type { ThemeViewModel } from "@/services/themeService"
-import { ContentRenderer, type Content } from "@/components/Page/primitives/ContentRenderer"
-import { DemoShell, type DemoShellBlockRenderItem } from "@/components/Demo/DemoShell"
-import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
-import { DemoPresentationFrame } from "@/components/Demo/DemoPresentationFrame"
 import { getRenderableDemoBlocks } from "@/components/Demo/blockVisibility"
-import {
-  buildDemoThemeIndex,
-  resolveDemoPresentationFrame,
-} from "@/components/Demo/demoPresentationResolver"
-import { renderDemoBlock, renderDemoPanel } from "@/components/Demo/rendererRegistry"
-import {
-  getCompositionStoryId,
-  type EditableComposition,
-} from "@/components/Demo/builder/demoBuilderSchema"
 import {
   getBlockCapabilityByType,
   getBlockCapabilityPreviewAdapterOverrides,
   getPanelCapabilityByKind,
   getPanelCapabilityPreviewAdapterOverrides,
 } from "@/components/Demo/builder/demoBuilderCapabilityRegistry"
+import {
+  type EditableComposition,
+  getCompositionStoryId,
+} from "@/components/Demo/builder/demoBuilderSchema"
+import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
+import { DemoPresentationFrame } from "@/components/Demo/DemoPresentationFrame"
+import {
+  DemoShell,
+  type DemoShellBlockRenderItem,
+} from "@/components/Demo/DemoShell"
+import {
+  buildDemoThemeIndex,
+  resolveDemoPresentationFrame,
+} from "@/components/Demo/demoPresentationResolver"
+import {
+  renderDemoBlock,
+  renderDemoPanel,
+} from "@/components/Demo/rendererRegistry"
+import {
+  type Content,
+  ContentRenderer,
+} from "@/components/Page/primitives/ContentRenderer"
+import type { ThemeViewModel } from "@/services/themeService"
 
 function isRenderableContentPayload(value: unknown): value is Content {
   if (!value || typeof value !== "object") return false
   const data = value as Record<string, unknown>
-  return typeof data.format === "string" && Object.prototype.hasOwnProperty.call(data, "value")
+  return typeof data.format === "string" && Object.hasOwn(data, "value")
 }
 
 function renderContentPayload(value: unknown, fallbackLabel: string) {
   if (!isRenderableContentPayload(value)) {
-    return <div className="p-4 text-sm text-muted-foreground">{fallbackLabel}</div>
+    return (
+      <div className="p-4 text-sm text-muted-foreground">{fallbackLabel}</div>
+    )
   }
   return (
     <div className="p-4 overflow-auto h-full">
@@ -59,11 +70,17 @@ export function DemoBuilderPreview({
   const roomTitle = "Preview Room"
   const roomStoryId = getCompositionStoryId(composition)
   const pageTheme = useMemo(
-    () => availablePageThemes.find((theme) => theme.id === composition.page_theme_id) ?? null,
+    () =>
+      availablePageThemes.find(
+        (theme) => theme.id === composition.page_theme_id,
+      ) ?? null,
     [availablePageThemes, composition.page_theme_id],
   )
   const cardsTheme = useMemo(
-    () => availableCardThemes.find((theme) => theme.id === composition.cards_theme_id) ?? null,
+    () =>
+      availableCardThemes.find(
+        (theme) => theme.id === composition.cards_theme_id,
+      ) ?? null,
     [availableCardThemes, composition.cards_theme_id],
   )
   const themeIndex = useMemo(
@@ -81,48 +98,54 @@ export function DemoBuilderPreview({
     [composition.presentation_json, themeIndex],
   )
 
-  const basePanelContext = useMemo(() => ({
-    roomId,
-    roomTitle,
-    roomStoryId,
-    canWrite: true,
-    autoRespond: true,
-    onSendMessage: () => {},
-    isConnected: false,
-    sendViaWebSocket: () => {},
-    streamingMessage: null,
-    activeUsers: [],
-    roomAgentsAsAgentData: [],
-    debugActiveAgents: [],
-    availableAgents: [],
-    existingAgentIds: [],
-    onAddAgent: async () => {},
-    onRemoveAgent: async () => {},
-    onToggleAgent: async () => {},
-    onRemoveUser: async () => {},
-    isParticipantPanelLoading: false,
-    debugMessages: [],
-    showInternalMessages: false,
-    onToggleInternalMessages: () => {},
-    renderContentPayload,
-  }), [roomId, roomStoryId, roomTitle])
+  const basePanelContext = useMemo(
+    () => ({
+      roomId,
+      roomTitle,
+      roomStoryId,
+      canWrite: true,
+      autoRespond: true,
+      onSendMessage: () => {},
+      isConnected: false,
+      sendViaWebSocket: () => {},
+      streamingMessage: null,
+      activeUsers: [],
+      roomAgentsAsAgentData: [],
+      debugActiveAgents: [],
+      availableAgents: [],
+      existingAgentIds: [],
+      onAddAgent: async () => {},
+      onRemoveAgent: async () => {},
+      onToggleAgent: async () => {},
+      onRemoveUser: async () => {},
+      isParticipantPanelLoading: false,
+      debugMessages: [],
+      showInternalMessages: false,
+      onToggleInternalMessages: () => {},
+      renderContentPayload,
+    }),
+    [roomStoryId],
+  )
 
-  const baseBlockContext = useMemo(() => ({
-    renderContentPayload,
-    roomId,
-    roomTitle,
-    roomStoryId,
-    runtimePolicy: composition.runtime_policy ?? "auto",
-    runtimeHasRuntime: true,
-    autoStartError: null,
-    autoRespond: true,
-    isConnected: false,
-    debugMessages: [],
-    streamingMessage: null,
-    activeUsers: [],
-    roomAgentsAsAgentData: [],
-    availableAgents: [],
-  }), [composition.runtime_policy, roomId, roomStoryId, roomTitle])
+  const baseBlockContext = useMemo(
+    () => ({
+      renderContentPayload,
+      roomId,
+      roomTitle,
+      roomStoryId,
+      runtimePolicy: composition.runtime_policy ?? "auto",
+      runtimeHasRuntime: true,
+      autoStartError: null,
+      autoRespond: true,
+      isConnected: false,
+      debugMessages: [],
+      streamingMessage: null,
+      activeUsers: [],
+      roomAgentsAsAgentData: [],
+      availableAgents: [],
+    }),
+    [composition.runtime_policy, roomStoryId],
+  )
 
   const panels: DemoLayoutPanelConfig[] = useMemo(
     () =>
@@ -140,9 +163,15 @@ export function DemoBuilderPreview({
         maxSize: panel.max_size ?? undefined,
         viewportMode: panel.viewport_mode ?? "panel",
         render: () => {
-          const capability = getPanelCapabilityByKind(typeof panel.kind === "string" ? panel.kind : null)
+          const capability = getPanelCapabilityByKind(
+            typeof panel.kind === "string" ? panel.kind : null,
+          )
           const overrides = capability
-            ? getPanelCapabilityPreviewAdapterOverrides(capability, panel, composition)
+            ? getPanelCapabilityPreviewAdapterOverrides(
+                capability,
+                panel,
+                composition,
+              )
             : {}
           const panelFrame = resolveDemoPresentationFrame({
             scope: "panel",
@@ -169,22 +198,27 @@ export function DemoBuilderPreview({
 
   const renderedBlocksByRegion = useMemo(() => {
     const orderedBlocks = getRenderableDemoBlocks(composition.blocks ?? [])
-    const regions: Record<"top" | "primary" | "auxiliary" | "footer", DemoShellBlockRenderItem[]> = {
+    const regions: Record<
+      "top" | "primary" | "auxiliary" | "footer",
+      DemoShellBlockRenderItem[]
+    > = {
       top: [],
       primary: [],
       auxiliary: [],
       footer: [],
     }
     for (const { block, region, visibilityMode } of orderedBlocks) {
-      const capability = getBlockCapabilityByType(typeof block.type === "string" ? block.type : null)
+      const capability = getBlockCapabilityByType(
+        typeof block.type === "string" ? block.type : null,
+      )
       const content = renderDemoBlock(block, {
         ...baseBlockContext,
         ...(capability
           ? getBlockCapabilityPreviewAdapterOverrides(
-            capability,
-            block,
-            composition,
-          )
+              capability,
+              block,
+              composition,
+            )
           : {}),
       })
       const blockFrame = resolveDemoPresentationFrame({
@@ -217,9 +251,10 @@ export function DemoBuilderPreview({
           id: "demo-builder-preview",
           slug: "demo-builder-preview",
           title: demoTitle,
-          description: typeof composition.metadata_json?.description === "string"
-            ? composition.metadata_json.description
-            : "Unsaved preview from Demo Builder composition.",
+          description:
+            typeof composition.metadata_json?.description === "string"
+              ? composition.metadata_json.description
+              : "Unsaved preview from Demo Builder composition.",
           scope: "personal",
           isActive: true,
           defaultAutoRespond: true,
