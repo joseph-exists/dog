@@ -238,6 +238,63 @@ def commit_snapshot(
         raise CommitError(f"Failed to commit snapshot: {stderr}") from e
 
 
+def commit_text_file(
+    repo_path: Path,
+    *,
+    filename: str,
+    content: str,
+    message: str,
+    author: str = "shadow-system",
+    remote_url: str | None = None,
+    remote_name: str = "origin",
+    default_branch: str = "main",
+) -> str:
+    """Write a text file, commit it, and optionally push."""
+    ensure_repo(
+        repo_path,
+        remote_url=remote_url,
+        remote_name=remote_name,
+        default_branch=default_branch,
+    )
+
+    file_path = repo_path / filename
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(content)
+
+    try:
+        _run_git(repo_path, ["add", filename])
+        commit_result = _run_git(
+            repo_path,
+            [
+                "commit",
+                "-m",
+                message,
+                "--author",
+                f"{author} <{author}@shadow>",
+            ],
+            check=False,
+            text=True,
+        )
+        if commit_result.returncode != 0 and "nothing to commit" not in (
+            commit_result.stdout + commit_result.stderr
+        ):
+            raise CommitError(
+                "Failed to commit file: "
+                f"{(commit_result.stderr or commit_result.stdout).strip()}"
+            )
+
+        sha = _run_git(repo_path, ["rev-parse", "HEAD"], text=True).stdout.strip()
+        if remote_url:
+            _run_git(repo_path, ["push", remote_name, f"HEAD:{default_branch}"])
+        return sha
+    except subprocess.CalledProcessError as e:
+        if isinstance(e.stderr, bytes):
+            stderr = e.stderr.decode()
+        else:
+            stderr = e.stderr or str(e)
+        raise CommitError(f"Failed to commit file: {stderr}") from e
+
+
 def read_snapshot(
     repo_path: Path,
     entity_type: str,

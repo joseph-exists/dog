@@ -21,6 +21,7 @@ import {
   resolveDemoPresentationFrame,
 } from "@/components/Demo/demoPresentationResolver"
 import {
+  type DemoPanelRendererContext,
   renderDemoBlock,
   renderDemoPanel,
 } from "@/components/Demo/rendererRegistry"
@@ -99,7 +100,8 @@ export function DemoBuilderPreview({
   )
 
   const basePanelContext = useMemo(
-    () => ({
+    (): DemoPanelRendererContext => ({
+      demoConfigId: "preview-demo-config",
       roomId,
       roomTitle,
       roomStoryId,
@@ -123,6 +125,9 @@ export function DemoBuilderPreview({
       showInternalMessages: false,
       onToggleInternalMessages: () => {},
       renderContentPayload,
+      onRenderCanvas: async () => {},
+      canvasRenderStateByPanelId: {},
+      canvasSvgOverrideByPanelId: {},
     }),
     [roomStoryId],
   )
@@ -188,6 +193,12 @@ export function DemoBuilderPreview({
               {renderDemoPanel(panel, {
                 ...basePanelContext,
                 ...overrides,
+                demoConfigId: basePanelContext.demoConfigId,
+                onRenderCanvas: basePanelContext.onRenderCanvas,
+                canvasRenderStateByPanelId:
+                  basePanelContext.canvasRenderStateByPanelId,
+                canvasSvgOverrideByPanelId:
+                  basePanelContext.canvasSvgOverrideByPanelId,
               })}
             </DemoPresentationFrame>
           )

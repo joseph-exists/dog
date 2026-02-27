@@ -8,6 +8,7 @@ import {
   StoryEditorPanel,
   StoryPlayerPanel,
 } from "@/components/Room"
+import type { TesserScript } from "@/services/demoService"
 import type { ResolvedDemoSessionViewModel } from "@/services/demoService"
 import type {
   MessageViewModel,
@@ -45,6 +46,7 @@ export interface DemoRoomAgentData {
 }
 
 export interface DemoPanelRendererContext {
+  demoConfigId: string
   roomId: string
   roomTitle: string
   roomStoryId: string | null
@@ -68,6 +70,29 @@ export interface DemoPanelRendererContext {
   showInternalMessages: boolean
   onToggleInternalMessages: (enabled: boolean) => void
   renderContentPayload: (value: unknown, fallbackLabel: string) => ReactNode
+  onRenderCanvas: (
+    panelId: string,
+    payload?: {
+      scriptName?: string
+      title?: string
+      subtitle?: string | null
+      scriptInput?: Record<string, unknown>
+    },
+  ) => Promise<void>
+  canvasRenderStateByPanelId: Record<
+    string,
+    {
+      isRendering: boolean
+      error: string | null
+      lastRequestId: string | null
+      lastCommitSha: string | null
+      lastScriptName: string | null
+    }
+  >
+  canvasSvgOverrideByPanelId: Record<string, string>
+  availableTesserScripts?: TesserScript[]
+  onRequestTesserScriptHelp?: (scriptName: string) => Promise<string | null>
+  onRequestTesserExamplesIndex?: () => Promise<string | null>
 }
 
 export interface DemoBlockRendererContext {
@@ -318,7 +343,30 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
       isLoading={ctx.isParticipantPanelLoading}
     />
   ),
-  canvas: () => <CanvasPanel />,
+  canvas: (panel, ctx) => {
+    const panelOptions = (panel as { options?: unknown }).options
+    const extras = getNestedRecord(panelOptions, ["extras"])
+    const persistedSvg =
+      typeof extras?.render_svg === "string" ? extras.render_svg : null
+    const liveSvg = ctx.canvasSvgOverrideByPanelId[panel.id]
+    const svgContent = typeof liveSvg === "string" ? liveSvg : persistedSvg
+    const renderState = ctx.canvasRenderStateByPanelId[panel.id]
+    return (
+      <CanvasPanel
+        svgContent={svgContent}
+        canWrite={ctx.canWrite}
+        onRenderSvg={(payload) => ctx.onRenderCanvas(panel.id, payload)}
+        isRendering={renderState?.isRendering ?? false}
+        renderError={renderState?.error ?? null}
+        lastRequestId={renderState?.lastRequestId ?? null}
+        lastCommitSha={renderState?.lastCommitSha ?? null}
+        lastScriptName={renderState?.lastScriptName ?? null}
+        availableScripts={ctx.availableTesserScripts ?? []}
+        onRequestScriptHelp={ctx.onRequestTesserScriptHelp}
+        onRequestExamplesIndex={ctx.onRequestTesserExamplesIndex}
+      />
+    )
+  },
   a2ui: (_panel, ctx) => <A2UIPanel roomId={ctx.roomId} />,
   storyEditor: (_panel, ctx) =>
     ctx.roomStoryId ? (

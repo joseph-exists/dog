@@ -79,6 +79,7 @@ services:
     # TODO: remove once coverage is done locally
     volumes:
       - ./backend/htmlcov:/app/htmlcov
+      - ./gittin/ssh:/root/.ssh:ro
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
@@ -93,7 +94,22 @@ services:
 
   # shadow-outbox-worker:
   #   environment:
-  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE}
+  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-ssh://git@gittin/repos/{entity_type}/{entity_id}.git}
+
+  tesser:
+    restart: "no"
+    build:
+      context: ./tesser
+    volumes:
+      - ./tesser/src:/app/src
+      - ./tesser/scripts:/app/scripts
+    environment:
+      TESSER_LOG_LEVEL: "DEBUG"
+
+  gittin:
+    restart: "no"
+    ports:
+      - "2222:22"
 
   frontend:
     restart: "no"

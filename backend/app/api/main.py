@@ -33,6 +33,7 @@ from app.api.routes import (
     rooms,
     stories,
     storynodes,
+    tesser,
     theme_bindings,
     themes,
     trait_conflicts,
@@ -89,6 +90,7 @@ api_router.include_router(user_panels.router, prefix="/users", tags=["user-panel
 api_router.include_router(presets.router, prefix="/presets", tags=["presets"])
 api_router.include_router(themes.router, prefix="/themes", tags=["themes"])
 api_router.include_router(demos.router, prefix="/demos", tags=["demos"])
+api_router.include_router(tesser.router, prefix="/tesser", tags=["tesser"])
 api_router.include_router(theme_bindings.router, prefix="/theme-bindings", tags=["theme-bindings"])
 
 if settings.ENVIRONMENT == "local":

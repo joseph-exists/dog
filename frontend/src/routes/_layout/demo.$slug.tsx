@@ -46,6 +46,7 @@ import {
 import {
   DemoService,
   type ResolvedDemoSessionViewModel,
+  type TesserScript,
 } from "@/services/demoService"
 import { RoomService } from "@/services/roomService"
 import { handleError } from "@/utils"
@@ -137,6 +138,21 @@ function ResolvedDemoRoute({
     resolved.runtime.auto_start_error ?? null,
   )
   const [showInternalMessages, setShowInternalMessages] = useState(false)
+  const [canvasSvgOverrideByPanelId, setCanvasSvgOverrideByPanelId] = useState<
+    Record<string, string>
+  >({})
+  const [canvasRenderStateByPanelId, setCanvasRenderStateByPanelId] = useState<
+    Record<
+      string,
+      {
+        isRendering: boolean
+        error: string | null
+        lastRequestId: string | null
+        lastCommitSha: string | null
+        lastScriptName: string | null
+      }
+    >
+  >({})
   const autoStartAttemptedRef = useRef(false)
   const { user } = useAuth()
 
@@ -157,6 +173,10 @@ function ResolvedDemoRoute({
       queryKey: ["agents", "available", "demo"],
       queryFn: () => AgentsService.listAvailableAgents(),
     })
+  const { data: tesserScriptsPayload } = useQuery({
+    queryKey: ["tesser", "scripts"],
+    queryFn: () => DemoService.listTesserScripts(),
+  })
   const { mutateAsync: startRuntime, isPending: isStarting } = useMutation({
     mutationFn: async (userPersonaId: string) =>
       RoomRuntimeService.putRoomRuntime({
@@ -350,6 +370,102 @@ function ResolvedDemoRoute({
     [removeParticipant],
   )
 
+  const handleRenderCanvas = useCallback(
+    async (
+      panelId: string,
+      payload?: {
+        scriptName?: string
+        title?: string
+        subtitle?: string | null
+        scriptInput?: Record<string, unknown>
+      },
+    ) => {
+      setCanvasRenderStateByPanelId((previous) => ({
+        ...previous,
+        [panelId]: {
+          isRendering: true,
+          error: null,
+          lastRequestId: previous[panelId]?.lastRequestId ?? null,
+          lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
+          lastScriptName: payload?.scriptName ?? previous[panelId]?.lastScriptName ?? null,
+        },
+      }))
+      try {
+        const response = await DemoService.renderCanvasPanel(resolved.demo_config_id, {
+          panel_id: panelId,
+          script_name: payload?.scriptName ?? "simple_svg",
+          script_input: payload?.scriptInput ?? {},
+          title: payload?.title ?? "Tesser Render",
+          subtitle: payload?.subtitle ?? null,
+          persist_to_composition: true,
+          commit_to_shadow_repo: true,
+        })
+        setCanvasSvgOverrideByPanelId((previous) => ({
+          ...previous,
+          [panelId]: response.svg,
+        }))
+        setCanvasRenderStateByPanelId((previous) => ({
+          ...previous,
+          [panelId]: {
+            isRendering: false,
+            error: null,
+            lastRequestId: response.request_id ?? null,
+            lastCommitSha: response.shadow_commit_sha ?? null,
+            lastScriptName: payload?.scriptName ?? "simple_svg",
+          },
+        }))
+        showSuccessToast("Canvas render updated")
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Canvas render failed."
+        setCanvasRenderStateByPanelId((previous) => ({
+          ...previous,
+          [panelId]: {
+            isRendering: false,
+            error: message,
+            lastRequestId: previous[panelId]?.lastRequestId ?? null,
+            lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
+            lastScriptName: payload?.scriptName ?? previous[panelId]?.lastScriptName ?? null,
+          },
+        }))
+        showErrorToast(message)
+      }
+    },
+    [resolved.demo_config_id],
+  )
+  const [tesserHelpByScriptName, setTesserHelpByScriptName] = useState<
+    Record<string, string>
+  >({})
+  const [tesserExamplesIndex, setTesserExamplesIndex] = useState<string | null>(
+    null,
+  )
+
+  const availableTesserScripts: TesserScript[] = tesserScriptsPayload?.data ?? []
+
+  const handleRequestTesserScriptHelp = useCallback(async (scriptName: string) => {
+    const cached = tesserHelpByScriptName[scriptName]
+    if (cached) return cached
+    const response = await DemoService.getTesserScriptHelp(scriptName)
+    const help = response.help_text ?? ""
+    if (help) {
+      setTesserHelpByScriptName((previous) => ({
+        ...previous,
+        [scriptName]: help,
+      }))
+    }
+    return help || null
+  }, [tesserHelpByScriptName])
+
+  const handleRequestTesserExamplesIndex = useCallback(async () => {
+    if (tesserExamplesIndex) return tesserExamplesIndex
+    const response = await DemoService.getTesserExamplesIndex()
+    const content = response.content ?? ""
+    if (content) {
+      setTesserExamplesIndex(content)
+    }
+    return content || null
+  }, [tesserExamplesIndex])
+
   const availableAgents = (availableAgentsData?.data ??
     []) as UserAgentConfigPublic[]
   const activeUsers = participants.filter((p) => p.participant_type === "user")
@@ -406,6 +522,7 @@ function ResolvedDemoRoute({
               contentClassName="h-full min-h-0"
             >
               {renderDemoPanel(panel, {
+                demoConfigId: resolved.demo_config_id,
                 roomId,
                 roomTitle,
                 roomStoryId,
@@ -433,6 +550,15 @@ function ResolvedDemoRoute({
                 showInternalMessages,
                 onToggleInternalMessages: setShowInternalMessages,
                 renderContentPayload,
+                onRenderCanvas: handleRenderCanvas,
+                canvasRenderStateByPanelId,
+                canvasSvgOverrideByPanelId,
+                availableTesserScripts: availableTesserScripts.map((script) => ({
+                  ...script,
+                  help_text: tesserHelpByScriptName[script.name] ?? script.help_text ?? null,
+                })),
+                onRequestTesserScriptHelp: handleRequestTesserScriptHelp,
+                onRequestTesserExamplesIndex: handleRequestTesserExamplesIndex,
               })}
             </DemoPresentationFrame>
           )
@@ -445,7 +571,14 @@ function ResolvedDemoRoute({
       handleRemoveAgent,
       handleRemoveUser,
       handleToggleAgent,
+      handleRenderCanvas,
+      handleRequestTesserExamplesIndex,
+      handleRequestTesserScriptHelp,
       canWrite,
+      canvasRenderStateByPanelId,
+      canvasSvgOverrideByPanelId,
+      availableTesserScripts,
+      tesserHelpByScriptName,
       existingAgentIds,
       handleAutoRespondMessage,
       isAddingParticipant,

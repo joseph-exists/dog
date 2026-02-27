@@ -8,6 +8,7 @@ context window overflow while maintaining conversation relevance.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -18,6 +19,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import (
+    DemoSession,
     UserAgentConfig,
     Room,
     RoomMessage,
@@ -28,6 +30,7 @@ from app.models import (
     UserStoryProgress,
 )
 from app.crud import get_available_choices, get_choice_ancestor_chain_async
+from app.crud_demo import get_demo_config_by_id, resolve_demo_composition_for_user
 from app.services.context_store import ContextItemStore
 from app.services.shadow_context_loader import build_shadow_context_items
 
@@ -35,6 +38,11 @@ logger = logging.getLogger(__name__)
 
 SERVICE_ID = "context_provider"
 logfire = ServiceLogfire(SERVICE_ID)
+
+
+def _canvas_context_type(panel_id: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9_.-]", "-", str(panel_id))
+    return f"system.canvas.{safe[:80]}.svg"
 
 
 @dataclass
@@ -348,6 +356,87 @@ async def build_room_context(
         }
 
         extra_contexts: list[dict[str, Any]] = []
+        # Load persisted demo canvas SVG context directly from DB composition.
+        # This gives agents durable access to canvas state similar to story runtime.
+        demo_session_result = await session.exec(
+            select(DemoSession).where(DemoSession.room_id == room_id)
+        )
+        demo_session = demo_session_result.first()
+        if demo_session:
+            demo_config = await get_demo_config_by_id(session, demo_session.demo_config_id)
+            if demo_config:
+                try:
+                    composition, _ = await resolve_demo_composition_for_user(
+                        session,
+                        demo_config=demo_config,
+                        user_id=demo_session.user_id,
+                    )
+                    panel_summaries: list[dict[str, Any]] = []
+                    for panel in composition.panels:
+                        panel_summaries.append(
+                            {
+                                "id": panel.id,
+                                "kind": panel.kind,
+                                "title": panel.title,
+                                "order": panel.order,
+                                "prominence": panel.prominence,
+                                "viewport_mode": panel.viewport_mode,
+                            }
+                        )
+                        if panel.kind != "canvas":
+                            continue
+                        options = panel.options
+                        extras = (
+                            options.get("extras")
+                            if isinstance(options, dict)
+                            else getattr(options, "extras", None)
+                        )
+                        if not isinstance(extras, dict):
+                            continue
+                        svg = extras.get("render_svg")
+                        if not isinstance(svg, str) or not svg.strip():
+                            continue
+                        extra_contexts.append(
+                            {
+                                "context_type": _canvas_context_type(panel.id),
+                                "payload": {
+                                    "panel_id": panel.id,
+                                    "svg": svg,
+                                    "rendered_at": extras.get("rendered_at"),
+                                    "request_id": extras.get("request_id"),
+                                },
+                                "source": "system",
+                            }
+                        )
+                    block_summaries = [
+                        {
+                            "id": block.id,
+                            "type": block.type,
+                            "title": block.title,
+                            "order": block.order,
+                            "region": block.region,
+                            "visibility": block.visibility,
+                        }
+                        for block in composition.blocks
+                    ]
+                    extra_contexts.append(
+                        {
+                            "context_type": "system.demo.composition",
+                            "payload": {
+                                "demo_config_id": str(demo_config.id),
+                                "panels": panel_summaries,
+                                "blocks": block_summaries,
+                            },
+                            "source": "system",
+                        }
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to load demo composition context for room %s: %s",
+                        room_id,
+                        exc,
+                    )
+
         if context_store:
             try:
                 shadow_items = await build_shadow_context_items(
@@ -368,7 +457,7 @@ async def build_room_context(
                 items,
                 key=lambda item: (source_priority.get(item.source, 99), item.created_at),
             )
-            extra_contexts = [
+            store_contexts = [
                 {
                     "context_type": item.context_type,
                     "payload": item.payload,
@@ -376,6 +465,14 @@ async def build_room_context(
                 }
                 for item in items_sorted
             ]
+            extra_contexts.extend(store_contexts)
+        # Prefer newer/later entries for same context_type so panel contexts stay deterministic.
+        deduped_contexts: dict[str, dict[str, Any]] = {}
+        for item in extra_contexts:
+            context_type = str(item.get("context_type") or "")
+            if context_type:
+                deduped_contexts[context_type] = item
+        extra_contexts = list(deduped_contexts.values())
 
         context = RoomContext(
             room_id=room_id,

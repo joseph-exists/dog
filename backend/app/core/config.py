@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     # Redis Configuration (Phase 4: Real-time Streaming)
     REDIS_HOST: str = "127.0.0.1"
     REDIS_PORT: int = 6379
+    TESSER_REQUEST_CHANNEL: str = "tesser:requests"
+    TESSER_RESPONSE_CHANNEL: str = "tesser:responses"
 
     # Shadow Configuration (git-based entity versioning)
     # Repos are cached locally at SHADOW_REPOS_PATH and optionally synced to

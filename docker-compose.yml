@@ -98,6 +98,10 @@ services:
       db:
         condition: service_healthy
         restart: true
+      tesser:
+        condition: service_started
+      gittin:
+        condition: service_started
       prestart:
         condition: service_completed_successfully
     env_file:
@@ -123,8 +127,15 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - SENTRY_DSN=${SENTRY_DSN}
       - SHADOW_REPOS_PATH=/tmp/shadows
-      - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE}
+      - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-ssh://git@gittin/repos/{entity_type}/{entity_id}.git}
       - SHADOW_REPO_DEFAULT_BRANCH=${SHADOW_REPO_DEFAULT_BRANCH:-main}
+      - GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /root/.ssh/id_ed25519
+      - TESSER_REDIS_HOST=redis
+      - TESSER_REDIS_PORT=${REDIS_PORT:-6379}
+      - TESSER_REQUEST_CHANNEL=${TESSER_REQUEST_CHANNEL:-tesser:requests}
+      - TESSER_RESPONSE_CHANNEL=${TESSER_RESPONSE_CHANNEL:-tesser:responses}
+    volumes:
+      - ./gittin/ssh:/root/.ssh:ro
 
     healthcheck:
       test:
@@ -172,12 +183,41 @@ services:
   #     - .env
   #   environment:
   #     - SHADOW_REPOS_PATH=/tmp/shadows
-  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE}
+  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-ssh://git@gittin/repos/{entity_type}/{entity_id}.git}
   #     - SHADOW_REPO_DEFAULT_BRANCH=${SHADOW_REPO_DEFAULT_BRANCH:-main}
   #   build:
   #     context: ./backend
   #     dockerfile: Dockerfile.worker
   #   command: ["python", "-m", "app.services.shadow_outbox_worker"]
+
+  tesser:
+    build:
+      context: ./tesser
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - TESSER_REDIS_HOST=redis
+      - TESSER_REDIS_PORT=${REDIS_PORT:-6379}
+      - TESSER_REDIS_DB=${TESSER_REDIS_DB:-0}
+      - TESSER_REQUEST_CHANNEL=${TESSER_REQUEST_CHANNEL:-tesser:requests}
+      - TESSER_RESPONSE_CHANNEL=${TESSER_RESPONSE_CHANNEL:-tesser:responses}
+      - TESSER_WORKER_ID=${TESSER_WORKER_ID:-tesser-worker-1}
+      - TESSER_LOG_LEVEL=${TESSER_LOG_LEVEL:-INFO}
+
+  gittin:
+    build:
+      context: ./gittin
+    restart: always
+    volumes:
+      - ./volumes/shadows:/repos
+      - ./gittin/ssh:/ssh
+    healthcheck:
+      test: ["CMD-SHELL", "pidof sshd >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     image: "${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}"

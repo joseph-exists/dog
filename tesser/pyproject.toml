@@ -1,19 +1,14 @@
 [project]
 name = "tesserax"
 version = "0.9.2"
-description = "A pure-Python library for rendering professional CS graphics."
-readme = "README.md"
+description = "go eff"
 authors = [
-    { name = "Alejandro Piad", email = "apiad@apiad.net" }
+    { name = "Don Quitsote", email = "purp@nerp.net" }
 ]
 requires-python = ">=3.12"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
-[project.optional-dependencies]
-export = [
+dependencies = [
     "imageio[ffmpeg]>=2.37.2",
     "cairosvg>=2.8.2",
 ]

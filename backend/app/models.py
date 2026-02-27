@@ -4732,6 +4732,68 @@ class ResolveDemoEntryPayload(SQLModel):
     runtime: DemoResolvedRuntimeContext
 
 
+class DemoCanvasRenderRequest(SQLModel):
+    panel_id: str | None = None
+    script_name: str = Field(default="simple_svg")
+    script_input: dict[str, Any] = Field(default_factory=dict)
+    title: str = Field(default="Tesser Render")
+    subtitle: str | None = None
+    persist_to_composition: bool = True
+    commit_to_shadow_repo: bool = True
+
+
+class DemoCanvasRenderResponse(SQLModel):
+    demo_config_id: UUID
+    panel_id: str
+    request_id: str | None = None
+    status: str
+    svg: str
+    persisted: bool
+    shadow_commit_sha: str | None = None
+
+
+class TesserScriptPublic(SQLModel):
+    name: str
+    description: str
+    input_schema: dict[str, Any] = Field(default_factory=dict)
+    help_text: str | None = None
+    source_path: str | None = None
+    kind: str | None = None
+
+
+class TesserScriptsPublic(SQLModel):
+    data: list[TesserScriptPublic]
+    count: int
+
+
+class TesserScriptRunRequest(SQLModel):
+    script_input: dict[str, Any] = Field(default_factory=dict)
+    room_id: str | None = None
+    timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
+
+
+class TesserScriptRunResponse(SQLModel):
+    request_id: str | None = None
+    script_name: str
+    status: str
+    render: dict[str, Any] | None = None
+    error: str | None = None
+    completed_at: str | None = None
+    worker_id: str | None = None
+
+
+class TesserScriptHelpResponse(SQLModel):
+    script_name: str
+    help_text: str | None = None
+    description: str | None = None
+    input_schema: dict[str, Any] = Field(default_factory=dict)
+
+
+class TesserExamplesIndexResponse(SQLModel):
+    path: str
+    content: str
+
+
 # Resolution precedence (service-level contract):
 # 1) user_demo_page_composition_overrides where use_composition_defaults=False
 # 2) demo_page_compositions for demo_config_id
