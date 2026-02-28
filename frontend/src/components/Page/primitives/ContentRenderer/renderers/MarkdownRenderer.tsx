@@ -3,10 +3,15 @@
  *
  * Uses react-markdown with custom code component for Shiki integration.
  */
+import { lazy, Suspense } from "react"
 import ReactMarkdown from "react-markdown"
-import { CodeHighlight } from "../components/CodeHighlight"
 import { useThemeResolution } from "../hooks/useThemeResolution"
 import type { ContentProps, MarkdownContentOptions } from "../types"
+
+const LazyCodeHighlight = lazy(async () => {
+  const mod = await import("../components/CodeHighlight")
+  return { default: mod.CodeHighlight }
+})
 
 export function MarkdownRenderer({
   content,
@@ -36,17 +41,27 @@ export function MarkdownRenderer({
             const isBlock = codeClassName?.includes("language-")
 
             return (
-              <CodeHighlight
-                className={codeClassName}
-                options={{
-                  theme: codeTheme,
-                  forceBlock: isBlock,
-                  // enable line numbers for blocks by default in page variant
-                  lineNumbers: isBlock && variant === "page",
-                }}
+              <Suspense
+                fallback={
+                  <code className={codeClassName}>
+                    {typeof children === "string"
+                      ? children
+                      : children?.toString?.() ?? ""}
+                  </code>
+                }
               >
-                {children}
-              </CodeHighlight>
+                <LazyCodeHighlight
+                  className={codeClassName}
+                  options={{
+                    theme: codeTheme,
+                    forceBlock: isBlock,
+                    // enable line numbers for blocks by default in page variant
+                    lineNumbers: isBlock && variant === "page",
+                  }}
+                >
+                  {children}
+                </LazyCodeHighlight>
+              </Suspense>
             )
           },
         }}

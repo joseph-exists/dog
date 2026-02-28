@@ -23,6 +23,11 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -257,29 +262,36 @@ const StoryEditor = ({ storyId }: StoryEditorProps) => {
       </header>
 
       {/* Two-Panel Layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel: Node Tree (280px) */}
-        <aside className="bg-muted/30 border-border w-[280px] flex-shrink-0 overflow-y-auto border-r">
-          <NodeTree
-            nodes={nodes}
-            choices={choices}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-            storyId={storyId}
-            storyVersion={story.current_version}
-          />
-        </aside>
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1 overflow-hidden"
+      >
+        <ResizablePanel defaultSize={25} minSize={25}>
+          <aside className="bg-muted/30 border-border h-full overflow-y-auto">
+            <NodeTree
+              nodes={nodes}
+              choices={choices}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={setSelectedNodeId}
+              storyId={storyId}
+              storyVersion={story.current_version}
+            />
+          </aside>
+        </ResizablePanel>
 
-        {/* Right Panel: Node Editor (flex) */}
-        <main className="flex-1 overflow-y-auto">
-          <NodeEditor
-            nodeId={selectedNodeId}
-            storyId={storyId}
-            storyVersion={story.current_version}
-            availableNodes={nodes}
-          />
-        </main>
-      </div>
+        <ResizableHandle withHandle />
+
+        <ResizablePanel defaultSize={25} minSize={25}>
+          <main className="h-full overflow-y-auto">
+            <NodeEditor
+              nodeId={selectedNodeId}
+              storyId={storyId}
+              storyVersion={story.current_version}
+              availableNodes={nodes}
+            />
+          </main>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }

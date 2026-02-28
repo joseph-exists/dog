@@ -228,8 +228,9 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
   },
   {
     kind: "storyPlayer",
-    label: "Story Player",
-    description: "Interactive story playback with choices",
+    label: "Solo Story Player",
+    description:
+      "Interactive story playback with choices. Local-only and not connected to room runtime.",
     icon: Play,
     defaultProminence: "primary",
     contexts: ["story"],
@@ -239,7 +240,7 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
   {
     kind: "storyDebug",
     label: "Story Debug",
-    description: "Player state, history, and choice debugging",
+    description: "Debug state for the local solo story player",
     icon: Bug,
     defaultProminence: "auxiliary",
     contexts: ["story"],

@@ -38,7 +38,7 @@ async def test_non_streaming_runner_success() -> None:
     async def is_agent_available(session, agent_name: str) -> bool:
         return True
 
-    async def get_agent_instance(session, agent_name: str):
+    async def get_agent_instance(session, agent_name: str, user_id=None, room_id=None):  # noqa: ARG001
         return _Agent()
 
     def build_agent_prompt(trigger_message, context, current_agent_slug=None) -> str:  # noqa: ARG001

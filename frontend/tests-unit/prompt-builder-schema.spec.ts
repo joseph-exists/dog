@@ -53,6 +53,31 @@ test.describe("promptBuilderSchema defaults", () => {
     expect(Array.isArray(normalized.input.messages)).toBeTruthy()
     expect(normalized.input.messages).toEqual([])
   })
+
+  test("normalizePromptDraft maps legacy response_format_json=true to response_format json_object", async () => {
+    const normalized = normalizePromptDraft({
+      params: {
+        provider_kind: "openai_compatible",
+        response_format_json: true,
+      } as any,
+    })
+    expect(normalized.params.response_format_json).toBeTruthy()
+    expect(normalized.params.response_format).toEqual({ type: "json_object" })
+  })
+
+  test("normalizePromptDraft normalizes tool_choice string into named object", async () => {
+    const normalized = normalizePromptDraft({
+      tools: {
+        tool_mode: "optional",
+        tool_allowlist: ["search"],
+        tool_choice: "dispatch_to_docs",
+      },
+    })
+    expect(normalized.tools?.tool_choice).toEqual({
+      type: "named",
+      name: "dispatch_to_docs",
+    })
+  })
 })
 
 test.describe("promptBuilderSchema field specs", () => {
@@ -246,6 +271,42 @@ test.describe("promptBuilderSchema semantic validation", () => {
     expect(
       issues.some(
         (issue) => issue.code === "reasoning_effort_without_openai_provider",
+      ),
+    ).toBeTruthy()
+  })
+
+  test("flags invalid max_tool_calls", async () => {
+    const draft = createEmptyPromptDraft({
+      provider: {
+        user_access_provider_id: "provider-1",
+        provider_type_id: null,
+        provider_kind: "openai_compatible",
+        base_url: null,
+        account_label: null,
+      },
+      model: {
+        model_catalog_id: null,
+        model_id: "gpt-4o",
+        model_name: "GPT 4o",
+        model_family: "gpt",
+      },
+      input: {
+        kind: "simple_text",
+        text: "Hi",
+      },
+      tools: {
+        tool_mode: "optional",
+        tool_allowlist: ["search"],
+        tool_choice: null,
+        max_tool_calls: 0,
+      },
+    })
+    const issues = validatePromptDraftSemantics(draft)
+    expect(
+      issues.some(
+        (issue) =>
+          issue.code === "param_out_of_range" &&
+          issue.path === "tools.max_tool_calls",
       ),
     ).toBeTruthy()
   })

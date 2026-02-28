@@ -83,6 +83,34 @@ test.describe("promptBuilder capability registry", () => {
     ])
   })
 
+  test("tool config hook normalizes tool_choice and validates max_tool_calls", async () => {
+    const draft = createPromptDraftForCapabilityTests()
+    const capability = getPromptCapabilityByKey("tools")
+    expect(capability).toBeTruthy()
+
+    const normalized = normalizePromptCapabilityValue(
+      capability!,
+      {
+        tool_mode: "optional",
+        tool_allowlist: ["search"],
+        tool_choice: "dispatch_to_docs",
+        max_tool_calls: 0,
+      },
+      draft,
+    ) as typeof draft.tools
+
+    expect(normalized?.tool_choice).toEqual({
+      type: "named",
+      name: "dispatch_to_docs",
+    })
+
+    draft.tools = normalized
+    const issues = runPromptCapabilitySemanticValidators(capability!, draft)
+    expect(
+      issues.some((issue) => issue.code === "max_tool_calls_invalid"),
+    ).toBeTruthy()
+  })
+
   test("validatePromptDraftWithCapabilityHooks includes both base and hook issues", async () => {
     const draft = createPromptDraftForCapabilityTests()
     draft.provider.user_access_provider_id = null

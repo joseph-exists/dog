@@ -63,8 +63,17 @@ const RUNTIME_EVENT_TYPES = new Set([
   "room.runtime.cleared",
 ])
 
+const ROOM_AGENT_SETTINGS_EVENT_TYPES = new Set([
+  "room.agent_settings.updated",
+  "room.agent_settings.deleted",
+])
+
 export function shouldInvalidateRuntime(eventType: string): boolean {
   return RUNTIME_EVENT_TYPES.has(eventType)
+}
+
+export function shouldInvalidateRoomAgentSettings(eventType: string): boolean {
+  return ROOM_AGENT_SETTINGS_EVENT_TYPES.has(eventType)
 }
 
 export function useRoomStream(
@@ -233,6 +242,12 @@ export function useRoomStream(
             if (shouldInvalidateRuntime(message.event_type)) {
               queryClient.invalidateQueries({
                 queryKey: ["rooms", roomId, "runtime"],
+              })
+            }
+
+            if (shouldInvalidateRoomAgentSettings(message.event_type)) {
+              queryClient.invalidateQueries({
+                queryKey: ["rooms", roomId, "agent-settings"],
               })
             }
 

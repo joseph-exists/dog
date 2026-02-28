@@ -1,13 +1,5 @@
 default: test-unit
 
-.PHONY: docs
-docs:
-	cd docs && quarto publish gh-pages
-
-.PHONY: preview
-preview:
-	cd docs && quarto preview
-
 .PHONY: format
 format:
 	black . && git commit -am "Apply code formatting"

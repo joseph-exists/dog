@@ -7,6 +7,8 @@ from sqlmodel import Session, select
 
 from app import crud
 from app.models import ShadowOutboxJob, ShadowRepo, ShadowVersion, User, UserCreate
+from app.services.repo_naming import shadow_repo_name
+from app.services.shadow_gogs_service import shadow_gogs_service
 from app.services.shadow_service import shadow_service
 from app.services import shadow_outbox_worker
 
@@ -23,7 +25,7 @@ def _create_repo(db: Session, *, owner_id: uuid.UUID) -> ShadowRepo:
         owner_id=owner_id,
         entity_type="agent",
         entity_id=entity_id,
-        forgejo_repo_name=f"agent-{str(entity_id)[:8]}",
+        forgejo_repo_name=shadow_repo_name("agent", entity_id),
         forgejo_repo_id=None,
     )
     db.add(repo)
@@ -195,7 +197,17 @@ def test_enqueue_creates_version_and_job(db: Session, monkeypatch) -> None:
     owner_id = _create_user(db)
     entity_id = uuid.uuid4()
 
-    monkeypatch.setattr(shadow_service, "_get_service_token", lambda *_: "test-token")
+    called: dict[str, object] = {}
+
+    def _fake_ensure_remote(*, session: Session, shadow_repo: ShadowRepo):
+        called["shadow_repo_id"] = shadow_repo.id
+        return None
+
+    monkeypatch.setattr(
+        shadow_gogs_service,
+        "ensure_shadow_repo_remote",
+        _fake_ensure_remote,
+    )
 
     version = shadow_service.enqueue_entity_version(
         session=db,
@@ -212,3 +224,45 @@ def test_enqueue_creates_version_and_job(db: Session, monkeypatch) -> None:
         select(ShadowOutboxJob).where(ShadowOutboxJob.shadow_version_id == version.id)
     ).first()
     assert job is not None
+
+    repo = db.get(ShadowRepo, version.shadow_repo_id)
+    assert repo is not None
+    assert repo.forgejo_repo_name == shadow_repo_name("agent", entity_id)
+    assert called["shadow_repo_id"] == repo.id
+
+
+def test_enqueue_continues_when_remote_provisioning_fails(
+    db: Session, monkeypatch
+) -> None:
+    owner_id = _create_user(db)
+    entity_id = uuid.uuid4()
+
+    def _raise_remote_failure(*, session: Session, shadow_repo: ShadowRepo):
+        raise RuntimeError("gogs provisioning failed")
+
+    monkeypatch.setattr(
+        shadow_gogs_service,
+        "ensure_shadow_repo_remote",
+        _raise_remote_failure,
+    )
+
+    version = shadow_service.enqueue_entity_version(
+        session=db,
+        user=db.get(User, owner_id),
+        entity_type="agent",
+        entity_id=entity_id,
+        entity_data={"entity_type": "agent"},
+        message="enqueue despite gogs failure",
+    )
+
+    assert version is not None
+    assert version.status == "pending"
+
+    job = db.exec(
+        select(ShadowOutboxJob).where(ShadowOutboxJob.shadow_version_id == version.id)
+    ).first()
+    assert job is not None
+
+    repo = db.get(ShadowRepo, version.shadow_repo_id)
+    assert repo is not None
+    assert repo.forgejo_repo_name == shadow_repo_name("agent", entity_id)

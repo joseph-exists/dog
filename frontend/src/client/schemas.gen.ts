@@ -729,6 +729,111 @@ export const DemoCanvasPanelSpecSchema = {
     title: 'DemoCanvasPanelSpec'
 } as const;
 
+export const DemoCanvasRenderRequestSchema = {
+    properties: {
+        panel_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Panel Id'
+        },
+        script_name: {
+            type: 'string',
+            title: 'Script Name',
+            default: 'simple_svg'
+        },
+        script_input: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Script Input'
+        },
+        title: {
+            type: 'string',
+            title: 'Title',
+            default: 'Tesser Render'
+        },
+        subtitle: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Subtitle'
+        },
+        persist_to_composition: {
+            type: 'boolean',
+            title: 'Persist To Composition',
+            default: true
+        },
+        commit_to_shadow_repo: {
+            type: 'boolean',
+            title: 'Commit To Shadow Repo',
+            default: true
+        }
+    },
+    type: 'object',
+    title: 'DemoCanvasRenderRequest'
+} as const;
+
+export const DemoCanvasRenderResponseSchema = {
+    properties: {
+        demo_config_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Demo Config Id'
+        },
+        panel_id: {
+            type: 'string',
+            title: 'Panel Id'
+        },
+        request_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Request Id'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        svg: {
+            type: 'string',
+            title: 'Svg'
+        },
+        persisted: {
+            type: 'boolean',
+            title: 'Persisted'
+        },
+        shadow_commit_sha: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Shadow Commit Sha'
+        }
+    },
+    type: 'object',
+    required: ['demo_config_id', 'panel_id', 'status', 'svg', 'persisted'],
+    title: 'DemoCanvasRenderResponse'
+} as const;
+
 export const DemoChatModeSchema = {
     type: 'string',
     enum: ['participant', 'observer'],
@@ -6748,6 +6853,19 @@ export const PromptConfigCommitRequestSchema = {
 
 export const PromptConfigCreateSchema = {
     properties: {
+        slug: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        },
         name: {
             type: 'string',
             maxLength: 150,
@@ -6881,6 +6999,12 @@ export const PromptConfigDraft_OutputSchema = {
 
 export const PromptConfigPublicSchema = {
     properties: {
+        slug: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Slug'
+        },
         name: {
             type: 'string',
             maxLength: 150,
@@ -6955,7 +7079,7 @@ export const PromptConfigPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'id', 'owner_id', 'latest_version', 'created_at', 'updated_at'],
+    required: ['slug', 'name', 'id', 'owner_id', 'latest_version', 'created_at', 'updated_at'],
     title: 'PromptConfigPublic'
 } as const;
 
@@ -6978,8 +7102,75 @@ export const PromptConfigResetWorkingCopyRequestSchema = {
     title: 'PromptConfigResetWorkingCopyRequest'
 } as const;
 
+export const PromptConfigResolvePreviewRequestSchema = {
+    properties: {
+        agent_slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Agent Slug'
+        },
+        room_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Room Id'
+        },
+        payload: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PromptConfigDraft-Input'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['agent_slug'],
+    title: 'PromptConfigResolvePreviewRequest'
+} as const;
+
+export const PromptConfigResolvePreviewResponseSchema = {
+    properties: {
+        effective_config: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Effective Config'
+        },
+        provenance: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Provenance'
+        }
+    },
+    type: 'object',
+    required: ['effective_config', 'provenance'],
+    title: 'PromptConfigResolvePreviewResponse'
+} as const;
+
 export const PromptConfigUpdateSchema = {
     properties: {
+        slug: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        },
         name: {
             anyOf: [
                 {
@@ -7508,6 +7699,18 @@ export const PromptParamsSchema = {
             ],
             title: 'Seed'
         },
+        response_format: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Response Format'
+        },
         response_format_json: {
             anyOf: [
                 {
@@ -7518,6 +7721,18 @@ export const PromptParamsSchema = {
                 }
             ],
             title: 'Response Format Json'
+        },
+        openai: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Openai'
         },
         parallel_tool_calls: {
             anyOf: [
@@ -7661,14 +7876,55 @@ export const PromptToolingConfigSchema = {
         tool_choice: {
             anyOf: [
                 {
-                    type: 'string',
-                    maxLength: 255
+                    type: 'string'
+                },
+                {
+                    additionalProperties: true,
+                    type: 'object'
                 },
                 {
                     type: 'null'
                 }
             ],
             title: 'Tool Choice'
+        },
+        max_tool_calls: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Tool Calls'
+        },
+        builtin: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Builtin'
+        },
+        mcp: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Mcp'
         }
     },
     type: 'object',
@@ -8057,6 +8313,44 @@ export const RoomAgentSettingsPublicSchema = {
             title: 'Agent Slug',
             description: 'Null for room-wide defaults; set for per-agent overrides.'
         },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig recipe for this room-scoped layer.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves the attached PromptConfig version for this room-scoped layer.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned PromptConfig version when version policy is 'pinned'."
+        },
         prompt_config: {
             anyOf: [
                 {
@@ -8067,7 +8361,8 @@ export const RoomAgentSettingsPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Prompt Config'
+            title: 'Prompt Config',
+            description: 'Optional inline PromptConfigDraft overlay applied after any attached PromptConfig reference.'
         },
         tool_policy: {
             anyOf: [
@@ -8126,6 +8421,41 @@ export const RoomAgentSettingsPublicSchema = {
 
 export const RoomAgentSettingsUpdateSchema = {
     properties: {
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number'
+        },
         prompt_config: {
             anyOf: [
                 {
@@ -10086,6 +10416,236 @@ export const StoryValidationResultSchema = {
     description: "Result of validating a story's graph structure for publishing."
 } as const;
 
+export const TesserExamplesIndexResponseSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        content: {
+            type: 'string',
+            title: 'Content'
+        }
+    },
+    type: 'object',
+    required: ['path', 'content'],
+    title: 'TesserExamplesIndexResponse'
+} as const;
+
+export const TesserScriptHelpResponseSchema = {
+    properties: {
+        script_name: {
+            type: 'string',
+            title: 'Script Name'
+        },
+        help_text: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Help Text'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        input_schema: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Input Schema'
+        }
+    },
+    type: 'object',
+    required: ['script_name'],
+    title: 'TesserScriptHelpResponse'
+} as const;
+
+export const TesserScriptPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        description: {
+            type: 'string',
+            title: 'Description'
+        },
+        input_schema: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Input Schema'
+        },
+        help_text: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Help Text'
+        },
+        source_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Path'
+        },
+        kind: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Kind'
+        }
+    },
+    type: 'object',
+    required: ['name', 'description'],
+    title: 'TesserScriptPublic'
+} as const;
+
+export const TesserScriptRunRequestSchema = {
+    properties: {
+        script_input: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Script Input'
+        },
+        room_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Room Id'
+        },
+        timeout_seconds: {
+            type: 'number',
+            maximum: 60,
+            minimum: 1,
+            title: 'Timeout Seconds',
+            default: 15
+        }
+    },
+    type: 'object',
+    title: 'TesserScriptRunRequest'
+} as const;
+
+export const TesserScriptRunResponseSchema = {
+    properties: {
+        request_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Request Id'
+        },
+        script_name: {
+            type: 'string',
+            title: 'Script Name'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        render: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Render'
+        },
+        error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error'
+        },
+        completed_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Completed At'
+        },
+        worker_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Worker Id'
+        }
+    },
+    type: 'object',
+    required: ['script_name', 'status'],
+    title: 'TesserScriptRunResponse'
+} as const;
+
+export const TesserScriptsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/TesserScriptPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'TesserScriptsPublic'
+} as const;
+
 export const ThemeBindingCreateSchema = {
     properties: {
         binding_type: {
@@ -11014,6 +11574,45 @@ export const Type1CreateSchema = {
             ],
             title: 'Deps Config'
         },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
         agent_metadata: {
             anyOf: [
                 {
@@ -11224,6 +11823,45 @@ export const Type1UpdateSchema = {
                 }
             ],
             title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
         },
         agent_metadata: {
             anyOf: [
@@ -11437,6 +12075,45 @@ export const Type3CreateSchema = {
             ],
             title: 'Deps Config'
         },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
         agent_metadata: {
             anyOf: [
                 {
@@ -11648,6 +12325,45 @@ export const Type3UpdateSchema = {
                 }
             ],
             title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
         },
         agent_metadata: {
             anyOf: [
@@ -12243,6 +12959,42 @@ export const UserAgentConfigPublicSchema = {
                 }
             ],
             title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number'
         },
         agent_metadata: {
             anyOf: [

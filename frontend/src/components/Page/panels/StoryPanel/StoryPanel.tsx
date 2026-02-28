@@ -86,7 +86,7 @@ export function StoryPanel({
       <div className={cn("flex h-full flex-col", className)}>
         <PlaceholderContent
           icon={BookOpen}
-          title="No Story Attached"
+          title="Why No Story?"
           description="Attach a story to begin playing in this room."
           action={
             <Button

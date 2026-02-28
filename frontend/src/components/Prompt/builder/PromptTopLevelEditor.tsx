@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 import {
   normalizePromptCapabilityValue,
@@ -8,6 +9,7 @@ import {
   normalizePromptDraft,
   type PromptConfigDraft,
 } from "@/components/Prompt/builder/promptBuilderSchema"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -15,6 +17,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -154,6 +161,8 @@ interface PromptTopLevelEditorProps {
     Array<{ value: string; label: string; disabled?: boolean }>
   >
   loadingCapabilityOptions?: Record<string, boolean>
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function PromptTopLevelEditor({
@@ -163,6 +172,8 @@ export function PromptTopLevelEditor({
   onDraftChange,
   capabilityOptions = {},
   loadingCapabilityOptions = {},
+  isOpen = true,
+  onOpenChange,
 }: PromptTopLevelEditorProps) {
   const [editorMode, setEditorMode] = useState<PromptEditorMode>("guided")
   const draftRecord = draft as unknown as Record<string, unknown>
@@ -395,60 +406,80 @@ export function PromptTopLevelEditor({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Prompt Composition</CardTitle>
-        <CardDescription>
-          Build prompts in Guided mode for step-by-step authoring, or use Full
-          Editor for complete registry-driven controls.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        <Tabs
-          value={editorMode}
-          onValueChange={(next) => setEditorMode(next as PromptEditorMode)}
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="guided">Guided</TabsTrigger>
-            <TabsTrigger value="full">Full Editor</TabsTrigger>
-          </TabsList>
-          <TabsContent value="guided" className="mt-4 space-y-4">
-            <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Guided mode prioritizes the highest-impact settings in authoring
-              order. Use it to build and tune quickly, then switch to Full
-              Editor when you need low-level fields such as stop sequences or
-              metadata.
+      <Collapsible open={isOpen} onOpenChange={onOpenChange}>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle>Prompt Composition</CardTitle>
+              <CardDescription>
+                Build prompts in Guided mode for step-by-step authoring, or use
+                Full Editor for complete registry-driven controls.
+              </CardDescription>
             </div>
-            {GUIDED_SECTION_SPECS.map((section) =>
-              renderGuidedSection(section),
+            {onOpenChange && (
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {isOpen ? (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 mr-1" />
+                  )}
+                  {isOpen ? "Collapse" : "Expand"}
+                </Button>
+              </CollapsibleTrigger>
             )}
-          </TabsContent>
-          <TabsContent value="full" className="mt-4 space-y-4">
-            <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Full Editor exposes all registered fields mapped to the underlying
-              JSON draft. Use this mode for provider-specific or advanced tuning
-              workflows.
-            </div>
-            {CATEGORY_ORDER.map((category) => {
-              const capabilities = PROMPT_CAPABILITIES.filter(
-                (capability) => capability.category === category,
-              )
-              if (capabilities.length === 0) return null
-              return (
-                <div key={category} className="space-y-3">
-                  <h3 className="text-sm font-medium">
-                    {CATEGORY_LABELS[category]}
-                  </h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {capabilities.map((capability) =>
-                      renderCapabilityField(capability),
-                    )}
-                  </div>
+          </div>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="space-y-5">
+            <Tabs
+              value={editorMode}
+              onValueChange={(next) => setEditorMode(next as PromptEditorMode)}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="guided">Guided</TabsTrigger>
+                <TabsTrigger value="full">Full Editor</TabsTrigger>
+              </TabsList>
+              <TabsContent value="guided" className="mt-4 space-y-4">
+                <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  Guided mode prioritizes the highest-impact settings in
+                  authoring order. Use it to build and tune quickly, then switch
+                  to Full Editor when you need low-level fields such as stop
+                  sequences or metadata.
                 </div>
-              )
-            })}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+                {GUIDED_SECTION_SPECS.map((section) =>
+                  renderGuidedSection(section),
+                )}
+              </TabsContent>
+              <TabsContent value="full" className="mt-4 space-y-4">
+                <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  Full Editor exposes all registered fields mapped to the
+                  underlying JSON draft. Use this mode for provider-specific or
+                  advanced tuning workflows.
+                </div>
+                {CATEGORY_ORDER.map((category) => {
+                  const capabilities = PROMPT_CAPABILITIES.filter(
+                    (capability) => capability.category === category,
+                  )
+                  if (capabilities.length === 0) return null
+                  return (
+                    <div key={category} className="space-y-3">
+                      <h3 className="text-sm font-medium">
+                        {CATEGORY_LABELS[category]}
+                      </h3>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {capabilities.map((capability) =>
+                          renderCapabilityField(capability),
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   )
 }

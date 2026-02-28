@@ -1,15 +1,18 @@
 import uuid
 from typing import Any
 
+from coolname import generate_slug as coolname_generate_slug
 from fastapi import APIRouter, HTTPException
 from sqlmodel import desc, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import AsyncSessionDep, CurrentUser, SessionDep
 from app.models import (
     Message,
     PromptConfig,
     PromptConfigCommitRequest,
     PromptConfigCreate,
+    PromptConfigResolvePreviewRequest,
+    PromptConfigResolvePreviewResponse,
     PromptConfigPublic,
     PromptConfigResetWorkingCopyRequest,
     PromptConfigUpdate,
@@ -23,6 +26,12 @@ from app.models import (
     PromptConfigWorkingCopyPublic,
     PromptConfigWorkingCopyUpdate,
     PromptConfigDraft,
+    RoomAgentSettings,
+    UserAgentConfig,
+)
+from app.services.prompt_runtime_resolver import (
+    resolve_effective_prompt_runtime_config,
+    resolve_effective_prompt_runtime_config_for_room,
 )
 
 router = APIRouter(prefix="/prompt-configs", tags=["prompt-configs"])
@@ -52,6 +61,26 @@ def _require_prompt_config_access(
     return prompt_config
 
 
+def _generate_prompt_config_slug() -> str:
+    return coolname_generate_slug()
+
+
+def _ensure_prompt_config_slug_available(
+    *,
+    session: SessionDep,
+    slug: str,
+    exclude_id: uuid.UUID | None = None,
+) -> str:
+    normalized = slug.strip()
+    if not normalized:
+        raise HTTPException(status_code=422, detail="Slug cannot be empty")
+    stmt = select(PromptConfig).where(PromptConfig.slug == normalized)
+    existing = session.exec(stmt).first()
+    if existing and existing.id != exclude_id:
+        raise HTTPException(status_code=409, detail="PromptConfig slug already exists")
+    return normalized
+
+
 @router.get("/", response_model=PromptConfigsPublic)
 def list_prompt_configs(
     session: SessionDep,
@@ -67,6 +96,20 @@ def list_prompt_configs(
         data=[PromptConfigPublic.model_validate(config) for config in configs],
         count=len(configs),
     )
+
+
+@router.get("/slug/{slug}", response_model=PromptConfigPublic)
+def get_prompt_config_by_slug(
+    session: SessionDep,
+    current_user: CurrentUser,
+    slug: str,
+) -> PromptConfigPublic:
+    prompt_config = session.exec(select(PromptConfig).where(PromptConfig.slug == slug)).first()
+    if not prompt_config:
+        raise HTTPException(status_code=404, detail="PromptConfig not found")
+    if not current_user.is_superuser and prompt_config.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return PromptConfigPublic.model_validate(prompt_config)
 
 
 @router.get("/{prompt_config_id}", response_model=PromptConfigPublic)
@@ -90,7 +133,15 @@ def create_prompt_config(
     current_user: CurrentUser,
     prompt_config_in: PromptConfigCreate,
 ) -> PromptConfigPublic:
+    requested_slug = (
+        prompt_config_in.slug.strip() if isinstance(prompt_config_in.slug, str) else ""
+    )
+    slug = _ensure_prompt_config_slug_available(
+        session=session,
+        slug=requested_slug or _generate_prompt_config_slug(),
+    )
     prompt_config = PromptConfig(
+        slug=slug,
         name=prompt_config_in.name,
         description=prompt_config_in.description,
         metadata_json=prompt_config_in.metadata_json,
@@ -139,6 +190,12 @@ def update_prompt_config(
         prompt_config_id=prompt_config_id,
     )
     update_data = prompt_config_in.model_dump(exclude_unset=True)
+    if isinstance(update_data.get("slug"), str):
+        update_data["slug"] = _ensure_prompt_config_slug_available(
+            session=session,
+            slug=update_data["slug"],
+            exclude_id=prompt_config.id,
+        )
     prompt_config.sqlmodel_update(update_data)
     session.add(prompt_config)
     session.commit()
@@ -451,3 +508,32 @@ def validate_prompt_config_payload(
             )
         )
     return PromptConfigValidationResponse(issues=issues)
+
+
+@router.post("/resolve-preview", response_model=PromptConfigResolvePreviewResponse)
+async def resolve_prompt_config_preview(
+    *,
+    session: AsyncSessionDep,
+    current_user: CurrentUser,
+    request: PromptConfigResolvePreviewRequest,
+) -> PromptConfigResolvePreviewResponse:
+    agent = (
+        await session.exec(
+        select(UserAgentConfig).where(UserAgentConfig.slug == request.agent_slug)
+        )
+    ).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    if not current_user.is_superuser and agent.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    resolved = await resolve_effective_prompt_runtime_config_for_room(
+        session=session,
+        agent_config=agent,
+        room_id=request.room_id,
+        bound_prompt=request.payload,
+    )
+    return PromptConfigResolvePreviewResponse(
+        effective_config=resolved.payload,
+        provenance=resolved.provenance,
+    )

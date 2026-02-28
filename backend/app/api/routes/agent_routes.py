@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Message,
+    PromptConfig,
     UserAgentConfig,
     UserAgentConfigCreate,
     UserAgentConfigPublic,
@@ -29,6 +30,21 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 
 class GeneratedSlugResponse(BaseModel):
     slug: str
+
+
+def _validate_prompt_binding_access(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    prompt_config_id: uuid.UUID | None,
+) -> None:
+    if prompt_config_id is None:
+        return
+    prompt_config = session.get(PromptConfig, prompt_config_id)
+    if not prompt_config:
+        raise HTTPException(status_code=404, detail="PromptConfig not found")
+    if not current_user.is_superuser and prompt_config.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied for PromptConfig binding")
 
 # ============================================================================
 # Available Agents Registry (Task 5)
@@ -148,6 +164,11 @@ def create_agent(
     """
     Create a new agent configuration.
     """
+    _validate_prompt_binding_access(
+        session=session,
+        current_user=current_user,
+        prompt_config_id=agent_in.prompt_config_id,
+    )
     agentconfig = UserAgentConfig.model_validate(agent_in, update={"owner_id": current_user.id})
     session.add(agentconfig)
     session.commit()
@@ -195,6 +216,12 @@ def update_agent(
     if not agentconfig.slug:
         raise HTTPException(status_code=500, detail="Agent config has no slug")
     update_dict: dict[str, Any] = agentconfig_in.model_dump(exclude_unset=True)
+    if "prompt_config_id" in update_dict:
+        _validate_prompt_binding_access(
+            session=session,
+            current_user=current_user,
+            prompt_config_id=update_dict.get("prompt_config_id"),
+        )
     agentconfig.sqlmodel_update(update_dict)
     session.add(agentconfig)
     session.commit()

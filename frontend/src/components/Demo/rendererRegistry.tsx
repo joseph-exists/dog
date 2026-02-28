@@ -5,8 +5,8 @@ import {
   CanvasPanel,
   DebugPanel,
   ParticipantPanel,
+  SoloStoryPlayerPanel,
   StoryEditorPanel,
-  StoryPlayerPanel,
 } from "@/components/Room"
 import type { TesserScript } from "@/services/demoService"
 import type { ResolvedDemoSessionViewModel } from "@/services/demoService"
@@ -378,7 +378,10 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
     ),
   storyPlayer: (_panel, ctx) =>
     ctx.roomStoryId ? (
-      <StoryPlayerPanel storyId={ctx.roomStoryId} />
+      <SoloStoryPlayerPanel
+        storyId={ctx.roomStoryId}
+        runtimeNotice="Local-only panel. This player does not stay in sync with the room runtime or other panels."
+      />
     ) : (
       <div className="h-full p-4 text-sm text-muted-foreground">
         Story player panel requires a story attached to this room.

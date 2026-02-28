@@ -13,13 +13,19 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.services.a2a_orchestrator import A2AOrchestrator
 from app.services.agent_context import RoomContextService
 from app.services.agent_events import AgentEventPublisher
-from app.services.agent_instance import get_agent_config
 from app.services.agent_runner_types import AgentRunRequest, AgentRunResult
 
 logger = logging.getLogger(__name__)
 
 SERVICE_ID = "agent_runner_streaming"
 logfire = ServiceLogfire(SERVICE_ID)
+
+
+def _get_agent_request_limit(agent: Any) -> int:
+    request_limit = getattr(agent, "_runtime_request_limit", None)
+    if isinstance(request_limit, int) and request_limit > 0:
+        return request_limit
+    return 10
 
 
 class StreamingAgentRunner:
@@ -110,14 +116,7 @@ class StreamingAgentRunner:
                     )
 
                 deps = self._deps_factory(session, room_id, agent_name, req.a2a_depth)
-
-                # Look up agent config for usage limits
-                agent_config = await get_agent_config(session, agent_name)
-                # Be defensive: some DB rows may omit this column or return RowMapping;
-                # fall back to 10 when not present.
-                request_limit = (
-                    getattr(agent_config, "max_tool_iterations", 10) if agent_config else 10
-                )
+                request_limit = _get_agent_request_limit(agent)
 
                 full_prompt = self._build_agent_prompt(
                     trigger_message, context, current_agent_slug=agent_name

@@ -49,11 +49,6 @@ services:
     ports:
       - "5432:5432"
 
-  #adminer:
-  #  restart: "no"
-  #  ports:
-  #    - "8080:8080"
-
   backend:
     restart: "no"
     ports:
@@ -79,37 +74,48 @@ services:
     # TODO: remove once coverage is done locally
     volumes:
       - ./backend/htmlcov:/app/htmlcov
-      - ./gittin/ssh:/root/.ssh:ro
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
       SMTP_TLS: "false"
       EMAILS_FROM_EMAIL: "joseph@foo.com"
 
-  #mailcatcher:
-  #  image: schickling/mailcatcher
-  #  ports:
-  #    - "1080:1080"
-  #   - "1025:1025"
+  mailcatcher:
+    profiles: ["test"]
+    image: schickling/mailcatcher
+    ports:
+      - "1080:1080"
+      - "1025:1025"
 
   # shadow-outbox-worker:
   #   environment:
-  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-ssh://git@gittin/repos/{entity_type}/{entity_id}.git}
+  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-}
 
   tesser:
     restart: "no"
     build:
       context: ./tesser
+      target: export
+    command:
+      - python
+      - -m
+      - tesserax_service.redis_bridge
     volumes:
       - ./tesser/src:/app/src
-      - ./tesser/scripts:/app/scripts
+      - ./tesser/examples-other:/app/examples-other
     environment:
       TESSER_LOG_LEVEL: "DEBUG"
 
   gittin:
     restart: "no"
+    environment:
+      GITTIN_DOMAIN: "localhost"
+      GITTIN_EXTERNAL_URL: "http://localhost:3001/"
+      GITTIN_SSH_PORT: "2222"
+      GITTIN_SSH_LISTEN_PORT: "2222"
     ports:
-      - "2222:22"
+      - "3001:3000"
+      - "2222:2222"
 
   frontend:
     restart: "no"
@@ -121,30 +127,31 @@ services:
         - VITE_API_URL=http://localhost:8000
         - NODE_ENV=development
 
-  # playwright:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile.playwright
-  #     args:
-  #       - VITE_API_URL=http://backend:8000
-  #       - NODE_ENV=production
-  #   ipc: host
-  #   depends_on:
-  #     - backend
-  #     - mailcatcher
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     - VITE_API_URL=http://backend:8000
-  #     - MAILCATCHER_HOST=http://mailcatcher:1080
-  #     # For the reports when run locally
-  #     - PLAYWRIGHT_HTML_HOST=0.0.0.0
-  #     - CI=${CI}
-  #   volumes:
-  #     - ./frontend/blob-report:/app/blob-report
-  #     - ./frontend/test-results:/app/test-results
-  #   ports:
-  #     - 9323:9323
+  playwright:
+    profiles: ["test"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.playwright
+      args:
+        - VITE_API_URL=http://backend:8000
+        - NODE_ENV=production
+    ipc: host
+    depends_on:
+      - backend
+      - mailcatcher
+    env_file:
+      - .env
+    environment:
+      - VITE_API_URL=http://backend:8000
+      - MAILCATCHER_HOST=http://mailcatcher:1080
+      # For the reports when run locally
+      - PLAYWRIGHT_HTML_HOST=0.0.0.0
+      - CI=${CI}
+    volumes:
+      - ./frontend/blob-report:/app/blob-report
+      - ./frontend/test-results:/app/test-results
+    ports:
+      - 9323:9323
 
 networks:
   traefik-public:

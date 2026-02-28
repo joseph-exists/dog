@@ -9,8 +9,7 @@
  * - safeMode: false → full component access
  */
 
-import { Suspense, useMemo } from "react"
-import { CodeHighlight } from "../components/CodeHighlight"
+import { lazy, Suspense, useMemo } from "react"
 import { FallbackRenderer } from "../components/FallbackRenderer"
 import { useMDXCompiler } from "../hooks/useMDXCompiler"
 import { useThemeResolution } from "../hooks/useThemeResolution"
@@ -21,6 +20,11 @@ import type {
   MDXContentOptions,
 } from "../types"
 
+const LazyCodeHighlight = lazy(async () => {
+  const mod = await import("../components/CodeHighlight")
+  return { default: mod.CodeHighlight }
+})
+
 /**
  * Default MDX components with Shiki integration
  */
@@ -28,12 +32,22 @@ function createDefaultComponents(codeTheme: string): MDXComponents {
   return {
     // Code blocks with Shiki highlighting
     code: ({ className, children }) => (
-      <CodeHighlight
-        className={className}
-        options={{ theme: codeTheme, forceBlock: true }}
+      <Suspense
+        fallback={
+          <code className={className}>
+            {typeof children === "string"
+              ? children
+              : children?.toString?.() ?? ""}
+          </code>
+        }
       >
-        {children}
-      </CodeHighlight>
+        <LazyCodeHighlight
+          className={className}
+          options={{ theme: codeTheme, forceBlock: true }}
+        >
+          {children}
+        </LazyCodeHighlight>
+      </Suspense>
     ),
     // Pre wrapper (Shiki handles this, we just provide a container)
     pre: ({ children }) => <div className="not-prose my-4">{children}</div>,

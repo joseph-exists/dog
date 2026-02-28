@@ -72,6 +72,14 @@ class Settings(BaseSettings):
     SHADOW_REPOS_PATH: str = "/tmp/shadows"
     SHADOW_REPO_URL_TEMPLATE: str | None = None
     SHADOW_REPO_DEFAULT_BRANCH: str = "main"
+    SHADOW_GOGS_BASE_URL: HttpUrl | None = None
+    SHADOW_GOGS_TOKEN: str | None = None
+    SHADOW_GOGS_ORG: str = "shadow"
+    SHADOW_GOGS_TIMEOUT_SECONDS: float = 10.0
+    USER_REPO_GOGS_BASE_URL: HttpUrl | None = None
+    USER_REPO_GOGS_TOKEN: str | None = None
+    USER_REPO_GOGS_ORG: str = "dog"
+    USER_REPO_GOGS_TIMEOUT_SECONDS: float = 10.0
 
     @computed_field  # type: ignore[prop-decorator]
     @property

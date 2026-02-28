@@ -70,6 +70,7 @@ const AVAILABLE_PANELS: PreviewPanel[] = [
   { id: "chat", kind: "chat", prominence: "primary" },
   { id: "story", kind: "storyEditor", prominence: "primary" },
   { id: "runtime", kind: "storyRuntime", prominence: "primary" },
+  { id: "solo-story", kind: "storyPlayer", prominence: "primary" },
   { id: "canvas", kind: "canvas", prominence: "primary" },
   { id: "a2ui", kind: "a2ui", prominence: "primary" },
   { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
@@ -80,6 +81,7 @@ const panelNames: Record<string, string> = {
   chat: "Chat",
   storyEditor: "Story Editor",
   storyRuntime: "Story Runtime",
+  storyPlayer: "Solo Story Player",
   canvas: "Canvas",
   a2ui: "Agent UI",
   participantPanel: "Participants",
@@ -271,6 +273,14 @@ export function PanelLayoutDialog({
                     </Button>
                   ))}
                 </div>
+                {availablePanelsToAdd.some(
+                  (panel) => panel.kind === "storyPlayer",
+                ) ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Solo Story Player is local-only. It does not sync with
+                    shared room runtime.
+                  </p>
+                ) : null}
               </CollapsibleContent>
             </Collapsible>
           )}

@@ -8,3 +8,5 @@ node_modules/
 backend/app/test_scripts/typer/.env
 # Git worktrees
 .worktrees/
+.volumes/
+volumes/

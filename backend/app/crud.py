@@ -40,6 +40,7 @@ from app.models import (
     PersonaCreate,
     PersonaQualityLink,
     PersonaTraitLink,
+    PromptConfig,
     ProgressSnapshot,
     Quality,
     QualityCreate,
@@ -2765,6 +2766,14 @@ async def upsert_room_agent_settings(
     if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Only room owners can update agent settings")
 
+    fields_set = settings_in.model_fields_set
+    if "prompt_config_id" in fields_set and settings_in.prompt_config_id is not None:
+        prompt_config = await session.get(PromptConfig, settings_in.prompt_config_id)
+        if not prompt_config:
+            raise HTTPException(status_code=404, detail="PromptConfig not found")
+        if prompt_config.owner_id is not None and prompt_config.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied for PromptConfig binding")
+
     result = await session.exec(
         select(RoomAgentSettings).where(
             RoomAgentSettings.room_id == room_id,
@@ -2779,6 +2788,9 @@ async def upsert_room_agent_settings(
             id=uuid.uuid4(),
             room_id=room_id,
             agent_slug=agent_slug,
+            prompt_config_id=settings_in.prompt_config_id,
+            prompt_config_version_policy=settings_in.prompt_config_version_policy,
+            prompt_config_version_number=settings_in.prompt_config_version_number,
             prompt_config=settings_in.prompt_config,
             tool_policy=settings_in.tool_policy,
             rule_config=settings_in.rule_config,
@@ -2790,11 +2802,17 @@ async def upsert_room_agent_settings(
     else:
         if settings_in.expected_revision is not None and settings_in.expected_revision != settings.revision:
             raise HTTPException(status_code=409, detail="Room agent settings revision mismatch")
-        if settings_in.prompt_config is not None:
+        if "prompt_config_id" in fields_set:
+            settings.prompt_config_id = settings_in.prompt_config_id
+        if "prompt_config_version_policy" in fields_set:
+            settings.prompt_config_version_policy = settings_in.prompt_config_version_policy
+        if "prompt_config_version_number" in fields_set:
+            settings.prompt_config_version_number = settings_in.prompt_config_version_number
+        if "prompt_config" in fields_set:
             settings.prompt_config = settings_in.prompt_config
-        if settings_in.tool_policy is not None:
+        if "tool_policy" in fields_set:
             settings.tool_policy = settings_in.tool_policy
-        if settings_in.rule_config is not None:
+        if "rule_config" in fields_set:
             settings.rule_config = settings_in.rule_config
         settings.revision += 1
         settings.updated_at = now
@@ -4850,5 +4868,4 @@ def update_user_agent_config(
 def delete_user_agent_config(*, session: Session, db_agent: UserAgentConfig) -> None:
     session.delete(db_agent)
     session.commit()
-
 

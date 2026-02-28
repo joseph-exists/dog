@@ -73,6 +73,8 @@ export interface PromptCapabilityCoverageGaps {
   missingCapabilities: string[]
 }
 
+type PromptToolChoice = NonNullable<PromptConfigDraft["tools"]>["tool_choice"]
+
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
@@ -92,6 +94,33 @@ function normalizeStopSequences(value: unknown): string[] | null {
   return normalized.length > 0 ? Array.from(new Set(normalized)) : null
 }
 
+function normalizeToolChoice(value: unknown): PromptToolChoice {
+  if (value == null) return null
+  if (value === "auto" || value === "none" || value === "required") {
+    return value
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    return {
+      type: "named",
+      name: trimmed,
+    }
+  }
+  if (
+    isObjectRecord(value) &&
+    value.type === "named" &&
+    typeof value.name === "string" &&
+    value.name.trim().length > 0
+  ) {
+    return {
+      type: "named",
+      name: value.name.trim(),
+    }
+  }
+  return null
+}
+
 function normalizeToolConfig(value: unknown): PromptConfigDraft["tools"] {
   if (!isObjectRecord(value)) return null
   const modeRaw = value.tool_mode
@@ -101,7 +130,7 @@ function normalizeToolConfig(value: unknown): PromptConfigDraft["tools"] {
       : "none"
   return {
     tool_mode: mode,
-    tool_choice: asTrimmedString(value.tool_choice),
+    tool_choice: normalizeToolChoice(value.tool_choice),
     tool_allowlist: Array.isArray(value.tool_allowlist)
       ? Array.from(
           new Set(
@@ -111,6 +140,46 @@ function normalizeToolConfig(value: unknown): PromptConfigDraft["tools"] {
               .filter((item) => item.length > 0),
           ),
         )
+      : null,
+    max_tool_calls:
+      typeof value.max_tool_calls === "number" ? value.max_tool_calls : null,
+    builtin: Array.isArray(value.builtin)
+      ? value.builtin.filter((item): item is Record<string, unknown> =>
+          isObjectRecord(item),
+        )
+      : null,
+    mcp: isObjectRecord(value.mcp)
+      ? {
+          servers: Array.isArray(value.mcp.servers)
+            ? value.mcp.servers
+                .filter((server): server is Record<string, unknown> =>
+                  isObjectRecord(server),
+                )
+                .map((server) => ({
+                  id:
+                    typeof server.id === "string" ? server.id.trim() : "server",
+                  url:
+                    typeof server.url === "string"
+                      ? server.url.trim() || null
+                      : null,
+                  allowed_tools: Array.isArray(server.allowed_tools)
+                    ? server.allowed_tools.filter(
+                        (item): item is string => typeof item === "string",
+                      )
+                    : null,
+                  require_approval:
+                    server.require_approval === "always" ||
+                    server.require_approval === "never"
+                      ? server.require_approval
+                      : null,
+                }))
+            : null,
+          allowed_tools: Array.isArray(value.mcp.allowed_tools)
+            ? value.mcp.allowed_tools.filter(
+                (item): item is string => typeof item === "string",
+              )
+            : null,
+        }
       : null,
   }
 }
@@ -159,6 +228,23 @@ function getCoreCapabilityHooks(key: string): PromptCapabilityHooks {
               severity: "warning",
               message: "tool_mode is required but tool_allowlist is empty.",
               path: "tools",
+            },
+          ]
+        },
+        ({ draft }) => {
+          if (!draft.tools || draft.tools.max_tool_calls == null) return []
+          if (
+            Number.isFinite(draft.tools.max_tool_calls) &&
+            draft.tools.max_tool_calls > 0
+          ) {
+            return []
+          }
+          return [
+            {
+              code: "max_tool_calls_invalid",
+              severity: "error",
+              message: "tools.max_tool_calls must be a positive number.",
+              path: "tools.max_tool_calls",
             },
           ]
         },

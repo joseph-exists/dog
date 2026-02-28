@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -26,7 +27,9 @@ class NonStreamingAgentRunner:
         context_service: RoomContextService,
         event_publisher: AgentEventPublisher,
         is_agent_available: Callable[[AsyncSession, str], Awaitable[bool]],
-        get_agent_instance: Callable[[AsyncSession, str], Awaitable[Any]],
+        get_agent_instance: Callable[
+            [AsyncSession, str, uuid.UUID | None, uuid.UUID | None], Awaitable[Any]
+        ],
         build_agent_prompt: Callable[[str, Any, str | None], str],
     ) -> None:
         self._context_service = context_service
@@ -71,7 +74,9 @@ class NonStreamingAgentRunner:
                 )
 
                 with logfire.span("agent.instantiate", **span_tags):
-                    agent = await self._get_agent_instance(session, agent_name)
+                    agent = await self._get_agent_instance(
+                        session, agent_name, req.user_id, req.room_id
+                    )
                     logfire.info(
                         "agent.instantiated",
                         **span_tags,

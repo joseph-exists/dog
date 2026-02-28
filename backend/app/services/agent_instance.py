@@ -26,8 +26,15 @@ from app.services.agent_tools import (
     emit_ui_component,
     request_agent_assistance,
 )
+from app.services.logfire_client import ServiceLogfire
+from app.services.prompt_runtime_resolver import (
+    ResolvedPromptRuntimeConfig,
+    resolve_effective_prompt_runtime_config_for_room,
+)
 
 logger = logging.getLogger(__name__)
+SERVICE_ID = "agent_instance"
+logfire = ServiceLogfire(SERVICE_ID)
 
 
 def _get(cfg: Any, *candidates: str) -> Any:
@@ -79,6 +86,55 @@ def _masked_key_suffix(api_key: str | None) -> str:
     tail_len = 4 if len(api_key) >= 4 else len(api_key)
     return f"***{api_key[-tail_len:]}"
 
+
+def _normalize_request_limit(value: Any) -> int:
+    if isinstance(value, int) and value > 0:
+        return value
+    return 10
+
+
+def _log_runtime_resolution(
+    *,
+    slug: str,
+    room_id: uuid.UUID | None,
+    config: UserAgentConfig,
+    resolved: ResolvedPromptRuntimeConfig,
+) -> None:
+    payload = resolved.payload
+    provenance = resolved.provenance
+    logfire.info(
+        "agent.runtime_config_resolved",
+        agent_slug=slug,
+        room_id=str(room_id) if room_id else None,
+        prompt_config_id=str(getattr(config, "prompt_config_id", None) or ""),
+        prompt_config_version_policy=getattr(config, "prompt_config_version_policy", None),
+        prompt_config_version_number=getattr(config, "prompt_config_version_number", None),
+        model_name=payload.get("model_name"),
+        user_access_provider=str(payload.get("user_access_provider") or ""),
+        max_tool_iterations=_normalize_request_limit(payload.get("max_tool_iterations")),
+        model_name_source=provenance.get("model_name"),
+        system_prompt_source=provenance.get("system_prompt"),
+        custom_system_prompt_source=provenance.get("custom_system_prompt"),
+        instructions_source=provenance.get("instructions"),
+        tool_config_source=provenance.get("tool_config"),
+        user_access_provider_source=provenance.get("user_access_provider"),
+        max_tool_iterations_source=provenance.get("max_tool_iterations"),
+    )
+
+
+def _attach_runtime_resolution_metadata(
+    *,
+    agent: Agent[Any, Any],
+    resolved: ResolvedPromptRuntimeConfig,
+) -> None:
+    setattr(agent, "_runtime_prompt_payload", resolved.payload)
+    setattr(agent, "_runtime_prompt_provenance", resolved.provenance)
+    setattr(
+        agent,
+        "_runtime_request_limit",
+        _normalize_request_limit(resolved.payload.get("max_tool_iterations")),
+    )
+
 async def get_user_agent_config_by_slug(
     *, session: AsyncSession, slug: str
 ) -> UserAgentConfig | None:
@@ -127,6 +183,8 @@ async def get_user_agent_config_provider_type_name_for_model_concat_by_user_agen
 async def get_agent_instance(
     session: AsyncSession,
     slug: str,
+    user_id: uuid.UUID | None = None,
+    room_id: uuid.UUID | None = None,
 ) -> Agent[Any, Any] | None:
     """
     Get basic agent instance from database UserAgentConfig (no tools).
@@ -141,7 +199,15 @@ async def get_agent_instance(
         logger.error("[AGENT_INSTANCE_FAILURE.get_agent_instance] -NO CONFIG")
         return None
 
-    model_name = _get(config, "model_name", "model")
+    resolved = await resolve_effective_prompt_runtime_config_for_room(
+        session=session,
+        agent_config=config,
+        room_id=room_id,
+    )
+    effective = resolved.payload
+    _log_runtime_resolution(slug=slug, room_id=room_id, config=config, resolved=resolved)
+
+    model_name = _get(effective, "model_name", "model")
     if not model_name:
         logger.error(
             "[AGENT_INSTANCE.get_agent_instance] slug=%s missing model/model_name; cannot instantiate Agent",
@@ -149,10 +215,8 @@ async def get_agent_instance(
         )
         return None
 
-    provider_type_name = (
-        await get_user_agent_config_provider_type_name_for_model_concat_by_slug(
-            session=session, slug=slug
-        )
+    provider_type_name = await get_user_agent_config_provider_type_name_for_model_concat_by_slug(
+        session=session, slug=slug
     )
     model_final_form = create_model_subclass_with_credentials(
         model_name=model_name,
@@ -161,7 +225,7 @@ async def get_agent_instance(
         base_url=None,
     )
 
-    system_prompt = _get(config, "system_prompt", "custom_system_prompt") or (
+    system_prompt = _get(effective, "custom_system_prompt", "system_prompt") or (
         f"You are {getattr(config, 'name', slug)}. {getattr(config, 'description', '')}".strip()
     )
 
@@ -170,7 +234,9 @@ async def get_agent_instance(
         "system_prompt": system_prompt,
     }
     agent_kwargs = {k: v for k, v in agent_kwargs.items() if v is not None}
-    return Agent(**agent_kwargs)
+    agent = Agent(**agent_kwargs)
+    _attach_runtime_resolution_metadata(agent=agent, resolved=resolved)
+    return agent
 
 
 async def get_agent_config(session: AsyncSession, slug: str) -> UserAgentConfig | None:
@@ -235,7 +301,15 @@ async def get_agent_instance_with_tools(
         )
         return None
 
-    model_name = _get(config, "model_name", "model")
+    resolved = await resolve_effective_prompt_runtime_config_for_room(
+        session=session,
+        agent_config=config,
+        room_id=room_id,
+    )
+    effective = resolved.payload
+    _log_runtime_resolution(slug=slug, room_id=room_id, config=config, resolved=resolved)
+
+    model_name = _get(effective, "model_name", "model")
     if not model_name:
         logger.error(
             "[AGENT_INSTANCE.get_agent_instance_with_tools] slug=%s missing model/model_name; cannot instantiate Agent",
@@ -256,10 +330,11 @@ async def get_agent_instance_with_tools(
     api_key = None
 
     # Fetch UserAccessProvider if configured for this agent.
-    if config.user_access_provider and user_id:
+    effective_uap_id = _get(effective, "user_access_provider")
+    if effective_uap_id and user_id:
         uap_stmt = (
             select(UserAccessProvider)
-            .where(UserAccessProvider.id == config.user_access_provider)
+            .where(UserAccessProvider.id == effective_uap_id)
             .where(UserAccessProvider.is_enabled)
             .where(UserAccessProvider.user_id == user_id)
         )
@@ -271,7 +346,7 @@ async def get_agent_instance_with_tools(
             logger.debug(
                 "[AGENT_INSTANCE.get_agent_instance_with_tools] slug=%s using UserAccessProvider id=%s has_api_key=%s",
                 slug,
-                config.user_access_provider,
+                effective_uap_id,
                 bool(api_key),
             )
         else:
@@ -301,7 +376,7 @@ async def get_agent_instance_with_tools(
         base_url=base_url,
     )
 
-    system_prompt = _get(config, "system_prompt", "custom_system_prompt") or (
+    system_prompt = _get(effective, "custom_system_prompt", "system_prompt") or (
         f"You are {getattr(config, 'name', slug)}. {getattr(config, 'description', '')}".strip()
     )
 
@@ -335,6 +410,7 @@ async def get_agent_instance_with_tools(
     agent_kwargs = {k: v for k, v in agent_kwargs.items() if v is not None}
 
     agent = Agent(**agent_kwargs)
+    _attach_runtime_resolution_metadata(agent=agent, resolved=resolved)
     logger.debug(
         "[AGENT_INSTANCE.get_agent_instance_with_tools] instantiated slug=%s model=%s tools=%d a2a=%s ag_ui=%s",
         slug,

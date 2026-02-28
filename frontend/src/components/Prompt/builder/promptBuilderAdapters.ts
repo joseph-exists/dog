@@ -62,6 +62,15 @@ function parseToolingConfig(
   toolConfig: UserAgentConfigPublic["tool_config"],
 ): PromptConfigDraft["tools"] {
   if (!isObjectRecord(toolConfig)) return null
+  const toolChoiceRaw = asNullableString(toolConfig.tool_choice)
+  const toolChoice =
+    toolChoiceRaw === "auto" ||
+    toolChoiceRaw === "none" ||
+    toolChoiceRaw === "required"
+      ? toolChoiceRaw
+      : toolChoiceRaw
+        ? { type: "named" as const, name: toolChoiceRaw }
+        : null
   return {
     tool_mode:
       toolConfig.require_tools === true
@@ -74,7 +83,7 @@ function parseToolingConfig(
           (item): item is string => typeof item === "string",
         )
       : null,
-    tool_choice: asNullableString(toolConfig.tool_choice),
+    tool_choice: toolChoice,
   }
 }
 
@@ -226,12 +235,21 @@ function promptToolsToAgentToolConfig(
   tools: PromptConfigDraft["tools"],
 ): Record<string, unknown> | null {
   if (!tools) return null
+  const normalizedToolChoice =
+    typeof tools.tool_choice === "string"
+      ? tools.tool_choice
+      : tools.tool_choice &&
+          typeof tools.tool_choice === "object" &&
+          tools.tool_choice.type === "named" &&
+          typeof tools.tool_choice.name === "string"
+        ? tools.tool_choice.name
+        : null
   return {
     enable_tools:
       tools.tool_mode === "optional" || tools.tool_mode === "required",
     require_tools: tools.tool_mode === "required",
     allowed_tools: tools.tool_allowlist ?? [],
-    tool_choice: asNullableString(tools.tool_choice),
+    tool_choice: asNullableString(normalizedToolChoice),
   }
 }
 

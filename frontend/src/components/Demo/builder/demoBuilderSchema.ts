@@ -730,13 +730,13 @@ export const BUILDER_COMPOSITION_TEMPLATE_SCHEMAS: Record<
     id: "composition_h_chaotic_combinatorics",
     label: "Composition H: Chaotic Combinatorics",
     description:
-      "Story player + chat with hidden runtime, compact participant picker, and wildly varied content blocks. Tests if motion/color changes are working or just too subtle.",
+      "Solo story player + chat with hidden runtime, compact participant picker, and wildly varied content blocks. Tests if motion/color changes are working or just too subtle.",
     requiredAssumptions: ["story_id", "runtime_policy", "persona_policy"],
     checklistItems: [
       {
         id: "story_id",
         label: "Story Attachment",
-        description: "Required for story player and hidden runtime panel.",
+        description: "Required for solo story player and hidden runtime panel.",
         severity: "error",
       },
       {
@@ -862,7 +862,7 @@ export const BUILDER_PANEL_KIND_SCHEMAS: Record<
   },
   storyPlayer: {
     kind: "storyPlayer",
-    displayName: "Story Player",
+    displayName: "Solo Story Player",
     requiresStoryId: true,
     defaults: {
       prominence: "primary",
@@ -2239,8 +2239,8 @@ function createCompositionD2EnhancedBonkersTemplate(): EditableComposition {
 // COMPOSITION H: CHAOTIC COMBINATORICS
 // =============================================================================
 //
-// Story player + chat with WILDLY VARIED content blocks.
-// Hidden storyRuntime (mounted) provides runtime context.
+// Solo story player + chat with WILDLY VARIED content blocks.
+// Hidden storyRuntime (mounted) provides a separate runtime surface.
 // Compact participantPanel with picker enabled.
 //
 // PURPOSE: Determine if motion/color changes are:
@@ -2254,7 +2254,7 @@ function createCompositionD2EnhancedBonkersTemplate(): EditableComposition {
 // Panel Configuration:
 // - storyPlayer: VISIBLE, primary, slow motion (600ms), serif font
 // - chat: VISIBLE, auxiliary, fast motion (100ms), monospace font
-// - storyRuntime: HIDDEN_MOUNTED, provides runtime coupling
+// - storyRuntime: HIDDEN_MOUNTED, separate from the solo player state
 // - participantPanel: VISIBLE, compact, picker enabled, different SVG
 //
 // Block Configuration: 8 content blocks, each with unique combinations of:
@@ -3096,7 +3096,7 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
       ...createPanelTemplate("storyPlayer"),
       id: "audit-story-player",
       order: 8,
-      title: "Audit Panel: Story Player (story-bound surface)",
+      title: "Audit Panel: Solo Story Player (story-bound surface)",
       prominence: "primary",
       viewport_mode: "panel",
       theme_id: null,
@@ -3473,7 +3473,7 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
       ...createPanelTemplate("storyPlayer"),
       id: "matrix-story-player",
       order: 8,
-      title: "Matrix Panel: Story Player",
+      title: "Matrix Panel: Solo Story Player",
       prominence: "primary",
       viewport_mode: "panel",
     } as EditablePanel,
@@ -4571,6 +4571,7 @@ export interface BuilderValidationIssue {
     | "unsupported_block_type"
     | "invalid_block_visibility"
     | "content_payload_missing"
+    | "story_player_local_only"
     | "capability_validation"
   severity: "error" | "warning"
   message: string
@@ -4594,6 +4595,8 @@ export function validateCompositionSemantics(
   const panels = composition.panels ?? []
   const blocks = composition.blocks ?? []
   const storyIdPresent = hasStoryId(composition)
+  const hasStoryPlayer = panels.some((panel) => panel.kind === "storyPlayer")
+  const hasStoryRuntime = panels.some((panel) => panel.kind === "storyRuntime")
 
   const pageViewportPanels = panels.filter(
     (panel) => panel.viewport_mode === "page",
@@ -4676,6 +4679,17 @@ export function validateCompositionSemantics(
         path: `blocks[${index}].content_json`,
       })
     }
+  }
+
+  if (hasStoryPlayer) {
+    issues.push({
+      code: "story_player_local_only",
+      severity: "warning",
+      message: hasStoryRuntime
+        ? "storyPlayer is local-only. It does not share state with storyRuntime even when both panels are present."
+        : "storyPlayer is local-only. It does not read from or write to shared room runtime.",
+      path: "panels",
+    })
   }
 
   return issues

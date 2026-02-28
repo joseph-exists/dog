@@ -4,9 +4,14 @@
  * Full options: language, lineNumbers, highlightLines, startLine,
  * filename, copyable, theme
  */
-import { CodeHighlight } from "../components/CodeHighlight"
+import { lazy, Suspense } from "react"
 import { useThemeResolution } from "../hooks/useThemeResolution"
 import type { CodeContentOptions, ContentProps } from "../types"
+
+const LazyCodeHighlight = lazy(async () => {
+  const mod = await import("../components/CodeHighlight")
+  return { default: mod.CodeHighlight }
+})
 
 export function CodeRenderer({
   content,
@@ -31,11 +36,19 @@ export function CodeRenderer({
       <div
         className={`absolute inset-0 overflow-hidden opacity-10 pointer-events-none ${className ?? ""}`}
       >
-        <CodeHighlight
-          options={{ language, theme: codeTheme, forceBlock: true }}
+        <Suspense
+          fallback={
+            <pre className="m-0 overflow-auto p-4 font-mono text-sm">
+              <code>{code}</code>
+            </pre>
+          }
         >
-          {code}
-        </CodeHighlight>
+          <LazyCodeHighlight
+            options={{ language, theme: codeTheme, forceBlock: true }}
+          >
+            {code}
+          </LazyCodeHighlight>
+        </Suspense>
       </div>
     )
   }
@@ -47,19 +60,27 @@ export function CodeRenderer({
           {filename}
         </div>
       )}
-      <CodeHighlight
-        options={{
-          language,
-          theme: codeTheme,
-          forceBlock: true,
-          copyable,
-          lineNumbers,
-          highlightLines,
-          startLine,
-        }}
+      <Suspense
+        fallback={
+          <pre className="m-0 overflow-auto p-4 font-mono text-sm">
+            <code>{code}</code>
+          </pre>
+        }
       >
-        {code}
-      </CodeHighlight>
+        <LazyCodeHighlight
+          options={{
+            language,
+            theme: codeTheme,
+            forceBlock: true,
+            copyable,
+            lineNumbers,
+            highlightLines,
+            startLine,
+          }}
+        >
+          {code}
+        </LazyCodeHighlight>
+      </Suspense>
     </div>
   )
 }

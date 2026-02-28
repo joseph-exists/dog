@@ -1,3 +1,0 @@
-✅ Saved: /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_service_blast_radius.gif
-   scenario=auth_outage policy=balanced phase=CONTAIN packets=95 transitions=2
-   service_level=0.883 peak_impact=0.344 blast_radius=3 mttd=1.49s mttr=3.12s

@@ -1,7 +1,0 @@
-.git
-.pytest_cache
-__pycache__
-*.pyc
-examples-other/results
-examples-other/results-legacy
-docs/.quarto

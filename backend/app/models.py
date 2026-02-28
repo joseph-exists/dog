@@ -2921,7 +2921,15 @@ class RoomContextItemsPublic(SQLModel):
 
 class RoomAgentSettingsBase(SQLModel):
     """
-    Room-scoped agent policy settings (prompt + tool rules).
+    Room-scoped runtime policy settings.
+
+    Extensibility contract:
+    - `prompt_config_id` + version fields are the canonical persisted attach points for
+      reusable PromptConfig recipes at room/session scope.
+    - `prompt_config` remains an inline ad hoc overlay payload for temporary edits and
+      future inspector/panel surfaces that need to expose the effective recipe shape.
+    - Runtime must resolve both through the shared prompt runtime resolver; callers
+      should not read or merge these fields directly.
     """
 
     agent_slug: str | None = Field(
@@ -2929,10 +2937,42 @@ class RoomAgentSettingsBase(SQLModel):
         max_length=50,
         description="Null for room-wide defaults; set for per-agent overrides.",
     )
-    prompt_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    prompt_config_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional bound PromptConfig recipe for this room-scoped layer.",
+    )
+    prompt_config_version_policy: str | None = Field(
+        default="latest",
+        description="How runtime resolves the attached PromptConfig version for this room-scoped layer.",
+    )
+    prompt_config_version_number: int | None = Field(
+        default=None,
+        description="Pinned PromptConfig version when version policy is 'pinned'.",
+    )
+    prompt_config: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Optional inline PromptConfigDraft overlay applied after any attached PromptConfig reference.",
+    )
     tool_policy: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     rule_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     revision: int = Field(default=0)
+
+    @model_validator(mode="after")
+    def validate_prompt_binding(self) -> "RoomAgentSettingsBase":
+        if self.prompt_config_id is None:
+            self.prompt_config_version_number = None
+            return self
+        policy = self.prompt_config_version_policy or "latest"
+        self.prompt_config_version_policy = policy
+        if policy == "latest":
+            self.prompt_config_version_number = None
+            return self
+        if not isinstance(self.prompt_config_version_number, int) or self.prompt_config_version_number <= 0:
+            raise ValueError(
+                "prompt_config_version_number must be a positive integer when prompt_config_version_policy is 'pinned'"
+            )
+        return self
 
 
 class RoomAgentSettings(RoomAgentSettingsBase, table=True):
@@ -2955,10 +2995,45 @@ class RoomAgentSettingsPublic(RoomAgentSettingsBase):
 
 
 class RoomAgentSettingsUpdate(SQLModel):
+    prompt_config_id: uuid.UUID | None = None
+    prompt_config_version_policy: Literal["latest", "pinned"] | None = None
+    prompt_config_version_number: int | None = None
     prompt_config: dict[str, Any] | None = None
     tool_policy: dict[str, Any] | None = None
     rule_config: dict[str, Any] | None = None
     expected_revision: int | None = None
+
+    @model_validator(mode="after")
+    def validate_prompt_binding(self) -> "RoomAgentSettingsUpdate":
+        fields_set = self.model_fields_set
+        has_binding_fields = bool(
+            {"prompt_config_id", "prompt_config_version_policy", "prompt_config_version_number"} & fields_set
+        )
+        if not has_binding_fields:
+            return self
+
+        if self.prompt_config_id is None:
+            if "prompt_config_version_number" in fields_set and self.prompt_config_version_number not in (None,):
+                raise ValueError(
+                    "prompt_config_version_number cannot be set when prompt_config_id is null"
+                )
+            return self
+
+        policy = self.prompt_config_version_policy or "latest"
+        if policy == "latest":
+            if (
+                "prompt_config_version_number" in fields_set
+                and self.prompt_config_version_number not in (None,)
+            ):
+                raise ValueError(
+                    "prompt_config_version_number must be null when prompt_config_version_policy is 'latest'"
+                )
+            return self
+        if not isinstance(self.prompt_config_version_number, int) or self.prompt_config_version_number <= 0:
+            raise ValueError(
+                "prompt_config_version_number must be a positive integer when prompt_config_version_policy is 'pinned'"
+            )
+        return self
 
 
 class RoomAgentSettingsBundle(SQLModel):
@@ -3571,6 +3646,19 @@ class UserAgentConfigBase(SQLModel):
     # JSON configuration fields
     tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
     deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
+    prompt_config_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="prompt_configs.id",
+        description="Optional bound PromptConfig for runtime prompt/tool recipe.",
+    )
+    prompt_config_version_policy: Literal["latest", "pinned"] | None = Field(
+        default="latest",
+        description="How runtime resolves prompt version for prompt_config_id.",
+    )
+    prompt_config_version_number: int | None = Field(
+        default=None,
+        description="Pinned version when prompt_config_version_policy is 'pinned'.",
+    )
     agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
     agent_type: str | None = Field(default=None, description="text for type that can be overloaded in presentation")
     presentation: dict | None = Field(default=None, sa_column=Column(JSON))
@@ -3598,6 +3686,23 @@ class UserAgentConfigBase(SQLModel):
     def capabilities_none_to_list(cls, v: list[str] | None) -> list[str]:
         """Convert NULL from database to empty list."""
         return v if v is not None else []
+
+    @model_validator(mode="after")
+    def validate_prompt_config_binding(self) -> "UserAgentConfigBase":
+        policy = self.prompt_config_version_policy or "latest"
+        if policy not in {"latest", "pinned"}:
+            raise ValueError("prompt_config_version_policy must be 'latest' or 'pinned'")
+        if self.prompt_config_id is None:
+            self.prompt_config_version_number = None
+            return self
+        if policy == "latest":
+            self.prompt_config_version_number = None
+            return self
+        if self.prompt_config_version_number is None or self.prompt_config_version_number <= 0:
+            raise ValueError(
+                "prompt_config_version_number must be a positive integer when policy is 'pinned'"
+            )
+        return self
 
 class UserAgentConfigCreate(UserAgentConfigBase):
      pass
@@ -3710,6 +3815,9 @@ class UserAgentConfig(UserAgentConfigBase, table=True):
     instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
     tool_config: dict | None = Field(default=None, sa_column=Column(JSON))
     deps_config: dict | None = Field(default=None, sa_column=Column(JSON))
+    prompt_config_id: uuid.UUID | None = Field(default=None, foreign_key="prompt_configs.id", index=True)
+    prompt_config_version_policy: str | None = Field(default="latest", max_length=20)
+    prompt_config_version_number: int | None = Field(default=None)
     agent_metadata: dict | None = Field(default=None, sa_column=Column(JSON))
     is_enabled: bool | None = Field(default=None)
     is_clonable: bool | None = Field(default=None)
@@ -3741,6 +3849,9 @@ class UserAgentConfigPublic(UserAgentConfigBase):
     instructions: str | None = Field(default=None, description="big ass text field for lots of words.")
     tool_config: dict | None = Field(default=None)
     deps_config: dict | None = Field(default=None)
+    prompt_config_id: uuid.UUID | None = Field(default=None)
+    prompt_config_version_policy: Literal["latest", "pinned"] | None = Field(default="latest")
+    prompt_config_version_number: int | None = Field(default=None)
     agent_metadata: dict | None = Field(default=None)
     is_enabled: bool | None = Field(default=None)
     is_clonable: bool | None = Field(default=None)
@@ -3832,7 +3943,10 @@ class PromptParams(SQLModel):
     max_output_tokens: int | None = Field(default=None)
     stop: list[str] | None = Field(default=None)
     seed: int | None = Field(default=None)
+    response_format: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    # Deprecated compatibility alias; normalized into response_format.
     response_format_json: bool | None = Field(default=None)
+    openai: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     parallel_tool_calls: bool | None = Field(default=None)
     reasoning_effort: Literal["low", "medium", "high"] | None = Field(default=None)
     top_k: int | None = Field(default=None)
@@ -3864,11 +3978,111 @@ class PromptParams(SQLModel):
             raise ValueError("max_output_tokens must be greater than 0")
         return value
 
+    @model_validator(mode="after")
+    def normalize_response_format_alias(self) -> "PromptParams":
+        if self.response_format is None and self.response_format_json is True:
+            self.response_format = {"type": "json_object"}
+        return self
+
+    @field_validator("response_format")
+    @classmethod
+    def validate_response_format(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        if value is None:
+            return value
+        format_type = value.get("type")
+        if format_type not in {"text", "json_object", "json_schema"}:
+            raise ValueError("response_format.type must be one of: text, json_object, json_schema")
+        if format_type == "json_schema":
+            json_schema = value.get("json_schema")
+            if not isinstance(json_schema, dict):
+                raise ValueError("response_format.json_schema is required when type=json_schema")
+            name = json_schema.get("name")
+            schema = json_schema.get("schema")
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError("response_format.json_schema.name must be a non-empty string")
+            if not isinstance(schema, dict):
+                raise ValueError("response_format.json_schema.schema must be an object")
+        return value
+
+    @field_validator("openai")
+    @classmethod
+    def validate_openai_extension(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        if value is None:
+            return value
+        previous_response_id = value.get("previous_response_id")
+        if previous_response_id is not None:
+            if not isinstance(previous_response_id, str) or not previous_response_id.strip():
+                raise ValueError("openai.previous_response_id must be a non-empty string")
+            value["previous_response_id"] = previous_response_id.strip()
+        reasoning = value.get("reasoning")
+        if reasoning is not None:
+            if not isinstance(reasoning, dict):
+                raise ValueError("openai.reasoning must be an object")
+            summary = reasoning.get("summary")
+            if summary is not None and summary not in {"auto", "concise", "detailed"}:
+                raise ValueError("openai.reasoning.summary must be one of: auto, concise, detailed")
+        return value
+
 
 class PromptToolingConfig(SQLModel):
     tool_mode: Literal["none", "optional", "required"] | None = Field(default="none")
     tool_allowlist: list[str] | None = Field(default=None)
-    tool_choice: str | None = Field(default=None, max_length=255)
+    tool_choice: str | dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    max_tool_calls: int | None = Field(default=None)
+    builtin: list[dict[str, Any]] | None = Field(default=None, sa_column=Column(JSON))
+    mcp: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+
+    @field_validator("max_tool_calls")
+    @classmethod
+    def validate_max_tool_calls(cls, value: int | None) -> int | None:
+        if value is None:
+            return value
+        if value <= 0:
+            raise ValueError("max_tool_calls must be greater than 0")
+        return value
+
+    @field_validator("tool_choice", mode="before")
+    @classmethod
+    def normalize_tool_choice(cls, value: Any) -> str | dict[str, Any] | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            trimmed = value.strip()
+            if trimmed in {"auto", "none", "required"}:
+                return trimmed
+            if trimmed:
+                # Backward compatibility: free-form string becomes named tool choice.
+                return {"type": "named", "name": trimmed}
+            return None
+        if isinstance(value, dict):
+            choice_type = value.get("type")
+            if choice_type == "named":
+                name = value.get("name")
+                if not isinstance(name, str) or not name.strip():
+                    raise ValueError("tool_choice.name is required when tool_choice.type=named")
+                return {"type": "named", "name": name.strip()}
+            raise ValueError("tool_choice.type must be 'named' for object form")
+        raise ValueError("tool_choice must be a string or object")
+
+    @field_validator("mcp")
+    @classmethod
+    def validate_mcp_config(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        if value is None:
+            return value
+        servers = value.get("servers")
+        if servers is not None:
+            if not isinstance(servers, list):
+                raise ValueError("mcp.servers must be a list")
+            for server in servers:
+                if not isinstance(server, dict):
+                    raise ValueError("mcp.servers entries must be objects")
+                server_id = server.get("id")
+                if not isinstance(server_id, str) or not server_id.strip():
+                    raise ValueError("mcp.servers[].id must be a non-empty string")
+                require_approval = server.get("require_approval")
+                if require_approval is not None and require_approval not in {"always", "never"}:
+                    raise ValueError("mcp.servers[].require_approval must be 'always' or 'never'")
+        return value
 
 
 class PromptBuilderMetadata(SQLModel):
@@ -3898,7 +4112,19 @@ class PromptConfigValidationResponse(SQLModel):
     issues: list[PromptConfigValidationIssue]
 
 
+class PromptConfigResolvePreviewRequest(SQLModel):
+    agent_slug: str = Field(max_length=50)
+    room_id: uuid.UUID | None = Field(default=None)
+    payload: PromptConfigDraft | None = Field(default=None)
+
+
+class PromptConfigResolvePreviewResponse(SQLModel):
+    effective_config: dict[str, Any]
+    provenance: dict[str, str]
+
+
 class PromptConfigBase(SQLModel):
+    slug: str = Field(min_length=1, max_length=100)
     name: str = Field(max_length=150)
     description: str | None = Field(default=None, max_length=1000)
     metadata_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
@@ -3906,6 +4132,7 @@ class PromptConfigBase(SQLModel):
 
 
 class PromptConfigCreate(SQLModel):
+    slug: str | None = Field(default=None, min_length=1, max_length=100)
     name: str = Field(max_length=150)
     description: str | None = Field(default=None, max_length=1000)
     metadata_json: dict[str, Any] | None = Field(default=None)
@@ -3914,6 +4141,7 @@ class PromptConfigCreate(SQLModel):
 
 
 class PromptConfigUpdate(SQLModel):
+    slug: str | None = Field(default=None, max_length=100)
     name: str | None = Field(default=None, max_length=150)
     description: str | None = Field(default=None, max_length=1000)
     metadata_json: dict[str, Any] | None = Field(default=None)
@@ -3922,6 +4150,7 @@ class PromptConfigUpdate(SQLModel):
 
 class PromptConfig(PromptConfigBase, table=True):
     __tablename__ = "prompt_configs"
+    __table_args__ = (UniqueConstraint("slug", name="uq_prompt_config_slug"),)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     owner_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", index=True)
@@ -4927,6 +5156,79 @@ class ShadowRepoPublic(ShadowRepoBase):
 class ShadowReposPublic(SQLModel):
     """Collection response for ShadowRepos"""
     data: list[ShadowRepoPublic]
+    count: int
+
+
+class UserRepoBase(SQLModel):
+    """Base model for user-visible repositories owned by the platform."""
+
+    slug: str = Field(max_length=100)
+    display_name: str = Field(max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    gogs_repo_name: str = Field(max_length=255)
+    gogs_repo_id: int | None = Field(default=None)
+    gogs_full_name: str | None = Field(default=None, max_length=255)
+    gogs_html_url: str | None = Field(default=None, max_length=1000)
+    is_private: bool = Field(default=False)
+
+
+class UserRepoCreate(UserRepoBase):
+    """Input model for creating a user-visible repo."""
+
+    owner_user_id: uuid.UUID
+
+
+class UserRepoProvisionRequest(SQLModel):
+    """Request payload for creating a user-visible repo."""
+
+    display_name: str = Field(max_length=255)
+    slug: str | None = Field(default=None, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    is_private: bool = Field(default=False)
+
+
+class UserRepoUpdate(SQLModel):
+    """Update model for user-visible repos."""
+
+    description: str | None = None
+    gogs_repo_id: int | None = None
+    gogs_full_name: str | None = None
+    gogs_html_url: str | None = None
+    is_private: bool | None = None
+
+
+class UserRepo(UserRepoBase, table=True):
+    """Database model for user-visible repositories in the `dog` org."""
+
+    __tablename__ = "user_repos"
+    __table_args__ = (
+        UniqueConstraint("gogs_repo_name", name="uq_user_repos_gogs_repo_name"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserRepoPublic(UserRepoBase):
+    """Public API response model for a user-visible repo."""
+
+    id: uuid.UUID
+    owner_user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserReposPublic(SQLModel):
+    """Collection response for user-visible repos."""
+
+    data: list[UserRepoPublic]
     count: int
 
 

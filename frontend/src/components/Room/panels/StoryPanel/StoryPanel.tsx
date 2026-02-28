@@ -56,7 +56,7 @@ export function StoryPanel({
       <div className={cn("flex h-full flex-col", className)}>
         <PlaceholderContent
           icon={Loader2}
-          title="Loading Story Runtime"
+          title="you must wait until you wait no more"
           description="Please wait while the runtime loads..."
           className="[&_svg]:animate-spin"
         />
@@ -69,7 +69,7 @@ export function StoryPanel({
       <div className={cn("flex h-full flex-col", className)}>
         <PlaceholderContent
           icon={AlertCircle}
-          title="Unable to load runtime"
+          title="runtime has failed you, as you have failed runtime"
           description={error.message || "Please try again."}
           action={
             <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -86,7 +86,7 @@ export function StoryPanel({
       <div className={cn("flex h-full flex-col", className)}>
         <PlaceholderContent
           icon={BookOpen}
-          title="No Story Attached"
+          title="no story attachment. luck fails us all."
           description="Attach a story to begin playing in this room."
           action={
             <Button
@@ -144,7 +144,7 @@ export function StoryPanel({
           <NodeDisplay node={runtime.currentNode} />
         ) : (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            Runtime is active but no current node is available.
+            runtime is active but no current node is available.
           </div>
         )}
 

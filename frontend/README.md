@@ -151,3 +151,23 @@ docker compose down -v
 To update the tests, navigate to the tests directory and modify the existing test files or add new ones as needed.
 
 For more information on writing and running Playwright tests, refer to the official [Playwright documentation](https://playwright.dev/docs/intro).
+
+### Recommended local workflow
+
+- Normal frontend validation (no test services):
+
+```bash
+docker compose up frontend -d
+```
+
+- Rebuild frontend image only when needed:
+
+```bash
+docker compose build frontend && docker compose up frontend -d
+```
+
+- Run Playwright stack only on demand (mailcatcher + playwright use the `test` profile):
+
+```bash
+docker compose --profile test run --rm playwright npx playwright test
+```

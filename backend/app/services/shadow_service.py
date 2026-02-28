@@ -46,6 +46,8 @@ from app.models import (
     User,
 )
 from app.services.shadow_git import get_repo_path
+from app.services.shadow_gogs_service import shadow_gogs_service
+from app.services.repo_naming import shadow_repo_name
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +127,7 @@ class ShadowService:
             return existing
 
         # Create the shadow user record (repo created lazily on first version)
-        repo_name = f"user-{str(user.id)[:8]}"
+        repo_name = shadow_repo_name("user", user.id)
 
         shadow_user = ShadowUser(
             user_id=user.id,
@@ -184,7 +186,7 @@ class ShadowService:
             return existing
 
         # repo_name kept for backward compat, but actual path is computed
-        repo_name = f"{entity_type}-{str(entity_id)[:8]}"
+        repo_name = shadow_repo_name(entity_type, entity_id)
         shadow_repo = ShadowRepo(
             owner_id=owner.id,
             entity_type=entity_type,
@@ -358,6 +360,11 @@ class ShadowService:
         if not shadow_repo:
             return None
 
+        self._ensure_shadow_repo_remote_best_effort(
+            session=session,
+            shadow_repo=shadow_repo,
+        )
+
         version_number = self._allocate_next_version_number(session, shadow_repo.id)
         shadow_version = ShadowVersion(
             shadow_repo_id=shadow_repo.id,
@@ -440,6 +447,11 @@ class ShadowService:
         if not shadow_repo:
             return None
 
+        self._ensure_shadow_repo_remote_best_effort(
+            session=session,
+            shadow_repo=shadow_repo,
+        )
+
         version_number = self._allocate_next_version_number(session, shadow_repo.id)
         shadow_version = ShadowVersion(
             shadow_repo_id=shadow_repo.id,
@@ -503,6 +515,26 @@ class ShadowService:
             return []
 
         return self.get_version_history(session, shadow_repo, limit)
+
+    def _ensure_shadow_repo_remote_best_effort(
+        self,
+        *,
+        session: Session,
+        shadow_repo: ShadowRepo,
+    ) -> None:
+        """Attempt remote provisioning without blocking local shadow enqueue."""
+        try:
+            shadow_gogs_service.ensure_shadow_repo_remote(
+                session=session,
+                shadow_repo=shadow_repo,
+            )
+        except Exception:
+            logger.warning(
+                "Shadow remote provisioning failed for %s/%s; continuing with local-only enqueue",
+                shadow_repo.entity_type,
+                shadow_repo.entity_id,
+                exc_info=True,
+            )
 
 
 # Singleton instance

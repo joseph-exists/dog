@@ -13,6 +13,7 @@ import { useEffect, useState } from "react"
 import { AgentsService } from "@/client/sdk.gen"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
 import EditDrawer from "@/components/Common/EditDrawer"
+import { RoomPromptSettingsDialog } from "@/components/Room/Dialogs/RoomPromptSettingsDialog"
 import {
   A2UIPanel,
   CanvasPanel,
@@ -21,9 +22,9 @@ import {
   type PanelConfig,
   ParticipantPanel,
   RoomShell,
+  SoloStoryPlayerPanel,
   StoryEditorPanel,
   StoryPanel,
-  StoryPlayerPanel,
 } from "@/components/Room"
 import RoomDebugPanel from "@/components/Room/panels/RoomDebugPanel"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
@@ -68,6 +69,7 @@ function RoomView() {
   // Debug panel overlay state (separate from panel config)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [showInternalMessages, setShowInternalMessages] = useState(false)
+  const [isPromptSettingsOpen, setIsPromptSettingsOpen] = useState(false)
 
   // Fetch available agents
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
@@ -159,6 +161,17 @@ function RoomView() {
       scope: agentConfig?.scope ?? "system",
       is_coordinator: agentConfig?.is_coordinator ?? false,
       is_enabled: p.is_active,
+    }
+  })
+  const roomPromptAgents = allRoomAgents.map((p) => {
+    const agentConfig = availableAgents.find(
+      (a) => a.id === p.participant_id || a.name === p.participant_id,
+    )
+    return {
+      id: agentConfig?.id ?? p.participant_id,
+      slug: agentConfig?.slug ?? null,
+      name: agentConfig?.name ?? p.display_name,
+      description: agentConfig?.description ?? null,
     }
   })
   const existingAgentIds = allRoomAgents.map((p) => {
@@ -341,21 +354,9 @@ function RoomView() {
       />
     ),
     storyPlayer: () => (
-      <StoryPlayerPanel
+      <SoloStoryPlayerPanel
         storyId={room?.story_id || ""}
-        onStoryEvent={(event) => {
-          const text =
-            event.type === "choice_made"
-              ? `[Story: chose "${event.choiceText}" → ${event.nodeTitle}]`
-              : event.type === "story_ended"
-                ? `[Story: reached ending "${event.nodeTitle}"]`
-                : event.type === "story_rewound"
-                  ? `[Story: rewound to "${event.nodeTitle}"]`
-                  : event.type === "story_restarted"
-                    ? `[Story: restarted "${event.nodeTitle}"]`
-                    : `[Story: started "${event.nodeTitle}"]`
-          sendViaWebSocket(text)
-        }}
+        runtimeNotice="Local-only panel. Choices here do not read from or write to shared room runtime."
       />
     ),
     canvas: () => <CanvasPanel />,
@@ -431,6 +432,7 @@ function RoomView() {
           participants={roomParticipants}
           panels={panels}
           canEdit={canManage}
+          onSettings={canManage ? () => setIsPromptSettingsOpen(true) : undefined}
           onCopyLink={handleCopyLink}
           onDelete={canManage ? handleDeleteRoom : undefined}
           showDebugPanel={showDebugPanel}
@@ -466,6 +468,15 @@ function RoomView() {
           isSaving={isEditing}
         />
       )}
+
+      {canManage ? (
+        <RoomPromptSettingsDialog
+          open={isPromptSettingsOpen}
+          onOpenChange={setIsPromptSettingsOpen}
+          roomId={roomId}
+          agents={roomPromptAgents}
+        />
+      ) : null}
     </div>
   )
 }

@@ -187,7 +187,7 @@ export function getPanelDisplayName(kind: PanelConfig["kind"]): string {
     chat: "Chat",
     storyEditor: "Story Editor",
     storyRuntime: "Story Runtime",
-    storyPlayer: "Story Player",
+    storyPlayer: "Solo Story Player",
     debug: "Debug",
     canvas: "Canvas",
     a2ui: "Agent UI",

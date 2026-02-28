@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
@@ -80,8 +81,44 @@ function isUuid(value: string | null | undefined): value is string {
   )
 }
 
+function asTrimmedString(value: string | null | undefined): string {
+  return value?.trim() ?? ""
+}
+
 function PromptBuilderPage() {
   const queryClient = useQueryClient()
+  type PromptSectionKey =
+    | "persistence"
+    | "top_level"
+    | "planned_integrations"
+    | "raw_json"
+    | "validation"
+  const SECTION_VISIBILITY_STORAGE_KEY = "prompt-builder-section-visibility-v1"
+  const defaultSectionVisibility: Record<PromptSectionKey, boolean> = {
+    persistence: true,
+    top_level: true,
+    planned_integrations: false,
+    raw_json: false,
+    validation: true,
+  }
+  const [sectionVisibility, setSectionVisibility] = useState<
+    Record<PromptSectionKey, boolean>
+  >(() => {
+    if (typeof window === "undefined") return defaultSectionVisibility
+    try {
+      const raw = window.localStorage.getItem(SECTION_VISIBILITY_STORAGE_KEY)
+      if (!raw) return defaultSectionVisibility
+      const parsed = JSON.parse(raw) as Partial<
+        Record<PromptSectionKey, boolean>
+      >
+      return {
+        ...defaultSectionVisibility,
+        ...parsed,
+      }
+    } catch {
+      return defaultSectionVisibility
+    }
+  })
   const [draft, setDraft] = useState<PromptConfigDraft>(() =>
     createEmptyPromptDraft(),
   )
@@ -99,10 +136,17 @@ function PromptBuilderPage() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [isResetFromAgentConfirmOpen, setIsResetFromAgentConfirmOpen] =
     useState(false)
+  const [newPromptConfigSlug, setNewPromptConfigSlug] = useState("")
+  const [newPromptConfigName, setNewPromptConfigName] = useState("")
+  const [newPromptConfigDescription, setNewPromptConfigDescription] =
+    useState("Created from Prompt Builder")
+  const [bindingVersionPolicy, setBindingVersionPolicy] = useState<
+    "latest" | "pinned"
+  >("latest")
+  const [bindingVersionNumber, setBindingVersionNumber] = useState<string>("")
   const [persistencePath, setPersistencePath] = useState<
     "resume_prompt_config" | "start_from_agent"
   >("resume_prompt_config")
-  const [plannedIntegrationsOpen, setPlannedIntegrationsOpen] = useState(false)
   const selectedProviderId = draft.provider.user_access_provider_id
   const selectedProviderIdForCatalog = isUuid(selectedProviderId)
     ? selectedProviderId
@@ -164,6 +208,13 @@ function PromptBuilderPage() {
       promptConfigs.find((config) => config.id === selectedPromptConfigId) ??
       null,
     [promptConfigs, selectedPromptConfigId],
+  )
+  const selectedAgentBoundPromptConfig = useMemo(
+    () =>
+      promptConfigs.find(
+        (config) => config.id === selectedAgent?.prompt_config_id,
+      ) ?? null,
+    [promptConfigs, selectedAgent?.prompt_config_id],
   )
   const hydration = useMemo(
     () => hydratePromptDraftProviderAndModel(draft, providers, models),
@@ -231,6 +282,19 @@ function PromptBuilderPage() {
       showErrorToast("Failed to load selected agent into Prompt Builder.")
     },
   })
+  async function generateSharedSlugValue(): Promise<string> {
+    try {
+      const generated = await AgentsService.generateAgentSlug()
+      const slug =
+        typeof generated === "string"
+          ? generated
+          : (generated as { slug?: string })?.slug
+      return typeof slug === "string" ? slug.trim() : ""
+    } catch (error) {
+      console.error("Failed to generate shared slug:", error)
+      return ""
+    }
+  }
   const resetFromAgentMutation = useMutation({
     mutationFn: async (input: { promptConfigId: string; agentId: string }) => {
       const agent = await AgentsService.getAgent({ agentId: input.agentId })
@@ -274,11 +338,22 @@ function PromptBuilderPage() {
   })
   const createPromptConfigMutation = useMutation({
     mutationFn: async () => {
-      const title = `Prompt Config ${new Date().toISOString()}`
+      const generatedSlug =
+        asTrimmedString(newPromptConfigSlug) || (await generateSharedSlugValue())
+      if (!generatedSlug) {
+        throw new Error("Unable to generate prompt config slug.")
+      }
+      const title =
+        asTrimmedString(newPromptConfigName) ||
+        generatedSlug ||
+        `Prompt Config ${new Date().toISOString()}`
       return PromptConfigsService.createPromptConfig({
         requestBody: {
+          slug: generatedSlug,
           name: title,
-          description: "Created from Prompt Builder",
+          description:
+            asTrimmedString(newPromptConfigDescription) ||
+            "Created from Prompt Builder",
           payload: draft as any,
           commit_message: "Initial version",
         },
@@ -286,6 +361,10 @@ function PromptBuilderPage() {
     },
     onSuccess: async (created) => {
       setSelectedPromptConfigId(created.id)
+      setNewPromptConfigSlug(created.slug)
+      if (!asTrimmedString(newPromptConfigName)) {
+        setNewPromptConfigName(created.name)
+      }
       await queryClient.invalidateQueries({
         queryKey: ["prompt-builder", "prompt-configs"],
       })
@@ -294,7 +373,76 @@ function PromptBuilderPage() {
       })
       showSuccessToast("Created PromptConfig.")
     },
-    onError: () => showErrorToast("Failed to create PromptConfig."),
+    onError: (error: unknown) => {
+      const detail = extractApiErrorDetail(error)
+      showErrorToast(detail ?? "Failed to create PromptConfig.")
+    },
+  })
+  const bindPromptConfigToAgentMutation = useMutation({
+    mutationFn: async (input: {
+      agentId: string
+      promptConfigId: string | null
+      versionPolicy: "latest" | "pinned"
+      versionNumber: number | null
+    }) => {
+      const agent = await AgentsService.getAgent({ agentId: input.agentId })
+      const name = asTrimmedString(agent.name)
+      const slug = asTrimmedString(agent.slug)
+      const providerType = asTrimmedString(agent.provider_type)
+      if (!name || !slug || !providerType) {
+        throw new Error("Selected agent is missing required identity fields.")
+      }
+      return AgentsService.updateAgent({
+        agentId: input.agentId,
+        requestBody: {
+          name,
+          slug,
+          provider_type: providerType as any,
+          description: agent.description ?? null,
+          user_access_provider: agent.user_access_provider ?? null,
+          model: agent.model ?? null,
+          model_id: agent.model_id ?? null,
+          model_name: agent.model_name ?? undefined,
+          system_prompt: agent.system_prompt ?? null,
+          custom_system_prompt: agent.custom_system_prompt ?? null,
+          instructions: agent.instructions ?? null,
+          tool_config: agent.tool_config ?? null,
+          deps_config: agent.deps_config ?? null,
+          prompt_config_id: input.promptConfigId,
+          prompt_config_version_policy: input.promptConfigId
+            ? input.versionPolicy
+            : null,
+          prompt_config_version_number: input.promptConfigId
+            ? input.versionPolicy === "pinned"
+              ? input.versionNumber
+              : null
+            : null,
+          agent_metadata: agent.agent_metadata ?? null,
+          agent_type: agent.agent_type ?? null,
+          presentation: agent.presentation ?? null,
+          is_enabled: agent.is_enabled ?? true,
+          is_clonable: agent.is_clonable ?? false,
+          is_visible: agent.is_visible ?? false,
+          scope: agent.scope ?? "personal",
+          participation_mode: agent.participation_mode ?? "on_mention",
+          is_coordinator: agent.is_coordinator ?? false,
+          max_tool_iterations: agent.max_tool_iterations ?? 10,
+          capabilities: agent.capabilities ?? [],
+        } as any,
+      })
+    },
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["prompt-builder", "agents"],
+      })
+      const label =
+        variables.promptConfigId == null ? "Removed PromptConfig binding." : "Bound PromptConfig to agent."
+      showSuccessToast(label)
+    },
+    onError: (error: unknown) => {
+      const detail = extractApiErrorDetail(error)
+      showErrorToast(detail ?? "Failed to update agent PromptConfig binding.")
+    },
   })
   const saveWorkingCopyMutation = useMutation({
     mutationFn: async () => {
@@ -385,6 +533,48 @@ function PromptBuilderPage() {
     }
   }, [selectedPromptConfigId, selectedAgentId])
 
+  useEffect(() => {
+    if (selectedPromptConfig) {
+      setNewPromptConfigSlug(selectedPromptConfig.slug)
+      setNewPromptConfigName(selectedPromptConfig.name)
+      setNewPromptConfigDescription(selectedPromptConfig.description ?? "")
+      return
+    }
+    if (!newPromptConfigName) {
+      setNewPromptConfigName("")
+    }
+  }, [selectedPromptConfig])
+
+  useEffect(() => {
+    if (!selectedAgent) {
+      setBindingVersionPolicy("latest")
+      setBindingVersionNumber("")
+      return
+    }
+    const nextPolicy =
+      selectedAgent.prompt_config_version_policy === "pinned"
+        ? "pinned"
+        : "latest"
+    setBindingVersionPolicy(nextPolicy)
+    setBindingVersionNumber(
+      selectedAgent.prompt_config_version_number != null
+        ? String(selectedAgent.prompt_config_version_number)
+        : "",
+    )
+  }, [
+    selectedAgent?.id,
+    selectedAgent?.prompt_config_version_policy,
+    selectedAgent?.prompt_config_version_number,
+  ])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem(
+      SECTION_VISIBILITY_STORAGE_KEY,
+      JSON.stringify(sectionVisibility),
+    )
+  }, [sectionVisibility])
+
   function onDraftChange(next: PromptConfigDraft) {
     setDraft(next)
     setRawJsonDraft(JSON.stringify(next, null, 2))
@@ -451,6 +641,59 @@ function PromptBuilderPage() {
     saveWorkingCopyMutation.mutate()
   }
 
+  async function populateNewPromptConfigSlug() {
+    const slug = await generateSharedSlugValue()
+    if (!slug) {
+      showErrorToast("Failed to generate slug.")
+      return
+    }
+    setNewPromptConfigSlug(slug)
+    if (!asTrimmedString(newPromptConfigName)) {
+      setNewPromptConfigName(slug)
+    }
+  }
+
+  function bindSelectedPromptConfigToAgent() {
+    if (!selectedAgentId) {
+      showErrorToast("Select an agent to bind.")
+      return
+    }
+    if (!selectedPromptConfigId) {
+      showErrorToast("Select a PromptConfig to bind.")
+      return
+    }
+    const parsedVersionNumber =
+      bindingVersionPolicy === "pinned"
+        ? Number.parseInt(bindingVersionNumber, 10)
+        : null
+    if (
+      bindingVersionPolicy === "pinned" &&
+      (!Number.isFinite(parsedVersionNumber) || parsedVersionNumber == null || parsedVersionNumber <= 0)
+    ) {
+      showErrorToast("Pinned version policy requires a positive version number.")
+      return
+    }
+    bindPromptConfigToAgentMutation.mutate({
+      agentId: selectedAgentId,
+      promptConfigId: selectedPromptConfigId,
+      versionPolicy: bindingVersionPolicy,
+      versionNumber: parsedVersionNumber,
+    })
+  }
+
+  function unbindPromptConfigFromAgent() {
+    if (!selectedAgentId) {
+      showErrorToast("Select an agent to unbind.")
+      return
+    }
+    bindPromptConfigToAgentMutation.mutate({
+      agentId: selectedAgentId,
+      promptConfigId: null,
+      versionPolicy: "latest",
+      versionNumber: null,
+    })
+  }
+
   function commitPromptConfigVersion() {
     if (!selectedPromptConfigId) {
       showErrorToast("Select a PromptConfig to commit.")
@@ -489,268 +732,458 @@ function PromptBuilderPage() {
   return (
     <div className="space-y-4 p-4 pb-24">
       <Card>
-        <CardHeader>
-          <CardTitle>PromptConfig Persistence</CardTitle>
-          <CardDescription>
-            A PromptConfig is the saved prompt recipe for one run profile
-            (provider/model/input/params/tools), with API-backed working-copy +
-            version history.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-            First choose your starting path: resume an existing PromptConfig, or
-            start from a Source Agent template. Both paths edit the same draft
-            model, but they represent different workflows for how prompt state
-            is sourced.
-          </div>
-          <Tabs
-            value={persistencePath}
-            onValueChange={(value) =>
-              setPersistencePath(
-                value as "resume_prompt_config" | "start_from_agent",
-              )
-            }
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="resume_prompt_config">
-                Resume PromptConfig
-              </TabsTrigger>
-              <TabsTrigger value="start_from_agent">
-                Start From SourceAgent
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent
-              value="resume_prompt_config"
-              className="mt-3 space-y-3"
-            >
-              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-                Choose this when you already have a PromptConfig to continue,
-                review, or version.
+        <Collapsible
+          open={sectionVisibility.persistence}
+          onOpenChange={(open) =>
+            setSectionVisibility((current) => ({
+              ...current,
+              persistence: open,
+            }))
+          }
+        >
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle>PromptConfig Persistence</CardTitle>
+                <CardDescription>
+                  A PromptConfig is the saved prompt recipe for one run profile
+                  (provider/model/input/params/tools), with API-backed
+                  working-copy + version history.
+                </CardDescription>
               </div>
-              <div className="space-y-1">
-                <Label>Prompt Config</Label>
-                <Select
-                  value={selectedPromptConfigId || "__none"}
-                  onValueChange={(value) =>
-                    setSelectedPromptConfigId(value === "__none" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        isLoadingPromptConfigs
-                          ? "Loading prompt configs..."
-                          : "Select a prompt config"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">None</SelectItem>
-                    {promptConfigs.map((config) => (
-                      <SelectItem key={config.id} value={config.id}>
-                        {config.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  disabled={createPromptConfigMutation.isPending}
-                  onClick={() => createPromptConfigMutation.mutate()}
-                >
-                  Create Prompt Config
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {sectionVisibility.persistence ? (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 mr-1" />
+                  )}
+                  {sectionVisibility.persistence ? "Collapse" : "Expand"}
                 </Button>
-                <Button
-                  variant="outline"
-                  disabled={
-                    !selectedPromptConfigId ||
-                    resetWorkingCopyMutation.isPending ||
-                    isLoadingWorkingCopy
-                  }
-                  onClick={() => resetWorkingCopyMutation.mutate()}
-                >
-                  Reset To Latest Commit
-                </Button>
-              </div>
-              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-                Optional: load a Source Agent into your local draft to compare
-                or re-baseline behavior. This does not overwrite PromptConfig
-                history unless you explicitly save/commit.
-              </div>
-              <div className="space-y-1">
-                <Label>Source Agent (Optional)</Label>
-                <Select
-                  value={selectedAgentId || "__none"}
-                  onValueChange={(value) =>
-                    setSelectedAgentId(value === "__none" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        isLoadingAgents
-                          ? "Loading agents..."
-                          : "Select an agent"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">None</SelectItem>
-                    {agents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.name ?? agent.slug ?? agent.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  disabled={
-                    !selectedAgentId ||
-                    loadFromAgentMutation.isPending ||
-                    resetFromAgentMutation.isPending
-                  }
-                  onClick={() => loadFromAgentMutation.mutate(selectedAgentId)}
-                >
-                  Load From Agent
-                </Button>
-                <Button
-                  variant="destructive"
-                  disabled={
-                    !selectedAgentId ||
-                    !selectedPromptConfigId ||
-                    loadFromAgentMutation.isPending ||
-                    resetFromAgentMutation.isPending
-                  }
-                  onClick={resetFromAgent}
-                >
-                  Reset From Agent
-                </Button>
-              </div>
-            </TabsContent>
-            <TabsContent value="start_from_agent" className="mt-3 space-y-3">
-              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-                Choose this when you want to bootstrap from an existing agent
-                config. Load from agent first, then create a PromptConfig when
-                you are ready to persist and version.
-              </div>
-              <div className="space-y-1">
-                <Label>Source Agent</Label>
-                <Select
-                  value={selectedAgentId || "__none"}
-                  onValueChange={(value) =>
-                    setSelectedAgentId(value === "__none" ? "" : value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        isLoadingAgents
-                          ? "Loading agents..."
-                          : "Select an agent"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">None</SelectItem>
-                    {agents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.name ?? agent.slug ?? agent.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  disabled={
-                    !selectedAgentId ||
-                    loadFromAgentMutation.isPending ||
-                    resetFromAgentMutation.isPending
-                  }
-                  onClick={() => loadFromAgentMutation.mutate(selectedAgentId)}
-                >
-                  Load From Agent
-                </Button>
-                <Button
-                  disabled={createPromptConfigMutation.isPending}
-                  onClick={() => createPromptConfigMutation.mutate()}
-                >
-                  Create Prompt Config From Current Draft
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <div className="space-y-2 pt-1">
-            <Label>Browser Checkpoints</Label>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={saveWorkingCopyToBrowser}>
-                Save Working Copy (Browser)
-              </Button>
-              <Button variant="outline" onClick={loadWorkingCopyFromBrowser}>
-                Load Working Copy (Browser)
-              </Button>
+              </CollapsibleTrigger>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Use browser checkpoints for fast local recovery during
-              experimentation. Use PromptConfig save/commit for shared
-              API-backed history.
-            </p>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {selectedPromptConfig
-              ? `PromptConfig: ${selectedPromptConfig.name}`
-              : "No PromptConfig selected."}{" "}
-            {selectedAgent
-              ? `Selected: ${selectedAgent.name ?? selectedAgent.slug ?? selectedAgent.id}`
-              : "No source agent selected."}
-            {lastSavedAt
-              ? ` Last persisted: ${new Date(lastSavedAt).toLocaleString()}.`
-              : ""}{" "}
-            {activeWorkingCopy?.base_version != null
-              ? `Base version: ${activeWorkingCopy.base_version}.`
-              : ""}
-          </p>
-          <AlertDialog
-            open={isResetFromAgentConfirmOpen}
-            onOpenChange={setIsResetFromAgentConfirmOpen}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Reset From Agent (Destructive)
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will delete PromptConfig "
-                  {selectedPromptConfig?.name ?? "selected config"}" and its
-                  full version history, then load a new local draft from the
-                  selected source agent. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={resetFromAgentMutation.isPending}>
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={confirmResetFromAgent}
-                  disabled={resetFromAgentMutation.isPending}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="space-y-3">
+              <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                First choose your starting path: resume an existing
+                PromptConfig, or start from a Source Agent template. Both paths
+                edit the same draft model, but they represent different
+                workflows for how prompt state is sourced.
+              </div>
+              <Tabs
+                value={persistencePath}
+                onValueChange={(value) =>
+                  setPersistencePath(
+                    value as "resume_prompt_config" | "start_from_agent",
+                  )
+                }
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="resume_prompt_config">
+                    Resume PromptConfig
+                  </TabsTrigger>
+                  <TabsTrigger value="start_from_agent">
+                    Start From SourceAgent
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent
+                  value="resume_prompt_config"
+                  className="mt-3 space-y-3"
                 >
-                  {resetFromAgentMutation.isPending
-                    ? "Resetting..."
-                    : "Delete And Reset"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
+                  <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    Choose this when you already have a PromptConfig to
+                    continue, review, or version.
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Prompt Config</Label>
+                    <Select
+                      value={selectedPromptConfigId || "__none"}
+                      onValueChange={(value) =>
+                        setSelectedPromptConfigId(
+                          value === "__none" ? "" : value,
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isLoadingPromptConfigs
+                              ? "Loading prompt configs..."
+                              : "Select a prompt config"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None</SelectItem>
+                        {promptConfigs.map((config) => (
+                          <SelectItem key={config.id} value={config.id}>
+                            {config.slug} · {config.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label>New PromptConfig Slug</Label>
+                      <Input
+                        placeholder="generated-slug"
+                        value={newPromptConfigSlug}
+                        onChange={(event) =>
+                          setNewPromptConfigSlug(event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>New PromptConfig Name</Label>
+                      <Input
+                        placeholder="Prompt Config name"
+                        value={newPromptConfigName}
+                        onChange={(event) =>
+                          setNewPromptConfigName(event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>New PromptConfig Description</Label>
+                      <Input
+                        placeholder="Optional description"
+                        value={newPromptConfigDescription}
+                        onChange={(event) =>
+                          setNewPromptConfigDescription(event.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => void populateNewPromptConfigSlug()}
+                    >
+                      Generate Slug
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={createPromptConfigMutation.isPending}
+                      onClick={() => createPromptConfigMutation.mutate()}
+                    >
+                      Create Prompt Config
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={
+                        !selectedPromptConfigId ||
+                        resetWorkingCopyMutation.isPending ||
+                        isLoadingWorkingCopy
+                      }
+                      onClick={() => resetWorkingCopyMutation.mutate()}
+                    >
+                      Reset To Latest Commit
+                    </Button>
+                  </div>
+                  <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    Optional: load a Source Agent into your local draft to
+                    compare or re-baseline behavior. This does not overwrite
+                    PromptConfig history unless you explicitly save/commit.
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Source Agent (Optional)</Label>
+                    <Select
+                      value={selectedAgentId || "__none"}
+                      onValueChange={(value) =>
+                        setSelectedAgentId(value === "__none" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isLoadingAgents
+                              ? "Loading agents..."
+                              : "Select an agent"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None</SelectItem>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.name ?? agent.slug ?? agent.id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={
+                        !selectedAgentId ||
+                        loadFromAgentMutation.isPending ||
+                        resetFromAgentMutation.isPending
+                      }
+                      onClick={() =>
+                        loadFromAgentMutation.mutate(selectedAgentId)
+                      }
+                    >
+                      Load From Agent
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={
+                        !selectedAgentId ||
+                        !selectedPromptConfigId ||
+                        loadFromAgentMutation.isPending ||
+                        resetFromAgentMutation.isPending
+                      }
+                      onClick={resetFromAgent}
+                    >
+                      Reset From Agent
+                    </Button>
+                  </div>
+                  <div className="space-y-3 rounded-md border p-3">
+                    <div>
+                      <Label>Agent Binding</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Bind the selected PromptConfig to the selected agent so runtime resolves this recipe by default.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <div className="space-y-1">
+                        <Label>Version Policy</Label>
+                        <Select
+                          value={bindingVersionPolicy}
+                          onValueChange={(value) =>
+                            setBindingVersionPolicy(value as "latest" | "pinned")
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="latest">Latest</SelectItem>
+                            <SelectItem value="pinned">Pinned</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Pinned Version</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          disabled={bindingVersionPolicy !== "pinned"}
+                          placeholder="e.g. 3"
+                          value={bindingVersionNumber}
+                          onChange={(event) =>
+                            setBindingVersionNumber(event.target.value)
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Current Agent Binding</Label>
+                        <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                          {selectedAgent?.prompt_config_id
+                            ? selectedAgentBoundPromptConfig
+                              ? `${selectedAgentBoundPromptConfig.slug} · ${selectedAgentBoundPromptConfig.name}`
+                              : selectedAgent.prompt_config_id
+                            : "No PromptConfig bound."}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        disabled={
+                          !selectedAgentId ||
+                          !selectedPromptConfigId ||
+                          bindPromptConfigToAgentMutation.isPending
+                        }
+                        onClick={bindSelectedPromptConfigToAgent}
+                      >
+                        Bind To Agent
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={
+                          !selectedAgentId ||
+                          !selectedAgent?.prompt_config_id ||
+                          bindPromptConfigToAgentMutation.isPending
+                        }
+                        onClick={unbindPromptConfigFromAgent}
+                      >
+                        Unbind From Agent
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent
+                  value="start_from_agent"
+                  className="mt-3 space-y-3"
+                >
+                  <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    Choose this when you want to bootstrap from an existing
+                    agent config. Load from agent first, then create a
+                    PromptConfig when you are ready to persist and version.
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Source Agent</Label>
+                    <Select
+                      value={selectedAgentId || "__none"}
+                      onValueChange={(value) =>
+                        setSelectedAgentId(value === "__none" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isLoadingAgents
+                              ? "Loading agents..."
+                              : "Select an agent"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None</SelectItem>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.name ?? agent.slug ?? agent.id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={
+                        !selectedAgentId ||
+                        loadFromAgentMutation.isPending ||
+                        resetFromAgentMutation.isPending
+                      }
+                      onClick={() =>
+                        loadFromAgentMutation.mutate(selectedAgentId)
+                      }
+                    >
+                      Load From Agent
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => void populateNewPromptConfigSlug()}
+                    >
+                      Generate Slug
+                    </Button>
+                    <Button
+                      disabled={createPromptConfigMutation.isPending}
+                      onClick={() => createPromptConfigMutation.mutate()}
+                    >
+                      Create Prompt Config From Current Draft
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label>New PromptConfig Slug</Label>
+                      <Input
+                        placeholder="generated-slug"
+                        value={newPromptConfigSlug}
+                        onChange={(event) =>
+                          setNewPromptConfigSlug(event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>New PromptConfig Name</Label>
+                      <Input
+                        placeholder="Prompt Config name"
+                        value={newPromptConfigName}
+                        onChange={(event) =>
+                          setNewPromptConfigName(event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>New PromptConfig Description</Label>
+                      <Input
+                        placeholder="Optional description"
+                        value={newPromptConfigDescription}
+                        onChange={(event) =>
+                          setNewPromptConfigDescription(event.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="space-y-2 pt-1">
+                <Label>Browser Checkpoints</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={saveWorkingCopyToBrowser}>
+                    Save Working Copy (Browser)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={loadWorkingCopyFromBrowser}
+                  >
+                    Load Working Copy (Browser)
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use browser checkpoints for fast local recovery during
+                  experimentation. Use PromptConfig save/commit for shared
+                  API-backed history.
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {selectedPromptConfig
+                  ? `PromptConfig: ${selectedPromptConfig.slug} · ${selectedPromptConfig.name}`
+                  : "No PromptConfig selected."}{" "}
+                {selectedAgent
+                  ? `Selected: ${selectedAgent.name ?? selectedAgent.slug ?? selectedAgent.id}`
+                  : "No source agent selected."}
+                {lastSavedAt
+                  ? ` Last persisted: ${new Date(lastSavedAt).toLocaleString()}.`
+                  : ""}{" "}
+                {activeWorkingCopy?.base_version != null
+                  ? `Base version: ${activeWorkingCopy.base_version}.`
+                  : ""}
+              </p>
+              <AlertDialog
+                open={isResetFromAgentConfirmOpen}
+                onOpenChange={setIsResetFromAgentConfirmOpen}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Reset From Agent (Destructive)
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will delete PromptConfig "
+                      {selectedPromptConfig?.name ?? "selected config"}" and its
+                      full version history, then load a new local draft from the
+                      selected source agent. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel
+                      disabled={resetFromAgentMutation.isPending}
+                    >
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={confirmResetFromAgent}
+                      disabled={resetFromAgentMutation.isPending}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {resetFromAgentMutation.isPending
+                        ? "Resetting..."
+                        : "Delete And Reset"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
 
       <PromptTopLevelEditor
@@ -763,12 +1196,21 @@ function PromptBuilderPage() {
           "provider.user_access_provider_id": isLoadingProviders,
           "model.model_id": isLoadingModels,
         }}
+        isOpen={sectionVisibility.top_level}
+        onOpenChange={(open) =>
+          setSectionVisibility((current) => ({ ...current, top_level: open }))
+        }
       />
 
       <Card>
         <Collapsible
-          open={plannedIntegrationsOpen}
-          onOpenChange={setPlannedIntegrationsOpen}
+          open={sectionVisibility.planned_integrations}
+          onOpenChange={(open) =>
+            setSectionVisibility((current) => ({
+              ...current,
+              planned_integrations: open,
+            }))
+          }
         >
           <CardHeader>
             <div className="flex items-center justify-between gap-2">
@@ -781,9 +1223,14 @@ function PromptBuilderPage() {
               </div>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" size="sm">
-                  {plannedIntegrationsOpen
-                    ? "Hide Planned Areas"
-                    : "Show Planned Areas"}
+                  {sectionVisibility.planned_integrations ? (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 mr-1" />
+                  )}
+                  {sectionVisibility.planned_integrations
+                    ? "Collapse"
+                    : "Expand"}
                 </Button>
               </CollapsibleTrigger>
             </div>
@@ -920,84 +1367,139 @@ function PromptBuilderPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Raw JSON Editor</CardTitle>
-          <CardDescription>
-            Advanced fallback for full-draft editing. Apply writes normalized
-            values back into editor state.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            className="min-h-[220px] font-mono text-xs"
-            value={rawJsonDraft}
-            onChange={(event) => {
-              setRawJsonDraft(event.target.value)
-              if (rawJsonError) setRawJsonError(null)
-            }}
-          />
-          {rawJsonError && (
-            <p className="text-sm text-destructive">{rawJsonError}</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={resetRawJsonFromCurrentDraft}>
-              Reset From Current Draft
-            </Button>
-            <Button variant="secondary" onClick={applyRawJsonToDraft}>
-              Apply Raw JSON
-            </Button>
-          </div>
-        </CardContent>
+        <Collapsible
+          open={sectionVisibility.raw_json}
+          onOpenChange={(open) =>
+            setSectionVisibility((current) => ({ ...current, raw_json: open }))
+          }
+        >
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle>Raw JSON Editor</CardTitle>
+                <CardDescription>
+                  Advanced fallback for full-draft editing. Apply writes
+                  normalized values back into editor state.
+                </CardDescription>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {sectionVisibility.raw_json ? (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 mr-1" />
+                  )}
+                  {sectionVisibility.raw_json ? "Collapse" : "Expand"}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="space-y-3">
+              <Textarea
+                className="min-h-[220px] font-mono text-xs"
+                value={rawJsonDraft}
+                onChange={(event) => {
+                  setRawJsonDraft(event.target.value)
+                  if (rawJsonError) setRawJsonError(null)
+                }}
+              />
+              {rawJsonError && (
+                <p className="text-sm text-destructive">{rawJsonError}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={resetRawJsonFromCurrentDraft}
+                >
+                  Reset From Current Draft
+                </Button>
+                <Button variant="secondary" onClick={applyRawJsonToDraft}>
+                  Apply Raw JSON
+                </Button>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Semantic Validation</CardTitle>
-          <CardDescription>
-            Combined base semantic rules + capability hook validators.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {semanticIssues.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No semantic issues.</p>
-          ) : (
-            semanticIssues.map((issue, index) => (
-              <div key={`${issue.code}-${index}`} className="text-sm">
-                <span
-                  className={
-                    issue.severity === "error"
-                      ? "text-destructive"
-                      : "text-amber-600"
+        <Collapsible
+          open={sectionVisibility.validation}
+          onOpenChange={(open) =>
+            setSectionVisibility((current) => ({
+              ...current,
+              validation: open,
+            }))
+          }
+        >
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle>Semantic Validation</CardTitle>
+                <CardDescription>
+                  Combined base semantic rules + capability hook validators.
+                </CardDescription>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {sectionVisibility.validation ? (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 mr-1" />
+                  )}
+                  {sectionVisibility.validation ? "Collapse" : "Expand"}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="space-y-2">
+              {semanticIssues.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No semantic issues.
+                </p>
+              ) : (
+                semanticIssues.map((issue, index) => (
+                  <div key={`${issue.code}-${index}`} className="text-sm">
+                    <span
+                      className={
+                        issue.severity === "error"
+                          ? "text-destructive"
+                          : "text-amber-600"
+                      }
+                    >
+                      [{issue.severity}]
+                    </span>{" "}
+                    <span>{issue.message}</span>
+                    {issue.path && (
+                      <span className="text-xs text-muted-foreground">
+                        {" "}
+                        ({issue.path})
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
+
+              <div className="pt-2">
+                <Button
+                  disabled={
+                    blockingIssues.length > 0 ||
+                    Object.keys(fieldErrors).length > 0
+                  }
+                  onClick={() =>
+                    showSuccessToast(
+                      "Prompt draft is semantically valid for save flow.",
+                    )
                   }
                 >
-                  [{issue.severity}]
-                </span>{" "}
-                <span>{issue.message}</span>
-                {issue.path && (
-                  <span className="text-xs text-muted-foreground">
-                    {" "}
-                    ({issue.path})
-                  </span>
-                )}
+                  Validate Draft
+                </Button>
               </div>
-            ))
-          )}
-
-          <div className="pt-2">
-            <Button
-              disabled={
-                blockingIssues.length > 0 || Object.keys(fieldErrors).length > 0
-              }
-              onClick={() =>
-                showSuccessToast(
-                  "Prompt draft is semantically valid for save flow.",
-                )
-              }
-            >
-              Validate Draft
-            </Button>
-          </div>
-        </CardContent>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
 
       <div className="sticky bottom-0 z-20 border rounded-md bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3">

@@ -41,6 +41,7 @@ from app.api.routes import (
     traits,
     user_panels,
     user_personas,
+    user_repos,
     user_story_progress,
     users,
     utils,
@@ -69,6 +70,7 @@ api_router.include_router(stories.router)
 api_router.include_router(catalog.router)
 api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
+api_router.include_router(user_repos.router)
 api_router.include_router(agent_routes.router)
 api_router.include_router(agent_personas.router)
 api_router.include_router(llm_providers.router)

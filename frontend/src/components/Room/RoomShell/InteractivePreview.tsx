@@ -60,6 +60,7 @@ const panelNames: Record<string, string> = {
   chat: "Chat",
   storyEditor: "Story Editor",
   storyRuntime: "Story Runtime",
+  storyPlayer: "Solo Story Player",
   participantPanel: "Participants",
   debug: "Debug",
   canvas: "Canvas",

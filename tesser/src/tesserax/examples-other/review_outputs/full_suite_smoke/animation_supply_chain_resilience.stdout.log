@@ -1,3 +1,0 @@
-✅ Saved: /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/animation_supply_chain_resilience.gif
-   scenario=baseline policy=balanced duration=4.0s fps=12 dt=0.040 camera_mode=hybrid visible_packets=480 dispatches=808
-   shock=[1.20s,2.24s] severity=0.88 target=west peak_store_backlog=0.92 peak_total_backlog=1.38 service_level=0.981 dominant_phase=NORMAL

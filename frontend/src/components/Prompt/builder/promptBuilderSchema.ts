@@ -84,29 +84,59 @@ export interface PromptParamsCommon {
   max_output_tokens?: number | null
   stop?: string[] | null
   seed?: number | null
+  response_format?:
+    | {
+        type: "text" | "json_object"
+      }
+    | {
+        type: "json_schema"
+        json_schema: {
+          name: string
+          schema: Record<string, unknown>
+          strict?: boolean | null
+        }
+      }
+    | null
+  // Deprecated compatibility alias. Normalized into response_format.
+  response_format_json?: boolean | null
+  openai?: {
+    previous_response_id?: string | null
+    reasoning?: {
+      summary?: "auto" | "concise" | "detailed" | null
+    } | null
+  } | null
 }
 
-export type PromptParamsByProvider =
-  | ({
-      provider_kind: "openai_compatible" | "openai"
-    } & PromptParamsCommon & {
-        response_format_json?: boolean | null
-        parallel_tool_calls?: boolean | null
-        reasoning_effort?: "low" | "medium" | "high" | null
-      })
-  | ({
-      provider_kind: "anthropic"
-    } & PromptParamsCommon & {
-        top_k?: number | null
-      })
-  | ({
-      provider_kind: "google" | "xai" | "custom"
-    } & PromptParamsCommon)
+export type PromptParamsByProvider = PromptParamsCommon & {
+  provider_kind: PromptProviderKind
+  parallel_tool_calls?: boolean | null
+  reasoning_effort?: "low" | "medium" | "high" | null
+  top_k?: number | null
+}
 
 export interface PromptToolingConfig {
   tool_mode?: "none" | "optional" | "required"
   tool_allowlist?: string[] | null
-  tool_choice?: string | null
+  tool_choice?:
+    | "auto"
+    | "none"
+    | "required"
+    | {
+        type: "named"
+        name: string
+      }
+    | null
+  max_tool_calls?: number | null
+  builtin?: Array<Record<string, unknown>> | null
+  mcp?: {
+    servers?: Array<{
+      id: string
+      url?: string | null
+      allowed_tools?: string[] | null
+      require_approval?: "always" | "never" | null
+    }> | null
+    allowed_tools?: string[] | null
+  } | null
 }
 
 export interface PromptBuilderMetadata {
@@ -232,6 +262,24 @@ export const PROMPT_BUILDER_FIELD_SPECS: PromptBuilderFieldSpec[] = [
     category: "params",
   },
   {
+    key: "params.response_format",
+    label: "Response Format",
+    control: "json",
+    category: "params",
+  },
+  {
+    key: "params.openai.previous_response_id",
+    label: "Previous Response ID",
+    control: "text",
+    category: "advanced",
+  },
+  {
+    key: "params.openai.reasoning",
+    label: "OpenAI Reasoning",
+    control: "json",
+    category: "advanced",
+  },
+  {
     key: "tools",
     label: "Tool Config",
     control: "json",
@@ -279,6 +327,192 @@ function normalizePromptInputPayload(input: unknown): PromptInputPayload {
   }
 }
 
+function normalizePromptResponseFormat(
+  value: unknown,
+): PromptParamsCommon["response_format"] {
+  if (!isObjectRecord(value)) return null
+  const rawType = value.type
+  if (rawType === "text" || rawType === "json_object") {
+    return { type: rawType }
+  }
+  if (rawType === "json_schema") {
+    const jsonSchema = value.json_schema
+    if (!isObjectRecord(jsonSchema)) return null
+    const name =
+      typeof jsonSchema.name === "string" && jsonSchema.name.trim().length > 0
+        ? jsonSchema.name.trim()
+        : "response_schema"
+    const schema = isObjectRecord(jsonSchema.schema) ? jsonSchema.schema : {}
+    return {
+      type: "json_schema",
+      json_schema: {
+        name,
+        schema,
+        strict:
+          typeof jsonSchema.strict === "boolean" ? jsonSchema.strict : undefined,
+      },
+    }
+  }
+  return null
+}
+
+function normalizePromptToolChoice(
+  value: unknown,
+): PromptToolingConfig["tool_choice"] {
+  if (value == null) return null
+  if (value === "auto" || value === "none" || value === "required") {
+    return value
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    return {
+      type: "named",
+      name: trimmed,
+    }
+  }
+  if (isObjectRecord(value) && value.type === "named") {
+    const name = typeof value.name === "string" ? value.name.trim() : ""
+    if (!name) return null
+    return {
+      type: "named",
+      name,
+    }
+  }
+  return null
+}
+
+function normalizePromptParams(input: unknown): PromptParamsByProvider {
+  const raw = isObjectRecord(input) ? input : {}
+  const rawProviderKind = raw.provider_kind
+  const providerKind: PromptProviderKind =
+    rawProviderKind === "openai_compatible" ||
+    rawProviderKind === "openai" ||
+    rawProviderKind === "anthropic" ||
+    rawProviderKind === "google" ||
+    rawProviderKind === "xai" ||
+    rawProviderKind === "custom"
+      ? rawProviderKind
+      : "openai_compatible"
+  const responseFormat = normalizePromptResponseFormat(raw.response_format)
+  const responseFormatJsonLegacy =
+    typeof raw.response_format_json === "boolean" ? raw.response_format_json : null
+  const resolvedResponseFormat =
+    responseFormat ??
+    (responseFormatJsonLegacy === true
+      ? ({ type: "json_object" } as const)
+      : null)
+
+  const openai = isObjectRecord(raw.openai)
+    ? {
+        previous_response_id:
+          typeof raw.openai.previous_response_id === "string"
+            ? raw.openai.previous_response_id.trim() || null
+            : null,
+        reasoning: isObjectRecord(raw.openai.reasoning)
+          ? {
+              summary:
+                raw.openai.reasoning.summary === "auto" ||
+                raw.openai.reasoning.summary === "concise" ||
+                raw.openai.reasoning.summary === "detailed"
+                  ? raw.openai.reasoning.summary
+                  : null,
+            }
+          : null,
+      }
+    : null
+
+  return {
+    provider_kind: providerKind,
+    temperature: typeof raw.temperature === "number" ? raw.temperature : null,
+    top_p: typeof raw.top_p === "number" ? raw.top_p : null,
+    max_output_tokens:
+      typeof raw.max_output_tokens === "number" ? raw.max_output_tokens : null,
+    stop: Array.isArray(raw.stop)
+      ? raw.stop.filter((item): item is string => typeof item === "string")
+      : null,
+    seed: typeof raw.seed === "number" ? raw.seed : null,
+    response_format: resolvedResponseFormat,
+    response_format_json: responseFormatJsonLegacy,
+    openai,
+    parallel_tool_calls:
+      typeof raw.parallel_tool_calls === "boolean"
+        ? raw.parallel_tool_calls
+        : null,
+    reasoning_effort:
+      raw.reasoning_effort === "low" ||
+      raw.reasoning_effort === "medium" ||
+      raw.reasoning_effort === "high"
+        ? raw.reasoning_effort
+        : null,
+    top_k: typeof raw.top_k === "number" ? raw.top_k : null,
+  } as PromptParamsByProvider
+}
+
+function normalizePromptTools(input: unknown): PromptToolingConfig | null {
+  if (!isObjectRecord(input)) return null
+  const mode =
+    input.tool_mode === "none" ||
+    input.tool_mode === "optional" ||
+    input.tool_mode === "required"
+      ? input.tool_mode
+      : "none"
+  return {
+    tool_mode: mode,
+    tool_allowlist: Array.isArray(input.tool_allowlist)
+      ? Array.from(
+          new Set(
+            input.tool_allowlist
+              .filter((item): item is string => typeof item === "string")
+              .map((item) => item.trim())
+              .filter((item) => item.length > 0),
+          ),
+        )
+      : null,
+    tool_choice: normalizePromptToolChoice(input.tool_choice),
+    max_tool_calls:
+      typeof input.max_tool_calls === "number" ? input.max_tool_calls : null,
+    builtin: Array.isArray(input.builtin)
+      ? input.builtin.filter((item): item is Record<string, unknown> =>
+          isObjectRecord(item),
+        )
+      : null,
+    mcp: isObjectRecord(input.mcp)
+      ? {
+          servers: Array.isArray(input.mcp.servers)
+            ? input.mcp.servers
+                .filter((server): server is Record<string, unknown> =>
+                  isObjectRecord(server),
+                )
+                .map((server) => ({
+                  id:
+                    typeof server.id === "string" ? server.id.trim() : "server",
+                  url:
+                    typeof server.url === "string"
+                      ? server.url.trim() || null
+                      : null,
+                  allowed_tools: Array.isArray(server.allowed_tools)
+                    ? server.allowed_tools.filter(
+                        (item): item is string => typeof item === "string",
+                      )
+                    : null,
+                  require_approval:
+                    server.require_approval === "always" ||
+                    server.require_approval === "never"
+                      ? server.require_approval
+                      : null,
+                }))
+            : null,
+          allowed_tools: Array.isArray(input.mcp.allowed_tools)
+            ? input.mcp.allowed_tools.filter(
+                (item): item is string => typeof item === "string",
+              )
+            : null,
+        }
+      : null,
+  }
+}
+
 export function createEmptyPromptDraft(
   overrides?: Partial<PromptConfigDraft>,
 ): PromptConfigDraft {
@@ -307,8 +541,14 @@ export function createEmptyPromptDraft(
       max_output_tokens: null,
       stop: null,
       seed: null,
+      response_format: null,
+      response_format_json: null,
+      openai: null,
+      parallel_tool_calls: null,
+      reasoning_effort: null,
+      top_k: null,
     },
-    tools: overrides?.tools ?? null,
+    tools: normalizePromptTools(overrides?.tools),
     metadata: overrides?.metadata ?? null,
   }
 }
@@ -358,6 +598,8 @@ export function normalizePromptDraft(
           : null,
     },
     input: normalizePromptInputPayload(base.input),
+    params: normalizePromptParams(base.params),
+    tools: normalizePromptTools(base.tools),
   }
 }
 
@@ -441,15 +683,33 @@ function validateProviderSpecificParamsStub(
   }
 
   if (
-    "response_format_json" in draft.params &&
-    draft.params.response_format_json === true &&
-    selectedModel?.has_json_mode === false
+    ((draft.params.response_format?.type === "json_object" ||
+      draft.params.response_format?.type === "json_schema") &&
+      selectedModel?.has_json_mode === false) ||
+    (draft.params.response_format_json === true &&
+      selectedModel?.has_json_mode === false)
   ) {
     issues.push({
       code: "json_mode_not_supported",
       severity: "error",
       message: "Selected model does not support JSON mode.",
-      path: "params.response_format_json",
+      path:
+        draft.params.response_format?.type != null
+          ? "params.response_format"
+          : "params.response_format_json",
+    })
+  }
+
+  if (
+    draft.tools?.max_tool_calls != null &&
+    (!Number.isFinite(draft.tools.max_tool_calls) ||
+      draft.tools.max_tool_calls <= 0)
+  ) {
+    issues.push({
+      code: "param_out_of_range",
+      severity: "error",
+      message: 'Parameter "tools.max_tool_calls" must be a positive number.',
+      path: "tools.max_tool_calls",
     })
   }
 

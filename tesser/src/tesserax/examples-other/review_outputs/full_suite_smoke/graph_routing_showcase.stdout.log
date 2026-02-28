@@ -1,5 +1,0 @@
-✅ Saved: /home/josep/tesserax/examples-other/review_outputs/full_suite_smoke/graph_routing_showcase.gif
-   mode=straight score=0.364 crossings=0 avg_bends=0.00 packets=10
-   mode=curved score=0.333 crossings=0 avg_bends=1.00 packets=4
-   mode=orthogonal score=0.262 crossings=0 avg_bends=2.94 packets=11
-   mode=bundled score=0.281 crossings=0 avg_bends=3.75 packets=7

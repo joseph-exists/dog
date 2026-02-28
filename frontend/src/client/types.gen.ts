@@ -207,6 +207,28 @@ export type DemoCanvasPanelSpec = {
     options?: DemoCanvasPanelOptions;
 };
 
+export type DemoCanvasRenderRequest = {
+    panel_id?: (string | null);
+    script_name?: string;
+    script_input?: {
+        [key: string]: unknown;
+    };
+    title?: string;
+    subtitle?: (string | null);
+    persist_to_composition?: boolean;
+    commit_to_shadow_repo?: boolean;
+};
+
+export type DemoCanvasRenderResponse = {
+    demo_config_id: string;
+    panel_id: string;
+    request_id?: (string | null);
+    status: string;
+    svg: string;
+    persisted: boolean;
+    shadow_commit_sha?: (string | null);
+};
+
 /**
  * UI mode for chat surfaces in demo routes.
  */
@@ -1769,6 +1791,7 @@ export type PromptConfigCommitRequest = {
 };
 
 export type PromptConfigCreate = {
+    slug?: (string | null);
     name: string;
     description?: (string | null);
     metadata_json?: ({
@@ -1797,6 +1820,7 @@ export type PromptConfigDraft_Output = {
 };
 
 export type PromptConfigPublic = {
+    slug: string;
     name: string;
     description?: (string | null);
     metadata_json?: ({
@@ -1814,12 +1838,28 @@ export type PromptConfigResetWorkingCopyRequest = {
     version_id?: (string | null);
 };
 
+export type PromptConfigResolvePreviewRequest = {
+    agent_slug: string;
+    room_id?: (string | null);
+    payload?: (PromptConfigDraft_Input | null);
+};
+
+export type PromptConfigResolvePreviewResponse = {
+    effective_config: {
+        [key: string]: unknown;
+    };
+    provenance: {
+        [key: string]: (string);
+    };
+};
+
 export type PromptConfigsPublic = {
     data: Array<PromptConfigPublic>;
     count: number;
 };
 
 export type PromptConfigUpdate = {
+    slug?: (string | null);
     name?: (string | null);
     description?: (string | null);
     metadata_json?: ({
@@ -1910,7 +1950,13 @@ export type PromptParams = {
     max_output_tokens?: (number | null);
     stop?: (Array<(string)> | null);
     seed?: (number | null);
+    response_format?: ({
+    [key: string]: unknown;
+} | null);
     response_format_json?: (boolean | null);
+    openai?: ({
+    [key: string]: unknown;
+} | null);
     parallel_tool_calls?: (boolean | null);
     reasoning_effort?: ('low' | 'medium' | 'high' | null);
     top_k?: (number | null);
@@ -1929,7 +1975,16 @@ export type PromptProviderKind = 'openai_compatible' | 'openai' | 'anthropic' | 
 export type PromptToolingConfig = {
     tool_mode?: ('none' | 'optional' | 'required' | null);
     tool_allowlist?: (Array<(string)> | null);
-    tool_choice?: (string | null);
+    tool_choice?: (string | {
+    [key: string]: unknown;
+} | null);
+    max_tool_calls?: (number | null);
+    builtin?: (Array<{
+    [key: string]: unknown;
+}> | null);
+    mcp?: ({
+    [key: string]: unknown;
+} | null);
 };
 
 /**
@@ -2041,6 +2096,21 @@ export type RoomAgentSettingsPublic = {
      * Null for room-wide defaults; set for per-agent overrides.
      */
     agent_slug?: (string | null);
+    /**
+     * Optional bound PromptConfig recipe for this room-scoped layer.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves the attached PromptConfig version for this room-scoped layer.
+     */
+    prompt_config_version_policy?: (string | null);
+    /**
+     * Pinned PromptConfig version when version policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
+    /**
+     * Optional inline PromptConfigDraft overlay applied after any attached PromptConfig reference.
+     */
     prompt_config?: ({
     [key: string]: unknown;
 } | null);
@@ -2058,6 +2128,9 @@ export type RoomAgentSettingsPublic = {
 };
 
 export type RoomAgentSettingsUpdate = {
+    prompt_config_id?: (string | null);
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    prompt_config_version_number?: (number | null);
     prompt_config?: ({
     [key: string]: unknown;
 } | null);
@@ -2548,6 +2621,56 @@ export type StoryValidationResult = {
     state_schema_validation?: (StateSchemaValidationResult | null);
 };
 
+export type TesserExamplesIndexResponse = {
+    path: string;
+    content: string;
+};
+
+export type TesserScriptHelpResponse = {
+    script_name: string;
+    help_text?: (string | null);
+    description?: (string | null);
+    input_schema?: {
+        [key: string]: unknown;
+    };
+};
+
+export type TesserScriptPublic = {
+    name: string;
+    description: string;
+    input_schema?: {
+        [key: string]: unknown;
+    };
+    help_text?: (string | null);
+    source_path?: (string | null);
+    kind?: (string | null);
+};
+
+export type TesserScriptRunRequest = {
+    script_input?: {
+        [key: string]: unknown;
+    };
+    room_id?: (string | null);
+    timeout_seconds?: number;
+};
+
+export type TesserScriptRunResponse = {
+    request_id?: (string | null);
+    script_name: string;
+    status: string;
+    render?: ({
+    [key: string]: unknown;
+} | null);
+    error?: (string | null);
+    completed_at?: (string | null);
+    worker_id?: (string | null);
+};
+
+export type TesserScriptsPublic = {
+    data: Array<TesserScriptPublic>;
+    count: number;
+};
+
 /**
  * API input for creating a theme binding.
  *
@@ -2920,6 +3043,18 @@ export type Type1Create = {
     deps_config?: ({
     [key: string]: unknown;
 } | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
     agent_metadata?: ({
     [key: string]: unknown;
 } | null);
@@ -2976,6 +3111,18 @@ export type Type1Update = {
     deps_config?: ({
     [key: string]: unknown;
 } | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
     agent_metadata?: ({
     [key: string]: unknown;
 } | null);
@@ -3035,6 +3182,18 @@ export type Type3Create = {
     deps_config?: ({
     [key: string]: unknown;
 } | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
     agent_metadata?: ({
     [key: string]: unknown;
 } | null);
@@ -3091,6 +3250,18 @@ export type Type3Update = {
     deps_config?: ({
     [key: string]: unknown;
 } | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
     agent_metadata?: ({
     [key: string]: unknown;
 } | null);
@@ -3278,6 +3449,9 @@ export type UserAgentConfigPublic = {
     deps_config?: ({
     [key: string]: unknown;
 } | null);
+    prompt_config_id?: (string | null);
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    prompt_config_version_number?: (number | null);
     agent_metadata?: ({
     [key: string]: unknown;
 } | null);
@@ -3708,6 +3882,13 @@ export type DemosPatchExistingDemoCompositionData = {
 
 export type DemosPatchExistingDemoCompositionResponse = (DemoPageCompositionPublic);
 
+export type DemosRenderDemoCanvasPanelData = {
+    demoConfigId: string;
+    requestBody: DemoCanvasRenderRequest;
+};
+
+export type DemosRenderDemoCanvasPanelResponse = (DemoCanvasRenderResponse);
+
 export type DemosListMyDemoSessionsData = {
     limit?: number;
     skip?: number;
@@ -4112,6 +4293,12 @@ export type PromptConfigsCreatePromptConfigData = {
 
 export type PromptConfigsCreatePromptConfigResponse = (PromptConfigPublic);
 
+export type PromptConfigsGetPromptConfigBySlugData = {
+    slug: string;
+};
+
+export type PromptConfigsGetPromptConfigBySlugResponse = (PromptConfigPublic);
+
 export type PromptConfigsGetPromptConfigData = {
     promptConfigId: string;
 };
@@ -4178,6 +4365,12 @@ export type PromptConfigsValidatePromptConfigPayloadData = {
 };
 
 export type PromptConfigsValidatePromptConfigPayloadResponse = (PromptConfigValidationResponse);
+
+export type PromptConfigsResolvePromptConfigPreviewData = {
+    requestBody: PromptConfigResolvePreviewRequest;
+};
+
+export type PromptConfigsResolvePromptConfigPreviewResponse = (PromptConfigResolvePreviewResponse);
 
 export type QualitiesReadQualitiesData = {
     limit?: number;
@@ -4707,6 +4900,23 @@ export type StorynodesCreateNodeChoiceFromNodeData = {
 };
 
 export type StorynodesCreateNodeChoiceFromNodeResponse = (NodeChoicePublic);
+
+export type TesserListScriptsResponse = (TesserScriptsPublic);
+
+export type TesserGetExamplesIndexResponse = (TesserExamplesIndexResponse);
+
+export type TesserGetScriptHelpData = {
+    scriptName: string;
+};
+
+export type TesserGetScriptHelpResponse = (TesserScriptHelpResponse);
+
+export type TesserRunScriptData = {
+    requestBody: TesserScriptRunRequest;
+    scriptName: string;
+};
+
+export type TesserRunScriptResponse = (TesserScriptRunResponse);
 
 export type ThemeBindingsGetMyBindingsData = {
     contextPrefix?: (string | null);
