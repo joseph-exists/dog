@@ -68,3 +68,11 @@
 [0.061ms] [rows:0] SELECT * FROM `two_factor` WHERE user_id = 5 ORDER BY `two_factor`.`id` LIMIT 1
 2026/02/28 23:34:27 gogs.io/gogs/internal/database/access_tokens.go:76 record not found
 [0.079ms] [rows:0] SELECT * FROM `access_token` WHERE uid = 5 AND name = "dog-alpha" ORDER BY `access_token`.`id` LIMIT 1
+2026/02/28 23:46:55 gogs.io/gogs/internal/database/users.go:667 record not found
+[0.146ms] [rows:0] SELECT * FROM `follow` WHERE user_id = 1 AND follow_id = 3 ORDER BY `follow`.`id` LIMIT 1
+2026/02/28 23:47:59 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.119ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-226eabe1-c035-4289-aa23-3535ad0c33a2" ORDER BY `repository`.`id` LIMIT 1
+2026/02/28 23:51:05 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.131ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-f1f16bb8-06e8-4330-8d13-bc0326dce73b" ORDER BY `repository`.`id` LIMIT 1
+2026/02/28 23:59:27 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.128ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-498231b8" ORDER BY `repository`.`id` LIMIT 1

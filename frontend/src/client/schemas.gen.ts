@@ -13524,6 +13524,165 @@ export const UserRegisterSchema = {
     title: 'UserRegister'
 } as const;
 
+export const UserRepoProvisionRequestSchema = {
+    properties: {
+        display_name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Display Name'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        is_private: {
+            type: 'boolean',
+            title: 'Is Private',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['display_name'],
+    title: 'UserRepoProvisionRequest',
+    description: 'Request payload for creating a user-visible repo.'
+} as const;
+
+export const UserRepoPublicSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Slug'
+        },
+        display_name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Display Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        gogs_repo_name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Gogs Repo Name'
+        },
+        gogs_repo_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Gogs Repo Id'
+        },
+        gogs_full_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Gogs Full Name'
+        },
+        gogs_html_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Gogs Html Url'
+        },
+        is_private: {
+            type: 'boolean',
+            title: 'Is Private',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner User Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'display_name', 'gogs_repo_name', 'id', 'owner_user_id', 'created_at', 'updated_at'],
+    title: 'UserRepoPublic',
+    description: 'Public API response model for a user-visible repo.'
+} as const;
+
+export const UserReposPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/UserRepoPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'UserReposPublic',
+    description: 'Collection response for user-visible repos.'
+} as const;
+
 export const UserRoomPanelConfigPublicSchema = {
     properties: {
         panels: {

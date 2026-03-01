@@ -1,10 +1,23 @@
 // src/components/Page/PageShell.tsx
 import { useEffect, useMemo, useState } from "react"
 
+import type {
+  AudiencePresentationSummary,
+  AudiencePresentationBlockContent,
+  PersonaManagerBlockContent,
+  PersonaRelationSummary,
+  PrimaryPersonaBlockContent,
+  RelationshipManagerBlockContent,
+  UserPageViewModel,
+  UserPersonaSummary,
+  UserWorkFeedItem,
+  WorkFeedBlockContent,
+} from "@/components/UserPage/types"
 import { usePageEditor } from "@/hooks/usePageEditor"
 import { BlockWrapper } from "./BlockWrapper"
 import {
   ActivityFeedBlock,
+  AudiencePresentationBlock,
   BioBlock,
   ChartBlock,
   ContactBlock,
@@ -13,12 +26,16 @@ import {
   GalleryBlock,
   IdentityBlock,
   LinksBlock,
+  PersonaManagerBlock,
   PersonasBlock,
+  PrimaryPersonaBlock,
   ProfileImageBlock,
   QualitiesBlock,
+  RelationshipManagerBlock,
   RelationshipsBlock,
   TraitsBlock,
   UsedByBlock,
+  WorkFeedBlock,
 } from "./blocks"
 import { BlockEditorSheet, BlockPalette } from "./editor"
 import { PageHeader } from "./PageHeader"
@@ -30,6 +47,8 @@ interface PageShellProps {
   entityId: string
   isOwner: boolean
   onDelete?: () => void
+  entityNameOverride?: string
+  userPageViewModel?: UserPageViewModel
 }
 
 /**
@@ -43,6 +62,8 @@ export function PageShell({
   entityId,
   isOwner,
   onDelete,
+  entityNameOverride,
+  userPageViewModel,
 }: PageShellProps) {
   const [paletteOpen, setPaletteOpen] = useState(true)
   const [targetColumn, setTargetColumn] = useState<"primary" | "auxiliary">(
@@ -70,11 +91,12 @@ export function PageShell({
 
   // Compute entity name from identity block content
   const entityName = useMemo(() => {
+    if (entityNameOverride) return entityNameOverride
     if (!blocks) return "Page"
     const identityBlock = blocks.find((b) => b.type === "identity")
     const name = identityBlock?.content?.name as string | undefined
     return name || "Untitled Page"
-  }, [blocks])
+  }, [blocks, entityNameOverride])
 
   // Warn user about unsaved changes when leaving the page
   useEffect(() => {
@@ -167,6 +189,29 @@ export function PageShell({
     const config = block.config
     // Content is stored as Record<string, unknown>, blocks handle missing fields gracefully
     const content = block.content as Record<string, unknown> | undefined
+    const updateCurrentBlockContent = (nextContent: Record<string, unknown>) => {
+      if (!block.id) return
+      updateBlockContent(block.id, nextContent)
+    }
+    const updatePrimaryPersonaContent = (nextContent: Record<string, unknown>) => {
+      const primaryBlock = blocks?.find((candidate) => candidate.type === "primaryPersona")
+      if (!primaryBlock?.id) return
+      updateBlockContent(primaryBlock.id, nextContent)
+    }
+    const updatePrimaryPersonaTyped = (nextContent: PrimaryPersonaBlockContent) =>
+      updateCurrentBlockContent(nextContent as Record<string, unknown>)
+    const updatePrimaryGlobalTyped = (nextContent: PrimaryPersonaBlockContent) =>
+      updatePrimaryPersonaContent(nextContent as Record<string, unknown>)
+    const updateWorkFeedTyped = (nextContent: WorkFeedBlockContent) =>
+      updateCurrentBlockContent(nextContent as Record<string, unknown>)
+    const updatePersonaManagerTyped = (nextContent: PersonaManagerBlockContent) =>
+      updateCurrentBlockContent(nextContent as Record<string, unknown>)
+    const updateAudiencePresentationTyped = (
+      nextContent: AudiencePresentationBlockContent,
+    ) => updateCurrentBlockContent(nextContent as Record<string, unknown>)
+    const updateRelationshipManagerTyped = (
+      nextContent: RelationshipManagerBlockContent,
+    ) => updateCurrentBlockContent(nextContent as Record<string, unknown>)
 
     const blockContent = (() => {
       switch (block.type) {
@@ -370,6 +415,129 @@ export function PageShell({
               entityType={entityType}
               entityId={entityId}
               isEditing={isEditing}
+            />
+          )
+
+        case "primaryPersona":
+          return (
+            <PrimaryPersonaBlock
+              config={{
+                allowUnset: (config.allowUnset as boolean) ?? true,
+                emphasizeOptionality:
+                  (config.emphasizeOptionality as boolean) ?? true,
+              }}
+              content={
+                content
+                  ? {
+                      primaryPersonaId: (content.primaryPersonaId as string | null) ?? null,
+                      explanation: content.explanation as string | undefined,
+                    }
+                  : undefined
+              }
+              viewModel={userPageViewModel}
+              entityId={entityId}
+              isOwner={isOwner}
+              isEditing={isEditing}
+              onContentChange={updatePrimaryPersonaTyped}
+            />
+          )
+
+        case "workFeed":
+          return (
+            <WorkFeedBlock
+              config={{
+                layout: "stack",
+                maxVisible: (config.maxVisible as number) ?? 8,
+                showPersonaBadges:
+                  (config.showPersonaBadges as boolean) ?? true,
+                showAudienceBadges:
+                  (config.showAudienceBadges as boolean) ?? true,
+              }}
+              content={
+                content
+                  ? {
+                      title: content.title as string | undefined,
+                      emptyMessage: content.emptyMessage as string | undefined,
+                      items: (content.items as UserWorkFeedItem[]) ?? [],
+                    }
+                  : undefined
+              }
+              viewModel={userPageViewModel}
+              isEditing={isEditing}
+              entityId={entityId}
+              onContentChange={updateWorkFeedTyped}
+            />
+          )
+
+        case "personaManager":
+          return (
+            <PersonaManagerBlock
+              config={{
+                allowCreate: (config.allowCreate as boolean) ?? true,
+                allowPrimarySelection:
+                  (config.allowPrimarySelection as boolean) ?? true,
+                allowPublishing: (config.allowPublishing as boolean) ?? true,
+                allowTagEditing: (config.allowTagEditing as boolean) ?? true,
+              }}
+              content={
+                content
+                  ? {
+                      personas: (content.personas as UserPersonaSummary[]) ?? [],
+                    }
+                  : undefined
+              }
+              viewModel={userPageViewModel}
+              isEditing={isEditing}
+              entityId={entityId}
+              onContentChange={updatePersonaManagerTyped}
+              onPrimaryPersonaChange={updatePrimaryGlobalTyped}
+            />
+          )
+
+        case "audiencePresentation":
+          return (
+            <AudiencePresentationBlock
+              config={{
+                allowAudienceSwitching:
+                  (config.allowAudienceSwitching as boolean) ?? true,
+                showPreviewCards:
+                  (config.showPreviewCards as boolean) ?? true,
+              }}
+              content={
+                content
+                  ? {
+                      presentations:
+                        (content.presentations as AudiencePresentationSummary[]) ??
+                        [],
+                    }
+                  : undefined
+              }
+              viewModel={userPageViewModel}
+              isEditing={isEditing}
+              entityId={entityId}
+              onContentChange={updateAudiencePresentationTyped}
+            />
+          )
+
+        case "relationshipManager":
+          return (
+            <RelationshipManagerBlock
+              config={{
+                allowCreate: (config.allowCreate as boolean) ?? true,
+                allowEditing: (config.allowEditing as boolean) ?? true,
+                audienceScoped: (config.audienceScoped as boolean) ?? true,
+              }}
+              content={
+                content
+                  ? {
+                      relations: (content.relations as PersonaRelationSummary[]) ?? [],
+                    }
+                  : undefined
+              }
+              viewModel={userPageViewModel}
+              isEditing={isEditing}
+              entityId={entityId}
+              onContentChange={updateRelationshipManagerTyped}
             />
           )
 

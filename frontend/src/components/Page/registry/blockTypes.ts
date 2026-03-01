@@ -4,6 +4,8 @@ import type { LucideIcon } from "lucide-react"
 import {
   Activity,
   BarChart,
+  BriefcaseBusiness,
+  Eye,
   FileText,
   Gem,
   Globe,
@@ -43,6 +45,11 @@ export type BlockType =
   | "traits"
   | "qualities"
   | "usedBy"
+  | "workFeed"
+  | "personaManager"
+  | "audiencePresentation"
+  | "relationshipManager"
+  | "primaryPersona"
 
 /**
  * Configuration field types for block settings.
@@ -223,6 +230,79 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
       showAddButton: true,
     },
     defaultContent: {},
+  },
+  {
+    type: "primaryPersona",
+    label: "Primary Persona",
+    description: "Show and manage the explicit primary persona for this user",
+    icon: UserCircle,
+    defaultConfig: {
+      allowUnset: true,
+      emphasizeOptionality: true,
+    },
+    defaultContent: {
+      primaryPersonaId: null,
+      explanation: "",
+    },
+  },
+  {
+    type: "workFeed",
+    label: "Work Feed",
+    description: "Display representative work associated with user personas",
+    icon: BriefcaseBusiness,
+    defaultConfig: {
+      layout: "stack",
+      maxVisible: 8,
+      showPersonaBadges: true,
+      showAudienceBadges: true,
+    },
+    defaultContent: {
+      title: "Work Flow",
+      emptyMessage: "",
+      items: [],
+    },
+  },
+  {
+    type: "personaManager",
+    label: "Persona Manager",
+    description: "Create, edit, and publish user personas",
+    icon: Smile,
+    defaultConfig: {
+      allowCreate: true,
+      allowPrimarySelection: true,
+      allowPublishing: true,
+      allowTagEditing: true,
+    },
+    defaultContent: {
+      personas: [],
+    },
+  },
+  {
+    type: "audiencePresentation",
+    label: "Audience Presentation",
+    description: "Manage what different audiences see through specific personas",
+    icon: Eye,
+    defaultConfig: {
+      allowAudienceSwitching: true,
+      showPreviewCards: true,
+    },
+    defaultContent: {
+      presentations: [],
+    },
+  },
+  {
+    type: "relationshipManager",
+    label: "Relationship Manager",
+    description: "Manage persona-mediated relations",
+    icon: Users,
+    defaultConfig: {
+      allowCreate: true,
+      allowEditing: true,
+      audienceScoped: true,
+    },
+    defaultContent: {
+      relations: [],
+    },
   },
   {
     type: "domains",

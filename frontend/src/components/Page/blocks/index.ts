@@ -6,8 +6,13 @@ export type {
   ActivityFeedContent,
   ActivityItem,
 } from "./ActivityFeedBlock"
+export type {
+  AudiencePresentationBlockConfig,
+  AudiencePresentationBlockProps,
+} from "./AudiencePresentationBlock"
 // Activity Feed Block
 export { ActivityFeedBlock } from "./ActivityFeedBlock"
+export { AudiencePresentationBlock } from "./AudiencePresentationBlock"
 export type {
   BioBlockConfig,
   BioBlockProps,
@@ -71,8 +76,18 @@ export type {
   PersonasBlockConfig,
   PersonasBlockProps,
 } from "./PersonasBlock"
+export type {
+  PersonaManagerBlockConfig,
+  PersonaManagerBlockProps,
+} from "./PersonaManagerBlock"
 // Personas Block
 export { PersonasBlock } from "./PersonasBlock"
+export { PersonaManagerBlock } from "./PersonaManagerBlock"
+export type {
+  PrimaryPersonaBlockConfig,
+  PrimaryPersonaBlockProps,
+} from "./PrimaryPersonaBlock"
+export { PrimaryPersonaBlock } from "./PrimaryPersonaBlock"
 export type {
   ProfileImageBlockConfig,
   ProfileImageBlockProps,
@@ -94,8 +109,13 @@ export type {
   RelationshipsBlockProps,
   RelationshipsContent,
 } from "./RelationshipsBlock"
+export type {
+  RelationshipManagerBlockConfig,
+  RelationshipManagerBlockProps,
+} from "./RelationshipManagerBlock"
 // Relationships Block
 export { RelationshipsBlock } from "./RelationshipsBlock"
+export { RelationshipManagerBlock } from "./RelationshipManagerBlock"
 export type {
   TraitItem,
   TraitsBlockConfig,
@@ -108,5 +128,7 @@ export type {
   UsedByBlockConfig,
   UsedByBlockProps,
 } from "./UsedByBlock"
+export type { WorkFeedBlockConfig, WorkFeedBlockProps } from "./WorkFeedBlock"
 // Used By Block
 export { UsedByBlock } from "./UsedByBlock"
+export { WorkFeedBlock } from "./WorkFeedBlock"

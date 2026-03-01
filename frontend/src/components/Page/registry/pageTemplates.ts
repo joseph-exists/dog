@@ -62,6 +62,97 @@ export interface PageTemplate {
  */
 export const pageTemplates: PageTemplate[] = [
   {
+    id: "user",
+    label: "User Work Surface",
+    description:
+      "A user-centered layout for work flow, persona management, audience views, and relations",
+    forEntityTypes: ["user"],
+    defaultBlocks: [
+      {
+        id: "template-user-identity",
+        type: "identity",
+        column: "primary",
+        order: 1,
+        config: { showTagline: true },
+        content: { name: "", tagline: "" },
+        visibility: "visible",
+      },
+      {
+        id: "template-user-bio",
+        type: "bio",
+        column: "primary",
+        order: 2,
+        config: { allowRichText: true },
+        content: { text: "" },
+        visibility: "visible",
+      },
+      {
+        id: "template-user-primary-persona",
+        type: "primaryPersona",
+        column: "primary",
+        order: 3,
+        config: { allowUnset: true, emphasizeOptionality: true },
+        content: {
+          primaryPersonaId: null,
+          explanation:
+            "A primary persona can orient the page while remaining optional and explicit.",
+        },
+        visibility: "visible",
+      },
+      {
+        id: "template-user-work-feed",
+        type: "workFeed",
+        column: "primary",
+        order: 4,
+        config: {
+          layout: "stack",
+          maxVisible: 8,
+          showPersonaBadges: true,
+          showAudienceBadges: true,
+        },
+        content: {
+          title: "Work Flow",
+          emptyMessage:
+            "No work has been associated with this page yet. Enter edit mode to start shaping the flow.",
+          items: [],
+        },
+        visibility: "visible",
+      },
+      {
+        id: "template-user-audience-presentation",
+        type: "audiencePresentation",
+        column: "primary",
+        order: 5,
+        config: { allowAudienceSwitching: true, showPreviewCards: true },
+        content: { presentations: [] },
+        visibility: "visible",
+      },
+      {
+        id: "template-user-persona-manager",
+        type: "personaManager",
+        column: "auxiliary",
+        order: 1,
+        config: {
+          allowCreate: true,
+          allowPrimarySelection: true,
+          allowPublishing: true,
+          allowTagEditing: true,
+        },
+        content: { personas: [] },
+        visibility: "visible",
+      },
+      {
+        id: "template-user-relationship-manager",
+        type: "relationshipManager",
+        column: "auxiliary",
+        order: 2,
+        config: { allowCreate: true, allowEditing: true, audienceScoped: true },
+        content: { relations: [] },
+        visibility: "visible",
+      },
+    ],
+  },
+  {
     id: "standard",
     label: "Standard Profile",
     description:

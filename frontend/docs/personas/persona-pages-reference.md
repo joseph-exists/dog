@@ -65,7 +65,7 @@
 
 ### PersonaPublic Shape
 
-[josep-note: see extended note on this definition below. I am moving very quickly away from the domain language, this will be refactored in very near future]
+[josep-note: see extended note on this definition below. I am moving very quickly away from the domain language, this may be refactored in very near future]
 
 ```typescript
 {

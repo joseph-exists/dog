@@ -3562,6 +3562,42 @@ export type UserRegister = {
 };
 
 /**
+ * Request payload for creating a user-visible repo.
+ */
+export type UserRepoProvisionRequest = {
+    display_name: string;
+    slug?: (string | null);
+    description?: (string | null);
+    is_private?: boolean;
+};
+
+/**
+ * Public API response model for a user-visible repo.
+ */
+export type UserRepoPublic = {
+    slug: string;
+    display_name: string;
+    description?: (string | null);
+    gogs_repo_name: string;
+    gogs_repo_id?: (number | null);
+    gogs_full_name?: (string | null);
+    gogs_html_url?: (string | null);
+    is_private?: boolean;
+    id: string;
+    owner_user_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Collection response for user-visible repos.
+ */
+export type UserReposPublic = {
+    data: Array<UserRepoPublic>;
+    count: number;
+};
+
+/**
  * Public response for user panel config
  */
 export type UserRoomPanelConfigPublic = {
@@ -5165,6 +5201,20 @@ export type UserPersonasDeleteUserPersonaData = {
 };
 
 export type UserPersonasDeleteUserPersonaResponse = (Message);
+
+export type UserReposListUserReposResponse = (UserReposPublic);
+
+export type UserReposCreateUserRepoData = {
+    requestBody: UserRepoProvisionRequest;
+};
+
+export type UserReposCreateUserRepoResponse = (UserRepoPublic);
+
+export type UserReposGetUserRepoData = {
+    repoId: string;
+};
+
+export type UserReposGetUserRepoResponse = (UserRepoPublic);
 
 export type UsersReadUsersData = {
     limit?: number;

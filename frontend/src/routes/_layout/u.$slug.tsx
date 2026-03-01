@@ -8,7 +8,7 @@ import { CreatePageDialog, PageShell } from "@/components/Page"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
-import { usePageEditor } from "@/hooks/usePageEditor"
+import { useUserPageViewModel } from "@/hooks/useUserPageViewModel"
 
 export const Route = createFileRoute("/_layout/u/$slug")({
   component: UserPage,
@@ -25,19 +25,30 @@ function UserPage() {
   const [isCreating, setIsCreating] = useState(false)
 
   // For now, treat slug as userId directly
-  // TODO: Add slug-to-userId resolution service
+  // TODO: review adding slug-to-userId resolution service
+  // TODO: review adding coolname/regenerate for slug - if UserID is immutable, maybe slug can be ephemeral -
+  // TODO: and maybe slug ephemerality presents affordances for privacy/persona system
   const userId = slug
 
   // Determine ownership
   const isOwner = user?.id === userId
 
-  // Use the page editor hook to check page existence
-  const { isLoading, pageExists, createPage } = usePageEditor("user", userId)
+  const { isLoading, pageExists, createPage, viewModel } =
+    useUserPageViewModel(slug)
 
   const handleCreatePage = async (templateId: string) => {
     setIsCreating(true)
     try {
-      await createPage(templateId)
+      await createPage(templateId, {
+        identity: {
+          name: user?.full_name || user?.email || slug,
+          tagline: "A work-centered user surface shaped through personas.",
+        },
+        bio: {
+          text:
+            "This page organizes work, personas, audience views, and relations without collapsing them into a single static identity.",
+        },
+      })
       setShowCreateDialog(false)
     } finally {
       setIsCreating(false)
@@ -124,6 +135,10 @@ function UserPage() {
       entityId={userId}
       isOwner={isOwner}
       onDelete={handleDelete}
+      entityNameOverride={
+        isOwner ? user?.full_name || user?.email || slug : undefined
+      }
+      userPageViewModel={viewModel}
     />
   )
 }
