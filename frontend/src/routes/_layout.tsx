@@ -29,18 +29,20 @@ export const Route = createFileRoute("/_layout")({
 
 /** Map route paths to display titles */
 const routeTitles: Record<string, string> = {
-  "/": "Dashingboard",
-  "/stories": "Stories",
-  "/rooms": "Rooms",
-  "/agents": "Agents",
-  "/story": "Story",
-  "/personas": "Personas",
+  "/": "Das Bord",
+  "/stories": "Stories Authoring",
+  "/rooms": "Rooms Looking At",
+  "/agents": "Agents Reviewing",
+  "/story": "Story Reading",
+  "/personas": "Personas Managing",
   "/persona": "Persona",
   "/items": "Items",
   "/u": "Profile",
   "/admin": "Admin",
   "/settings": "Settings",
-  "/demo": "Demo",
+  "/demos": "Demos Pagings",
+  "/demo-builder": "DEMOS BILDERDAMMERUNG",
+  "/prompt-builder": "PARTI PROMPTINGS",
   "/content-renderer-demo": "Content Demo",
 }
 
@@ -67,7 +69,7 @@ function Layout() {
     Object.entries(routeTitles).find(
       ([path]) => currentPath.startsWith(path) && path !== "/",
     )?.[1] ||
-    "Dashboard"
+    "Flamingo"
 
   // Check if this route needs full-bleed layout
   const isFullBleed = fullBleedRoutes.some((route) =>

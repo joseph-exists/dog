@@ -1,72 +1,84 @@
-import {
-  BookOpen,
-  Bot,
-  Briefcase,
-  Crown,
-  Gem,
-  Home,
-  MessageSquare,
-  Smile,
-  Sparkles,
-  User2,
-  Users,
-} from "lucide-react"
 
-import { SidebarAppearance } from "@/components/Common/Appearance"
-import { Logo } from "@/components/Common/Logo"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-} from "@/components/ui/sidebar"
-import useAuth from "@/hooks/useAuth"
-import { type Item, Main } from "./Main"
-import { User } from "./User"
+// DEPRECATED: real/new version at // src/components/Common/Sidebar/AppSidebar.tsx
+// this to be deleted next time it's seen post 3/10
 
-const baseItems: Item[] = [
-  { icon: Home, title: "Dashboard", path: "/" },
-  { icon: BookOpen, title: "Creative Desk", path: "/stories" },
-  { icon: MessageSquare, title: "Rooms", path: "/rooms" },
-  { icon: Bot, title: "Agents", path: "/agents" },
-  { icon: Smile, title: "Personas", path: "/personas" },
-  { icon: Crown, title: "Archetypes", path: "/archetypes" },
-  { icon: Gem, title: "Qualities", path: "/qualities" },
-  { icon: Sparkles, title: "Traits", path: "/traits" },
-  { icon: Briefcase, title: "Items", path: "/items" },
-  { icon: BookOpen, title: "debug-chatster", path: "/chatster" },
-]
 
-export function AppSidebar() {
-  const { user: currentUser } = useAuth()
+// import {
+//   BookOpen,
+//   Bot,
+//   Briefcase,
+//   Crown,
+//   Gem,
+//   GrapeIcon,
+//   Home,
+//   MessageSquare,
+//   MonitorSpeaker,
+//   MoonStar,
+//   Smile,
+//   Sparkles,
+//   User2,
+//   Users,
+// } from "lucide-react"
 
-  // Build items list based on user state
-  const items: Item[] = [...baseItems]
+// import { SidebarAppearance } from "@/components/Common/Appearance"
+// import { Logo } from "@/components/Common/Logo"
+// import {
+//   Sidebar,
+//   SidebarContent,
+//   SidebarFooter,
+//   SidebarHeader,
+// } from "@/components/ui/sidebar"
+// import useAuth from "@/hooks/useAuth"
+// import { type Item, Main } from "./Main"
+// import { User } from "./User"
 
-  // Add "My Page" only for authenticated users
-  if (currentUser?.id) {
-    items.push({ icon: User2, title: "My Page", path: `/u/${currentUser.id}` })
-  }
+// const baseItems: Item[] = [
+//   { icon: Home, title: "Dashboard", path: "/" },
+//   { icon: BookOpen, title: "Creative Desk", path: "/stories" },
+//   { icon: MessageSquare, title: "Rooms", path: "/rooms" },
+//   { icon: Bot, title: "Agents", path: "/agents" },
+//   { icon: Smile, title: "Personas", path: "/personas" },
+//   { icon: Crown, title: "Archetypes", path: "/archetypes" },
+//   { icon: Gem, title: "Qualities", path: "/qualities" },
+//   { icon: Sparkles, title: "Traits", path: "/traits" },
+//   { icon: Briefcase, title: "Items", path: "/items" },
+//   { icon: BookOpen, title: "debug-chatster", path: "/chatster" },
+//   { icon: GrapeIcon, title: "prompt builder", path: "/prompt-builder"},
+//   { icon: MonitorSpeaker, title: "demo builder", path: "/demo-builder"},
+//   { icon: MoonStar, title: "demo library", path: "/demos"},
+//   // { icon: RadicalIcon, title: "repo library", path: "/repos"}
+// ]
 
-  // Add Admin for superusers
-  if (currentUser?.is_superuser) {
-    items.push({ icon: Users, title: "Admin", path: "/admin" })
-  }
+// export function AppSidebar() {
+//   const { user: currentUser } = useAuth()
 
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="px-4 py-6 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:items-center">
-        <Logo variant="responsive" />
-      </SidebarHeader>
-      <SidebarContent>
-        <Main items={items} />
-      </SidebarContent>
-      <SidebarFooter>
-        <SidebarAppearance />
-        <User user={currentUser} />
-      </SidebarFooter>
-    </Sidebar>
-  )
-}
+//   // Build items list based on user state
+//   const items: Item[] = [...baseItems]
 
-export default AppSidebar
+//   // Add "My Page" only for authenticated users
+//   if (currentUser?.id) {
+//     items.push({ icon: User2, title: "My Page", path: `/u/${currentUser.id}` })
+//   }
+
+//   // Add Admin for superusers
+//   if (currentUser?.is_superuser) {
+//     items.push({ icon: Users, title: "Admin", path: "/admin" })
+//   }
+
+//   return (
+//     <Sidebar collapsible="icon">
+//       <SidebarHeader className="px-4 py-6 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:items-center">
+//         <Logo variant="responsive" />
+//       </SidebarHeader>
+//       <SidebarContent>
+//         <Main items={items} />
+//       </SidebarContent>
+//       <SidebarFooter>
+//         <SidebarAppearance />
+//         <User user={currentUser} />
+//       </SidebarFooter>
+//     </Sidebar>
+//   )
+// }
+
+// export default AppSidebar

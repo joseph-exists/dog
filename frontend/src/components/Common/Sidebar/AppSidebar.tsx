@@ -15,6 +15,9 @@ import {
   Sparkles,
   User2,
   Users,
+  GrapeIcon,
+  MonitorSpeaker,
+  MoonStar,
 } from "lucide-react"
 import { Logo } from "@/components/Common/Logo"
 import { Sidebar } from "@/components/ui/sidebar"
@@ -59,6 +62,9 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     path: "/chatster",
     icon: IconRobotFace,
   },
+  { id: "prompt-builder", icon: GrapeIcon, title: "prompt builder", path: "/prompt-builder"},
+  { id: "demo-builder", icon: MonitorSpeaker, title: "demo builder", path: "/demo-builder"},
+  { id: "demo-library", icon: MoonStar, title: "demo library", path: "/demos"},
 ]
 
 // ============================================================================

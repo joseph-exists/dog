@@ -23,6 +23,7 @@ import { Route as LayoutQualitiesRouteImport } from './routes/_layout/qualities'
 import { Route as LayoutPromptBuilderRouteImport } from './routes/_layout/prompt-builder'
 import { Route as LayoutPersonasRouteImport } from './routes/_layout/personas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
+import { Route as LayoutDemosRouteImport } from './routes/_layout/demos'
 import { Route as LayoutDemoBuilderRouteImport } from './routes/_layout/demo-builder'
 import { Route as LayoutChatsterRouteImport } from './routes/_layout/chatster'
 import { Route as LayoutArchetypesRouteImport } from './routes/_layout/archetypes'
@@ -112,6 +113,11 @@ const LayoutPersonasRoute = LayoutPersonasRouteImport.update({
 const LayoutItemsRoute = LayoutItemsRouteImport.update({
   id: '/items',
   path: '/items',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDemosRoute = LayoutDemosRouteImport.update({
+  id: '/demos',
+  path: '/demos',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutDemoBuilderRoute = LayoutDemoBuilderRouteImport.update({
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/archetypes': typeof LayoutArchetypesRoute
   '/chatster': typeof LayoutChatsterRoute
   '/demo-builder': typeof LayoutDemoBuilderRoute
+  '/demos': typeof LayoutDemosRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
   '/prompt-builder': typeof LayoutPromptBuilderRoute
@@ -268,6 +275,7 @@ export interface FileRoutesByTo {
   '/archetypes': typeof LayoutArchetypesRoute
   '/chatster': typeof LayoutChatsterRoute
   '/demo-builder': typeof LayoutDemoBuilderRoute
+  '/demos': typeof LayoutDemosRoute
   '/items': typeof LayoutItemsRoute
   '/personas': typeof LayoutPersonasRoute
   '/prompt-builder': typeof LayoutPromptBuilderRoute
@@ -305,6 +313,7 @@ export interface FileRoutesById {
   '/_layout/archetypes': typeof LayoutArchetypesRoute
   '/_layout/chatster': typeof LayoutChatsterRoute
   '/_layout/demo-builder': typeof LayoutDemoBuilderRoute
+  '/_layout/demos': typeof LayoutDemosRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/personas': typeof LayoutPersonasRoute
   '/_layout/prompt-builder': typeof LayoutPromptBuilderRoute
@@ -344,6 +353,7 @@ export interface FileRouteTypes {
     | '/archetypes'
     | '/chatster'
     | '/demo-builder'
+    | '/demos'
     | '/items'
     | '/personas'
     | '/prompt-builder'
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
     | '/archetypes'
     | '/chatster'
     | '/demo-builder'
+    | '/demos'
     | '/items'
     | '/personas'
     | '/prompt-builder'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/_layout/archetypes'
     | '/_layout/chatster'
     | '/_layout/demo-builder'
+    | '/_layout/demos'
     | '/_layout/items'
     | '/_layout/personas'
     | '/_layout/prompt-builder'
@@ -548,6 +560,13 @@ declare module '@tanstack/react-router' {
       path: '/items'
       fullPath: '/items'
       preLoaderRoute: typeof LayoutItemsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/demos': {
+      id: '/_layout/demos'
+      path: '/demos'
+      fullPath: '/demos'
+      preLoaderRoute: typeof LayoutDemosRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/demo-builder': {
@@ -720,6 +739,7 @@ interface LayoutRouteChildren {
   LayoutArchetypesRoute: typeof LayoutArchetypesRoute
   LayoutChatsterRoute: typeof LayoutChatsterRoute
   LayoutDemoBuilderRoute: typeof LayoutDemoBuilderRoute
+  LayoutDemosRoute: typeof LayoutDemosRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutPersonasRoute: typeof LayoutPersonasRoute
   LayoutPromptBuilderRoute: typeof LayoutPromptBuilderRoute
@@ -751,6 +771,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutArchetypesRoute: LayoutArchetypesRoute,
   LayoutChatsterRoute: LayoutChatsterRoute,
   LayoutDemoBuilderRoute: LayoutDemoBuilderRoute,
+  LayoutDemosRoute: LayoutDemosRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutPersonasRoute: LayoutPersonasRoute,
   LayoutPromptBuilderRoute: LayoutPromptBuilderRoute,
