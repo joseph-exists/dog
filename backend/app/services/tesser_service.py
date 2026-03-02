@@ -126,6 +126,38 @@ async def request_tesser(
     )
 
 
+async def enqueue_tesser(
+    *,
+    script_name: str,
+    script_input: dict[str, Any] | None = None,
+    room_id: str | None = None,
+    callback: dict[str, Any] | None = None,
+    timeout_seconds: float = 10.0,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "script_name": script_name,
+        "script_input": script_input or {},
+        "room_id": room_id,
+    }
+    if isinstance(callback, dict):
+        payload["callback"] = callback
+    return await _request_tesser_message(
+        request_type="tesser.script.enqueue.request",
+        payload=payload,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+async def get_tesser_job_status(
+    *, job_id: str, timeout_seconds: float = 10.0
+) -> dict[str, Any]:
+    return await _request_tesser_message(
+        request_type="tesser.script.status.request",
+        payload={"job_id": job_id},
+        timeout_seconds=timeout_seconds,
+    )
+
+
 async def request_tesser_svg(
     *,
     title: str,

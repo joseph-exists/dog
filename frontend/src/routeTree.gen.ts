@@ -41,6 +41,8 @@ import { Route as LayoutPersonaPersonaIdRouteImport } from './routes/_layout/per
 import { Route as LayoutDemoSlugRouteImport } from './routes/_layout/demo.$slug'
 import { Route as LayoutArchetypeArchetypeIdRouteImport } from './routes/_layout/archetype.$archetypeId'
 import { Route as LayoutAgentAgentIdRouteImport } from './routes/_layout/agent.$agentId'
+import { Route as LayoutUSlugIndexRouteImport } from './routes/_layout/u.$slug.index'
+import { Route as LayoutUSlugComposeRouteImport } from './routes/_layout/u.$slug.compose'
 import { Route as LayoutStoriesStoryIdEditRouteImport } from './routes/_layout/stories/$storyId/edit'
 
 const SignupRoute = SignupRouteImport.update({
@@ -203,6 +205,16 @@ const LayoutAgentAgentIdRoute = LayoutAgentAgentIdRouteImport.update({
   path: '/agent/$agentId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutUSlugIndexRoute = LayoutUSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutUSlugRoute,
+} as any)
+const LayoutUSlugComposeRoute = LayoutUSlugComposeRouteImport.update({
+  id: '/compose',
+  path: '/compose',
+  getParentRoute: () => LayoutUSlugRoute,
+} as any)
 const LayoutStoriesStoryIdEditRoute =
   LayoutStoriesStoryIdEditRouteImport.update({
     id: '/stories/$storyId/edit',
@@ -240,9 +252,11 @@ export interface FileRoutesByFullPath {
   '/story/$storyId': typeof LayoutStoryStoryIdRoute
   '/team/$slug': typeof LayoutTeamSlugRoute
   '/trait/$traitId': typeof LayoutTraitTraitIdRoute
-  '/u/$slug': typeof LayoutUSlugRoute
+  '/u/$slug': typeof LayoutUSlugRouteWithChildren
   '/stories/': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
+  '/u/$slug/compose': typeof LayoutUSlugComposeRoute
+  '/u/$slug/': typeof LayoutUSlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -274,9 +288,10 @@ export interface FileRoutesByTo {
   '/story/$storyId': typeof LayoutStoryStoryIdRoute
   '/team/$slug': typeof LayoutTeamSlugRoute
   '/trait/$traitId': typeof LayoutTraitTraitIdRoute
-  '/u/$slug': typeof LayoutUSlugRoute
   '/stories': typeof LayoutStoriesIndexRoute
   '/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
+  '/u/$slug/compose': typeof LayoutUSlugComposeRoute
+  '/u/$slug': typeof LayoutUSlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -310,9 +325,11 @@ export interface FileRoutesById {
   '/_layout/story_/$storyId': typeof LayoutStoryStoryIdRoute
   '/_layout/team/$slug': typeof LayoutTeamSlugRoute
   '/_layout/trait/$traitId': typeof LayoutTraitTraitIdRoute
-  '/_layout/u/$slug': typeof LayoutUSlugRoute
+  '/_layout/u/$slug': typeof LayoutUSlugRouteWithChildren
   '/_layout/stories/': typeof LayoutStoriesIndexRoute
   '/_layout/stories/$storyId/edit': typeof LayoutStoriesStoryIdEditRoute
+  '/_layout/u/$slug/compose': typeof LayoutUSlugComposeRoute
+  '/_layout/u/$slug/': typeof LayoutUSlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -349,6 +366,8 @@ export interface FileRouteTypes {
     | '/u/$slug'
     | '/stories/'
     | '/stories/$storyId/edit'
+    | '/u/$slug/compose'
+    | '/u/$slug/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -380,9 +399,10 @@ export interface FileRouteTypes {
     | '/story/$storyId'
     | '/team/$slug'
     | '/trait/$traitId'
-    | '/u/$slug'
     | '/stories'
     | '/stories/$storyId/edit'
+    | '/u/$slug/compose'
+    | '/u/$slug'
   id:
     | '__root__'
     | '/_layout'
@@ -418,6 +438,8 @@ export interface FileRouteTypes {
     | '/_layout/u/$slug'
     | '/_layout/stories/'
     | '/_layout/stories/$storyId/edit'
+    | '/_layout/u/$slug/compose'
+    | '/_layout/u/$slug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -654,6 +676,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAgentAgentIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/u/$slug/': {
+      id: '/_layout/u/$slug/'
+      path: '/'
+      fullPath: '/u/$slug/'
+      preLoaderRoute: typeof LayoutUSlugIndexRouteImport
+      parentRoute: typeof LayoutUSlugRoute
+    }
+    '/_layout/u/$slug/compose': {
+      id: '/_layout/u/$slug/compose'
+      path: '/compose'
+      fullPath: '/u/$slug/compose'
+      preLoaderRoute: typeof LayoutUSlugComposeRouteImport
+      parentRoute: typeof LayoutUSlugRoute
+    }
     '/_layout/stories/$storyId/edit': {
       id: '/_layout/stories/$storyId/edit'
       path: '/stories/$storyId/edit'
@@ -663,6 +699,20 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface LayoutUSlugRouteChildren {
+  LayoutUSlugComposeRoute: typeof LayoutUSlugComposeRoute
+  LayoutUSlugIndexRoute: typeof LayoutUSlugIndexRoute
+}
+
+const LayoutUSlugRouteChildren: LayoutUSlugRouteChildren = {
+  LayoutUSlugComposeRoute: LayoutUSlugComposeRoute,
+  LayoutUSlugIndexRoute: LayoutUSlugIndexRoute,
+}
+
+const LayoutUSlugRouteWithChildren = LayoutUSlugRoute._addFileChildren(
+  LayoutUSlugRouteChildren,
+)
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
@@ -690,7 +740,7 @@ interface LayoutRouteChildren {
   LayoutStoryStoryIdRoute: typeof LayoutStoryStoryIdRoute
   LayoutTeamSlugRoute: typeof LayoutTeamSlugRoute
   LayoutTraitTraitIdRoute: typeof LayoutTraitTraitIdRoute
-  LayoutUSlugRoute: typeof LayoutUSlugRoute
+  LayoutUSlugRoute: typeof LayoutUSlugRouteWithChildren
   LayoutStoriesIndexRoute: typeof LayoutStoriesIndexRoute
   LayoutStoriesStoryIdEditRoute: typeof LayoutStoriesStoryIdEditRoute
 }
@@ -721,7 +771,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutStoryStoryIdRoute: LayoutStoryStoryIdRoute,
   LayoutTeamSlugRoute: LayoutTeamSlugRoute,
   LayoutTraitTraitIdRoute: LayoutTraitTraitIdRoute,
-  LayoutUSlugRoute: LayoutUSlugRoute,
+  LayoutUSlugRoute: LayoutUSlugRouteWithChildren,
   LayoutStoriesIndexRoute: LayoutStoriesIndexRoute,
   LayoutStoriesStoryIdEditRoute: LayoutStoriesStoryIdEditRoute,
 }

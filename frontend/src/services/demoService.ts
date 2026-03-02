@@ -65,6 +65,23 @@ export interface DemoCanvasRenderResponse {
   shadow_commit_sha?: string | null
 }
 
+export interface DemoCanvasRenderJobResponse {
+  demo_config_id: string
+  panel_id: string
+  job_id: string
+  request_id?: string | null
+  script_name?: string | null
+  status: string
+  runtime_profile?: string | null
+  resolved_capabilities?: string[]
+  queued_at?: string | null
+  completed_at?: string | null
+  svg?: string | null
+  persisted: boolean
+  shadow_commit_sha?: string | null
+  error?: string | null
+}
+
 export interface TesserScript {
   name: string
   description: string
@@ -124,15 +141,26 @@ export const DemoService = {
     })
   },
 
-  async renderCanvasPanel(
+  async enqueueCanvasPanelRender(
     demoConfigId: string,
     payload: DemoCanvasRenderRequest,
-  ): Promise<DemoCanvasRenderResponse> {
-    const requestOptions: ApiRequestOptions<DemoCanvasRenderResponse> = {
+  ): Promise<DemoCanvasRenderJobResponse> {
+    const requestOptions: ApiRequestOptions<DemoCanvasRenderJobResponse> = {
       method: "POST",
-      url: `/api/v1/demos/configs/${demoConfigId}/canvas/render`,
+      url: `/api/v1/demos/configs/${demoConfigId}/canvas/render/enqueue`,
       body: payload,
       mediaType: "application/json",
+    }
+    return __request(OpenAPI, requestOptions)
+  },
+
+  async getCanvasRenderJobStatus(
+    demoConfigId: string,
+    jobId: string,
+  ): Promise<DemoCanvasRenderJobResponse> {
+    const requestOptions: ApiRequestOptions<DemoCanvasRenderJobResponse> = {
+      method: "GET",
+      url: `/api/v1/demos/configs/${demoConfigId}/canvas/render/jobs/${encodeURIComponent(jobId)}`,
     }
     return __request(OpenAPI, requestOptions)
   },

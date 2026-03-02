@@ -20,6 +20,8 @@ import {
   withTemplateSetupState,
 } from "@/components/Demo/builder/demoBuilderSchema"
 
+const VALID_STORY_ID = "11111111-1111-4111-8111-111111111111"
+
 test.describe("demoBuilderSchema normalization", () => {
   test("createEmptyComposition returns canonical defaults", async () => {
     const composition = createEmptyComposition()
@@ -35,10 +37,10 @@ test.describe("demoBuilderSchema normalization", () => {
   test("normalizeComposition fills missing arrays and preserves provided values", async () => {
     const normalized = normalizeComposition({
       layout_mode: "tabs",
-      metadata_json: { story_id: "story-1" },
+      metadata_json: { story_id: VALID_STORY_ID },
     })
     expect(normalized.layout_mode).toBe("tabs")
-    expect(normalized.metadata_json).toEqual({ story_id: "story-1" })
+    expect(normalized.metadata_json).toEqual({ story_id: VALID_STORY_ID })
     expect(normalized.panels).toEqual([])
     expect(normalized.blocks).toEqual([])
   })
@@ -78,7 +80,7 @@ test.describe("demoBuilderSchema v2 field specs", () => {
     }
   })
 
-  test("template options expose the expected A/B/C/D/E/F/G entries", async () => {
+  test("template options expose the expected composition entries", async () => {
     expect(
       BUILDER_COMPOSITION_TEMPLATES.map((template) => template.id),
     ).toEqual([
@@ -86,9 +88,13 @@ test.describe("demoBuilderSchema v2 field specs", () => {
       "composition_b_runtime_coupled",
       "composition_c_visibility_semantics",
       "composition_d_stylized_agent_ops",
+      "composition_d1_enhanced_normal",
+      "composition_d2_enhanced_bonkers",
       "composition_e_tabs_content_studio",
       "composition_f_presentation_passthrough_audit",
       "composition_g_ux_style_matrix",
+      "composition_h_chaotic_combinatorics",
+      "composition_i_intensity",
     ])
   })
 })
@@ -106,13 +112,24 @@ test.describe("demoBuilderSchema semantic validation", () => {
 
   test("does not flag story-dependent panel when story_id is present", async () => {
     const composition = createEmptyComposition()
-    composition.metadata_json = { story_id: "story-1" }
+    composition.metadata_json = { story_id: VALID_STORY_ID }
     composition.panels = [createPanelTemplate("storyRuntime")]
 
     const issues = validateCompositionSemantics(composition)
     expect(
       issues.some((issue) => issue.code === "story_id_required"),
     ).toBeFalsy()
+  })
+
+  test("flags story-dependent panel when story_id is not a UUID", async () => {
+    const composition = createEmptyComposition()
+    composition.metadata_json = { story_id: "story-1" }
+    composition.panels = [createPanelTemplate("storyRuntime")]
+
+    const issues = validateCompositionSemantics(composition)
+    expect(
+      issues.some((issue) => issue.code === "story_id_required"),
+    ).toBeTruthy()
   })
 
   test("flags multiple page viewport panels", async () => {
@@ -141,7 +158,7 @@ test.describe("demoBuilderSchema semantic validation", () => {
     ).toBeTruthy()
   })
 
-  test("composition A template includes story/chat baseline and no error-level issues", async () => {
+  test("composition A template includes story/chat baseline and requires story setup", async () => {
     const composition = createCompositionTemplate("composition_a_baseline")
     const panelKinds = (composition.panels ?? []).map((panel) => panel.kind)
     const blockTypes = (composition.blocks ?? []).map((block) => block.type)
@@ -149,13 +166,13 @@ test.describe("demoBuilderSchema semantic validation", () => {
     expect(panelKinds).toEqual(expect.arrayContaining(["storyRuntime", "chat"]))
     expect(blockTypes).toEqual(expect.arrayContaining(["content"]))
     expect(
-      validateCompositionSemantics(composition).every(
-        (issue) => issue.severity !== "error",
+      validateCompositionSemantics(composition).some(
+        (issue) => issue.code === "story_id_required",
       ),
     ).toBeTruthy()
   })
 
-  test("composition B template includes runtime-coupled coverage and no error-level issues", async () => {
+  test("composition B template includes runtime-coupled coverage and requires story setup", async () => {
     const composition = createCompositionTemplate(
       "composition_b_runtime_coupled",
     )
@@ -169,13 +186,13 @@ test.describe("demoBuilderSchema semantic validation", () => {
       ]),
     )
     expect(
-      validateCompositionSemantics(composition).every(
-        (issue) => issue.severity !== "error",
+      validateCompositionSemantics(composition).some(
+        (issue) => issue.code === "story_id_required",
       ),
     ).toBeTruthy()
   })
 
-  test("composition C template applies explicit visibility permutations", async () => {
+  test("composition C template applies explicit visibility permutations and requires story setup", async () => {
     const composition = createCompositionTemplate(
       "composition_c_visibility_semantics",
     )
@@ -187,8 +204,8 @@ test.describe("demoBuilderSchema semantic validation", () => {
       expect.arrayContaining(["visible", "hidden_mounted", "hidden_unmounted"]),
     )
     expect(
-      validateCompositionSemantics(composition).every(
-        (issue) => issue.severity !== "error",
+      validateCompositionSemantics(composition).some(
+        (issue) => issue.code === "story_id_required",
       ),
     ).toBeTruthy()
   })
@@ -211,19 +228,14 @@ test.describe("demoBuilderSchema semantic validation", () => {
       }),
     )
     expect(metadata.template_id).toBe("composition_d_stylized_agent_ops")
-    expect(metadata.theme_title_hints).toEqual(
-      expect.objectContaining({
-        panel_theme_title: "qa-chat-neon",
-      }),
-    )
     expect(metadata.preloaded_participants).toEqual(
       expect.objectContaining({
         user_agent_config_ids: ["orchestrator", "coder", "analyst"],
       }),
     )
     expect(
-      validateCompositionSemantics(composition).every(
-        (issue) => issue.severity !== "error",
+      validateCompositionSemantics(composition).some(
+        (issue) => issue.code === "story_id_required",
       ),
     ).toBeTruthy()
   })
@@ -264,8 +276,8 @@ test.describe("demoBuilderSchema semantic validation", () => {
     expect(panelKinds).toEqual(new Set(ACTIVE_BUILDER_PANEL_KINDS))
     expect(blockTypes).toEqual(new Set(ACTIVE_BUILDER_BLOCK_TYPES))
     expect(
-      validateCompositionSemantics(composition).every(
-        (issue) => issue.severity !== "error",
+      validateCompositionSemantics(composition).some(
+        (issue) => issue.code === "story_id_required",
       ),
     ).toBeTruthy()
   })
@@ -293,8 +305,8 @@ test.describe("demoBuilderSchema semantic validation", () => {
     expect(presentation.motion).toBeTruthy()
     expect(presentation.backgrounds).toBeTruthy()
     expect(
-      validateCompositionSemantics(composition).every(
-        (issue) => issue.severity !== "error",
+      validateCompositionSemantics(composition).some(
+        (issue) => issue.code === "story_id_required",
       ),
     ).toBeTruthy()
   })
@@ -318,7 +330,7 @@ test.describe("demoBuilderSchema template checklist status", () => {
     ).toBeFalsy()
 
     const withStory = normalizeComposition(composition)
-    withStory.metadata_json = { story_id: "story-1" }
+    withStory.metadata_json = { story_id: VALID_STORY_ID }
     const resolvedStatus = resolveTemplateChecklistStatus({
       templateId: "composition_a_baseline",
       composition: withStory,

@@ -12,12 +12,14 @@ COPY --from=uv-bin /uvx /usr/local/bin/uvx
 COPY pyproject.toml uv.lock /app/
 COPY src /app/src
 COPY examples-other /app/examples-other
+COPY scripts/run_tesser_services.sh /app/scripts/run_tesser_services.sh
 
 RUN uv sync --frozen --no-dev --no-install-project
 RUN uv pip install --no-cache-dir 'redis>=5.0.0'
 
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /data/jobs /data/artifacts \
+    && chmod +x /app/scripts/run_tesser_services.sh \
     && chown -R appuser:appuser /app /data
 
 USER appuser
@@ -48,12 +50,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml uv.lock /app/
 COPY src /app/src
 COPY examples-other /app/examples-other
+COPY scripts/run_tesser_services.sh /app/scripts/run_tesser_services.sh
 
 RUN uv sync --frozen --no-dev --extra export --no-install-project
 RUN uv pip install --no-cache-dir 'redis>=5.0.0'
 
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /data/jobs /data/artifacts \
+    && chmod +x /app/scripts/run_tesser_services.sh \
     && chown -R appuser:appuser /app /data
 
 USER appuser
@@ -62,4 +66,4 @@ ENV PYTHONPATH="/app/src"
 ENV TESSERAX_JOBS_ROOT=/data/jobs
 ENV TESSERAX_ARTIFACTS_ROOT=/data/artifacts
 
-CMD ["python", "-m", "tesserax_service.worker", "--jobs-root", "/data/jobs", "--runtime-profile", "export"]
+CMD ["sh", "/app/scripts/run_tesser_services.sh"]

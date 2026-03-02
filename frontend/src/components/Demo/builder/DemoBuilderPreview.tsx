@@ -1,4 +1,5 @@
-import { useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo, useState } from "react"
 import { getRenderableDemoBlocks } from "@/components/Demo/blockVisibility"
 import {
   getBlockCapabilityByType,
@@ -29,6 +30,13 @@ import {
   type Content,
   ContentRenderer,
 } from "@/components/Page/primitives/ContentRenderer"
+import { useCanvasRenderJobEvents } from "@/hooks/useCanvasRenderJobEvents"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
+import { useRoomStream } from "@/hooks/useRoomStream"
+import {
+  DemoService,
+  type TesserScript,
+} from "@/services/demoService"
 import type { ThemeViewModel } from "@/services/themeService"
 
 function isRenderableContentPayload(value: unknown): value is Content {
@@ -51,8 +59,11 @@ function renderContentPayload(value: unknown, fallbackLabel: string) {
 }
 
 interface DemoBuilderPreviewProps {
+  demoConfigId?: string | null
+  demoSlug?: string | null
   composition: EditableComposition
   demoTitle: string
+  isDirty?: boolean
   availablePageThemes: ThemeViewModel[]
   availableCardThemes: ThemeViewModel[]
   onPageThemeChange: (themeId: string) => void
@@ -60,16 +71,29 @@ interface DemoBuilderPreviewProps {
 }
 
 export function DemoBuilderPreview({
+  demoConfigId = null,
+  demoSlug = null,
   composition,
   demoTitle,
+  isDirty = false,
   availablePageThemes,
   availableCardThemes,
   onPageThemeChange,
   onCardsThemeChange,
 }: DemoBuilderPreviewProps) {
-  const roomId = "preview-room"
+  const { handleRoomEvent, waitForJob } = useCanvasRenderJobEvents()
   const roomTitle = "Preview Room"
   const roomStoryId = getCompositionStoryId(composition)
+  const { data: previewSession } = useQuery({
+    queryKey: ["demo-builder", "preview-session", demoSlug],
+    queryFn: () => DemoService.resolveSessionForSlug(demoSlug ?? ""),
+    enabled: Boolean(demoSlug),
+  })
+  const roomId = previewSession?.room.room_id ?? "preview-room"
+  const { isConnected } = useRoomStream(previewSession?.room.room_id, {
+    enabled: Boolean(previewSession?.room.room_id),
+    onEvent: handleRoomEvent,
+  })
   const pageTheme = useMemo(
     () =>
       availablePageThemes.find(
@@ -88,6 +112,32 @@ export function DemoBuilderPreview({
     () => buildDemoThemeIndex(availablePageThemes, availableCardThemes),
     [availableCardThemes, availablePageThemes],
   )
+  const [canvasSvgOverrideByPanelId, setCanvasSvgOverrideByPanelId] = useState<
+    Record<string, string>
+  >({})
+  const [canvasRenderStateByPanelId, setCanvasRenderStateByPanelId] = useState<
+    Record<
+      string,
+      {
+        isRendering: boolean
+        status: string | null
+        error: string | null
+        lastJobId: string | null
+        lastRequestId: string | null
+        lastCommitSha: string | null
+        lastScriptName: string | null
+      }
+    >
+  >({})
+  const [tesserHelpByScriptName, setTesserHelpByScriptName] = useState<
+    Record<string, string>
+  >({})
+  const [tesserExamplesIndex, setTesserExamplesIndex] = useState<string | null>(null)
+  const { data: tesserScriptsPayload } = useQuery({
+    queryKey: ["demo-builder", "tesser", "scripts"],
+    queryFn: () => DemoService.listTesserScripts(),
+  })
+  const availableTesserScripts: TesserScript[] = tesserScriptsPayload?.data ?? []
   const compositionFrame = useMemo(
     () =>
       resolveDemoPresentationFrame({
@@ -101,14 +151,14 @@ export function DemoBuilderPreview({
 
   const basePanelContext = useMemo(
     (): DemoPanelRendererContext => ({
-      demoConfigId: "preview-demo-config",
+      demoConfigId: demoConfigId ?? "preview-demo-config",
       roomId,
       roomTitle,
       roomStoryId,
       canWrite: true,
       autoRespond: true,
       onSendMessage: () => {},
-      isConnected: false,
+      isConnected,
       sendViaWebSocket: () => {},
       streamingMessage: null,
       activeUsers: [],
@@ -125,11 +175,191 @@ export function DemoBuilderPreview({
       showInternalMessages: false,
       onToggleInternalMessages: () => {},
       renderContentPayload,
-      onRenderCanvas: async () => {},
-      canvasRenderStateByPanelId: {},
-      canvasSvgOverrideByPanelId: {},
+      onRenderCanvas: async (panelId, payload) => {
+        const nextScriptName = payload?.scriptName ?? "simple_svg"
+        if (!demoConfigId) {
+          const message = "Select and save a demo config before rendering canvas panels."
+          setCanvasRenderStateByPanelId((previous) => ({
+            ...previous,
+            [panelId]: {
+              isRendering: false,
+              status: null,
+              error: message,
+              lastJobId: previous[panelId]?.lastJobId ?? null,
+              lastRequestId: previous[panelId]?.lastRequestId ?? null,
+              lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
+              lastScriptName: nextScriptName,
+            },
+          }))
+          showErrorToast(message)
+          return
+        }
+        if (!previewSession?.room.room_id) {
+          const message = "Preview room is not ready for live canvas render events."
+          setCanvasRenderStateByPanelId((previous) => ({
+            ...previous,
+            [panelId]: {
+              isRendering: false,
+              status: null,
+              error: message,
+              lastJobId: previous[panelId]?.lastJobId ?? null,
+              lastRequestId: previous[panelId]?.lastRequestId ?? null,
+              lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
+              lastScriptName: nextScriptName,
+            },
+          }))
+          showErrorToast(message)
+          return
+        }
+        if (isDirty) {
+          const message =
+            "Save the demo composition before rendering canvas preview updates."
+          setCanvasRenderStateByPanelId((previous) => ({
+            ...previous,
+            [panelId]: {
+              isRendering: false,
+              status: null,
+              error: message,
+              lastJobId: previous[panelId]?.lastJobId ?? null,
+              lastRequestId: previous[panelId]?.lastRequestId ?? null,
+              lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
+              lastScriptName: nextScriptName,
+            },
+          }))
+          showErrorToast(message)
+          return
+        }
+        setCanvasRenderStateByPanelId((previous) => ({
+          ...previous,
+          [panelId]: {
+            isRendering: true,
+            status: "Queueing render...",
+            error: null,
+            lastJobId: previous[panelId]?.lastJobId ?? null,
+            lastRequestId: previous[panelId]?.lastRequestId ?? null,
+            lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
+            lastScriptName: nextScriptName,
+          },
+        }))
+        try {
+          const enqueueResponse = await DemoService.enqueueCanvasPanelRender(
+            demoConfigId,
+            {
+              panel_id: panelId,
+              script_name: nextScriptName,
+              script_input: payload?.scriptInput ?? {},
+              title: payload?.title ?? "Tesser Render",
+              subtitle: payload?.subtitle ?? null,
+              persist_to_composition: true,
+              commit_to_shadow_repo: false,
+            },
+          )
+          const enqueueStatus = enqueueResponse.status ?? "queued"
+          setCanvasRenderStateByPanelId((previous) => ({
+            ...previous,
+            [panelId]: {
+              isRendering: enqueueStatus === "queued" || enqueueStatus === "running",
+              status:
+                enqueueStatus === "queued"
+                  ? "Render queued..."
+                  : enqueueStatus === "running"
+                    ? "Rendering in worker..."
+                    : null,
+              error: null,
+              lastJobId: enqueueResponse.job_id ?? previous[panelId]?.lastJobId ?? null,
+              lastRequestId:
+                enqueueResponse.request_id ?? previous[panelId]?.lastRequestId ?? null,
+              lastCommitSha:
+                enqueueResponse.shadow_commit_sha ??
+                previous[panelId]?.lastCommitSha ??
+                null,
+              lastScriptName: nextScriptName,
+            },
+          }))
+          const terminalResponse =
+            enqueueStatus === "queued" || enqueueStatus === "running"
+              ? await waitForJob(enqueueResponse.job_id)
+              : enqueueResponse
+          if (terminalResponse.status !== "completed" || !terminalResponse.svg) {
+            throw new Error(
+              terminalResponse.error ||
+                `Canvas render ended with status '${terminalResponse.status}'.`,
+            )
+          }
+          setCanvasSvgOverrideByPanelId((previous) => ({
+            ...previous,
+            [panelId]: terminalResponse.svg ?? "",
+          }))
+          setCanvasRenderStateByPanelId((previous) => ({
+            ...previous,
+            [panelId]: {
+              isRendering: false,
+              status: null,
+              error: null,
+              lastJobId: terminalResponse.job_id ?? null,
+              lastRequestId: terminalResponse.request_id ?? null,
+              lastCommitSha: terminalResponse.shadow_commit_sha ?? null,
+              lastScriptName: nextScriptName,
+            },
+          }))
+          showSuccessToast("Canvas preview updated")
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Canvas render failed."
+          setCanvasRenderStateByPanelId((previous) => ({
+            ...previous,
+            [panelId]: {
+              isRendering: false,
+              status: null,
+              error: message,
+              lastJobId: previous[panelId]?.lastJobId ?? null,
+              lastRequestId: previous[panelId]?.lastRequestId ?? null,
+              lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
+              lastScriptName: nextScriptName,
+            },
+          }))
+          showErrorToast(message)
+        }
+      },
+      canvasRenderStateByPanelId,
+      canvasSvgOverrideByPanelId,
+      availableTesserScripts: availableTesserScripts.map((script) => ({
+        ...script,
+        help_text: tesserHelpByScriptName[script.name] ?? script.help_text ?? null,
+      })),
+      onRequestTesserScriptHelp: async (scriptName) => {
+        const cached = tesserHelpByScriptName[scriptName]
+        if (cached) return cached
+        const response = await DemoService.getTesserScriptHelp(scriptName)
+        const help = response.help_text ?? null
+        if (help) {
+          setTesserHelpByScriptName((previous) => ({
+            ...previous,
+            [scriptName]: help,
+          }))
+        }
+        return help
+      },
+      onRequestTesserExamplesIndex: async () => {
+        if (tesserExamplesIndex) return tesserExamplesIndex
+        const response = await DemoService.getTesserExamplesIndex()
+        setTesserExamplesIndex(response.content)
+        return response.content
+      },
     }),
-    [roomStoryId],
+    [
+      availableTesserScripts,
+      canvasRenderStateByPanelId,
+      canvasSvgOverrideByPanelId,
+      demoConfigId,
+      isDirty,
+      roomStoryId,
+      tesserExamplesIndex,
+      tesserHelpByScriptName,
+      previewSession?.room.room_id,
+      waitForJob,
+      isConnected,
+    ],
   )
 
   const baseBlockContext = useMemo(

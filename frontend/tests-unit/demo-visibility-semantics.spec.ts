@@ -4,7 +4,11 @@ import {
   normalizeBlockVisibility,
   resolveDemoBlockRegion,
 } from "@/components/Demo/blockVisibility"
-import { getDemoBlockContainerClassName } from "@/components/Demo/DemoShell"
+import {
+  getDemoBlockContainerClassName,
+  getDemoBlockRegionClassName,
+  getDemoPanelRegionClassName,
+} from "@/components/Demo/DemoShell"
 
 test.describe("Demo visibility semantics helpers", () => {
   test("normalizeBlockVisibility supports explicit v2 values only", async () => {
@@ -73,5 +77,28 @@ test.describe("DemoShell visibility class behavior", () => {
     expect(className).toContain("rounded-md")
     expect(className).not.toContain(" hidden ")
     expect(className.endsWith("hidden")).toBeFalsy()
+  })
+
+  test("support block regions are height-capped and scrollable", async () => {
+    const className = getDemoBlockRegionClassName("support")
+    expect(className).toContain("shrink-0")
+    expect(className).toContain("max-h-[32vh]")
+    expect(className).toContain("overflow-hidden")
+  })
+
+  test("top/footer block regions are height-capped and scrollable", async () => {
+    const topClassName = getDemoBlockRegionClassName("top")
+    const footerClassName = getDemoBlockRegionClassName("footer")
+    expect(topClassName).toContain("max-h-[24vh]")
+    expect(topClassName).toContain("overflow-y-auto")
+    expect(footerClassName).toContain("max-h-[24vh]")
+    expect(footerClassName).toContain("overflow-y-auto")
+  })
+
+  test("panel region reserves minimum height for panel layout", async () => {
+    const className = getDemoPanelRegionClassName()
+    expect(className).toContain("flex-1")
+    expect(className).toContain("min-h-[18rem]")
+    expect(className).toContain("overflow-hidden")
   })
 })

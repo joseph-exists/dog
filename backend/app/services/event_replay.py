@@ -12,8 +12,8 @@ This enables:
 from __future__ import annotations
 
 import logging
-from uuid import UUID
 from typing import Any
+from uuid import UUID
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession

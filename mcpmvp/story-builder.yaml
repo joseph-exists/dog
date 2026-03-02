@@ -1,0 +1,765 @@
+# Story Builder Affordance Registry
+# =================================
+#
+# Defines what operations are possible when authoring and navigating stories.
+# Used by agents to understand the capability matrix for story manipulation.
+#
+# PREDICATES: Use simple patterns that the constraint evaluator supports:
+# - Truthy checks: story_id, progress_id, has_nodes
+# - Boolean checks: is_published, has_start_node
+# - Negation: NOT is_published
+# - Comparisons: node_count > 0
+# - AND/OR: story_id AND NOT is_published
+
+version: "1.0"
+domain: "story-builder"
+
+# ============================================================================
+# DIMENSIONS
+# ============================================================================
+# These are the axes along which story affordances vary
+
+dimensions:
+  # Story-level
+  story_id:
+    type: reference
+    description: "UUID of the story"
+
+  story_version:
+    type: integer
+    description: "Version number of the story (draft or published)"
+    min: 1
+
+  story_title:
+    type: string
+    description: "Human-readable title for the story"
+    max_length: 255
+
+  content_format:
+    type: enum
+    values: [text, markdown, html]
+    default: text
+    description: "Format for story/node content"
+
+  # Node-level
+  node_id:
+    type: reference
+    description: "UUID of a story node"
+
+  node_title:
+    type: string
+    description: "Title/label for a node"
+    max_length: 255
+
+  node_type:
+    type: string
+    description: "Custom type tag for node (e.g., 'dialogue', 'combat', 'puzzle')"
+    max_length: 50
+
+  node_content:
+    type: string
+    description: "The narrative content of a node"
+
+  is_start_node:
+    type: boolean
+    default: false
+    description: "Whether this node is a story entry point"
+
+  is_end_node:
+    type: boolean
+    default: false
+    description: "Whether this node is a story conclusion"
+
+  # Choice-level
+  choice_id:
+    type: reference
+    description: "UUID of a choice"
+
+  choice_text:
+    type: string
+    description: "The text shown to player for this choice"
+    max_length: 500
+
+  choice_order:
+    type: integer
+    description: "Display order among sibling choices"
+    default: 0
+
+  target_node_id:
+    type: reference
+    description: "The node this choice leads to"
+
+  requires_state:
+    type: object
+    description: "State conditions that must be met to show this choice"
+    schema:
+      type: dict
+      example: {"has_key": true, "gold": {"$gte": 10}}
+
+  sets_state:
+    type: object
+    description: "State changes applied when this choice is taken"
+    schema:
+      type: dict
+      example: {"visited_cave": true, "gold": {"$inc": -5}}
+
+  # State schema
+  state_key:
+    type: string
+    description: "Key name for a state variable"
+    max_length: 100
+
+  state_value_type:
+    type: enum
+    values: [string, integer, boolean, enum]
+    default: string
+    description: "Data type of the state variable"
+
+  state_default_value:
+    type: any
+    description: "Default value for a state variable"
+
+  state_enum_values:
+    type: array
+    description: "Allowed values if state_value_type is enum"
+
+  # Progress/runtime
+  user_persona_id:
+    type: reference
+    description: "The persona playing through the story"
+
+  progress_id:
+    type: reference
+    description: "UUID of a UserStoryProgress record"
+
+  current_node_id:
+    type: reference
+    description: "The node the player is currently at"
+
+  story_state:
+    type: object
+    description: "Accumulated state from player's choices"
+
+# ============================================================================
+# AFFORDANCES
+# ============================================================================
+
+affordances:
+  # --------------------------------------------------------------------------
+  # STORY-LEVEL AFFORDANCES
+  # --------------------------------------------------------------------------
+
+  - name: create_story
+    description: "Create a new story template"
+    category: story
+    dimensions:
+      story_title:
+        required: true
+      content_format:
+        required: false
+        default: text
+    preconditions: []
+    effects:
+      - dimension: story
+        change: creates
+        target: story_id
+        description: "Creates a new story with version 1 (draft)"
+    enables:
+      - add_node
+      - define_state_variable
+      - update_story
+    result:
+      type: Story
+      fields: [id, title, current_version, is_published]
+
+  - name: update_story
+    description: "Update story metadata (title, description, presentation)"
+    category: story
+    dimensions:
+      story_id:
+        required: true
+      story_title:
+        required: false
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: story_not_published
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Cannot modify published story; create new version first"
+    effects:
+      - dimension: story
+        change: modifies
+        target: story_id
+        description: "Updates story metadata"
+
+  - name: validate_story
+    description: "Validate story graph structure for publishing"
+    category: story
+    dimensions:
+      story_id:
+        required: true
+      story_version:
+        required: false
+        default: "current_version"
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+    effects: []
+    result:
+      type: StoryValidationResult
+      fields: [is_valid, errors, warnings, node_count, start_node_count, end_node_count]
+
+  - name: publish_story
+    description: "Publish the current story version (locks it for players)"
+    category: story
+    dimensions:
+      story_id:
+        required: true
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: has_start_node
+        dimension: structure
+        predicate: "has_start_node"
+        message: "Story must have at least one start node"
+      - id: has_end_node
+        dimension: structure
+        predicate: "has_end_node"
+        message: "Story must have at least one end node"
+    effects:
+      - dimension: story
+        change: modifies
+        target: published_version
+        value: "current_version"
+        description: "Sets published_version to current_version"
+      - dimension: story
+        change: modifies
+        target: is_published
+        value: true
+        description: "Marks story as published"
+    enables:
+      - start_progress
+    precludes:
+      - update_story  # for published version
+      - add_node      # for published version
+      - remove_node   # for published version
+
+  # --------------------------------------------------------------------------
+  # NODE-LEVEL AFFORDANCES
+  # --------------------------------------------------------------------------
+
+  - name: add_node
+    description: "Add a new node to the story graph"
+    category: node
+    dimensions:
+      story_id:
+        required: true
+      story_version:
+        required: true
+      node_title:
+        required: true
+      node_content:
+        required: false
+        default: ""
+      node_type:
+        required: false
+      is_start_node:
+        required: false
+        default: false
+      is_end_node:
+        required: false
+        default: false
+      content_format:
+        required: false
+        default: text
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only add nodes to draft story"
+    effects:
+      - dimension: structure
+        change: creates
+        target: node_id
+        description: "Creates a new node in the story graph"
+    enables:
+      - configure_node
+      - add_choice
+      - remove_node
+    result:
+      type: StoryNode
+      fields: [id, title, story_id, story_version, is_start_node, is_end_node]
+
+  - name: configure_node
+    description: "Update node properties (title, content, type, markers)"
+    category: node
+    dimensions:
+      node_id:
+        required: true
+      node_title:
+        required: false
+      node_content:
+        required: false
+      node_type:
+        required: false
+      is_start_node:
+        required: false
+      is_end_node:
+        required: false
+      content_format:
+        required: false
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: has_nodes
+        dimension: structure
+        predicate: "has_nodes"
+        message: "Story must have nodes"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only configure nodes in draft story"
+    effects:
+      - dimension: structure
+        change: modifies
+        target: node_id
+        description: "Updates node configuration"
+
+  - name: remove_node
+    description: "Remove a node from the story graph"
+    category: node
+    dimensions:
+      node_id:
+        required: true
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: has_nodes
+        dimension: structure
+        predicate: "has_nodes"
+        message: "Story must have nodes"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only remove nodes from draft story"
+    effects:
+      - dimension: structure
+        change: removes
+        target: node_id
+        description: "Removes the node and all its choices"
+      - dimension: structure
+        change: removes
+        target: "choices where from_node_id == node_id OR to_node_id == node_id"
+        description: "Cascades removal to connected choices"
+        conditional: "has_choices"
+
+  # --------------------------------------------------------------------------
+  # CHOICE-LEVEL AFFORDANCES
+  # --------------------------------------------------------------------------
+
+  - name: add_choice
+    description: "Add a choice that connects two nodes"
+    category: choice
+    dimensions:
+      node_id:
+        required: true
+        description: "The source node (from_node)"
+      target_node_id:
+        required: true
+        description: "The destination node (to_node)"
+      choice_text:
+        required: true
+      choice_order:
+        required: false
+        default: 0
+      requires_state:
+        required: false
+      sets_state:
+        required: false
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: has_nodes
+        dimension: structure
+        predicate: "node_count >= 2"
+        message: "Need at least 2 nodes to create a choice"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only add choices to draft story"
+    effects:
+      - dimension: structure
+        change: creates
+        target: choice_id
+        description: "Creates a choice linking two nodes"
+    enables:
+      - configure_choice
+      - remove_choice
+    result:
+      type: NodeChoice
+      fields: [id, text, from_node_id, to_node_id, requires_state, sets_state]
+
+  - name: configure_choice
+    description: "Update choice properties (text, order, state conditions)"
+    category: choice
+    dimensions:
+      choice_id:
+        required: true
+      choice_text:
+        required: false
+      choice_order:
+        required: false
+      requires_state:
+        required: false
+      sets_state:
+        required: false
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: has_nodes
+        dimension: structure
+        predicate: "has_nodes"
+        message: "Story must have nodes"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only configure choices in draft story"
+    effects:
+      - dimension: structure
+        change: modifies
+        target: choice_id
+        description: "Updates choice configuration"
+
+  - name: remove_choice
+    description: "Remove a choice from the story graph"
+    category: choice
+    dimensions:
+      choice_id:
+        required: true
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: has_nodes
+        dimension: structure
+        predicate: "has_nodes"
+        message: "Story must have nodes"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only remove choices from draft story"
+    effects:
+      - dimension: structure
+        change: removes
+        target: choice_id
+        description: "Removes the choice edge"
+
+  # --------------------------------------------------------------------------
+  # STATE SCHEMA AFFORDANCES
+  # --------------------------------------------------------------------------
+
+  - name: define_state_variable
+    description: "Define a state variable in the story's schema"
+    category: state
+    dimensions:
+      story_id:
+        required: true
+      story_version:
+        required: true
+      state_key:
+        required: true
+      state_value_type:
+        required: false
+        default: string
+      state_default_value:
+        required: false
+      state_enum_values:
+        required: false
+        description: "Required if state_value_type is 'enum'"
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only define state variables in draft story"
+    effects:
+      - dimension: state
+        change: creates
+        target: state_variable
+        description: "Defines a new state variable in the schema"
+    result:
+      type: StoryStateVariable
+      fields: [id, key, value_type, default_value]
+
+  - name: update_state_variable
+    description: "Update a state variable's definition"
+    category: state
+    dimensions:
+      story_id:
+        required: true
+      state_key:
+        required: true
+      state_value_type:
+        required: false
+      state_default_value:
+        required: false
+      state_enum_values:
+        required: false
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+      - id: story_is_draft
+        dimension: story
+        predicate: "NOT is_published"
+        message: "Can only update state variables in draft story"
+    effects:
+      - dimension: state
+        change: modifies
+        target: state_variable
+        description: "Updates the state variable definition"
+
+  - name: validate_state_schema
+    description: "Check that all state references in choices match defined variables"
+    category: state
+    dimensions:
+      story_id:
+        required: true
+      story_version:
+        required: false
+        default: "current_version"
+    preconditions:
+      - id: story_exists
+        dimension: story
+        predicate: "story_id"
+        message: "Story must exist"
+    effects: []
+    result:
+      type: StateSchemaValidationResult
+      fields: [is_valid, errors, defined_variables]
+
+  # --------------------------------------------------------------------------
+  # PROGRESS/NAVIGATION AFFORDANCES
+  # --------------------------------------------------------------------------
+
+  - name: start_progress
+    description: "Start a new playthrough of a published story"
+    category: progress
+    dimensions:
+      story_id:
+        required: true
+      user_persona_id:
+        required: true
+    preconditions:
+      - id: story_published
+        dimension: story
+        predicate: "is_published"
+        message: "Story must be published to start playthrough"
+      - id: has_start_node
+        dimension: structure
+        predicate: "has_start_node"
+        message: "Story must have a start node"
+    effects:
+      - dimension: progress
+        change: creates
+        target: progress_id
+        description: "Creates a new progress record locked to published version"
+      - dimension: progress
+        change: sets
+        target: current_node_id
+        value: "start_node_id"
+        description: "Positions player at start node"
+      - dimension: progress
+        change: sets
+        target: story_state
+        value: "default_state_from_schema"
+        description: "Initializes story state with defaults"
+    enables:
+      - navigate_choice
+      - get_available_choices
+      - get_current_position
+    result:
+      type: UserStoryProgress
+      fields: [id, story_id, story_version, current_node_id, story_state]
+
+  - name: get_current_position
+    description: "Get the player's current node and available choices"
+    category: progress
+    dimensions:
+      progress_id:
+        required: true
+    preconditions:
+      - id: progress_exists
+        dimension: progress
+        predicate: "progress_id"
+        message: "Progress record must exist"
+    effects: []
+    result:
+      type: object
+      fields: [current_node, available_choices, story_state, is_at_end]
+
+  - name: get_available_choices
+    description: "Get choices available from current node given current state"
+    category: progress
+    dimensions:
+      progress_id:
+        required: true
+    preconditions:
+      - id: progress_exists
+        dimension: progress
+        predicate: "progress_id"
+        message: "Progress record must exist"
+    effects: []
+    result:
+      type: array
+      items:
+        type: NodeChoice
+        fields: [id, text, to_node_id, requires_state, is_available]
+
+  - name: navigate_choice
+    description: "Take a choice and advance to the next node"
+    category: progress
+    dimensions:
+      progress_id:
+        required: true
+      choice_id:
+        required: true
+    preconditions:
+      - id: progress_exists
+        dimension: progress
+        predicate: "progress_id"
+        message: "Progress record must exist"
+    effects:
+      - dimension: progress
+        change: modifies
+        target: current_node_id
+        value: "choice.to_node_id"
+        description: "Moves player to the choice's target node"
+      - dimension: progress
+        change: modifies
+        target: story_state
+        value: "apply_sets_state(choice.sets_state, story_state)"
+        description: "Applies state changes from the choice"
+        conditional: "choice.sets_state is not null"
+      - dimension: progress
+        change: modifies
+        target: is_completed
+        value: true
+        description: "Marks progress complete if target is end node"
+        conditional: "choice.to_node.is_end_node"
+    result:
+      type: object
+      fields: [new_node, story_state, is_completed, available_choices]
+
+  - name: jump_to_ancestor
+    description: "Jump back to a previous point in the timeline (time travel)"
+    category: progress
+    dimensions:
+      progress_id:
+        required: true
+      choice_id:
+        required: false
+        description: "Target choice in history; null = jump to start"
+    preconditions:
+      - id: progress_exists
+        dimension: progress
+        predicate: "progress_id"
+        message: "Progress record must exist"
+    effects:
+      - dimension: progress
+        change: modifies
+        target: head_choice_id
+        value: "choice_id"
+        description: "Updates head pointer to ancestor"
+      - dimension: progress
+        change: modifies
+        target: story_state
+        value: "recompute_state_at(choice_id)"
+        description: "Recomputes state from timeline up to target"
+
+# ============================================================================
+# COMPOSITION PATTERNS
+# ============================================================================
+
+patterns:
+  create_linear_story:
+    description: "Create a simple linear story with sequential nodes"
+    sequence:
+      - action: create_story
+        params: {story_title: "$title"}
+      - action: add_node
+        params: {node_title: "Introduction", is_start_node: true}
+        output: intro_node
+      - action: add_node
+        params: {node_title: "Middle"}
+        output: middle_node
+      - action: add_node
+        params: {node_title: "Conclusion", is_end_node: true}
+        output: end_node
+      - action: add_choice
+        params: {node_id: "$intro_node.id", target_node_id: "$middle_node.id", choice_text: "Continue"}
+      - action: add_choice
+        params: {node_id: "$middle_node.id", target_node_id: "$end_node.id", choice_text: "Continue"}
+    result: "A linear 3-node story ready for content"
+
+  create_branching_story:
+    description: "Create a story with a branch point and two endings"
+    sequence:
+      - action: create_story
+        params: {story_title: "$title"}
+      - action: add_node
+        params: {node_title: "Introduction", is_start_node: true}
+        output: intro_node
+      - action: add_node
+        params: {node_title: "Branch Point"}
+        output: branch_node
+      - action: add_node
+        params: {node_title: "Path A Ending", is_end_node: true}
+        output: ending_a
+      - action: add_node
+        params: {node_title: "Path B Ending", is_end_node: true}
+        output: ending_b
+      - action: add_choice
+        params: {node_id: "$intro_node.id", target_node_id: "$branch_node.id", choice_text: "Continue"}
+      - action: add_choice
+        params: {node_id: "$branch_node.id", target_node_id: "$ending_a.id", choice_text: "Choose Path A"}
+      - action: add_choice
+        params: {node_id: "$branch_node.id", target_node_id: "$ending_b.id", choice_text: "Choose Path B"}
+    result: "A branching story with two possible endings"
+
+  add_conditional_choice:
+    description: "Add a choice that only appears when certain state is met"
+    sequence:
+      - action: define_state_variable
+        params: {state_key: "$key", state_value_type: "$type", state_default_value: "$default"}
+      - action: add_choice
+        params:
+          node_id: "$from_node"
+          target_node_id: "$to_node"
+          choice_text: "$text"
+          requires_state: {$key: "$required_value"}
+    result: "A conditional choice gated by state"

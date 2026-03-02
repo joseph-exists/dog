@@ -416,6 +416,8 @@ async def _update_projections(
         "room.context_item.upserted": _handle_room_runtime_event,
         "room.agent_settings.updated": _handle_room_runtime_event,
         "room.agent_settings.deleted": _handle_room_runtime_event,
+        "room.canvas_render.completed": _handle_room_runtime_event,
+        "room.canvas_render.failed": _handle_room_runtime_event,
         "room_message.user": _handle_room_message_user,
         "room_message.agent": _handle_room_message_agent,
         "room_message.agent_internal": _handle_room_message_agent_internal,

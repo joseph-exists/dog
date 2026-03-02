@@ -5,8 +5,9 @@ import json
 from pathlib import Path
 
 from .contracts import RenderArtifact, RenderRequest, RenderResult
-from .profiles import preflight_errors, resolve_capabilities, runtime_profile_for_capabilities
-from .registry import get_script, get_script_spec
+from .jobs import resolve_render_request
+from .profiles import preflight_errors
+from .registry import get_script
 from . import scripts as _scripts  # noqa: F401
 
 _MEDIA_TYPES: dict[str, str] = {
@@ -30,20 +31,7 @@ def execute_render(request: RenderRequest) -> RenderResult:
     output_dir = Path(request.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    spec = get_script_spec(request.script_id)
-    if not spec.enabled:
-        reason = spec.disabled_reason or "Script disabled"
-        raise RuntimeError(f"script_id '{request.script_id}' is disabled: {reason}")
-
-    capabilities = resolve_capabilities(spec, request)
-    resolved_profile = runtime_profile_for_capabilities(
-        capabilities, default_profile=spec.default_runtime_profile
-    )
-    if request.runtime_profile is not None and request.runtime_profile != resolved_profile:
-        raise RuntimeError(
-            f"runtime_profile mismatch: requested='{request.runtime_profile}' "
-            f"resolved='{resolved_profile}'"
-        )
+    _, capabilities, resolved_profile = resolve_render_request(request)
 
     errors = preflight_errors(resolved_profile, capabilities)
     if errors:

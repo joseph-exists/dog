@@ -20,6 +20,13 @@ import type {
   RelationshipsContent,
   TraitsBlockConfig,
 } from "@/components/Page/blocks"
+import type {
+  AudiencePresentationBlockContent,
+  PersonaManagerBlockContent,
+  PrimaryPersonaBlockContent,
+  RelationshipManagerBlockContent,
+  WorkFeedBlockContent,
+} from "@/components/UserPage/types"
 import { getBlockType, type TemplateBlock } from "@/components/Page/registry"
 import {
   Sheet,
@@ -28,16 +35,21 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import {
+  AudiencePresentationForm,
   BioForm,
   ContactForm,
   DomainsForm,
   GalleryForm,
   IdentityForm,
   LinksForm,
+  PersonaManagerForm,
+  PrimaryPersonaForm,
   ProfileImageForm,
   QualitiesForm,
+  RelationshipManagerForm,
   RelationshipsForm,
   TraitsForm,
+  WorkFeedForm,
 } from "./forms"
 
 interface BlockEditorSheetProps {
@@ -171,6 +183,46 @@ export function BlockEditorSheet({
             entityType={entityType}
             entityId={entityId}
             onClose={onClose}
+          />
+        )
+      case "primaryPersona":
+        return (
+          <PrimaryPersonaForm
+            content={content as PrimaryPersonaBlockContent}
+            onSave={createSaveHandler<PrimaryPersonaBlockContent>(block.id)}
+            onCancel={onClose}
+          />
+        )
+      case "workFeed":
+        return (
+          <WorkFeedForm
+            content={content as WorkFeedBlockContent}
+            onSave={createSaveHandler<WorkFeedBlockContent>(block.id)}
+            onCancel={onClose}
+          />
+        )
+      case "personaManager":
+        return (
+          <PersonaManagerForm
+            content={content as PersonaManagerBlockContent}
+            onSave={createSaveHandler<PersonaManagerBlockContent>(block.id)}
+            onCancel={onClose}
+          />
+        )
+      case "audiencePresentation":
+        return (
+          <AudiencePresentationForm
+            content={content as AudiencePresentationBlockContent}
+            onSave={createSaveHandler<AudiencePresentationBlockContent>(block.id)}
+            onCancel={onClose}
+          />
+        )
+      case "relationshipManager":
+        return (
+          <RelationshipManagerForm
+            content={content as RelationshipManagerBlockContent}
+            onSave={createSaveHandler<RelationshipManagerBlockContent>(block.id)}
+            onCancel={onClose}
           />
         )
       default:

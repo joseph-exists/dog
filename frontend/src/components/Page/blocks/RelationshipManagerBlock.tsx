@@ -77,7 +77,9 @@ export function RelationshipManagerBlock({
         title="Relations"
         className={className}
         headerActions={
-          viewModel?.isOwner && config.allowCreate !== false ? (
+          viewModel?.isOwner &&
+          isEditing &&
+          config.allowCreate !== false ? (
             <Button
               size="sm"
               variant="outline"
@@ -130,7 +132,9 @@ export function RelationshipManagerBlock({
                       )}
                     </div>
 
-                    {viewModel?.isOwner && config.allowEditing !== false && (
+                    {viewModel?.isOwner &&
+                      isEditing &&
+                      config.allowEditing !== false && (
                       <Button
                         size="icon"
                         variant="ghost"

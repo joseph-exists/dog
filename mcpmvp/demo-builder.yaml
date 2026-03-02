@@ -1,0 +1,850 @@
+# Demo-Builder Affordance Registry
+# =================================
+#
+# This file defines the affordance space for Demo-builder operations.
+# It enables agent introspection: querying what's possible, previewing
+# effects, and reasoning about compositional constraints.
+#
+# Structure:
+#   - dimensions: The axes along which operations vary
+#   - affordances: Operations with preconditions, effects, and relationships
+#
+# Usage:
+#   An agent can query this registry to understand:
+#   - What operations are available given current state
+#   - What dimensions must be specified for each operation
+#   - What effects an operation will have (enables/precludes)
+#   - Why a proposed action is invalid (constraint violations)
+
+version: "0.1.0"
+domain: "demo-builder"
+
+# ============================================================================
+# DIMENSIONS
+# ============================================================================
+# Dimensions are the axes along which affordances vary. Each dimension
+# represents a distinct concern that may need specification.
+
+dimensions:
+  # --- Structural Dimensions ---
+  # How the demo is physically organized
+
+  layout_mode:
+    type: enum
+    values: [panels, tabs]
+    description: "Top-level layout strategy for the demo"
+    default: panels
+
+  panel_prominence:
+    type: enum
+    values: [primary, auxiliary]
+    description: "Panel placement in the layout grid"
+    default: auxiliary
+
+  panel_viewport:
+    type: enum
+    values: [panel, page]
+    description: "Whether panel is contained or takes full viewport"
+    default: panel
+    constraint: "At most one panel can have viewport=page"
+
+  block_region:
+    type: enum
+    values: [top, primary, auxiliary, footer]
+    description: "CSS grid region for block placement"
+    default: primary
+
+  block_visibility:
+    type: enum
+    values: [visible, hidden_unmounted, hidden_mounted]
+    description: "Block render state"
+    default: visible
+
+  # --- Behavioral Dimensions ---
+  # How the demo behaves at runtime
+
+  runtime_policy:
+    type: enum
+    values: [auto, manual, owner_only]
+    description: "When/how the room runtime starts"
+    default: auto
+    implications:
+      auto: "Runtime starts immediately on session creation"
+      manual: "User must explicitly start runtime"
+      owner_only: "Only demo owner can start runtime"
+
+  persona_policy:
+    type: enum
+    values: [first_available, fixed_user_persona, manual_prompt]
+    description: "How user persona is selected for the session"
+    default: first_available
+    implications:
+      first_available: "System selects user's first available persona"
+      fixed_user_persona: "Requires fixed_user_persona_id to be set"
+      manual_prompt: "User is prompted to select persona"
+
+  chat_mode:
+    type: enum
+    values: [participant, observer]
+    description: "Whether user can send messages or only watch"
+    default: participant
+
+  # --- Binding Dimensions ---
+  # What data sources panels/blocks connect to
+
+  panel_kind:
+    type: enum
+    values:
+      - chat           # Requires room binding
+      - storyRuntime   # Requires story binding
+      - storyEditor    # Requires story binding
+      - storyPlayer    # Requires story binding
+      - canvas         # Requires canvas/tesser binding
+      - content        # Static content, no binding
+      - participantPanel
+      - a2ui
+      - debug
+    description: "The type of panel, determines available options and bindings"
+
+  block_type:
+    type: enum
+    values:
+      - context        # Room context display
+      - content        # Static content
+      - story          # Story state display
+      - storyMetadata
+      - agentRoster    # Participants list
+      - orchestratorState
+      - toolCapability
+      - contributionFeed
+      - gitView
+      - fileExplorer
+    description: "The type of block, determines rendering and data binding"
+
+  # --- Ownership Dimensions ---
+  # Access control and visibility
+
+  scope:
+    type: enum
+    values: [system, personal, shared]
+    description: "Visibility and ownership scope"
+    implications:
+      system: "Superuser-only creation, visible to all"
+      personal: "Owner-only visibility and modification"
+      shared: "User-created but visible to all"
+
+  ownership:
+    type: reference
+    references: user
+    description: "The user who owns this entity"
+
+# ============================================================================
+# AFFORDANCES
+# ============================================================================
+# Each affordance is a typed operation with:
+#   - dimensions: which axes it touches
+#   - preconditions: what must be true to invoke it
+#   - effects: what changes after invocation
+#   - enables/precludes: downstream affordance availability
+
+affordances:
+
+  # ---------------------------------------------------------------------------
+  # CONFIG-LEVEL AFFORDANCES
+  # ---------------------------------------------------------------------------
+
+  - name: create_demo_config
+    description: "Create a new demo configuration"
+    category: config
+
+    dimensions:
+      scope:
+        required: true
+        constraint: "system scope requires superuser"
+      title:
+        type: string
+        required: true
+      slug:
+        type: string
+        required: true
+        constraint: "must be unique across all configs"
+      description:
+        type: string
+        required: false
+
+    preconditions:
+      - id: authenticated
+        predicate: "user.is_authenticated"
+        dimension: ownership
+      - id: superuser_for_system
+        predicate: "scope != 'system' OR user.is_superuser"
+        dimension: scope
+      - id: slug_unique
+        predicate: "NOT exists(demo_config WHERE slug = :slug)"
+        dimension: structure
+
+    effects:
+      - dimension: structure
+        change: creates
+        target: demo_config
+        description: "New DemoConfig entity created"
+      - dimension: ownership
+        change: creates
+        target: demo_config.owner_id
+        description: "Ownership assigned to creating user"
+
+    enables:
+      - update_demo_config
+      - initialize_composition
+      - create_session
+      - delete_demo_config
+
+    precludes: []
+
+    result:
+      type: demo_config
+      fields: [id, slug, title, scope, is_active, owner_id]
+
+  - name: update_demo_config
+    description: "Modify demo configuration properties"
+    category: config
+
+    dimensions:
+      title:
+        type: string
+        required: false
+      description:
+        type: string
+        required: false
+      is_active:
+        type: boolean
+        required: false
+      default_auto_respond:
+        type: boolean
+        required: false
+
+    preconditions:
+      - id: config_exists
+        predicate: "exists(demo_config WHERE id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: structure
+        change: modifies
+        target: demo_config
+        description: "Config properties updated"
+
+    enables: []
+    precludes: []
+
+  - name: publish_demo_config
+    description: "Make demo available by setting is_active=true"
+    category: config
+
+    dimensions: {}
+
+    preconditions:
+      - id: config_exists
+        predicate: "exists(demo_config WHERE id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+      - id: has_composition
+        predicate: "exists(composition WHERE demo_config_id = :config_id)"
+        dimension: structure
+        message: "Cannot publish without a composition"
+      - id: composition_valid
+        predicate: "composition.panels.length > 0 OR composition.blocks.length > 0"
+        dimension: structure
+        message: "Composition must have at least one panel or block"
+
+    effects:
+      - dimension: structure
+        change: modifies
+        target: demo_config.is_active
+        value: true
+        description: "Demo becomes publicly accessible"
+
+    enables:
+      - create_session  # Now anyone (per scope) can create sessions
+
+    precludes: []
+
+  # ---------------------------------------------------------------------------
+  # COMPOSITION-LEVEL AFFORDANCES
+  # ---------------------------------------------------------------------------
+
+  - name: initialize_composition
+    description: "Create or retrieve the composition for a demo config"
+    category: composition
+
+    dimensions:
+      layout_mode:
+        required: false
+        default: panels
+      schema_version:
+        type: string
+        required: false
+        default: "1.0"
+
+    preconditions:
+      - id: config_exists
+        predicate: "exists(demo_config WHERE id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: structure
+        change: creates
+        target: composition
+        description: "DemoPageComposition created with defaults"
+        conditional: "only if not exists"
+
+    enables:
+      - set_layout_mode
+      - set_runtime_policy
+      - set_persona_policy
+      - set_chat_mode
+      - add_panel
+      - add_block
+      - set_theme
+
+    precludes: []
+
+    result:
+      type: composition
+      fields: [id, demo_config_id, layout_mode, runtime_policy, persona_policy]
+
+  - name: set_layout_mode
+    description: "Configure the top-level layout strategy"
+    category: composition
+
+    dimensions:
+      layout_mode:
+        required: true
+
+    preconditions:
+      - id: composition_exists
+        predicate: "exists(composition WHERE demo_config_id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: layout_mode
+        change: modifies
+        target: composition.layout_mode
+        description: "Layout mode updated"
+
+    enables: []
+    precludes: []
+
+  - name: set_runtime_policy
+    description: "Configure when/how the room runtime starts"
+    category: composition
+
+    dimensions:
+      runtime_policy:
+        required: true
+
+    preconditions:
+      - id: composition_exists
+        predicate: "exists(composition WHERE demo_config_id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: runtime_policy
+        change: modifies
+        target: composition.runtime_policy
+        description: "Runtime behavior configured"
+
+    enables: []
+    precludes: []
+
+  - name: set_persona_policy
+    description: "Configure how user personas are assigned to sessions"
+    category: composition
+
+    dimensions:
+      persona_policy:
+        required: true
+      fixed_user_persona_id:
+        type: uuid
+        required: false
+        constraint: "required when persona_policy = 'fixed_user_persona'"
+
+    preconditions:
+      - id: composition_exists
+        predicate: "exists(composition WHERE demo_config_id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+      - id: fixed_persona_provided
+        predicate: "persona_policy != 'fixed_user_persona' OR fixed_user_persona_id IS NOT NULL"
+        dimension: persona_policy
+        message: "fixed_user_persona_id required for fixed_user_persona policy"
+
+    effects:
+      - dimension: persona_policy
+        change: modifies
+        target: composition.persona_policy
+        description: "Persona selection behavior configured"
+
+    enables: []
+    precludes: []
+
+  - name: set_chat_mode
+    description: "Configure whether users can participate or only observe"
+    category: composition
+
+    dimensions:
+      chat_mode:
+        required: true
+
+    preconditions:
+      - id: composition_exists
+        predicate: "exists(composition WHERE demo_config_id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: chat_mode
+        change: modifies
+        target: composition.chat_mode
+        description: "Chat participation mode configured"
+
+    enables: []
+    precludes: []
+
+  # ---------------------------------------------------------------------------
+  # PANEL AFFORDANCES
+  # ---------------------------------------------------------------------------
+
+  - name: add_panel
+    description: "Add a panel to the composition"
+    category: panel
+
+    dimensions:
+      panel_kind:
+        required: true
+      panel_prominence:
+        required: false
+        default: auxiliary
+      panel_viewport:
+        required: false
+        default: panel
+      title:
+        type: string
+        required: false
+      order:
+        type: integer
+        required: false
+
+    preconditions:
+      - id: composition_exists
+        predicate: "exists(composition WHERE demo_config_id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+      - id: panel_limit
+        predicate: "composition.panels.length < 8"
+        dimension: structure
+        message: "Maximum 8 panels per composition"
+      - id: page_viewport_unique
+        predicate: "panel_viewport != 'page' OR NOT exists(panel WHERE viewport_mode = 'page')"
+        dimension: panel_viewport
+        message: "Only one panel can have viewport_mode='page'"
+      - id: chat_requires_room
+        predicate: "panel_kind != 'chat' OR composition.has_room_binding"
+        dimension: panel_kind
+        message: "Chat panel requires room binding (auto-created on session)"
+
+    effects:
+      - dimension: structure
+        change: modifies
+        target: composition.panels
+        description: "New panel added to composition"
+      - dimension: panel_kind
+        change: creates
+        target: panel
+        description: "Panel entity created with specified kind"
+
+    enables:
+      - configure_panel
+      - remove_panel
+      - reorder_panels
+
+    precludes: []
+
+    result:
+      type: panel
+      fields: [id, kind, prominence, viewport_mode, title, order]
+
+  - name: configure_panel
+    description: "Modify panel options and presentation"
+    category: panel
+
+    dimensions:
+      panel_prominence:
+        required: false
+      panel_viewport:
+        required: false
+      title:
+        type: string
+        required: false
+      size_default:
+        type: integer
+        required: false
+        constraint: "1-100, min_size <= default <= max_size"
+      size_min:
+        type: integer
+        required: false
+      size_max:
+        type: integer
+        required: false
+      theme_id:
+        type: uuid
+        required: false
+      presentation_json:
+        type: object
+        required: false
+
+    preconditions:
+      - id: panel_exists
+        predicate: "exists(panel WHERE id = :panel_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+      - id: size_bounds_valid
+        predicate: "size_min <= size_default <= size_max"
+        dimension: structure
+        message: "Size constraints must satisfy min <= default <= max"
+
+    effects:
+      - dimension: structure
+        change: modifies
+        target: panel
+        description: "Panel configuration updated"
+
+    enables: []
+    precludes: []
+
+  - name: remove_panel
+    description: "Remove a panel from the composition"
+    category: panel
+
+    dimensions: {}
+
+    preconditions:
+      - id: panel_exists
+        predicate: "exists(panel WHERE id = :panel_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: structure
+        change: removes
+        target: panel
+        description: "Panel removed from composition"
+
+    enables: []
+
+    precludes:
+      - configure_panel  # for this panel
+
+  # ---------------------------------------------------------------------------
+  # BLOCK AFFORDANCES
+  # ---------------------------------------------------------------------------
+
+  - name: add_block
+    description: "Add a block to the composition"
+    category: block
+
+    dimensions:
+      block_type:
+        required: true
+      block_region:
+        required: false
+        default: primary
+      block_visibility:
+        required: false
+        default: visible
+      title:
+        type: string
+        required: false
+      order:
+        type: integer
+        required: false
+
+    preconditions:
+      - id: composition_exists
+        predicate: "exists(composition WHERE demo_config_id = :config_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: structure
+        change: modifies
+        target: composition.blocks
+        description: "New block added to composition"
+      - dimension: block_type
+        change: creates
+        target: block
+        description: "Block entity created with specified type"
+
+    enables:
+      - configure_block
+      - remove_block
+
+    precludes: []
+
+    result:
+      type: block
+      fields: [id, type, region, visibility, title, order]
+
+  - name: remove_block
+    description: "Remove a block from the composition"
+    category: block
+
+    dimensions: {}
+
+    preconditions:
+      - id: block_exists
+        predicate: "exists(block WHERE id = :block_id)"
+        dimension: structure
+      - id: has_permission
+        predicate: "demo_config.owner_id = user.id OR user.is_superuser"
+        dimension: ownership
+
+    effects:
+      - dimension: structure
+        change: removes
+        target: block
+        description: "Block removed from composition"
+
+    enables: []
+    precludes: []
+
+  # ---------------------------------------------------------------------------
+  # SESSION AFFORDANCES
+  # ---------------------------------------------------------------------------
+
+  - name: create_session
+    description: "Create a user session for a demo"
+    category: session
+
+    dimensions:
+      auto_respond:
+        type: boolean
+        required: false
+
+    preconditions:
+      - id: config_exists
+        predicate: "exists(demo_config WHERE id = :config_id)"
+        dimension: structure
+      - id: config_active
+        predicate: "demo_config.is_active = true"
+        dimension: structure
+        message: "Cannot create session for inactive demo"
+      - id: config_visible
+        predicate: "demo_config.scope != 'personal' OR demo_config.owner_id = user.id"
+        dimension: scope
+        message: "Personal demos only accessible to owner"
+      - id: authenticated
+        predicate: "user.is_authenticated"
+        dimension: ownership
+
+    effects:
+      - dimension: structure
+        change: creates
+        target: demo_session
+        description: "New session created (get-or-create semantics)"
+        conditional: "only if not exists for (user_id, demo_config_id)"
+      - dimension: structure
+        change: creates
+        target: room
+        description: "Backing room created for session isolation"
+        conditional: "only if session is new"
+
+    enables:
+      - resolve_entry
+      - update_session
+      - end_session
+
+    precludes: []
+
+    result:
+      type: session
+      fields: [id, demo_config_id, user_id, room_id, status, auto_respond]
+
+  - name: resolve_entry
+    description: "Main entry point - resolves composition, room, runtime state"
+    category: session
+
+    dimensions: {}
+
+    preconditions:
+      - id: session_exists
+        predicate: "exists(demo_session WHERE id = :session_id)"
+        dimension: structure
+      - id: session_active
+        predicate: "demo_session.status = 'active'"
+        dimension: structure
+
+    effects:
+      - dimension: structure
+        change: modifies
+        target: demo_session.last_accessed_at
+        description: "Session access timestamp updated"
+
+    enables: []
+    precludes: []
+
+    result:
+      type: resolve_demo_entry_payload
+      description: "Complete payload with composition, room context, runtime state"
+      fields: [composition, room_id, runtime_state, user_persona]
+
+# ============================================================================
+# COMPOSITION PATTERNS
+# ============================================================================
+# Common sequences of affordances that accomplish high-level goals.
+# These are not prescriptive - just documented patterns.
+
+patterns:
+
+  minimal_demo:
+    description: "Create a minimal working demo"
+    sequence:
+      - affordance: create_demo_config
+        parameters: { scope: personal, title: "Minimal Demo", slug: "minimal-demo" }
+      - affordance: initialize_composition
+        parameters: {}
+      - affordance: add_panel
+        parameters: { panel_kind: chat, panel_prominence: primary }
+      - affordance: publish_demo_config
+        parameters: {}
+    result: "A simple chat-based demo"
+
+  story_explorer:
+    description: "Demo for exploring branching narratives"
+    sequence:
+      - affordance: create_demo_config
+        parameters: { scope: personal, title: "Story Explorer", slug: "story-explorer" }
+      - affordance: initialize_composition
+        parameters: {}
+      - affordance: set_runtime_policy
+        parameters: { runtime_policy: auto }
+      - affordance: add_panel
+        parameters: { panel_kind: storyRuntime, panel_prominence: primary }
+      - affordance: add_panel
+        parameters: { panel_kind: chat, panel_prominence: auxiliary }
+      - affordance: add_block
+        parameters: { block_type: storyMetadata, block_region: top }
+      - affordance: publish_demo_config
+        parameters: {}
+    result: "Story runtime with chat sidebar and metadata header"
+
+  canvas_workshop:
+    description: "Demo for collaborative canvas creation"
+    sequence:
+      - affordance: create_demo_config
+        parameters: { scope: personal, title: "Canvas Workshop", slug: "canvas-workshop" }
+      - affordance: initialize_composition
+        parameters: {}
+      - affordance: add_panel
+        parameters: { panel_kind: canvas, panel_prominence: primary, panel_viewport: page }
+      - affordance: add_block
+        parameters: { block_type: toolCapability, block_region: auxiliary }
+      - affordance: publish_demo_config
+        parameters: {}
+    result: "Full-viewport canvas with tool panel"
+
+# ============================================================================
+# INTROSPECTION QUERIES
+# ============================================================================
+# Formal specification of the query operations an agent can perform.
+
+queries:
+
+  available:
+    description: "List affordances available given current state"
+    input:
+      context:
+        type: object
+        description: "Current state (demo_config, composition, session, user)"
+    output:
+      affordances:
+        type: array
+        items: affordance_reference
+      grouped_by_category:
+        type: object
+        description: "Affordances grouped by category"
+
+  preview:
+    description: "Simulate an action and see its effects"
+    input:
+      context:
+        type: object
+      action:
+        type: object
+        properties:
+          affordance: { type: string }
+          parameters: { type: object }
+    output:
+      valid: { type: boolean }
+      violations:
+        type: array
+        items: constraint_violation
+        description: "If invalid, which constraints are violated"
+      resulting_state:
+        type: object
+        description: "If valid, the state after action"
+      newly_enabled:
+        type: array
+        items: affordance_reference
+      newly_precluded:
+        type: array
+        items: affordance_reference
+
+  path_to:
+    description: "Find a sequence of affordances to reach a goal state"
+    input:
+      context:
+        type: object
+      goal:
+        type: object
+        description: "Partial state describing desired outcome"
+    output:
+      reachable: { type: boolean }
+      minimal_path:
+        type: array
+        items: action
+        description: "Shortest sequence to reach goal"
+      required_dimensions:
+        type: array
+        items: string
+        description: "Dimensions that must be specified along the path"
+      alternatives:
+        type: array
+        items: action_sequence
+        description: "Other valid paths if multiple exist"

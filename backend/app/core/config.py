@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     TESSER_REQUEST_CHANNEL: str = "tesser:requests"
     TESSER_RESPONSE_CHANNEL: str = "tesser:responses"
+    TESSER_DEMO_CANVAS_CALLBACK_CHANNEL: str = "tesser:demo-canvas:callbacks"
 
     # Shadow Configuration (git-based entity versioning)
     # Repos are cached locally at SHADOW_REPOS_PATH and optionally synced to

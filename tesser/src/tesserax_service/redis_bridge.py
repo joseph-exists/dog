@@ -11,8 +11,13 @@ from typing import Any
 import redis.asyncio as redis
 
 from tesserax_service.contracts import RenderRequest
+from tesserax_service.jobs import enqueue_render_job, get_job_status, write_job_status_snapshot
+from tesserax_service.redis_messages import (
+    build_enqueue_response,
+    build_job_status_response,
+    build_render_response,
+)
 from tesserax_service.registry import get_script_spec, list_script_specs
-from tesserax_service.runtime import execute_render
 from tesserax_service import scripts as _scripts  # noqa: F401
 
 LOG_LEVEL = os.getenv("TESSER_LOG_LEVEL", "INFO").upper()
@@ -22,6 +27,7 @@ REDIS_DB = int(os.getenv("TESSER_REDIS_DB", "0"))
 REQUEST_CHANNEL = os.getenv("TESSER_REQUEST_CHANNEL", "tesser:requests")
 RESPONSE_CHANNEL = os.getenv("TESSER_RESPONSE_CHANNEL", "tesser:responses")
 WORKER_ID = os.getenv("TESSER_WORKER_ID", "tesser-worker-1")
+JOBS_ROOT = Path(os.getenv("TESSER_JOBS_ROOT", os.getenv("TESSERAX_JOBS_ROOT", "/data/jobs")))
 ARTIFACTS_ROOT = Path(os.getenv("TESSER_ARTIFACTS_ROOT", "/data/artifacts/redis-bridge"))
 EXAMPLES_INDEX_PATH = Path("/app/examples-other/reference/index.md")
 
@@ -196,9 +202,51 @@ def _select_formats(script_input: dict[str, Any]) -> list[str]:
     return ["svg"]
 
 
-def _run_registry_script(script_name: str, script_input: dict[str, Any], request_id: str | None) -> dict[str, Any]:
-    spec = get_script_spec(script_name)
+def _job_metadata(
+    *, script_name: str, room_id: str | None, queued_at: str
+) -> dict[str, Any]:
+    return {
+        "script_name": script_name,
+        "room_id": room_id,
+        "queued_at": queued_at,
+    }
+
+
+def _queue_registry_script(
+    script_name: str,
+    script_input: dict[str, Any],
+    request_id: str | None,
+    *,
+    room_id: str | None,
+    received_at: str | None,
+    callback: dict[str, Any] | None,
+) -> dict[str, Any]:
     output_dir = ARTIFACTS_ROOT / (request_id or "adhoc")
+    queued_at = _now_iso()
+    extra_fields: dict[str, Any] = {
+        "job_metadata": _job_metadata(
+            script_name=script_name,
+            room_id=room_id,
+            queued_at=queued_at,
+        )
+    }
+    callback_payload: dict[str, Any] | None = None
+    if isinstance(callback, dict):
+        callback_payload = dict(callback)
+    elif received_at is not None or room_id is not None:
+        callback_payload = {
+            "kind": "redis",
+            "response_channel": RESPONSE_CHANNEL,
+        }
+    if callback_payload is not None:
+        callback_payload.setdefault("kind", "redis")
+        if received_at is not None:
+            callback_payload.setdefault("received_at", received_at)
+        if room_id is not None:
+            callback_payload.setdefault("room_id", room_id)
+        callback_payload.setdefault("script_name", script_name)
+        extra_fields["callback"] = callback_payload
+
     request = RenderRequest(
         script_id=script_name,
         params=dict(script_input),
@@ -208,26 +256,23 @@ def _run_registry_script(script_name: str, script_input: dict[str, Any], request
         request_id=request_id,
         runtime_profile=None,
     )
-    result = execute_render(request)
-    render_payload: dict[str, Any] = {
-        "format": "external",
-        "artifacts": [artifact.to_dict() for artifact in result.artifacts],
-        "manifest_path": result.manifest_path,
-        "runtime_profile": result.runtime_profile,
-        "resolved_capabilities": result.resolved_capabilities,
-    }
-    svg_artifact = next((artifact for artifact in result.artifacts if artifact.media_type == "image/svg+xml"), None)
-    if svg_artifact is not None:
-        svg_path = Path(svg_artifact.path)
-        if svg_path.exists():
-            render_payload["format"] = "svg"
-            render_payload["svg"] = svg_path.read_text(encoding="utf-8")
-    if spec.kind in {"runner", "utility"}:
-        render_payload["format"] = render_payload.get("format", "external")
-    return render_payload
+    queued = enqueue_render_job(
+        request,
+        JOBS_ROOT,
+        extra_fields=extra_fields,
+    )
+    logger.info(
+        "Queued tesser render request_id=%s script_name=%s runtime_profile=%s job_path=%s",
+        queued["request_id"],
+        script_name,
+        queued["runtime_profile"],
+        queued["job_path"],
+    )
+    queued["queued_at"] = queued_at
+    return queued
 
 
-def _build_render_response(payload: dict[str, Any]) -> dict[str, Any]:
+def _build_render_response(payload: dict[str, Any]) -> dict[str, Any] | None:
     request_id = payload.get("request_id")
     room_id = payload.get("room_id")
     script_name = str(payload.get("script_name") or "simple_svg")
@@ -236,20 +281,155 @@ def _build_render_response(payload: dict[str, Any]) -> dict[str, Any]:
 
     if script_name in BUILTIN_SCRIPT_METADATA:
         render_payload = _run_builtin_script(script_name, script_input)
-    else:
-        render_payload = _run_registry_script(script_name, script_input, request_id)
+        return build_render_response(
+            request_id=request_id if isinstance(request_id, str) else None,
+            room_id=room_id if isinstance(room_id, str) else None,
+            script_name=script_name,
+            worker_id=WORKER_ID,
+            completed_at=_now_iso(),
+            render=render_payload,
+            received_at=payload.get("sent_at") if isinstance(payload.get("sent_at"), str) else None,
+        )
 
-    return {
-        "request_id": request_id,
-        "room_id": room_id,
-        "worker_id": WORKER_ID,
-        "script_name": script_name,
-        "status": "ok",
-        "type": "tesser.script.response",
-        "render": render_payload,
-        "received_at": payload.get("sent_at"),
-        "completed_at": _now_iso(),
-    }
+    _queue_registry_script(
+        script_name,
+        script_input,
+        request_id if isinstance(request_id, str) else None,
+        room_id=room_id if isinstance(room_id, str) else None,
+        received_at=payload.get("sent_at") if isinstance(payload.get("sent_at"), str) else None,
+        callback=None,
+    )
+    return None
+
+
+def _build_enqueue_render_response(payload: dict[str, Any]) -> dict[str, Any]:
+    request_id = payload.get("request_id")
+    if not isinstance(request_id, str) or not request_id:
+        raise ValueError("request_id is required")
+
+    room_id = payload.get("room_id")
+    room_value = room_id if isinstance(room_id, str) else None
+    script_name = str(payload.get("script_name") or "simple_svg")
+    script_input_raw = payload.get("script_input")
+    script_input = script_input_raw if isinstance(script_input_raw, dict) else {}
+
+    if script_name in BUILTIN_SCRIPT_METADATA:
+        queued_at = _now_iso()
+        render_payload = _run_builtin_script(script_name, script_input)
+        write_job_status_snapshot(
+            JOBS_ROOT,
+            "core",
+            request_id,
+            {
+                "job_id": request_id,
+                "script_name": script_name,
+                "room_id": room_value,
+                "status": "completed",
+                "worker_id": WORKER_ID,
+                "runtime_profile": "core",
+                "resolved_capabilities": ["render.svg"],
+                "queued_at": queued_at,
+                "completed_at": queued_at,
+                "render": render_payload,
+            },
+        )
+        return build_enqueue_response(
+            request_id=request_id,
+            script_name=script_name,
+            worker_id=WORKER_ID,
+            queued_at=queued_at,
+            runtime_profile="core",
+            resolved_capabilities=["render.svg"],
+            room_id=room_value,
+            status="completed",
+            render=render_payload,
+            completed_at=queued_at,
+        )
+
+    queued = _queue_registry_script(
+        script_name,
+        script_input,
+        request_id,
+        room_id=room_value,
+        received_at=None,
+        callback=payload.get("callback") if isinstance(payload.get("callback"), dict) else None,
+    )
+    return build_enqueue_response(
+        request_id=queued["request_id"],
+        script_name=script_name,
+        worker_id=WORKER_ID,
+        queued_at=str(queued["queued_at"]),
+        runtime_profile=queued["runtime_profile"],
+        resolved_capabilities=queued["resolved_capabilities"],
+        room_id=room_value,
+    )
+
+
+def _build_job_status_lookup_response(payload: dict[str, Any]) -> dict[str, Any]:
+    response_request_id = payload.get("request_id")
+    if not isinstance(response_request_id, str) or not response_request_id:
+        raise ValueError("request_id is required")
+
+    job_id = payload.get("job_id")
+    if not isinstance(job_id, str) or not job_id:
+        raise ValueError("job_id is required")
+
+    status_payload = get_job_status(job_id, JOBS_ROOT)
+    if status_payload is None:
+        return build_job_status_response(
+            request_id=response_request_id,
+            job_id=job_id,
+            worker_id=WORKER_ID,
+            status="not_found",
+            error=f"Unknown tesser job '{job_id}'",
+        )
+
+    return build_job_status_response(
+        request_id=response_request_id,
+        job_id=job_id,
+        worker_id=str(status_payload.get("worker_id") or WORKER_ID),
+        status=str(status_payload.get("status") or "queued"),
+        script_name=(
+            str(status_payload.get("script_name"))
+            if status_payload.get("script_name") is not None
+            else None
+        ),
+        room_id=(
+            str(status_payload.get("room_id"))
+            if status_payload.get("room_id") is not None
+            else None
+        ),
+        runtime_profile=(
+            str(status_payload.get("runtime_profile"))
+            if status_payload.get("runtime_profile") is not None
+            else None
+        ),
+        resolved_capabilities=(
+            list(status_payload.get("resolved_capabilities"))
+            if isinstance(status_payload.get("resolved_capabilities"), list)
+            else None
+        ),
+        queued_at=(
+            str(status_payload.get("queued_at"))
+            if status_payload.get("queued_at") is not None
+            else None
+        ),
+        completed_at=(
+            str(status_payload.get("completed_at"))
+            if status_payload.get("completed_at") is not None
+            else None
+        ),
+        render=(
+            status_payload.get("render")
+            if isinstance(status_payload.get("render"), dict)
+            else None
+        ),
+        error=(
+            str(status_payload.get("error"))
+            if status_payload.get("error") is not None
+            else None
+        ),
+    )
 
 
 def _build_list_scripts_response(payload: dict[str, Any]) -> dict[str, Any]:
@@ -325,6 +505,12 @@ async def _process_message(redis_client: redis.Redis, raw_data: str) -> None:
         elif request_type == "tesser.script.help.request":
             message_type = "tesser.script.help.response"
             response = _build_script_help_response(payload)
+        elif request_type == "tesser.script.enqueue.request":
+            message_type = "tesser.script.enqueue.response"
+            response = _build_enqueue_render_response(payload)
+        elif request_type == "tesser.script.status.request":
+            message_type = "tesser.script.status.response"
+            response = _build_job_status_lookup_response(payload)
         else:
             message_type = "tesser.script.response"
             response = _build_render_response(payload)
@@ -342,12 +528,16 @@ async def _process_message(redis_client: redis.Redis, raw_data: str) -> None:
         await redis_client.publish(RESPONSE_CHANNEL, json.dumps(error_payload))
         return
 
+    if response is None:
+        return
+
     await redis_client.publish(RESPONSE_CHANNEL, json.dumps(response))
     logger.info("Published tesser response request_id=%s", response.get("request_id"))
 
 
 async def run() -> None:
     ARTIFACTS_ROOT.mkdir(parents=True, exist_ok=True)
+    JOBS_ROOT.mkdir(parents=True, exist_ok=True)
     redis_client = redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,

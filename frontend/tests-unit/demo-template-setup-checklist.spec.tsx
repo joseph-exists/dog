@@ -7,6 +7,8 @@ import {
   validateCompositionSemantics,
 } from "@/components/Demo/builder/demoBuilderSchema"
 
+const VALID_STORY_ID = "11111111-1111-4111-8111-111111111111"
+
 interface ElementLike {
   props?: {
     children?: ReactNode
@@ -80,7 +82,7 @@ test.describe("DemoTemplateSetupChecklist", () => {
 
   test("shows template setup complete banner when all checklist items resolve", async () => {
     const composition = createCompositionTemplate("composition_a_baseline")
-    composition.metadata_json = { story_id: "story-1" }
+    composition.metadata_json = { story_id: VALID_STORY_ID }
     const checklistStatus = resolveTemplateChecklistStatus({
       templateId: "composition_a_baseline",
       composition,

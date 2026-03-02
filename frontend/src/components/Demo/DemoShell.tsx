@@ -45,6 +45,16 @@ export interface DemoShellProps {
   onPageThemeChange: (themeId: string) => void
   /** Cards theme change callback */
   onCardsThemeChange: (themeId: string) => void
+  /** Open demo-local layout customization */
+  onCustomizeLayout?: () => void
+  /** Whether the current view differs from the authored layout */
+  canResetLayout?: boolean
+  /** Reset local layout customization */
+  onResetLayout?: () => void
+  /** Collapse all visible panels and blocks */
+  onCollapseAll?: () => void
+  /** Expand all collapsed panels and blocks */
+  onExpandAll?: () => void
   /** Additional className */
   className?: string
 }
@@ -56,6 +66,19 @@ export function getDemoBlockContainerClassName(
     "rounded-md border bg-card/50",
     visibilityMode === "hidden_mounted" && "hidden",
   )
+}
+
+export function getDemoBlockRegionClassName(
+  region: "top" | "support" | "footer",
+): string {
+  if (region === "support") {
+    return "shrink-0 min-h-0 max-h-[32vh] grid grid-cols-1 gap-2 overflow-hidden lg:grid-cols-2"
+  }
+  return "shrink-0 min-h-0 max-h-[24vh] overflow-y-auto overscroll-contain"
+}
+
+export function getDemoPanelRegionClassName(): string {
+  return "flex-1 min-h-[18rem] overflow-hidden"
 }
 
 export function DemoShell({
@@ -74,6 +97,11 @@ export function DemoShell({
   availableCardThemes,
   onPageThemeChange,
   onCardsThemeChange,
+  onCustomizeLayout,
+  canResetLayout,
+  onResetLayout,
+  onCollapseAll,
+  onExpandAll,
   className,
 }: DemoShellProps) {
   const [layoutMode] = React.useState<"panels" | "tabs">("panels")
@@ -102,16 +130,21 @@ export function DemoShell({
         availableCardThemes={availableCardThemes}
         onPageThemeChange={onPageThemeChange}
         onCardsThemeChange={onCardsThemeChange}
+        onCustomizeLayout={onCustomizeLayout}
+        canResetLayout={canResetLayout}
+        onResetLayout={onResetLayout}
+        onCollapseAll={onCollapseAll}
+        onExpandAll={onExpandAll}
       />
 
       {/* Inner: Cards theme scope (overrides page theme for card areas) */}
       {/* Transparent wrapper — only sets CSS variables, does not render a surface */}
       <div
         style={cardsThemeStyle}
-        className="flex-1 min-h-0 flex flex-col gap-2 p-2 overflow-y-auto overflow-x-hidden"
+        className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden p-2"
       >
         {topBlocks.length > 0 && (
-          <div className="space-y-2">
+          <div className={getDemoBlockRegionClassName("top")}>
             {topBlocks.map((block) => (
               <div
                 key={`top-block-${block.id}`}
@@ -125,8 +158,8 @@ export function DemoShell({
         )}
 
         {(primaryBlocks.length > 0 || auxiliaryBlocks.length > 0) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-            <div className="space-y-2">
+          <div className={getDemoBlockRegionClassName("support")}>
+            <div className="min-h-0 space-y-2 overflow-y-auto overscroll-contain">
               {primaryBlocks.map((block) => (
                 <div
                   key={`primary-block-${block.id}`}
@@ -139,7 +172,7 @@ export function DemoShell({
                 </div>
               ))}
             </div>
-            <div className="space-y-2">
+            <div className="min-h-0 space-y-2 overflow-y-auto overscroll-contain">
               {auxiliaryBlocks.map((block) => (
                 <div
                   key={`aux-block-${block.id}`}
@@ -155,12 +188,12 @@ export function DemoShell({
           </div>
         )}
 
-        <div className="flex-1 min-h-0">
+        <div className={getDemoPanelRegionClassName()}>
           <DemoLayout panels={panels} mode={layoutMode} />
         </div>
 
         {footerBlocks.length > 0 && (
-          <div className="space-y-2">
+          <div className={getDemoBlockRegionClassName("footer")}>
             {footerBlocks.map((block) => (
               <div
                 key={`footer-block-${block.id}`}

@@ -2,3 +2,4 @@
 _freeze
 _site
 index_files
+/__pycache__/

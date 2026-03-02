@@ -1,4 +1,6 @@
+import { LayoutPanelLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -22,6 +24,11 @@ interface DemoHeaderProps {
   availableCardThemes: ThemeViewModel[]
   onPageThemeChange: (themeId: string) => void
   onCardsThemeChange: (themeId: string) => void
+  onCustomizeLayout?: () => void
+  canResetLayout?: boolean
+  onResetLayout?: () => void
+  onCollapseAll?: () => void
+  onExpandAll?: () => void
 }
 
 export function DemoHeader({
@@ -36,6 +43,11 @@ export function DemoHeader({
   availableCardThemes,
   onPageThemeChange,
   onCardsThemeChange,
+  onCustomizeLayout,
+  canResetLayout = false,
+  onResetLayout,
+  onCollapseAll,
+  onExpandAll,
 }: DemoHeaderProps) {
   const pageThemeId = pageTheme?.id ?? ""
   const cardsThemeId = cardsTheme?.id ?? ""
@@ -71,6 +83,51 @@ export function DemoHeader({
             ))}
           </SelectContent>
         </Select>
+        {onCustomizeLayout && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-2 text-xs"
+            onClick={onCustomizeLayout}
+          >
+            <LayoutPanelLeft className="h-3.5 w-3.5" />
+            Layout
+          </Button>
+        )}
+        {onResetLayout && canResetLayout && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={onResetLayout}
+          >
+            Reset View
+          </Button>
+        )}
+        {onCollapseAll && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={onCollapseAll}
+          >
+            Collapse All
+          </Button>
+        )}
+        {onExpandAll && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={onExpandAll}
+          >
+            Expand All
+          </Button>
+        )}
         <Badge
           variant={isConnected ? "default" : "secondary"}
           className="text-xs"

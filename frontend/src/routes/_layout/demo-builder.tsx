@@ -52,6 +52,7 @@ import {
   type EditableBlock,
   type EditableComposition,
   type EditablePanel,
+  getCompositionStoryId,
   getBuilderCompositionTemplateSchema,
   getTemplateSetupState,
   normalizeComposition,
@@ -138,6 +139,16 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 
 function isArrayValue(value: unknown): value is unknown[] {
   return Array.isArray(value)
+}
+
+function buildTemplateWithSetupState(
+  templateId: BuilderTemplateId,
+): EditableComposition {
+  return withTemplateSetupState(createCompositionTemplate(templateId), {
+    templateId,
+    dismissed: false,
+    confirmations: {},
+  })
 }
 
 function toPathTokens(path: string): Array<string | number> {
@@ -227,14 +238,6 @@ function setValueAtPath(
     cursor[leaf] = value
   }
   return root
-}
-
-function getCompositionStoryId(
-  composition: EditableComposition,
-): string | null {
-  if (!isObjectRecord(composition.metadata_json)) return null
-  const raw = composition.metadata_json.story_id
-  return typeof raw === "string" && raw.trim().length > 0 ? raw : null
 }
 
 function deepCloneJsonLike<T>(value: T): T {
@@ -983,14 +986,7 @@ function DemoBuilderPage() {
   }
 
   function applyTemplateToEditor() {
-    const template = withTemplateSetupState(
-      createCompositionTemplate(selectedTemplateId),
-      {
-        templateId: selectedTemplateId,
-        dismissed: false,
-        confirmations: {},
-      },
-    )
+    const template = buildTemplateWithSetupState(selectedTemplateId)
     setComposition(template)
     setRawJsonDraft(toPrettyJson(template))
     setFieldErrors({})
@@ -1010,14 +1006,20 @@ function DemoBuilderPage() {
       setNewSlug(slug)
     }
 
-    const template = withTemplateSetupState(
-      createCompositionTemplate(selectedTemplateId),
-      {
-        templateId: selectedTemplateId,
-        dismissed: false,
-        confirmations: {},
-      },
-    )
+    const template =
+      activeTemplateSetupId === selectedTemplateId
+        ? normalizeComposition(composition)
+        : buildTemplateWithSetupState(selectedTemplateId)
+    const templateIssues = [
+      ...validateCompositionSemantics(template),
+      ...collectCapabilityValidationIssues(template),
+    ]
+    if (templateIssues.some((issue) => issue.severity === "error")) {
+      showErrorToast(
+        "Template requires a valid setup before creation. Apply it to the editor, resolve the checklist, then create the demo.",
+      )
+      return
+    }
 
     try {
       const created = await createDemoMutation.mutateAsync({
@@ -1283,8 +1285,11 @@ function DemoBuilderPage() {
       )}
       <div className="flex-1 min-h-0">
         <DemoBuilderPreview
+          demoConfigId={selectedDemo?.id ?? null}
+          demoSlug={selectedDemo?.slug ?? null}
           composition={composition}
           demoTitle={selectedDemo?.title ?? "Demo Builder Preview"}
+          isDirty={isDirty}
           availablePageThemes={availablePageThemes}
           availableCardThemes={availableCardThemes}
           onPageThemeChange={(themeId) =>

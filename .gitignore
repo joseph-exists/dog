@@ -10,3 +10,4 @@ backend/app/test_scripts/typer/.env
 .worktrees/
 .volumes/
 volumes/
+/__pycache__/

@@ -96,7 +96,7 @@ export function WorkFeedBlock({
         title={content?.title || "Work Flow"}
         className={className}
         headerActions={
-          viewModel?.isOwner ? (
+          viewModel?.isOwner && isEditing ? (
             <Button
               size="sm"
               variant="outline"
@@ -135,7 +135,7 @@ export function WorkFeedBlock({
                     )}
                   </div>
 
-                  {viewModel?.isOwner && (
+                  {viewModel?.isOwner && isEditing && (
                     <Button
                       size="icon"
                       variant="ghost"

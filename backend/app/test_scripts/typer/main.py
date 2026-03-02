@@ -38,7 +38,9 @@ app.add_typer(wonka.app, name="demo", help="Demo commands (see wonka.py)")
 
 # Command modules
 from commands import (
+    affordances,
     agents,
+    demos,
     stories,
     personas,
     rooms,
@@ -49,6 +51,7 @@ from commands import (
     presets,
     panels,
     embedder,
+    story_affordances,
 )
 
 app.add_typer(items.app, name="items")
@@ -63,6 +66,9 @@ app.add_typer(pages.app, name="pages", help="Page layout management")
 app.add_typer(presets.app, name="presets", help="Panel preset browsing")
 app.add_typer(panels.app, name="panels", help="Room panel configuration")
 app.add_typer(embedder.app, name="embedder", help="Vector embedding query commands")
+app.add_typer(affordances.app, name="affordances", help="Affordance introspection commands")
+app.add_typer(demos.app, name="demos", help="Demo configuration and styling commands")
+app.add_typer(story_affordances.app, name="story-affordances", help="Story affordance introspection commands")
 
 # TODO: Add more command modules
 # from commands import tests

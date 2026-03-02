@@ -140,7 +140,7 @@ export function PersonaManagerBlock({
         title="Persona Management"
         className={className}
         headerActions={
-          viewModel?.isOwner && config.allowCreate !== false ? (
+          viewModel?.isOwner && isEditing && config.allowCreate !== false ? (
             <Button
               size="sm"
               variant="outline"
@@ -188,17 +188,19 @@ export function PersonaManagerBlock({
                     </div>
                   </div>
 
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    disabled={!isEditing}
-                    onClick={() => {
-                      setEditingPersona(persona)
-                      setIsSheetOpen(true)
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  {isEditing && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={!isEditing}
+                      onClick={() => {
+                        setEditingPersona(persona)
+                        setIsSheetOpen(true)
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))

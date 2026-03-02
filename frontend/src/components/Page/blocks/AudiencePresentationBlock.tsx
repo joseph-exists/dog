@@ -93,7 +93,7 @@ export function AudiencePresentationBlock({
         title="Audience Views"
         className={className}
         headerActions={
-          viewModel?.isOwner ? (
+          viewModel?.isOwner && isEditing ? (
             <Button
               size="sm"
               variant="outline"
@@ -142,7 +142,9 @@ export function AudiencePresentationBlock({
                       </div>
                     </div>
 
-                    {viewModel?.isOwner && config.showPreviewCards !== false && (
+                    {viewModel?.isOwner &&
+                      isEditing &&
+                      config.showPreviewCards !== false && (
                       <Button
                         size="icon"
                         variant="ghost"

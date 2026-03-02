@@ -81,12 +81,14 @@ export interface DemoPanelRendererContext {
   ) => Promise<void>
   canvasRenderStateByPanelId: Record<
     string,
-    {
-      isRendering: boolean
-      error: string | null
-      lastRequestId: string | null
-      lastCommitSha: string | null
-      lastScriptName: string | null
+      {
+        isRendering: boolean
+        status: string | null
+        error: string | null
+        lastJobId: string | null
+        lastRequestId: string | null
+        lastCommitSha: string | null
+        lastScriptName: string | null
     }
   >
   canvasSvgOverrideByPanelId: Record<string, string>
@@ -357,7 +359,9 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
         canWrite={ctx.canWrite}
         onRenderSvg={(payload) => ctx.onRenderCanvas(panel.id, payload)}
         isRendering={renderState?.isRendering ?? false}
+        renderStatus={renderState?.status ?? null}
         renderError={renderState?.error ?? null}
+        lastJobId={renderState?.lastJobId ?? null}
         lastRequestId={renderState?.lastRequestId ?? null}
         lastCommitSha={renderState?.lastCommitSha ?? null}
         lastScriptName={renderState?.lastScriptName ?? null}

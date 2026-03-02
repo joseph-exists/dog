@@ -3215,6 +3215,12 @@ class PageBase(SQLModel):
     entity_id: str = Field(max_length=255, index=True)
     layout_version: int = Field(default=1)
     layout_json: list[dict[str, Any]] = Field(sa_column=Column(JSONB))
+    page_theme_id: UUID | None = None
+    cards_theme_id: UUID | None = None
+    presentation_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False),
+    )
 
 
 class PageCreate(PageBase):
@@ -3228,6 +3234,9 @@ class PageLayoutUpdate(SQLModel):
 
     layout_json: list[dict[str, Any]]
     layout_version: int | None = None
+    page_theme_id: UUID | None = None
+    cards_theme_id: UUID | None = None
+    presentation_json: dict[str, Any] = Field(default_factory=dict)
 
 
 class Page(PageBase, table=True):
@@ -4981,6 +4990,23 @@ class DemoCanvasRenderResponse(SQLModel):
     shadow_commit_sha: str | None = None
 
 
+class DemoCanvasRenderJobResponse(SQLModel):
+    demo_config_id: UUID
+    panel_id: str
+    job_id: str
+    request_id: str | None = None
+    script_name: str | None = None
+    status: str
+    runtime_profile: str | None = None
+    resolved_capabilities: list[str] = Field(default_factory=list)
+    queued_at: str | None = None
+    completed_at: str | None = None
+    svg: str | None = None
+    persisted: bool = False
+    shadow_commit_sha: str | None = None
+    error: str | None = None
+
+
 class TesserScriptPublic(SQLModel):
     name: str
     description: str
@@ -4998,7 +5024,12 @@ class TesserScriptsPublic(SQLModel):
 class TesserScriptRunRequest(SQLModel):
     script_input: dict[str, Any] = Field(default_factory=dict)
     room_id: str | None = None
-    timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
+    timeout_seconds: float = Field(default=15.0, ge=1.0, le=300.0)
+
+
+class TesserScriptEnqueueRequest(SQLModel):
+    script_input: dict[str, Any] = Field(default_factory=dict)
+    room_id: str | None = None
 
 
 class TesserScriptRunResponse(SQLModel):
@@ -5008,6 +5039,35 @@ class TesserScriptRunResponse(SQLModel):
     render: dict[str, Any] | None = None
     error: str | None = None
     completed_at: str | None = None
+    worker_id: str | None = None
+
+
+class TesserScriptEnqueueResponse(SQLModel):
+    request_id: str
+    job_id: str
+    script_name: str
+    status: str
+    runtime_profile: str | None = None
+    resolved_capabilities: list[str] = Field(default_factory=list)
+    queued_at: str | None = None
+    completed_at: str | None = None
+    render: dict[str, Any] | None = None
+    error: str | None = None
+    worker_id: str | None = None
+
+
+class TesserJobStatusResponse(SQLModel):
+    request_id: str
+    job_id: str
+    status: str
+    script_name: str | None = None
+    room_id: str | None = None
+    runtime_profile: str | None = None
+    resolved_capabilities: list[str] = Field(default_factory=list)
+    queued_at: str | None = None
+    completed_at: str | None = None
+    render: dict[str, Any] | None = None
+    error: str | None = None
     worker_id: str | None = None
 
 

@@ -1,58 +1,8 @@
 services:
-  api:
-    build:
-      context: .
-      target: core
-    command:
-      - python
-      - -m
-      - tesserax_service.api
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8080"
-      - --jobs-root
-      - /data/jobs
-    ports:
-      - "8080:8080"
-    volumes:
-      - jobs_data:/data/jobs
-      - artifacts_data:/data/artifacts
-    restart: unless-stopped
-
-  worker-core:
-    build:
-      context: .
-      target: core
-    command:
-      - python
-      - -m
-      - tesserax_service.worker
-      - --jobs-root
-      - /data/jobs
-      - --runtime-profile
-      - core
-      - --default-timeout-seconds
-      - "180"
-    volumes:
-      - jobs_data:/data/jobs
-      - artifacts_data:/data/artifacts
-    restart: unless-stopped
-
-  worker-export:
+  tesser:
     build:
       context: .
       target: export
-    command:
-      - python
-      - -m
-      - tesserax_service.worker
-      - --jobs-root
-      - /data/jobs
-      - --runtime-profile
-      - export
-      - --default-timeout-seconds
-      - "600"
     volumes:
       - jobs_data:/data/jobs
       - artifacts_data:/data/artifacts

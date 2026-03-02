@@ -1,6 +1,7 @@
 import logging
 import os
 import threading
+import asyncio
 import sentry_sdk
 import logfire
 from fastapi import FastAPI, Request
@@ -12,6 +13,7 @@ from starlette.middleware.cors import CORSMiddleware
 # Initialize agent registry
 import app.agents  # noqa: F401
 from app.api.main import api_router
+from app.api.routes.demos import run_demo_canvas_tesser_callback_listener
 from app.core.config import settings
 from app.services.shadow_outbox_worker import run_worker as run_shadow_outbox_worker
 
@@ -32,6 +34,10 @@ app = FastAPI(
     generate_unique_id_function=custom_generate_unique_id,
 )
 logger = logging.getLogger(__name__)
+
+
+_demo_canvas_listener_stop_event: asyncio.Event | None = None
+_demo_canvas_listener_task: asyncio.Task[None] | None = None
 
 
 @app.exception_handler(ResponseValidationError)
@@ -78,3 +84,30 @@ def start_shadow_outbox_worker() -> None:
     )
     thread.start()
     logger.info("Shadow outbox worker started")
+
+
+@app.on_event("startup")
+async def start_demo_canvas_callback_listener() -> None:
+    global _demo_canvas_listener_stop_event, _demo_canvas_listener_task
+    if _demo_canvas_listener_task is not None and not _demo_canvas_listener_task.done():
+        return
+    _demo_canvas_listener_stop_event = asyncio.Event()
+    _demo_canvas_listener_task = asyncio.create_task(
+        run_demo_canvas_tesser_callback_listener(_demo_canvas_listener_stop_event)
+    )
+    logger.info("Demo canvas callback listener started")
+
+
+@app.on_event("shutdown")
+async def stop_demo_canvas_callback_listener() -> None:
+    global _demo_canvas_listener_stop_event, _demo_canvas_listener_task
+    if _demo_canvas_listener_stop_event is not None:
+        _demo_canvas_listener_stop_event.set()
+    if _demo_canvas_listener_task is not None:
+        _demo_canvas_listener_task.cancel()
+        try:
+            await _demo_canvas_listener_task
+        except asyncio.CancelledError:
+            pass
+    _demo_canvas_listener_stop_event = None
+    _demo_canvas_listener_task = None

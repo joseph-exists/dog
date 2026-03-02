@@ -37,8 +37,10 @@ interface CanvasPanelProps {
     scriptInput?: Record<string, unknown>
   }) => Promise<void>
   isRendering?: boolean
+  renderStatus?: string | null
   renderError?: string | null
   lastRequestId?: string | null
+  lastJobId?: string | null
   lastCommitSha?: string | null
   lastScriptName?: string | null
   availableScripts?: Array<{
@@ -60,8 +62,10 @@ export function CanvasPanel({
   canWrite = false,
   onRenderSvg,
   isRendering = false,
+  renderStatus = null,
   renderError = null,
   lastRequestId = null,
+  lastJobId = null,
   lastCommitSha = null,
   lastScriptName = null,
   availableScripts = [],
@@ -248,10 +252,14 @@ export function CanvasPanel({
           {configError && (
             <div className="mt-2 text-xs text-red-600">{configError}</div>
           )}
+          {renderStatus && !renderError && (
+            <div className="mt-2 text-xs text-muted-foreground">{renderStatus}</div>
+          )}
           {renderError && <div className="mt-2 text-xs text-red-600">{renderError}</div>}
-          {!renderError && (lastRequestId || lastCommitSha || lastScriptName) && (
+          {!renderError && (lastRequestId || lastJobId || lastCommitSha || lastScriptName) && (
             <div className="mt-2 text-xs text-muted-foreground">
               {lastScriptName ? `script=${lastScriptName} ` : ""}
+              {lastJobId ? `job=${lastJobId} ` : ""}
               {lastRequestId ? `request=${lastRequestId} ` : ""}
               {lastCommitSha ? `commit=${lastCommitSha.slice(0, 8)}` : ""}
             </div>

@@ -4,7 +4,7 @@ This card documents the currently available example scripts and how to run them.
 
 ## Environment Notes
 
-- Run from repository root: `/home/josep/tesserax`
+- Run from repository root: `tesserax`
 - Prefer project venv:
   - `./.venv/bin/python <script>`
 - Animation export (`gif`/`mp4`) requires optional export deps:

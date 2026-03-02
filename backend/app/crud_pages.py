@@ -81,6 +81,9 @@ async def create_page_layout(
     entity_id: str,
     layout_json: list[dict[str, Any]],
     layout_version: int = 1,
+    page_theme_id: UUID | None = None,
+    cards_theme_id: UUID | None = None,
+    presentation_json: dict[str, Any] | None = None,
 ) -> Page:
     """Create a new page layout for an entity."""
     page = Page(
@@ -89,6 +92,9 @@ async def create_page_layout(
         entity_id=entity_id,
         layout_json=layout_json,
         layout_version=layout_version,
+        page_theme_id=page_theme_id,
+        cards_theme_id=cards_theme_id,
+        presentation_json=presentation_json or {},
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -104,11 +110,17 @@ async def update_page_layout(
     *,
     layout_json: list[dict[str, Any]],
     layout_version: int | None = None,
+    page_theme_id: UUID | None = None,
+    cards_theme_id: UUID | None = None,
+    presentation_json: dict[str, Any] | None = None,
 ) -> Page:
     """Update an existing page layout."""
     page.layout_json = layout_json
     if layout_version is not None:
         page.layout_version = layout_version
+    page.page_theme_id = page_theme_id
+    page.cards_theme_id = cards_theme_id
+    page.presentation_json = presentation_json or {}
     page.updated_at = datetime.utcnow()
     session.add(page)
     await session.flush()

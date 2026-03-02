@@ -96,13 +96,12 @@ services:
     build:
       context: ./tesser
       target: export
-    command:
-      - python
-      - -m
-      - tesserax_service.redis_bridge
     volumes:
       - ./tesser/src:/app/src
       - ./tesser/examples-other:/app/examples-other
+      - ./tesser/scripts:/app/scripts
+      - tesser_jobs_data:/data/jobs
+      - tesser_artifacts_data:/data/artifacts
     environment:
       TESSER_LOG_LEVEL: "DEBUG"
 

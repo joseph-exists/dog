@@ -1,0 +1,11 @@
+[project]
+name = "mcpmvp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=3.0.2",
+    "httpx>=0.28.1",
+    "mcp[cli]>=1.26.0",
+]

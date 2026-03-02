@@ -14,7 +14,7 @@ import { showWarningToast } from "@/hooks/useCustomToast"
 import type { MessageViewModel } from "@/services/roomService"
 import useAuth from "./useAuth"
 
-interface RoomEvent {
+export interface RoomStreamEvent {
   type: "event"
   sequence: number
   event_type: string
@@ -44,7 +44,7 @@ interface WarningMessage {
 }
 
 type WebSocketMessage =
-  | RoomEvent
+  | RoomStreamEvent
   | MessageDelta
   | SessionCreated
   | ErrorMessage
@@ -53,6 +53,7 @@ type WebSocketMessage =
 interface UseRoomStreamOptions {
   enabled?: boolean
   onError?: (error: Error) => void
+  onEvent?: (event: RoomStreamEvent) => void
 }
 
 const RUNTIME_EVENT_TYPES = new Set([
@@ -80,7 +81,7 @@ export function useRoomStream(
   roomId: string | undefined,
   options: UseRoomStreamOptions = {},
 ) {
-  const { enabled = true, onError } = options
+  const { enabled = true, onError, onEvent } = options
 
   const wsRef = useRef<WebSocket | null>(null)
   const queryClient = useQueryClient()
@@ -105,7 +106,7 @@ export function useRoomStream(
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const appendUserMessageFromEvent = useCallback(
-    (event: RoomEvent) => {
+    (event: RoomStreamEvent) => {
       const payload = event.payload ?? {}
       if (!payload.sender_id || typeof payload.content !== "string") {
         return
@@ -195,6 +196,7 @@ export function useRoomStream(
             break
 
           case "event":
+            onEvent?.(message)
             // Update last sequence
             setLastSequence(message.sequence)
             lastSequenceRef.current = message.sequence
@@ -305,7 +307,7 @@ export function useRoomStream(
         console.error("Error parsing WebSocket message:", error)
       }
     },
-    [queryClient, roomId, onError, appendUserMessageFromEvent, shouldLog],
+    [queryClient, roomId, onError, onEvent, appendUserMessageFromEvent, shouldLog],
   )
 
   // Connect to WebSocket

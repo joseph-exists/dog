@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "layout_mode": "panels",
+  "runtime_policy": "auto",
+  "persona_policy": "first_available",
+  "chat_mode": "participant",
+  "fixed_user_persona_id": null,
+  "page_theme_id": null,
+  "cards_theme_id": null,
+  "presentation_json": {},
+  "metadata_json": {
+    "story_id": "f1f16bb8-06e8-4330-8d13-bc0326dce73b",
+    "template_id": "composition_b_runtime_coupled",
+    "template_setup": {
+      "dismissed": false,
+      "template_id": "composition_b_runtime_coupled",
+      "confirmations": {
+        "persona_policy": true,
+        "runtime_policy": true
+      }
+    }
+  },
+  "panels": [
+    {
+      "id": "story-runtime-primary",
+      "kind": "storyRuntime",
+      "prominence": "primary",
+      "order": 1,
+      "title": "Story Runtime",
+      "theme_id": null,
+      "presentation_json": {},
+      "default_size": null,
+      "min_size": null,
+      "max_size": null,
+      "viewport_mode": "panel",
+      "options": {
+        "send_runtime_events_to_chat": true,
+        "viewer_mode": false
+      }
+    },
+    {
+      "id": "chat-aux",
+      "kind": "chat",
+      "prominence": "auxiliary",
+      "order": 2,
+      "title": "Room Chat",
+      "theme_id": null,
+      "presentation_json": {},
+      "default_size": null,
+      "min_size": null,
+      "max_size": null,
+      "viewport_mode": "panel",
+      "options": {
+        "mode": "participant",
+        "include_internal_messages": false
+      }
+    },
+    {
+      "id": "participants-aux",
+      "kind": "participantPanel",
+      "prominence": "auxiliary",
+      "order": 3,
+      "title": "Participants",
+      "theme_id": null,
+      "presentation_json": {},
+      "default_size": null,
+      "min_size": null,
+      "max_size": null,
+      "viewport_mode": "panel",
+      "options": {
+        "showUsers": true,
+        "showAgents": true,
+        "compact": false,
+        "allowQuickAdd": true
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "id": "story-meta-top",
+      "type": "storyMetadata",
+      "region": "top",
+      "order": 1,
+      "title": "Story Metadata",
+      "visibility": "visible",
+      "theme_id": null,
+      "presentation_json": {},
+      "config_json": {}
+    },
+    {
+      "id": "orchestrator-primary",
+      "type": "orchestratorState",
+      "region": "primary",
+      "order": 1,
+      "title": "Orchestrator State",
+      "visibility": "visible",
+      "theme_id": null,
+      "presentation_json": {},
+      "config_json": {
+        "show_agent_list": true,
+        "only_active_agents": false
+      }
+    },
+    {
+      "id": "feed-aux",
+      "type": "contributionFeed",
+      "region": "auxiliary",
+      "order": 1,
+      "title": "Contribution Feed",
+      "visibility": "visible",
+      "theme_id": null,
+      "presentation_json": {},
+      "config_json": {
+        "max_items": 8,
+        "include_internal": true,
+        "show_sender_type": true
+      }
+    }
+  ],
+  "id": "e8d540d1-5ea5-4d0c-bfa7-959fdf5c2b0c",
+  "demo_config_id": "71cd2041-1920-4dde-9572-0cd2ce32eae1",
+  "owner_id": "228d7ff2-960d-48b3-91a0-979034859cfe",
+  "created_at": "2026-03-02T00:58:32.861377",
+  "updated_at": "2026-03-02T10:11:38.665557"
+}

@@ -114,12 +114,10 @@ def _classify_spec(rel_path: str, text: str, kind: str) -> ExternalScriptSpec:
     has_core_mode = "svg" in supported_formats
     default_profile = "core" if has_core_mode else "export"
 
-    enabled = kind in {"static", "animation"} and has_core_mode
+    enabled = kind in {"static", "animation"}
     disabled_reason = None
     if kind not in {"static", "animation"}:
         disabled_reason = "Utility/runner scripts are not enabled as render jobs"
-    elif not has_core_mode:
-        disabled_reason = "Requires export runtime profile (staged rollout)"
 
     return ExternalScriptSpec(
         script_id=script_id,

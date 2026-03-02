@@ -199,10 +199,6 @@ services:
     build:
       context: ./tesser
       target: export
-    command:
-      - python
-      - -m
-      - tesserax_service.redis_bridge
     restart: always
     depends_on:
       redis:
@@ -213,9 +209,16 @@ services:
       - TESSER_REDIS_DB=${TESSER_REDIS_DB:-0}
       - TESSER_REQUEST_CHANNEL=${TESSER_REQUEST_CHANNEL:-tesser:requests}
       - TESSER_RESPONSE_CHANNEL=${TESSER_RESPONSE_CHANNEL:-tesser:responses}
-      - TESSER_WORKER_ID=${TESSER_WORKER_ID:-tesser-worker-1}
       - TESSER_LOG_LEVEL=${TESSER_LOG_LEVEL:-INFO}
       - TESSER_ARTIFACTS_ROOT=/data/artifacts/redis-bridge
+      - TESSER_BRIDGE_WORKER_ID=${TESSER_BRIDGE_WORKER_ID:-tesser-bridge}
+      - TESSER_CORE_WORKER_ID=${TESSER_CORE_WORKER_ID:-tesser-worker-core}
+      - TESSER_EXPORT_WORKER_ID=${TESSER_EXPORT_WORKER_ID:-tesser-worker-export}
+      - TESSER_CORE_TIMEOUT_SECONDS=${TESSER_CORE_TIMEOUT_SECONDS:-180}
+      - TESSER_EXPORT_TIMEOUT_SECONDS=${TESSER_EXPORT_TIMEOUT_SECONDS:-600}
+    volumes:
+      - tesser_jobs_data:/data/jobs
+      - tesser_artifacts_data:/data/artifacts
 
   gittin:
     build:
@@ -278,6 +281,8 @@ services:
 volumes:
   app-db-data:
   # forgejo-db-data:  # Commented out - Forgejo replaced by local git
+  tesser_jobs_data:
+  tesser_artifacts_data:
 
 
 networks:

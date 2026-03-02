@@ -62,7 +62,7 @@ export function PrimaryPersonaBlock({
         title="Primary Persona"
         className={className}
         headerActions={
-          isOwner ? (
+          isOwner && isEditing ? (
             <Button
               size="sm"
               variant="outline"

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
 from .contracts import RenderRequest
-from .profiles import resolve_capabilities, runtime_profile_for_capabilities
-from .registry import get_script_spec, list_script_specs
+from .jobs import enqueue_render_job
+from .registry import list_script_specs
 from .runtime import execute_render
 from . import scripts as _scripts  # noqa: F401
 
@@ -58,38 +57,14 @@ class RenderRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(200, result.to_dict())
                 return
 
-            spec = get_script_spec(request.script_id)
-            capabilities = resolve_capabilities(spec, request)
-            resolved_profile = runtime_profile_for_capabilities(
-                capabilities, default_profile=spec.default_runtime_profile
-            )
-            if request.runtime_profile is not None and request.runtime_profile != resolved_profile:
-                raise RuntimeError(
-                    f"runtime_profile mismatch: requested='{request.runtime_profile}' "
-                    f"resolved='{resolved_profile}'"
-                )
-
-            request_id = request.request_id or str(uuid.uuid4())
-            jobs_dir = self.jobs_root / resolved_profile
-            jobs_dir.mkdir(parents=True, exist_ok=True)
-            job_path = jobs_dir / f"{request_id}.json"
-            job_payload = {
-                "script_id": request.script_id,
-                "params": request.params,
-                "output_dir": request.output_dir,
-                "formats": request.formats,
-                "basename": request.basename,
-                "request_id": request_id,
-                "runtime_profile": resolved_profile,
-            }
-            job_path.write_text(json.dumps(job_payload, indent=2), encoding="utf-8")
+            queued = enqueue_render_job(request, self.jobs_root)
             self._send_json(
                 202,
                 {
-                    "job_id": request_id,
-                    "job_path": str(job_path),
-                    "runtime_profile": resolved_profile,
-                    "resolved_capabilities": sorted(capabilities),
+                    "job_id": queued["request_id"],
+                    "job_path": queued["job_path"],
+                    "runtime_profile": queued["runtime_profile"],
+                    "resolved_capabilities": queued["resolved_capabilities"],
                 },
             )
         except Exception as exc:  # noqa: BLE001

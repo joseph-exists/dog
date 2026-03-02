@@ -84,6 +84,9 @@ async def upsert_page_layout(
             existing,
             layout_json=payload.layout_json,
             layout_version=payload.layout_version,
+            page_theme_id=payload.page_theme_id,
+            cards_theme_id=payload.cards_theme_id,
+            presentation_json=payload.presentation_json,
         )
 
     return await create_page_layout(
@@ -93,6 +96,9 @@ async def upsert_page_layout(
         entity_id=entity_id,
         layout_json=payload.layout_json,
         layout_version=payload.layout_version or 1,
+        page_theme_id=payload.page_theme_id,
+        cards_theme_id=payload.cards_theme_id,
+        presentation_json=payload.presentation_json,
     )
 
 
@@ -117,6 +123,9 @@ async def update_page(
         page,
         layout_json=payload.layout_json,
         layout_version=payload.layout_version,
+        page_theme_id=payload.page_theme_id,
+        cards_theme_id=payload.cards_theme_id,
+        presentation_json=payload.presentation_json,
     )
 
 

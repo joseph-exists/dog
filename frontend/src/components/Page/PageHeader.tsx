@@ -28,6 +28,7 @@ export interface PageHeaderProps {
   createdAt: Date
   updatedAt: Date
   isOwner: boolean
+  canEdit?: boolean
   editMode: boolean
   onEditModeChange: (enabled: boolean) => void
   onSave?: () => void
@@ -84,6 +85,7 @@ export function PageHeader({
   createdAt,
   updatedAt,
   isOwner,
+  canEdit = true,
   editMode,
   onEditModeChange,
   onSave,
@@ -141,7 +143,7 @@ export function PageHeader({
         )}
 
         {/* Edit toggle - owner only */}
-        {isOwner && (
+        {isOwner && canEdit && (
           <div className="flex items-center gap-2">
             <Switch
               id="edit-mode"
@@ -167,7 +169,7 @@ export function PageHeader({
         </Button>
 
         {/* Edit button - owner only, also triggers edit mode */}
-        {isOwner && (
+        {isOwner && canEdit && (
           <Button
             type="button"
             variant="ghost"

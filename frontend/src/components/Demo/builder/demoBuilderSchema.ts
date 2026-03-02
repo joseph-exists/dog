@@ -1062,15 +1062,20 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUuidString(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value.trim())
+}
+
 export function getCompositionStoryId(
   composition: EditableComposition,
 ): string | null {
   const metadata = composition.metadata_json
   if (!isObjectRecord(metadata)) return null
   const storyId = metadata.story_id
-  return typeof storyId === "string" && storyId.trim().length > 0
-    ? storyId.trim()
-    : null
+  return isUuidString(storyId) ? storyId.trim() : null
 }
 
 function isTemplateId(value: unknown): value is BuilderTemplateId {
@@ -1211,7 +1216,6 @@ function createCompositionABaselineTemplate(): EditableComposition {
   composition.persona_policy = "first_available"
   composition.chat_mode = "participant"
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_a_baseline",
   }
   composition.panels = [
@@ -1272,7 +1276,6 @@ function createCompositionBRuntimeCoupledTemplate(): EditableComposition {
   composition.persona_policy = "first_available"
   composition.chat_mode = "participant"
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_b_runtime_coupled",
   }
   composition.panels = [
@@ -1422,7 +1425,6 @@ function createCompositionDStylizedAgentOpsTemplate(): EditableComposition {
     },
   }
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_d_stylized_agent_ops",
     description: "Stylized ops baseline with themed panels and chat.",
     // NOTE: preloaded_participants is pass-through metadata for backend/runtime consumption
@@ -1625,7 +1627,6 @@ function createCompositionD1EnhancedNormalTemplate(): EditableComposition {
   }
 
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_d1_enhanced_normal",
     description:
       "Full-feature showcase with professional styling. Demonstrates fonts, callouts, SVG overlays, and density tokens working together.",
@@ -1929,7 +1930,6 @@ function createCompositionD2EnhancedBonkersTemplate(): EditableComposition {
   }
 
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_d2_enhanced_bonkers",
     description:
       "EXTREME visual differentiation for regression detection. Serif headings, monospace body, neon callouts, compact everything. NOT meant to look good - meant to make problems OBVIOUS.",
@@ -2315,7 +2315,6 @@ function createCompositionHChaoticCombinatoricsTemplate(): EditableComposition {
   }
 
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_h_chaotic_combinatorics",
     description:
       "Tests if presentation features are working by making every element DIFFERENT. If they look the same, something is broken.",
@@ -2836,7 +2835,6 @@ function createCompositionETabsContentStudioTemplate(): EditableComposition {
     },
   }
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_e_tabs_content_studio",
     description:
       "Tabbed demo for content curation, git/file walkthrough, and observer chat.",
@@ -2965,7 +2963,6 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
     },
   }
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_f_presentation_passthrough_audit",
     description: "Pass-through audit across all active panel/block surfaces.",
     audit_goal:
@@ -3355,7 +3352,6 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
     },
   }
   composition.metadata_json = {
-    story_id: "story-placeholder",
     template_id: "composition_g_ux_style_matrix",
     description:
       "Manual UX style-matrix review across panel/block/capability combinations.",

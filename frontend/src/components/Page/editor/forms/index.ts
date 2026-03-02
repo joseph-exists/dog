@@ -1,12 +1,17 @@
 // src/components/Page/editor/forms/index.ts
 
+export { AudiencePresentationForm } from "./AudiencePresentationForm"
 export { BioForm } from "./BioForm"
 export { ContactForm } from "./ContactForm"
 export { DomainsForm } from "./DomainsForm"
 export { GalleryForm } from "./GalleryForm"
 export { IdentityForm } from "./IdentityForm"
 export { LinksForm } from "./LinksForm"
+export { PersonaManagerForm } from "./PersonaManagerForm"
+export { PrimaryPersonaForm } from "./PrimaryPersonaForm"
 export { ProfileImageForm } from "./ProfileImageForm"
 export { QualitiesForm } from "./QualitiesForm"
+export { RelationshipManagerForm } from "./RelationshipManagerForm"
 export { RelationshipsForm } from "./RelationshipsForm"
 export { TraitsForm } from "./TraitsForm"
+export { WorkFeedForm } from "./WorkFeedForm"

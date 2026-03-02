@@ -20,6 +20,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/tesserax", "src/tesserax_service"]
 
+[tool.uv.workspace]
+members = [
+    "mcphammer/mcphammer",
+    "mcphammer",
+]
+
 [project.optional-dependencies]
 export = [
     "imageio[ffmpeg]>=2.37.2",

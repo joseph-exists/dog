@@ -46,6 +46,7 @@ interface PageShellProps {
   entityType: string
   entityId: string
   isOwner: boolean
+  ownerCanEdit?: boolean
   onDelete?: () => void
   entityNameOverride?: string
   userPageViewModel?: UserPageViewModel
@@ -61,6 +62,7 @@ export function PageShell({
   entityType,
   entityId,
   isOwner,
+  ownerCanEdit = true,
   onDelete,
   entityNameOverride,
   userPageViewModel,
@@ -676,6 +678,7 @@ export function PageShell({
           createdAt={new Date()}
           updatedAt={new Date()}
           isOwner={isOwner}
+          canEdit={ownerCanEdit}
           editMode={isEditing}
           onEditModeChange={handleEditModeChange}
           onSave={save}

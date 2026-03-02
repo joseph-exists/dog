@@ -11,11 +11,27 @@ import {
 import { AgentsService } from "@/client/sdk.gen"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
 import { getRenderableDemoBlocks } from "@/components/Demo/blockVisibility"
+import { DemoCollapsibleSurface } from "@/components/Demo/DemoCollapsibleSurface"
 import {
   DemoInteractiveBlock,
   type DemoInteractiveDispatchRequest,
 } from "@/components/Demo/DemoInteractiveBlock"
+import { DemoPanelLayoutDialog } from "@/components/Demo/DemoPanelLayoutDialog"
 import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
+import {
+  applyDemoPanelLayoutItems,
+  buildDemoCollapseStorageKey,
+  buildDemoPanelLayoutStorageKey,
+  createDemoPanelLayoutItems,
+  demoPanelLayoutItemsEqual,
+  readDemoCollapsedIds,
+  readDemoPanelLayoutItems,
+  reconcileDemoCollapsedIds,
+  reconcileDemoPanelLayoutItems,
+  writeDemoCollapsedIds,
+  writeDemoPanelLayoutItems,
+  type DemoPanelLayoutItem,
+} from "@/components/Demo/demoPanelLayoutCustomization"
 import { DemoPresentationFrame } from "@/components/Demo/DemoPresentationFrame"
 import {
   DemoShell,
@@ -35,6 +51,7 @@ import {
   ContentRenderer,
 } from "@/components/Page/primitives/ContentRenderer"
 import useAuth from "@/hooks/useAuth"
+import { useCanvasRenderJobEvents } from "@/hooks/useCanvasRenderJobEvents"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useRoomMessages } from "@/hooks/useRoomMessages"
 import { useRoomStream } from "@/hooks/useRoomStream"
@@ -90,7 +107,7 @@ function DemoRoute() {
     )
   }
 
-  return <ResolvedDemoRoute resolved={resolved} />
+  return <ResolvedDemoRoute slug={slug} resolved={resolved} />
 }
 
 function isRenderableContentPayload(value: unknown): value is Content {
@@ -116,10 +133,14 @@ function renderContentPayload(
 }
 
 function ResolvedDemoRoute({
+  slug,
   resolved,
 }: {
+  slug: string
   resolved: ResolvedDemoSessionViewModel
 }) {
+  const getPanelCollapseId = useCallback((panelId: string) => `panel:${panelId}`, [])
+  const getBlockCollapseId = useCallback((blockId: string) => `block:${blockId}`, [])
   const queryClient = useQueryClient()
   const roomId = resolved.room.room_id
   const roomTitle = resolved.room.title ?? "Demo Room"
@@ -138,6 +159,33 @@ function ResolvedDemoRoute({
     resolved.runtime.auto_start_error ?? null,
   )
   const [showInternalMessages, setShowInternalMessages] = useState(false)
+  const authoredPanelLayoutItems = useMemo(
+    () => createDemoPanelLayoutItems(resolved.composition.panels ?? []),
+    [resolved.composition.panels],
+  )
+  const panelLayoutStorageKey = useMemo(
+    () =>
+      buildDemoPanelLayoutStorageKey(
+        resolved.demo_config_id?.trim().length
+          ? resolved.demo_config_id
+          : slug,
+      ),
+    [resolved.demo_config_id, slug],
+  )
+  const collapseStorageKey = useMemo(
+    () =>
+      buildDemoCollapseStorageKey(
+        resolved.demo_config_id?.trim().length
+          ? resolved.demo_config_id
+          : slug,
+      ),
+    [resolved.demo_config_id, slug],
+  )
+  const [layoutDialogOpen, setLayoutDialogOpen] = useState(false)
+  const [panelLayoutItems, setPanelLayoutItems] = useState<DemoPanelLayoutItem[]>(
+    authoredPanelLayoutItems,
+  )
+  const [collapsedContentIds, setCollapsedContentIds] = useState<string[]>([])
   const [canvasSvgOverrideByPanelId, setCanvasSvgOverrideByPanelId] = useState<
     Record<string, string>
   >({})
@@ -146,7 +194,9 @@ function ResolvedDemoRoute({
       string,
       {
         isRendering: boolean
+        status: string | null
         error: string | null
+        lastJobId: string | null
         lastRequestId: string | null
         lastCommitSha: string | null
         lastScriptName: string | null
@@ -155,12 +205,13 @@ function ResolvedDemoRoute({
   >({})
   const autoStartAttemptedRef = useRef(false)
   const { user } = useAuth()
+  const { handleRoomEvent, waitForJob } = useCanvasRenderJobEvents()
 
   const {
     isConnected,
     sendMessage: sendViaWebSocket,
     streamingMessage,
-  } = useRoomStream(roomId)
+  } = useRoomStream(roomId, { onEvent: handleRoomEvent })
   const { messages: debugMessages = [] } = useRoomMessages(roomId)
   const participantsQueryKey = ["room", roomId, "participants", "demo"] as const
   const { data: participants = [], isLoading: isLoadingParticipants } =
@@ -380,38 +431,78 @@ function ResolvedDemoRoute({
         scriptInput?: Record<string, unknown>
       },
     ) => {
+      const nextScriptName = payload?.scriptName ?? "simple_svg"
       setCanvasRenderStateByPanelId((previous) => ({
         ...previous,
         [panelId]: {
           isRendering: true,
+          status: "Queueing render...",
           error: null,
+          lastJobId: previous[panelId]?.lastJobId ?? null,
           lastRequestId: previous[panelId]?.lastRequestId ?? null,
           lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
-          lastScriptName: payload?.scriptName ?? previous[panelId]?.lastScriptName ?? null,
+          lastScriptName: nextScriptName,
         },
       }))
       try {
-        const response = await DemoService.renderCanvasPanel(resolved.demo_config_id, {
+        const enqueueResponse = await DemoService.enqueueCanvasPanelRender(
+          resolved.demo_config_id,
+          {
           panel_id: panelId,
-          script_name: payload?.scriptName ?? "simple_svg",
+          script_name: nextScriptName,
           script_input: payload?.scriptInput ?? {},
           title: payload?.title ?? "Tesser Render",
           subtitle: payload?.subtitle ?? null,
           persist_to_composition: true,
           commit_to_shadow_repo: true,
-        })
+          },
+        )
+        const enqueueStatus = enqueueResponse.status ?? "queued"
+        setCanvasRenderStateByPanelId((previous) => ({
+          ...previous,
+          [panelId]: {
+            isRendering: enqueueStatus === "queued" || enqueueStatus === "running",
+            status:
+              enqueueStatus === "queued"
+                ? "Render queued..."
+                : enqueueStatus === "running"
+                  ? "Rendering in worker..."
+                  : null,
+            error: null,
+            lastJobId: enqueueResponse.job_id ?? previous[panelId]?.lastJobId ?? null,
+            lastRequestId:
+              enqueueResponse.request_id ?? previous[panelId]?.lastRequestId ?? null,
+            lastCommitSha:
+              enqueueResponse.shadow_commit_sha ?? previous[panelId]?.lastCommitSha ?? null,
+            lastScriptName: nextScriptName,
+          },
+        }))
+        const terminalResponse =
+          enqueueStatus === "queued" || enqueueStatus === "running"
+            ? await waitForJob(enqueueResponse.job_id)
+            : enqueueResponse
+
+        if (terminalResponse.status !== "completed" || !terminalResponse.svg) {
+          throw new Error(
+            terminalResponse.error ||
+              `Canvas render ended with status '${terminalResponse.status}'.`,
+          )
+        }
+        const svg = terminalResponse.svg
         setCanvasSvgOverrideByPanelId((previous) => ({
           ...previous,
-          [panelId]: response.svg,
+          [panelId]: svg,
         }))
         setCanvasRenderStateByPanelId((previous) => ({
           ...previous,
           [panelId]: {
             isRendering: false,
+            status: null,
             error: null,
-            lastRequestId: response.request_id ?? null,
-            lastCommitSha: response.shadow_commit_sha ?? null,
-            lastScriptName: payload?.scriptName ?? "simple_svg",
+            lastJobId: terminalResponse.job_id ?? null,
+            lastRequestId: terminalResponse.request_id ?? null,
+            lastCommitSha: terminalResponse.shadow_commit_sha ?? null,
+            lastScriptName: nextScriptName,
           },
         }))
         showSuccessToast("Canvas render updated")
@@ -422,16 +513,18 @@ function ResolvedDemoRoute({
           ...previous,
           [panelId]: {
             isRendering: false,
+            status: null,
             error: message,
+            lastJobId: previous[panelId]?.lastJobId ?? null,
             lastRequestId: previous[panelId]?.lastRequestId ?? null,
             lastCommitSha: previous[panelId]?.lastCommitSha ?? null,
-            lastScriptName: payload?.scriptName ?? previous[panelId]?.lastScriptName ?? null,
+            lastScriptName: nextScriptName,
           },
         }))
         showErrorToast(message)
       }
     },
-    [resolved.demo_config_id],
+    [resolved.demo_config_id, waitForJob],
   )
   const [tesserHelpByScriptName, setTesserHelpByScriptName] = useState<
     Record<string, string>
@@ -493,13 +586,132 @@ function ResolvedDemoRoute({
     return config?.id ?? p.participant_id
   })
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      setPanelLayoutItems(authoredPanelLayoutItems)
+      return
+    }
+    const storedItems = readDemoPanelLayoutItems(
+      window.localStorage,
+      panelLayoutStorageKey,
+    )
+    setPanelLayoutItems(
+      reconcileDemoPanelLayoutItems(authoredPanelLayoutItems, storedItems),
+    )
+  }, [authoredPanelLayoutItems, panelLayoutStorageKey])
+
+  const effectiveCompositionPanels = useMemo(
+    () =>
+      applyDemoPanelLayoutItems(
+        resolved.composition.panels ?? [],
+        panelLayoutItems,
+      ),
+    [panelLayoutItems, resolved.composition.panels],
+  )
+  const renderableBlocks = useMemo(
+    () => getRenderableDemoBlocks(resolved.composition.blocks ?? []),
+    [resolved.composition.blocks],
+  )
+  const validCollapsedIds = useMemo(
+    () => [
+      ...effectiveCompositionPanels.map((panel) => getPanelCollapseId(panel.id)),
+      ...renderableBlocks.map(({ block }) => getBlockCollapseId(block.id)),
+    ],
+    [effectiveCompositionPanels, getBlockCollapseId, getPanelCollapseId, renderableBlocks],
+  )
+
+  const hasCustomizedPanelLayout = useMemo(
+    () =>
+      !demoPanelLayoutItemsEqual(panelLayoutItems, authoredPanelLayoutItems),
+    [authoredPanelLayoutItems, panelLayoutItems],
+  )
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      setCollapsedContentIds([])
+      return
+    }
+    const storedIds = readDemoCollapsedIds(
+      window.localStorage,
+      collapseStorageKey,
+    )
+    setCollapsedContentIds(reconcileDemoCollapsedIds(storedIds, validCollapsedIds))
+  }, [collapseStorageKey, validCollapsedIds])
+
+  useEffect(() => {
+    setCollapsedContentIds((current) =>
+      reconcileDemoCollapsedIds(current, validCollapsedIds),
+    )
+  }, [validCollapsedIds])
+
+  const handleApplyPanelLayout = useCallback(
+    (items: DemoPanelLayoutItem[]) => {
+      setPanelLayoutItems(items)
+      if (typeof window !== "undefined") {
+        writeDemoPanelLayoutItems(
+          window.localStorage,
+          panelLayoutStorageKey,
+          items,
+        )
+      }
+      setLayoutDialogOpen(false)
+      showSuccessToast("Demo layout updated for this device.")
+    },
+    [panelLayoutStorageKey],
+  )
+
+  const handleResetPanelLayout = useCallback(() => {
+    setPanelLayoutItems(authoredPanelLayoutItems)
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(panelLayoutStorageKey)
+    }
+    showSuccessToast("Demo layout reset to authored default.")
+  }, [authoredPanelLayoutItems, panelLayoutStorageKey])
+
+  const persistCollapsedIds = useCallback(
+    (nextIds: string[]) => {
+      setCollapsedContentIds(nextIds)
+      if (typeof window !== "undefined") {
+        writeDemoCollapsedIds(window.localStorage, collapseStorageKey, nextIds)
+      }
+    },
+    [collapseStorageKey],
+  )
+
+  const toggleCollapsedContent = useCallback(
+    (collapseId: string) => {
+      persistCollapsedIds(
+        collapsedContentIds.includes(collapseId)
+          ? collapsedContentIds.filter((id) => id !== collapseId)
+          : [...collapsedContentIds, collapseId],
+      )
+    },
+    [collapsedContentIds, persistCollapsedIds],
+  )
+
+  const handleCollapseAllContent = useCallback(() => {
+    persistCollapsedIds(validCollapsedIds)
+    showSuccessToast("Panels and blocks collapsed for this demo view.")
+  }, [persistCollapsedIds, validCollapsedIds])
+
+  const handleExpandAllContent = useCallback(() => {
+    persistCollapsedIds([])
+    showSuccessToast("Panels and blocks expanded for this demo view.")
+  }, [persistCollapsedIds])
+
+  const hasCollapsedContent = collapsedContentIds.length > 0
+  const hasExpandableContent = validCollapsedIds.some(
+    (id) => !collapsedContentIds.includes(id),
+  )
+
   const panels: DemoLayoutPanelConfig[] = useMemo(
     () =>
-      (resolved.composition.panels ?? []).map((panel) => ({
+      effectiveCompositionPanels.map((panel) => ({
         id: panel.id,
         kind: panel.kind ?? "content",
         prominence: panel.prominence ?? "primary",
         title: panel.title ?? panel.kind ?? "Panel",
+        collapsed: collapsedContentIds.includes(getPanelCollapseId(panel.id)),
         defaultSize:
           panel.default_size ??
           ((panel.prominence ?? "primary") === "primary" ? 65 : 35),
@@ -521,45 +733,58 @@ function ResolvedDemoRoute({
               className="h-full min-h-0"
               contentClassName="h-full min-h-0"
             >
-              {renderDemoPanel(panel, {
-                demoConfigId: resolved.demo_config_id,
-                roomId,
-                roomTitle,
-                roomStoryId,
-                canWrite,
-                autoRespond,
-                onSendMessage: handleAutoRespondMessage,
-                isConnected,
-                sendViaWebSocket,
-                streamingMessage,
-                activeUsers,
-                roomAgentsAsAgentData,
-                debugActiveAgents: allRoomAgents,
-                availableAgents,
-                existingAgentIds,
-                onAddAgent: handleAddAgent,
-                onRemoveAgent: handleRemoveAgent,
-                onToggleAgent: handleToggleAgent,
-                onRemoveUser: handleRemoveUser,
-                isParticipantPanelLoading:
-                  isLoadingParticipants ||
-                  isLoadingAvailableAgents ||
-                  isAddingParticipant ||
-                  isRemovingParticipant,
-                debugMessages,
-                showInternalMessages,
-                onToggleInternalMessages: setShowInternalMessages,
-                renderContentPayload,
-                onRenderCanvas: handleRenderCanvas,
-                canvasRenderStateByPanelId,
-                canvasSvgOverrideByPanelId,
-                availableTesserScripts: availableTesserScripts.map((script) => ({
-                  ...script,
-                  help_text: tesserHelpByScriptName[script.name] ?? script.help_text ?? null,
-                })),
-                onRequestTesserScriptHelp: handleRequestTesserScriptHelp,
-                onRequestTesserExamplesIndex: handleRequestTesserExamplesIndex,
-              })}
+              <DemoCollapsibleSurface
+                title={panel.title ?? panel.kind ?? "Panel"}
+                isCollapsed={collapsedContentIds.includes(
+                  getPanelCollapseId(panel.id),
+                )}
+                onToggle={() => toggleCollapsedContent(getPanelCollapseId(panel.id))}
+                className="h-full min-h-0"
+                contentClassName="h-full min-h-0"
+              >
+                {renderDemoPanel(panel, {
+                  demoConfigId: resolved.demo_config_id,
+                  roomId,
+                  roomTitle,
+                  roomStoryId,
+                  canWrite,
+                  autoRespond,
+                  onSendMessage: handleAutoRespondMessage,
+                  isConnected,
+                  sendViaWebSocket,
+                  streamingMessage,
+                  activeUsers,
+                  roomAgentsAsAgentData,
+                  debugActiveAgents: allRoomAgents,
+                  availableAgents,
+                  existingAgentIds,
+                  onAddAgent: handleAddAgent,
+                  onRemoveAgent: handleRemoveAgent,
+                  onToggleAgent: handleToggleAgent,
+                  onRemoveUser: handleRemoveUser,
+                  isParticipantPanelLoading:
+                    isLoadingParticipants ||
+                    isLoadingAvailableAgents ||
+                    isAddingParticipant ||
+                    isRemovingParticipant,
+                  debugMessages,
+                  showInternalMessages,
+                  onToggleInternalMessages: setShowInternalMessages,
+                  renderContentPayload,
+                  onRenderCanvas: handleRenderCanvas,
+                  canvasRenderStateByPanelId,
+                  canvasSvgOverrideByPanelId,
+                  availableTesserScripts: availableTesserScripts.map((script) => ({
+                    ...script,
+                    help_text:
+                      tesserHelpByScriptName[script.name] ??
+                      script.help_text ??
+                      null,
+                  })),
+                  onRequestTesserScriptHelp: handleRequestTesserScriptHelp,
+                  onRequestTesserExamplesIndex: handleRequestTesserExamplesIndex,
+                })}
+              </DemoCollapsibleSurface>
             </DemoPresentationFrame>
           )
         },
@@ -587,13 +812,16 @@ function ResolvedDemoRoute({
       isLoadingParticipants,
       isRemovingParticipant,
       activeUsers,
+      collapsedContentIds,
       debugMessages,
-      resolved.composition.panels,
+      effectiveCompositionPanels,
+      getPanelCollapseId,
       roomAgentsAsAgentData,
       roomStoryId,
       roomTitle,
       roomId,
       themeIndex,
+      toggleCollapsedContent,
       sendViaWebSocket,
       showInternalMessages,
       streamingMessage,
@@ -604,7 +832,7 @@ function ResolvedDemoRoute({
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return
 
-    const rawPanels = (resolved.composition.panels ?? []).map((panel) => ({
+    const rawPanels = effectiveCompositionPanels.map((panel) => ({
       id: panel.id,
       kind: panel.kind,
       prominence: panel.prominence,
@@ -628,7 +856,7 @@ function ResolvedDemoRoute({
     // Debug panel mapping to trace layout size/prominence regressions.
     console.debug("[DemoRoute] raw composition panels", rawPanels)
     console.debug("[DemoRoute] mapped layout panels", mappedPanels)
-  }, [panels, resolved.composition.panels])
+  }, [effectiveCompositionPanels, panels])
 
   const interactionReceiverRegistry = useMemo(() => {
     const registry = new Map<
@@ -639,7 +867,7 @@ function ResolvedDemoRoute({
         accepts: string[]
       }
     >()
-    for (const panel of resolved.composition.panels ?? []) {
+    for (const panel of effectiveCompositionPanels) {
       const registration = resolveInteractionReceiverRegistration({
         id: panel.id,
         kind: panel.kind,
@@ -653,7 +881,7 @@ function ResolvedDemoRoute({
       })
     }
     return registry
-  }, [resolved.composition.panels])
+  }, [effectiveCompositionPanels])
 
   const handleDispatchInteraction = useCallback(
     (request: DemoInteractiveDispatchRequest) => {
@@ -691,10 +919,6 @@ function ResolvedDemoRoute({
   )
 
   const renderedBlocksByRegion = useMemo(() => {
-    const orderedBlocks = getRenderableDemoBlocks(
-      resolved.composition.blocks ?? [],
-    )
-
     const regions: Record<
       "top" | "primary" | "auxiliary" | "footer",
       DemoShellBlockRenderItem[]
@@ -705,7 +929,7 @@ function ResolvedDemoRoute({
       footer: [],
     }
 
-    for (const { block, region, visibilityMode } of orderedBlocks) {
+    for (const { block, region, visibilityMode } of renderableBlocks) {
       const rendered = renderDemoBlock(block, {
         renderContentPayload,
         roomId,
@@ -733,12 +957,20 @@ function ResolvedDemoRoute({
         id: block.id,
         content: (
           <DemoPresentationFrame frame={blockFrame}>
-            <DemoInteractiveBlock
-              block={block}
-              onDispatchInteraction={handleDispatchInteraction}
+            <DemoCollapsibleSurface
+              title={block.title ?? block.type ?? "Block"}
+              isCollapsed={collapsedContentIds.includes(
+                getBlockCollapseId(block.id),
+              )}
+              onToggle={() => toggleCollapsedContent(getBlockCollapseId(block.id))}
             >
-              {rendered}
-            </DemoInteractiveBlock>
+              <DemoInteractiveBlock
+                block={block}
+                onDispatchInteraction={handleDispatchInteraction}
+              >
+                {rendered}
+              </DemoInteractiveBlock>
+            </DemoCollapsibleSurface>
           </DemoPresentationFrame>
         ),
         visibilityMode,
@@ -751,9 +983,10 @@ function ResolvedDemoRoute({
     autoRespond,
     autoStartError,
     availableAgents,
+    collapsedContentIds,
     debugMessages,
+    getBlockCollapseId,
     isConnected,
-    resolved.composition.blocks,
     roomAgentsAsAgentData,
     handleDispatchInteraction,
     roomId,
@@ -763,6 +996,8 @@ function ResolvedDemoRoute({
     runtimePolicy,
     streamingMessage,
     themeIndex,
+    toggleCollapsedContent,
+    renderableBlocks,
   ])
 
   const roomHasStory = Boolean(roomStoryId)
@@ -811,7 +1046,7 @@ function ResolvedDemoRoute({
           className="h-full min-h-0"
           contentClassName="h-full min-h-0"
         >
-          <DemoShell
+      <DemoShell
             demoConfig={{
               id: resolved.demo_config_id,
               slug: resolved.demo_config_id,
@@ -842,10 +1077,23 @@ function ResolvedDemoRoute({
             pageTheme={themes.page?.theme ?? null}
             cardsTheme={themes.cards?.theme ?? null}
             availablePageThemes={availablePageThemes}
-            availableCardThemes={availableCardThemes}
-            onPageThemeChange={handlePageThemeChange}
-            onCardsThemeChange={handleCardsThemeChange}
-          />
+        availableCardThemes={availableCardThemes}
+        onPageThemeChange={handlePageThemeChange}
+        onCardsThemeChange={handleCardsThemeChange}
+        onCustomizeLayout={() => setLayoutDialogOpen(true)}
+        canResetLayout={hasCustomizedPanelLayout}
+        onResetLayout={handleResetPanelLayout}
+        onCollapseAll={hasExpandableContent ? handleCollapseAllContent : undefined}
+        onExpandAll={hasCollapsedContent ? handleExpandAllContent : undefined}
+      />
+      <DemoPanelLayoutDialog
+        open={layoutDialogOpen}
+        onOpenChange={setLayoutDialogOpen}
+        items={panelLayoutItems}
+        onApply={handleApplyPanelLayout}
+        onReset={handleResetPanelLayout}
+        canReset={hasCustomizedPanelLayout}
+      />
         </DemoPresentationFrame>
       </div>
     </div>

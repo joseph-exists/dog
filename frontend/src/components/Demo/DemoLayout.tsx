@@ -16,12 +16,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
+import type { PanelImperativeHandle } from "react-resizable-panels"
 
 export interface PanelConfig {
   id: string
   kind: string
   prominence: "primary" | "auxiliary"
   title: string
+  collapsed?: boolean
   defaultSize?: number
   minSize?: number
   maxSize?: number
@@ -51,7 +53,90 @@ function getAuxiliaryColumnDefaultSize(auxiliaryPanels: PanelConfig[]): number {
   return clampPanelSize(auxiliaryPanels[0]?.defaultSize, 35)
 }
 
-export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
+export const DEMO_LAYOUT_COLLAPSED_PRIMARY_SIZE = 8
+
+export function canPrimaryPanelCollapseToWidth(
+  panels: Pick<PanelConfig, "id" | "prominence" | "collapsed">[],
+  panelId: string,
+): boolean {
+  const primaryPanels = panels.filter((panel) => panel.prominence === "primary")
+  if (primaryPanels.length < 2) return false
+  return primaryPanels.some(
+    (panel) => panel.id !== panelId && panel.collapsed !== true,
+  )
+}
+
+export function getPrimaryPanelCollapsedSize(
+  panel: Pick<PanelConfig, "prominence" | "collapsed">,
+  canCollapseToWidth = true,
+): number | undefined {
+  if (
+    panel.prominence !== "primary" ||
+    panel.collapsed !== true ||
+    !canCollapseToWidth
+  ) {
+    return undefined
+  }
+  return DEMO_LAYOUT_COLLAPSED_PRIMARY_SIZE
+}
+
+function PrimaryResizablePanel({
+  panel,
+  canCollapseToWidth,
+}: {
+  panel: PanelConfig
+  canCollapseToWidth: boolean
+}) {
+  const panelRef = React.useRef<PanelImperativeHandle | null>(null)
+
+  React.useEffect(() => {
+    const instance = panelRef.current
+    if (!instance) return
+    if (panel.collapsed && canCollapseToWidth) {
+      try {
+        instance.collapse()
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[DemoLayout] Primary width collapse failed", {
+            panelId: panel.id,
+            error,
+          })
+        }
+      }
+    } else if (instance.isCollapsed()) {
+      try {
+        instance.expand()
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[DemoLayout] Primary width expand failed", {
+            panelId: panel.id,
+            error,
+          })
+        }
+      }
+    }
+  }, [canCollapseToWidth, panel.collapsed, panel.id])
+
+  return (
+    <ResizablePanel
+      id={panel.id}
+      panelRef={panelRef}
+      defaultSize={panel.defaultSize}
+      minSize={panel.minSize ?? 10}
+      maxSize={panel.maxSize}
+      collapsible={canCollapseToWidth}
+      collapsedSize={getPrimaryPanelCollapsedSize(panel, canCollapseToWidth)}
+    >
+      {panel.render()}
+    </ResizablePanel>
+  )
+}
+
+export function DemoLayout({
+  panels,
+  mode,
+  className,
+}: DemoLayoutProps) {
   const isMobile = useIsMobile()
   const pageSizedPanel = panels.find((p) => p.viewportMode === "page")
 
@@ -102,7 +187,6 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
     )
   }
 
-  // Desktop panel layout
   return (
     <ResizablePanelGroup
       direction="horizontal"
@@ -112,13 +196,13 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
       {primaryPanels.map((panel, index) => (
         <React.Fragment key={panel.id}>
           {index > 0 && <ResizableHandle withHandle />}
-          <ResizablePanel
-            defaultSize={panel.defaultSize}
-            minSize={panel.minSize ?? 10}
-            maxSize={panel.maxSize}
-          >
-            {panel.render()}
-          </ResizablePanel>
+          <PrimaryResizablePanel
+            panel={panel}
+            canCollapseToWidth={canPrimaryPanelCollapseToWidth(
+              primaryPanels,
+              panel.id,
+            )}
+          />
         </React.Fragment>
       ))}
 
@@ -126,15 +210,17 @@ export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
       {auxiliaryPanels.length > 0 && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={auxiliaryColumnDefaultSize} minSize={20}>
+          <ResizablePanel
+            defaultSize={auxiliaryColumnDefaultSize}
+            minSize={20}
+          >
             <ResizablePanelGroup direction="vertical">
               {auxiliaryPanels.map((panel, index) => (
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}
                   <ResizablePanel
-                    defaultSize={
-                      panel.defaultSize ?? 100 / auxiliaryPanels.length
-                    }
+                    id={panel.id}
+                    defaultSize={panel.defaultSize ?? 100 / auxiliaryPanels.length}
                     minSize={panel.minSize ?? 10}
                     maxSize={panel.maxSize}
                   >

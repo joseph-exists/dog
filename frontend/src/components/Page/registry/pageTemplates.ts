@@ -130,8 +130,8 @@ export const pageTemplates: PageTemplate[] = [
       {
         id: "template-user-persona-manager",
         type: "personaManager",
-        column: "auxiliary",
-        order: 1,
+        column: "primary",
+        order: 6,
         config: {
           allowCreate: true,
           allowPrimarySelection: true,
@@ -144,8 +144,8 @@ export const pageTemplates: PageTemplate[] = [
       {
         id: "template-user-relationship-manager",
         type: "relationshipManager",
-        column: "auxiliary",
-        order: 2,
+        column: "primary",
+        order: 7,
         config: { allowCreate: true, allowEditing: true, audienceScoped: true },
         content: { relations: [] },
         visibility: "visible",

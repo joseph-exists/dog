@@ -11,6 +11,9 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.deps import CurrentUser
 from app.models import (
     TesserExamplesIndexResponse,
+    TesserJobStatusResponse,
+    TesserScriptEnqueueRequest,
+    TesserScriptEnqueueResponse,
     TesserScriptPublic,
     TesserScriptHelpResponse,
     TesserScriptRunRequest,
@@ -18,7 +21,9 @@ from app.models import (
     TesserScriptsPublic,
 )
 from app.services.tesser_service import (
+    enqueue_tesser,
     get_tesser_examples_index,
+    get_tesser_job_status,
     TesserRenderTimeoutError,
     get_tesser_script_help,
     list_tesser_scripts,
@@ -136,4 +141,123 @@ async def run_script(
         error=response.get("error"),
         completed_at=response.get("completed_at"),
         worker_id=response.get("worker_id"),
+    )
+
+
+@router.post("/scripts/{script_name}/enqueue", response_model=TesserScriptEnqueueResponse)
+async def enqueue_script(
+    current_user: CurrentUser,
+    script_name: str,
+    payload: TesserScriptEnqueueRequest,
+) -> Any:
+    _ = current_user
+    try:
+        response = await enqueue_tesser(
+            script_name=script_name,
+            script_input=payload.script_input,
+            room_id=payload.room_id,
+        )
+    except TesserRenderTimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=str(exc),
+        ) from exc
+
+    if str(response.get("status") or "") == "error":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=response.get("error") or f"Failed to enqueue script '{script_name}'",
+        )
+
+    return TesserScriptEnqueueResponse(
+        request_id=str(response.get("request_id") or ""),
+        job_id=str(response.get("job_id") or response.get("request_id") or ""),
+        script_name=script_name,
+        status=str(response.get("status") or "queued"),
+        runtime_profile=(
+            str(response.get("runtime_profile"))
+            if response.get("runtime_profile") is not None
+            else None
+        ),
+        resolved_capabilities=(
+            list(response.get("resolved_capabilities"))
+            if isinstance(response.get("resolved_capabilities"), list)
+            else []
+        ),
+        queued_at=(
+            str(response.get("queued_at"))
+            if response.get("queued_at") is not None
+            else None
+        ),
+        completed_at=(
+            str(response.get("completed_at"))
+            if response.get("completed_at") is not None
+            else None
+        ),
+        render=response.get("render") if isinstance(response.get("render"), dict) else None,
+        error=str(response.get("error")) if response.get("error") is not None else None,
+        worker_id=(
+            str(response.get("worker_id"))
+            if response.get("worker_id") is not None
+            else None
+        ),
+    )
+
+
+@router.get("/jobs/{job_id}", response_model=TesserJobStatusResponse)
+async def get_job_status(current_user: CurrentUser, job_id: str) -> Any:
+    _ = current_user
+    try:
+        response = await get_tesser_job_status(job_id=job_id)
+    except TesserRenderTimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=str(exc),
+        ) from exc
+
+    if str(response.get("status") or "") == "not_found":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=response.get("error") or f"Unknown tesser job '{job_id}'",
+        )
+
+    return TesserJobStatusResponse(
+        request_id=str(response.get("request_id") or ""),
+        job_id=str(response.get("job_id") or job_id),
+        status=str(response.get("status") or "queued"),
+        script_name=(
+            str(response.get("script_name"))
+            if response.get("script_name") is not None
+            else None
+        ),
+        room_id=(
+            str(response.get("room_id")) if response.get("room_id") is not None else None
+        ),
+        runtime_profile=(
+            str(response.get("runtime_profile"))
+            if response.get("runtime_profile") is not None
+            else None
+        ),
+        resolved_capabilities=(
+            list(response.get("resolved_capabilities"))
+            if isinstance(response.get("resolved_capabilities"), list)
+            else []
+        ),
+        queued_at=(
+            str(response.get("queued_at"))
+            if response.get("queued_at") is not None
+            else None
+        ),
+        completed_at=(
+            str(response.get("completed_at"))
+            if response.get("completed_at") is not None
+            else None
+        ),
+        render=response.get("render") if isinstance(response.get("render"), dict) else None,
+        error=str(response.get("error")) if response.get("error") is not None else None,
+        worker_id=(
+            str(response.get("worker_id"))
+            if response.get("worker_id") is not None
+            else None
+        ),
     )
