@@ -20,8 +20,7 @@ User-visible platform repos live under the `dog` organization.
 
 - These repos are associated with platform users.
 - Individual users are not direct Gogs owners of these repos.
-- They are separate from shadow repos and should not share provisioning logic or naming assumptions.
-- They are user visible in the Gogs UI.
+- They are separate from shadow repos.
 - Ownership in Gogs stays stable after creation.
 
 ### Operator-Owned Repos
@@ -72,17 +71,6 @@ Requirements:
 - cleanup and reverse mapping should still be possible
 - the scheme should tolerate duplicate or changing slugs
 
-Open options:
-
-- `dog/{slug}`
-- `dog/{user_id}-{slug}`
-- `dog/{slug}-{user_id}`
-- `dog/{stable_repo_id}-{slug}`
-
-Current leaning:
-
-- keep a readable slug
-- include a stable short identifier in the repo name
 
 Chosen format:
 
@@ -111,13 +99,6 @@ Shadow repos are backend-managed infrastructure.
 - Should ownership in Gogs stay stable? Yes.
 - Should shadow repo names be immutable? Yes.
 - Should shadow repos be user visible by default? No.
-
-## Questions Still Open
-
-- What exact naming rule should `dog` user-visible repos use?
-- Should shadow provisioning use one shared service account or one dedicated account per entity type or workflow?
-- What metadata should be stored in Gogs versus in the application DB for reverse lookup and cleanup?
-- Should existing local shadow repos be migrated into matching Gogs repos immediately or only when first touched by the new provisioning path?
 
 ## Implementation Consequence
 

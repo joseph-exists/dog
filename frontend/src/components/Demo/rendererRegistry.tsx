@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
+import { resolveShadowRepoGitViewConfig } from "@/components/Demo/gitViewConfig"
 import {
   A2UIPanel,
   CanvasPanel,
@@ -99,6 +100,7 @@ export interface DemoPanelRendererContext {
 
 export interface DemoBlockRendererContext {
   renderContentPayload: (value: unknown, fallbackLabel: string) => ReactNode
+  metadataJson: Record<string, unknown>
   roomId: string
   roomTitle: string
   roomStoryId: string | null
@@ -488,10 +490,14 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
       />
     )
   },
-  gitView: (block) => (
+  gitView: (block, ctx) => (
     <GitViewBlock
       title={block.title}
-      config={(block as { config_json?: unknown }).config_json}
+      config={resolveShadowRepoGitViewConfig(
+        (block as { config_json?: unknown }).config_json,
+        ctx.metadataJson,
+      )}
+      rawConfig={(block as { config_json?: unknown }).config_json}
     />
   ),
   fileExplorer: (block) => (

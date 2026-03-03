@@ -171,29 +171,41 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.middlewares=https-redirect
 
 
-  # shadow-outbox-worker:
-  #   image: "${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}-shadow-worker"
-  #   restart: always
-  #   depends_on:
-  #     backend:
-  #       condition: service_healthy
-  #       restart: true
-  #     db:
-  #       condition: service_healthy
-  #       restart: true
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     - SHADOW_REPOS_PATH=/tmp/shadows
-  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-}
-  #     - SHADOW_REPO_DEFAULT_BRANCH=${SHADOW_REPO_DEFAULT_BRANCH:-main}
-  #     - SHADOW_GOGS_BASE_URL=${SHADOW_GOGS_BASE_URL:-}
-  #     - SHADOW_GOGS_ORG=${SHADOW_GOGS_ORG:-shadow}
-  #     - SHADOW_GOGS_TOKEN=${SHADOW_GOGS_TOKEN:-}
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile.worker
-  #   command: ["python", "-m", "app.services.shadow_outbox_worker"]
+  outbox-worker:
+    image: "${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}"
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      prestart:
+        condition: service_completed_successfully
+      gittin:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - SHADOW_REPOS_PATH=/data/shadows
+      - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-}
+      - SHADOW_REPO_DEFAULT_BRANCH=${SHADOW_REPO_DEFAULT_BRANCH:-main}
+      # Use Docker network hostname for Gogs API access
+      - SHADOW_GOGS_BASE_URL=http://gittin:3000
+      - SHADOW_GOGS_ORG=${SHADOW_GOGS_ORG:-shadow}
+      - SHADOW_GOGS_TOKEN=${SHADOW_GOGS_TOKEN:-}
+      - SHADOW_GOGS_TIMEOUT_SECONDS=${SHADOW_GOGS_TIMEOUT_SECONDS:-10}
+      - SHADOW_OUTBOX_POLL_INTERVAL_SECONDS=${SHADOW_OUTBOX_POLL_INTERVAL_SECONDS:-5}
+      - SHADOW_OUTBOX_BATCH_SIZE=${SHADOW_OUTBOX_BATCH_SIZE:-10}
+      - SHADOW_OUTBOX_LOG_LEVEL=${SHADOW_OUTBOX_LOG_LEVEL:-INFO}
+    volumes:
+      - shadow-repos-data:/data/shadows
+    build:
+      context: ./backend
+    command: ["python", "-m", "app.services.outbox_worker"]
 
   tesser:
     build:
@@ -283,6 +295,7 @@ volumes:
   # forgejo-db-data:  # Commented out - Forgejo replaced by local git
   tesser_jobs_data:
   tesser_artifacts_data:
+  shadow-repos-data:  # Local git staging for shadow versioning
 
 
 networks:

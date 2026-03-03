@@ -31,6 +31,7 @@ from app.api.routes import (
     room_agent_settings,
     room_runtime,
     rooms,
+    shadow_repos,
     stories,
     storynodes,
     tesser,
@@ -76,6 +77,7 @@ api_router.include_router(agent_personas.router)
 api_router.include_router(llm_providers.router)
 api_router.include_router(llm_catalog.router)
 api_router.include_router(rooms.router)
+api_router.include_router(shadow_repos.router)
 api_router.include_router(room_contexts.router)
 api_router.include_router(room_agent_settings.router)
 api_router.include_router(room_runtime.router)

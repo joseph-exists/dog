@@ -932,6 +932,12 @@ function ResolvedDemoRoute({
     for (const { block, region, visibilityMode } of renderableBlocks) {
       const rendered = renderDemoBlock(block, {
         renderContentPayload,
+        metadataJson:
+          resolved.composition.metadata_json &&
+          typeof resolved.composition.metadata_json === "object" &&
+          !Array.isArray(resolved.composition.metadata_json)
+            ? (resolved.composition.metadata_json as Record<string, unknown>)
+            : {},
         roomId,
         roomTitle,
         roomStoryId,
@@ -994,6 +1000,7 @@ function ResolvedDemoRoute({
     roomTitle,
     runtimeHasRuntime,
     runtimePolicy,
+    resolved.composition.metadata_json,
     streamingMessage,
     themeIndex,
     toggleCollapsedContent,

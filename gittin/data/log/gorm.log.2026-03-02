@@ -1,0 +1,6 @@
+2026/03/02 01:26:29 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.273ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-195cab47-29ed-4d88-a755-67662118554b" ORDER BY `repository`.`id` LIMIT 1
+2026/03/02 23:00:09 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.308ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-2bc54502" ORDER BY `repository`.`id` LIMIT 1
+2026/03/02 23:03:45 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.127ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-4cae5b44" ORDER BY `repository`.`id` LIMIT 1

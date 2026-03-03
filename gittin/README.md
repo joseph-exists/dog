@@ -22,10 +22,79 @@ On first boot, [`entrypoint.sh`](/home/josep/dog/gittin/entrypoint.sh) writes `/
 
 After the installer runs, Gogs persists its final configuration in `./gittin/data/conf/app.ini` and later restarts reuse it unchanged.
 
-## Current integration status
-This replaces the container runtime only. It does not yet recreate the old "auto-create missing repo on first git access" behavior for shadow repos, so backend shadow sync should remain local-only until a repo provisioning path is added.
+● Excellent question! These are actually two separate systems that both use your Gogs instance (gittin), but for different purposes.
 
-## Provisioning Notes
-- Do not store personal access tokens in this file.
-- Keep the `shadow-alpha` PAT in local secrets or `.env`, not in tracked documentation.
-- If a token was pasted here previously, rotate it in Gogs and replace it only in local secret storage.
+  ★ Insight ─────────────────────────────────────
+  Two Gogs Consumers, Two Orgs:
+  - Shadow System (shadow org) → Internal entity versioning, background worker
+  - User Repo System (dog org) → User-visible repos, synchronous API calls
+
+  They share the same Gogs server but are isolated by organization.
+  ─────────────────────────────────────────────────
+
+  Comparison
+  ┌───────────────┬────────────────────────────────────────────────┬──────────────────────────────────────────────┐
+  │    Aspect     │              shadow_outbox_worker              │              user_repo_service               │
+  ├───────────────┼────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Purpose       │ Internal entity snapshots (rooms, agents)      │ User-controlled repositories                 │
+  ├───────────────┼────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Gogs Org      │ shadow                                         │ dog                                          │
+  ├───────────────┼────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Config Vars   │ SHADOW_GOGS_*                                  │ USER_REPO_GOGS_*                             │
+  ├───────────────┼────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Execution     │ Background worker (polls DB)                   │ Synchronous (API request)                    │
+  ├───────────────┼────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Workflow      │ Outbox pattern: queue → worker → commit → push │ Direct: API call → provision in Gogs         │
+  ├───────────────┼────────────────────────────────────────────────┼──────────────────────────────────────────────┤
+  │ Import Source │ Internal snapshots only                        │ Can import from external URLs (GitHub, etc.) │
+  └───────────────┴────────────────────────────────────────────────┴──────────────────────────────────────────────┘
+  Architecture Diagram
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                           Gogs (gittin:3000)                            │
+  │  ┌─────────────────────────────┐   ┌─────────────────────────────────┐  │
+  │  │    shadow org               │   │         dog org                 │  │
+  │  │  • room-{uuid}              │   │  • user-repo-{slug}-{uuid}      │  │
+  │  │  • agent-{uuid}             │   │  • imported-from-github         │  │
+  │  │  (internal snapshots)       │   │  (user-visible repos)           │  │
+  │  └─────────────────────────────┘   └─────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────────────────────────┘
+             ▲                                      ▲
+             │                                      │
+      shadow-outbox-worker                    backend (API)
+      (background, async)                   (synchronous)
+             ▲                                      ▲
+             │                                      │
+      ShadowOutboxJob table              POST /api/v1/user-repos/
+
+  Does user_repo_service Need a Worker?
+
+  Currently no - it runs synchronously during API requests. However, looking at the code:
+
+  def clone_user_repo_from_external_source(...):
+      # ...
+      repo = self.create_user_repo_db_only(...)
+      # This blocks the API request while Gogs clones from external URL
+      self.ensure_user_repo_remote(session=session, user_repo=repo)
+
+  The _migrate_repo call (line 158) uses Gogs' /api/v1/repos/migrate endpoint which clones from external sources. For large repos, this could
+  timeout.
+
+  If you wanted to make user repo imports async, you could follow the same outbox pattern:
+  1. Create a UserRepoOutboxJob table
+  2. Add a user-repo-worker service
+  3. API creates DB record → returns immediately → worker provisions asynchronously
+
+  But that's an enhancement, not required for current functionality.
+
+  Docker Integration for User Repo Service
+
+  The backend service already has the right environment variables:
+
+  # From  .env (already configured)
+  USER_REPO_GOGS_TOKEN (hidden)
+  USER_REPO_GOGS_ORG=dog
+  USER_REPO_GOGS_BASE_URL=http://gittin:3000
+
+  These flow through to the backend container via env_file: .env. No additional Docker changes needed - user repo provisioning works from the
+  existing backend service.

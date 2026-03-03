@@ -87,9 +87,14 @@ services:
       - "1080:1080"
       - "1025:1025"
 
-  # shadow-outbox-worker:
-  #   environment:
-  #     - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-}
+  outbox-worker:
+    restart: "no"
+    environment:
+      OUTBOX_LOG_LEVEL: "DEBUG"
+      OUTBOX_POLL_INTERVAL_SECONDS: "10"
+      # Enable/disable individual processors
+      OUTBOX_SHADOW_ENABLED: "true"
+      OUTBOX_USER_REPO_ENABLED: "true"
 
   tesser:
     restart: "no"

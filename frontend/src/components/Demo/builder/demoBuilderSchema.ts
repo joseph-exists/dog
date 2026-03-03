@@ -6,6 +6,7 @@ import type {
   DemoPersonaPolicy,
   DemoRuntimePolicy,
 } from "@/client/types.gen"
+import { createDefaultShadowRepoGitViewConfig } from "@/components/Demo/gitViewConfig"
 
 // ============================================================================
 // Builder Schema: Canonical Authoring Layer
@@ -997,7 +998,9 @@ export const BUILDER_BLOCK_TYPE_SCHEMAS: Record<
     defaults: {
       region: "top",
       visibility: "visible",
-      config_json: {},
+      config_json: {
+        ...createDefaultShadowRepoGitViewConfig(),
+      },
       presentation_json: {},
       theme_id: null,
     },
@@ -3638,7 +3641,12 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
       title: "Matrix Block: Git View",
       visibility: "visible",
       theme_id: null,
-      config_json: { mode: "summary" },
+      config_json: {
+        ...createDefaultShadowRepoGitViewConfig(),
+        entity_type: "story",
+        entity_id_mode: "metadata",
+        entity_id_metadata_key: "story_id",
+      },
     },
     {
       ...createBlockTemplate("fileExplorer"),

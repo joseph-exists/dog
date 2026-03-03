@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     USER_REPO_GOGS_TOKEN: str | None = None
     USER_REPO_GOGS_ORG: str = "dog"
     USER_REPO_GOGS_TIMEOUT_SECONDS: float = 10.0
+    USER_REPO_DEFAULT_BRANCH: str = "main"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -141,6 +141,13 @@ class ContentFormat(str, PyEnum):
     TEST = "test"
 
 
+class UserRepoImportStatus(str, PyEnum):
+    PENDING = "pending"
+    IMPORTING = "importing"
+    READY = "ready"
+    FAILED = "failed"
+
+
 
 # ============ Base Models ++++++++
 
@@ -5219,12 +5226,59 @@ class ShadowReposPublic(SQLModel):
     count: int
 
 
+class ShadowRepoCommitSummary(SQLModel):
+    sha: str
+    short_sha: str
+    message: str
+    author_name: str | None = None
+    authored_at: datetime | None = None
+
+
+class ShadowRepoTreeEntry(SQLModel):
+    path: str
+    name: str
+    entry_type: str
+    size_bytes: int | None = None
+
+
+class ShadowRepoSummary(SQLModel):
+    entity_type: str
+    entity_id: uuid.UUID
+    repo_available: bool
+    default_branch: str
+    latest_commit_sha: str | None = None
+    latest_commit_message: str | None = None
+    latest_commit_authored_at: datetime | None = None
+
+
+class ShadowRepoViewResponse(SQLModel):
+    summary: ShadowRepoSummary
+    commits: list[ShadowRepoCommitSummary] = Field(default_factory=list)
+    tree: list[ShadowRepoTreeEntry] = Field(default_factory=list)
+    tree_root_path: str = ""
+    ref: str
+
+
+class ShadowRepoFileContent(SQLModel):
+    path: str
+    ref: str
+    content: str
+    encoding: str = "utf-8"
+    size_bytes: int
+    content_type: str | None = None
+
+
 class UserRepoBase(SQLModel):
     """Base model for user-visible repositories owned by the platform."""
 
     slug: str = Field(max_length=100)
     display_name: str = Field(max_length=255)
     description: str | None = Field(default=None, max_length=1000)
+    source_repo_url: str | None = Field(default=None, max_length=2000)
+    source_branch: str = Field(default="main", max_length=255)
+    import_status: UserRepoImportStatus = Field(default=UserRepoImportStatus.PENDING)
+    import_error: str | None = Field(default=None, max_length=2000)
+    imported_at: datetime | None = Field(default=None)
     gogs_repo_name: str = Field(max_length=255)
     gogs_repo_id: int | None = Field(default=None)
     gogs_full_name: str | None = Field(default=None, max_length=255)
@@ -5241,7 +5295,8 @@ class UserRepoCreate(UserRepoBase):
 class UserRepoProvisionRequest(SQLModel):
     """Request payload for creating a user-visible repo."""
 
-    display_name: str = Field(max_length=255)
+    source_repo_url: str = Field(max_length=2000)
+    display_name: str | None = Field(default=None, max_length=255)
     slug: str | None = Field(default=None, max_length=100)
     description: str | None = Field(default=None, max_length=1000)
     is_private: bool = Field(default=False)
@@ -5251,6 +5306,11 @@ class UserRepoUpdate(SQLModel):
     """Update model for user-visible repos."""
 
     description: str | None = None
+    source_repo_url: str | None = None
+    source_branch: str | None = None
+    import_status: UserRepoImportStatus | None = None
+    import_error: str | None = None
+    imported_at: datetime | None = None
     gogs_repo_id: int | None = None
     gogs_full_name: str | None = None
     gogs_html_url: str | None = None
@@ -5284,6 +5344,37 @@ class UserRepoPublic(UserRepoBase):
     created_at: datetime
     updated_at: datetime
 
+class UserRepoOutboxJob(SQLModel, table=True):
+    """
+    Outbox job for async user repo provisioning.
+
+    One row represents one pending Gogs provisioning operation for a UserRepo.
+    Supports retry with exponential backoff for transient failures.
+    """
+
+    __tablename__ = "user_repo_outbox_jobs"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_repo_id: uuid.UUID = Field(foreign_key="user_repos.id", index=True)
+
+    status: str = Field(
+        default="queued",
+        max_length=30,
+        index=True,
+        description="queued, processing, completed, retryable_error, dead",
+    )
+    priority: int = Field(default=100, index=True, description="Lower = higher priority")
+    attempt_count: int = Field(default=0)
+    run_after: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+    locked_at: datetime | None = Field(default=None)
+    locked_by: str | None = Field(default=None, max_length=255)
+
+    last_error: str | None = Field(default=None)
+    last_error_at: datetime | None = Field(default=None)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 class UserReposPublic(SQLModel):
     """Collection response for user-visible repos."""

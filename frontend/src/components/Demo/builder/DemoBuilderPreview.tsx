@@ -365,6 +365,12 @@ export function DemoBuilderPreview({
   const baseBlockContext = useMemo(
     () => ({
       renderContentPayload,
+      metadataJson:
+        composition.metadata_json &&
+        typeof composition.metadata_json === "object" &&
+        !Array.isArray(composition.metadata_json)
+          ? (composition.metadata_json as Record<string, unknown>)
+          : {},
       roomId,
       roomTitle,
       roomStoryId,
@@ -379,7 +385,7 @@ export function DemoBuilderPreview({
       roomAgentsAsAgentData: [],
       availableAgents: [],
     }),
-    [composition.runtime_policy, roomStoryId],
+    [composition.metadata_json, composition.runtime_policy, roomStoryId],
   )
 
   const panels: DemoLayoutPanelConfig[] = useMemo(

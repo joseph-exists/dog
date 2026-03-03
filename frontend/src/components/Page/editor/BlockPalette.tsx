@@ -10,6 +10,7 @@ interface BlockPaletteProps {
   onAddBlock: (type: BlockType, column: "primary" | "auxiliary") => void
   targetColumn: "primary" | "auxiliary"
   className?: string
+  openClassName?: string
   isOpen?: boolean
   onToggle?: () => void
 }
@@ -24,6 +25,7 @@ export function BlockPalette({
   onAddBlock,
   targetColumn,
   className,
+  openClassName,
   isOpen = true,
   onToggle,
 }: BlockPaletteProps) {
@@ -56,6 +58,7 @@ export function BlockPalette({
     <div
       className={cn(
         "flex flex-col w-[220px] border-r border-border bg-background shrink-0",
+        openClassName,
         className,
       )}
     >
