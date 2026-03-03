@@ -5660,6 +5660,7 @@ export class UserPersonasService {
 export class UserReposService {
     /**
      * List User Repos
+     * List all repositories owned by the current user.
      * @returns UserReposPublic Successful Response
      * @throws ApiError
      */
@@ -5672,6 +5673,17 @@ export class UserReposService {
     
     /**
      * Create User Repo
+     * Create a new repository by importing from an external source.
+     *
+     * This endpoint returns immediately with status `importing`. The actual
+     * clone operation happens asynchronously via the outbox worker.
+     *
+     * Poll `GET /user-repos/{id}` to check when `import_status` becomes
+     * `ready` or `failed`.
+     *
+     * Returns:
+     * 202 Accepted: Repository created, import queued
+     * 422 Unprocessable Entity: Invalid source URL
      * @param data The data for the request.
      * @param data.requestBody
      * @returns UserRepoPublic Successful Response
@@ -5691,6 +5703,13 @@ export class UserReposService {
     
     /**
      * Get User Repo
+     * Get a single repository by ID.
+     *
+     * Use this endpoint to poll for import status after creating a repo.
+     * Check the `import_status` field:
+     * - `importing`: Still being cloned from source
+     * - `ready`: Successfully imported
+     * - `failed`: Import failed (check `import_error` for details)
      * @param data The data for the request.
      * @param data.repoId
      * @returns UserRepoPublic Successful Response

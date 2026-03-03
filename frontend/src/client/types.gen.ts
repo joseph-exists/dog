@@ -3670,11 +3670,14 @@ export type UserRegister = {
     full_name?: (string | null);
 };
 
+export type UserRepoImportStatus = 'pending' | 'importing' | 'ready' | 'failed';
+
 /**
  * Request payload for creating a user-visible repo.
  */
 export type UserRepoProvisionRequest = {
-    display_name: string;
+    source_repo_url: string;
+    display_name?: (string | null);
     slug?: (string | null);
     description?: (string | null);
     is_private?: boolean;
@@ -3687,6 +3690,11 @@ export type UserRepoPublic = {
     slug: string;
     display_name: string;
     description?: (string | null);
+    source_repo_url?: (string | null);
+    source_branch?: string;
+    import_status?: UserRepoImportStatus;
+    import_error?: (string | null);
+    imported_at?: (string | null);
     gogs_repo_name: string;
     gogs_repo_id?: (number | null);
     gogs_full_name?: (string | null);

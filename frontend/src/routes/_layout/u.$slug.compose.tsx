@@ -301,7 +301,7 @@ function UserPageComposerRoute() {
       <BlockPalette
         onAddBlock={(type) => handleAddBlock(type)}
         targetColumn="primary"
-        openClassName="w-96"
+        openClassName="w-60"
         isOpen={paletteOpen}
         onToggle={() => setPaletteOpen((current) => !current)}
       />

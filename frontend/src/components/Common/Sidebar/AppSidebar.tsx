@@ -8,6 +8,7 @@ import {
   Bot,
   Briefcase,
   Crown,
+  FolderGit2,
   Gem,
   Home,
   MessageSquare,
@@ -54,6 +55,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "story", title: "Story", path: "/story", icon: BookHeart },
   { id: "rooms", title: "Rooms", path: "/rooms", icon: MessageSquare },
   { id: "agents", title: "Agents", path: "/agents", icon: Bot },
+  { id: "repos", title: "Repos", path: "/repos", icon: FolderGit2 },
   { id: "personas", title: "Personas", path: "/personas", icon: Smile },
   { id: "items", title: "Items", path: "/items", icon: Briefcase },
   {

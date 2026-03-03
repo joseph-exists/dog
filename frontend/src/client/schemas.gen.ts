@@ -14151,11 +14151,29 @@ export const UserRegisterSchema = {
     title: 'UserRegister'
 } as const;
 
+export const UserRepoImportStatusSchema = {
+    type: 'string',
+    enum: ['pending', 'importing', 'ready', 'failed'],
+    title: 'UserRepoImportStatus'
+} as const;
+
 export const UserRepoProvisionRequestSchema = {
     properties: {
-        display_name: {
+        source_repo_url: {
             type: 'string',
-            maxLength: 255,
+            maxLength: 2000,
+            title: 'Source Repo Url'
+        },
+        display_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Display Name'
         },
         slug: {
@@ -14189,7 +14207,7 @@ export const UserRepoProvisionRequestSchema = {
         }
     },
     type: 'object',
-    required: ['display_name'],
+    required: ['source_repo_url'],
     title: 'UserRepoProvisionRequest',
     description: 'Request payload for creating a user-visible repo.'
 } as const;
@@ -14217,6 +14235,52 @@ export const UserRepoPublicSchema = {
                 }
             ],
             title: 'Description'
+        },
+        source_repo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Repo Url'
+        },
+        source_branch: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Source Branch',
+            default: 'main'
+        },
+        import_status: {
+            '$ref': '#/components/schemas/UserRepoImportStatus',
+            default: 'pending'
+        },
+        import_error: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Import Error'
+        },
+        imported_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Imported At'
         },
         gogs_repo_name: {
             type: 'string',

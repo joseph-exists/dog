@@ -1,3 +1,13 @@
 # Local SSH material used for dev connectivity
 ssh/*
 !ssh/.gitkeep
+
+# Gogs runtime data - database, keys, sessions
+data/data/
+data/conf/
+
+# Gogs log files
+data/log/
+
+# Keep the data directory structure
+!data/.gitkeep

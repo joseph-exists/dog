@@ -33,6 +33,7 @@ const routeTitles: Record<string, string> = {
   "/stories": "Stories Authoring",
   "/rooms": "Rooms Looking At",
   "/agents": "Agents Reviewing",
+  "/repos": "Repositories",
   "/story": "Story Reading",
   "/personas": "Personas Managing",
   "/persona": "Persona",
@@ -49,6 +50,7 @@ const routeTitles: Record<string, string> = {
 /** Routes that need full-bleed layout (no max-width or padding) */
 const fullBleedRoutes = [
   "/agents",
+  "/repos",
   "/story",
   "/r/",
   "/room/",

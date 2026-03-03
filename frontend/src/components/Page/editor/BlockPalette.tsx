@@ -57,7 +57,7 @@ export function BlockPalette({
   return (
     <div
       className={cn(
-        "flex flex-col w-[220px] border-r border-border bg-background shrink-0",
+        "flex flex-col w-[120px] border-r border-border bg-background shrink-0",
         openClassName,
         className,
       )}

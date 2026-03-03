@@ -14,3 +14,8 @@
 2026/03/03 14:32:35 [ INFO] Run mode: Production
 2026/03/03 14:32:35 [ INFO] SSH server started on 0.0.0.0:2222
 2026/03/03 14:32:35 [ INFO] Available on http://localhost:3001/
+2026/03/03 15:09:25 [ERROR] [...ternal/route/api/v1/repo_repo.go:293 migrate()] migrate repository: clone: exit status 128 - fatal: could not read Username for 'https://github.com': No such device or address
+2026/03/03 15:10:05 [ERROR] [...ternal/route/api/v1/repo_repo.go:293 migrate()] migrate repository: clone: exit status 128 - fatal: could not read Username for 'https://github.com': No such device or address
+2026/03/03 15:12:36 [ERROR] [...ternal/route/api/v1/repo_repo.go:293 migrate()] migrate repository: clone: exit status 128 - fatal: could not read Username for 'https://github.com': No such device or address
+2026/03/03 15:16:37 [ERROR] [...ternal/route/api/v1/repo_repo.go:293 migrate()] migrate repository: clone: exit status 128 - fatal: could not read Username for 'https://github.com': No such device or address
+2026/03/03 15:34:03 [ERROR] [...ternal/route/api/v1/repo_repo.go:293 migrate()] migrate repository: clone: exit status 128 - fatal: could not read Username for 'https://github.com': No such device or address

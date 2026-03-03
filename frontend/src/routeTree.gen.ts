@@ -19,6 +19,7 @@ import { Route as LayoutTraitsRouteImport } from './routes/_layout/traits'
 import { Route as LayoutStoryRouteImport } from './routes/_layout/story'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRoomsRouteImport } from './routes/_layout/rooms'
+import { Route as LayoutReposRouteImport } from './routes/_layout/repos'
 import { Route as LayoutQualitiesRouteImport } from './routes/_layout/qualities'
 import { Route as LayoutPromptBuilderRouteImport } from './routes/_layout/prompt-builder'
 import { Route as LayoutPersonasRouteImport } from './routes/_layout/personas'
@@ -36,6 +37,7 @@ import { Route as LayoutTeamSlugRouteImport } from './routes/_layout/team.$slug'
 import { Route as LayoutStoryStoryIdRouteImport } from './routes/_layout/story_.$storyId'
 import { Route as LayoutRoomRoomIdRouteImport } from './routes/_layout/room.$roomId'
 import { Route as LayoutRoomV2RoomIdRouteImport } from './routes/_layout/room-v2.$roomId'
+import { Route as LayoutRepoRepoIdRouteImport } from './routes/_layout/repo.$repoId'
 import { Route as LayoutRRoomIdRouteImport } from './routes/_layout/r.$roomId'
 import { Route as LayoutQualityQualityIdRouteImport } from './routes/_layout/quality.$qualityId'
 import { Route as LayoutPersonaPersonaIdRouteImport } from './routes/_layout/persona.$personaId'
@@ -93,6 +95,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
 const LayoutRoomsRoute = LayoutRoomsRouteImport.update({
   id: '/rooms',
   path: '/rooms',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutReposRoute = LayoutReposRouteImport.update({
+  id: '/repos',
+  path: '/repos',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutQualitiesRoute = LayoutQualitiesRouteImport.update({
@@ -180,6 +187,11 @@ const LayoutRoomV2RoomIdRoute = LayoutRoomV2RoomIdRouteImport.update({
   path: '/room-v2/$roomId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutRepoRepoIdRoute = LayoutRepoRepoIdRouteImport.update({
+  id: '/repo/$repoId',
+  path: '/repo/$repoId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutRRoomIdRoute = LayoutRRoomIdRouteImport.update({
   id: '/r/$roomId',
   path: '/r/$roomId',
@@ -244,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/personas': typeof LayoutPersonasRoute
   '/prompt-builder': typeof LayoutPromptBuilderRoute
   '/qualities': typeof LayoutQualitiesRoute
+  '/repos': typeof LayoutReposRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
   '/story': typeof LayoutStoryRoute
@@ -254,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
   '/quality/$qualityId': typeof LayoutQualityQualityIdRoute
   '/r/$roomId': typeof LayoutRRoomIdRoute
+  '/repo/$repoId': typeof LayoutRepoRepoIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/story/$storyId': typeof LayoutStoryStoryIdRoute
@@ -280,6 +294,7 @@ export interface FileRoutesByTo {
   '/personas': typeof LayoutPersonasRoute
   '/prompt-builder': typeof LayoutPromptBuilderRoute
   '/qualities': typeof LayoutQualitiesRoute
+  '/repos': typeof LayoutReposRoute
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
   '/story': typeof LayoutStoryRoute
@@ -291,6 +306,7 @@ export interface FileRoutesByTo {
   '/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
   '/quality/$qualityId': typeof LayoutQualityQualityIdRoute
   '/r/$roomId': typeof LayoutRRoomIdRoute
+  '/repo/$repoId': typeof LayoutRepoRepoIdRoute
   '/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/story/$storyId': typeof LayoutStoryStoryIdRoute
@@ -318,6 +334,7 @@ export interface FileRoutesById {
   '/_layout/personas': typeof LayoutPersonasRoute
   '/_layout/prompt-builder': typeof LayoutPromptBuilderRoute
   '/_layout/qualities': typeof LayoutQualitiesRoute
+  '/_layout/repos': typeof LayoutReposRoute
   '/_layout/rooms': typeof LayoutRoomsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/story': typeof LayoutStoryRoute
@@ -329,6 +346,7 @@ export interface FileRoutesById {
   '/_layout/persona/$personaId': typeof LayoutPersonaPersonaIdRoute
   '/_layout/quality/$qualityId': typeof LayoutQualityQualityIdRoute
   '/_layout/r/$roomId': typeof LayoutRRoomIdRoute
+  '/_layout/repo/$repoId': typeof LayoutRepoRepoIdRoute
   '/_layout/room-v2/$roomId': typeof LayoutRoomV2RoomIdRoute
   '/_layout/room/$roomId': typeof LayoutRoomRoomIdRoute
   '/_layout/story_/$storyId': typeof LayoutStoryStoryIdRoute
@@ -358,6 +376,7 @@ export interface FileRouteTypes {
     | '/personas'
     | '/prompt-builder'
     | '/qualities'
+    | '/repos'
     | '/rooms'
     | '/settings'
     | '/story'
@@ -368,6 +387,7 @@ export interface FileRouteTypes {
     | '/persona/$personaId'
     | '/quality/$qualityId'
     | '/r/$roomId'
+    | '/repo/$repoId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
     | '/story/$storyId'
@@ -394,6 +414,7 @@ export interface FileRouteTypes {
     | '/personas'
     | '/prompt-builder'
     | '/qualities'
+    | '/repos'
     | '/rooms'
     | '/settings'
     | '/story'
@@ -405,6 +426,7 @@ export interface FileRouteTypes {
     | '/persona/$personaId'
     | '/quality/$qualityId'
     | '/r/$roomId'
+    | '/repo/$repoId'
     | '/room-v2/$roomId'
     | '/room/$roomId'
     | '/story/$storyId'
@@ -431,6 +453,7 @@ export interface FileRouteTypes {
     | '/_layout/personas'
     | '/_layout/prompt-builder'
     | '/_layout/qualities'
+    | '/_layout/repos'
     | '/_layout/rooms'
     | '/_layout/settings'
     | '/_layout/story'
@@ -442,6 +465,7 @@ export interface FileRouteTypes {
     | '/_layout/persona/$personaId'
     | '/_layout/quality/$qualityId'
     | '/_layout/r/$roomId'
+    | '/_layout/repo/$repoId'
     | '/_layout/room-v2/$roomId'
     | '/_layout/room/$roomId'
     | '/_layout/story_/$storyId'
@@ -532,6 +556,13 @@ declare module '@tanstack/react-router' {
       path: '/rooms'
       fullPath: '/rooms'
       preLoaderRoute: typeof LayoutRoomsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/repos': {
+      id: '/_layout/repos'
+      path: '/repos'
+      fullPath: '/repos'
+      preLoaderRoute: typeof LayoutReposRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/qualities': {
@@ -653,6 +684,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutRoomV2RoomIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/repo/$repoId': {
+      id: '/_layout/repo/$repoId'
+      path: '/repo/$repoId'
+      fullPath: '/repo/$repoId'
+      preLoaderRoute: typeof LayoutRepoRepoIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/r/$roomId': {
       id: '/_layout/r/$roomId'
       path: '/r/$roomId'
@@ -744,6 +782,7 @@ interface LayoutRouteChildren {
   LayoutPersonasRoute: typeof LayoutPersonasRoute
   LayoutPromptBuilderRoute: typeof LayoutPromptBuilderRoute
   LayoutQualitiesRoute: typeof LayoutQualitiesRoute
+  LayoutReposRoute: typeof LayoutReposRoute
   LayoutRoomsRoute: typeof LayoutRoomsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutStoryRoute: typeof LayoutStoryRoute
@@ -755,6 +794,7 @@ interface LayoutRouteChildren {
   LayoutPersonaPersonaIdRoute: typeof LayoutPersonaPersonaIdRoute
   LayoutQualityQualityIdRoute: typeof LayoutQualityQualityIdRoute
   LayoutRRoomIdRoute: typeof LayoutRRoomIdRoute
+  LayoutRepoRepoIdRoute: typeof LayoutRepoRepoIdRoute
   LayoutRoomV2RoomIdRoute: typeof LayoutRoomV2RoomIdRoute
   LayoutRoomRoomIdRoute: typeof LayoutRoomRoomIdRoute
   LayoutStoryStoryIdRoute: typeof LayoutStoryStoryIdRoute
@@ -776,6 +816,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutPersonasRoute: LayoutPersonasRoute,
   LayoutPromptBuilderRoute: LayoutPromptBuilderRoute,
   LayoutQualitiesRoute: LayoutQualitiesRoute,
+  LayoutReposRoute: LayoutReposRoute,
   LayoutRoomsRoute: LayoutRoomsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutStoryRoute: LayoutStoryRoute,
@@ -787,6 +828,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutPersonaPersonaIdRoute: LayoutPersonaPersonaIdRoute,
   LayoutQualityQualityIdRoute: LayoutQualityQualityIdRoute,
   LayoutRRoomIdRoute: LayoutRRoomIdRoute,
+  LayoutRepoRepoIdRoute: LayoutRepoRepoIdRoute,
   LayoutRoomV2RoomIdRoute: LayoutRoomV2RoomIdRoute,
   LayoutRoomRoomIdRoute: LayoutRoomRoomIdRoute,
   LayoutStoryStoryIdRoute: LayoutStoryStoryIdRoute,
