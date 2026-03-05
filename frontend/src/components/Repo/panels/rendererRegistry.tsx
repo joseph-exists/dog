@@ -39,6 +39,33 @@ export interface RepoPanelRendererContext {
     ref: string
     path?: string | null
   }) => void
+  getFileRoomContextState?: (payload: {
+    panelId: string
+    repoId: string
+    path: string
+    ref: string
+    isBinary: boolean
+    hasContent: boolean
+  }) => {
+    included: boolean
+    pending: boolean
+    canToggle: boolean
+    disabledReason?: string | null
+  }
+  onToggleFileRoomContext?: (payload: {
+    panelId: string
+    repoId: string
+    repoSlug: string
+    path: string
+    ref: string
+    content: string
+    contentType: string | null
+    encoding: string | null
+    sizeBytes: number | null
+    isBinary: boolean
+    isTruncated: boolean
+    truncationReason: string | null
+  }) => Promise<void> | void
 }
 
 export function renderRepoPanel(
@@ -98,6 +125,8 @@ export function renderRepoPanel(
           selectedPath={selectionKey ? context.panelSelections[selectionKey] ?? null : null}
           onFileOpened={context.onFileOpened}
           onRefObserved={context.onRefObserved}
+          getRoomContextState={context.getFileRoomContextState}
+          onToggleRoomContext={context.onToggleFileRoomContext}
         />
       )
     }

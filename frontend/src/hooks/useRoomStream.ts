@@ -69,6 +69,12 @@ const ROOM_AGENT_SETTINGS_EVENT_TYPES = new Set([
   "room.agent_settings.deleted",
 ])
 
+const ROOM_CONTEXT_EVENT_TYPES = new Set([
+  "room.context_item.created",
+  "room.context_item.upserted",
+  "room.context_item.deleted",
+])
+
 const ROOM_REPO_EVENT_TYPES = new Set([
   "room.repo.selection",
   "room.repo.opened",
@@ -81,6 +87,10 @@ export function shouldInvalidateRuntime(eventType: string): boolean {
 
 export function shouldInvalidateRoomAgentSettings(eventType: string): boolean {
   return ROOM_AGENT_SETTINGS_EVENT_TYPES.has(eventType)
+}
+
+export function shouldInvalidateRoomContexts(eventType: string): boolean {
+  return ROOM_CONTEXT_EVENT_TYPES.has(eventType)
 }
 
 export function shouldInvalidateRepoPanels(eventType: string): boolean {
@@ -260,6 +270,12 @@ export function useRoomStream(
             if (shouldInvalidateRoomAgentSettings(message.event_type)) {
               queryClient.invalidateQueries({
                 queryKey: ["rooms", roomId, "agent-settings"],
+              })
+            }
+
+            if (shouldInvalidateRoomContexts(message.event_type)) {
+              queryClient.invalidateQueries({
+                queryKey: ["rooms", roomId, "contexts"],
               })
             }
 

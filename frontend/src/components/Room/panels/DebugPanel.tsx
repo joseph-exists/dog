@@ -27,6 +27,19 @@ interface DebugPanelProps {
   showInternalMessages: boolean
   /** Toggle internal message visibility in the message list. */
   onToggleInternalMessages: (enabled: boolean) => void
+  selectedRepoFiles?: Array<{ selectionKey: string; path: string }>
+  repoContextFiles?: Array<{
+    contextId: string
+    repoId: string
+    repoSlug: string | null
+    path: string
+    ref: string
+    source: string
+    sizeBytes: number | null
+    isTruncated: boolean
+  }>
+  canManageRoomContext?: boolean
+  onRemoveRepoContextFile?: (contextId: string) => Promise<void>
   /** Hide panel header (when page provides its own) */
   hideHeader?: boolean
   /** Additional className */
@@ -40,6 +53,10 @@ export function DebugPanel({
   activeAgents,
   showInternalMessages,
   onToggleInternalMessages,
+  selectedRepoFiles,
+  repoContextFiles,
+  canManageRoomContext = false,
+  onRemoveRepoContextFile,
   hideHeader = false,
   className,
 }: DebugPanelProps) {
@@ -52,6 +69,10 @@ export function DebugPanel({
         activeAgents={activeAgents}
         showInternalMessages={showInternalMessages}
         onToggleInternalMessages={onToggleInternalMessages}
+        selectedRepoFiles={selectedRepoFiles}
+        repoContextFiles={repoContextFiles}
+        canManageRoomContext={canManageRoomContext}
+        onRemoveRepoContextFile={onRemoveRepoContextFile}
       />
     </div>
   )

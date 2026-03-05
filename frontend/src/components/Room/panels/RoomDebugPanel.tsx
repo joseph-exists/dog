@@ -24,6 +24,7 @@ import {
   Copy,
   Eye,
   MessageSquare,
+  Trash2,
   Wifi,
   WifiOff,
 } from "lucide-react"
@@ -51,6 +52,23 @@ export interface RoomDebugPanelContentProps {
   showInternalMessages: boolean
   /** Toggle internal message visibility in the message list. */
   onToggleInternalMessages: (enabled: boolean) => void
+  /** Current non-null repo file selections by selection key. */
+  selectedRepoFiles?: Array<{ selectionKey: string; path: string }>
+  /** Repo files currently attached to room context. */
+  repoContextFiles?: Array<{
+    contextId: string
+    repoId: string
+    repoSlug: string | null
+    path: string
+    ref: string
+    source: string
+    sizeBytes: number | null
+    isTruncated: boolean
+  }>
+  /** Whether current user can remove room context items. */
+  canManageRoomContext?: boolean
+  /** Remove a repo context file by context id. */
+  onRemoveRepoContextFile?: (contextId: string) => Promise<void>
 }
 
 /**
@@ -64,16 +82,22 @@ export function RoomDebugPanelContent({
   activeAgents,
   showInternalMessages,
   onToggleInternalMessages,
+  selectedRepoFiles = [],
+  repoContextFiles = [],
+  canManageRoomContext = false,
+  onRemoveRepoContextFile,
 }: RoomDebugPanelContentProps) {
   const [expandedSections, setExpandedSections] = useState({
     apiPayload: true,
     context: true,
     streaming: true,
     agents: true,
+    repoFiles: true,
     recent: false,
   })
 
   const [copiedPayload, setCopiedPayload] = useState(false)
+  const [removingContextIds, setRemovingContextIds] = useState<Record<string, boolean>>({})
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -113,6 +137,11 @@ export function RoomDebugPanelContent({
       },
     }
   }, [contextMessages, messages])
+
+  const selectedPathSet = useMemo(
+    () => new Set(selectedRepoFiles.map((item) => item.path)),
+    [selectedRepoFiles],
+  )
 
   const handleCopyPayload = async () => {
     try {
@@ -211,6 +240,116 @@ export function RoomDebugPanelContent({
                 array
               </p>
             )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Repo File Context */}
+      <Collapsible
+        open={expandedSections.repoFiles}
+        onOpenChange={() => toggleSection("repoFiles")}
+      >
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-full justify-between">
+            <span className="flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              Repo Files ({repoContextFiles.length} in context / {selectedRepoFiles.length} selected)
+            </span>
+            {expandedSections.repoFiles ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="bg-muted rounded-md p-3 mt-2 text-xs space-y-3">
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase mb-1">
+                Selected paths
+              </p>
+              {selectedRepoFiles.length === 0 ? (
+                <p className="text-muted-foreground">No selected files.</p>
+              ) : (
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {selectedRepoFiles.map((item) => (
+                    <div key={`${item.selectionKey}:${item.path}`} className="font-mono text-[10px] truncate">
+                      {item.selectionKey}: {item.path}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="text-muted-foreground text-[10px] uppercase mb-1">
+                In room context
+              </p>
+              {repoContextFiles.length === 0 ? (
+                <p className="text-muted-foreground">No repo files in room context.</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {repoContextFiles.map((item) => {
+                    const isSelected = selectedPathSet.has(item.path)
+                    const isRemoving = removingContextIds[item.contextId] === true
+                    return (
+                      <div key={item.contextId} className="rounded border border-border p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-mono text-[10px] truncate">{item.path}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {item.repoSlug || item.repoId} @ {item.ref}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {isSelected ? (
+                              <Badge variant="secondary" className="text-[9px]">
+                                Selected
+                              </Badge>
+                            ) : null}
+                            {item.isTruncated ? (
+                              <Badge variant="outline" className="text-[9px]">
+                                Truncated
+                              </Badge>
+                            ) : null}
+                            {canManageRoomContext && onRemoveRepoContextFile ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2"
+                                disabled={isRemoving}
+                                onClick={async () => {
+                                  setRemovingContextIds((current) => ({
+                                    ...current,
+                                    [item.contextId]: true,
+                                  }))
+                                  try {
+                                    await onRemoveRepoContextFile(item.contextId)
+                                  } finally {
+                                    setRemovingContextIds((current) => ({
+                                      ...current,
+                                      [item.contextId]: false,
+                                    }))
+                                  }
+                                }}
+                                title="Remove from room context"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {!canManageRoomContext && repoContextFiles.length > 0 ? (
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Only room owners can remove context files.
+                </p>
+              ) : null}
+            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>

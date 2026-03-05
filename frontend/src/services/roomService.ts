@@ -22,6 +22,9 @@
 import {
   OpenAPI,
   type ParticipantAddRequest,
+  type RoomContextItemCreate,
+  type RoomContextItemPublic,
+  type RoomContextItemsPublic,
   type RoomCreate,
   type RoomMessagePublic,
   type RoomMessageSend,
@@ -36,7 +39,7 @@ import {
 } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
-import { AgentsService } from "@/client/sdk.gen"
+import { AgentsService, RoomContextsService } from "@/client/sdk.gen"
 import type { UIComponent } from "@/components/AgentUI/types"
 
 // ============================================================================
@@ -169,6 +172,17 @@ export interface RepoRoomEventInput {
   metadata?: Record<string, unknown> | null
 }
 
+export interface RoomContextItemViewModel {
+  id: string
+  room_id: string
+  agent_slug: string | null
+  context_type: string
+  payload: Record<string, unknown>
+  source: string
+  created_at: string
+  expires_at: string | null
+}
+
 // ============================================================================
 // Transformation Functions
 // ============================================================================
@@ -273,6 +287,21 @@ function transformParticipant(
     is_active: participant.active,
     joined_at: new Date(participant.joined_at),
     left_at: participant.left_at ? new Date(participant.left_at) : null,
+  }
+}
+
+function transformRoomContextItem(
+  item: RoomContextItemPublic,
+): RoomContextItemViewModel {
+  return {
+    id: item.id,
+    room_id: item.room_id,
+    agent_slug: item.agent_slug ?? null,
+    context_type: item.context_type,
+    payload: (item.payload ?? {}) as Record<string, unknown>,
+    source: item.source,
+    created_at: item.created_at,
+    expires_at: item.expires_at ?? null,
   }
 }
 
@@ -643,6 +672,53 @@ export const RoomService = {
       event_type: string
       sequence: number
     }
+  },
+
+  /**
+   * List room-scoped supplemental context items.
+   */
+  async listRoomContexts(
+    roomId: string,
+    agentSlug?: string | null,
+  ): Promise<{ data: RoomContextItemViewModel[]; count: number }> {
+    const response: RoomContextItemsPublic = await RoomContextsService.listRoomContexts({
+      roomId,
+      agentSlug: agentSlug ?? undefined,
+    })
+    return {
+      data: response.data.map(transformRoomContextItem),
+      count: response.count,
+    }
+  },
+
+  /**
+   * Upsert a room context item at a deterministic id.
+   */
+  async upsertRoomContext(
+    roomId: string,
+    contextId: string,
+    context: RoomContextItemCreate,
+    options?: { replaceByType?: boolean },
+  ): Promise<RoomContextItemViewModel> {
+    const response: RoomContextItemPublic = await RoomContextsService.upsertRoomContext(
+      {
+        roomId,
+        contextId,
+        requestBody: context,
+        replaceByType: options?.replaceByType ?? false,
+      },
+    )
+    return transformRoomContextItem(response)
+  },
+
+  /**
+   * Delete a room context item.
+   */
+  async deleteRoomContext(roomId: string, contextId: string): Promise<void> {
+    await RoomContextsService.deleteRoomContext({
+      roomId,
+      contextId,
+    })
   },
 
   // ==========================================================================

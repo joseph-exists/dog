@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { CopyIcon, FileCode2, FileQuestion } from "lucide-react"
+import { CheckIcon, CopyIcon, FileCode2, FileQuestion, Loader2, PlusIcon } from "lucide-react"
 import { useEffect } from "react"
 import { UserReposService } from "@/client/sdk.gen"
 import type { UserRepoPublic } from "@/client/types.gen"
@@ -19,6 +19,8 @@ export function RepoFileViewerPanel({
   selectedPath,
   onFileOpened,
   onRefObserved,
+  getRoomContextState,
+  onToggleRoomContext,
 }: {
   repo: UserRepoPublic
   panelId: string
@@ -37,6 +39,33 @@ export function RepoFileViewerPanel({
     ref: string
     path?: string | null
   }) => void
+  getRoomContextState?: (payload: {
+    panelId: string
+    repoId: string
+    path: string
+    ref: string
+    isBinary: boolean
+    hasContent: boolean
+  }) => {
+    included: boolean
+    pending: boolean
+    canToggle: boolean
+    disabledReason?: string | null
+  }
+  onToggleRoomContext?: (payload: {
+    panelId: string
+    repoId: string
+    repoSlug: string
+    path: string
+    ref: string
+    content: string
+    contentType: string | null
+    encoding: string | null
+    sizeBytes: number | null
+    isBinary: boolean
+    isTruncated: boolean
+    truncationReason: string | null
+  }) => Promise<void> | void
 }) {
   const resolvedConfig = parseRepoFileViewerPanelConfig(config, panelId)
   const resolvedPath =
@@ -105,6 +134,18 @@ export function RepoFileViewerPanel({
     repo.id,
   ])
 
+  const roomContextState =
+    fileQuery.data?.path && fileQuery.data?.ref && getRoomContextState
+      ? getRoomContextState({
+          panelId,
+          repoId: repo.id,
+          path: fileQuery.data.path,
+          ref: fileQuery.data.ref,
+          isBinary: fileQuery.data.is_binary === true,
+          hasContent: typeof fileQuery.data.content === "string",
+        })
+      : null
+
   return (
     <PanelContainer
       title={resolvedConfig.title || "File Viewer"}
@@ -130,6 +171,45 @@ export function RepoFileViewerPanel({
             >
               <CopyIcon className="size-3.5" />
               Copy
+            </Button>
+          ) : null}
+          {onToggleRoomContext &&
+          fileQuery.data?.path &&
+          fileQuery.data?.ref &&
+          roomContextState ? (
+            <Button
+              type="button"
+              variant={roomContextState.included ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={roomContextState.pending || !roomContextState.canToggle}
+              title={roomContextState.disabledReason ?? undefined}
+              onClick={async () => {
+                if (!fileQuery.data) return
+                await onToggleRoomContext({
+                  panelId,
+                  repoId: repo.id,
+                  repoSlug: repo.slug,
+                  path: fileQuery.data.path,
+                  ref: fileQuery.data.ref,
+                  content: fileQuery.data.content ?? "",
+                  contentType: fileQuery.data.content_type || null,
+                  encoding: fileQuery.data.encoding || null,
+                  sizeBytes: fileQuery.data.size_bytes ?? null,
+                  isBinary: fileQuery.data.is_binary === true,
+                  isTruncated: fileQuery.data.is_truncated === true,
+                  truncationReason: fileQuery.data.truncation_reason || null,
+                })
+              }}
+            >
+              {roomContextState.pending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : roomContextState.included ? (
+                <CheckIcon className="size-3.5" />
+              ) : (
+                <PlusIcon className="size-3.5" />
+              )}
+              {roomContextState.included ? "In Context" : "Add to Context"}
             </Button>
           ) : null}
         </>

@@ -5,11 +5,11 @@
  * Panels are dynamically configured via useRoomPanels hook.
  */
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2 } from "lucide-react"
 import type React from "react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AgentsService, StoriesService } from "@/client/sdk.gen"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
 import EditDrawer from "@/components/Common/EditDrawer"
@@ -30,7 +30,11 @@ import {
 import { PanelContainer } from "@/components/Room/primitives"
 import RoomDebugPanel from "@/components/Room/panels/RoomDebugPanel"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
-import { showSuccessToast } from "@/hooks/useCustomToast"
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from "@/hooks/useCustomToast"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
 import { useRoomStream } from "@/hooks/useRoomStream"
@@ -117,6 +121,29 @@ function resolveRepoIdForRoomPanel(params: {
   return findRepoIdInBindingSource(params.storyData)
 }
 
+function hashToBase36(value: string): string {
+  let hash = 2166136261
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36)
+}
+
+function buildRepoFileContextKey(repoId: string, path: string, ref: string): string {
+  return `${repoId}|${ref}|${path}`
+}
+
+function buildRepoFileContextType(repoId: string, path: string, ref: string): string {
+  const hash = hashToBase36(buildRepoFileContextKey(repoId, path, ref))
+  return `system.repo.file.${hash}`
+}
+
+function buildRepoFileContextId(repoId: string, path: string, ref: string): string {
+  const hash = hashToBase36(`ctx|${buildRepoFileContextKey(repoId, path, ref)}`)
+  return `repo-file-${hash}`
+}
+
 function RoomRepoPanel({
   roomId,
   panelId,
@@ -127,6 +154,7 @@ function RoomRepoPanel({
   storyData,
   panelSelections,
   setPanelSelection,
+  canManageRoomContext,
 }: {
   roomId: string
   panelId: string
@@ -137,7 +165,9 @@ function RoomRepoPanel({
   storyData: unknown
   panelSelections: Record<string, string | null>
   setPanelSelection: (selectionKey: string, path: string | null) => void
+  canManageRoomContext: boolean
 }) {
+  const queryClient = useQueryClient()
   const repoId = resolveRepoIdForRoomPanel({
     panelConfigJson,
     panelEntityBinding,
@@ -153,6 +183,11 @@ function RoomRepoPanel({
     ...getUserRepoQueryOptions(repoId ?? ""),
     enabled: Boolean(repoId),
   })
+  const { data: roomContexts } = useQuery({
+    queryKey: ["rooms", roomId, "contexts"],
+    queryFn: () => RoomService.listRoomContexts(roomId),
+  })
+  const [pendingContextKeys, setPendingContextKeys] = useState<Set<string>>(new Set())
 
   if (!repoId) {
     return (
@@ -198,6 +233,269 @@ function RoomRepoPanel({
     )
   }
 
+  const lastSelectionEmitRef = useRef<string | null>(null)
+  const lastOpenEmitRef = useRef<string | null>(null)
+  const lastRefEmitRef = useRef<string | null>(null)
+  const roomContextByRepoFileKey = useMemo(() => {
+    const index = new Map<string, { id: string; source: string }>()
+    const contexts = roomContexts?.data ?? []
+    for (const item of contexts) {
+      const payload = toRecord(item.payload)
+      if (!payload) continue
+      const payloadRepoId = getString(payload.repo_id)
+      const payloadPath = getString(payload.path)
+      const payloadRef = getString(payload.ref)
+      if (!payloadRepoId || !payloadPath || !payloadRef) continue
+      const key = buildRepoFileContextKey(payloadRepoId, payloadPath, payloadRef)
+      index.set(key, { id: item.id, source: item.source })
+    }
+    return index
+  }, [roomContexts?.data])
+
+  const emitSelectionEvent = useCallback(
+    (selectionKey: string, path: string | null) => {
+      const emitKey = `${panelId}|${repo.id}|${selectionKey}|${path ?? ""}`
+      if (lastSelectionEmitRef.current === emitKey) return
+      lastSelectionEmitRef.current = emitKey
+
+      void RoomService.emitRepoEvent(roomId, {
+        action: "selection",
+        panel_id: panelId,
+        selection_key: selectionKey,
+        path,
+        repo_id: repo.id,
+      }).catch((error) => {
+        console.error("Failed to emit repo selection event", error)
+      })
+    },
+    [panelId, repo.id, roomId],
+  )
+
+  const emitOpenEvent = useCallback(
+    (path: string, ref: string) => {
+      const emitKey = `${panelId}|${repo.id}|${path}|${ref}`
+      if (lastOpenEmitRef.current === emitKey) return
+      lastOpenEmitRef.current = emitKey
+
+      void RoomService.emitRepoEvent(roomId, {
+        action: "open",
+        panel_id: panelId,
+        path,
+        ref,
+        repo_id: repo.id,
+      }).catch((error) => {
+        console.error("Failed to emit repo open event", error)
+      })
+    },
+    [panelId, repo.id, roomId],
+  )
+
+  const emitRefEvent = useCallback(
+    (ref: string, path?: string | null) => {
+      const emitKey = `${panelId}|${repo.id}|${path ?? ""}|${ref}`
+      if (lastRefEmitRef.current === emitKey) return
+      lastRefEmitRef.current = emitKey
+
+      void RoomService.emitRepoEvent(roomId, {
+        action: "ref",
+        panel_id: panelId,
+        path,
+        ref,
+        repo_id: repo.id,
+      }).catch((error) => {
+        console.error("Failed to emit repo ref event", error)
+      })
+    },
+    [panelId, repo.id, roomId],
+  )
+
+  const handleSetPanelSelection = useCallback(
+    (selectionKey: string, path: string | null) => {
+      setPanelSelection(selectionKey, path)
+      emitSelectionEvent(selectionKey, path)
+    },
+    [emitSelectionEvent, setPanelSelection],
+  )
+
+  const handleFileOpened = useCallback(
+    ({ path, ref }: { path: string; ref: string }) => {
+      emitOpenEvent(path, ref)
+    },
+    [emitOpenEvent],
+  )
+
+  const handleRefObserved = useCallback(
+    ({ ref, path }: { ref: string; path?: string | null }) => {
+      emitRefEvent(ref, path)
+    },
+    [emitRefEvent],
+  )
+
+  const getFileRoomContextState = useCallback(
+    ({
+      repoId: contextRepoId,
+      path,
+      ref,
+      isBinary,
+      hasContent,
+    }: {
+      panelId: string
+      repoId: string
+      path: string
+      ref: string
+      isBinary: boolean
+      hasContent: boolean
+    }) => {
+      const fileKey = buildRepoFileContextKey(contextRepoId, path, ref)
+      const included = roomContextByRepoFileKey.has(fileKey)
+      const pending = pendingContextKeys.has(fileKey)
+      if (!canManageRoomContext) {
+        return {
+          included,
+          pending,
+          canToggle: false,
+          disabledReason: "Only room owners can add or remove room context.",
+        }
+      }
+      if (isBinary) {
+        return {
+          included,
+          pending,
+          canToggle: false,
+          disabledReason: "Binary files cannot be added to room context in v1.",
+        }
+      }
+      if (!hasContent) {
+        return {
+          included,
+          pending,
+          canToggle: false,
+          disabledReason: "This file has no readable content to attach.",
+        }
+      }
+      return {
+        included,
+        pending,
+        canToggle: true,
+        disabledReason: null,
+      }
+    },
+    [canManageRoomContext, pendingContextKeys, roomContextByRepoFileKey],
+  )
+
+  const toggleFileRoomContext = useCallback(
+    async ({
+      repoId: contextRepoId,
+      repoSlug,
+      path,
+      ref,
+      content,
+      contentType,
+      encoding,
+      sizeBytes,
+      isBinary,
+      isTruncated,
+      truncationReason,
+    }: {
+      panelId: string
+      repoId: string
+      repoSlug: string
+      path: string
+      ref: string
+      content: string
+      contentType: string | null
+      encoding: string | null
+      sizeBytes: number | null
+      isBinary: boolean
+      isTruncated: boolean
+      truncationReason: string | null
+    }) => {
+      if (!canManageRoomContext) {
+        showWarningToast("Only room owners can add or remove room context.")
+        return
+      }
+      if (isBinary) {
+        showWarningToast("Binary files cannot be added to room context in v1.")
+        return
+      }
+
+      const fileKey = buildRepoFileContextKey(contextRepoId, path, ref)
+      if (pendingContextKeys.has(fileKey)) {
+        return
+      }
+
+      setPendingContextKeys((current) => {
+        const next = new Set(current)
+        next.add(fileKey)
+        return next
+      })
+
+      try {
+        const existing = roomContextByRepoFileKey.get(fileKey)
+        if (existing) {
+          await RoomService.deleteRoomContext(roomId, existing.id)
+          showSuccessToast("File removed from room context.")
+        } else {
+          const contextPayload: Record<string, unknown> = {
+            repo_id: contextRepoId,
+            repo_slug: repoSlug,
+            path,
+            ref,
+            content,
+            content_type: contentType,
+            encoding,
+            size_bytes: sizeBytes,
+            is_binary: isBinary,
+            is_truncated: isTruncated,
+            truncation_reason: truncationReason,
+          }
+          const payloadBytes = new TextEncoder().encode(
+            JSON.stringify(contextPayload),
+          ).length
+          if (payloadBytes > 49_000) {
+            showWarningToast(
+              "File too large for room context payload limit. Try a smaller file.",
+            )
+            return
+          }
+
+          await RoomService.upsertRoomContext(
+            roomId,
+            buildRepoFileContextId(contextRepoId, path, ref),
+            {
+              agent_slug: null,
+              context_type: buildRepoFileContextType(contextRepoId, path, ref),
+              payload: contextPayload,
+              source: "frontend",
+              expires_at: null,
+            },
+            { replaceByType: false },
+          )
+          showSuccessToast("File added to room context.")
+        }
+      } catch (error) {
+        console.error("Failed to toggle file room context", error)
+        showErrorToast("Failed to update room context for this file.")
+      } finally {
+        await queryClient.invalidateQueries({
+          queryKey: ["rooms", roomId, "contexts"],
+        })
+        setPendingContextKeys((current) => {
+          const next = new Set(current)
+          next.delete(fileKey)
+          return next
+        })
+      }
+    },
+    [
+      canManageRoomContext,
+      pendingContextKeys,
+      queryClient,
+      roomContextByRepoFileKey,
+      roomId,
+    ],
+  )
+
   return renderRepoPanel(
     {
       id: panelId,
@@ -215,40 +513,11 @@ function RoomRepoPanel({
         hasManageAccess: true,
       },
       panelSelections,
-      setPanelSelection: (selectionKey, path) => {
-        setPanelSelection(selectionKey, path)
-        void RoomService.emitRepoEvent(roomId, {
-          action: "selection",
-          panel_id: panelId,
-          selection_key: selectionKey,
-          path,
-          repo_id: repo.id,
-        }).catch((error) => {
-          console.error("Failed to emit repo selection event", error)
-        })
-      },
-      onFileOpened: ({ path, ref }) => {
-        void RoomService.emitRepoEvent(roomId, {
-          action: "open",
-          panel_id: panelId,
-          path,
-          ref,
-          repo_id: repo.id,
-        }).catch((error) => {
-          console.error("Failed to emit repo open event", error)
-        })
-      },
-      onRefObserved: ({ ref, path }) => {
-        void RoomService.emitRepoEvent(roomId, {
-          action: "ref",
-          panel_id: panelId,
-          path,
-          ref,
-          repo_id: repo.id,
-        }).catch((error) => {
-          console.error("Failed to emit repo ref event", error)
-        })
-      },
+      setPanelSelection: handleSetPanelSelection,
+      onFileOpened: handleFileOpened,
+      onRefObserved: handleRefObserved,
+      getFileRoomContextState,
+      onToggleFileRoomContext: toggleFileRoomContext,
     },
   )
 }
@@ -256,6 +525,7 @@ function RoomRepoPanel({
 function RoomView() {
   const { roomId } = Route.useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // Edit drawer state
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
@@ -268,6 +538,23 @@ function RoomView() {
   const [showInternalMessages, setShowInternalMessages] = useState(false)
   const [isPromptSettingsOpen, setIsPromptSettingsOpen] = useState(false)
   const [panelSelections, setPanelSelections] = useState<Record<string, string | null>>({})
+
+  const updatePanelSelection = useCallback((selectionKey: string, path: string | null) => {
+    setPanelSelections((current) => ({
+      ...current,
+      [selectionKey]: path,
+    }))
+  }, [])
+  const selectedRepoFiles = useMemo(
+    () =>
+      Object.entries(panelSelections)
+        .filter(([, path]) => typeof path === "string" && path.length > 0)
+        .map(([selectionKey, path]) => ({
+          selectionKey,
+          path: path as string,
+        })),
+    [panelSelections],
+  )
 
   // Fetch available agents
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
@@ -293,12 +580,9 @@ function RoomView() {
       const selectionKey = getString(payload.selection_key)
       const path = getString(payload.path)
       if (!selectionKey) return
-      setPanelSelections((current) => ({
-        ...current,
-        [selectionKey]: path,
-      }))
+      updatePanelSelection(selectionKey, path)
     },
-    [],
+    [updatePanelSelection],
   )
 
   const {
@@ -351,6 +635,10 @@ function RoomView() {
     queryKey: ["stories", room?.story_id, "room-repo-binding"],
     queryFn: () => StoriesService.readStory({ id: room?.story_id || "" }),
     enabled: Boolean(room?.story_id),
+  })
+  const { data: roomContextsData } = useQuery({
+    queryKey: ["rooms", roomId, "contexts"],
+    queryFn: () => RoomService.listRoomContexts(roomId),
   })
 
   // Handle authorization errors
@@ -523,6 +811,51 @@ function RoomView() {
   }
 
   const canManage = currentUserRole === "owner"
+  const repoContextFiles = useMemo(() => {
+    const contexts = roomContextsData?.data ?? []
+    return contexts
+      .map((item) => {
+        const payload = toRecord(item.payload)
+        if (!payload) return null
+        const repoId = getString(payload.repo_id)
+        const path = getString(payload.path)
+        const ref = getString(payload.ref)
+        if (!repoId || !path || !ref) return null
+        return {
+          contextId: item.id,
+          repoId,
+          repoSlug: getString(payload.repo_slug),
+          path,
+          ref,
+          source: item.source,
+          sizeBytes:
+            typeof payload.size_bytes === "number" ? payload.size_bytes : null,
+          isTruncated: payload.is_truncated === true,
+        }
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+  }, [roomContextsData?.data])
+
+  const handleRemoveRepoContextFile = useCallback(
+    async (contextId: string) => {
+      if (!canManage) {
+        showWarningToast("Only room owners can remove room context files.")
+        return
+      }
+      try {
+        await RoomService.deleteRoomContext(roomId, contextId)
+        showSuccessToast("Removed file from room context.")
+      } catch (error) {
+        console.error("Failed to remove room context file", error)
+        showErrorToast("Failed to remove file from room context.")
+      } finally {
+        await queryClient.invalidateQueries({
+          queryKey: ["rooms", roomId, "contexts"],
+        })
+      }
+    },
+    [canManage, queryClient, roomId],
+  )
 
   // ==========================================================================
   // Panel component registry - maps panel kinds to render functions
@@ -563,6 +896,10 @@ function RoomView() {
         activeAgents={activeAgents}
         showInternalMessages={showInternalMessages}
         onToggleInternalMessages={setShowInternalMessages}
+        selectedRepoFiles={selectedRepoFiles}
+        repoContextFiles={repoContextFiles}
+        canManageRoomContext={canManage}
+        onRemoveRepoContextFile={handleRemoveRepoContextFile}
       />
     ),
     storyEditor: () => (
@@ -639,12 +976,8 @@ function RoomView() {
               roomData={room}
               storyData={storyBindingSource}
               panelSelections={panelSelections}
-              setPanelSelection={(selectionKey, path) => {
-                setPanelSelections((current) => ({
-                  ...current,
-                  [selectionKey]: path,
-                }))
-              }}
+              setPanelSelection={updatePanelSelection}
+              canManageRoomContext={canManage}
             />
           )
         : panelComponents[config.kind] || (() => null),
@@ -698,6 +1031,10 @@ function RoomView() {
           activeAgents={activeAgents}
           showInternalMessages={showInternalMessages}
           onToggleInternalMessages={setShowInternalMessages}
+          selectedRepoFiles={selectedRepoFiles}
+          repoContextFiles={repoContextFiles}
+          canManageRoomContext={canManage}
+          onRemoveRepoContextFile={handleRemoveRepoContextFile}
         />
       )}
 
