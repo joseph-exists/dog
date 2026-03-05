@@ -4809,7 +4809,10 @@ def create_user_agent_config(
      owner_id: uuid.UUID | None = None,
  ) -> UserAgentConfig:
      """Create a new agent configuration."""
-     db_obj = UserAgentConfig.model_validate(agent_in, update={"owner_id": owner_id})
+     db_obj = UserAgentConfig.model_validate(
+         agent_in.model_dump(),
+         update={"owner_id": owner_id},
+     )
      session.add(db_obj)
      session.commit()
      session.refresh(db_obj)
@@ -4868,4 +4871,3 @@ def update_user_agent_config(
 def delete_user_agent_config(*, session: Session, db_agent: UserAgentConfig) -> None:
     session.delete(db_agent)
     session.commit()
-

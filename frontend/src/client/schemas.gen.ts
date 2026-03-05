@@ -8313,6 +8313,98 @@ export const QualityUpdateSchema = {
     title: 'QualityUpdate'
 } as const;
 
+export const RepoRoomEventRequestSchema = {
+    properties: {
+        metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata',
+            description: 'Optional opaque metadata for future expansion'
+        },
+        action: {
+            type: 'string',
+            enum: ['selection', 'open', 'ref'],
+            title: 'Action',
+            description: 'Repo collaboration action type'
+        },
+        panel_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Panel Id',
+            description: 'Optional panel instance id that emitted the action'
+        },
+        selection_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Selection Key',
+            description: 'Shared selection key for cross-panel coordination'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path',
+            description: 'Repository file path associated with this action'
+        },
+        ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ref',
+            description: 'Git ref associated with this action'
+        },
+        repo_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Repo Id',
+            description: 'Platform user_repo identifier for the emitted action'
+        }
+    },
+    type: 'object',
+    required: ['action'],
+    title: 'RepoRoomEventRequest',
+    description: `Request body for room-scoped repository collaboration events.
+
+This payload is used by frontend repo panels embedded in Room to emit
+structured selection/open/ref actions into the room event log.`
+} as const;
+
 export const ResolutionSourceSchema = {
     type: 'string',
     enum: ['authored', 'user_pref', 'system_default', 'none'],
@@ -9672,6 +9764,32 @@ export const ShadowRepoFileContentSchema = {
                 }
             ],
             title: 'Content Type'
+        },
+        is_binary: {
+            type: 'boolean',
+            title: 'Is Binary',
+            default: false
+        },
+        is_truncated: {
+            type: 'boolean',
+            title: 'Is Truncated',
+            default: false
+        },
+        truncation_reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Truncation Reason'
+        },
+        is_unsupported_preview: {
+            type: 'boolean',
+            title: 'Is Unsupported Preview',
+            default: false
         }
     },
     type: 'object',
@@ -12300,6 +12418,18 @@ export const Type1CreateSchema = {
             title: 'Is Coordinator',
             default: false
         },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
         max_tool_iterations: {
             type: 'integer',
             title: 'Max Tool Iterations',
@@ -12556,6 +12686,18 @@ export const Type1UpdateSchema = {
             title: 'Is Coordinator',
             default: false
         },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
         max_tool_iterations: {
             type: 'integer',
             title: 'Max Tool Iterations',
@@ -12799,6 +12941,18 @@ export const Type3CreateSchema = {
         is_coordinator: {
             type: 'boolean',
             title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
             default: false
         },
         max_tool_iterations: {
@@ -13056,6 +13210,18 @@ export const Type3UpdateSchema = {
         is_coordinator: {
             type: 'boolean',
             title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
             default: false
         },
         max_tool_iterations: {
@@ -13725,6 +13891,18 @@ export const UserAgentConfigPublicSchema = {
             ],
             title: 'Is Coordinator'
         },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
         max_tool_iterations: {
             anyOf: [
                 {
@@ -14151,6 +14329,72 @@ export const UserRegisterSchema = {
     title: 'UserRegister'
 } as const;
 
+export const UserRepoFileContentSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        ref: {
+            type: 'string',
+            title: 'Ref'
+        },
+        content: {
+            type: 'string',
+            title: 'Content'
+        },
+        encoding: {
+            type: 'string',
+            title: 'Encoding',
+            default: 'utf-8'
+        },
+        size_bytes: {
+            type: 'integer',
+            title: 'Size Bytes'
+        },
+        content_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content Type'
+        },
+        is_binary: {
+            type: 'boolean',
+            title: 'Is Binary',
+            default: false
+        },
+        is_truncated: {
+            type: 'boolean',
+            title: 'Is Truncated',
+            default: false
+        },
+        truncation_reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Truncation Reason'
+        },
+        is_unsupported_preview: {
+            type: 'boolean',
+            title: 'Is Unsupported Preview',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['path', 'ref', 'content', 'size_bytes'],
+    title: 'UserRepoFileContent'
+} as const;
+
 export const UserRepoImportStatusSchema = {
     type: 'string',
     enum: ['pending', 'importing', 'ready', 'failed'],
@@ -14346,12 +14590,237 @@ export const UserRepoPublicSchema = {
             type: 'string',
             format: 'date-time',
             title: 'Updated At'
+        },
+        default_branch: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Branch'
+        },
+        capabilities: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/UserRepoViewerCapabilities'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
     required: ['slug', 'display_name', 'gogs_repo_name', 'id', 'owner_user_id', 'created_at', 'updated_at'],
     title: 'UserRepoPublic',
     description: 'Public API response model for a user-visible repo.'
+} as const;
+
+export const UserRepoReadmeContentSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        ref: {
+            type: 'string',
+            title: 'Ref'
+        },
+        content: {
+            type: 'string',
+            title: 'Content'
+        },
+        encoding: {
+            type: 'string',
+            title: 'Encoding',
+            default: 'utf-8'
+        },
+        size_bytes: {
+            type: 'integer',
+            title: 'Size Bytes'
+        },
+        content_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content Type'
+        },
+        is_binary: {
+            type: 'boolean',
+            title: 'Is Binary',
+            default: false
+        },
+        is_truncated: {
+            type: 'boolean',
+            title: 'Is Truncated',
+            default: false
+        },
+        truncation_reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Truncation Reason'
+        },
+        is_unsupported_preview: {
+            type: 'boolean',
+            title: 'Is Unsupported Preview',
+            default: false
+        },
+        resolved_from_path: {
+            type: 'string',
+            title: 'Resolved From Path'
+        }
+    },
+    type: 'object',
+    required: ['path', 'ref', 'content', 'size_bytes', 'resolved_from_path'],
+    title: 'UserRepoReadmeContent'
+} as const;
+
+export const UserRepoSummarySchema = {
+    properties: {
+        repo_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Repo Id'
+        },
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        display_name: {
+            type: 'string',
+            title: 'Display Name'
+        },
+        repo_available: {
+            type: 'boolean',
+            title: 'Repo Available'
+        },
+        default_branch: {
+            type: 'string',
+            title: 'Default Branch'
+        },
+        latest_commit_sha: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Commit Sha'
+        },
+        latest_commit_message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Commit Message'
+        },
+        latest_commit_authored_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Commit Authored At'
+        }
+    },
+    type: 'object',
+    required: ['repo_id', 'slug', 'display_name', 'repo_available', 'default_branch'],
+    title: 'UserRepoSummary'
+} as const;
+
+export const UserRepoViewResponseSchema = {
+    properties: {
+        summary: {
+            '$ref': '#/components/schemas/UserRepoSummary'
+        },
+        commits: {
+            items: {
+                '$ref': '#/components/schemas/ShadowRepoCommitSummary'
+            },
+            type: 'array',
+            title: 'Commits'
+        },
+        tree: {
+            items: {
+                '$ref': '#/components/schemas/ShadowRepoTreeEntry'
+            },
+            type: 'array',
+            title: 'Tree'
+        },
+        tree_root_path: {
+            type: 'string',
+            title: 'Tree Root Path',
+            default: ''
+        },
+        ref: {
+            type: 'string',
+            title: 'Ref'
+        }
+    },
+    type: 'object',
+    required: ['summary', 'ref'],
+    title: 'UserRepoViewResponse'
+} as const;
+
+export const UserRepoViewerCapabilitiesSchema = {
+    properties: {
+        has_file_tree: {
+            type: 'boolean',
+            title: 'Has File Tree',
+            default: false
+        },
+        has_blob_content: {
+            type: 'boolean',
+            title: 'Has Blob Content',
+            default: false
+        },
+        has_commit_history: {
+            type: 'boolean',
+            title: 'Has Commit History',
+            default: false
+        },
+        has_search: {
+            type: 'boolean',
+            title: 'Has Search',
+            default: false
+        },
+        has_branches: {
+            type: 'boolean',
+            title: 'Has Branches',
+            default: false
+        },
+        default_branch: {
+            type: 'string',
+            title: 'Default Branch',
+            default: 'main'
+        }
+    },
+    type: 'object',
+    title: 'UserRepoViewerCapabilities'
 } as const;
 
 export const UserReposPublicSchema = {

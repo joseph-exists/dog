@@ -290,9 +290,11 @@ async def get_agent_instance_with_tools(
     """
     config = await get_agent_config(session, slug)
     logger.info(
-        "[AGENT_INSTANCE.get_agent_instance_with_tools] slug=%s config_present=%s",
+        "[AGENT_INSTANCE.get_agent_instance_with_tools] slug=%s config_present=%s enable_a2a=%s enable_ag_ui=%s",
         slug,
         config is not None,
+        getattr(config, "enable_a2a_tool", "MISSING") if config else None,
+        getattr(config, "enable_ag_ui_tool", "MISSING") if config else None,
     )
 
     if not config:
@@ -385,11 +387,35 @@ async def get_agent_instance_with_tools(
     # Future extension: pull model/base_url/provider overrides from user-specific credentials.
     # Keep the hook explicit so new credential sources can slot in without rewriting the caller.
 
+    # Hybrid tool enablement: tools are enabled if EITHER:
+    # 1. The agent config declares them (self-declaration pattern), OR
+    # 2. The runtime caller enables them (dependency injection pattern)
+    # This allows agents to specify their own tool requirements while also
+    # supporting runtime override for testing, demos, or special contexts.
+    config_a2a = getattr(config, "enable_a2a_tool", False)
+    config_ag_ui = getattr(config, "enable_ag_ui_tool", False)
+
+    effective_a2a = enable_a2a_tool or config_a2a
+    effective_ag_ui = enable_ag_ui_tool or config_ag_ui
+
     tools: list[Any] = []
-    if enable_a2a_tool:
+    if effective_a2a:
         tools.append(request_agent_assistance)
-    if enable_ag_ui_tool:
+    if effective_ag_ui:
         tools.append(emit_ui_component)
+
+    # INFO level so we can trace tool resolution in production
+    logger.info(
+        "[AGENT_INSTANCE.tool_resolution] slug=%s config_a2a=%s config_ag_ui=%s runtime_a2a=%s runtime_ag_ui=%s effective_a2a=%s effective_ag_ui=%s tools_count=%d",
+        slug,
+        config_a2a,
+        config_ag_ui,
+        enable_a2a_tool,
+        enable_ag_ui_tool,
+        effective_a2a,
+        effective_ag_ui,
+        len(tools),
+    )
 
     agent_kwargs: dict[str, Any] = {
         "model": model_final_form,
@@ -412,12 +438,14 @@ async def get_agent_instance_with_tools(
     agent = Agent(**agent_kwargs)
     _attach_runtime_resolution_metadata(agent=agent, resolved=resolved)
     logger.debug(
-        "[AGENT_INSTANCE.get_agent_instance_with_tools] instantiated slug=%s model=%s tools=%d a2a=%s ag_ui=%s",
+        "[AGENT_INSTANCE.get_agent_instance_with_tools] instantiated slug=%s model=%s tools=%d a2a=%s ag_ui=%s (config: a2a=%s ag_ui=%s)",
         slug,
         model_name,
         len(tools),
-        enable_a2a_tool,
-        enable_ag_ui_tool,
+        effective_a2a,
+        effective_ag_ui,
+        config_a2a,
+        config_ag_ui,
     )
     return agent
 

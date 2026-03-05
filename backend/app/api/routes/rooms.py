@@ -61,9 +61,11 @@ from app.models import (
     RoomPublic,
     RoomsPublic,
     RoomUpdate,
+    RepoRoomEventRequest,
     UIActionRequest,
 )
 from app.services.agent_runner import invoke_agent_manually, run_agents_for_message
+from app.services.event_emitter import emit_event
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 logger = logging.getLogger(__name__)
@@ -733,3 +735,59 @@ async def handle_ui_action(
     # Return 200 with status. The agent's response arrives asynchronously
     # via the normal message stream (WebSocket or polling).
     return {"status": "accepted", "agent": agent_slug, "action": action_in.action}
+
+
+@router.post("/{room_id}/repo-event")
+async def emit_repo_room_event(
+    *,
+    room_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+    event_in: RepoRoomEventRequest,
+) -> Any:
+    """
+    Emit a room-scoped repository collaboration event.
+
+    Used by room-embedded repo panels to publish structured actions for:
+    - selection changes
+    - file opens
+    - ref observations/changes
+
+    Authorization: Any active room participant can emit events.
+    """
+    await check_room_membership(
+        room_id=room_id,
+        user_id=current_user.id,
+        session=session,
+    )
+
+    action_to_event_type = {
+        "selection": "room.repo.selection",
+        "open": "room.repo.opened",
+        "ref": "room.repo.ref_changed",
+    }
+    event_type = action_to_event_type[event_in.action]
+
+    event_payload = {
+        "actor_user_id": str(current_user.id),
+        "action": event_in.action,
+        "panel_id": event_in.panel_id,
+        "selection_key": event_in.selection_key,
+        "path": event_in.path,
+        "ref": event_in.ref,
+        "repo_id": str(event_in.repo_id) if event_in.repo_id else None,
+        "metadata": event_in.metadata or {},
+    }
+
+    event = await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type=event_type,
+        payload=event_payload,
+    )
+
+    return {
+        "status": "accepted",
+        "event_type": event_type,
+        "sequence": event.room_sequence,
+    }

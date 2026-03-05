@@ -1,0 +1,1 @@
+One residual note: the repos route still uses the generic repo shell with a non-registry use case, so I resolved the type issue conservatively without changing its UI. If you want, the next clean step is to separate “workspace shell panel config” from “registry-backed repo detail panel config” so that route stops borrowing the stricter detail-view type.

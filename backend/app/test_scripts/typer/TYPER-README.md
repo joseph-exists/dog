@@ -165,6 +165,62 @@ python -m backend.app.test_scripts.typer.main stories create "My Story" --verbos
 python -m backend.app.test_scripts.typer.main stories list --json
 ```
 
+### Story Authoring (State Machine)
+
+```bash
+# Add nodes with explicit version and type
+python -m backend.app.test_scripts.typer.main stories add-node STORY_ID \
+  --title "Start" --content "..." --start --version 2 --node-type "text"
+
+# Create a new version before editing a published story
+python -m backend.app.test_scripts.typer.main stories new-version STORY_ID
+
+# Add guarded choice with state mutations
+python -m backend.app.test_scripts.typer.main stories add-choice NODE_A NODE_B \
+  --text "Take the risky path" \
+  --requires-state '{"has_sword": true}' \
+  --sets-state '{"courage": 1}'
+
+# Add access requirements
+python -m backend.app.test_scripts.typer.main stories add-requirement STORY_ID \
+  --type quality --target-id REQUIREMENT_TARGET_UUID --desc "Requires brave trait"
+
+# Inspect nodes and choices
+python -m backend.app.test_scripts.typer.main stories list-nodes STORY_ID --version 2 --json
+python -m backend.app.test_scripts.typer.main stories list-choices --story-id STORY_ID --json
+
+# Resolve start node
+python -m backend.app.test_scripts.typer.main stories start-node STORY_ID --version 2
+
+# Unpublish if you need to revert a published story to draft
+python -m backend.app.test_scripts.typer.main stories unpublish STORY_ID
+```
+
+### Story Progress (Playtesting)
+
+```bash
+# Start a new playthrough
+python -m backend.app.test_scripts.typer.main stories create-progress USER_PERSONA_ID STORY_ID
+
+# Get current node and choices
+python -m backend.app.test_scripts.typer.main stories current-node USER_PERSONA_ID STORY_ID
+
+# Make a choice
+python -m backend.app.test_scripts.typer.main stories make-choice USER_PERSONA_ID STORY_ID CHOICE_ID
+
+# Jump to ancestor and inspect timeline
+python -m backend.app.test_scripts.typer.main stories jump USER_PERSONA_ID STORY_ID --expected-head-version 3 --choice-id CHOICE_ID
+python -m backend.app.test_scripts.typer.main stories timeline USER_PERSONA_ID STORY_ID --json
+```
+
+### Room Runtime (Shared Run)
+
+```bash
+python -m backend.app.test_scripts.typer.main rooms runtime-get ROOM_ID --json
+python -m backend.app.test_scripts.typer.main rooms runtime-put ROOM_ID --user-persona-id USER_PERSONA_ID
+python -m backend.app.test_scripts.typer.main rooms runtime-advance ROOM_ID --choice-id CHOICE_ID
+```
+
 ### Embedder Queries
 
 ```bash

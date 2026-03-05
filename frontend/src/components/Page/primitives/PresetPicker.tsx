@@ -56,6 +56,10 @@ export interface PresetPickerProps {
   onSelect: (presetId: string) => void
   /** Display variant */
   variant?: "dropdown" | "buttons"
+  /** Optional override for preview labels */
+  panelLabels?: Record<string, string>
+  /** Optional override for preview colors */
+  panelColors?: Record<string, string>
   /** Additional className */
   className?: string
 }
@@ -68,9 +72,17 @@ interface PresetButtonProps {
   preset: Preset
   isSelected: boolean
   onSelect: () => void
+  panelLabels?: Record<string, string>
+  panelColors?: Record<string, string>
 }
 
-function PresetButton({ preset, isSelected, onSelect }: PresetButtonProps) {
+function PresetButton({
+  preset,
+  isSelected,
+  onSelect,
+  panelLabels,
+  panelColors,
+}: PresetButtonProps) {
   const reduceMotion = useReduceMotion()
 
   return (
@@ -94,6 +106,8 @@ function PresetButton({ preset, isSelected, onSelect }: PresetButtonProps) {
             width={80}
             height={50}
             showLabels={false}
+            panelLabels={panelLabels}
+            panelColors={panelColors}
           />
           <span className="text-xs font-medium">{preset.name}</span>
           {isSelected && (
@@ -117,6 +131,8 @@ export function PresetPicker({
   currentPresetId,
   onSelect,
   variant = "dropdown",
+  panelLabels,
+  panelColors,
   className,
 }: PresetPickerProps) {
   const currentPreset = presets.find((p) => p.id === currentPresetId)
@@ -130,6 +146,8 @@ export function PresetPicker({
             preset={preset}
             isSelected={preset.id === currentPresetId}
             onSelect={() => onSelect(preset.id)}
+            panelLabels={panelLabels}
+            panelColors={panelColors}
           />
         ))}
       </div>
@@ -157,6 +175,8 @@ export function PresetPicker({
               width={60}
               height={40}
               showLabels={false}
+              panelLabels={panelLabels}
+              panelColors={panelColors}
             />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm">{preset.name}</p>

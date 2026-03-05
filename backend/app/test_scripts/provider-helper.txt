@@ -1,0 +1,20 @@
+  ✅ OpenAI-Funktown
+    ID: 36150057-1c9c-4441-b0d1-4edbab1e438b
+    Provider Type ID: 673f1787-8474-4e1c-986c-8e19f14c989c
+    Base URL: https://api.openai.com/v1
+    Description: woop
+    API Key: [encrypted - never returned]
+
+  ✅ nouslington
+    ID: 471b5ade-7e99-4062-b08e-fbb16395cf80
+    Provider Type ID: e09ade10-8563-4748-8deb-1a6c87c97134
+    Base URL: https://inference-api.nousresearch.com/v1
+    Description: Knower of Turtles
+    API Key: [encrypted - never returned]
+
+  ✅ MegaLLM
+    ID: c917adfc-7eeb-4dbd-b331-573ae07e3317
+    Provider Type ID: e09ade10-8563-4748-8deb-1a6c87c97134
+    Base URL: https://ai.megallm.io/v1
+    Description: Trapical
+    API Key: [encrypted - never returned]

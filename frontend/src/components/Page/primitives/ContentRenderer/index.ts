@@ -51,6 +51,7 @@ export type {
   ContentRendererProps,
   ContentTrustLevel,
   ContentVariant,
+  FormatSpecificOptions,
   HTMLContentOptions,
   ImageContentOptions,
   JSONContentOptions,

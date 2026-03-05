@@ -198,3 +198,125 @@ def test_shadow_repo_access_denied_is_opaque_404(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Shadow repo not found"
+
+
+def test_superuser_can_access_any_shadow_repo(
+    client: TestClient,
+    db: Session,
+    tmp_path: Path,
+    monkeypatch,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    """Superusers should be able to view any user's shadow repo."""
+    monkeypatch.setattr(settings, "SHADOW_REPOS_PATH", str(tmp_path))
+
+    # Create a regular user who owns the repo
+    owner_password = "shadow-owned-pass"
+    owner = _create_user(
+        db,
+        email=f"shadow-owned-{uuid.uuid4()}@example.com",
+        password=owner_password,
+    )
+
+    entity_id = uuid.uuid4()
+    db.add(
+        ShadowRepo(
+            owner_id=owner.id,
+            entity_type="room",
+            entity_id=entity_id,
+            forgejo_repo_name=f"room-{entity_id}",
+            forgejo_repo_id=None,
+        )
+    )
+    db.commit()
+
+    _init_shadow_repo(base_path=tmp_path, entity_type="room", entity_id=entity_id)
+
+    # Superuser accesses the repo
+    response = client.get(
+        f"{settings.API_V1_STR}/shadow-repos/room/{entity_id}/view",
+        headers=superuser_token_headers,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summary"]["entity_type"] == "room"
+    assert payload["summary"]["entity_id"] == str(entity_id)
+
+
+def test_shadow_repo_file_rejects_path_traversal(
+    client: TestClient,
+    db: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Path traversal attempts should return 404 (git show fails on invalid paths)."""
+    monkeypatch.setattr(settings, "SHADOW_REPOS_PATH", str(tmp_path))
+
+    owner_password = "shadow-traversal-pass"
+    owner = _create_user(
+        db,
+        email=f"shadow-traversal-{uuid.uuid4()}@example.com",
+        password=owner_password,
+    )
+    headers = user_authentication_headers(
+        client=client,
+        email=owner.email,
+        password=owner_password,
+    )
+
+    entity_id = uuid.uuid4()
+    db.add(
+        ShadowRepo(
+            owner_id=owner.id,
+            entity_type="agent",
+            entity_id=entity_id,
+            forgejo_repo_name=f"agent-{entity_id}",
+            forgejo_repo_id=None,
+        )
+    )
+    db.commit()
+
+    _init_shadow_repo(base_path=tmp_path, entity_type="agent", entity_id=entity_id)
+
+    # Attempt path traversal
+    response = client.get(
+        f"{settings.API_V1_STR}/shadow-repos/agent/{entity_id}/file",
+        params={"path": "../../../etc/passwd"},
+        headers=headers,
+    )
+
+    # Git show will fail on paths outside the repo, returning 404
+    assert response.status_code == 404
+
+
+def test_shadow_repo_nonexistent_returns_404(
+    client: TestClient,
+    db: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Requesting a shadow repo that doesn't exist should return 404."""
+    monkeypatch.setattr(settings, "SHADOW_REPOS_PATH", str(tmp_path))
+
+    owner_password = "shadow-nonexistent-pass"
+    owner = _create_user(
+        db,
+        email=f"shadow-nonexistent-{uuid.uuid4()}@example.com",
+        password=owner_password,
+    )
+    headers = user_authentication_headers(
+        client=client,
+        email=owner.email,
+        password=owner_password,
+    )
+
+    # Request a repo that was never created
+    fake_entity_id = uuid.uuid4()
+    response = client.get(
+        f"{settings.API_V1_STR}/shadow-repos/agent/{fake_entity_id}/view",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Shadow repo not found"

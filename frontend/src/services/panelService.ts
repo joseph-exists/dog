@@ -33,10 +33,26 @@ import {
  * Panel configuration item for layouts.
  * Uses PanelKind from registry as single source of truth.
  */
+export type PanelBindingSource =
+  | "panel_config"
+  | "room_attachment"
+  | "story_default"
+  | "runtime_override"
+
+export interface PanelEntityBinding {
+  source?: PanelBindingSource
+  entity_type?: string
+  entity_id?: string | null
+  repo_model?: "user_repo" | "shadow_repo"
+  repo_id?: string | null
+}
+
 export interface PanelConfig {
   id: string
   kind: PanelKind
   prominence: PanelProminence
+  config_json?: Record<string, unknown> | null
+  entity_binding?: PanelEntityBinding | null
 }
 
 /**

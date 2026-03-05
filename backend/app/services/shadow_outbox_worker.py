@@ -348,10 +348,160 @@ def repair_missing_outbox_jobs() -> int:
     return created
 
 
+def backfill_orphaned_repos(
+    *,
+    entity_types: list[str] | None = None,
+    limit: int | None = None,
+    dry_run: bool = False,
+) -> dict[str, int]:
+    """
+    Backfill versions for ShadowRepos that have no versions.
+
+    These orphaned repos were created due to a transaction bug where the repo
+    was committed before the version/job. This function re-snapshots the
+    current entity state and creates versions.
+
+    Args:
+        entity_types: Only backfill these types (default: all)
+        limit: Max repos to process (default: unlimited)
+        dry_run: If True, just count without creating
+
+    Returns:
+        Dict with counts: {'processed': N, 'created': N, 'skipped': N, 'errors': N}
+    """
+    from app.services.shadow_exporters import (
+        build_agent_snapshot,
+        build_persona_snapshot,
+        build_room_snapshot,
+        build_story_snapshot,
+    )
+    from app.models import User, UserAgentConfig, Story, Persona, Room
+
+    # Map entity types to their snapshot builders
+    snapshot_builders = {
+        "agent": lambda session, entity_id: build_agent_snapshot(
+            session=session, agent_id=entity_id
+        ),
+        "story": lambda session, entity_id: build_story_snapshot(
+            session=session, story_id=entity_id
+        ),
+        "persona": lambda session, entity_id: build_persona_snapshot(
+            session=session, persona_id=entity_id
+        ),
+        "room": lambda session, entity_id: build_room_snapshot(
+            session=session, room_id=entity_id
+        ),
+    }
+
+    stats = {"processed": 0, "created": 0, "skipped": 0, "errors": 0}
+
+    with Session(engine) as session:
+        # Find repos without versions
+        repos_with_versions = session.exec(
+            select(ShadowVersion.shadow_repo_id).distinct()
+        ).all()
+        version_repo_ids = set(repos_with_versions)
+
+        stmt = select(ShadowRepo).where(~ShadowRepo.id.in_(version_repo_ids))
+        if entity_types:
+            stmt = stmt.where(ShadowRepo.entity_type.in_(entity_types))
+        if limit:
+            stmt = stmt.limit(limit)
+
+        orphaned_repos = list(session.exec(stmt).all())
+        logger.info(f"Found {len(orphaned_repos)} orphaned repos to backfill")
+
+        for repo in orphaned_repos:
+            stats["processed"] += 1
+
+            if repo.entity_type not in snapshot_builders:
+                logger.debug(
+                    f"Skipping {repo.entity_type}/{repo.entity_id} - no snapshot builder"
+                )
+                stats["skipped"] += 1
+                continue
+
+            if dry_run:
+                logger.info(f"[DRY RUN] Would backfill {repo.entity_type}/{repo.entity_id}")
+                stats["created"] += 1
+                continue
+
+            try:
+                # Build snapshot from current entity state
+                snapshot = snapshot_builders[repo.entity_type](session, repo.entity_id)
+
+                # Get owner for the version
+                owner = session.get(User, repo.owner_id)
+                if not owner:
+                    logger.warning(f"Owner not found for repo {repo.id}, skipping")
+                    stats["skipped"] += 1
+                    continue
+
+                # Create version
+                version = ShadowVersion(
+                    shadow_repo_id=repo.id,
+                    commit_sha="pending",
+                    version_number=1,
+                    message=f"Backfill: initial snapshot of {repo.entity_type}",
+                    snapshot_json=snapshot,
+                    created_by_id=owner.id,
+                    created_at=_now(),
+                    status="pending",
+                    committed_at=None,
+                    last_error=None,
+                    updated_at=_now(),
+                )
+                session.add(version)
+                session.flush()
+
+                # Create job
+                job = ShadowOutboxJob(
+                    shadow_repo_id=repo.id,
+                    shadow_version_id=version.id,
+                    entity_type=repo.entity_type,
+                    entity_id=repo.entity_id,
+                    status="queued",
+                    attempt_count=0,
+                    run_after=_now(),
+                    locked_at=None,
+                    locked_by=None,
+                    last_error=None,
+                    last_error_at=None,
+                    priority=200,  # Lower priority than normal operations
+                    created_at=_now(),
+                    updated_at=_now(),
+                )
+                session.add(job)
+                session.commit()
+
+                logger.info(f"Backfilled {repo.entity_type}/{repo.entity_id}")
+                stats["created"] += 1
+
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to backfill {repo.entity_type}/{repo.entity_id}: {exc}"
+                )
+                stats["errors"] += 1
+                session.rollback()
+
+    return stats
+
+
 if __name__ == "__main__":
     mode = os.getenv("SHADOW_OUTBOX_MODE", "worker")
     if mode == "repair_missing_jobs":
         created = repair_missing_outbox_jobs()
         logger.info(f"Created {created} missing outbox jobs")
+    elif mode == "backfill_orphaned_repos":
+        entity_types = os.getenv("SHADOW_BACKFILL_TYPES", "").split(",")
+        entity_types = [t.strip() for t in entity_types if t.strip()] or None
+        limit = int(os.getenv("SHADOW_BACKFILL_LIMIT", "0")) or None
+        dry_run = os.getenv("SHADOW_BACKFILL_DRY_RUN", "false").lower() == "true"
+        stats = backfill_orphaned_repos(
+            entity_types=entity_types,
+            limit=limit,
+            dry_run=dry_run,
+        )
+        logger.info(f"Backfill complete: {stats}")
     else:
         run_worker()

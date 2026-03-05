@@ -8,7 +8,7 @@ scripts:
 ## Requirements
 - `OPENAI_API_KEY` must be set
 - Postgres must have `pgvector` available
-- DB URI from `--db-uri` or env (`DATABASE_URL` / `ASYNC_DATABASE_URL`)
+- DB URI from `--db-uri` or env (`DEVEMBED_DATABASE_URL` / `DEVEMBED_ASYNC_DATABASE_URL` / `DATABASE_URL` / `ASYNC_DATABASE_URL`)
 
 ## 1) Ingest OpenAPI into Postgres
 
@@ -23,7 +23,7 @@ Explicit run:
 ```bash
 python3 app/test_scripts/embedder/utils/api_embedder.py \
   --spec app/test_scripts/embedder/utils/openapi.json \
-  --db-uri "postgresql://postgres:postgres@db:5432/tinyfoot" \
+  --db-uri "postgresql://postgres:postgres@db:5432/devembed" \
   --table api_areas \
   --model text-embedding-3-small \
   --dimensions 1536
@@ -85,7 +85,7 @@ Explicit run:
 python3 app/test_scripts/embedder/utils/api_code_embedder.py \
   --source-dir app/test_scripts/embedder/exported \
   --files sdk.gen.ts,types.gen.ts,schemas.gen.ts \
-  --db-uri "postgresql://postgres:postgres@db:5432/tinyfoot" \
+  --db-uri "postgresql://postgres:postgres@db:5432/devembed" \
   --table api_code_chunks \
   --corpus exported \
   --model text-embedding-3-small \

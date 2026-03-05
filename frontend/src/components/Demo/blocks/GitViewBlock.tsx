@@ -11,10 +11,10 @@ import {
 import { useEffect, useMemo, useState } from "react"
 
 import {
-  ShadowReposService,
   type ShadowRepoTreeEntry,
-  type ShadowRepoViewResponse,
+  type UserRepoViewResponse,
 } from "@/client"
+import { UserReposService } from "@/client/sdk.gen"
 import {
   resolveShadowRepoGitViewConfig,
   type ResolvedShadowRepoGitViewConfig,
@@ -79,7 +79,7 @@ function TreeEntryRow({
   )
 }
 
-function CommitList({ view }: { view: ShadowRepoViewResponse }) {
+function CommitList({ view }: { view: GitViewResponse }) {
   const commits = view.commits ?? []
 
   return (
@@ -107,6 +107,16 @@ function CommitList({ view }: { view: ShadowRepoViewResponse }) {
   )
 }
 
+type GitViewResponse = UserRepoViewResponse
+
+function useUserRepo(config: ResolvedShadowRepoGitViewConfig) {
+  return useQuery({
+    queryKey: ["git-view-user-repo", config.entity_type, config.entity_id],
+    queryFn: () => UserReposService.getUserRepo({ repoId: config.entity_id }),
+    enabled: config.entity_type === "user_repo",
+  })
+}
+
 function LiveGitView({
   title,
   config,
@@ -118,22 +128,25 @@ function LiveGitView({
 }) {
   const [currentPath, setCurrentPath] = useState(config.initial_path)
   const [selectedFilePath, setSelectedFilePath] = useState<string>("")
+  const repoQuery = useUserRepo(config)
+  const isUserRepo = config.entity_type === "user_repo"
+  const repo = repoQuery.data ?? null
 
   const viewQuery = useQuery({
     queryKey: [
-      "shadow-repo-view",
+      "git-view-tree",
       config.entity_type,
       config.entity_id,
       currentPath,
       config.commit_limit,
     ],
     queryFn: () =>
-      ShadowReposService.getShadowRepoView({
-        entityType: config.entity_type,
-        entityId: config.entity_id,
+      UserReposService.getUserRepoTree({
+        repoId: config.entity_id,
         path: currentPath || undefined,
         commitLimit: config.commit_limit,
       }),
+    enabled: isUserRepo,
   })
 
   const treeEntries = viewQuery.data?.tree ?? []
@@ -153,18 +166,17 @@ function LiveGitView({
 
   const fileQuery = useQuery({
     queryKey: [
-      "shadow-repo-file",
+      "git-view-file",
       config.entity_type,
       config.entity_id,
       selectedFilePath,
     ],
     queryFn: () =>
-      ShadowReposService.getShadowRepoFile({
-        entityType: config.entity_type,
-        entityId: config.entity_id,
+      UserReposService.getUserRepoFile({
+        repoId: config.entity_id,
         path: selectedFilePath,
       }),
-    enabled: config.show_file_content && Boolean(selectedFilePath),
+    enabled: isUserRepo && config.show_file_content && Boolean(selectedFilePath),
   })
 
   const pathSegments = currentPath
@@ -177,7 +189,7 @@ function LiveGitView({
     <div className="p-4 space-y-4">
       <RepoHeader
         title={title}
-        subtitle="Live shadow repository projection resolved through backend APIs."
+        subtitle="Live platform-managed repository view resolved through backend APIs."
       />
 
       <div className="flex flex-wrap gap-2">
@@ -187,7 +199,9 @@ function LiveGitView({
         </Badge>
         <Badge variant="default" className="gap-1">
           <GitPullRequest className="h-3 w-3" />
-          {viewQuery.data?.summary.default_branch ?? "main"}
+          {viewQuery.data?.summary.default_branch ??
+            repo?.default_branch ??
+            "main"}
         </Badge>
         <Badge variant="secondary">
           Tree: {viewQuery.data?.tree?.length ?? 0}
@@ -197,19 +211,29 @@ function LiveGitView({
         </Badge>
       </div>
 
-      {viewQuery.isLoading ? (
+      {!isUserRepo ? (
+        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+          Git View is now backed by the user-repo workspace manager and expects
+          <span className="mx-1 font-mono">entity_type: "user_repo"</span>
+          with a user repo ID.
+          <div className="mt-2">
+            Existing authored content can keep this block layout, but the data
+            source needs to be repointed to a platform-managed repo.
+          </div>
+        </div>
+      ) : repoQuery.isLoading || viewQuery.isLoading ? (
         <div className="flex items-center gap-2 rounded-md border bg-muted/20 p-4 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading shadow repo view...
+          Loading repository view...
         </div>
-      ) : viewQuery.isError ? (
+      ) : repoQuery.isError || viewQuery.isError ? (
         <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-          Could not load shadow repo data. This repo may be unavailable or not
+          Could not load repository data. This repo may be unavailable or not
           visible to the current user.
         </div>
-      ) : !viewQuery.data ? (
+      ) : !repo || !viewQuery.data ? (
         <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-          No shadow repo data available.
+          No repository data available.
         </div>
       ) : (
         <>
@@ -286,6 +310,9 @@ function LiveGitView({
                 </div>
               ) : (
                 <pre className="max-h-80 overflow-auto rounded border bg-background/80 p-3 text-xs whitespace-pre-wrap">
+                  {/* TODO(repo-viewer): Preserve the existing raw-content display here until
+                      demo surfaces can opt into RepoContentRenderer/CodeHighlight without
+                      changing GitViewBlock UX. */}
                   {fileQuery.data?.content ?? ""}
                 </pre>
               )}
@@ -320,9 +347,9 @@ export function GitViewBlock({ title, config, rawConfig }: GitViewBlockProps) {
             {JSON.stringify(
               {
                 source: "shadow_repo",
-                entity_type: "agent",
+                entity_type: "user_repo",
                 entity_id_mode: "metadata",
-                entity_id_metadata_key: "agent_id",
+                entity_id_metadata_key: "repo_id",
                 initial_path: "",
                 commit_limit: 10,
                 show_file_content: true,

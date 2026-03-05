@@ -18,6 +18,7 @@ export interface ResolvedShadowRepoGitViewConfig extends ShadowRepoGitViewConfig
 
 export const GIT_VIEW_METADATA_KEY_PRESETS = [
   "story_id",
+  "repo_id",
   "agent_id",
   "persona_id",
   "room_id",

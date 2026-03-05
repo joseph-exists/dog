@@ -196,8 +196,9 @@ class ShadowService:
             created_at=datetime.now(),
         )
         session.add(shadow_repo)
-        session.commit()
-        session.refresh(shadow_repo)
+        # NOTE: Don't commit here - let caller commit atomically with version/job.
+        # This prevents orphaned repos when version creation fails.
+        session.flush()  # Get the ID without committing
         return shadow_repo
 
     def _allocate_next_version_number(

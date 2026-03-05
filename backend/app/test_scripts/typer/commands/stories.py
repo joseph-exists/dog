@@ -3,14 +3,29 @@ Story Management Commands
 
 Commands for creating, managing, and testing CYOA stories in staging environments.
 """
-import typer
 import json
 from typing import Annotated
+
+import typer
 from auth_helper import get_authenticated_session
 
 app = typer.Typer(help="Story management commands")
 
 BASE_URL = "http://localhost:8000/api/v1"
+
+
+def _parse_json_option(value: str | None, label: str) -> dict | None:
+    if value is None:
+        return None
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{label} must be valid JSON: {exc}") from exc
+    if parsed is None:
+        return None
+    if not isinstance(parsed, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    return parsed
 
 # ============================================================================
 # Story CRUD Commands
@@ -215,6 +230,161 @@ def publish(
         raise typer.Exit(1)
 
 
+@app.command()
+def unpublish(
+    story_id: Annotated[str, typer.Argument(help="Story ID to unpublish")],
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
+):
+    """Unpublish a story (return to draft)."""
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    log(f"PUT {BASE_URL}/stories/{story_id}/unpublish")
+    response = session.put(f"{BASE_URL}/stories/{story_id}/unpublish")
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        story = response.json()
+        typer.secho("✅ Story unpublished successfully!", fg=typer.colors.GREEN)
+        typer.echo(f"Current Version: {story.get('current_version', 'N/A')}")
+        typer.echo(f"Published Version: {story.get('published_version', 'N/A')}")
+    else:
+        typer.secho("❌ Failed to unpublish story", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def new_version(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
+):
+    """Create a new draft version for a story."""
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    log(f"POST {BASE_URL}/stories/{story_id}/new-version")
+    response = session.post(f"{BASE_URL}/stories/{story_id}/new-version")
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        story = response.json()
+        if json_output:
+            typer.echo(json.dumps(story, indent=2))
+        else:
+            typer.secho("✅ New story version created!", fg=typer.colors.GREEN)
+            typer.echo(f"Current Version: {story.get('current_version', 'N/A')}")
+            typer.echo(f"Published Version: {story.get('published_version', 'N/A')}")
+    else:
+        typer.secho("❌ Failed to create new version", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def update(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    title: Annotated[str | None, typer.Option("--title", help="Story title")] = None,
+    description: Annotated[str | None, typer.Option("--desc", "-d", help="Story description")] = None,
+    content_format: Annotated[str | None, typer.Option("--content-format", help="Content format (e.g. text, markdown)")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
+):
+    """Update story metadata."""
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "title": title,
+        "description": description,
+        "content_format": content_format,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    if not payload:
+        typer.secho("⚠️  No fields to update provided", fg=typer.colors.YELLOW)
+        raise typer.Exit(0)
+
+    log(f"PUT {BASE_URL}/stories/{story_id}")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.put(f"{BASE_URL}/stories/{story_id}", json=payload)
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        story = response.json()
+        if json_output:
+            typer.echo(json.dumps(story, indent=2))
+        else:
+            typer.secho("✅ Story updated successfully!", fg=typer.colors.GREEN)
+            typer.echo(f"Title: {story.get('title')}")
+            typer.echo(f"ID: {story.get('id')}")
+    else:
+        typer.secho("❌ Failed to update story", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def delete(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    force: Annotated[bool, typer.Option("--force", "-f", help="Skip confirmation")] = False
+):
+    """Delete a story."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    if not force:
+        typer.secho(f"⚠️  This will delete story {story_id}", fg=typer.colors.YELLOW)
+        if not typer.confirm("Are you sure?"):
+            typer.echo("Cancelled.")
+            raise typer.Exit(0)
+
+    response = session.delete(f"{BASE_URL}/stories/{story_id}")
+
+    if response.status_code in [200, 204]:
+        typer.secho("✅ Story deleted!", fg=typer.colors.GREEN)
+    else:
+        typer.secho("❌ Failed to delete story", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
 # ============================================================================
 # Story Node Commands
 # ============================================================================
@@ -224,8 +394,12 @@ def add_node(
     story_id: Annotated[str, typer.Argument(help="Story ID")],
     title: Annotated[str, typer.Option("--title", "-t", help="Node title")],
     content: Annotated[str, typer.Option("--content", "-c", help="Node content")],
+    version: Annotated[int, typer.Option("--version", "-V", help="Story version")] = 1,
+    node_type: Annotated[str | None, typer.Option("--node-type", help="Node type tag")] = None,
+    content_format: Annotated[str | None, typer.Option("--content-format", help="Content format (e.g. text, markdown)")] = None,
     start: Annotated[bool, typer.Option("--start", help="Mark as start node")] = False,
     end: Annotated[bool, typer.Option("--end", help="Mark as end node")] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
 ):
     """
@@ -249,14 +423,16 @@ def add_node(
 
     payload = {
         "story_id": story_id,
-        "story_version": 1,
+        "story_version": version,
         "title": title,
         "content": content,
-        "node_type": "text",
-        "content_format": "text",
+        "node_type": node_type,
+        "content_format": content_format,
         "is_start_node": start,
         "is_end_node": end
     }
+
+    payload = {k: v for k, v in payload.items() if v is not None}
 
     log(f"POST {BASE_URL}/storynodes")
     log(f"Payload: {json.dumps(payload, indent=2)}")
@@ -268,13 +444,16 @@ def add_node(
 
     if response.status_code == 200:
         node = response.json()
-        typer.secho("✅ Node added successfully!", fg=typer.colors.GREEN)
-        typer.echo(f"Node ID: {node['id']}")
-        typer.echo(f"Title: {node['title']}")
-        if start:
-            typer.echo("  (Start node)")
-        if end:
-            typer.echo("  (End node)")
+        if json_output:
+            typer.echo(json.dumps(node, indent=2))
+        else:
+            typer.secho("✅ Node added successfully!", fg=typer.colors.GREEN)
+            typer.echo(f"Node ID: {node['id']}")
+            typer.echo(f"Title: {node['title']}")
+            if start:
+                typer.echo("  (Start node)")
+            if end:
+                typer.echo("  (End node)")
     else:
         typer.secho(f"❌ Failed to add node", fg=typer.colors.RED, err=True)
         typer.echo(f"Status: {response.status_code}")
@@ -288,6 +467,9 @@ def add_choice(
     to_node: Annotated[str, typer.Argument(help="Destination node ID")],
     text: Annotated[str, typer.Option("--text", "-t", help="Choice text")],
     order: Annotated[int, typer.Option("--order", "-o", help="Choice order")] = 0,
+    requires_state: Annotated[str | None, typer.Option("--requires-state", help="JSON object of required state conditions")] = None,
+    sets_state: Annotated[str | None, typer.Option("--sets-state", help="JSON object of state mutations")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
 ):
     """
@@ -309,12 +491,23 @@ def add_choice(
         typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
 
+    try:
+        parsed_requires = _parse_json_option(requires_state, "requires_state")
+        parsed_sets = _parse_json_option(sets_state, "sets_state")
+    except ValueError as exc:
+        typer.secho(f"❌ {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
     payload = {
         "from_node_id": from_node,
         "to_node_id": to_node,
         "text": text,
-        "order": order
+        "order": order,
+        "requires_state": parsed_requires,
+        "sets_state": parsed_sets,
     }
+
+    payload = {k: v for k, v in payload.items() if v is not None}
 
     log(f"POST {BASE_URL}/node-choices")
     log(f"Payload: {json.dumps(payload, indent=2)}")
@@ -326,13 +519,402 @@ def add_choice(
 
     if response.status_code == 200:
         choice = response.json()
-        typer.secho("✅ Choice added successfully!", fg=typer.colors.GREEN)
-        typer.echo(f"Choice ID: {choice['id']}")
-        typer.echo(f"Text: {choice['text']}")
-        typer.echo(f"From: {choice['from_node_id']}")
-        typer.echo(f"To: {choice['to_node_id']}")
+        if json_output:
+            typer.echo(json.dumps(choice, indent=2))
+        else:
+            typer.secho("✅ Choice added successfully!", fg=typer.colors.GREEN)
+            typer.echo(f"Choice ID: {choice['id']}")
+            typer.echo(f"Text: {choice['text']}")
+            typer.echo(f"From: {choice['from_node_id']}")
+            typer.echo(f"To: {choice['to_node_id']}")
     else:
         typer.secho(f"❌ Failed to add choice", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+# ============================================================================
+# Story Node/Choice CRUD Commands
+# ============================================================================
+
+@app.command()
+def list_nodes(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    version: Annotated[int | None, typer.Option("--version", "-v", help="Story version")] = None,
+    limit: Annotated[int, typer.Option(help="Max nodes to list")] = 50,
+    offset: Annotated[int, typer.Option(help="Pagination offset")] = 0,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """List story nodes."""
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    params = {"limit": limit, "offset": offset, "story_id": story_id}
+    if version is not None:
+        params["story_version"] = version
+
+    response = session.get(f"{BASE_URL}/storynodes", params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+            return
+        nodes = data.get("data", [])
+        total = data.get("count", 0)
+        typer.echo(f"\n📚 Story Nodes ({len(nodes)} of {total}):\n")
+        if not nodes:
+            typer.secho("  No nodes found", fg=typer.colors.YELLOW)
+        else:
+            for node in nodes:
+                tags = []
+                if node.get("is_start_node"):
+                    tags.append("START")
+                if node.get("is_end_node"):
+                    tags.append("END")
+                tag_str = f" [{' '.join(tags)}]" if tags else ""
+                typer.echo(f"  • {node.get('title', 'Untitled')}{tag_str}")
+                typer.echo(f"    ID: {node.get('id')}")
+                if node.get("node_type"):
+                    typer.echo(f"    Type: {node.get('node_type')}")
+                typer.echo()
+    else:
+        typer.secho("❌ Failed to list nodes", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def get_node(
+    node_id: Annotated[str, typer.Argument(help="Node ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Get details for a specific node."""
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(f"{BASE_URL}/storynodes/{node_id}")
+
+    if response.status_code == 200:
+        node = response.json()
+        if json_output:
+            typer.echo(json.dumps(node, indent=2))
+        else:
+            typer.echo(f"\n📄 Node Details:\n")
+            typer.echo(f"Title: {node.get('title')}")
+            typer.echo(f"ID: {node.get('id')}")
+            typer.echo(f"Story ID: {node.get('story_id')}")
+            typer.echo(f"Version: {node.get('story_version')}")
+            if node.get("node_type"):
+                typer.echo(f"Type: {node.get('node_type')}")
+            if node.get("content"):
+                typer.echo(f"\nContent:\n{node.get('content')}")
+    else:
+        typer.secho("❌ Node not found", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def update_node(
+    node_id: Annotated[str, typer.Argument(help="Node ID")],
+    title: Annotated[str | None, typer.Option("--title", "-t", help="Node title")] = None,
+    content: Annotated[str | None, typer.Option("--content", "-c", help="Node content")] = None,
+    node_type: Annotated[str | None, typer.Option("--node-type", help="Node type tag")] = None,
+    content_format: Annotated[str | None, typer.Option("--content-format", help="Content format (e.g. text, markdown)")] = None,
+    start: Annotated[bool | None, typer.Option("--start/--no-start", help="Set start node flag")] = None,
+    end: Annotated[bool | None, typer.Option("--end/--no-end", help="Set end node flag")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+):
+    """Update a story node."""
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "title": title,
+        "content": content,
+        "node_type": node_type,
+        "content_format": content_format,
+        "is_start_node": start,
+        "is_end_node": end,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    if not payload:
+        typer.secho("⚠️  No fields to update provided", fg=typer.colors.YELLOW)
+        raise typer.Exit(0)
+
+    log(f"PUT {BASE_URL}/storynodes/{node_id}")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.put(f"{BASE_URL}/storynodes/{node_id}", json=payload)
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        node = response.json()
+        if json_output:
+            typer.echo(json.dumps(node, indent=2))
+        else:
+            typer.secho("✅ Node updated successfully!", fg=typer.colors.GREEN)
+            typer.echo(f"ID: {node.get('id')}")
+            typer.echo(f"Title: {node.get('title')}")
+    else:
+        typer.secho("❌ Failed to update node", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def delete_node(
+    node_id: Annotated[str, typer.Argument(help="Node ID")],
+    force: Annotated[bool, typer.Option("--force", "-f", help="Skip confirmation")] = False,
+):
+    """Delete a story node."""
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    if not force:
+        typer.secho(f"⚠️  This will delete node {node_id}", fg=typer.colors.YELLOW)
+        if not typer.confirm("Are you sure?"):
+            typer.echo("Cancelled.")
+            raise typer.Exit(0)
+
+    response = session.delete(f"{BASE_URL}/storynodes/{node_id}")
+
+    if response.status_code in [200, 204]:
+        typer.secho("✅ Node deleted!", fg=typer.colors.GREEN)
+    else:
+        typer.secho("❌ Failed to delete node", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def list_choices(
+    story_id: Annotated[str | None, typer.Option("--story-id", help="Story ID filter")] = None,
+    node_id: Annotated[str | None, typer.Option("--node-id", help="Node ID filter")] = None,
+    limit: Annotated[int, typer.Option(help="Max choices to list")] = 50,
+    offset: Annotated[int, typer.Option(help="Pagination offset")] = 0,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """List node choices."""
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    params = {"limit": limit, "offset": offset}
+
+    if node_id:
+        response = session.get(f"{BASE_URL}/storynodes/{node_id}/choices", params=params)
+    else:
+        if story_id:
+            params["story_id"] = story_id
+        response = session.get(f"{BASE_URL}/node-choices", params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+            return
+        choices = data.get("data", [])
+        total = data.get("count", 0)
+        typer.echo(f"\n🔀 Choices ({len(choices)} of {total}):\n")
+        if not choices:
+            typer.secho("  No choices found", fg=typer.colors.YELLOW)
+        else:
+            for choice in choices:
+                typer.echo(f"  • {choice.get('text', 'Untitled')}")
+                typer.echo(f"    ID: {choice.get('id')}")
+                typer.echo(f"    From: {choice.get('from_node_id')}  To: {choice.get('to_node_id')}")
+                typer.echo()
+    else:
+        typer.secho("❌ Failed to list choices", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def get_choice(
+    choice_id: Annotated[str, typer.Argument(help="Choice ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Get details for a specific choice."""
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(f"{BASE_URL}/node-choices/{choice_id}")
+
+    if response.status_code == 200:
+        choice = response.json()
+        if json_output:
+            typer.echo(json.dumps(choice, indent=2))
+        else:
+            typer.echo(f"\n🔀 Choice Details:\n")
+            typer.echo(f"Text: {choice.get('text')}")
+            typer.echo(f"ID: {choice.get('id')}")
+            typer.echo(f"From: {choice.get('from_node_id')}")
+            typer.echo(f"To: {choice.get('to_node_id')}")
+    else:
+        typer.secho("❌ Choice not found", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def update_choice(
+    choice_id: Annotated[str, typer.Argument(help="Choice ID")],
+    text: Annotated[str | None, typer.Option("--text", "-t", help="Choice text")] = None,
+    order: Annotated[int | None, typer.Option("--order", "-o", help="Choice order")] = None,
+    to_node_id: Annotated[str | None, typer.Option("--to-node-id", help="Destination node ID")] = None,
+    requires_state: Annotated[str | None, typer.Option("--requires-state", help="JSON object of required state conditions")] = None,
+    sets_state: Annotated[str | None, typer.Option("--sets-state", help="JSON object of state mutations")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+):
+    """Update a node choice."""
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    try:
+        parsed_requires = _parse_json_option(requires_state, "requires_state")
+        parsed_sets = _parse_json_option(sets_state, "sets_state")
+    except ValueError as exc:
+        typer.secho(f"❌ {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "text": text,
+        "order": order,
+        "to_node_id": to_node_id,
+        "requires_state": parsed_requires,
+        "sets_state": parsed_sets,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    if not payload:
+        typer.secho("⚠️  No fields to update provided", fg=typer.colors.YELLOW)
+        raise typer.Exit(0)
+
+    log(f"PUT {BASE_URL}/node-choices/{choice_id}")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.put(f"{BASE_URL}/node-choices/{choice_id}", json=payload)
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        choice = response.json()
+        if json_output:
+            typer.echo(json.dumps(choice, indent=2))
+        else:
+            typer.secho("✅ Choice updated successfully!", fg=typer.colors.GREEN)
+            typer.echo(f"ID: {choice.get('id')}")
+            typer.echo(f"Text: {choice.get('text')}")
+    else:
+        typer.secho("❌ Failed to update choice", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def delete_choice(
+    choice_id: Annotated[str, typer.Argument(help="Choice ID")],
+    force: Annotated[bool, typer.Option("--force", "-f", help="Skip confirmation")] = False,
+):
+    """Delete a node choice."""
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    if not force:
+        typer.secho(f"⚠️  This will delete choice {choice_id}", fg=typer.colors.YELLOW)
+        if not typer.confirm("Are you sure?"):
+            typer.echo("Cancelled.")
+            raise typer.Exit(0)
+
+    response = session.delete(f"{BASE_URL}/node-choices/{choice_id}")
+
+    if response.status_code in [200, 204]:
+        typer.secho("✅ Choice deleted!", fg=typer.colors.GREEN)
+    else:
+        typer.secho("❌ Failed to delete choice", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def start_node(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    version: Annotated[int | None, typer.Option("--version", "-v", help="Story version")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Get the start node for a story."""
+    try:
+        session = get_authenticated_session()
+    except Exception as exc:
+        typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    params = {}
+    if version is not None:
+        params["version"] = version
+
+    response = session.get(f"{BASE_URL}/stories/{story_id}/start-node", params=params)
+
+    if response.status_code == 200:
+        node = response.json()
+        if json_output:
+            typer.echo(json.dumps(node, indent=2))
+        else:
+            typer.echo(f"\n🚀 Start Node:\n")
+            typer.echo(f"Title: {node.get('title')}")
+            typer.echo(f"ID: {node.get('id')}")
+            typer.echo(f"Version: {node.get('story_version')}")
+    else:
+        typer.secho("❌ Failed to get start node", fg=typer.colors.RED, err=True)
         typer.echo(f"Status: {response.status_code}")
         typer.echo(f"Error: {response.text}")
         raise typer.Exit(1)
@@ -440,6 +1022,593 @@ def create_room(
         typer.echo(f"Story ID: {story_id}")
     else:
         typer.secho(f"❌ Failed to create room", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+# ============================================================================
+# Story Requirements Commands
+# ============================================================================
+
+@app.command()
+def list_requirements(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False
+):
+    """List access requirements for a story."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(f"{BASE_URL}/stories/{story_id}/requirements")
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+            return
+        requirements = data.get("data", [])
+        total = data.get("count", 0)
+        typer.echo(f"\n🔒 Requirements ({len(requirements)} of {total}):\n")
+        if not requirements:
+            typer.secho("  No requirements found", fg=typer.colors.YELLOW)
+        else:
+            for req in requirements:
+                typer.echo(f"  • {req.get('requirement_type')} -> {req.get('target_id')}")
+                if req.get("description"):
+                    typer.echo(f"    {req.get('description')}")
+                typer.echo(f"    ID: {req.get('id')}")
+                typer.echo()
+    else:
+        typer.secho("❌ Failed to list requirements", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def add_requirement(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    requirement_type: Annotated[str, typer.Option("--type", "-t", help="Requirement type")] = None,
+    target_id: Annotated[str, typer.Option("--target-id", help="Target UUID")] = None,
+    description: Annotated[str | None, typer.Option("--desc", "-d", help="Requirement description")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False
+):
+    """Add an access requirement to a story."""
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    if not requirement_type or not target_id:
+        typer.secho("❌ --type and --target-id are required", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "requirement_type": requirement_type,
+        "target_id": target_id,
+        "description": description,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    log(f"POST {BASE_URL}/stories/{story_id}/requirements")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.post(f"{BASE_URL}/stories/{story_id}/requirements", json=payload)
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        requirement = response.json()
+        if json_output:
+            typer.echo(json.dumps(requirement, indent=2))
+        else:
+            typer.secho("✅ Requirement added!", fg=typer.colors.GREEN)
+            typer.echo(f"Type: {requirement.get('requirement_type')}")
+            typer.echo(f"Target: {requirement.get('target_id')}")
+            typer.echo(f"ID: {requirement.get('id')}")
+    else:
+        typer.secho("❌ Failed to add requirement", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def delete_requirement(
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    requirement_id: Annotated[str, typer.Argument(help="Requirement ID")],
+    force: Annotated[bool, typer.Option("--force", "-f", help="Skip confirmation")] = False
+):
+    """Delete a story requirement."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    if not force:
+        typer.secho(
+            f"⚠️  This will delete requirement {requirement_id} from story {story_id}",
+            fg=typer.colors.YELLOW,
+        )
+        if not typer.confirm("Are you sure?"):
+            typer.echo("Cancelled.")
+            raise typer.Exit(0)
+
+    response = session.delete(
+        f"{BASE_URL}/stories/{story_id}/requirements/{requirement_id}"
+    )
+
+    if response.status_code in [200, 204]:
+        typer.secho("✅ Requirement deleted!", fg=typer.colors.GREEN)
+    else:
+        typer.secho("❌ Failed to delete requirement", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+# ============================================================================
+# Story Progress Commands
+# ============================================================================
+
+@app.command()
+def list_progress(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    limit: Annotated[int, typer.Option(help="Max items to list")] = 20,
+    offset: Annotated[int, typer.Option(help="Pagination offset")] = 0,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """List story progress records for a user persona."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/",
+        params={"limit": limit, "skip": offset},
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+            return
+        progress_list = data.get("data", [])
+        total = data.get("count", 0)
+        typer.echo(f"\n📈 Story Progress ({len(progress_list)} of {total}):\n")
+        if not progress_list:
+            typer.secho("  No progress found", fg=typer.colors.YELLOW)
+        else:
+            for progress in progress_list:
+                typer.echo(f"  • Story ID: {progress.get('story_id')}")
+                typer.echo(f"    Progress ID: {progress.get('id')}")
+                typer.echo(f"    Version: {progress.get('story_version')}")
+                typer.echo()
+    else:
+        typer.secho("❌ Failed to list progress", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def get_progress(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Get a user's progress for a specific story."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}"
+    )
+
+    if response.status_code == 200:
+        progress = response.json()
+        if json_output:
+            typer.echo(json.dumps(progress, indent=2))
+        else:
+            typer.echo(f"\n📈 Story Progress:\n")
+            typer.echo(f"ID: {progress.get('id')}")
+            typer.echo(f"Story ID: {progress.get('story_id')}")
+            typer.echo(f"Version: {progress.get('story_version')}")
+            typer.echo(f"Completed: {progress.get('is_completed')}")
+    else:
+        typer.secho("❌ Progress not found", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def create_progress(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Create a new story progress for a persona."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.post(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}"
+    )
+
+    if response.status_code == 200:
+        progress = response.json()
+        if json_output:
+            typer.echo(json.dumps(progress, indent=2))
+        else:
+            typer.secho("✅ Progress created!", fg=typer.colors.GREEN)
+            typer.echo(f"ID: {progress.get('id')}")
+            typer.echo(f"Version: {progress.get('story_version')}")
+    else:
+        typer.secho("❌ Failed to create progress", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def update_progress(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    current_node_id: Annotated[str | None, typer.Option("--current-node-id", help="Current node ID")] = None,
+    is_completed: Annotated[bool | None, typer.Option("--completed/--not-completed", help="Set completion flag")] = None,
+    story_state: Annotated[str | None, typer.Option("--story-state", help="JSON object for story state")] = None,
+    head_choice_id: Annotated[str | None, typer.Option("--head-choice-id", help="Head choice ID")] = None,
+    head_version: Annotated[int | None, typer.Option("--head-version", help="Head version (optimistic lock)")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+):
+    """Update story progress (admin/debug)."""
+
+    def log(msg: str):
+        if verbose:
+            typer.secho(f"[DEBUG] {msg}", fg=typer.colors.CYAN)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    try:
+        parsed_state = _parse_json_option(story_state, "story_state")
+    except ValueError as exc:
+        typer.secho(f"❌ {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "current_node_id": current_node_id,
+        "is_completed": is_completed,
+        "story_state": parsed_state,
+        "head_choice_id": head_choice_id,
+        "head_version": head_version,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    if not payload:
+        typer.secho("⚠️  No fields to update provided", fg=typer.colors.YELLOW)
+        raise typer.Exit(0)
+
+    log(f"PUT {BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}")
+    log(f"Payload: {json.dumps(payload, indent=2)}")
+
+    response = session.put(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}",
+        json=payload,
+    )
+
+    log(f"Response status: {response.status_code}")
+
+    if response.status_code == 200:
+        progress = response.json()
+        if json_output:
+            typer.echo(json.dumps(progress, indent=2))
+        else:
+            typer.secho("✅ Progress updated!", fg=typer.colors.GREEN)
+            typer.echo(f"ID: {progress.get('id')}")
+    else:
+        typer.secho("❌ Failed to update progress", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def current_node(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Get current node and available choices for progress."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/current-node"
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            node = data.get("node", {})
+            choices = data.get("available_choices", [])
+            typer.echo(f"\n📍 Current Node:\n")
+            typer.echo(f"Title: {node.get('title')}")
+            typer.echo(f"ID: {node.get('id')}")
+            typer.echo(f"\nChoices ({len(choices)}):")
+            for choice in choices:
+                typer.echo(f"  • {choice.get('text')} ({choice.get('id')})")
+    else:
+        typer.secho("❌ Failed to fetch current node", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def make_choice(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    choice_id: Annotated[str, typer.Argument(help="Choice ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Make a story choice and advance progress."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.post(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/choices/{choice_id}"
+    )
+
+    if response.status_code == 200:
+        progress = response.json()
+        if json_output:
+            typer.echo(json.dumps(progress, indent=2))
+        else:
+            typer.secho("✅ Choice applied!", fg=typer.colors.GREEN)
+            typer.echo(f"Head choice: {progress.get('head_choice_id')}")
+            typer.echo(f"Completed: {progress.get('is_completed')}")
+    else:
+        typer.secho("❌ Failed to apply choice", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def validate_state(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Validate story state against replayed state."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/validate-state"
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.secho("✅ Validation complete", fg=typer.colors.GREEN)
+            typer.echo(f"Match: {data.get('match')}")
+    else:
+        typer.secho("❌ Failed to validate state", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def undo(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Undo last choice (rewind one step)."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.post(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/undo"
+    )
+
+    if response.status_code == 200:
+        progress = response.json()
+        if json_output:
+            typer.echo(json.dumps(progress, indent=2))
+        else:
+            typer.secho("✅ Undo complete", fg=typer.colors.GREEN)
+            typer.echo(f"Head choice: {progress.get('head_choice_id')}")
+    else:
+        typer.secho("❌ Failed to undo", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def jump(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    expected_head_version: Annotated[int, typer.Option("--expected-head-version", help="Expected head version")] = None,
+    choice_id: Annotated[str | None, typer.Option("--choice-id", help="Target choice ID (null = start)")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Jump head to an ancestor choice."""
+    if expected_head_version is None:
+        typer.secho("❌ --expected-head-version is required", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "choice_id": choice_id,
+        "expected_head_version": expected_head_version,
+    }
+
+    response = session.post(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/jump",
+        json=payload,
+    )
+
+    if response.status_code == 200:
+        progress = response.json()
+        if json_output:
+            typer.echo(json.dumps(progress, indent=2))
+        else:
+            typer.secho("✅ Jump complete", fg=typer.colors.GREEN)
+            typer.echo(f"Head choice: {progress.get('head_choice_id')}")
+            typer.echo(f"Head version: {progress.get('head_version')}")
+    else:
+        typer.secho("❌ Failed to jump", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def timeline(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Get active timeline (root to head)."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/timeline"
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            events = data.get("events", [])
+            typer.echo(f"\n🧭 Timeline ({len(events)} events):\n")
+            for event in events:
+                marker = "•"
+                if event.get("is_current"):
+                    marker = "*"
+                typer.echo(f"  {marker} {event.get('choice_text')}")
+    else:
+        typer.secho("❌ Failed to load timeline", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def snapshots(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """List snapshots for a story progress."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/snapshots"
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            snapshots = data.get("data", [])
+            typer.echo(f"\n📸 Snapshots ({len(snapshots)}):\n")
+            for snap in snapshots:
+                typer.echo(f"  • {snap.get('id')} @ {snap.get('created_at')}")
+    else:
+        typer.secho("❌ Failed to list snapshots", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def create_snapshot(
+    user_persona_id: Annotated[str, typer.Argument(help="User persona ID")],
+    story_id: Annotated[str, typer.Argument(help="Story ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Create a snapshot at current head."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.post(
+        f"{BASE_URL}/user-personas/{user_persona_id}/stories/{story_id}/snapshots/create"
+    )
+
+    if response.status_code == 200:
+        snapshot = response.json()
+        if json_output:
+            typer.echo(json.dumps(snapshot, indent=2))
+        else:
+            typer.secho("✅ Snapshot created!", fg=typer.colors.GREEN)
+            typer.echo(f"ID: {snapshot.get('id')}")
+    else:
+        typer.secho("❌ Failed to create snapshot", fg=typer.colors.RED, err=True)
         typer.echo(f"Status: {response.status_code}")
         typer.echo(f"Error: {response.text}")
         raise typer.Exit(1)

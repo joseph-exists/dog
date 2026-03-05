@@ -2061,6 +2061,50 @@ export type QualityUpdate = {
 };
 
 /**
+ * Request body for room-scoped repository collaboration events.
+ *
+ * This payload is used by frontend repo panels embedded in Room to emit
+ * structured selection/open/ref actions into the room event log.
+ */
+export type RepoRoomEventRequest = {
+    /**
+     * Optional opaque metadata for future expansion
+     */
+    metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Repo collaboration action type
+     */
+    action: 'selection' | 'open' | 'ref';
+    /**
+     * Optional panel instance id that emitted the action
+     */
+    panel_id?: (string | null);
+    /**
+     * Shared selection key for cross-panel coordination
+     */
+    selection_key?: (string | null);
+    /**
+     * Repository file path associated with this action
+     */
+    path?: (string | null);
+    /**
+     * Git ref associated with this action
+     */
+    ref?: (string | null);
+    /**
+     * Platform user_repo identifier for the emitted action
+     */
+    repo_id?: (string | null);
+};
+
+/**
+ * Repo collaboration action type
+ */
+export type action = 'selection' | 'open' | 'ref';
+
+/**
  * How a theme was resolved in the cascade.
  */
 export type ResolutionSource = 'authored' | 'user_pref' | 'system_default' | 'none';
@@ -2436,6 +2480,10 @@ export type ShadowRepoFileContent = {
     encoding?: string;
     size_bytes: number;
     content_type?: (string | null);
+    is_binary?: boolean;
+    is_truncated?: boolean;
+    truncation_reason?: (string | null);
+    is_unsupported_preview?: boolean;
 };
 
 export type ShadowRepoSummary = {
@@ -3177,6 +3225,14 @@ export type Type1Create = {
     scope?: string;
     participation_mode?: string;
     is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
     max_tool_iterations?: number;
     capabilities?: Array<(string)>;
 };
@@ -3248,6 +3304,14 @@ export type Type1Update = {
     scope?: string;
     participation_mode?: string;
     is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
     max_tool_iterations?: number;
     capabilities?: Array<(string)>;
 };
@@ -3316,6 +3380,14 @@ export type Type3Create = {
     scope?: string;
     participation_mode?: string;
     is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
     max_tool_iterations?: number;
     capabilities?: Array<(string)>;
 };
@@ -3387,6 +3459,14 @@ export type Type3Update = {
     scope?: string;
     participation_mode?: string;
     is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
     max_tool_iterations?: number;
     capabilities?: Array<(string)>;
 };
@@ -3577,6 +3657,14 @@ export type UserAgentConfigPublic = {
     scope?: (string | null);
     participation_mode?: (string | null);
     is_coordinator?: (boolean | null);
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
     max_tool_iterations?: (number | null);
     capabilities?: (Array<(string)> | null);
     id: string;
@@ -3670,6 +3758,19 @@ export type UserRegister = {
     full_name?: (string | null);
 };
 
+export type UserRepoFileContent = {
+    path: string;
+    ref: string;
+    content: string;
+    encoding?: string;
+    size_bytes: number;
+    content_type?: (string | null);
+    is_binary?: boolean;
+    is_truncated?: boolean;
+    truncation_reason?: (string | null);
+    is_unsupported_preview?: boolean;
+};
+
 export type UserRepoImportStatus = 'pending' | 'importing' | 'ready' | 'failed';
 
 /**
@@ -3704,6 +3805,22 @@ export type UserRepoPublic = {
     owner_user_id: string;
     created_at: string;
     updated_at: string;
+    default_branch?: (string | null);
+    capabilities?: (UserRepoViewerCapabilities | null);
+};
+
+export type UserRepoReadmeContent = {
+    path: string;
+    ref: string;
+    content: string;
+    encoding?: string;
+    size_bytes: number;
+    content_type?: (string | null);
+    is_binary?: boolean;
+    is_truncated?: boolean;
+    truncation_reason?: (string | null);
+    is_unsupported_preview?: boolean;
+    resolved_from_path: string;
 };
 
 /**
@@ -3712,6 +3829,34 @@ export type UserRepoPublic = {
 export type UserReposPublic = {
     data: Array<UserRepoPublic>;
     count: number;
+};
+
+export type UserRepoSummary = {
+    repo_id: string;
+    slug: string;
+    display_name: string;
+    repo_available: boolean;
+    default_branch: string;
+    latest_commit_sha?: (string | null);
+    latest_commit_message?: (string | null);
+    latest_commit_authored_at?: (string | null);
+};
+
+export type UserRepoViewerCapabilities = {
+    has_file_tree?: boolean;
+    has_blob_content?: boolean;
+    has_commit_history?: boolean;
+    has_search?: boolean;
+    has_branches?: boolean;
+    default_branch?: string;
+};
+
+export type UserRepoViewResponse = {
+    summary: UserRepoSummary;
+    commits?: Array<ShadowRepoCommitSummary>;
+    tree?: Array<ShadowRepoTreeEntry>;
+    tree_root_path?: string;
+    ref: string;
 };
 
 /**
@@ -4886,6 +5031,13 @@ export type RoomsHandleUiActionData = {
 
 export type RoomsHandleUiActionResponse = (unknown);
 
+export type RoomsEmitRepoRoomEventData = {
+    requestBody: RepoRoomEventRequest;
+    roomId: string;
+};
+
+export type RoomsEmitRepoRoomEventResponse = (unknown);
+
 export type ShadowReposGetShadowRepoViewData = {
     commitLimit?: number;
     entityId: string;
@@ -5376,6 +5528,30 @@ export type UserReposGetUserRepoData = {
 };
 
 export type UserReposGetUserRepoResponse = (UserRepoPublic);
+
+export type UserReposGetUserRepoTreeData = {
+    commitLimit?: number;
+    path?: string;
+    ref?: (string | null);
+    repoId: string;
+};
+
+export type UserReposGetUserRepoTreeResponse = (UserRepoViewResponse);
+
+export type UserReposGetUserRepoFileData = {
+    path: string;
+    ref?: (string | null);
+    repoId: string;
+};
+
+export type UserReposGetUserRepoFileResponse = (UserRepoFileContent);
+
+export type UserReposGetUserRepoReadmeData = {
+    ref?: (string | null);
+    repoId: string;
+};
+
+export type UserReposGetUserRepoReadmeResponse = (UserRepoReadmeContent);
 
 export type UsersReadUsersData = {
     limit?: number;

@@ -48,6 +48,8 @@ export interface InteractivePreviewProps {
   collapsedPanels?: Set<string>
   /** Whether editing is disabled */
   disabled?: boolean
+  /** Optional override for panel labels */
+  panelLabels?: Record<string, string>
   /** Additional className */
   className?: string
 }
@@ -72,6 +74,7 @@ const panelNames: Record<string, string> = {
 
 interface PreviewPanelItemProps {
   panel: PreviewPanel
+  label: string
   isCollapsed?: boolean
   onRemove?: () => void
   onToggleCollapse?: () => void
@@ -81,6 +84,7 @@ interface PreviewPanelItemProps {
 
 function PreviewPanelItem({
   panel,
+  label,
   isCollapsed,
   onRemove,
   onToggleCollapse,
@@ -107,9 +111,7 @@ function PreviewPanelItem({
       <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
 
       {/* Panel name */}
-      <span className="flex-1 text-sm font-medium truncate">
-        {panelNames[panel.kind] || panel.kind}
-      </span>
+      <span className="flex-1 text-sm font-medium truncate">{label}</span>
 
       {/* Prominence badge */}
       <span
@@ -171,8 +173,10 @@ export function InteractivePreview({
   onToggleCollapse,
   collapsedPanels = new Set(),
   disabled = false,
+  panelLabels,
   className,
 }: InteractivePreviewProps) {
+  const resolvedPanelNames = panelLabels ?? panelNames
   const primaryPanels = panels.filter((p) => p.prominence === "primary")
   const auxiliaryPanels = panels.filter((p) => p.prominence === "auxiliary")
 
@@ -212,6 +216,7 @@ export function InteractivePreview({
               >
                 <PreviewPanelItem
                   panel={panel}
+                  label={resolvedPanelNames[panel.kind] || panel.kind}
                   isCollapsed={collapsedPanels.has(panel.id)}
                   onRemove={onRemove ? () => onRemove(panel.id) : undefined}
                   onToggleCollapse={
@@ -253,6 +258,7 @@ export function InteractivePreview({
               >
                 <PreviewPanelItem
                   panel={panel}
+                  label={resolvedPanelNames[panel.kind] || panel.kind}
                   isCollapsed={collapsedPanels.has(panel.id)}
                   onRemove={onRemove ? () => onRemove(panel.id) : undefined}
                   onToggleCollapse={

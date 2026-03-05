@@ -9,10 +9,11 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Loader2 } from "lucide-react"
 import type React from "react"
-import { useEffect, useState } from "react"
-import { AgentsService } from "@/client/sdk.gen"
+import { useCallback, useEffect, useState } from "react"
+import { AgentsService, StoriesService } from "@/client/sdk.gen"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
 import EditDrawer from "@/components/Common/EditDrawer"
+import { getUserRepoQueryOptions, renderRepoPanel } from "@/components/Repo"
 import { RoomPromptSettingsDialog } from "@/components/Room/Dialogs/RoomPromptSettingsDialog"
 import {
   A2UIPanel,
@@ -26,6 +27,7 @@ import {
   StoryEditorPanel,
   StoryPanel,
 } from "@/components/Room"
+import { PanelContainer } from "@/components/Room/primitives"
 import RoomDebugPanel from "@/components/Room/panels/RoomDebugPanel"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
 import { showSuccessToast } from "@/hooks/useCustomToast"
@@ -56,6 +58,201 @@ function toParticipant(p: ParticipantViewModel): Participant {
   }
 }
 
+function toRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+  return value as Record<string, unknown>
+}
+
+function getString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+}
+
+function findRepoIdInBindingSource(source: unknown): string | null {
+  const record = toRecord(source)
+  if (!record) return null
+
+  const direct =
+    getString(record.repo_id) ||
+    getString(record.user_repo_id) ||
+    getString(record.default_repo_id) ||
+    getString(record.entity_id)
+  if (direct) return direct
+
+  const metadata = toRecord(record.metadata_json)
+  if (metadata) {
+    return (
+      getString(metadata.repo_id) ||
+      getString(metadata.user_repo_id) ||
+      getString(metadata.default_repo_id)
+    )
+  }
+
+  const presentation = toRecord(record.presentation)
+  if (presentation) {
+    return (
+      getString(presentation.repo_id) ||
+      getString(presentation.user_repo_id) ||
+      getString(presentation.default_repo_id)
+    )
+  }
+
+  return null
+}
+
+function resolveRepoIdForRoomPanel(params: {
+  panelConfigJson: unknown
+  panelEntityBinding: unknown
+  roomData: unknown
+  storyData: unknown
+}): string | null {
+  const panelConfigRepoId = findRepoIdInBindingSource(params.panelConfigJson)
+  if (panelConfigRepoId) return panelConfigRepoId
+
+  const panelBindingRepoId = findRepoIdInBindingSource(params.panelEntityBinding)
+  if (panelBindingRepoId) return panelBindingRepoId
+
+  const roomRepoId = findRepoIdInBindingSource(params.roomData)
+  if (roomRepoId) return roomRepoId
+
+  return findRepoIdInBindingSource(params.storyData)
+}
+
+function RoomRepoPanel({
+  roomId,
+  panelId,
+  panelKind,
+  panelConfigJson,
+  panelEntityBinding,
+  roomData,
+  storyData,
+  panelSelections,
+  setPanelSelection,
+}: {
+  roomId: string
+  panelId: string
+  panelKind: "repoExplorer" | "fileViewer"
+  panelConfigJson: unknown
+  panelEntityBinding: unknown
+  roomData: unknown
+  storyData: unknown
+  panelSelections: Record<string, string | null>
+  setPanelSelection: (selectionKey: string, path: string | null) => void
+}) {
+  const repoId = resolveRepoIdForRoomPanel({
+    panelConfigJson,
+    panelEntityBinding,
+    roomData,
+    storyData,
+  })
+
+  const {
+    data: repo,
+    isLoading: isLoadingRepo,
+    error: repoError,
+  } = useQuery({
+    ...getUserRepoQueryOptions(repoId ?? ""),
+    enabled: Boolean(repoId),
+  })
+
+  if (!repoId) {
+    return (
+      <PanelContainer title="Repository Panel">
+        <div className="p-4 text-sm text-destructive">
+          No repository binding found for this panel. Set `repo_id` in panel
+          config or provide a room/story default binding.
+        </div>
+      </PanelContainer>
+    )
+  }
+
+  if (isLoadingRepo) {
+    return (
+      <PanelContainer title="Repository Panel">
+        <div className="p-4 text-sm text-muted-foreground">Loading repository...</div>
+      </PanelContainer>
+    )
+  }
+
+  if (repoError || !repo) {
+    return (
+      <PanelContainer title="Repository Panel">
+        <div className="p-4 text-sm text-destructive">
+          Failed to load bound repository for this panel.
+        </div>
+      </PanelContainer>
+    )
+  }
+
+  const capabilityEnvelope = repo.capabilities
+  if (
+    !capabilityEnvelope ||
+    typeof capabilityEnvelope.has_file_tree !== "boolean" ||
+    typeof capabilityEnvelope.has_blob_content !== "boolean"
+  ) {
+    return (
+      <PanelContainer title="Repository Panel">
+        <div className="p-4 text-sm text-destructive">
+          Repository capability flags are missing or invalid for this panel.
+        </div>
+      </PanelContainer>
+    )
+  }
+
+  return renderRepoPanel(
+    {
+      id: panelId,
+      kind: panelKind,
+      config_json: toRecord(panelConfigJson) ?? null,
+    },
+    {
+      repo,
+      capabilities: {
+        hasRepoIdentity: true,
+        hasFileTree: capabilityEnvelope.has_file_tree,
+        hasBlobContent: capabilityEnvelope.has_blob_content,
+        hasCommitHistory: capabilityEnvelope.has_commit_history === true,
+        hasSearch: capabilityEnvelope.has_search === true,
+        hasManageAccess: true,
+      },
+      panelSelections,
+      setPanelSelection: (selectionKey, path) => {
+        setPanelSelection(selectionKey, path)
+        void RoomService.emitRepoEvent(roomId, {
+          action: "selection",
+          panel_id: panelId,
+          selection_key: selectionKey,
+          path,
+          repo_id: repo.id,
+        }).catch((error) => {
+          console.error("Failed to emit repo selection event", error)
+        })
+      },
+      onFileOpened: ({ path, ref }) => {
+        void RoomService.emitRepoEvent(roomId, {
+          action: "open",
+          panel_id: panelId,
+          path,
+          ref,
+          repo_id: repo.id,
+        }).catch((error) => {
+          console.error("Failed to emit repo open event", error)
+        })
+      },
+      onRefObserved: ({ ref, path }) => {
+        void RoomService.emitRepoEvent(roomId, {
+          action: "ref",
+          panel_id: panelId,
+          path,
+          ref,
+          repo_id: repo.id,
+        }).catch((error) => {
+          console.error("Failed to emit repo ref event", error)
+        })
+      },
+    },
+  )
+}
+
 function RoomView() {
   const { roomId } = Route.useParams()
   const navigate = useNavigate()
@@ -70,6 +267,7 @@ function RoomView() {
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [showInternalMessages, setShowInternalMessages] = useState(false)
   const [isPromptSettingsOpen, setIsPromptSettingsOpen] = useState(false)
+  const [panelSelections, setPanelSelections] = useState<Record<string, string | null>>({})
 
   // Fetch available agents
   const { data: availableAgentsData, isLoading: isLoadingAvailable } = useQuery(
@@ -80,11 +278,34 @@ function RoomView() {
   )
 
   // Use the aggregate room hook
+  const handleRoomStreamEvent = useCallback(
+    (event: { event_type: string; payload: unknown }) => {
+      if (
+        event.event_type !== "room.repo.selection" &&
+        event.event_type !== "room.repo.opened" &&
+        event.event_type !== "room.repo.ref_changed"
+      ) {
+        return
+      }
+
+      const payload = toRecord(event.payload)
+      if (!payload) return
+      const selectionKey = getString(payload.selection_key)
+      const path = getString(payload.path)
+      if (!selectionKey) return
+      setPanelSelections((current) => ({
+        ...current,
+        [selectionKey]: path,
+      }))
+    },
+    [],
+  )
+
   const {
     isConnected,
     sendMessage: sendViaWebSocket,
     streamingMessage,
-  } = useRoomStream(roomId)
+  } = useRoomStream(roomId, { onEvent: handleRoomStreamEvent })
 
   // Use the aggregate room hook
   const {
@@ -125,6 +346,11 @@ function RoomView() {
     isLoading: isLoadingPanels,
   } = useRoomPanels(roomId, {
     enabled: !isLoadingRoom,
+  })
+  const { data: storyBindingSource } = useQuery({
+    queryKey: ["stories", room?.story_id, "room-repo-binding"],
+    queryFn: () => StoriesService.readStory({ id: room?.story_id || "" }),
+    enabled: Boolean(room?.story_id),
   })
 
   // Handle authorization errors
@@ -397,9 +623,31 @@ function RoomView() {
         | "debug"
         | "canvas"
         | "a2ui"
-        | "participantPanel",
+        | "participantPanel"
+        | "repoExplorer"
+        | "fileViewer",
     ),
-    render: panelComponents[config.kind] || (() => null),
+    render:
+      config.kind === "repoExplorer" || config.kind === "fileViewer"
+        ? () => (
+            <RoomRepoPanel
+              roomId={roomId}
+              panelId={config.id}
+              panelKind={config.kind as "repoExplorer" | "fileViewer"}
+              panelConfigJson={config.config_json ?? null}
+              panelEntityBinding={config.entity_binding ?? null}
+              roomData={room}
+              storyData={storyBindingSource}
+              panelSelections={panelSelections}
+              setPanelSelection={(selectionKey, path) => {
+                setPanelSelections((current) => ({
+                  ...current,
+                  [selectionKey]: path,
+                }))
+              }}
+            />
+          )
+        : panelComponents[config.kind] || (() => null),
   }))
 
   // Fallback if no panels configured (shouldn't happen with type_defaults)

@@ -63,6 +63,24 @@ Returns the current user's repos only.
 
 Returns a single repo record if the current user owns it or is a superuser.
 
+## Current Frontend State
+
+The frontend now has more than list/detail/import-status UX.
+
+Current repo viewer surfaces include:
+
+- repo list and import flow
+- registry-backed repo detail view
+- real `repoOverview` and `repoImportStatus` panels
+- implemented but capability-gated `repoExplorer` and `fileViewer` panels
+- local repo layout editing with duplicate panel instances and per-panel `config_json`
+
+Important implication:
+
+- the viewer architecture is already in place
+- the main blocker is backend read-contract wiring for user-repo tree/blob access
+- once those reads exist, the frontend can activate explorer/viewer behavior without another major redesign
+
 ## Important Response Fields
 
 The frontend should rely on these fields from `UserRepoPublic`:
@@ -129,6 +147,21 @@ Avoid designing around:
 - direct branch management in v1
 - direct clone credentials
 
+### Repo Viewer Surface
+
+The frontend repo detail surface now supports panel-based viewing, including repeatable explorer and file-viewer instances.
+
+Frontend implications for backend contracts:
+
+- explorer and file viewer are not singleton assumptions
+- multiple instances may exist at once for the same repo
+- instances may share selection state or use isolated selection state
+- panel instances may target different paths or different viewer modes
+
+Backend implication:
+
+- tree/blob reads must be safe for concurrent, stateless use by multiple panel instances
+
 ## Known Behavioral Constraints
 
 ### Backend Contract Is Stronger Than Underlying Forge Semantics
@@ -143,6 +176,16 @@ Frontend implication:
 ### `source_branch`
 
 The backend persists `source_branch = main` as the current platform convention. Do not expose branch selection UI until the backend contract supports it.
+
+### Viewer Read Semantics
+
+The frontend should not infer Git semantics the backend has not explicitly decided to preserve.
+
+Because platform-managed repos may sever or rewrite branch/ref/history state after intake:
+
+- tree/blob responses should reflect platform semantics, not assumed upstream semantics
+- `ref` values in viewer responses need stable product meaning
+- commit/history metadata should only be surfaced when backend contract makes it meaningful
 
 ## Data Flow to Assume
 
@@ -215,6 +258,30 @@ At minimum, treat these as distinct UI states:
 - Stop polling on terminal states (`ready` or `failed`).
 - If optimistic navigation is used after create, key it by returned `repo_id`.
 
+### Viewer Enablement Notes
+
+The frontend repo viewer is currently waiting on backend support for:
+
+- `user_repo` tree reads
+- `user_repo` blob/file reads
+- capability exposure for:
+  - `hasFileTree`
+  - `hasBlobContent`
+  - later: `hasCommitHistory`
+  - later: `hasSearch`
+
+The detailed backend handoff checklist lives in:
+
+- [`backend/app/services/service-docs/user-repo-viewer-backend-handoff-checklist.md`](/home/josep/dog/backend/app/services/service-docs/user-repo-viewer-backend-handoff-checklist.md)
+
+Minimum backend delivery to activate the current viewer:
+
+1. Support `user_repo` tree reads.
+2. Support `user_repo` blob/file reads.
+3. Expose route-level capability availability for those reads.
+4. Define the meaning of `ref` in viewer responses.
+5. Verify real payloads against an imported user repo.
+
 ## Polling Reference Implementation
 
 ```typescript
@@ -278,5 +345,6 @@ const { data: repo } = useQuery({
 - state library choice
 - polling implementation details
 - retry UI contract beyond current backend behavior
+- final tree/blob response schema details beyond the current handoff checklist
 
 Those should be decided in frontend implementation work, but must remain aligned with the backend contract above.

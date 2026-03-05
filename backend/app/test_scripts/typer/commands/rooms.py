@@ -554,5 +554,203 @@ def list_messages(
         raise typer.Exit(1)
 
 
+# ============================================================================
+# Room Runtime Commands
+# ============================================================================
+
+@app.command()
+def runtime_get(
+    room_id: Annotated[str, typer.Argument(help="Room ID")],
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Get room runtime projection."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    response = session.get(f"{BASE_URL}/rooms/{room_id}/runtime")
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.echo(f"\n🧩 Room Runtime:\n")
+            typer.echo(f"Room ID: {data.get('room_id')}")
+            typer.echo(f"Story ID: {data.get('story_id')}")
+            typer.echo(f"Version: {data.get('story_version')}")
+            typer.echo(f"Revision: {data.get('revision')}")
+    else:
+        typer.secho("❌ Failed to read room runtime", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def runtime_put(
+    room_id: Annotated[str, typer.Argument(help="Room ID")],
+    user_persona_id: Annotated[str, typer.Option("--user-persona-id", help="User persona ID")] = None,
+    story_version: Annotated[int | None, typer.Option("--story-version", help="Story version override")] = None,
+    expected_revision: Annotated[int | None, typer.Option("--expected-revision", help="Optimistic revision check")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Initialize or reset a room runtime."""
+    if not user_persona_id:
+        typer.secho("❌ --user-persona-id is required", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "user_persona_id": user_persona_id,
+        "story_version": story_version,
+        "expected_revision": expected_revision,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    response = session.put(
+        f"{BASE_URL}/rooms/{room_id}/runtime",
+        json=payload,
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.secho("✅ Room runtime initialized!", fg=typer.colors.GREEN)
+            typer.echo(f"Revision: {data.get('revision')}")
+    else:
+        typer.secho("❌ Failed to put room runtime", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def runtime_advance(
+    room_id: Annotated[str, typer.Argument(help="Room ID")],
+    choice_id: Annotated[str, typer.Option("--choice-id", help="Choice ID")] = None,
+    expected_revision: Annotated[int | None, typer.Option("--expected-revision", help="Optimistic revision check")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Advance room runtime by choosing a path."""
+    if not choice_id:
+        typer.secho("❌ --choice-id is required", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {"choice_id": choice_id, "expected_revision": expected_revision}
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    response = session.post(
+        f"{BASE_URL}/rooms/{room_id}/runtime/advance",
+        json=payload,
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.secho("✅ Room runtime advanced!", fg=typer.colors.GREEN)
+            typer.echo(f"Revision: {data.get('revision')}")
+    else:
+        typer.secho("❌ Failed to advance room runtime", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def runtime_rewind(
+    room_id: Annotated[str, typer.Argument(help="Room ID")],
+    target_choice_id: Annotated[str, typer.Option("--target-choice-id", help="Target choice ID")] = None,
+    expected_revision: Annotated[int | None, typer.Option("--expected-revision", help="Optimistic revision check")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Rewind room runtime to a prior choice."""
+    if not target_choice_id:
+        typer.secho("❌ --target-choice-id is required", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {
+        "target_choice_id": target_choice_id,
+        "expected_revision": expected_revision,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    response = session.post(
+        f"{BASE_URL}/rooms/{room_id}/runtime/rewind",
+        json=payload,
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.secho("✅ Room runtime rewound!", fg=typer.colors.GREEN)
+            typer.echo(f"Revision: {data.get('revision')}")
+    else:
+        typer.secho("❌ Failed to rewind room runtime", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def runtime_reset(
+    room_id: Annotated[str, typer.Argument(help="Room ID")],
+    expected_revision: Annotated[int | None, typer.Option("--expected-revision", help="Optimistic revision check")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Reset room runtime to story start."""
+    try:
+        session = get_authenticated_session()
+    except Exception as e:
+        typer.secho(f"❌ Authentication failed: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    payload = {"expected_revision": expected_revision}
+    payload = {k: v for k, v in payload.items() if v is not None}
+
+    response = session.post(
+        f"{BASE_URL}/rooms/{room_id}/runtime/reset",
+        json=payload,
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        if json_output:
+            typer.echo(json.dumps(data, indent=2))
+        else:
+            typer.secho("✅ Room runtime reset!", fg=typer.colors.GREEN)
+            typer.echo(f"Revision: {data.get('revision')}")
+    else:
+        typer.secho("❌ Failed to reset room runtime", fg=typer.colors.RED, err=True)
+        typer.echo(f"Status: {response.status_code}")
+        typer.echo(f"Error: {response.text}")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()

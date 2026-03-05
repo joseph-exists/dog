@@ -17,6 +17,13 @@
 
 import { Plus } from "lucide-react"
 import { useEffect, useState } from "react"
+import {
+  createDefaultRepoExplorerPanelConfig,
+  createDefaultRepoFileViewerPanelConfig,
+  normalizeRepoPanelConfig,
+  parseRepoExplorerPanelConfig,
+  parseRepoFileViewerPanelConfig,
+} from "@/components/Repo/panels/config"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -32,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
 import type { PanelConfig } from "@/services/panelService"
@@ -71,6 +79,8 @@ const AVAILABLE_PANELS: PreviewPanel[] = [
   { id: "story", kind: "storyEditor", prominence: "primary" },
   { id: "runtime", kind: "storyRuntime", prominence: "primary" },
   { id: "solo-story", kind: "storyPlayer", prominence: "primary" },
+  { id: "repo-explorer", kind: "repoExplorer", prominence: "primary" },
+  { id: "file-viewer", kind: "fileViewer", prominence: "primary" },
   { id: "canvas", kind: "canvas", prominence: "primary" },
   { id: "a2ui", kind: "a2ui", prominence: "primary" },
   { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
@@ -82,10 +92,28 @@ const panelNames: Record<string, string> = {
   storyEditor: "Story Editor",
   storyRuntime: "Story Runtime",
   storyPlayer: "Solo Story Player",
+  repoExplorer: "Repo Explorer",
+  fileViewer: "File Viewer",
   canvas: "Canvas",
   a2ui: "Agent UI",
   participantPanel: "Participants",
   debug: "Debug",
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function isRepoPanelKind(kind: string): kind is "repoExplorer" | "fileViewer" {
+  return kind === "repoExplorer" || kind === "fileViewer"
+}
+
+function toPreviewPanel(panel: PanelConfig): PreviewPanel {
+  return {
+    id: panel.id,
+    kind: panel.kind,
+    prominence: panel.prominence,
+  }
 }
 
 // ============================================================================
@@ -105,7 +133,7 @@ export function PanelLayoutDialog({
   })
 
   // Local state for editing
-  const [panels, setPanels] = useState<PreviewPanel[]>([])
+  const [panels, setPanels] = useState<PanelConfig[]>([])
   const [source, setSource] = useState<LayoutSource>("user_defaults")
   const [savedSource, setSavedSource] = useState<LayoutSource>("user_defaults")
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
@@ -117,13 +145,7 @@ export function PanelLayoutDialog({
     if (!open) return
 
     if (mode === "room" && roomPanels.panels.length > 0) {
-      setPanels(
-        roomPanels.panels.map((p) => ({
-          id: p.id,
-          kind: p.kind,
-          prominence: p.prominence,
-        })),
-      )
+      setPanels(roomPanels.panels)
       const initialSource =
         (roomPanels.panelSource as LayoutSource) || "user_defaults"
       setSource(initialSource)
@@ -131,7 +153,15 @@ export function PanelLayoutDialog({
     } else {
       // Default to collaborate preset
       const defaultPreset = SYSTEM_PRESETS.find((p) => p.id === "collaborate")
-      setPanels(defaultPreset?.panels || [])
+      setPanels(
+        (defaultPreset?.panels || []).map((panel) => ({
+          id: panel.id,
+          kind: panel.kind as PanelConfig["kind"],
+          prominence: panel.prominence,
+          config_json: null,
+          entity_binding: null,
+        })),
+      )
       setSelectedPresetId("collaborate")
       setSource("user_defaults")
       setSavedSource("user_defaults")
@@ -149,7 +179,15 @@ export function PanelLayoutDialog({
   const handlePresetSelect = (presetId: string) => {
     const preset = SYSTEM_PRESETS.find((p) => p.id === presetId)
     if (preset) {
-      setPanels(preset.panels)
+      setPanels(
+        preset.panels.map((panel) => ({
+          id: panel.id,
+          kind: panel.kind as PanelConfig["kind"],
+          prominence: panel.prominence,
+          config_json: null,
+          entity_binding: null,
+        })),
+      )
       setSelectedPresetId(presetId)
       switchToCustom()
     }
@@ -157,7 +195,26 @@ export function PanelLayoutDialog({
 
   // Handle panel reorder
   const handleReorder = (newPanels: PreviewPanel[]) => {
-    setPanels(newPanels)
+    setPanels((prev) => {
+      const byId = new Map(prev.map((panel) => [panel.id, panel]))
+      return newPanels.map((previewPanel) => {
+        const existing = byId.get(previewPanel.id)
+        if (existing) {
+          return {
+            ...existing,
+            kind: previewPanel.kind as PanelConfig["kind"],
+            prominence: previewPanel.prominence,
+          }
+        }
+        return {
+          id: previewPanel.id,
+          kind: previewPanel.kind as PanelConfig["kind"],
+          prominence: previewPanel.prominence,
+          config_json: null,
+          entity_binding: null,
+        }
+      })
+    })
     setSelectedPresetId(null)
     switchToCustom()
   }
@@ -172,16 +229,77 @@ export function PanelLayoutDialog({
   // Handle add panel
   const handleAddPanel = (panel: PreviewPanel) => {
     if (panels.some((p) => p.id === panel.id)) return
-    setPanels((prev) => [...prev, panel])
+    setPanels((prev) => {
+      const basePanel: PanelConfig = {
+        id: panel.id,
+        kind: panel.kind as PanelConfig["kind"],
+        prominence: panel.prominence,
+        config_json: null,
+        entity_binding: null,
+      }
+
+      if (panel.kind === "repoExplorer") {
+        return [
+          ...prev,
+          {
+            ...basePanel,
+            config_json: {
+              ...createDefaultRepoExplorerPanelConfig(panel.id),
+              repo_id: null,
+            },
+          },
+        ]
+      }
+
+      if (panel.kind === "fileViewer") {
+        return [
+          ...prev,
+          {
+            ...basePanel,
+            config_json: {
+              ...createDefaultRepoFileViewerPanelConfig(panel.id),
+              repo_id: null,
+            },
+          },
+        ]
+      }
+
+      return [...prev, basePanel]
+    })
     setSelectedPresetId(null)
     switchToCustom()
     setAddPanelOpen(false)
+  }
+
+  const handleUpdateRepoPanelConfig = (
+    panelId: string,
+    patch: Record<string, unknown>,
+  ) => {
+    setPanels((prev) =>
+      prev.map((panel) => {
+        if (panel.id !== panelId || !isRepoPanelKind(panel.kind)) return panel
+        const currentConfig = isObjectRecord(panel.config_json)
+          ? panel.config_json
+          : {}
+        const nextConfig = {
+          ...currentConfig,
+          ...patch,
+        }
+        return {
+          ...panel,
+          config_json: normalizeRepoPanelConfig(panel.kind, panel.id, nextConfig),
+        }
+      }),
+    )
+    switchToCustom()
   }
 
   // Get panels not yet added
   const availablePanelsToAdd = AVAILABLE_PANELS.filter(
     (ap) => !panels.some((p) => p.id === ap.id),
   )
+  const repoPanels = panels.filter((panel) => isRepoPanelKind(panel.kind))
+  const previewPanels = panels.map(toPreviewPanel)
 
   // Handle save
   const handleSave = async () => {
@@ -239,12 +357,122 @@ export function PanelLayoutDialog({
             />
           </div>
 
+          {repoPanels.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Repo Panel Bindings</h4>
+              <div className="space-y-3">
+                {repoPanels.map((panel) => {
+                  const config = isObjectRecord(panel.config_json)
+                    ? panel.config_json
+                    : {}
+                  const repoIdValue =
+                    typeof config.repo_id === "string" ? config.repo_id : ""
+
+                  if (panel.kind === "repoExplorer") {
+                    const parsed = parseRepoExplorerPanelConfig(
+                      panel.config_json,
+                      panel.id,
+                    )
+                    return (
+                      <div key={panel.id} className="rounded-md border p-3 space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          {panelNames[panel.kind]} ({panel.id})
+                        </div>
+                        <Input
+                          value={repoIdValue}
+                          onChange={(event) =>
+                            handleUpdateRepoPanelConfig(panel.id, {
+                              repo_id: event.target.value || null,
+                            })
+                          }
+                          placeholder="repo_id"
+                        />
+                        <Input
+                          value={parsed.initial_path}
+                          onChange={(event) =>
+                            handleUpdateRepoPanelConfig(panel.id, {
+                              initial_path: event.target.value,
+                            })
+                          }
+                          placeholder="initial_path"
+                        />
+                        <Input
+                          value={parsed.selection_key || ""}
+                          onChange={(event) =>
+                            handleUpdateRepoPanelConfig(panel.id, {
+                              selection_key: event.target.value || null,
+                            })
+                          }
+                          placeholder="selection_key"
+                        />
+                      </div>
+                    )
+                  }
+
+                  const parsed = parseRepoFileViewerPanelConfig(
+                    panel.config_json,
+                    panel.id,
+                  )
+                  return (
+                    <div key={panel.id} className="rounded-md border p-3 space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {panelNames[panel.kind]} ({panel.id})
+                      </div>
+                      <Input
+                        value={repoIdValue}
+                        onChange={(event) =>
+                          handleUpdateRepoPanelConfig(panel.id, {
+                            repo_id: event.target.value || null,
+                          })
+                        }
+                        placeholder="repo_id"
+                      />
+                      <select
+                        value={parsed.path_mode}
+                        onChange={(event) =>
+                          handleUpdateRepoPanelConfig(panel.id, {
+                            path_mode: event.target.value,
+                          })
+                        }
+                        className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                      >
+                        <option value="selection">selection</option>
+                        <option value="fixed">fixed</option>
+                        <option value="readme">readme</option>
+                      </select>
+                      {parsed.path_mode === "fixed" && (
+                        <Input
+                          value={parsed.fixed_path || ""}
+                          onChange={(event) =>
+                            handleUpdateRepoPanelConfig(panel.id, {
+                              fixed_path: event.target.value,
+                            })
+                          }
+                          placeholder="fixed_path"
+                        />
+                      )}
+                      <Input
+                        value={parsed.selection_key || ""}
+                        onChange={(event) =>
+                          handleUpdateRepoPanelConfig(panel.id, {
+                            selection_key: event.target.value || null,
+                          })
+                        }
+                        placeholder="selection_key"
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Interactive preview */}
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Panel Arrangement</h4>
             <div className="border rounded-lg p-4 bg-muted/30">
               <InteractivePreview
-                panels={panels}
+                panels={previewPanels}
                 onReorder={handleReorder}
                 onRemove={handleRemove}
               />

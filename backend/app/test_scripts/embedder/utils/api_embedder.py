@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import asyncpg
 from openai import AsyncOpenAI
@@ -40,16 +41,36 @@ def _normalize_db_uri(uri: str) -> str:
 
 
 def _resolve_default_db_uri() -> str | None:
-    env_uri = os.getenv("ASYNC_DATABASE_URL") or os.getenv("DATABASE_URL")
+    env_uri = (
+        os.getenv("DEVEMBED_ASYNC_DATABASE_URL")
+        or os.getenv("DEVEMBED_DATABASE_URL")
+        or os.getenv("ASYNC_DATABASE_URL")
+        or os.getenv("DATABASE_URL")
+    )
     if env_uri:
-        return env_uri
+        return _prefer_devembed_db(env_uri)
 
     try:
         from app.core.config import settings
 
-        return str(settings.ASYNC_SQLALCHEMY_DATABASE_URI)
+        return _prefer_devembed_db(str(settings.ASYNC_SQLALCHEMY_DATABASE_URI))
     except Exception:
         return None
+
+
+def _prefer_devembed_db(uri: str) -> str:
+    parts = urlsplit(uri)
+    if not parts.scheme.startswith("postgresql"):
+        return uri
+
+    path = parts.path or ""
+    if path in {"", "/"}:
+        new_path = "/devembed"
+    else:
+        prefix, _sep, _db_name = path.rpartition("/")
+        new_path = f"{prefix}/devembed" if prefix else "/devembed"
+
+    return urlunsplit((parts.scheme, parts.netloc, new_path, parts.query, parts.fragment))
 
 
 def _validate_identifier(name: str) -> str:

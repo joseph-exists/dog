@@ -17,7 +17,7 @@ function ReposPage() {
   const panels: RepoPanelConfig[] = [
     {
       id: "repos-grid",
-      kind: "repos-grid",
+      kind: "repoOverview",
       prominence: "primary",
       title: "Repositories",
       render: panelComponents["repos-grid"],
@@ -27,7 +27,7 @@ function ReposPage() {
   return (
     <RepoShell
       title="Repositories"
-      description="View, import, and review the repositories this platform manages on your behalf."
+      description="View, import, and browse the platform-managed repositories available to you, including shared public repos and viewer-ready imports."
       panels={panels}
       actions={<ImportRepoDialog />}
     />

@@ -36,6 +36,10 @@ export interface MiniPreviewProps {
   height?: number
   /** Show panel labels */
   showLabels?: boolean
+  /** Optional override for panel labels */
+  panelLabels?: Record<string, string>
+  /** Optional override for panel colors/classes */
+  panelColors?: Record<string, string>
   /** Additional className */
   className?: string
 }
@@ -77,8 +81,12 @@ export function MiniPreview({
   width = 120,
   height = 80,
   showLabels = true,
+  panelLabels,
+  panelColors: panelColorOverrides,
   className,
 }: MiniPreviewProps) {
+  const resolvedPanelNames = panelLabels ?? panelNames
+  const resolvedPanelColors = panelColorOverrides ?? panelColors
   const primaryPanels = panels.filter((p) => p.prominence === "primary")
   const auxiliaryPanels = panels.filter((p) => p.prominence === "auxiliary")
 
@@ -97,7 +105,7 @@ export function MiniPreview({
       )}
       style={{ width, height }}
       role="img"
-      aria-label={`Layout preview: ${panels.map((p) => panelNames[p.kind] || p.kind).join(", ")}`}
+      aria-label={`Layout preview: ${panels.map((p) => resolvedPanelNames[p.kind] || p.kind).join(", ")}`}
     >
       {/* Primary panels */}
       {hasPrimary && (
@@ -110,12 +118,12 @@ export function MiniPreview({
               key={panel.id}
               className={cn(
                 "flex-1 rounded-sm border flex items-center justify-center",
-                panelColors[panel.kind] || "bg-muted border-border",
+                resolvedPanelColors[panel.kind] || "bg-muted border-border",
               )}
             >
               {showLabels && (
                 <span className="text-[8px] text-muted-foreground font-medium truncate px-0.5">
-                  {panelNames[panel.kind] || panel.kind}
+                  {resolvedPanelNames[panel.kind] || panel.kind}
                 </span>
               )}
             </div>
@@ -134,12 +142,12 @@ export function MiniPreview({
               key={panel.id}
               className={cn(
                 "flex-1 rounded-sm border flex items-center justify-center",
-                panelColors[panel.kind] || "bg-muted border-border",
+                resolvedPanelColors[panel.kind] || "bg-muted border-border",
               )}
             >
               {showLabels && (
                 <span className="text-[6px] text-muted-foreground font-medium truncate px-0.5">
-                  {panelNames[panel.kind]?.substring(0, 3) ||
+                  {resolvedPanelNames[panel.kind]?.substring(0, 3) ||
                     panel.kind.substring(0, 3)}
                 </span>
               )}

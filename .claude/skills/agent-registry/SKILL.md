@@ -3,12 +3,12 @@ name: agent-registry
 description: |
   Agent registry system for database-backed agent configurations with PydanticAI runtime instantiation.
   Use when working with:
-  - Agent models, CRUD, or API routes (models.py AgentConfig*, crud.py, agent_routes.py)
+  - Agent models, CRUD, or API routes (models.py UserAgentConfig*, crud.py, agent_routes.py)
   - AgentRegistryService or tool_registry.py
   - Creating, configuring, or debugging agents
   - Agent-room participation system
 
-  Triggers: AgentConfig, agent_registry_service, tool_registry, agent_routes, create agent, configure agent
+  Triggers: UserAgentConfig, AgentConfig, agent_registry_service, tool_registry, agent_routes, create agent, configure agent
 ---
 
 # Agent Registry
@@ -24,15 +24,18 @@ AgentRegistryService                 → Caching, validation, instantiation
          ↓
 CRUD (crud.py)                       → Repository pattern operations
          ↓
-AgentConfig Models (models.py)       → 6-tier SQLModel pattern
+UserAgentConfig Models (models.py)   → 6-tier SQLModel pattern
          ↓
 Tool Registry (tool_registry.py)     → Hybrid tool association
+         ↓
+Agent Orchestration (agent_runner.py) → Runtime execution, A2A, AG-UI
 ```
 
 **Key Files:**
-- `backend/app/models.py` - AgentConfigBase through AgentConfigsPublic (lines 2334-2392)
-- `backend/app/crud.py` - create/get/update/delete_agent_config functions
-- `backend/app/services/agent_registry_service.py` - Service singleton
+- `backend/app/models.py` - UserAgentConfigBase through UserAgentConfigsPublic (lines 3685-3920)
+- `backend/app/crud.py` - agent config CRUD functions
+- `backend/app/services/agent_registry_service.py` - Service singleton with caching
+- `backend/app/services/agent_instance.py` - Runtime PydanticAI Agent construction
 - `backend/app/agents/tool_registry.py` - Tool definitions and mappings
 - `backend/app/api/routes/agent_routes.py` - REST endpoints
 
@@ -41,13 +44,15 @@ Tool Registry (tool_registry.py)     → Hybrid tool association
 ### 1. Model Hierarchy (6-Tier)
 
 ```python
-AgentConfigBase      # Shared properties (name, slug, model_name, system_prompt, etc.)
-AgentConfigCreate    # API input - inherits Base
-AgentConfigUpdate    # Partial updates - all fields optional
-AgentConfig          # Database table (table=True), adds id, owner_id, timestamps, version
-AgentConfigPublic    # API response - adds id, timestamps
-AgentConfigsPublic   # Collection response - data: list + count: int
+UserAgentConfigBase      # Shared properties (name, slug, model_name, system_prompt, etc.)
+UserAgentConfigCreate    # API input - inherits Base
+UserAgentConfigUpdate    # Partial updates - all fields optional
+UserAgentConfig          # Database table (table=True), adds id, owner_id, timestamps, version
+UserAgentConfigPublic    # API response - adds id, timestamps
+UserAgentConfigsPublic   # Collection response - data: list + count: int
 ```
+
+> **Note**: Models are prefixed with `User` to reflect that agents are user-owned resources with tiered access (personal/system scope).
 
 ### 2. Tiered Access Control
 
@@ -143,8 +148,11 @@ The agent_runner queries active agent participants, then uses registry service t
 
 | Document | Purpose |
 |----------|---------|
+| [Agent Demo Quick-Start](../../backend/app/services/service-docs/agent-demo-quickstart.md) | **Ready-to-use demo agent configurations** |
+| [Agent Orchestration Reference](../../backend/app/services/service-docs/agent-orchestration-reference.md) | **Runtime orchestration patterns & demo capabilities** |
 | [Agent User Guide](./references/agent-user-guide.md) | End-user reference for working with agents |
 | [Agent Developer Reference](./references/agent-developer-reference.md) | Technical reference for implementation |
 | [A2A & AG-UI Roadmap](./references/a2a-ag-ui-roadmap.md) | Agent-to-Agent and UI component system |
+| [A2A & AG-UI Reference Card](./references/a2a-ag-ui-reference-card.md) | GTM/Product owner summary |
 | [Agent Registry Plan](./references/agent-registry-plan.md) | Original architecture and design |
 | [Agent Provider Integration](./references/agent-provider-integration.md) | LLM provider configuration |

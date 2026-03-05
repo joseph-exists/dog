@@ -5,16 +5,42 @@ import {
   ArrowLeftIcon,
   ExternalLinkIcon,
   GitBranchIcon,
-  InfoIcon,
-  LinkIcon,
   LockIcon,
+  MoreVerticalIcon,
+  PanelsTopLeftIcon,
   RefreshCwIcon,
-  ShieldAlertIcon,
+  SaveIcon,
+  Trash2Icon,
   UnlockIcon,
 } from "lucide-react"
-import { getUserRepoQueryOptions } from "@/components/Repo"
+import {
+  buildRepoUserLayoutPresetId,
+  createUserRepoLayoutPreset,
+  getSystemRepoLayoutPresets,
+  getUserRepoQueryOptions,
+  renderRepoPanel,
+  RepoLayout,
+  RepoPanelLayoutDialog,
+  SaveRepoLayoutPresetDialog,
+  type RepoPanelConfig,
+  type RepoLayoutPreset,
+} from "@/components/Repo"
+import { RepoLayoutEditorDialog } from "@/components/Repo/Dialogs/RepoLayoutEditorDialog"
 import { RepoStatusBadge } from "@/components/Repo/Display/RepoStatusBadge"
+import {
+  applyRepoPanelLayoutItems,
+  repoPanelLayoutItemsEqual,
+  type RepoPanelLayoutItem,
+} from "@/components/Repo/panels/repoPanelLayoutCustomization"
+import {
+  readRepoLayoutWorkspaceState,
+  readUserRepoLayoutPresets,
+  resolveRepoLayoutPreset,
+  writeRepoLayoutWorkspaceState,
+  writeUserRepoLayoutPresets,
+} from "@/components/Repo/panels/repoLayoutPresets"
 import { formatRepoDate } from "@/components/Repo/utils"
+import { showSuccessToast } from "@/hooks/useCustomToast"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -24,8 +50,23 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useEffect, useMemo, useState } from "react"
 
 export const Route = createFileRoute("/_layout/repo/$repoId")({
   component: RepoDetailPage,
@@ -56,6 +97,17 @@ function RepoDetailSkeleton() {
 function RepoDetailPage() {
   const { repoId } = Route.useParams()
   const navigate = useNavigate()
+  const [layoutMode, setLayoutMode] = useState<"panels" | "tabs">("panels")
+  const [isQuickLayoutDialogOpen, setIsQuickLayoutDialogOpen] = useState(false)
+  const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false)
+  const [isSavePresetOpen, setIsSavePresetOpen] = useState(false)
+  const [panelSelections, setPanelSelections] = useState<Record<string, string | null>>({})
+  const systemPresets = useMemo(() => getSystemRepoLayoutPresets(), [])
+  const [userPresets, setUserPresets] = useState<RepoLayoutPreset[]>([])
+  const [activePresetId, setActivePresetId] = useState<string>(systemPresets[0]?.id ?? "system-default")
+  const [panelLayoutItems, setPanelLayoutItems] = useState<RepoPanelLayoutItem[]>(
+    systemPresets[0]?.items ?? [],
+  )
   const {
     data: repo,
     isLoading,
@@ -63,6 +115,231 @@ function RepoDetailPage() {
     refetch,
     isFetching,
   } = useQuery(getUserRepoQueryOptions(repoId))
+  const capabilities = useMemo(
+    () => ({
+      // Backend capability fields are returned in snake_case on UserRepoPublic.
+      // This route keeps a small normalization layer so the existing repo panel
+      // registry can continue using its established camelCase requirement names.
+      hasRepoIdentity: true,
+      hasFileTree: repo?.capabilities?.has_file_tree === true,
+      hasBlobContent: repo?.capabilities?.has_blob_content === true,
+      hasCommitHistory: repo?.capabilities?.has_commit_history === true,
+      hasSearch: repo?.capabilities?.has_search === true,
+      // Manage-access is still a frontend product concept rather than a backend
+      // capability on UserRepoPublic; keep it conservative until repo sharing/edit
+      // controls have their own explicit API contract.
+      hasManageAccess: true,
+    }),
+    [repo],
+  )
+  const defaultBranch =
+    repo?.default_branch ||
+    repo?.capabilities?.default_branch ||
+    repo?.source_branch ||
+    "main"
+  const isViewerReady =
+    capabilities.hasFileTree === true && capabilities.hasBlobContent === true
+  const layoutPresets = useMemo(
+    () => [...systemPresets, ...userPresets],
+    [systemPresets, userPresets],
+  )
+  const activePreset = useMemo(
+    () => resolveRepoLayoutPreset(layoutPresets, activePresetId),
+    [activePresetId, layoutPresets],
+  )
+
+  useEffect(() => {
+    if (!repo || typeof window === "undefined") return
+    const storedUserPresets = readUserRepoLayoutPresets(window.localStorage)
+    const allPresets = [...systemPresets, ...storedUserPresets]
+    const workspaceState = readRepoLayoutWorkspaceState(window.localStorage, repo.id)
+    const nextActivePreset = resolveRepoLayoutPreset(
+      allPresets,
+      workspaceState?.activePresetId ?? systemPresets[0]?.id,
+    )
+
+    setUserPresets(storedUserPresets)
+    setActivePresetId(nextActivePreset.id)
+    setPanelLayoutItems(
+      workspaceState?.items && workspaceState.items.length > 0
+        ? applyRepoPanelLayoutItems(nextActivePreset.items, workspaceState.items)
+        : nextActivePreset.items,
+    )
+  }, [repo, systemPresets])
+
+  useEffect(() => {
+    if (!repo || typeof window === "undefined") return
+    writeRepoLayoutWorkspaceState(window.localStorage, repo.id, {
+      activePresetId,
+      items: panelLayoutItems,
+    })
+  }, [activePresetId, panelLayoutItems, repo])
+
+  const panelContext = useMemo(
+    () =>
+      repo
+        ? {
+            repo,
+            capabilities,
+            panelSelections,
+            setPanelSelection: (selectionKey: string, path: string | null) => {
+              setPanelSelections((current) => ({
+                ...current,
+                [selectionKey]: path,
+              }))
+            },
+          }
+        : null,
+    [capabilities, panelSelections, repo],
+  )
+  const effectivePanels = useMemo(
+    () => applyRepoPanelLayoutItems(activePreset.items, panelLayoutItems),
+    [activePreset.items, panelLayoutItems],
+  )
+
+  const panels = useMemo<RepoPanelConfig[]>(
+    () =>
+      panelContext
+        ? effectivePanels.map((panel) => ({
+            ...panel,
+            title: panel.title ?? panel.kind,
+            render: () => renderRepoPanel(panel, panelContext),
+          }))
+        : [],
+    [effectivePanels, panelContext],
+  )
+  const hasCustomizedPanelLayout = useMemo(
+    () => !repoPanelLayoutItemsEqual(panelLayoutItems, activePreset.items),
+    [activePreset.items, panelLayoutItems],
+  )
+  const canDeleteActivePreset = activePreset.source === "user"
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+
+      const hasMod = event.metaKey || event.ctrlKey
+      if (hasMod && event.shiftKey && event.key.toLowerCase() === "l") {
+        event.preventDefault()
+        setIsQuickLayoutDialogOpen(true)
+        return
+      }
+
+      if (hasMod && event.altKey && event.key.toLowerCase() === "l") {
+        event.preventDefault()
+        setIsLayoutEditorOpen(true)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  const handleApplyPanelLayout = (items: RepoPanelLayoutItem[]) => {
+    setPanelLayoutItems(items)
+    showSuccessToast("Repository panel layout updated.")
+  }
+
+  const handleApplyQuickPanelLayout = (
+    items: RepoPanelLayoutItem[],
+    presetId: string | null,
+  ) => {
+    if (presetId) {
+      setActivePresetId(presetId)
+    }
+    setPanelLayoutItems(items)
+    showSuccessToast("Repository panel layout updated.")
+  }
+
+  const handleResetPanelLayout = () => {
+    setPanelLayoutItems(activePreset.items)
+    showSuccessToast("Repository panel layout reset to preset.")
+  }
+
+  const handleSwitchPreset = (presetId: string) => {
+    const nextPreset = resolveRepoLayoutPreset(layoutPresets, presetId)
+    setActivePresetId(nextPreset.id)
+    setPanelLayoutItems(nextPreset.items)
+    showSuccessToast(`Preset switched to ${nextPreset.label}.`)
+  }
+
+  const handleSavePreset = (input: { label: string; description: string }) => {
+    if (typeof window === "undefined") return
+
+    const nextUserPresets =
+      activePreset.source === "user"
+        ? userPresets.map((preset) =>
+            preset.id === activePreset.id
+              ? {
+                  ...preset,
+                  label: input.label,
+                  description: input.description,
+                  items: panelLayoutItems,
+                }
+              : preset,
+          )
+        : [
+            ...userPresets,
+            createUserRepoLayoutPreset({
+              id: buildRepoUserLayoutPresetId(
+                input.label,
+                [...systemPresets, ...userPresets].map((preset) => preset.id),
+              ),
+              label: input.label,
+              description: input.description,
+              items: panelLayoutItems,
+            }),
+          ]
+
+    setUserPresets(nextUserPresets)
+    writeUserRepoLayoutPresets(window.localStorage, nextUserPresets)
+
+    const nextActivePreset =
+      activePreset.source === "user"
+        ? nextUserPresets.find((preset) => preset.id === activePreset.id) ?? nextUserPresets[0]
+        : nextUserPresets[nextUserPresets.length - 1]
+
+    if (nextActivePreset) {
+      setActivePresetId(nextActivePreset.id)
+    }
+
+    setIsSavePresetOpen(false)
+    showSuccessToast(
+      activePreset.source === "user"
+        ? "Layout preset updated."
+        : "Layout preset saved.",
+    )
+  }
+
+  const handleDeleteActivePreset = () => {
+    if (!repo || typeof window === "undefined" || activePreset.source !== "user") return
+
+    const nextUserPresets = userPresets.filter((preset) => preset.id !== activePreset.id)
+    const fallbackPreset = resolveRepoLayoutPreset(
+      [...systemPresets, ...nextUserPresets],
+      systemPresets[0]?.id,
+    )
+
+    setUserPresets(nextUserPresets)
+    writeUserRepoLayoutPresets(window.localStorage, nextUserPresets)
+    setActivePresetId(fallbackPreset.id)
+    setPanelLayoutItems(fallbackPreset.items)
+    showSuccessToast(`Preset ${activePreset.label} deleted.`)
+  }
+
+  const openAdvancedLayoutEditor = (items: RepoPanelLayoutItem[]) => {
+    setPanelLayoutItems(items)
+    setIsQuickLayoutDialogOpen(false)
+    setIsLayoutEditorOpen(true)
+  }
 
   if (isLoading) {
     return <RepoDetailSkeleton />
@@ -115,7 +392,7 @@ function RepoDetailPage() {
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-2">
               <GitBranchIcon className="size-4" />
-              Branch {repo.source_branch || "main"}
+              Branch {defaultBranch}
             </span>
             <span className="inline-flex items-center gap-2">
               {repo.is_private ? (
@@ -125,14 +402,83 @@ function RepoDetailPage() {
               )}
               {repo.is_private ? "Private" : "Public"}
             </span>
+            <span className="inline-flex items-center gap-2">
+              {isViewerReady ? "Viewer ready" : "Viewer partial"}
+            </span>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Select value={activePreset.id} onValueChange={handleSwitchPreset}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Select layout preset" />
+            </SelectTrigger>
+            <SelectContent>
+              {layoutPresets.map((preset) => (
+                <SelectItem key={preset.id} value={preset.id}>
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="inline-flex rounded-xl border bg-muted/30 p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={layoutMode === "panels" ? "bg-background shadow-sm" : ""}
+              onClick={() => setLayoutMode("panels")}
+            >
+              Panels
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={layoutMode === "tabs" ? "bg-background shadow-sm" : ""}
+              onClick={() => setLayoutMode("tabs")}
+            >
+              Tabs
+            </Button>
+          </div>
           <Button variant="outline" onClick={() => refetch()}>
             <RefreshCwIcon className={isFetching ? "size-4 animate-spin" : "size-4"} />
             Refresh
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Repository layout actions">
+                <MoreVerticalIcon className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsQuickLayoutDialogOpen(true)}>
+                <PanelsTopLeftIcon className="mr-2 size-4" />
+                Panel Layout
+                <span className="ml-auto text-xs text-muted-foreground">Ctrl+Shift+L</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsLayoutEditorOpen(true)}>
+                <PanelsTopLeftIcon className="mr-2 size-4" />
+                Advanced Layout Editor
+                <span className="ml-auto text-xs text-muted-foreground">Ctrl+Alt+L</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsSavePresetOpen(true)}>
+                <SaveIcon className="mr-2 size-4" />
+                {activePreset.source === "user" ? "Update Preset" : "Save Preset"}
+              </DropdownMenuItem>
+              {canDeleteActivePreset ? (
+                <DropdownMenuItem onClick={handleDeleteActivePreset}>
+                  <Trash2Icon className="mr-2 size-4" />
+                  Delete Preset
+                </DropdownMenuItem>
+              ) : null}
+              {hasCustomizedPanelLayout ? (
+                <DropdownMenuItem onClick={handleResetPanelLayout}>
+                  <RefreshCwIcon className="mr-2 size-4" />
+                  Reset to Preset
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button asChild variant="outline">
             <Link to="/repos">
               <ArrowLeftIcon className="size-4" />
@@ -150,6 +496,12 @@ function RepoDetailPage() {
         </div>
       </div>
 
+      <div className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{activePreset.label}</span>
+        {` · ${activePreset.description || "Custom repository workspace preset."}`}
+        {hasCustomizedPanelLayout ? " · Modified for this repository." : ""}
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -161,6 +513,20 @@ function RepoDetailPage() {
           <CardHeader className="pb-2">
             <CardDescription>Updated</CardDescription>
             <CardTitle className="text-base">{formatRepoDate(repo.updated_at)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Default Branch</CardDescription>
+            <CardTitle className="text-base">{defaultBranch}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Viewer</CardDescription>
+            <CardTitle className="text-base">
+              {isViewerReady ? "Enabled" : "Limited"}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -177,89 +543,42 @@ function RepoDetailPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LinkIcon className="size-4" />
-              Provenance
-            </CardTitle>
-            <CardDescription>
-              External source and managed platform metadata for this repository.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div className="space-y-1">
-              <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                Source URL
-              </div>
-              <div className="rounded-xl border bg-muted/30 p-3 font-mono text-xs break-all">
-                {repo.source_repo_url || "Not available"}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Managed Repo Name
-                </div>
-                <div className="rounded-xl border bg-muted/30 p-3 font-mono text-xs">
-                  {repo.gogs_repo_name}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Managed Repo ID
-                </div>
-                <div className="rounded-xl border bg-muted/30 p-3 font-mono text-xs">
-                  {repo.gogs_repo_id ?? "Not available"}
-                </div>
-              </div>
-              <div className="space-y-1 md:col-span-2">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Internal Full Name
-                </div>
-                <div className="rounded-xl border bg-muted/30 p-3 font-mono text-xs">
-                  {repo.gogs_full_name || "Not available"}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <InfoIcon className="size-4" />
-                Import State
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                Repository imports are asynchronous. This page polls automatically while the repo is still provisioning.
-              </p>
-              <p>
-                Current state: <span className="font-medium text-foreground">{repo.import_status ?? "pending"}</span>
-              </p>
-            </CardContent>
-          </Card>
-
-          {repo.import_status === "failed" && (
-            <Card className="border-destructive/40">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <ShieldAlertIcon className="size-4" />
-                  Import Failure
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                {repo.import_error || "The platform reported a permanent import failure."}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+      <div className="min-h-[720px] overflow-hidden rounded-3xl border bg-background">
+        <RepoLayout panels={panels} mode={layoutMode} />
       </div>
+
+      <RepoPanelLayoutDialog
+        open={isQuickLayoutDialogOpen}
+        onOpenChange={setIsQuickLayoutDialogOpen}
+        repoName={repo.display_name}
+        presets={layoutPresets}
+        activePresetId={activePreset.id}
+        panels={panelLayoutItems}
+        canReset={hasCustomizedPanelLayout}
+        onApply={handleApplyQuickPanelLayout}
+        onReset={handleResetPanelLayout}
+        onOpenAdvanced={openAdvancedLayoutEditor}
+      />
+      <RepoLayoutEditorDialog
+        open={isLayoutEditorOpen}
+        onOpenChange={setIsLayoutEditorOpen}
+        repoName={repo.display_name}
+        panels={panelLayoutItems}
+        capabilities={capabilities}
+        onApply={handleApplyPanelLayout}
+        onReset={handleResetPanelLayout}
+        canReset={hasCustomizedPanelLayout}
+      />
+      <SaveRepoLayoutPresetDialog
+        open={isSavePresetOpen}
+        onOpenChange={setIsSavePresetOpen}
+        title={activePreset.source === "user" ? "Update Layout Preset" : "Save Layout Preset"}
+        description="Store this panel arrangement as a selectable repository workspace preset."
+        initialLabel={activePreset.source === "user" ? activePreset.label : ""}
+        initialDescription={activePreset.source === "user" ? activePreset.description : ""}
+        confirmLabel={activePreset.source === "user" ? "Update Preset" : "Save Preset"}
+        onConfirm={handleSavePreset}
+      />
     </div>
   )
 }

@@ -472,6 +472,13 @@ export function DemoBlockEditor({
                                       createDefaultShadowRepoGitViewConfig()
                                     return (
                                       <div className="rounded border p-3 space-y-3">
+                                        <div className="rounded border border-dashed bg-muted/20 p-2 text-[11px] text-muted-foreground">
+                                          Existing story/shadow-repo authoring remains
+                                          supported. For platform-managed repositories,
+                                          set <code>entity_type</code> to{" "}
+                                          <code>user_repo</code> and resolve the ID from{" "}
+                                          <code>repo_id</code> or an explicit repo ID.
+                                        </div>
                                         <div className="grid gap-3 md:grid-cols-2">
                                           <div className="space-y-1">
                                             <label className="text-xs text-muted-foreground">
@@ -499,6 +506,12 @@ export function DemoBlockEditor({
                                                 })
                                               }
                                             />
+                                            <p className="text-[11px] text-muted-foreground">
+                                              Common values: <code>story</code> for
+                                              existing shadow-repo demos,{" "}
+                                              <code>user_repo</code> for platform-managed
+                                              repositories.
+                                            </p>
                                           </div>
                                           <div className="space-y-1">
                                             <label className="text-xs text-muted-foreground">
@@ -636,7 +649,10 @@ export function DemoBlockEditor({
                                                 {" "}
                                                 <code>metadata_json</code>
                                                 {" "}
-                                                at preview/runtime.
+                                                at preview/runtime. Keep using{" "}
+                                                <code>story_id</code> for story-backed
+                                                demos; use <code>repo_id</code> for
+                                                user-repo-backed demos.
                                               </p>
                                             </div>
                                           )}

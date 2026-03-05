@@ -5,6 +5,8 @@ import {
   BookOpen,
   Bot,
   Bug,
+  FileText,
+  FolderTree,
   MessageSquare,
   Palette,
   Play,
@@ -32,6 +34,8 @@ export type PanelKind =
   | "a2ui"
   | "participantPanel"
   | "debug"
+  | "repoExplorer"
+  | "fileViewer"
   // Story panels
   | "storyEditor"
   | "storyRuntime"
@@ -199,6 +203,26 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
     permission: "participant",
     cardinality: "single",
     relational: true, // Shows relationships: Room <-> Users
+  },
+  {
+    kind: "repoExplorer",
+    label: "Repo Explorer",
+    description: "Tree browser for repository folders and files",
+    icon: FolderTree,
+    defaultProminence: "primary",
+    contexts: ["room"],
+    permission: "participant",
+    cardinality: "single",
+  },
+  {
+    kind: "fileViewer",
+    label: "File Viewer",
+    description: "Repository file content view with shared selection support",
+    icon: FileText,
+    defaultProminence: "primary",
+    contexts: ["room"],
+    permission: "participant",
+    cardinality: "single",
   },
 
   // --------------------------------------------------------------------------

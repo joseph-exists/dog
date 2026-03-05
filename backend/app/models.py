@@ -3111,6 +3111,43 @@ class UIActionRequest(SQLModel):
     )
 
 
+class RepoRoomEventRequest(SQLModel):
+    """
+    Request body for room-scoped repository collaboration events.
+
+    This payload is used by frontend repo panels embedded in Room to emit
+    structured selection/open/ref actions into the room event log.
+    """
+
+    action: Literal["selection", "open", "ref"] = Field(
+        description="Repo collaboration action type"
+    )
+    panel_id: str | None = Field(
+        default=None,
+        description="Optional panel instance id that emitted the action",
+    )
+    selection_key: str | None = Field(
+        default=None,
+        description="Shared selection key for cross-panel coordination",
+    )
+    path: str | None = Field(
+        default=None,
+        description="Repository file path associated with this action",
+    )
+    ref: str | None = Field(
+        default=None,
+        description="Git ref associated with this action",
+    )
+    repo_id: uuid.UUID | None = Field(
+        default=None,
+        description="Platform user_repo identifier for the emitted action",
+    )
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional opaque metadata for future expansion",
+    )
+
+
 class RoomMessageUpdate(SQLModel):
     """
     Messages are immutable once created.
@@ -3690,6 +3727,19 @@ class UserAgentConfigBase(SQLModel):
     # before other agents, acting as an orchestrator that routes to specialists
     is_coordinator: bool = Field(default=False)
 
+    # Tool enablement flags - agents can self-declare which tools they need.
+    # These work as an OR with runtime flags: tool is enabled if EITHER
+    # the config declares it OR the runtime caller injects it.
+    # This supports both agent self-declaration and dependency injection patterns.
+    enable_a2a_tool: bool = Field(
+        default=False,
+        description="Enable request_agent_assistance tool for agent-to-agent calls"
+    )
+    enable_ag_ui_tool: bool = Field(
+        default=False,
+        description="Enable emit_ui_component tool for rich UI emission"
+    )
+
     # Maximum number of LLM requests per agent run (prevents runaway tool loops)
     max_tool_iterations: int = Field(default=10)
 
@@ -3703,22 +3753,42 @@ class UserAgentConfigBase(SQLModel):
         """Convert NULL from database to empty list."""
         return v if v is not None else []
 
-    @model_validator(mode="after")
-    def validate_prompt_config_binding(self) -> "UserAgentConfigBase":
-        policy = self.prompt_config_version_policy or "latest"
+    @model_validator(mode="before")
+    @classmethod
+    def validate_prompt_config_binding(cls, data: Any) -> Any:
+        """
+        Validate and normalize prompt binding fields before model construction.
+        Using `before` avoids mutating SQLAlchemy-instrumented attributes during
+        `model_validate()` for table models.
+        """
+        if data is None:
+            return data
+
+        if isinstance(data, dict):
+            payload = dict(data)
+        elif hasattr(data, "model_dump"):
+            payload = data.model_dump()
+        else:
+            return data
+
+        policy = payload.get("prompt_config_version_policy") or "latest"
         if policy not in {"latest", "pinned"}:
             raise ValueError("prompt_config_version_policy must be 'latest' or 'pinned'")
-        if self.prompt_config_id is None:
-            self.prompt_config_version_number = None
-            return self
-        if policy == "latest":
-            self.prompt_config_version_number = None
-            return self
-        if self.prompt_config_version_number is None or self.prompt_config_version_number <= 0:
+
+        prompt_config_id = payload.get("prompt_config_id")
+        if prompt_config_id is None or policy == "latest":
+            payload["prompt_config_version_number"] = None
+            payload["prompt_config_version_policy"] = policy
+            return payload
+
+        version_number = payload.get("prompt_config_version_number")
+        if version_number is None or version_number <= 0:
             raise ValueError(
                 "prompt_config_version_number must be a positive integer when policy is 'pinned'"
             )
-        return self
+
+        payload["prompt_config_version_policy"] = policy
+        return payload
 
 class UserAgentConfigCreate(UserAgentConfigBase):
      pass
@@ -5266,6 +5336,10 @@ class ShadowRepoFileContent(SQLModel):
     encoding: str = "utf-8"
     size_bytes: int
     content_type: str | None = None
+    is_binary: bool = False
+    is_truncated: bool = False
+    truncation_reason: str | None = None
+    is_unsupported_preview: bool = False
 
 
 class UserRepoBase(SQLModel):
@@ -5343,6 +5417,44 @@ class UserRepoPublic(UserRepoBase):
     owner_user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    default_branch: str | None = None
+    capabilities: "UserRepoViewerCapabilities | None" = None
+
+
+class UserRepoViewerCapabilities(SQLModel):
+    has_file_tree: bool = False
+    has_blob_content: bool = False
+    has_commit_history: bool = False
+    has_search: bool = False
+    has_branches: bool = False
+    default_branch: str = "main"
+
+
+class UserRepoSummary(SQLModel):
+    repo_id: uuid.UUID
+    slug: str
+    display_name: str
+    repo_available: bool
+    default_branch: str
+    latest_commit_sha: str | None = None
+    latest_commit_message: str | None = None
+    latest_commit_authored_at: datetime | None = None
+
+
+class UserRepoViewResponse(SQLModel):
+    summary: UserRepoSummary
+    commits: list[ShadowRepoCommitSummary] = Field(default_factory=list)
+    tree: list[ShadowRepoTreeEntry] = Field(default_factory=list)
+    tree_root_path: str = ""
+    ref: str
+
+
+class UserRepoFileContent(ShadowRepoFileContent):
+    pass
+
+
+class UserRepoReadmeContent(UserRepoFileContent):
+    resolved_from_path: str
 
 class UserRepoOutboxJob(SQLModel, table=True):
     """

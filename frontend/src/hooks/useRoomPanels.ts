@@ -15,7 +15,7 @@
  * ```tsx
  * const { panels, panelSource, setCustomPanels } = useRoomPanels(roomId)
  *
- * // panels = [{ id: "chat", kind: "chat", prominence: "primary" }, ...]
+ * // panels = [{ id, kind, prominence, config_json?, entity_binding? }, ...]
  * // panelSource = "room_defaults" | "user_override" | "type_defaults"
  * ```
  */

@@ -157,6 +157,18 @@ export interface AddParticipantInput {
   role?: "owner" | "member"
 }
 
+export type RepoRoomEventAction = "selection" | "open" | "ref"
+
+export interface RepoRoomEventInput {
+  action: RepoRoomEventAction
+  panel_id?: string | null
+  selection_key?: string | null
+  path?: string | null
+  ref?: string | null
+  repo_id?: string | null
+  metadata?: Record<string, unknown> | null
+}
+
 // ============================================================================
 // Transformation Functions
 // ============================================================================
@@ -599,6 +611,37 @@ export const RoomService = {
       status: string
       agent: string
       action: string
+    }
+  },
+
+  /**
+   * Emit a room-scoped repository collaboration event.
+   *
+   * This posts a structured repo action to the room event log. The emitted
+   * event is then delivered through roomstream to all subscribers.
+   */
+  async emitRepoEvent(
+    roomId: string,
+    event: RepoRoomEventInput,
+  ): Promise<{ status: string; event_type: string; sequence: number }> {
+    const requestOptions: ApiRequestOptions = {
+      method: "POST",
+      url: `/api/v1/rooms/${roomId}/repo-event`,
+      body: {
+        action: event.action,
+        panel_id: event.panel_id ?? null,
+        selection_key: event.selection_key ?? null,
+        path: event.path ?? null,
+        ref: event.ref ?? null,
+        repo_id: event.repo_id ?? null,
+        metadata: event.metadata ?? {},
+      },
+    }
+
+    return (await __request(OpenAPI, requestOptions)) as {
+      status: string
+      event_type: string
+      sequence: number
     }
   },
 

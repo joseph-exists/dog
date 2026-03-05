@@ -148,3 +148,33 @@ def test_clone_user_repo_from_external_source_rejects_non_https_urls(db) -> None
         assert str(exc) == "Only https repository URLs are supported"
     else:
         raise AssertionError("Expected clone request to reject non-https URL")
+
+
+def test_get_repo_uses_org_owner_for_lookup(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.user_repo_service.settings.USER_REPO_GOGS_BASE_URL",
+        "http://gittin:3000",
+    )
+    monkeypatch.setattr(
+        "app.services.user_repo_service.settings.USER_REPO_GOGS_TOKEN",
+        "test-token",
+    )
+    requested_paths: list[str] = []
+
+    class FakeClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, path):
+            requested_paths.append(path)
+            return httpx.Response(404)
+
+    monkeypatch.setattr(user_repo_service, "_client", lambda: FakeClient())
+
+    result = user_repo_service._get_repo("viewer-repo")
+
+    assert result is None
+    assert requested_paths == ["/api/v1/repos/dog/viewer-repo"]

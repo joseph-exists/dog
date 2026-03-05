@@ -169,7 +169,10 @@ def create_agent(
         current_user=current_user,
         prompt_config_id=agent_in.prompt_config_id,
     )
-    agentconfig = UserAgentConfig.model_validate(agent_in, update={"owner_id": current_user.id})
+    agentconfig = UserAgentConfig.model_validate(
+        agent_in.model_dump(),
+        update={"owner_id": current_user.id},
+    )
     session.add(agentconfig)
     session.commit()
     session.refresh(agentconfig)

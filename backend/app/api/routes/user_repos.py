@@ -7,17 +7,27 @@ repositories that are provisioned in the platform's Gogs instance.
 
 import uuid
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    UserRepoFileContent,
     UserRepoImportStatus,
     UserRepoProvisionRequest,
     UserRepoPublic,
+    UserRepoReadmeContent,
+    UserRepoViewResponse,
     UserReposPublic,
 )
 from app.services.user_repo_service import user_repo_service
 from app.services.user_repo_outbox_worker import create_user_repo_outbox_job
+from app.services.user_repo_view_service import (
+    UserRepoBackendUnavailable,
+    UserRepoBranchNotFound,
+    UserRepoPathError,
+    UserRepoViewNotFound,
+    user_repo_view_service,
+)
 
 router = APIRouter(prefix="/user-repos", tags=["user-repos"])
 
@@ -29,12 +39,30 @@ def _require_user_repo_access(
     repo_id: uuid.UUID,
 ):
     """Verify user has access to the specified repo."""
-    user_repo = user_repo_service.get_user_repo(session=session, repo_id=repo_id)
-    if not user_repo:
-        raise HTTPException(status_code=404, detail="UserRepo not found")
-    if not current_user.is_superuser and user_repo.owner_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    return user_repo
+    try:
+        return user_repo_view_service.authorize_user_repo_read(
+            session=session,
+            current_user_id=current_user.id,
+            is_superuser=current_user.is_superuser,
+            repo_id=repo_id,
+        )
+    except UserRepoViewNotFound as exc:
+        raise HTTPException(status_code=404, detail="UserRepo not found") from exc
+
+
+def _raise_user_repo_read_error(exc: Exception) -> None:
+    if isinstance(exc, UserRepoViewNotFound):
+        raise HTTPException(status_code=404, detail="UserRepo not found") from exc
+    if isinstance(exc, UserRepoBranchNotFound):
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Branch not found", "error_code": "BRANCH_NOT_FOUND"},
+        ) from exc
+    if isinstance(exc, UserRepoPathError):
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if isinstance(exc, UserRepoBackendUnavailable):
+        raise HTTPException(status_code=503, detail="User repo backend unavailable") from exc
+    raise exc
 
 
 @router.get("/", response_model=UserReposPublic)
@@ -48,7 +76,10 @@ def list_user_repos(
         owner_user_id=current_user.id,
     )
     return UserReposPublic(
-        data=[UserRepoPublic.model_validate(repo) for repo in repos],
+        data=[
+            user_repo_view_service.to_public_model(user_repo=repo)
+            for repo in repos
+        ],
         count=len(repos),
     )
 
@@ -73,7 +104,7 @@ def get_user_repo(
         current_user=current_user,
         repo_id=repo_id,
     )
-    return UserRepoPublic.model_validate(user_repo)
+    return user_repo_view_service.to_public_model(user_repo=user_repo)
 
 
 @router.post("/", response_model=UserRepoPublic, status_code=status.HTTP_202_ACCEPTED)
@@ -129,4 +160,91 @@ def create_user_repo(
     )
     session.commit()
 
-    return UserRepoPublic.model_validate(user_repo)
+    return user_repo_view_service.to_public_model(user_repo=user_repo)
+
+
+@router.get("/{repo_id}/tree", response_model=UserRepoViewResponse)
+def get_user_repo_tree(
+    session: SessionDep,
+    current_user: CurrentUser,
+    repo_id: uuid.UUID,
+    path: str = Query(default=""),
+    ref: str | None = Query(default=None),
+    commit_limit: int = Query(default=10, ge=0, le=100),
+) -> UserRepoViewResponse:
+    _require_user_repo_access(
+        session=session,
+        current_user=current_user,
+        repo_id=repo_id,
+    )
+    try:
+        return user_repo_view_service.get_repo_view(
+            session=session,
+            repo_id=repo_id,
+            path=path,
+            ref=ref,
+            commit_limit=commit_limit,
+        )
+    except (
+        UserRepoViewNotFound,
+        UserRepoBranchNotFound,
+        UserRepoPathError,
+        UserRepoBackendUnavailable,
+    ) as exc:
+        _raise_user_repo_read_error(exc)
+
+
+@router.get("/{repo_id}/file", response_model=UserRepoFileContent)
+def get_user_repo_file(
+    session: SessionDep,
+    current_user: CurrentUser,
+    repo_id: uuid.UUID,
+    path: str = Query(..., min_length=1),
+    ref: str | None = Query(default=None),
+) -> UserRepoFileContent:
+    _require_user_repo_access(
+        session=session,
+        current_user=current_user,
+        repo_id=repo_id,
+    )
+    try:
+        return user_repo_view_service.get_file_content(
+            session=session,
+            repo_id=repo_id,
+            path=path,
+            ref=ref,
+        )
+    except (
+        UserRepoViewNotFound,
+        UserRepoBranchNotFound,
+        UserRepoPathError,
+        UserRepoBackendUnavailable,
+    ) as exc:
+        _raise_user_repo_read_error(exc)
+
+
+@router.get("/{repo_id}/readme", response_model=UserRepoReadmeContent)
+def get_user_repo_readme(
+    session: SessionDep,
+    current_user: CurrentUser,
+    repo_id: uuid.UUID,
+    ref: str | None = Query(default=None),
+) -> UserRepoReadmeContent:
+    _require_user_repo_access(
+        session=session,
+        current_user=current_user,
+        repo_id=repo_id,
+    )
+    try:
+        return user_repo_view_service.get_readme(
+            session=session,
+            repo_id=repo_id,
+            ref=ref,
+        )
+    except (
+        UserRepoViewNotFound,
+        UserRepoBranchNotFound,
+        UserRepoPathError,
+        UserRepoBackendUnavailable,
+    ) as exc:
+        _raise_user_repo_read_error(exc)

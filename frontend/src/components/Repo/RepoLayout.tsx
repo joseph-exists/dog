@@ -1,4 +1,5 @@
 import React from "react"
+import type { RepoPanelKind, RepoPanelProminence } from "@/components/Repo/registry"
 import {
   ResizableHandle,
   ResizablePanel,
@@ -10,9 +11,13 @@ import { cn } from "@/lib/utils"
 
 export interface RepoPanelConfig {
   id: string
-  kind: string
-  prominence: "primary" | "auxiliary"
+  kind: RepoPanelKind
+  prominence: RepoPanelProminence
   title: string
+  default_size?: number
+  min_size?: number
+  max_size?: number
+  config_json?: Record<string, unknown> | null
   render: () => React.ReactNode
 }
 
@@ -66,7 +71,13 @@ export function RepoLayout({ panels, mode, className }: RepoLayoutProps) {
       {primaryPanels.map((panel, index) => (
         <React.Fragment key={panel.id}>
           {index > 0 && <ResizableHandle withHandle />}
-          <ResizablePanel>{panel.render()}</ResizablePanel>
+          <ResizablePanel
+            defaultSize={panel.default_size}
+            minSize={panel.min_size}
+            maxSize={panel.max_size}
+          >
+            {panel.render()}
+          </ResizablePanel>
         </React.Fragment>
       ))}
 
@@ -79,8 +90,9 @@ export function RepoLayout({ panels, mode, className }: RepoLayoutProps) {
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}
                   <ResizablePanel
-                    defaultSize={100 / auxiliaryPanels.length}
-                    minSize={15}
+                    defaultSize={panel.default_size ?? 100 / auxiliaryPanels.length}
+                    minSize={panel.min_size ?? 15}
+                    maxSize={panel.max_size}
                   >
                     {panel.render()}
                   </ResizablePanel>

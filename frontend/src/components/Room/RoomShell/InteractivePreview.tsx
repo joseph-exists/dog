@@ -61,6 +61,8 @@ const panelNames: Record<string, string> = {
   storyEditor: "Story Editor",
   storyRuntime: "Story Runtime",
   storyPlayer: "Solo Story Player",
+  repoExplorer: "Repo Explorer",
+  fileViewer: "File Viewer",
   participantPanel: "Participants",
   debug: "Debug",
   canvas: "Canvas",

@@ -92,7 +92,6 @@ _non_streaming_runner: NonStreamingAgentRunner | None = None
 def _uuid_to_str(value: uuid.UUID | None) -> str | None:
     return str(value) if value else None
 
-# TODO: either branch here or refactor in agent_instance for tools/a2a/orchestrator?
 def _get_streaming_runner() -> StreamingAgentRunner:
     global _streaming_runner
     if _streaming_runner is None:

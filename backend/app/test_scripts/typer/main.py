@@ -39,6 +39,7 @@ app.add_typer(wonka.app, name="demo", help="Demo commands (see wonka.py)")
 # Command modules
 from commands import (
     affordances,
+    agent_demos,
     agents,
     demos,
     stories,
@@ -60,6 +61,7 @@ app.add_typer(personas.app, name="personas")
 app.add_typer(rooms.app, name="rooms")
 app.add_typer(users.app, name="users")
 app.add_typer(agents.app, name="agents", help="Agent management commands")
+app.add_typer(agent_demos.app, name="agent-demos", help="Agent orchestration demo setup")
 app.add_typer(trait_conflicts.app, name="conflicts", help="Trait conflict management")
 app.add_typer(llm_catalog.app, name="catalog", help="LLM Catalog - browse providers and models")
 app.add_typer(pages.app, name="pages", help="Page layout management")

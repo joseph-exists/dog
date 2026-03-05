@@ -69,12 +69,22 @@ const ROOM_AGENT_SETTINGS_EVENT_TYPES = new Set([
   "room.agent_settings.deleted",
 ])
 
+const ROOM_REPO_EVENT_TYPES = new Set([
+  "room.repo.selection",
+  "room.repo.opened",
+  "room.repo.ref_changed",
+])
+
 export function shouldInvalidateRuntime(eventType: string): boolean {
   return RUNTIME_EVENT_TYPES.has(eventType)
 }
 
 export function shouldInvalidateRoomAgentSettings(eventType: string): boolean {
   return ROOM_AGENT_SETTINGS_EVENT_TYPES.has(eventType)
+}
+
+export function shouldInvalidateRepoPanels(eventType: string): boolean {
+  return ROOM_REPO_EVENT_TYPES.has(eventType)
 }
 
 export function useRoomStream(
@@ -252,6 +262,11 @@ export function useRoomStream(
                 queryKey: ["rooms", roomId, "agent-settings"],
               })
             }
+
+            // Repo panel selection/open/ref events are already applied via
+            // explicit event payload handling in room routes. Avoid global
+            // query invalidation here because it causes unnecessary re-fetches
+            // of tree/blob data across all mounted repo panels.
 
             // Phase 5: Message management events - invalidate messages query
             if (
