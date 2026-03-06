@@ -9,6 +9,7 @@ import { StoryMetadataBlock } from "@/components/Demo/blocks/StoryMetadataBlock"
 import { ToolCapabilityBlock } from "@/components/Demo/blocks/ToolCapabilityBlock"
 import { DemoChatPanel } from "@/components/Demo/DemoChatPanel"
 import { DemoStoryPanel } from "@/components/Demo/DemoStoryPanel"
+import { GitViewPanel } from "@/components/Demo/panels/GitViewPanel"
 import {
   type DemoBlockRendererContext,
   type DemoPanelRendererContext,
@@ -20,8 +21,8 @@ import {
   CanvasPanel,
   DebugPanel,
   ParticipantPanel,
+  SoloStoryPlayerPanel,
   StoryEditorPanel,
-  StoryPlayerPanel,
 } from "@/components/Room"
 
 interface ElementLike {
@@ -58,6 +59,7 @@ function makePanelContext(
   overrides?: Partial<DemoPanelRendererContext>,
 ): DemoPanelRendererContext {
   return {
+    metadataJson: {},
     roomId: "room-1",
     roomTitle: "Demo Room",
     roomStoryId: "story-1",
@@ -83,6 +85,8 @@ function makePanelContext(
     renderContentPayload: () => (
       <div data-testid="content-panel-sentinel">content-sentinel</div>
     ),
+    canvasRenderStateByPanelId: {},
+    canvasSvgOverrideByPanelId: {},
     ...overrides,
   }
 }
@@ -115,11 +119,12 @@ test.describe("Demo renderer registry panel mapping", () => {
   const supportedCases: Array<{ kind: string; expectedType: unknown }> = [
     { kind: "storyRuntime", expectedType: DemoStoryPanel },
     { kind: "chat", expectedType: DemoChatPanel },
+    { kind: "gitView", expectedType: GitViewPanel },
     { kind: "participantPanel", expectedType: ParticipantPanel },
     { kind: "canvas", expectedType: CanvasPanel },
     { kind: "a2ui", expectedType: A2UIPanel },
     { kind: "storyEditor", expectedType: StoryEditorPanel },
-    { kind: "storyPlayer", expectedType: StoryPlayerPanel },
+    { kind: "storyPlayer", expectedType: SoloStoryPlayerPanel },
     { kind: "debug", expectedType: DebugPanel },
   ]
 

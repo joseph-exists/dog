@@ -1845,6 +1845,12 @@ async def check_room_membership(
     Returns:
         True if user is an active participant, False otherwise
     """
+    # System constraint: superusers can access any room.
+    superuser_stmt = select(User.is_superuser).where(User.id == user_id)
+    is_superuser = (await session.exec(superuser_stmt)).one_or_none()
+    if is_superuser:
+        return True
+
     result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,
@@ -1877,6 +1883,12 @@ async def check_room_owner(
     Returns:
         True if user is an active owner, False otherwise
     """
+    # System constraint: superusers can access any room.
+    superuser_stmt = select(User.is_superuser).where(User.id == user_id)
+    is_superuser = (await session.exec(superuser_stmt)).one_or_none()
+    if is_superuser:
+        return True
+
     result = await session.exec(
         select(RoomParticipant).where(
             RoomParticipant.room_id == room_id,

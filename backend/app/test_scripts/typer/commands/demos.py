@@ -6,14 +6,28 @@ Typer CLI for demo-builder operations with built-in styling presets.
 Presets use ONLY supported presentation_json fields verified against color-tests.json.
 
 Commands:
-    demos create     - Create a new demo config
-    demos list       - List existing demos
-    demos get        - Get demo details
-    demos delete     - Delete a demo
-    demos compose    - Set composition from JSON file
-    demos preset     - Apply a named styling preset
-    demos presets    - List available presets
-    demos session    - Create a chat session for a demo
+    # Demo Config CRUD
+    demos create           - Create a new demo config
+    demos list             - List existing demos
+    demos get              - Get demo details
+    demos delete           - Delete a demo
+
+    # Composition Management
+    demos compose          - Set composition from JSON file (PUT)
+    demos composition      - View demo composition details
+    demos preset           - Apply a named styling preset
+    demos presets          - List available presets
+
+    # Session Management
+    demos session          - Create a chat session for a demo
+    demos sessions         - List your demo sessions
+    demos session-get      - Get details of a specific session
+    demos session-update   - Update session settings (status, auto-respond)
+    demos session-delete   - Delete a demo session
+    demos session-resolve  - Get or create session by slug (like visiting /demo/{slug})
+
+    # Quick Creation
+    demos quick            - Quick-create a styled demo with optional session
 """
 
 import json
@@ -495,7 +509,11 @@ def set_composition(
     demo_id: Annotated[str, typer.Argument(help="Demo config ID")],
     json_file: Annotated[Path, typer.Argument(help="Path to composition JSON file")],
 ):
-    """Set demo composition from a JSON file."""
+    """Set demo composition from a JSON file.
+
+    Uses PUT to fully replace the composition with the JSON file contents.
+    The JSON should contain the full DemoPageCompositionBase structure.
+    """
     if not json_file.exists():
         rprint(f"[red]File not found: {json_file}[/red]")
         raise typer.Exit(1)
@@ -503,12 +521,16 @@ def set_composition(
     composition = json.loads(json_file.read_text())
 
     with get_client() as client:
-        response = client.patch(
-            f"/configs/{demo_id}",
-            json={"composition_json": composition},
+        # Use the dedicated composition endpoint with PUT for full replacement
+        response = client.put(
+            f"/configs/{demo_id}/composition",
+            json=composition,
         )
         if response.status_code == 404:
-            rprint(f"[red]Demo not found: {demo_id}[/red]")
+            rprint(f"[red]Demo or composition not found: {demo_id}[/red]")
+            raise typer.Exit(1)
+        if response.status_code == 403:
+            rprint(f"[red]Access denied - you may not own this demo config[/red]")
             raise typer.Exit(1)
         response.raise_for_status()
 
@@ -522,7 +544,11 @@ def apply_preset(
     demo_id: Annotated[str, typer.Argument(help="Demo config ID")],
     preset_name: Annotated[str, typer.Argument(help="Preset name")],
 ):
-    """Apply a styling preset to an existing demo."""
+    """Apply a styling preset to an existing demo.
+
+    Fetches the current composition, applies the preset's presentation_json
+    and chat panel styling, then PUTs the updated composition back.
+    """
     if preset_name not in STYLING_PRESETS:
         rprint(f"[red]Unknown preset: {preset_name}[/red]")
         rprint(f"Available: {', '.join(STYLING_PRESETS.keys())}")
@@ -530,38 +556,35 @@ def apply_preset(
 
     preset_data = STYLING_PRESETS[preset_name]
 
-    # Get current demo
     with get_client() as client:
-        response = client.get(f"/configs/{demo_id}")
+        # Get current composition (creates one if needed)
+        response = client.get(f"/configs/{demo_id}/composition")
         if response.status_code == 404:
             rprint(f"[red]Demo not found: {demo_id}[/red]")
             raise typer.Exit(1)
+        if response.status_code == 403:
+            rprint(f"[red]Access denied - you may not own this demo config[/red]")
+            raise typer.Exit(1)
         response.raise_for_status()
-        demo = response.json()
+        composition = response.json()
 
-    # Update composition with preset styling
-    composition = demo.get("composition_json") or {
-        "schema_version": 1,
-        "layout_mode": "panels",
-        "panels": [],
-        "blocks": [],
-    }
+        # Apply composition-level presentation
+        composition["presentation_json"] = preset_data["composition"]
 
-    # Apply composition-level presentation
-    composition["presentation_json"] = preset_data["composition"]
+        # Apply chat panel styling to any existing chat panels
+        chat_panel_style = preset_data.get("chat_panel", {})
+        for panel in composition.get("panels", []):
+            if panel.get("kind") == "chat":
+                panel["presentation_json"] = chat_panel_style
 
-    # Apply chat panel styling to any existing chat panels
-    chat_panel_style = preset_data.get("chat_panel", {})
-    for panel in composition.get("panels", []):
-        if panel.get("kind") == "chat":
-            panel["presentation_json"] = chat_panel_style
-
-    # Update the demo
-    with get_client() as client:
-        response = client.patch(
-            f"/configs/{demo_id}",
-            json={"composition_json": composition},
+        # PUT the updated composition using the dedicated endpoint
+        response = client.put(
+            f"/configs/{demo_id}/composition",
+            json=composition,
         )
+        if response.status_code == 403:
+            rprint(f"[red]Access denied - cannot modify this demo config[/red]")
+            raise typer.Exit(1)
         response.raise_for_status()
 
     rprint(f"[green]✓ Applied preset [cyan]{preset_name}[/cyan] to demo {demo_id}[/green]")
@@ -632,6 +655,197 @@ def create_session(
     rprint(f"[green]✓ Created session:[/green] {session.get('title')}")
     rprint(f"  Room ID: {session.get('id')}")
     rprint(f"  Demo: {demo.get('title')}")
+
+
+@app.command("sessions")
+def list_sessions(
+    status_filter: Annotated[str, typer.Option("--status", "-s", help="Filter by status: active|archived|ended")] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show detailed info")] = False,
+    show_json: Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")] = False,
+    limit: Annotated[int, typer.Option(help="Max results")] = 20,
+):
+    """List your demo sessions."""
+    params: dict[str, Any] = {"limit": limit}
+    if status_filter:
+        params["status_filter"] = status_filter
+
+    with get_client() as client:
+        response = client.get("/sessions", params=params)
+        response.raise_for_status()
+        data = response.json()
+
+    sessions = data.get("data", [])
+    count = data.get("count", len(sessions))
+
+    if show_json:
+        console.print(Syntax(json.dumps(data, indent=2), "json", theme="monokai"))
+        return
+
+    if not sessions:
+        rprint("[dim]No demo sessions found[/dim]")
+        return
+
+    table = Table(title=f"Demo Sessions ({count} total)", show_lines=verbose)
+    table.add_column("ID", style="dim")
+    table.add_column("Demo Config", style="cyan")
+    table.add_column("Room ID", style="green")
+    table.add_column("Status")
+    table.add_column("Auto-respond")
+    if verbose:
+        table.add_column("Last Accessed")
+
+    for sess in sessions:
+        status = sess.get("status", "-")
+        status_color = {"active": "green", "archived": "yellow", "ended": "dim"}.get(status, "white")
+        row = [
+            str(sess.get("id", ""))[:8],
+            str(sess.get("demo_config_id", ""))[:8],
+            str(sess.get("room_id", ""))[:8],
+            f"[{status_color}]{status}[/{status_color}]",
+            "✓" if sess.get("auto_respond") else "✗",
+        ]
+        if verbose:
+            row.append(sess.get("last_accessed_at", "-")[:19] if sess.get("last_accessed_at") else "-")
+        table.add_row(*row)
+
+    console.print(table)
+
+
+@app.command("session-get")
+def get_session(
+    session_id: Annotated[str, typer.Argument(help="Demo session ID")],
+    show_json: Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")] = False,
+):
+    """Get details of a specific demo session."""
+    with get_client() as client:
+        response = client.get(f"/sessions/{session_id}")
+        if response.status_code == 404:
+            rprint(f"[red]Session not found: {session_id}[/red]")
+            raise typer.Exit(1)
+        if response.status_code == 403:
+            rprint(f"[red]Access denied - you don't own this session[/red]")
+            raise typer.Exit(1)
+        response.raise_for_status()
+        sess = response.json()
+
+    if show_json:
+        console.print(Syntax(json.dumps(sess, indent=2), "json", theme="monokai"))
+        return
+
+    rprint(Panel(f"[bold]Demo Session[/bold]", subtitle=f"ID: {sess.get('id')}"))
+    rprint(f"  Demo Config: [cyan]{sess.get('demo_config_id')}[/cyan]")
+    rprint(f"  Room ID: [green]{sess.get('room_id')}[/green]")
+    rprint(f"  Status: {sess.get('status', '-')}")
+    rprint(f"  Auto-respond: {'✓ enabled' if sess.get('auto_respond') else '✗ disabled'}")
+    rprint(f"  Created: {sess.get('created_at', '-')[:19] if sess.get('created_at') else '-'}")
+    rprint(f"  Last Accessed: {sess.get('last_accessed_at', '-')[:19] if sess.get('last_accessed_at') else '-'}")
+
+
+@app.command("session-update")
+def update_session(
+    session_id: Annotated[str, typer.Argument(help="Demo session ID")],
+    auto_respond: Annotated[bool, typer.Option("--auto-respond/--no-auto-respond", help="Enable/disable auto-respond")] = None,
+    status: Annotated[str, typer.Option("--status", "-s", help="Set status: active|archived|ended")] = None,
+):
+    """Update a demo session's settings."""
+    update_payload: dict[str, Any] = {}
+    if auto_respond is not None:
+        update_payload["auto_respond"] = auto_respond
+    if status is not None:
+        if status not in ("active", "archived", "ended"):
+            rprint(f"[red]Invalid status: {status}. Must be active|archived|ended[/red]")
+            raise typer.Exit(1)
+        update_payload["status"] = status
+
+    if not update_payload:
+        rprint("[yellow]No updates specified. Use --auto-respond/--no-auto-respond or --status[/yellow]")
+        raise typer.Exit(1)
+
+    with get_client() as client:
+        response = client.patch(f"/sessions/{session_id}", json=update_payload)
+        if response.status_code == 404:
+            rprint(f"[red]Session not found: {session_id}[/red]")
+            raise typer.Exit(1)
+        if response.status_code == 403:
+            rprint(f"[red]Access denied - you don't own this session[/red]")
+            raise typer.Exit(1)
+        response.raise_for_status()
+        sess = response.json()
+
+    rprint(f"[green]✓ Updated session {session_id[:8]}...[/green]")
+    rprint(f"  Status: {sess.get('status', '-')}")
+    rprint(f"  Auto-respond: {'✓ enabled' if sess.get('auto_respond') else '✗ disabled'}")
+
+
+@app.command("session-delete")
+def delete_session(
+    session_id: Annotated[str, typer.Argument(help="Demo session ID")],
+    force: Annotated[bool, typer.Option("--force", "-f", help="Skip confirmation")] = False,
+):
+    """Delete a demo session."""
+    if not force:
+        confirm = typer.confirm(f"Delete session {session_id}?")
+        if not confirm:
+            raise typer.Abort()
+
+    with get_client() as client:
+        response = client.delete(f"/sessions/{session_id}")
+        if response.status_code == 404:
+            rprint(f"[red]Session not found: {session_id}[/red]")
+            raise typer.Exit(1)
+        if response.status_code == 403:
+            rprint(f"[red]Access denied - you don't own this session[/red]")
+            raise typer.Exit(1)
+        response.raise_for_status()
+
+    rprint(f"[green]✓ Deleted session: {session_id}[/green]")
+
+
+@app.command("session-resolve")
+def resolve_session(
+    demo_slug: Annotated[str, typer.Argument(help="Demo slug (e.g., 'my-demo')")],
+    show_json: Annotated[bool, typer.Option("--json", "-j", help="Output as JSON")] = False,
+):
+    """Get or create a demo session by slug.
+
+    This is the CLI equivalent of visiting /demo/{slug} in the browser.
+    If you already have a session for this demo, it returns it.
+    Otherwise, it creates a new session with a backing room.
+    """
+    with get_client() as client:
+        response = client.post(f"/{demo_slug}/session")
+        if response.status_code == 404:
+            rprint(f"[red]Demo not found: {demo_slug}[/red]")
+            raise typer.Exit(1)
+        response.raise_for_status()
+        data = response.json()
+
+    if show_json:
+        console.print(Syntax(json.dumps(data, indent=2), "json", theme="monokai"))
+        return
+
+    demo_config = data.get("demo_config", {})
+    demo_session = data.get("demo_session", {})
+    created = data.get("created", False)
+
+    action = "Created new" if created else "Resolved existing"
+    rprint(f"[green]✓ {action} session for '{demo_slug}'[/green]")
+    rprint(f"\n  [bold]Demo Config:[/bold]")
+    rprint(f"    ID: [cyan]{demo_config.get('id', '-')}[/cyan]")
+    rprint(f"    Title: {demo_config.get('title', '-')}")
+    rprint(f"    Scope: {demo_config.get('scope', '-')}")
+    rprint(f"\n  [bold]Session:[/bold]")
+    rprint(f"    ID: [green]{demo_session.get('id', '-')}[/green]")
+    rprint(f"    Room ID: {demo_session.get('room_id', '-')}")
+    rprint(f"    Status: {demo_session.get('status', '-')}")
+    rprint(f"    Auto-respond: {'✓' if demo_session.get('auto_respond') else '✗'}")
+
+    # Show composition if available
+    composition = data.get("composition")
+    if composition:
+        rprint(f"\n  [bold]Composition:[/bold]")
+        rprint(f"    Layout: {composition.get('layout_mode', '-')}")
+        rprint(f"    Panels: {len(composition.get('panels', []))}")
 
 
 @app.command("composition")

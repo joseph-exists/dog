@@ -64,6 +64,7 @@ export interface RoomDebugPanelContentProps {
     source: string
     sizeBytes: number | null
     isTruncated: boolean
+    payload: Record<string, unknown>
   }>
   /** Whether current user can remove room context items. */
   canManageRoomContext?: boolean
@@ -98,6 +99,7 @@ export function RoomDebugPanelContent({
 
   const [copiedPayload, setCopiedPayload] = useState(false)
   const [removingContextIds, setRemovingContextIds] = useState<Record<string, boolean>>({})
+  const [copiedContextIds, setCopiedContextIds] = useState<Record<string, boolean>>({})
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -337,6 +339,37 @@ export function RoomDebugPanelContent({
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             ) : null}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2"
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(
+                                    JSON.stringify(item.payload, null, 2),
+                                  )
+                                  setCopiedContextIds((current) => ({
+                                    ...current,
+                                    [item.contextId]: true,
+                                  }))
+                                  setTimeout(() => {
+                                    setCopiedContextIds((current) => ({
+                                      ...current,
+                                      [item.contextId]: false,
+                                    }))
+                                  }, 1500)
+                                } catch (error) {
+                                  console.error("Failed to copy context payload", error)
+                                }
+                              }}
+                              title="Copy context payload JSON"
+                            >
+                              {copiedContextIds[item.contextId] ? (
+                                <Check className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </Button>
                           </div>
                         </div>
                       </div>

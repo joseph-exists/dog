@@ -1,4 +1,6 @@
 export const CLICK_PROMPT_DISPATCH_KIND = "click_prompt_dispatch.v1"
+const LEGACY_CLICK_SOURCE_SELECTOR = "pre code, code"
+const DEFAULT_CLICK_SOURCE_SELECTOR = "pre, pre code, code"
 
 export interface ClickPromptDispatchConfig {
   kind: typeof CLICK_PROMPT_DISPATCH_KIND
@@ -107,8 +109,11 @@ export function parseClickPromptDispatchConfig(
 
   const rawEnabled = interaction.enabled
   const enabled = typeof rawEnabled === "boolean" ? rawEnabled : true
+  const rawTriggerSelector = getNestedString(interaction, ["trigger", "selector"])
   const triggerSelector =
-    getNestedString(interaction, ["trigger", "selector"]) ?? "pre code, code"
+    rawTriggerSelector === LEGACY_CLICK_SOURCE_SELECTOR
+      ? DEFAULT_CLICK_SOURCE_SELECTOR
+      : (rawTriggerSelector ?? DEFAULT_CLICK_SOURCE_SELECTOR)
   const maxSourceCharsRaw = getNestedNumber(interaction, [
     "trigger",
     "max_source_chars",
@@ -275,7 +280,7 @@ export function createClickPromptDispatchStarterConfig(): Record<
       kind: CLICK_PROMPT_DISPATCH_KIND,
       enabled: true,
       trigger: {
-        selector: "pre code, code",
+        selector: DEFAULT_CLICK_SOURCE_SELECTOR,
         max_source_chars: 1200,
       },
       modal: {

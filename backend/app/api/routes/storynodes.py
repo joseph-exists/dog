@@ -5,9 +5,11 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.access_control_sync import has_access_sync
 from app.services.shadow_exporters import build_story_snapshot
 from app.services.shadow_service import shadow_service
 from app.models import (
+    AccessGrantRole,
     Message,
     NodeChoice,
     NodeChoiceBase,
@@ -24,6 +26,22 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/storynodes", tags=["storynodes"])
+
+def _require_story_role(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    minimum_role: AccessGrantRole,
+) -> None:
+    if not has_access_sync(
+        session,
+        user=current_user,
+        resource_type="story",
+        resource_id=story_id,
+        minimum_role=minimum_role,
+    ):
+        raise HTTPException(status_code=400, detail="Not enough permissions")
 
 
 @router.get("/", response_model=StoryNodesPublic)
@@ -62,6 +80,16 @@ def create_storynode(
     """
     Create new storynode.
     """
+    story = session.get(Story, storynode_in.story_id)
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story.id,
+        minimum_role=AccessGrantRole.editor,
+    )
+
     # Generate storynode_title from title
     storynode_title = storynode_in.title.lower().replace(" ", "_")[:50]
 
@@ -104,8 +132,12 @@ def update_storynode(
     storynode = session.get(StoryNode, id)
     if not storynode:
         raise HTTPException(status_code=404, detail="StoryNode not found")
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=storynode.story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
     update_dict = storynode_in.model_dump(exclude_unset=True)
     storynode.sqlmodel_update(update_dict)
     session.add(storynode)
@@ -140,8 +172,12 @@ def delete_storynode(
     storynode = session.get(StoryNode, id)
     if not storynode:
         raise HTTPException(status_code=404, detail="storynode not found")
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=storynode.story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
     story_id = storynode.story_id
     session.delete(storynode)
     session.commit()
@@ -180,6 +216,12 @@ def read_node_choices(
     node = session.get(StoryNode, node_id)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=node.story_id,
+        minimum_role=AccessGrantRole.viewer,
+    )
 
     # Get choices
     count_query = select(func.count()).select_from(NodeChoice).where(
@@ -212,6 +254,12 @@ def create_node_choice_from_node(
     from_node = session.get(StoryNode, node_id)
     if not from_node:
         raise HTTPException(status_code=404, detail="Node not found")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=from_node.story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Create full choice object with from_node_id
     choice_create = NodeChoiceCreate(

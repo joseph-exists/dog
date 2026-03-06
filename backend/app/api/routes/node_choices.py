@@ -23,9 +23,11 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import select, func
 
 from app.api.deps import CurrentUser, SessionDep
+from app.services.access_control_sync import has_access_sync
 from app.services.shadow_exporters import build_story_snapshot
 from app.services.shadow_service import shadow_service
 from app.models import (
+    AccessGrantRole,
     NodeChoice,
     Story,
     StoryNode,
@@ -40,6 +42,24 @@ from app.models import (
 from app import crud
 
 router = APIRouter(prefix="/node-choices", tags=["node-choices"])
+
+
+def _require_story_role(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    minimum_role: AccessGrantRole,
+) -> None:
+    if not has_access_sync(
+        session,
+        user=current_user,
+        resource_type="story",
+        resource_id=story_id,
+        minimum_role=minimum_role,
+    ):
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
 
 @router.get("/", response_model=NodeChoicesPublic)
 def read_node_choices(
@@ -57,6 +77,31 @@ def read_node_choices(
     - from_node_id: Get choices originating from specific node
     - story_id: Get all choices for a story (joins through StoryNode)
     """
+    if not current_user.is_superuser and not from_node_id and not story_id:
+        raise HTTPException(status_code=400, detail="Not enough permissions")
+
+    if from_node_id and not current_user.is_superuser:
+        from_node = session.get(StoryNode, from_node_id)
+        if not from_node:
+            raise HTTPException(status_code=404, detail="from_node not found")
+        _require_story_role(
+            session=session,
+            current_user=current_user,
+            story_id=from_node.story_id,
+            minimum_role=AccessGrantRole.viewer,
+        )
+
+    if story_id and not current_user.is_superuser:
+        story = session.get(Story, story_id)
+        if not story:
+            raise HTTPException(status_code=404, detail="Story not found")
+        _require_story_role(
+            session=session,
+            current_user=current_user,
+            story_id=story_id,
+            minimum_role=AccessGrantRole.viewer,
+        )
+
     query = select(NodeChoice)
 
     # Filter by from_node_id if provided
@@ -91,6 +136,18 @@ def read_node_choice(
     choice = session.get(NodeChoice, choice_id)
     if not choice:
         raise HTTPException(status_code=404, detail="Choice not found")
+    if not current_user.is_superuser:
+        from_node = session.get(StoryNode, choice.from_node_id)
+        if not from_node:
+            raise HTTPException(
+                status_code=500, detail="from_node not found (data corruption)"
+            )
+        _require_story_role(
+            session=session,
+            current_user=current_user,
+            story_id=from_node.story_id,
+            minimum_role=AccessGrantRole.viewer,
+        )
     return choice
 
 @router.post("/", response_model=NodeChoicePublic)
@@ -143,9 +200,12 @@ def create_node_choice(
     story = session.get(Story, from_node.story_id)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story.id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Create choice
     choice = NodeChoice.model_validate(choice_in)
@@ -202,8 +262,12 @@ def update_node_choice(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story.id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Prevent editing published version
     if from_node.story_version == story.published_version:
@@ -285,8 +349,12 @@ def delete_node_choice(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story.id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Prevent deleting from published version
     if from_node.story_version == story.published_version:
@@ -332,4 +400,3 @@ def delete_node_choice(
         pass
 
     return Message(message="Choice deleted successfully")
-

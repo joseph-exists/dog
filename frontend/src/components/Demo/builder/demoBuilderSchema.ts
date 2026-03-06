@@ -71,6 +71,7 @@ export const ACTIVE_BUILDER_PANEL_KINDS = [
   "storyRuntime",
   "chat",
   "content",
+  "gitView",
   "participantPanel",
   "canvas",
   "a2ui",
@@ -812,6 +813,18 @@ export const BUILDER_PANEL_KIND_SCHEMAS: Record<
     },
     fieldSpecs: PANEL_COMMON_FIELD_SPECS,
   },
+  gitView: {
+    kind: "gitView",
+    displayName: "Git View",
+    defaults: {
+      prominence: "primary",
+      viewport_mode: "panel",
+      options: {},
+      presentation_json: {},
+      theme_id: null,
+    },
+    fieldSpecs: PANEL_COMMON_FIELD_SPECS,
+  },
   participantPanel: {
     kind: "participantPanel",
     displayName: "Participant Panel",
@@ -1250,12 +1263,23 @@ function createCompositionABaselineTemplate(): EditableComposition {
         include_internal_messages: false,
       },
     } as EditablePanel,
+    {
+      ...createPanelTemplate("participantPanel"),
+      id: "participants-aux",
+      order: 3,
+      title: "Participants",
+      prominence: "auxiliary",
+      viewport_mode: "panel",
+      default_size: 24,
+      min_size: 15,
+      options: {},
+    } as EditablePanel,
   ]
   composition.blocks = [
     {
       ...createBlockTemplate("content"),
-      id: "instructions-top",
-      region: "top",
+      id: "instructions-footer",
+      region: "footer",
       order: 1,
       title: "Instructions",
       visibility: "visible",
@@ -1493,15 +1517,15 @@ function createCompositionDStylizedAgentOpsTemplate(): EditableComposition {
   composition.blocks = [
     {
       ...createBlockTemplate("content"),
-      id: "mission-brief-top",
-      region: "top",
+      id: "mission-brief-bottom",
+      region: "footer",
       order: 1,
       title: "Mission Brief",
       visibility: "visible",
       content_json: {
         format: "markdown",
         value:
-          "### Launch Checklist\n- Verify runtime attach\n- Verify seeded agents\n- Verify stylized chat rendering",
+          "### Beep Beep",
         metadata: {
           variant: "callout",
         },
@@ -3037,9 +3061,26 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
       },
     } as EditablePanel,
     {
+      ...createPanelTemplate("gitView"),
+      id: "audit-git-view-panel",
+      order: 4,
+      title: "Audit Panel: Git View (repo surface + context toggle)",
+      prominence: "primary",
+      viewport_mode: "panel",
+      theme_id: null,
+      options: {},
+      presentation_json: {
+        overlays: {
+          panel_header: {
+            css: "linear-gradient(100deg, rgba(59,130,246,0.34), rgba(16,185,129,0.24))",
+          },
+        },
+      },
+    } as EditablePanel,
+    {
       ...createPanelTemplate("participantPanel"),
       id: "audit-participants",
-      order: 4,
+      order: 5,
       title: "Audit Panel: Participants (density + overlay expected)",
       prominence: "auxiliary",
       viewport_mode: "panel",
@@ -3055,7 +3096,7 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
     {
       ...createPanelTemplate("canvas"),
       id: "audit-canvas",
-      order: 5,
+      order: 6,
       title: "Audit Panel: Canvas (container theming expected)",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3067,7 +3108,7 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
     {
       ...createPanelTemplate("a2ui"),
       id: "audit-a2ui",
-      order: 6,
+      order: 7,
       title: "Audit Panel: A2UI (theme shell expected)",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3079,7 +3120,7 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
     {
       ...createPanelTemplate("storyEditor"),
       id: "audit-story-editor",
-      order: 7,
+      order: 8,
       title: "Audit Panel: Story Editor (story-bound surface)",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3095,7 +3136,7 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
     {
       ...createPanelTemplate("storyPlayer"),
       id: "audit-story-player",
-      order: 8,
+      order: 9,
       title: "Audit Panel: Solo Story Player (story-bound surface)",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3111,7 +3152,7 @@ function createCompositionFPresentationPassthroughAuditTemplate(): EditableCompo
     {
       ...createPanelTemplate("debug"),
       id: "audit-debug",
-      order: 9,
+      order: 10,
       title: "Audit Panel: Debug (monospace contrast expected)",
       prominence: "auxiliary",
       viewport_mode: "panel",
@@ -3429,9 +3470,25 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
       },
     } as EditablePanel,
     {
+      ...createPanelTemplate("gitView"),
+      id: "matrix-git-view-panel",
+      order: 4,
+      title: "Matrix Panel: Git View",
+      prominence: "primary",
+      viewport_mode: "panel",
+      options: {},
+      presentation_json: {
+        overlays: {
+          panel_header: {
+            css: "linear-gradient(115deg, rgba(56,189,248,0.24), rgba(251,146,60,0.24))",
+          },
+        },
+      },
+    } as EditablePanel,
+    {
       ...createPanelTemplate("participantPanel"),
       id: "matrix-participants",
-      order: 4,
+      order: 5,
       title: "Matrix Panel: Participants",
       prominence: "auxiliary",
       viewport_mode: "panel",
@@ -3447,7 +3504,7 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
     {
       ...createPanelTemplate("canvas"),
       id: "matrix-canvas",
-      order: 5,
+      order: 6,
       title: "Matrix Panel: Canvas",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3455,7 +3512,7 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
     {
       ...createPanelTemplate("a2ui"),
       id: "matrix-a2ui",
-      order: 6,
+      order: 7,
       title: "Matrix Panel: A2UI",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3463,7 +3520,7 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
     {
       ...createPanelTemplate("storyEditor"),
       id: "matrix-story-editor",
-      order: 7,
+      order: 8,
       title: "Matrix Panel: Story Editor",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3471,7 +3528,7 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
     {
       ...createPanelTemplate("storyPlayer"),
       id: "matrix-story-player",
-      order: 8,
+      order: 9,
       title: "Matrix Panel: Solo Story Player",
       prominence: "primary",
       viewport_mode: "panel",
@@ -3479,7 +3536,7 @@ function createCompositionGUXStyleMatrixTemplate(): EditableComposition {
     {
       ...createPanelTemplate("debug"),
       id: "matrix-debug",
-      order: 9,
+      order: 10,
       title: "Matrix Panel: Debug",
       prominence: "auxiliary",
       viewport_mode: "panel",

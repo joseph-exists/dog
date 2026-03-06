@@ -39,15 +39,20 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import or_, union
 from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
+from app.services.access_control_sync import has_access_sync
 from app.services.shadow_exporters import build_story_snapshot
 from app.services.shadow_service import shadow_service
 
 logger = logging.getLogger(__name__)
 from app.models import (
+    AccessGrant,
+    AccessGrantRole,
+    AccessGrantSubjectType,
     Message,
     NodeChoice,
     Quality,
@@ -74,9 +79,27 @@ from app.models import (
     StoryValidationResult,
     Trait,
     User,
+    UserGroupMembership,
 )
 
 router = APIRouter(prefix="/stories", tags=["stories"])
+
+
+def _require_story_role(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    story_id: uuid.UUID,
+    minimum_role: AccessGrantRole,
+) -> None:
+    if not has_access_sync(
+        session,
+        user=current_user,
+        resource_type="story",
+        resource_id=story_id,
+        minimum_role=minimum_role,
+    ):
+        raise HTTPException(status_code=400, detail="Not enough permissions")
 
 
 @router.get("/", response_model=StoriesPublic)
@@ -119,6 +142,44 @@ def read_stories(
             .limit(limit)
         )
         stories = session.exec(statement).all()
+        # Include stories shared to the user (directly or via groups).
+        direct_ids_stmt = select(AccessGrant.resource_id.label("resource_id")).where(
+            AccessGrant.resource_type == "story",
+            AccessGrant.subject_type == AccessGrantSubjectType.user,
+            AccessGrant.subject_id == current_user.id,
+        )
+        group_ids_subq = select(UserGroupMembership.group_id).where(
+            UserGroupMembership.user_id == current_user.id
+        )
+        group_ids_stmt = select(AccessGrant.resource_id.label("resource_id")).where(
+            AccessGrant.resource_type == "story",
+            AccessGrant.subject_type == AccessGrantSubjectType.group,
+            AccessGrant.subject_id.in_(group_ids_subq),
+        )
+        shared_ids_subq = union(direct_ids_stmt, group_ids_stmt).subquery()
+
+        shared_count_statement = (
+            select(func.count())
+            .select_from(Story)
+            .where(Story.id.in_(select(shared_ids_subq.c.resource_id)))
+            .where(Story.deleted_at == None)  # noqa: E711
+        )
+        shared_count = session.exec(shared_count_statement).one()
+        shared_statement = (
+            select(Story)
+            .where(Story.id.in_(select(shared_ids_subq.c.resource_id)))
+            .where(Story.deleted_at == None)  # noqa: E711
+            .offset(skip)
+            .limit(limit)
+        )
+        shared_stories = session.exec(shared_statement).all()
+
+        # De-dupe by id while preserving order (owned first).
+        by_id: dict[uuid.UUID, Story] = {s.id: s for s in stories}
+        for s in shared_stories:
+            by_id.setdefault(s.id, s)
+        stories = list(by_id.values())
+        count = int(count) + int(shared_count)
 
     return StoriesPublic(data=stories, count=count)  # type: ignore
 
@@ -133,8 +194,12 @@ def read_story(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) ->
     story = session.get(Story, id)
     if not story or story.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Story not found")
-    if not current_user.is_superuser and (story.owner_id != current_user.id):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=id,
+        minimum_role=AccessGrantRole.viewer,
+    )
     return story
 
 
@@ -204,8 +269,12 @@ def validate_story(
     story = session.get(Story, id)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-    if not current_user.is_superuser and (story.owner_id != current_user.id):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Use specified version or default to current_version
     target_version = version if version is not None else story.current_version
@@ -451,8 +520,12 @@ def get_story_tree(
     story = session.get(Story, id)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-    if not current_user.is_superuser and (story.owner_id != current_user.id):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=id,
+        minimum_role=AccessGrantRole.viewer,
+    )
 
     # Use specified version or default to current_version
     target_version = version if version is not None else story.current_version
@@ -493,8 +566,12 @@ def get_story_start_node(
     story = session.get(Story, id)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-    if not current_user.is_superuser and (story.owner_id != current_user.id):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=id,
+        minimum_role=AccessGrantRole.viewer,
+    )
 
     # Find the start node for the current version
     statement = select(StoryNode).where(
@@ -564,8 +641,12 @@ def update_story(
     story = session.get(Story, id)
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-    if not current_user.is_superuser and (story.owner_id != current_user.id):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     update_dict = story_in.model_dump(exclude_unset=True)
     story.sqlmodel_update(update_dict)
@@ -851,8 +932,12 @@ def create_story_requirement(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Validate requirement_type
     # TODO this should be an enum on the model not here
@@ -960,8 +1045,12 @@ def delete_story_requirement(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     session.delete(requirement)
     session.commit()
@@ -1047,8 +1136,12 @@ def create_story_state_variable(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Prevent editing published version
     if version == story.published_version:
@@ -1123,8 +1216,12 @@ def update_story_state_variable(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Prevent editing published version
     if version == story.published_version:
@@ -1198,8 +1295,12 @@ def delete_story_state_variable(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     # Prevent editing published version
     if version == story.published_version:
@@ -1263,8 +1364,12 @@ def validate_story_state_schema(
         raise HTTPException(status_code=404, detail="Story not found")
 
     # Check ownership
-    if not current_user.is_superuser and story.owner_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    _require_story_role(
+        session=session,
+        current_user=current_user,
+        story_id=story_id,
+        minimum_role=AccessGrantRole.editor,
+    )
 
     return crud.get_undefined_variables_in_choices(
         session=session, story_id=story_id, story_version=version

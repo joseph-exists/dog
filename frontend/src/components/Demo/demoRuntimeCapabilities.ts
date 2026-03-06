@@ -2,6 +2,7 @@ export const ACTIVE_RUNTIME_DEMO_PANEL_KINDS = [
   "storyRuntime",
   "chat",
   "content",
+  "gitView",
   "participantPanel",
   "canvas",
   "a2ui",

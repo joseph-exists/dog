@@ -72,13 +72,13 @@ export function getDemoBlockRegionClassName(
   region: "top" | "support" | "footer",
 ): string {
   if (region === "support") {
-    return "shrink-0 min-h-0 max-h-[32vh] grid grid-cols-1 gap-2 overflow-hidden lg:grid-cols-2"
+    return "shrink-0 min-h-0 grid grid-cols-1 gap-2 lg:grid-cols-2"
   }
-  return "shrink-0 min-h-0 max-h-[24vh] overflow-y-auto overscroll-contain"
+  return "shrink-0 min-h-0"
 }
 
 export function getDemoPanelRegionClassName(): string {
-  return "flex-1 min-h-[18rem] overflow-hidden"
+  return "flex-1 min-h-0 overflow-hidden"
 }
 
 export function DemoShell({
@@ -141,7 +141,7 @@ export function DemoShell({
       {/* Transparent wrapper — only sets CSS variables, does not render a surface */}
       <div
         style={cardsThemeStyle}
-        className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden p-2"
+        className="flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto overscroll-contain p-2"
       >
         {topBlocks.length > 0 && (
           <div className={getDemoBlockRegionClassName("top")}>
@@ -159,7 +159,7 @@ export function DemoShell({
 
         {(primaryBlocks.length > 0 || auxiliaryBlocks.length > 0) && (
           <div className={getDemoBlockRegionClassName("support")}>
-            <div className="min-h-0 space-y-2 overflow-y-auto overscroll-contain">
+            <div className="min-h-0 space-y-2">
               {primaryBlocks.map((block) => (
                 <div
                   key={`primary-block-${block.id}`}
@@ -172,7 +172,7 @@ export function DemoShell({
                 </div>
               ))}
             </div>
-            <div className="min-h-0 space-y-2 overflow-y-auto overscroll-contain">
+            <div className="min-h-0 space-y-2">
               {auxiliaryBlocks.map((block) => (
                 <div
                   key={`aux-block-${block.id}`}

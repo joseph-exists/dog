@@ -18,9 +18,35 @@ from app.crud_pages import (
     search_pages,
     update_page_layout,
 )
-from app.models import PageLayoutUpdate, PagePublic, PagesPublic
+from app.models import AccessGrantRole, PageLayoutUpdate, PagePublic, PagesPublic
+from app.services.access_control import require_access
 
 router = APIRouter(prefix="/pages", tags=["pages"])
+
+
+def _parse_project_entity_uuid(entity_id: str) -> UUID:
+    try:
+        return UUID(entity_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid project entity_id") from exc
+
+
+async def _require_project_page_access(
+    *,
+    session: AsyncSessionDep | AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+    entity_id: str,
+    minimum_role: AccessGrantRole,
+) -> None:
+    project_id = _parse_project_entity_uuid(entity_id)
+    await require_access(
+        session,
+        user=current_user,
+        resource_type="project",
+        resource_id=project_id,
+        minimum_role=minimum_role,
+        detail="Access denied",
+    )
 
 
 @router.get("/", response_model=PagesPublic)
@@ -62,6 +88,13 @@ async def get_page_layout(
     current_user: CurrentUser,
 ) -> Any:
     """Get the persisted page layout for an entity."""
+    if entity_type == "project":
+        await _require_project_page_access(
+            session=session,
+            current_user=current_user,
+            entity_id=entity_id,
+            minimum_role=AccessGrantRole.viewer,
+        )
     return await get_page_by_entity(session, entity_type, entity_id)
 
 
@@ -75,9 +108,21 @@ async def upsert_page_layout(
     current_user: CurrentUser,
 ) -> Any:
     """Create or overwrite a page layout for an entity."""
+    if entity_type == "project":
+        await _require_project_page_access(
+            session=session,
+            current_user=current_user,
+            entity_id=entity_id,
+            minimum_role=AccessGrantRole.editor,
+        )
+
     existing = await get_page_by_entity(session, entity_type, entity_id)
     if existing:
-        if existing.owner_id != current_user.id and not current_user.is_superuser:
+        if (
+            entity_type != "project"
+            and existing.owner_id != current_user.id
+            and not current_user.is_superuser
+        ):
             raise HTTPException(status_code=403, detail="Access denied")
         return await update_page_layout(
             session,
@@ -115,7 +160,14 @@ async def update_page(
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    if page.owner_id != current_user.id and not current_user.is_superuser:
+    if page.entity_type == "project":
+        await _require_project_page_access(
+            session=session,
+            current_user=current_user,
+            entity_id=page.entity_id,
+            minimum_role=AccessGrantRole.editor,
+        )
+    elif page.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Access denied")
 
     return await update_page_layout(
@@ -141,7 +193,14 @@ async def delete_page(
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    if page.owner_id != current_user.id and not current_user.is_superuser:
+    if page.entity_type == "project":
+        await _require_project_page_access(
+            session=session,
+            current_user=current_user,
+            entity_id=page.entity_id,
+            minimum_role=AccessGrantRole.editor,
+        )
+    elif page.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Access denied")
 
     await delete_page_layout(session, page)

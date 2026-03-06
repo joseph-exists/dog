@@ -147,6 +147,32 @@ class UserRepoImportStatus(str, PyEnum):
     READY = "ready"
     FAILED = "failed"
 
+class AccessGrantSubjectType(str, PyEnum):
+    """Subject types supported by AccessGrant."""
+
+    user = "user"
+    group = "group"
+
+
+class AccessGrantRole(str, PyEnum):
+    """
+    Minimal object-scoped roles for access grants.
+
+    NOTE: We currently avoid delegated share-management; object owners and
+    superusers manage shares. `manager` is reserved for future expansion.
+    """
+
+    viewer = "viewer"
+    editor = "editor"
+    manager = "manager"
+
+
+class UserGroupMembershipRole(str, PyEnum):
+    """Membership role within a user-owned group."""
+
+    member = "member"
+    manager = "manager"
+
 
 
 # ============ Base Models ++++++++
@@ -1016,6 +1042,291 @@ class Item(ItemBase, table=True):
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
     owner: User | None = Relationship(back_populates="items")
+
+
+# ============================================================================
+# Minimal RBAC + User Groups (Phase 0)
+# ============================================================================
+
+
+class UserGroupBase(SQLModel):
+    """User-owned group used as a share target."""
+
+    name: str = Field(min_length=1, max_length=100)
+
+
+class UserGroupCreate(UserGroupBase):
+    """Input model for creating a user group."""
+
+    pass
+
+
+class UserGroupUpdate(SQLModel):
+    """Update model for user groups (all fields optional)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class UserGroup(UserGroupBase, table=True):
+    """Database model for user-owned groups."""
+
+    __tablename__ = "user_groups"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "name", name="uq_user_groups_owner_name"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserGroupPublic(UserGroupBase):
+    """Public API response model for a user group."""
+
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    created_at: datetime
+
+
+class UserGroupsPublic(SQLModel):
+    """Collection response for user groups."""
+
+    data: list[UserGroupPublic]
+    count: int
+
+
+class UserGroupMembershipBase(SQLModel):
+    """Shared properties for group memberships."""
+
+    role: UserGroupMembershipRole = Field(default=UserGroupMembershipRole.member)
+
+
+class UserGroupMembershipCreate(UserGroupMembershipBase):
+    """Input model for adding a user to a group."""
+
+    user_id: uuid.UUID
+
+
+class UserGroupMembership(UserGroupMembershipBase, table=True):
+    """Database model for group memberships."""
+
+    __tablename__ = "user_group_memberships"
+    __table_args__ = (
+        UniqueConstraint("group_id", "user_id", name="uq_user_group_memberships_group_user"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    group_id: uuid.UUID = Field(
+        foreign_key="user_groups.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserGroupMembershipPublic(UserGroupMembershipBase):
+    """Public API response model for group memberships."""
+
+    id: uuid.UUID
+    group_id: uuid.UUID
+    user_id: uuid.UUID
+    created_at: datetime
+
+
+class UserGroupMembershipsPublic(SQLModel):
+    """Collection response for group memberships."""
+
+    data: list[UserGroupMembershipPublic]
+    count: int
+
+
+class AccessGrantBase(SQLModel):
+    """Shared properties for object-scoped access grants."""
+
+    resource_type: str = Field(min_length=1, max_length=50, index=True)
+    resource_id: uuid.UUID = Field(index=True)
+
+    subject_type: AccessGrantSubjectType
+    subject_id: uuid.UUID
+
+    role: AccessGrantRole = Field(default=AccessGrantRole.viewer)
+
+
+class AccessGrantCreate(AccessGrantBase):
+    """Input model for creating an access grant."""
+
+    pass
+
+
+class AccessGrant(AccessGrantBase, table=True):
+    """Database model for object-scoped access grants."""
+
+    __tablename__ = "access_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "resource_type",
+            "resource_id",
+            "subject_type",
+            "subject_id",
+            name="uq_access_grants_resource_subject",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    granted_by_user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class AccessGrantPublic(AccessGrantBase):
+    """Public API response model for an access grant."""
+
+    id: uuid.UUID
+    granted_by_user_id: uuid.UUID
+    created_at: datetime
+
+
+class AccessGrantsPublic(SQLModel):
+    """Collection response for access grants."""
+
+    data: list[AccessGrantPublic]
+    count: int
+
+
+class AccessEffectiveRolePublic(SQLModel):
+    """Effective role for the current user on a resource."""
+
+    resource_type: str
+    resource_id: uuid.UUID
+    role: AccessGrantRole | None
+
+
+class AccessGrantUpsertRequest(SQLModel):
+    """
+    Request model for granting access to a resource.
+
+    View-only is the default role.
+    """
+
+    subject_type: AccessGrantSubjectType
+    subject_id: uuid.UUID
+    role: AccessGrantRole = Field(default=AccessGrantRole.viewer)
+
+
+class AccessGrantRevokeRequest(SQLModel):
+    """Request model for revoking access to a resource."""
+
+    subject_type: AccessGrantSubjectType
+    subject_id: uuid.UUID
+
+
+# ============================================================================
+# Projects Container (Workspace) — Phase 0
+# ============================================================================
+
+
+class ProjectBase(SQLModel):
+    """User-owned collaboration container for attaching resources."""
+
+    name: str = Field(min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+
+
+class ProjectCreate(ProjectBase):
+    pass
+
+
+class ProjectUpdate(SQLModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+
+
+class Project(ProjectBase, table=True):
+    __tablename__ = "projects"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "name", name="uq_projects_owner_name"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ProjectPublic(ProjectBase):
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectsPublic(SQLModel):
+    data: list[ProjectPublic]
+    count: int
+
+
+class ProjectResourceBase(SQLModel):
+    """Attachment row linking a project to a resource."""
+
+    resource_type: str = Field(min_length=1, max_length=50, index=True)
+    resource_id: uuid.UUID = Field(index=True)
+
+
+class ProjectResourceCreate(ProjectResourceBase):
+    pass
+
+
+class ProjectResource(ProjectResourceBase, table=True):
+    __tablename__ = "project_resources"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "resource_type",
+            "resource_id",
+            name="uq_project_resources_project_resource",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    project_id: uuid.UUID = Field(
+        foreign_key="projects.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ProjectResourcePublic(ProjectResourceBase):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    created_at: datetime
+
+
+class ProjectResourcesPublic(SQLModel):
+    data: list[ProjectResourcePublic]
+    count: int
 
 
 class FrontierAccessProviderBase(SQLModel):

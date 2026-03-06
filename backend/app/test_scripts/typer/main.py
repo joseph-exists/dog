@@ -42,6 +42,7 @@ from commands import (
     agent_demos,
     agents,
     demos,
+    gauntlet,
     stories,
     personas,
     rooms,
@@ -71,6 +72,7 @@ app.add_typer(embedder.app, name="embedder", help="Vector embedding query comman
 app.add_typer(affordances.app, name="affordances", help="Affordance introspection commands")
 app.add_typer(demos.app, name="demos", help="Demo configuration and styling commands")
 app.add_typer(story_affordances.app, name="story-affordances", help="Story affordance introspection commands")
+app.add_typer(gauntlet.app, name="gauntlet", help="The Gauntlet Protocol - integrated demo system")
 
 # TODO: Add more command modules
 # from commands import tests

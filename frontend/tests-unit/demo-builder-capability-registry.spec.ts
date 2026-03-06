@@ -912,7 +912,9 @@ test.describe("demoBuilder capability registry", () => {
   test("storyRuntime panel preview adapter reflects story and runtime policy", async () => {
     const composition = createEmptyComposition()
     composition.runtime_policy = "manual"
-    composition.metadata_json = { story_id: "story-123" }
+    composition.metadata_json = {
+      story_id: "11111111-1111-4111-8111-111111111111",
+    }
     const capability = getPanelCapabilityByKind("storyRuntime")
     expect(capability).toBeTruthy()
 
@@ -922,7 +924,7 @@ test.describe("demoBuilder capability registry", () => {
       composition,
     )
 
-    expect(overrides.roomStoryId).toBe("story-123")
+    expect(overrides.roomStoryId).toBe("11111111-1111-4111-8111-111111111111")
     expect(overrides.autoRespond).toBeFalsy()
   })
 

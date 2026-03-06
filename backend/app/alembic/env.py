@@ -21,6 +21,25 @@ fileConfig(config.config_file_name)
 from app.models import SQLModel  # noqa
 from app.core.config import settings # noqa
 
+IGNORE_TABLES = {
+    # optionally list tables you *never* want Alembic to touch, e.g.:
+    "devtools_embeddings",
+    "devtools_chunks",
+}
+
+def include_object(object, name, type_, reflected, compare_to):
+    # 1) Explicit ignore list (embeddings, devtools, etc.)
+    if type_ in {"table", "index"} and name in IGNORE_TABLES:
+        return False
+
+    # 2) Prevent Alembic from generating drops for tables
+    #    that are not in our SQLModel metadata
+    if type_ == "table" and reflected and compare_to is None:
+        # This means the table exists in DB but not in target_metadata
+        return False
+
+    return True
+
 target_metadata = SQLModel.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -47,7 +66,7 @@ def run_migrations_offline():
     """
     url = get_url()
     context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True, compare_type=True
+        url=url, target_metadata=target_metadata, literal_binds=True, compare_type=True, include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -71,7 +90,7 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, compare_type=True
+            connection=connection, target_metadata=target_metadata, compare_type=True, include_object=include_object,
         )
 
         with context.begin_transaction():

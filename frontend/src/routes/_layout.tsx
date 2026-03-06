@@ -33,6 +33,8 @@ const routeTitles: Record<string, string> = {
   "/stories": "Stories Authoring",
   "/rooms": "Rooms Looking At",
   "/agents": "Agents Reviewing",
+  "/projects": "Projects",
+  "/project": "Project Workspace",
   "/repos": "Repositories",
   "/story": "Story Reading",
   "/personas": "Personas Managing",

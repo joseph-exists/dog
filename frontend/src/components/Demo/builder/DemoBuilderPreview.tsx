@@ -152,6 +152,12 @@ export function DemoBuilderPreview({
   const basePanelContext = useMemo(
     (): DemoPanelRendererContext => ({
       demoConfigId: demoConfigId ?? "preview-demo-config",
+      metadataJson:
+        composition.metadata_json &&
+        typeof composition.metadata_json === "object" &&
+        !Array.isArray(composition.metadata_json)
+          ? (composition.metadata_json as Record<string, unknown>)
+          : {},
       roomId,
       roomTitle,
       roomStoryId,
@@ -351,6 +357,7 @@ export function DemoBuilderPreview({
       availableTesserScripts,
       canvasRenderStateByPanelId,
       canvasSvgOverrideByPanelId,
+      composition.metadata_json,
       demoConfigId,
       isDirty,
       roomStoryId,

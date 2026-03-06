@@ -20,6 +20,7 @@ import { ContributionFeedBlock } from "./blocks/ContributionFeedBlock"
 import { FileExplorerBlock } from "./blocks/FileExplorerBlock"
 import { GitViewBlock } from "./blocks/GitViewBlock"
 import { OrchestratorStateBlock } from "./blocks/OrchestratorStateBlock"
+import { GitViewPanel } from "./panels/GitViewPanel"
 import { StoryMetadataBlock } from "./blocks/StoryMetadataBlock"
 import { ToolCapabilityBlock } from "./blocks/ToolCapabilityBlock"
 import { DemoChatPanel } from "./DemoChatPanel"
@@ -48,6 +49,7 @@ export interface DemoRoomAgentData {
 
 export interface DemoPanelRendererContext {
   demoConfigId: string
+  metadataJson: Record<string, unknown>
   roomId: string
   roomTitle: string
   roomStoryId: string | null
@@ -70,6 +72,48 @@ export interface DemoPanelRendererContext {
   debugMessages: MessageViewModel[]
   showInternalMessages: boolean
   onToggleInternalMessages: (enabled: boolean) => void
+  onSelectRepoFileForDebug?: (selectionKey: string, path: string | null) => void
+  getFileRoomContextState?: (payload: {
+    panelId: string
+    repoId: string
+    path: string
+    ref: string
+    isBinary: boolean
+    hasContent: boolean
+  }) => {
+    included: boolean
+    pending: boolean
+    canToggle: boolean
+    disabledReason?: string | null
+  }
+  onToggleFileRoomContext?: (payload: {
+    panelId: string
+    repoId: string
+    repoSlug: string
+    path: string
+    ref: string
+    content: string
+    contentType: string | null
+    encoding: string | null
+    sizeBytes: number | null
+    isBinary: boolean
+    isTruncated: boolean
+    truncationReason: string | null
+  }) => Promise<void>
+  debugSelectedRepoFiles?: Array<{ selectionKey: string; path: string }>
+  debugRepoContextFiles?: Array<{
+    contextId: string
+    repoId: string
+    repoSlug: string | null
+    path: string
+    ref: string
+    source: string
+    sizeBytes: number | null
+    isTruncated: boolean
+    payload: Record<string, unknown>
+  }>
+  canManageRoomContext?: boolean
+  onRemoveRepoContextFile?: (contextId: string) => Promise<void>
   renderContentPayload: (value: unknown, fallbackLabel: string) => ReactNode
   onRenderCanvas: (
     panelId: string,
@@ -114,6 +158,34 @@ export interface DemoBlockRendererContext {
   activeUsers: ParticipantViewModel[]
   roomAgentsAsAgentData: DemoRoomAgentData[]
   availableAgents: UserAgentConfigPublic[]
+  onSelectRepoFileForDebug?: (selectionKey: string, path: string | null) => void
+  getFileRoomContextState?: (payload: {
+    panelId: string
+    repoId: string
+    path: string
+    ref: string
+    isBinary: boolean
+    hasContent: boolean
+  }) => {
+    included: boolean
+    pending: boolean
+    canToggle: boolean
+    disabledReason?: string | null
+  }
+  onToggleFileRoomContext?: (payload: {
+    panelId: string
+    repoId: string
+    repoSlug: string
+    path: string
+    ref: string
+    content: string
+    contentType: string | null
+    encoding: string | null
+    sizeBytes: number | null
+    isBinary: boolean
+    isTruncated: boolean
+    truncationReason: string | null
+  }) => Promise<void>
 }
 
 type DemoPanelRenderer = (
@@ -333,6 +405,18 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
       getPanelContentPayload(panel),
       "Content panel is configured, but no valid content_json payload was provided.",
     ),
+  gitView: (panel, ctx) => (
+    <GitViewPanel
+      panelId={panel.id}
+      title={panel.title}
+      selectionKey={`gitViewPanel:${panel.id}`}
+      options={panel.options}
+      metadataJson={ctx.metadataJson}
+      onSelectFileForDebug={ctx.onSelectRepoFileForDebug}
+      getRoomContextState={ctx.getFileRoomContextState}
+      onToggleRoomContext={ctx.onToggleFileRoomContext}
+    />
+  ),
   participantPanel: (_panel, ctx) => (
     <ParticipantPanel
       activeUsers={ctx.activeUsers}
@@ -401,6 +485,10 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
       activeAgents={ctx.debugActiveAgents}
       showInternalMessages={ctx.showInternalMessages}
       onToggleInternalMessages={ctx.onToggleInternalMessages}
+      selectedRepoFiles={ctx.debugSelectedRepoFiles ?? []}
+      repoContextFiles={ctx.debugRepoContextFiles ?? []}
+      canManageRoomContext={ctx.canManageRoomContext ?? false}
+      onRemoveRepoContextFile={ctx.onRemoveRepoContextFile}
     />
   ),
 }
@@ -493,11 +581,15 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
   gitView: (block, ctx) => (
     <GitViewBlock
       title={block.title}
+      selectionKey={`gitView:${block.id}`}
       config={resolveShadowRepoGitViewConfig(
         (block as { config_json?: unknown }).config_json,
         ctx.metadataJson,
       )}
       rawConfig={(block as { config_json?: unknown }).config_json}
+      onSelectFileForDebug={ctx.onSelectRepoFileForDebug}
+      getRoomContextState={ctx.getFileRoomContextState}
+      onToggleRoomContext={ctx.onToggleFileRoomContext}
     />
   ),
   fileExplorer: (block) => (

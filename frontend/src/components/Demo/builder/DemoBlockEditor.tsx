@@ -220,7 +220,7 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function canUseClickPromptDispatch(type: ActiveBuilderBlockType): boolean {
-  return type === "content" || type === "context"
+  return type === "content" || type === "context" || type === "gitView"
 }
 
 function getConfigJsonHelpText(type: ActiveBuilderBlockType): string | null {

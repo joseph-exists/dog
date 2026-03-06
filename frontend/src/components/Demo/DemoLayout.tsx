@@ -152,7 +152,7 @@ export function DemoLayout({
     return (
       <Tabs
         defaultValue={panels[0]?.id}
-        className={cn("flex flex-col h-full", className)}
+        className={cn("flex flex-col h-full min-h-0", className)}
       >
         <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-auto p-0">
           {panels.map((panel) => (
@@ -169,7 +169,7 @@ export function DemoLayout({
           <TabsContent
             key={panel.id}
             value={panel.id}
-            className="flex-1 mt-0 overflow-hidden"
+            className="flex-1 min-h-0 mt-0 overflow-hidden"
           >
             {panel.render()}
           </TabsContent>
@@ -181,7 +181,7 @@ export function DemoLayout({
   // Page-sized panels intentionally consume the full workspace.
   if (pageSizedPanel) {
     return (
-      <div className={cn("h-full overflow-hidden", className)}>
+      <div className={cn("h-full min-h-0 overflow-hidden", className)}>
         {pageSizedPanel.render()}
       </div>
     )
@@ -190,7 +190,7 @@ export function DemoLayout({
   return (
     <ResizablePanelGroup
       direction="horizontal"
-      className={cn("h-full", className)}
+      className={cn("h-full min-h-0", className)}
     >
       {/* Primary panels */}
       {primaryPanels.map((panel, index) => (
@@ -214,7 +214,7 @@ export function DemoLayout({
             defaultSize={auxiliaryColumnDefaultSize}
             minSize={20}
           >
-            <ResizablePanelGroup direction="vertical">
+            <ResizablePanelGroup direction="vertical" className="min-h-0">
               {auxiliaryPanels.map((panel, index) => (
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}

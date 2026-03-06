@@ -14,7 +14,7 @@ test.describe("demo interaction handler schema", () => {
     expect(parsed).toBeTruthy()
     expect(parsed?.kind).toBe(CLICK_PROMPT_DISPATCH_KIND)
     expect(parsed?.enabled).toBe(true)
-    expect(parsed?.trigger.selector).toBe("pre code, code")
+    expect(parsed?.trigger.selector).toBe("pre, pre code, code")
     expect(parsed?.dispatch.target).toBe("hidden_chat_panel")
     expect(parsed?.dispatch.format).toBe("json")
     expect(parsed?.dispatch.enforceRegisteredReceiver).toBe(false)
@@ -25,6 +25,18 @@ test.describe("demo interaction handler schema", () => {
       show_config_json: true,
     })
     expect(parsed).toBeNull()
+  })
+
+  test("parser normalizes legacy selector to include pre blocks", async () => {
+    const parsed = parseClickPromptDispatchConfig({
+      interaction: {
+        kind: CLICK_PROMPT_DISPATCH_KIND,
+        trigger: {
+          selector: "pre code, code",
+        },
+      },
+    })
+    expect(parsed?.trigger.selector).toBe("pre, pre code, code")
   })
 
   test("dispatch message includes block context + user message envelope", async () => {

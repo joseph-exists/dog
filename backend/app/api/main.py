@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    access,
     agent_personas,
     agent_routes,
     archetype_qualities,
@@ -20,6 +21,7 @@ from app.api.routes import (
     personas,
     pages,
     prompt_configs,
+    projects,
     presets,
     private,
     qualities,
@@ -46,6 +48,7 @@ from app.api.routes import (
     user_story_progress,
     users,
     utils,
+    groups,
     websocket,
 )
 from app.core.config import settings
@@ -55,6 +58,9 @@ api_router.include_router(login.router)
 api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(items.router)
+api_router.include_router(groups.router)
+api_router.include_router(access.router)
+api_router.include_router(projects.router)
 api_router.include_router(personas.router)
 api_router.include_router(archetypes.router)
 api_router.include_router(archetype_traits.router)

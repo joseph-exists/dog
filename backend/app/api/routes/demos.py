@@ -48,6 +48,7 @@ from app.core.config import settings
 from app.core.db import async_session_maker
 from app.core.redis import get_redis
 from app.models import (
+    AccessGrantRole,
     DemoCanvasRenderJobResponse,
     DemoCanvasRenderRequest,
     DemoCanvasRenderResponse,
@@ -68,6 +69,7 @@ from app.models import (
     ResolveDemoEntryPayload,
     User,
 )
+from app.services.access_control import require_access
 from app.services.event_emitter import emit_event
 from app.services.shadow_git import commit_text_file, get_repo_path, get_repo_remote_url
 from app.services.tesser_service import (
@@ -1189,8 +1191,12 @@ async def get_my_demo_session(
             detail="Demo session not found",
         )
     if demo_session.user_id != current_user.id and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+        await require_access(
+            session,
+            user=current_user,
+            resource_type="demo_session",
+            resource_id=demo_session_id,
+            minimum_role=AccessGrantRole.viewer,
             detail="Access denied",
         )
     return DemoSessionPublic.model_validate(demo_session)

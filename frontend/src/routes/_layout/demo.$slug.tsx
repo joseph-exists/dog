@@ -53,6 +53,7 @@ import {
 import useAuth from "@/hooks/useAuth"
 import { useCanvasRenderJobEvents } from "@/hooks/useCanvasRenderJobEvents"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
+import { useRoomRepoContext } from "@/hooks/useRoomRepoContext"
 import { useRoomMessages } from "@/hooks/useRoomMessages"
 import { useRoomStream } from "@/hooks/useRoomStream"
 import { usePageThemes } from "@/hooks/useThemeBinding"
@@ -159,6 +160,9 @@ function ResolvedDemoRoute({
     resolved.runtime.auto_start_error ?? null,
   )
   const [showInternalMessages, setShowInternalMessages] = useState(false)
+  const [repoSelectedPathsByKey, setRepoSelectedPathsByKey] = useState<
+    Record<string, string | null>
+  >({})
   const authoredPanelLayoutItems = useMemo(
     () => createDemoPanelLayoutItems(resolved.composition.panels ?? []),
     [resolved.composition.panels],
@@ -213,6 +217,12 @@ function ResolvedDemoRoute({
     streamingMessage,
   } = useRoomStream(roomId, { onEvent: handleRoomEvent })
   const { messages: debugMessages = [] } = useRoomMessages(roomId)
+  const {
+    repoContextFiles,
+    getFileRoomContextState,
+    toggleFileRoomContext,
+    removeRepoContextFile,
+  } = useRoomRepoContext(roomId, canWrite)
   const participantsQueryKey = ["room", roomId, "participants", "demo"] as const
   const { data: participants = [], isLoading: isLoadingParticipants } =
     useQuery({
@@ -343,6 +353,26 @@ function ResolvedDemoRoute({
       sendViaWebSocket(message)
     },
     [sendViaWebSocket],
+  )
+
+  const handleSelectRepoFileForDebug = useCallback(
+    (selectionKey: string, path: string | null) => {
+      setRepoSelectedPathsByKey((current) => ({
+        ...current,
+        [selectionKey]: path,
+      }))
+    },
+    [],
+  )
+  const selectedRepoFiles = useMemo(
+    () =>
+      Object.entries(repoSelectedPathsByKey)
+        .filter(([, path]) => typeof path === "string" && path.length > 0)
+        .map(([selectionKey, path]) => ({
+          selectionKey,
+          path: path as string,
+        })),
+    [repoSelectedPathsByKey],
   )
 
   const contextKey = `page:demo:${resolved.demo_config_id}`
@@ -744,6 +774,15 @@ function ResolvedDemoRoute({
               >
                 {renderDemoPanel(panel, {
                   demoConfigId: resolved.demo_config_id,
+                  metadataJson:
+                    resolved.composition.metadata_json &&
+                    typeof resolved.composition.metadata_json === "object" &&
+                    !Array.isArray(resolved.composition.metadata_json)
+                      ? (resolved.composition.metadata_json as Record<
+                          string,
+                          unknown
+                        >)
+                      : {},
                   roomId,
                   roomTitle,
                   roomStoryId,
@@ -770,6 +809,13 @@ function ResolvedDemoRoute({
                   debugMessages,
                   showInternalMessages,
                   onToggleInternalMessages: setShowInternalMessages,
+                  onSelectRepoFileForDebug: handleSelectRepoFileForDebug,
+                  getFileRoomContextState,
+                  onToggleFileRoomContext: toggleFileRoomContext,
+                  debugSelectedRepoFiles: selectedRepoFiles,
+                  debugRepoContextFiles: repoContextFiles,
+                  canManageRoomContext: canWrite,
+                  onRemoveRepoContextFile: removeRepoContextFile,
                   renderContentPayload,
                   onRenderCanvas: handleRenderCanvas,
                   canvasRenderStateByPanelId,
@@ -814,6 +860,12 @@ function ResolvedDemoRoute({
       activeUsers,
       collapsedContentIds,
       debugMessages,
+      handleSelectRepoFileForDebug,
+      getFileRoomContextState,
+      toggleFileRoomContext,
+      selectedRepoFiles,
+      repoContextFiles,
+      removeRepoContextFile,
       effectiveCompositionPanels,
       getPanelCollapseId,
       roomAgentsAsAgentData,
@@ -951,6 +1003,9 @@ function ResolvedDemoRoute({
         activeUsers,
         roomAgentsAsAgentData,
         availableAgents,
+        onSelectRepoFileForDebug: handleSelectRepoFileForDebug,
+        getFileRoomContextState,
+        onToggleFileRoomContext: toggleFileRoomContext,
       })
 
       const blockFrame = resolveDemoPresentationFrame({
@@ -1001,6 +1056,9 @@ function ResolvedDemoRoute({
     runtimeHasRuntime,
     runtimePolicy,
     resolved.composition.metadata_json,
+    handleSelectRepoFileForDebug,
+    getFileRoomContextState,
+    toggleFileRoomContext,
     streamingMessage,
     themeIndex,
     toggleCollapsedContent,

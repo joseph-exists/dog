@@ -37,6 +37,7 @@ interface DebugPanelProps {
     source: string
     sizeBytes: number | null
     isTruncated: boolean
+    payload: Record<string, unknown>
   }>
   canManageRoomContext?: boolean
   onRemoveRepoContextFile?: (contextId: string) => Promise<void>
