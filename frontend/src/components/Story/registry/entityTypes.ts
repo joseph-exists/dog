@@ -2,6 +2,7 @@
 import {
   Bot,
   Crown,
+  FolderKanban,
   Gem,
   type LucideIcon,
   MessageSquare,
@@ -54,6 +55,14 @@ export const entityTypes: EntityTypeDefinition[] = [
     icon: Users,
     color: "green",
     pageRoutePattern: "/team/:slug",
+  },
+  {
+    id: "project",
+    label: "Project",
+    labelPlural: "Projects",
+    icon: FolderKanban,
+    color: "slate",
+    pageRoutePattern: "/project/:id",
   },
   {
     id: "room",

@@ -25,12 +25,12 @@ The Users pages implementation must represent four distinct surfaces:
 
 3. **C. User page as seen by others**
    Presentation is discriminated by audience and by the degree of work the selected persona has done for that audience.
-   The page must present “work for this audience” rather than “this is the whole user.”
+   The page must present “work for this audience” rather than “this is the whole user.”  This is dependent on the userpersona that the specific audience (user) has access to.
 
 4. **D. Relational management**
    All relation management is mediated by `UserPersona`.
    No direct user-to-user relation affordance is exposed.
-   A primary persona is optional and explicitly chosen.
+   The UX paradigm is that a primary persona is optional and explicitly chosen.  Within the system, if a User does not define a primary userpersona, a userpersona is implicitly created and directly linked to their user: this is opaque to that user, but enables the rest of the relational systems to be built without needing/requiring User access or lookup.
 
 ## Architectural Decision
 
@@ -223,6 +223,7 @@ Phase 1 data sourcing rules:
 
 - Personas come from existing `PersonaLibraryService`.
 - Primary persona is stored locally in page block content until backend support exists.
+NOTE: backend support required for MVP.  All contracts required by the backend for data management and transactions should exist at this time.  IF not available, raise high-priority request.
 - Work feed is represented from seeded/mock/adapted data, not real recommender logic.
 - Audience presentations are stored in page block content.
 - Relations are represented in page block content or local draft state, not persisted in a backend relation table.

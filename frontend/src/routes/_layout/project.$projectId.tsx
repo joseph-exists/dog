@@ -26,6 +26,15 @@ import {
   useUpdateProject,
   useUpsertProjectGrant,
 } from "@/hooks/useProjects"
+import type { AttachableResourceType } from "@/services/projectsService"
+
+const resourceTypeLabels: Record<AttachableResourceType, string> = {
+  agent: "Agent",
+  story: "Story",
+  demo_session: "Demo",
+  room: "Room",
+  user_repo: "Repo",
+}
 
 export const Route = createFileRoute("/_layout/project/$projectId")({
   component: ProjectDetailPage,
@@ -73,7 +82,8 @@ function ProjectDetailPage() {
 
   const [nameDraft, setNameDraft] = useState("")
   const [descriptionDraft, setDescriptionDraft] = useState("")
-  const [resourceType, setResourceType] = useState("story")
+  const [resourceType, setResourceType] = useState<AttachableResourceType>("story")
+  const [resourceScope, setResourceScope] = useState<"owned" | "available">("owned")
   const [resourceId, setResourceId] = useState("")
   const [attachSelection, setAttachSelection] = useState("")
   const [grantSubjectType, setGrantSubjectType] = useState<"user" | "group">("group")
@@ -86,6 +96,16 @@ function ProjectDetailPage() {
         (item) => `${item.resourceType}:${item.resourceId}` === attachSelection,
       ),
     [attachSelection, attachable],
+  )
+
+  const filteredAttachableOptions = useMemo(
+    () =>
+      (attachable ?? []).filter(
+        (item) =>
+          item.resourceType === resourceType &&
+          (resourceScope === "available" || item.scope === "owned"),
+      ),
+    [attachable, resourceScope, resourceType],
   )
 
   useEffect(() => {
@@ -247,10 +267,10 @@ function ProjectDetailPage() {
                     <Label>Quick pick</Label>
                     <Select value={attachSelection} onValueChange={setAttachSelection}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a resource from your visible sets" />
+                        <SelectValue placeholder="Select a resource from the filtered set" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(attachable ?? []).map((option) => (
+                        {filteredAttachableOptions.map((option) => (
                           <SelectItem
                             key={`${option.resourceType}:${option.resourceId}`}
                             value={`${option.resourceType}:${option.resourceId}`}
@@ -263,10 +283,43 @@ function ProjectDetailPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Type</Label>
-                    <Input
+                    <Select
                       value={selectedAttachOption?.resourceType ?? resourceType}
-                      onChange={(event) => setResourceType(event.target.value)}
-                    />
+                      onValueChange={(value: AttachableResourceType) => {
+                        setResourceType(value)
+                        setAttachSelection("")
+                        setResourceId("")
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(resourceTypeLabels).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Visibility</Label>
+                    <Select
+                      value={resourceScope}
+                      onValueChange={(value: "owned" | "available") => {
+                        setResourceScope(value)
+                        setAttachSelection("")
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="owned">Owned</SelectItem>
+                        <SelectItem value="available">Available</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <Label>Resource ID</Label>
@@ -282,6 +335,12 @@ function ProjectDetailPage() {
                     </Button>
                   </div>
                 </div>
+              ) : null}
+
+              {canManageProject && filteredAttachableOptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No {resourceTypeLabels[resourceType].toLowerCase()} resources in the current filter.
+                </p>
               ) : null}
 
               {isResourcesLoading ? (

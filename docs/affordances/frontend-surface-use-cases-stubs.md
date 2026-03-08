@@ -39,6 +39,8 @@ service wiring. Surface-specific detail now lives in dedicated documents using
 | --- | --- |
 | `Room + Agents` | [room-agents.md](/home/josep/dog/docs/affordances/journeys/room-agents.md) |
 | `Story -> Room Runtime` | [story-room-runtime.md](/home/josep/dog/docs/affordances/journeys/story-room-runtime.md) |
+| `Demo Builder -> Demo Runtime` | [demo-builder-runtime.md](/home/josep/dog/docs/affordances/journeys/demo-builder-runtime.md) |
+| `Agent -> Story Runtime` | [agent-story-runtime.md](/home/josep/dog/docs/affordances/journeys/agent-story-runtime.md) |
 
 ## Walkthrough Sets
 
@@ -46,6 +48,8 @@ service wiring. Surface-specific detail now lives in dedicated documents using
 | --- | --- |
 | `Room + Agents` | [README.md](/home/josep/dog/docs/affordances/walkthroughs/room-agents/README.md) |
 | `Story -> Room Runtime` | [README.md](/home/josep/dog/docs/affordances/walkthroughs/story-room-runtime/README.md) |
+| `Demo Builder -> Demo Runtime` | [README.md](/home/josep/dog/docs/affordances/walkthroughs/demo-builder-runtime/README.md) |
+| `Agent -> Story Runtime` | [README.md](/home/josep/dog/docs/affordances/walkthroughs/agent-story-runtime/README.md) |
 
 ## Global Surface Map
 
@@ -53,7 +57,7 @@ service wiring. Surface-specific detail now lives in dedicated documents using
 | --- | --- | --- | --- |
 | `Repos` | shell + panel workspace | `partial` | rich viewer and layout affordances are present |
 | `Projects` | CRUD + workspace host | `partial` | management flows exist; permission and page-layout semantics need validation |
-| `Demos` | library + launch/manage | `partial` | strong library affordances; composition/runtime journeys extend elsewhere |
+| `Demos` | builder + runtime assemblage | `partial` | builder is the primary authored surface; library is secondary |
 | `Story` | library + player + edit/room handoff | `partial` | browse/play is clear; authoring needs fuller mapping |
 | `Room` | runtime collaboration assemblage | `partial` | highest integration surface, strongest walkthrough potential |
 | `Agents` | library + detail + create/clone/edit + room participation | `partial` | creation and cloning are implemented; cross-surface role needs fuller coverage |
@@ -90,7 +94,8 @@ These are the top-level user intents the walkthrough set should cover.
 - convert each surface section into its own dedicated document using the template
 - verify owner/editor/viewer behavior for `Projects` and `Room`
 - map `Story` authoring/edit workflows explicitly
-- map `Demo` runtime and builder journeys explicitly
+- turn `Demo Builder -> Demo Runtime` into QA-ready validation with seeded fixtures
+- validate `Agent -> Story Runtime` gaps as hidden wiring vs missing backend contracts
 - document `Agents` model settings and alternate creation path
 - turn walkthrough sets into QA-ready validation runs with stable seeded fixtures
 - decide whether to formalize this inventory as markdown only or also encode it in an affordance registry format

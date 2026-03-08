@@ -25,6 +25,26 @@ from app.core.provider_types import TYPE1, TYPE3
 class Message(SQLModel):
     message: str
 
+class PersonaVisibility(str, PyEnum):
+    PRIVATE = "private"
+    SYSTEM = "system"
+
+
+class UserPersonaPublicationState(str, PyEnum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+
+
+class AudienceScope(str, PyEnum):
+    PUBLIC = "public"
+    TRUSTED = "trusted"
+    COLLABORATORS = "collaborators"
+    CUSTOM = "custom"
+
+
+class PresentationPublicationState(str, PyEnum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
 
 # ==================== ProgressSnapshot Models (PHASE 5) ====================
 
@@ -184,13 +204,49 @@ class UserBase(SQLModel):
     is_superuser: bool = False
     full_name: str | None = Field(default=None, max_length=255)
 
-
 class UserPersonaBase(SQLModel):
-    """Base model for User's instance of a Persona"""
+    """
+    User-owned derived state.
+
+    This is the product model that should replace page-JSON as the source of truth
+    for authored persona identity/state on user pages.
+    """
 
     nickname: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Short user-authored summary for this derived persona.",
+    )
+    short_bio: str | None = Field(default=None, max_length=500)
+    long_bio: str | None = Field(default=None)
+
+    tags_json: list[dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False),
+        description=(
+            "Weighted tags. Example: "
+            '[{"id":"systems-0","label":"systems","weight":0.8,"source":"user"}]'
+        ),
+    )
+
+    publication_state: UserPersonaPublicationState = Field(
+        default=UserPersonaPublicationState.DRAFT
+    )
+    is_primary: bool = Field(default=False)
     is_active: bool = Field(default=True)
-    # what other customization fields should we add?
+    sort_order: int = Field(default=0, ge=0)
+
+    presentation_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False),
+        description=(
+            "Visual presentation-as-data for this UserPersona. "
+            "Not audience resolution, permissioning, or segmentation."
+        ),
+    )
+
+
 
 
 class UserPersonaCreate(UserPersonaBase):
@@ -199,21 +255,41 @@ class UserPersonaCreate(UserPersonaBase):
 
 class UserPersonaUpdate(SQLModel):
     nickname: str | None = Field(default=None, max_length=255)
-    is_active: bool | None = Field(default=None)
+    description: str | None = Field(default=None, max_length=255)
+    short_bio: str | None = Field(default=None, max_length=500)
+    long_bio: str | None = Field(default=None)
+    tags_json: list[dict[str, Any]] | None = None
+    publication_state: UserPersonaPublicationState | None = None
+    is_primary: bool | None = None
+    is_active: bool | None = None
+    sort_order: int | None = Field(default=None, ge=0)
+    presentation_json: dict[str, Any] | None = None
 
 
 class UserPersona(UserPersonaBase, table=True):
     """Database model for User's instance of a Persona"""
 
+    __tablename__ = "userpersona"
+    __table_args__ = (
+        UniqueConstraint("user_id", "persona_id", name="uq_userpersona_user_persona"),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
     )
-    persona_id: uuid.UUID = Field(foreign_key="persona.id", nullable=False)
-    created_at: datetime = Field(default_factory=datetime.now)
+    persona_id: uuid.UUID = Field(
+        foreign_key="persona.id",
+        nullable=False,
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(
-        default_factory=datetime.now, sa_column_kwargs={"onupdate": datetime.now}
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow},
     )
+
 
 class UserPersonaPublic(UserPersonaBase):
     """Public model for UserPersona API responses"""
@@ -230,6 +306,116 @@ class UserPersonasPublic(SQLModel):
 
     data: list[UserPersonaPublic]
     count: int
+
+# ---------------------------------------------------------------------------
+# Recommended UserPersonaPresentation model
+# ---------------------------------------------------------------------------
+
+
+class UserPersonaPresentationBase(SQLModel):
+    """
+    Audience-specific presentation of a UserPersona.
+
+    This is where audience-facing framing belongs.
+    It is intentionally separate from UserPersona.presentation_json.
+    """
+
+    audience_scope: AudienceScope = Field(default=AudienceScope.PUBLIC)
+    audience_key: str | None = Field(
+        default=None,
+        max_length=255,
+        description=(
+            "Optional identifier for custom/manual audience grouping. "
+            "Null for standard scopes."
+        ),
+    )
+    audience_label: str = Field(min_length=1, max_length=255)
+
+    headline: str = Field(min_length=1, max_length=255)
+    framing_text: str | None = Field(default=None)
+
+    visible_work_ids_json: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False),
+        description=(
+            "Interim work references exposed to this audience presentation."
+        ),
+    )
+
+    relation_call_to_action: str = Field(
+        default="none",
+        max_length=64,
+        description=(
+            "UI affordance only. Example values: none, request_contact, "
+            "invite_collaboration, follow_work."
+        ),
+    )
+
+    publication_state: PresentationPublicationState = Field(
+        default=PresentationPublicationState.DRAFT
+    )
+
+    presentation_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False),
+        description=(
+            "Visual presentation-as-data for this audience-specific presentation."
+        ),
+    )
+
+
+class UserPersonaPresentationCreate(
+    UserPersonaPresentationBase
+):
+    user_persona_id: uuid.UUID
+
+
+class UserPersonaPresentationUpdate(SQLModel):
+    audience_scope: AudienceScope | None = None
+    audience_key: str | None = Field(default=None, max_length=255)
+    audience_label: str | None = Field(default=None, min_length=1, max_length=255)
+    headline: str | None = Field(default=None, min_length=1, max_length=255)
+    framing_text: str | None = None
+    visible_work_ids_json: list[str] | None = None
+    relation_call_to_action: str | None = Field(default=None, max_length=64)
+    publication_state: PresentationPublicationState | None = None
+    presentation_json: dict[str, Any] | None = None
+
+
+class UserPersonaPresentation(
+    UserPersonaPresentationBase, table=True
+):
+    __tablename__ = "userpersonapresentation"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_persona_id",
+            "audience_scope",
+            "audience_key",
+            name="uq_userpersona_presentation_audience",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_persona_id: uuid.UUID = Field(
+        foreign_key="userpersona.id",
+        nullable=False,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow},
+    )
+
+
+"""
+UserPersonaPresentation invariants:
+
+1. One UserPersona may have many presentations.
+2. Each presentation targets exactly one audience scope (+ optional audience_key).
+3. publication_state is per presentation, not folded into UserPersona.
+4. presentation_json remains visual only.
+"""
 
 
 class AgentPersonaBase(SQLModel):
@@ -322,6 +508,14 @@ class PersonaBase(SQLModel):
     general_domain_high: str | None = Field(default=None, max_length=255)
     specific_domain_high: str | None = Field(default=None, max_length=255)
 
+    visibility: PersonaVisibility = Field(default=PersonaVisibility.PRIVATE)
+    owner_user_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        description=(
+            "Required when visibility=private. Null for system personas."
+        ),
+    )
 
 class TraitBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)

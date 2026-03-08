@@ -29,10 +29,6 @@ def upgrade():
     op.create_index(op.f('ix_llmmodel_is_system'), 'llmmodel', ['is_system'], unique=False)
     op.create_foreign_key(None, 'llmmodel', 'user', ['created_by_user_id'], ['id'])
     op.add_column('llmprovider', sa.Column('created_by_user_id', sa.Uuid(), nullable=True))
-    op.alter_column('llmprovider', 'provider_type',
-               existing_type=postgresql.ENUM('OPENAI', 'ANTHROPIC', 'GOOGLE', 'OPENAI_COMPATIBLE', 'EMPTY', name='llmprovidertype'),
-               nullable=True,
-               existing_server_default=sa.text("'EMPTY'::llmprovidertype"))
     op.create_foreign_key(None, 'llmprovider', 'user', ['created_by_user_id'], ['id'])
     op.alter_column('userllmprovider', 'provider_type',
                existing_type=postgresql.ENUM('OPENAI', 'ANTHROPIC', 'GOOGLE', 'OPENAI_COMPATIBLE', 'EMPTY', name='llmprovidertype'),
@@ -46,10 +42,6 @@ def downgrade():
                existing_type=postgresql.ENUM('OPENAI', 'ANTHROPIC', 'GOOGLE', 'OPENAI_COMPATIBLE', 'EMPTY', name='llmprovidertype'),
                nullable=False)
     op.drop_constraint(None, 'llmprovider', type_='foreignkey')
-    op.alter_column('llmprovider', 'provider_type',
-               existing_type=postgresql.ENUM('OPENAI', 'ANTHROPIC', 'GOOGLE', 'OPENAI_COMPATIBLE', 'EMPTY', name='llmprovidertype'),
-               nullable=False,
-               existing_server_default=sa.text("'EMPTY'::llmprovidertype"))
     op.drop_column('llmprovider', 'created_by_user_id')
     op.drop_constraint(None, 'llmmodel', type_='foreignkey')
     op.drop_index(op.f('ix_llmmodel_is_system'), table_name='llmmodel')

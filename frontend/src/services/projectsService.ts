@@ -1,10 +1,12 @@
 import {
   AccessService,
+  AgentsService,
   DemosService,
   GroupsService,
   ProjectsService,
   RoomsService,
   StoriesService,
+  UsersService,
   UserReposService,
   type AccessGrantPublic,
   type AccessGrantRevokeRequest,
@@ -23,16 +25,20 @@ import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
 
 export type AttachableResourceType =
+  | "agent"
   | "story"
   | "demo_session"
   | "room"
   | "user_repo"
+
+export type AttachableResourceScope = "owned" | "available"
 
 export interface AttachableResourceOption {
   resourceType: AttachableResourceType
   resourceId: string
   label: string
   subtitle?: string
+  scope: AttachableResourceScope
 }
 
 export const ProjectsAppService = {
@@ -129,11 +135,13 @@ export const ProjectsAppService = {
   },
 
   async listAttachableResourceOptions(): Promise<AttachableResourceOption[]> {
-    const [stories, sessions, repos, rooms] = await Promise.all([
+    const [currentUser, stories, sessions, repos, rooms, agents] = await Promise.all([
+      UsersService.readUserMe(),
       StoriesService.readStories({ skip: 0, limit: 100 }),
       DemosService.listMyDemoSessions({ skip: 0, limit: 100 }),
       UserReposService.listUserRepos(),
       RoomsService.listUserRooms({ skip: 0, limit: 100 }),
+      AgentsService.listAvailableAgents({ skip: 0, limit: 100 }),
     ])
 
     const storyOptions: AttachableResourceOption[] = stories.data.map((story) => ({
@@ -141,6 +149,7 @@ export const ProjectsAppService = {
       resourceId: story.id,
       label: story.title,
       subtitle: story.description ?? "Story",
+      scope: story.owner_id === currentUser.id ? "owned" : "available",
     }))
 
     const sessionOptions: AttachableResourceOption[] = sessions.data.map(
@@ -149,6 +158,7 @@ export const ProjectsAppService = {
         resourceId: session.id,
         label: `Demo Session ${session.id.slice(0, 8)}`,
         subtitle: `Room ${session.room_id.slice(0, 8)}`,
+        scope: session.user_id === currentUser.id ? "owned" : "available",
       }),
     )
 
@@ -157,6 +167,7 @@ export const ProjectsAppService = {
       resourceId: repo.id,
       label: repo.display_name,
       subtitle: repo.import_status,
+      scope: repo.owner_user_id === currentUser.id ? "owned" : "available",
     }))
 
     const roomOptions: AttachableResourceOption[] = rooms.data.map((room) => ({
@@ -164,9 +175,18 @@ export const ProjectsAppService = {
       resourceId: room.room_id,
       label: room.title ?? `Room ${room.room_id.slice(0, 8)}`,
       subtitle: room.story_id ? `Story ${room.story_id.slice(0, 8)}` : "No story",
+      scope: room.creator_id === currentUser.id ? "owned" : "available",
     }))
 
-    return [...storyOptions, ...sessionOptions, ...repoOptions, ...roomOptions]
+    const agentOptions: AttachableResourceOption[] = agents.data.map((agent) => ({
+      resourceType: "agent",
+      resourceId: agent.id,
+      label: agent.name ?? agent.slug ?? `Agent ${agent.id.slice(0, 8)}`,
+      subtitle: agent.description ?? agent.model_name ?? agent.scope ?? "Agent",
+      scope: agent.owner_id === currentUser.id ? "owned" : "available",
+    }))
+
+    return [...storyOptions, ...sessionOptions, ...repoOptions, ...roomOptions, ...agentOptions]
   },
 }
 
