@@ -17,11 +17,13 @@ from app.models import (
     AccessGrantRole,
     AccessGrantSubjectType,
     DemoSession,
+    PersonaGroupMembership,
     Project,
     ProjectResource,
     Story,
     User,
     UserGroupMembership,
+    UserPersona,
 )
 
 
@@ -78,6 +80,19 @@ def get_effective_role_sync(
     )
     direct = session.exec(direct_stmt).all()
 
+    owned_persona_ids_stmt = select(UserPersona.id).where(UserPersona.user_id == user.id)
+    owned_persona_ids = session.exec(owned_persona_ids_stmt).all()
+
+    persona_direct: list[AccessGrantRole] = []
+    if owned_persona_ids:
+        persona_direct_stmt = select(AccessGrant.role).where(
+            AccessGrant.resource_type == resource_type,
+            AccessGrant.resource_id == resource_id,
+            AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+            AccessGrant.subject_id.in_(owned_persona_ids),
+        )
+        persona_direct = session.exec(persona_direct_stmt).all()
+
     group_ids_stmt = select(UserGroupMembership.group_id).where(
         UserGroupMembership.user_id == user.id
     )
@@ -92,7 +107,24 @@ def get_effective_role_sync(
         )
         group_roles = session.exec(group_stmt).all()
 
-    roles: list[AccessGrantRole] = [*direct, *group_roles]
+    persona_group_ids: list[UUID] = []
+    persona_group_roles: list[AccessGrantRole] = []
+    if owned_persona_ids:
+        persona_group_ids_stmt = select(PersonaGroupMembership.group_id).where(
+            PersonaGroupMembership.user_persona_id.in_(owned_persona_ids),
+            PersonaGroupMembership.is_active == True,  # noqa: E712
+        )
+        persona_group_ids = session.exec(persona_group_ids_stmt).all()
+        if persona_group_ids:
+            persona_group_stmt = select(AccessGrant.role).where(
+                AccessGrant.resource_type == resource_type,
+                AccessGrant.resource_id == resource_id,
+                AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                AccessGrant.subject_id.in_(persona_group_ids),
+            )
+            persona_group_roles = session.exec(persona_group_stmt).all()
+
+    roles: list[AccessGrantRole] = [*direct, *persona_direct, *group_roles, *persona_group_roles]
     best_direct = max(roles, key=lambda r: _ROLE_LEVEL[r]) if roles else None
 
     if resource_type != "project":
@@ -115,6 +147,16 @@ def get_effective_role_sync(
             )
             project_direct = session.exec(project_direct_stmt).all()
 
+            project_persona_direct: list[AccessGrantRole] = []
+            if owned_persona_ids:
+                project_persona_direct_stmt = select(AccessGrant.role).where(
+                    AccessGrant.resource_type == "project",
+                    AccessGrant.resource_id.in_(project_ids),
+                    AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+                    AccessGrant.subject_id.in_(owned_persona_ids),
+                )
+                project_persona_direct = session.exec(project_persona_direct_stmt).all()
+
             group_ids_stmt = select(UserGroupMembership.group_id).where(
                 UserGroupMembership.user_id == user.id
             )
@@ -129,7 +171,22 @@ def get_effective_role_sync(
                 )
                 project_group = session.exec(project_group_stmt).all()
 
-            project_roles: list[AccessGrantRole] = [*project_direct, *project_group]
+            project_persona_group: list[AccessGrantRole] = []
+            if persona_group_ids:
+                project_persona_group_stmt = select(AccessGrant.role).where(
+                    AccessGrant.resource_type == "project",
+                    AccessGrant.resource_id.in_(project_ids),
+                    AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                    AccessGrant.subject_id.in_(persona_group_ids),
+                )
+                project_persona_group = session.exec(project_persona_group_stmt).all()
+
+            project_roles: list[AccessGrantRole] = [
+                *project_direct,
+                *project_persona_direct,
+                *project_group,
+                *project_persona_group,
+            ]
             best_project = (
                 max(project_roles, key=lambda r: _ROLE_LEVEL[r]) if project_roles else None
             )

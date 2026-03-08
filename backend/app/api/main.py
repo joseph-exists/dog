@@ -16,6 +16,7 @@ from app.api.routes import (
     login,
     node_choices,
     persona_events,
+    persona_groups,
     persona_qualities,
     persona_traits,
     personas,
@@ -59,6 +60,7 @@ api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(items.router)
 api_router.include_router(groups.router)
+api_router.include_router(persona_groups.router)
 api_router.include_router(access.router)
 api_router.include_router(projects.router)
 api_router.include_router(personas.router)

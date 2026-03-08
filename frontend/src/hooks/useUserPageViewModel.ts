@@ -14,6 +14,7 @@ import type {
   WeightedTag,
 } from "@/components/UserPage/types"
 import { PersonaLibraryService } from "@/services/personaLibraryService"
+import { UserPersonaService } from "@/services/userPersonaService"
 import useAuth from "./useAuth"
 import { usePageEditor } from "./usePageEditor"
 
@@ -159,6 +160,10 @@ function normalizeAudiencePresentation(
       typeof input.id === "string" && input.id.trim().length > 0
         ? input.id.trim()
         : crypto.randomUUID(),
+    userPersonaId:
+      typeof input.userPersonaId === "string" && input.userPersonaId.trim().length > 0
+        ? input.userPersonaId.trim()
+        : null,
     personaId: input.personaId.trim(),
     audienceScope,
     audienceLabel:
@@ -220,6 +225,15 @@ function normalizeStoredPersona(input: unknown): UserPersonaSummary | null {
 
   return {
     id: input.id.trim(),
+    userPersonaId:
+      typeof input.userPersonaId === "string" &&
+      input.userPersonaId.trim().length > 0
+        ? input.userPersonaId.trim()
+        : null,
+    personaVisibility:
+      input.personaVisibility === "private" || input.personaVisibility === "system"
+        ? input.personaVisibility
+        : null,
     name: input.name.trim(),
     nickname:
       typeof input.nickname === "string" && input.nickname.trim().length > 0
@@ -246,6 +260,8 @@ function normalizeStoredPersona(input: unknown): UserPersonaSummary | null {
 function buildPersonaFromLibrary(persona: LibraryPersona): UserPersonaSummary {
   return {
     id: persona.personaId,
+    userPersonaId: persona.libraryEntryId,
+    personaVisibility: null,
     name: persona.name,
     nickname: persona.nickname,
     shortBio: persona.description,
@@ -261,6 +277,20 @@ function buildPersonaFromLibrary(persona: LibraryPersona): UserPersonaSummary {
     isPrimary: false,
     isVisibleInCurrentAudience: true,
   }
+}
+
+function personaMatchesId(persona: UserPersonaSummary, candidateId: string): boolean {
+  return candidateId === persona.id || candidateId === persona.userPersonaId
+}
+
+function resolvePersonaReference(
+  candidateId: string | null | undefined,
+  personas: UserPersonaSummary[],
+): string | null {
+  if (!candidateId) return null
+  const trimmedId = candidateId.trim()
+  if (!trimmedId) return null
+  return personas.find((persona) => personaMatchesId(persona, trimmedId))?.id ?? null
 }
 
 export function resolvePrimaryPersonaId(
@@ -310,8 +340,19 @@ export function buildUserPageViewModel(input: {
   pageExists: boolean
   blocks: TemplateBlock[] | undefined
   libraryPersonas: LibraryPersona[]
+  ownerPersonas?: UserPersonaSummary[]
+  ownerPresentations?: AudiencePresentationSummary[]
 }): UserPageViewModel {
-  const { slug, userId, isOwner, pageExists, blocks, libraryPersonas } = input
+  const {
+    slug,
+    userId,
+    isOwner,
+    pageExists,
+    blocks,
+    libraryPersonas,
+    ownerPersonas = [],
+    ownerPresentations = [],
+  } = input
 
   const primaryContent = getBlockContent(
     blocks,
@@ -350,7 +391,7 @@ export function buildUserPageViewModel(input: {
         .map((persona) => normalizeStoredPersona(persona))
         .filter((persona): persona is UserPersonaSummary => persona !== null)
     : []
-  const presentations = rawPresentations.length > 0
+  const storedPresentations = rawPresentations.length > 0
     ? rawPresentations
         .map((presentation) => normalizeAudiencePresentation(presentation))
         .filter(
@@ -365,38 +406,60 @@ export function buildUserPageViewModel(input: {
     : []
 
   const personaMap = new Map<string, UserPersonaSummary>()
-  for (const libraryPersona of libraryPersonas) {
-    personaMap.set(
-      libraryPersona.personaId,
-      buildPersonaFromLibrary(libraryPersona),
-    )
-  }
-  for (const storedPersona of storedPersonas) {
-    personaMap.set(storedPersona.id, {
-      ...personaMap.get(storedPersona.id),
-      ...storedPersona,
-      tags: storedPersona.tags,
-    })
+  const authoritativePersonas =
+    isOwner && ownerPersonas.length > 0
+      ? ownerPersonas
+      : libraryPersonas.map((persona) => buildPersonaFromLibrary(persona))
+
+  for (const persona of authoritativePersonas) {
+    personaMap.set(persona.id, persona)
   }
 
-  const personaIds = Array.from(personaMap.keys())
-  const primaryPersonaId = resolvePrimaryPersonaId(
-    primaryContent?.primaryPersonaId ?? null,
-    personaIds,
-  )
+  for (const storedPersona of storedPersonas) {
+    const matchedPersona = Array.from(personaMap.values()).find((persona) =>
+      personaMatchesId(persona, storedPersona.id),
+    )
+
+    if (!matchedPersona) {
+      personaMap.set(storedPersona.id, storedPersona)
+    }
+  }
+
+  const personas = Array.from(personaMap.values())
+  const presentations =
+    isOwner && ownerPresentations.length > 0
+      ? [
+          ...ownerPresentations,
+          ...storedPresentations.filter(
+            (storedPresentation) =>
+              !ownerPresentations.some(
+                (presentation) =>
+                  presentation.id === storedPresentation.id ||
+                  (presentation.personaId === storedPresentation.personaId &&
+                    presentation.audienceScope ===
+                      storedPresentation.audienceScope),
+              ),
+          ),
+        ]
+      : storedPresentations
+
+  const personaIds = personas.map((persona) => persona.id)
+  const primaryPersonaId =
+    resolvePersonaReference(primaryContent?.primaryPersonaId ?? null, personas) ??
+    resolvePrimaryPersonaId(primaryContent?.primaryPersonaId ?? null, personaIds)
   const selectedAudienceScope =
     presentations[0]?.audienceScope ?? DEFAULT_AUDIENCE_SCOPE
   const selectedAudienceLabel =
     presentations[0]?.audienceLabel ?? slugToDisplayLabel(selectedAudienceScope)
 
-  const personas = Array.from(personaMap.values()).map((persona) => {
+  const resolvedPersonas = personas.map((persona) => {
     const associatedWorkCount = workItems.filter((item) =>
-      item.associatedPersonaIds.includes(persona.id),
+      item.associatedPersonaIds.some((personaId) => personaMatchesId(persona, personaId)),
     ).length
     const isVisibleInCurrentAudience = presentations.some(
       (presentation) =>
         presentation.audienceScope === selectedAudienceScope &&
-        presentation.personaId === persona.id,
+        personaMatchesId(persona, presentation.personaId),
     )
 
     return {
@@ -409,10 +472,13 @@ export function buildUserPageViewModel(input: {
 
   const selectedPersonaId =
     primaryPersonaId ??
-    presentations.find(
-      (presentation) => presentation.audienceScope === selectedAudienceScope,
-    )?.personaId ??
-    personas[0]?.id ??
+    resolvePersonaReference(
+      presentations.find(
+        (presentation) => presentation.audienceScope === selectedAudienceScope,
+      )?.personaId,
+      resolvedPersonas,
+    ) ??
+    resolvedPersonas[0]?.id ??
     null
 
   return {
@@ -429,7 +495,7 @@ export function buildUserPageViewModel(input: {
     selectedAudienceScope,
     selectedAudienceLabel,
     workFeed: workItems,
-    personas,
+    personas: resolvedPersonas,
     audiencePresentations: presentations,
     relations,
   }
@@ -453,6 +519,12 @@ export function useUserPageViewModel(slug: string) {
     enabled: Boolean(userId) && isOwner,
   })
 
+  const ownerPersonaQuery = useQuery({
+    queryKey: ["user-persona-page-data", userId],
+    queryFn: () => UserPersonaService.getUserPageData(),
+    enabled: Boolean(userId) && isOwner,
+  })
+
   const viewModel = useMemo(
     () =>
       buildUserPageViewModel({
@@ -462,6 +534,8 @@ export function useUserPageViewModel(slug: string) {
         pageExists: pageEditor.pageExists,
         blocks: pageEditor.blocks,
         libraryPersonas: personaLibraryQuery.data ?? [],
+        ownerPersonas: ownerPersonaQuery.data?.personas ?? [],
+        ownerPresentations: ownerPersonaQuery.data?.presentations ?? [],
       }),
     [
       slug,
@@ -470,6 +544,7 @@ export function useUserPageViewModel(slug: string) {
       pageEditor.pageExists,
       pageEditor.blocks,
       personaLibraryQuery.data,
+      ownerPersonaQuery.data,
     ],
   )
 
@@ -478,7 +553,10 @@ export function useUserPageViewModel(slug: string) {
     viewModel,
     userId,
     isOwner,
-    isLoading: pageEditor.isLoading || personaLibraryQuery.isLoading,
+    isLoading:
+      pageEditor.isLoading ||
+      personaLibraryQuery.isLoading ||
+      ownerPersonaQuery.isLoading,
     personaLibrary: personaLibraryQuery.data ?? [],
   }
 }

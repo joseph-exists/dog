@@ -19,6 +19,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models import (
     AccessGrant,
     AccessGrantSubjectType,
+    PersonaGroupMembership,
     Project,
     ProjectCreate,
     ProjectResource,
@@ -26,6 +27,7 @@ from app.models import (
     ProjectUpdate,
     User,
     UserGroupMembership,
+    UserPersona,
 )
 from app.services.access_control import require_access
 from app.models import AccessGrantRole
@@ -79,12 +81,31 @@ async def list_projects_visible_to_user(
     group_ids_stmt = select(UserGroupMembership.group_id).where(UserGroupMembership.user_id == user.id)
     group_ids = (await session.exec(group_ids_stmt)).all()
 
+    owned_persona_ids_stmt = select(UserPersona.id).where(UserPersona.user_id == user.id)
+    owned_persona_ids = (await session.exec(owned_persona_ids_stmt)).all()
+
+    persona_group_ids: list[UUID] = []
+    if owned_persona_ids:
+        persona_group_ids_stmt = select(PersonaGroupMembership.group_id).where(
+            PersonaGroupMembership.user_persona_id.in_(owned_persona_ids),
+            PersonaGroupMembership.is_active == True,  # noqa: E712
+        )
+        persona_group_ids = (await session.exec(persona_group_ids_stmt)).all()
+
     direct_stmt = select(AccessGrant.resource_id).where(
         AccessGrant.resource_type == "project",
         AccessGrant.subject_type == AccessGrantSubjectType.user,
         AccessGrant.subject_id == user.id,
     )
     shared_ids = set((await session.exec(direct_stmt)).all())
+
+    if owned_persona_ids:
+        persona_direct_stmt = select(AccessGrant.resource_id).where(
+            AccessGrant.resource_type == "project",
+            AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+            AccessGrant.subject_id.in_(owned_persona_ids),
+        )
+        shared_ids.update((await session.exec(persona_direct_stmt)).all())
 
     if group_ids:
         group_stmt = select(AccessGrant.resource_id).where(
@@ -93,6 +114,14 @@ async def list_projects_visible_to_user(
             AccessGrant.subject_id.in_(group_ids),
         )
         shared_ids.update((await session.exec(group_stmt)).all())
+
+    if persona_group_ids:
+        persona_group_stmt = select(AccessGrant.resource_id).where(
+            AccessGrant.resource_type == "project",
+            AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+            AccessGrant.subject_id.in_(persona_group_ids),
+        )
+        shared_ids.update((await session.exec(persona_group_stmt)).all())
 
     # Owner projects are always visible.
     statement = (
@@ -207,4 +236,3 @@ async def detach_project_resource(
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
     await session.delete(row)
-

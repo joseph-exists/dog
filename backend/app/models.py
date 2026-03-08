@@ -172,6 +172,8 @@ class AccessGrantSubjectType(str, PyEnum):
 
     user = "user"
     group = "group"
+    user_persona = "user_persona"
+    persona_group = "persona_group"
 
 
 class AccessGrantRole(str, PyEnum):
@@ -192,6 +194,13 @@ class UserGroupMembershipRole(str, PyEnum):
 
     member = "member"
     manager = "manager"
+
+
+class PersonaGroupType(str, PyEnum):
+    """Persona-mediated collaboration container type."""
+
+    group = "group"
+    workspace = "workspace"
 
 
 
@@ -406,6 +415,22 @@ class UserPersonaPresentation(
         default_factory=datetime.utcnow,
         sa_column_kwargs={"onupdate": datetime.utcnow},
     )
+
+
+class UserPersonaPresentationPublic(UserPersonaPresentationBase):
+    """Public model for UserPersonaPresentation API responses."""
+
+    id: uuid.UUID
+    user_persona_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserPersonaPresentationsPublic(SQLModel):
+    """Collection model for UserPersonaPresentation API responses."""
+
+    data: list[UserPersonaPresentationPublic]
+    count: int
 
 
 """
@@ -1343,6 +1368,140 @@ class UserGroupMembershipsPublic(SQLModel):
     """Collection response for group memberships."""
 
     data: list[UserGroupMembershipPublic]
+    count: int
+
+
+class PersonaGroupBase(SQLModel):
+    """Persona-owned collaboration container."""
+
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    group_type: PersonaGroupType = Field(default=PersonaGroupType.group)
+    is_active: bool = Field(default=True)
+
+
+class PersonaGroupCreate(PersonaGroupBase):
+    """Input model for creating a persona group."""
+
+    owner_user_persona_id: uuid.UUID
+
+
+class PersonaGroupUpdate(SQLModel):
+    """Update model for persona groups (all fields optional)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    is_active: bool | None = None
+
+
+class PersonaGroup(PersonaGroupBase, table=True):
+    """Database model for persona-mediated collaboration groups/workspaces."""
+
+    __tablename__ = "persona_groups"
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_user_persona_id",
+            "name",
+            name="uq_persona_groups_owner_persona_name",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_user_persona_id: uuid.UUID = Field(
+        foreign_key="userpersona.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow},
+    )
+
+
+class PersonaGroupPublic(PersonaGroupBase):
+    """Public API response model for a persona group."""
+
+    id: uuid.UUID
+    owner_user_persona_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class PersonaGroupsPublic(SQLModel):
+    """Collection response for persona groups."""
+
+    data: list[PersonaGroupPublic]
+    count: int
+
+
+class PersonaGroupMembershipBase(SQLModel):
+    """Shared properties for persona-group memberships."""
+
+    role: UserGroupMembershipRole = Field(default=UserGroupMembershipRole.member)
+    is_active: bool = Field(default=True)
+
+
+class PersonaGroupMembershipCreate(PersonaGroupMembershipBase):
+    """Input model for adding a user persona to a persona group."""
+
+    user_persona_id: uuid.UUID
+
+
+class PersonaGroupMembershipUpdate(SQLModel):
+    """Update model for persona-group memberships."""
+
+    role: UserGroupMembershipRole | None = None
+    is_active: bool | None = None
+
+
+class PersonaGroupMembership(PersonaGroupMembershipBase, table=True):
+    """Database model for persona-mediated group membership."""
+
+    __tablename__ = "persona_group_memberships"
+    __table_args__ = (
+        UniqueConstraint(
+            "group_id",
+            "user_persona_id",
+            name="uq_persona_group_memberships_group_user_persona",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    group_id: uuid.UUID = Field(
+        foreign_key="persona_groups.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    user_persona_id: uuid.UUID = Field(
+        foreign_key="userpersona.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow},
+    )
+
+
+class PersonaGroupMembershipPublic(PersonaGroupMembershipBase):
+    """Public API response model for persona-group memberships."""
+
+    id: uuid.UUID
+    group_id: uuid.UUID
+    user_persona_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class PersonaGroupMembershipsPublic(SQLModel):
+    """Collection response for persona-group memberships."""
+
+    data: list[PersonaGroupMembershipPublic]
     count: int
 
 

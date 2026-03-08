@@ -38,6 +38,7 @@ from app.models import (
     NodeChoicePublic,
     Persona,
     PersonaCreate,
+    PersonaVisibility,
     PersonaQualityLink,
     PersonaTraitLink,
     PromptConfig,
@@ -104,6 +105,9 @@ from app.models import (
     UserNodeChoice,
     UserPersona,
     UserPersonaCreate,
+    UserPersonaPresentation,
+    UserPersonaPresentationCreate,
+    UserPersonaPresentationUpdate,
     UserPersonaUpdate,
     UserStoryProgress,
     UserStoryProgressCreate,
@@ -510,9 +514,12 @@ def create_archetype(
 
 
 def create_persona(
-    *, session: Session, persona_in: PersonaCreate, owner_id: uuid.UUID
+    *, session: Session, persona_in: PersonaCreate, owner_user_id: uuid.UUID | None
 ) -> Persona:
-    db_persona = Persona.model_validate(persona_in, update={"owner_id": owner_id})
+    db_persona = Persona.model_validate(
+        persona_in,
+        update={"owner_user_id": owner_user_id},
+    )
     session.add(db_persona)
     session.commit()
     session.refresh(db_persona)
@@ -572,10 +579,17 @@ def create_quality_event_trigger(
 
 # Enhanced Persona creation with Archetype inheritance
 def create_persona_with_archetype(
-    *, session: Session, persona_in: PersonaCreate, archetype_id: uuid.UUID
+    *,
+    session: Session,
+    persona_in: PersonaCreate,
+    archetype_id: uuid.UUID,
+    owner_user_id: uuid.UUID | None = None,
 ) -> Persona:
     # Create the persona first
-    db_persona = Persona.model_validate(persona_in)
+    db_persona = Persona.model_validate(
+        persona_in,
+        update={"owner_user_id": owner_user_id},
+    )
     session.add(db_persona)
     session.flush()  # Flush to get the ID without committing
 
@@ -811,13 +825,88 @@ def delete_story(*, session: Session, story_id: uuid.UUID) -> Message:
 # User Persona CRUD functions
 
 
+def _get_derivable_persona_for_user(
+    *,
+    session: Session,
+    persona_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> Persona:
+    persona = session.get(Persona, persona_id)
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona not found")
+
+    if persona.visibility == PersonaVisibility.SYSTEM:
+        return persona
+
+    if (
+        persona.visibility == PersonaVisibility.PRIVATE
+        and persona.owner_user_id == user_id
+    ):
+        return persona
+
+    raise HTTPException(
+        status_code=403,
+        detail="Persona is not derivable by this user",
+    )
+
+
+def _get_primary_user_persona_for_user(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+) -> UserPersona | None:
+    statement = select(UserPersona).where(
+        UserPersona.user_id == user_id,
+        UserPersona.is_primary == True,  # noqa: E712
+    )
+    return session.exec(statement).first()
+
+
+def _set_primary_user_persona(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    target_user_persona_id: uuid.UUID,
+) -> None:
+    existing_primary = _get_primary_user_persona_for_user(
+        session=session,
+        user_id=user_id,
+    )
+    if existing_primary and existing_primary.id != target_user_persona_id:
+        existing_primary.is_primary = False
+        session.add(existing_primary)
+
+
 def create_user_persona(
     *, session: Session, user_persona_in: UserPersonaCreate, user_id: uuid.UUID
 ) -> UserPersona:
     """Create a new user persona."""
+    _get_derivable_persona_for_user(
+        session=session,
+        persona_id=user_persona_in.persona_id,
+        user_id=user_id,
+    )
+
+    existing_statement = select(UserPersona).where(
+        UserPersona.user_id == user_id,
+        UserPersona.persona_id == user_persona_in.persona_id,
+    )
+    existing = session.exec(existing_statement).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="User persona already exists for this persona",
+        )
+
     db_user_persona = UserPersona.model_validate(
         user_persona_in, update={"user_id": user_id}
     )
+    if db_user_persona.is_primary:
+        _set_primary_user_persona(
+            session=session,
+            user_id=user_id,
+            target_user_persona_id=db_user_persona.id,
+        )
     session.add(db_user_persona)
     session.commit()
     session.refresh(db_user_persona)
@@ -838,6 +927,11 @@ def get_user_personas(
     statement = (
         select(UserPersona)
         .where(UserPersona.user_id == user_id)
+        .order_by(
+            UserPersona.is_primary.desc(),
+            UserPersona.sort_order.asc(),
+            UserPersona.created_at.desc(),
+        )
         .offset(skip)
         .limit(limit)
     )
@@ -864,6 +958,12 @@ def update_user_persona(
     """Update a user persona."""
     update_data = user_persona_in.model_dump(exclude_unset=True)
     db_user_persona.sqlmodel_update(update_data)
+    if db_user_persona.is_primary:
+        _set_primary_user_persona(
+            session=session,
+            user_id=db_user_persona.user_id,
+            target_user_persona_id=db_user_persona.id,
+        )
     session.add(db_user_persona)
     session.commit()
     session.refresh(db_user_persona)
@@ -873,6 +973,122 @@ def update_user_persona(
 def delete_user_persona(*, session: Session, db_user_persona: UserPersona) -> None:
     """Delete a user persona."""
     session.delete(db_user_persona)
+    session.commit()
+
+
+def get_user_persona_presentations(
+    *,
+    session: Session,
+    user_persona_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+) -> tuple[list[UserPersonaPresentation], int]:
+    count_statement = (
+        select(func.count())
+        .select_from(UserPersonaPresentation)
+        .where(UserPersonaPresentation.user_persona_id == user_persona_id)
+    )
+    count = session.exec(count_statement).one()
+
+    statement = (
+        select(UserPersonaPresentation)
+        .where(UserPersonaPresentation.user_persona_id == user_persona_id)
+        .order_by(
+            UserPersonaPresentation.audience_scope.asc(),
+            UserPersonaPresentation.audience_key.asc(),
+            UserPersonaPresentation.created_at.desc(),
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+    presentations = session.exec(statement).all()
+    return list(presentations), count
+
+
+def get_user_persona_presentation(
+    *,
+    session: Session,
+    id: uuid.UUID,
+    user_persona_id: uuid.UUID,
+) -> UserPersonaPresentation | None:
+    statement = select(UserPersonaPresentation).where(
+        UserPersonaPresentation.id == id,
+        UserPersonaPresentation.user_persona_id == user_persona_id,
+    )
+    return session.exec(statement).first()
+
+
+def create_user_persona_presentation(
+    *,
+    session: Session,
+    user_persona_id: uuid.UUID,
+    presentation_in: UserPersonaPresentationCreate,
+) -> UserPersonaPresentation:
+    existing_statement = select(UserPersonaPresentation).where(
+        UserPersonaPresentation.user_persona_id == user_persona_id,
+        UserPersonaPresentation.audience_scope == presentation_in.audience_scope,
+        UserPersonaPresentation.audience_key == presentation_in.audience_key,
+    )
+    existing = session.exec(existing_statement).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Presentation already exists for this audience",
+        )
+
+    db_presentation = UserPersonaPresentation.model_validate(
+        presentation_in,
+        update={"user_persona_id": user_persona_id},
+    )
+    session.add(db_presentation)
+    session.commit()
+    session.refresh(db_presentation)
+    return db_presentation
+
+
+def update_user_persona_presentation(
+    *,
+    session: Session,
+    db_presentation: UserPersonaPresentation,
+    presentation_in: UserPersonaPresentationUpdate,
+) -> UserPersonaPresentation:
+    update_data = presentation_in.model_dump(exclude_unset=True)
+
+    next_audience_scope = update_data.get(
+        "audience_scope",
+        db_presentation.audience_scope,
+    )
+    next_audience_key = update_data.get(
+        "audience_key",
+        db_presentation.audience_key,
+    )
+
+    conflict_statement = select(UserPersonaPresentation).where(
+        UserPersonaPresentation.user_persona_id == db_presentation.user_persona_id,
+        UserPersonaPresentation.audience_scope == next_audience_scope,
+        UserPersonaPresentation.audience_key == next_audience_key,
+        UserPersonaPresentation.id != db_presentation.id,
+    )
+    conflict = session.exec(conflict_statement).first()
+    if conflict:
+        raise HTTPException(
+            status_code=400,
+            detail="Presentation already exists for this audience",
+        )
+
+    db_presentation.sqlmodel_update(update_data)
+    session.add(db_presentation)
+    session.commit()
+    session.refresh(db_presentation)
+    return db_presentation
+
+
+def delete_user_persona_presentation(
+    *,
+    session: Session,
+    db_presentation: UserPersonaPresentation,
+) -> None:
+    session.delete(db_presentation)
     session.commit()
 
 

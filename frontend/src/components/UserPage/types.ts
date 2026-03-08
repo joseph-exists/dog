@@ -41,6 +41,8 @@ export interface UserWorkFeedItem {
 
 export interface UserPersonaSummary {
   id: string
+  userPersonaId?: string | null
+  personaVisibility?: "private" | "system" | null
   name: string
   nickname: string | null
   shortBio: string | null
@@ -54,6 +56,7 @@ export interface UserPersonaSummary {
 
 export interface AudiencePresentationSummary {
   id: string
+  userPersonaId?: string | null
   personaId: string
   audienceScope: AudienceScope
   audienceLabel: string

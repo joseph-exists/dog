@@ -26,13 +26,152 @@ The repo already contains a substantial phase-1 user page implementation:
 
 So the main MVP gap is no longer "build the user page UI."
 
-The main MVP gap is that persona identity, audience visibility, and authored persona state are still split across:
+Since the first draft of this deep dive, the backend has moved forward materially:
 
-- global `Persona` records
-- `UserPersona` library junction rows
-- page block JSON
+- `Persona` now has explicit visibility semantics (`private` vs `system`)
+- `UserPersona` as owner-scoped entity
+- `UserPersonaPresentation` as a separate audience-facing model
+- access grants support `user_persona` and `persona_group` subjects
+- persona-mediated collaboration groups/workspaces co-exist with user groups
 
-That means the system can currently demo persona-shaped pages, but it cannot yet reliably claim that user personas are truly distinct, owner-scoped, and disassociated from each other for other users.
+That changes the state of the plan in an important way:
+
+- the product data model is no longer blocked on its core persona entities
+- the backend now has the right primitives for persona-mediated publication and persona-mediated collaboration
+- the remaining MVP work is now primarily integration, audience-resolution policy, frontend adoption, and migration rather than greenfield modeling
+
+## What Changed
+
+### Persona model is now coherent enough for MVP
+
+The backend now supports:
+
+- `Persona.visibility` and `Persona.owner_user_id`
+- `UserPersona` fields for authored persona metadata:
+  - description
+  - short bio
+  - long bio
+  - tags
+  - publication state
+  - primary designation
+  - sort order
+  - visual `presentation_json`
+- `UserPersonaPresentation` as a separate model for:
+  - audience scope
+  - audience label
+  - headline
+  - framing text
+  - visible work ids
+  - relation call to action
+  - presentation-level publication state
+  - visual `presentation_json`
+
+
+
+### Persona derivation semantics are now explicit
+
+The model supports the intended product rule:
+
+- `system` Personas are globally derivable
+- `private` Personas are owner-scoped and only derivable by the user who owns them
+
+### Persona-mediated collaboration is now represented in backend data
+
+In addition to user groups, the backend exposes persona-mediated collaboration primitives (exported in frontend/src/client with types, schemas, and services)
+
+- `PersonaGroup`
+- `PersonaGroupMembership`
+- access grants to:
+  - `user_persona`
+  - `persona_group`
+
+The access resolver now considers:
+
+- direct user grants
+- direct user-persona grants
+- legacy user-group grants
+- persona-group grants
+- project-derived grants flowing through those same subject types
+
+the backend supports:
+
+- users collaborating through personas
+- projects/workspaces being shared to persona-defined groups
+- attached resources inheriting access from those persona-mediated project grants
+
+## Affordances Enabled
+
+These are the main plan-level affordances unlocked by the recent implementation.
+
+### 1. persisted persona-authored identity 
+
+- persona identity is a backend-owned product entity through `UserPersona`
+
+Affordance:
+
+- user pages can evolve toward referencing personas rather than owning all persona state inline
+- the same user persona can participate consistently across page, project, workspace, and access systems
+
+### 2. Audience-facing presentation is separable from persona identity
+
+Before:
+
+- there was no stable backend distinction between "the persona" and "how that persona is presented to an audience"
+
+Now:
+
+- `UserPersonaPresentation` provides that distinction
+
+Affordance:
+
+- one persona can support multiple audience-facing views without collapsing identity and presentation into one record
+- the frontend can shift from block-owned audience view JSON to backend-owned presentation records
+
+### 3. Private personas are now a first-class concept
+
+Before:
+
+- persona authorship risked accidentally producing globally visible/shared entities
+
+Now:
+
+- `Persona.visibility` makes private vs system semantics explicit
+
+Affordance:
+
+- users can derive `UserPersona` state from private upstream personas without forcing those upstream personas into the global catalog
+- the plan can support distinct user-authored personas without requiring public/global publication
+
+### 4. Collaboration can now be mediated through personas instead of only accounts
+
+Before:
+
+- group and project access collapsed collaboration identity back to the raw user account
+
+Now:
+
+- persona groups and persona-subject grants coexist with legacy user-group grants
+
+Affordance:
+
+- a project/workspace can now be shared to a persona-mediated group
+- access can be granted directly to a specific user persona
+- attached resources can inherit those project/workspace grants
+
+This is a major step toward the broader product vision where users associate through personas rather than only through account-level identity.
+
+### 5. The backend supports coexistence 
+
+The implementation intentionally leaves the concurrent user path in place:
+
+- user `group` access still works
+- persona-mediated `persona_group` access now works in parallel
+
+Affordance:
+
+- frontend and product flows can migrate incrementally
+- workspace/project features do not need to pause until every legacy group/share path is replaced
+- the repo can support mixed-mode rollout while the persona system is integrated into more surfaces
 
 ## What Is Already Implemented
 
@@ -107,79 +246,47 @@ So the repo already supports the authoring flow at a UI level.
 
 This is the key delta.
 
-### 1. "User personas" are not yet true user-owned persona entities
+### 1. Frontend user pages still do not consume the new backend persona model
 
-Current implementation:
-
-- creating a persona from the user page composer calls `PersonasService.createPersona(...)`
-- that creates a global `Persona`
-- then the app creates a `UserPersona` row that only links the current user to that global persona
-
-The `UserPersona` backend model currently stores only:
-
-- `persona_id`
-- `nickname`
-- `is_active`
-
-It does not store:
-
-- short bio
-- long bio
-- tags
-- publication state
-- primary designation
-- audience-specific publication state
-- any page-facing persona metadata beyond nickname/active flag
-
-Those richer authored fields are currently persisted in page block JSON inside `personaManager`, not in a backend user-persona publication model.
+The backend model now exists, but the frontend user-page runtime/composer still largely hydrates from page block content.
 
 Consequence:
 
-- the authored persona a user manages on their page is not actually the same thing as a durable backend entity
-- persona metadata can drift between the page JSON and the underlying persona/library records
-- the system cannot yet enforce user-scoped persona behavior outside the page layer
+- the old page-JSON source-of-truth behavior still exists in the frontend layer
+- the main remaining gap is now adapter/integration work rather than missing backend entities
 
 ### 2. Audience views exist as authored content, but audience resolution is not real
 
-Current implementation:
+Current state:
 
-- audience presentations can be authored and saved in page JSON
-- runtime selects an audience scope by taking the first presentation or defaulting to `public`
+- `UserPersonaPresentation` now exists in backend data
+- frontend runtime still does not resolve viewer audience from a canonical access/relationship policy
 
 Not implemented:
 
 - determine the viewer's actual audience scope from relationship/access state
 - select the correct presentation for the visiting user
 - support per-visitor or per-group audience assignment in backend data
-- any gating stronger than "show the stored presentation chosen by frontend defaults"
 
 Consequence:
 
-- the system can author multiple audience views
-- but it cannot yet reliably say "viewer X sees persona A while viewer Y sees persona B"
+- the data shape is now available
+- the runtime selection policy is still a remaining product/implementation decision
 
-This is the biggest product gap for the "disassociated from each other for other users" requirement.
+This remains the biggest product gap for the "disassociated from each other for other users" requirement.
 
 ### 3. Visitor-visible persona isolation is representational, not enforced
 
-Current implementation:
-
-- visitor runtime filters work through audience presentations
-- if no presentation exists, visitor sees sparse empty state
-- direct user-to-user relation UI is avoided
-
-But:
-
-- personas shown to visitors are derived from page JSON plus frontend filtering
-- there is no backend publication object enforcing what persona metadata is public for which audience
-- there is no stable model for "this persona presentation is published to this audience and hidden from all others"
+The backend now has the right publication entities, but the frontend visitor flow has not yet been rewired to them.
 
 Consequence:
 
-- the UX points in the right direction
-- the data model does not yet guarantee it
+- this is no longer a schema problem
+- it is now a runtime integration and policy-enforcement problem
 
 ### 4. Work is still page-authored metadata, not a canonical work system
+
+NOTE: Work is still in design. Keep current system working for MVP. 
 
 Current implementation:
 
@@ -199,23 +306,14 @@ Consequence:
 
 For MVP this may be acceptable if the requirement is only "author a persona-shaped page," not "ship a unified work graph."
 
-### 5. Relations are authored, but still page-local
+### 5. Persona-mediated collaboration exists, but frontend workspaces/projects have not adopted it yet
 
-Current implementation:
-
-- relations are persona-mediated in the UI
-- relation summaries are saved in `relationshipManager` block content
-
-Not implemented:
-
-- backend relation table for user-page persona relations
-- identity-aware target resolution
-- relationship-driven audience access logic
+The backend now supports persona groups and persona-mediated grants, but this is still backend-first.
 
 Consequence:
 
-- good representational MVP surface
-- not enough to drive real audience segmentation
+- the plan now has viable collaboration primitives
+- the remaining work is exposing them through frontend workflows and aligning project/workspace UX to those primitives
 
 ## High-Priority Mismatches Against MVP Needs
 
@@ -227,34 +325,15 @@ If the MVP requirement is:
 
 then these are the highest-priority remaining gaps.
 
-### P0: Define the backend source of truth for user-owned persona state
+### P0: Rewire frontend user-page composition and runtime to the backend persona contracts
 
-This is the most important unresolved item.
+This is now the most important item.
 
-Right now the source of truth is split:
+The key backend records exist. The MVP now depends on:
 
-- global `Persona`
-- user library junction
-- page JSON
-
-For MVP, product and engineering need one explicit answer:
-
-1. treat `UserPersona` as the real user-owned persona entity and extend it
-2. or create a new user-persona publication/profile model
-
-At minimum, the backend-owned record for a user's page persona needs fields for:
-
-- owner user id
-- backing persona id or null
-- display name / nickname policy
-- short bio
-- long bio
-- weighted tags
-- publication state
-- primary flag
-- optional stable ordering
-
-Without this, persona management remains page-content-driven rather than product-model-driven.
+- reading `UserPersona` from backend data using exported client services 
+- reading `UserPersonaPresentation` from backend data using exported client services
+- persisting changes through those APIs rather than only through page block JSON
 
 ### P0: Define how visitor audience is resolved
 
@@ -282,19 +361,13 @@ The runtime should guarantee:
 
 The current frontend approximates this, but the data contract does not yet guarantee it.
 
-### P1: Decide whether persona creation should remain globally catalogued
+### P1: Integrate persona-group collaboration into project/workspace UX
 
-Current behavior creates a global `Persona`, then links it to the user.
+The backend primitives now exist, but the frontend still needs:
 
-That creates a product question:
-
-- should a user-created persona be globally discoverable in `/personas`?
-
-If the answer is no for MVP, current implementation is wrong in product terms.
-
-If the answer is yes, product should explicitly accept that these are reusable shared personas, not purely private user-owned personas.
-
-This is a major identity semantics decision, not just an implementation detail.
+- persona-group creation and management flows
+- project/workspace sharing UI that can target persona groups and user personas
+- clear display of why a user has access through a particular persona/group path
 
 ### P1: Move authored persona fields out of page JSON
 
@@ -375,45 +448,24 @@ That would satisfy the user-facing requirement without implementing vouch.
 
 ### Backend work required for MVP
 
-#### 1. Create a real backend contract for user-owned persona state
+#### 1. Add migrations and tests for the new persona, presentation, and persona-group models
 
-Required:
+The shape now exists in backend code, but the remaining backend-critical work is operationalization:
 
-- durable storage for user-authored persona metadata
-- API read/write endpoints for that model
-- contract for publish/unpublish
-- contract for primary persona designation
+- alembic migrations
+- CRUD and route test coverage
+- integrity constraints where still only service-enforced
 
-This is the single highest-priority request.
+#### 2. Define and implement audience resolution policy
 
-#### 2. Create a real backend contract for audience presentations
+The backend now stores audience-facing presentations, but the runtime still needs a deterministic policy for mapping viewer -> audience scope.
 
-Required:
+#### 3. Extend collaboration/audience policy from backend primitives to product rules
 
-- durable audience presentation records
-- reference to user-owned persona
-- reference to visible work items or interim work ids
-- audience scope
-- publication/runtime eligibility rules
+The system now has persona groups and persona-mediated grants. Product still needs to decide:
 
-#### 3. Decide and implement audience resolution
-
-Minimum MVP option:
-
-- always resolve visitor to `public`
-
-Better MVP option:
-
-- support `public` plus one manually managed non-public audience path
-
-#### 4. Decide product semantics for user-created personas
-
-Required decision:
-
-- globally reusable persona catalog entries
-- or user-owned page personas not exposed as shared catalog personas
-
-Current implementation behaves like the former.
+- how those groups map into audience scopes, if at all
+- whether non-public persona presentations are driven by access grants, relation state, group membership, or a simpler MVP rule
 
 ### Frontend work required for MVP
 
@@ -452,32 +504,42 @@ Recommended:
 
 ## Notable Implementation Risks If Shipped As-Is
 
-### Risk 1: Persona data drift
+### Risk 1: Frontend/backend drift during migration
 
-The same conceptual persona is currently represented across multiple stores.
+The backend model has advanced faster than the frontend composition/runtime layer.
 
-### Risk 2: Audience claims exceed reality
+### Risk 2: Audience claims still exceed runtime policy
 
-The UI suggests audience-specific visibility, but backend audience resolution does not exist yet.
+The storage model now exists, but viewer-to-audience resolution is still not finalized.
 
-### Risk 3: User-created personas may leak into the shared persona universe unintentionally
+### Risk 3: Persona-group access may outpace frontend explanation
 
-Because creation currently goes through the global `Persona` API, product may accidentally ship shared/global semantics where private/user-owned semantics were intended.
+The backend now supports persona-mediated access paths; frontend surfaces may lag in explaining why a user has access.
 
-### Risk 4: Runtime isolation is soft
+### Risk 4: Runtime isolation is still soft until frontend adopts backend publication data
 
-The runtime mostly depends on frontend filtering of page-authored JSON, not backend-enforced publication/access semantics.
+The new backend entities reduce this risk, but they do not remove it until the frontend uses them.
 
 ## Bottom Line
 
-The user-page personas system is already far enough along to validate the UX model.
+The user-page personas system is now beyond the stage of being only a strong prototype.
 
-What is not finished for MVP is the product data model.
-
-If vouch is excluded, the minimum honest MVP should focus on three things:
+The backend now has the core data model required for:
 
 1. real backend-owned user persona records
 2. real backend-owned audience presentation records
-3. explicit visitor audience resolution, even if that resolution is only `public` for the first release
+3. persona-mediated collaboration and access-control primitives
 
-Without those three pieces, the system remains a strong prototype of persona-shaped pages rather than a finished MVP for distinct, disassociated user personas.
+That moves the plan forward in a concrete way:
+
+- distinct personas can now exist as durable backend entities
+- audience-facing presentation has a backend home
+- projects/workspaces can now be shared through persona-mediated groups rather than only raw user groups
+
+The remaining MVP blockers are now:
+
+1. frontend adoption of the new backend contracts
+2. explicit audience-resolution policy
+3. migrations, tests, and rollout integration
+
+That is a much stronger position than the earlier state, where the main blocker was the absence of the underlying product model itself.

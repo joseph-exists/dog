@@ -37,9 +37,17 @@ function toLibraryPersona(
     personaId: entry.persona_id,
     name: persona.name,
     nickname: entry.nickname ?? null,
-    description: persona.description ?? null,
+    description:
+      ("short_bio" in entry && typeof entry.short_bio === "string"
+        ? entry.short_bio
+        : "description" in entry && typeof entry.description === "string"
+          ? entry.description
+          : persona.description) ?? null,
     isActive: entry.is_active ?? true,
-    longDescription: persona.long_description ?? null,
+    longDescription:
+      ("long_bio" in entry && typeof entry.long_bio === "string"
+        ? entry.long_bio
+        : persona.long_description) ?? null,
     domains: [persona.general_domain, persona.specific_domain].filter(
       Boolean,
     ) as string[],

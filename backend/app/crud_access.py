@@ -17,9 +17,13 @@ from app.models import (
     AccessGrant,
     AccessGrantRevokeRequest,
     AccessGrantRole,
+    AccessGrantSubjectType,
     AccessGrantUpsertRequest,
     DemoSession,
+    PersonaGroup,
     User,
+    UserGroup,
+    UserPersona,
 )
 from app.services.access_control import get_effective_role, get_resource_owner_id
 from app.crud import add_participant, remove_participant
@@ -47,6 +51,30 @@ def _validate_requested_role(role: AccessGrantRole) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="manager role is not assignable in Phase 0",
+        )
+
+
+async def _validate_subject_exists(
+    session: AsyncSession,
+    *,
+    subject_type: AccessGrantSubjectType,
+    subject_id: UUID,
+) -> None:
+    if subject_type == AccessGrantSubjectType.user:
+        subject = await session.get(User, subject_id)
+    elif subject_type == AccessGrantSubjectType.group:
+        subject = await session.get(UserGroup, subject_id)
+    elif subject_type == AccessGrantSubjectType.user_persona:
+        subject = await session.get(UserPersona, subject_id)
+    elif subject_type == AccessGrantSubjectType.persona_group:
+        subject = await session.get(PersonaGroup, subject_id)
+    else:
+        subject = None
+
+    if subject is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Grant subject not found",
         )
 
 
@@ -98,6 +126,11 @@ async def upsert_access_grant(
         session, actor=actor, resource_type=resource_type, resource_id=resource_id
     )
     _validate_requested_role(grant_in.role)
+    await _validate_subject_exists(
+        session,
+        subject_type=grant_in.subject_type,
+        subject_id=grant_in.subject_id,
+    )
 
     existing_stmt = select(AccessGrant).where(
         AccessGrant.resource_type == resource_type,

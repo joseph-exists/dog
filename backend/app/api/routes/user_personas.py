@@ -8,6 +8,11 @@ from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Message,
     UserPersonaCreate,
+    UserPersonaPresentationBase,
+    UserPersonaPresentationCreate,
+    UserPersonaPresentationPublic,
+    UserPersonaPresentationsPublic,
+    UserPersonaPresentationUpdate,
     UserPersonaPublic,
     UserPersonasPublic,
     UserPersonaUpdate,
@@ -97,3 +102,167 @@ def delete_user_persona(
 
     crud.delete_user_persona(session=session, db_user_persona=user_persona)
     return Message(message="User persona deleted successfully")
+
+
+@router.get("/{id}/presentations", response_model=UserPersonaPresentationsPublic)
+def read_user_persona_presentations(
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    """
+    Retrieve audience presentations for a user persona owned by the current user.
+    """
+    user_persona = crud.get_user_persona(
+        session=session,
+        id=id,
+        user_id=current_user.id,
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    presentations, count = crud.get_user_persona_presentations(
+        session=session,
+        user_persona_id=id,
+        skip=skip,
+        limit=limit,
+    )
+    return UserPersonaPresentationsPublic(data=presentations, count=count)
+
+
+@router.get(
+    "/{id}/presentations/{presentation_id}",
+    response_model=UserPersonaPresentationPublic,
+)
+def read_user_persona_presentation(
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    presentation_id: uuid.UUID,
+) -> Any:
+    """
+    Get one audience presentation for a user persona owned by the current user.
+    """
+    user_persona = crud.get_user_persona(
+        session=session,
+        id=id,
+        user_id=current_user.id,
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    presentation = crud.get_user_persona_presentation(
+        session=session,
+        id=presentation_id,
+        user_persona_id=id,
+    )
+    if not presentation:
+        raise HTTPException(status_code=404, detail="User persona presentation not found")
+    return presentation
+
+
+@router.post(
+    "/{id}/presentations",
+    response_model=UserPersonaPresentationPublic,
+)
+def create_user_persona_presentation(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    presentation_in: UserPersonaPresentationBase,
+) -> Any:
+    """
+    Create a new audience presentation for a user persona owned by the current user.
+    """
+    user_persona = crud.get_user_persona(
+        session=session,
+        id=id,
+        user_id=current_user.id,
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    presentation = crud.create_user_persona_presentation(
+        session=session,
+        user_persona_id=id,
+        presentation_in=UserPersonaPresentationCreate(
+            user_persona_id=id,
+            **presentation_in.model_dump(),
+        ),
+    )
+    return presentation
+
+
+@router.put(
+    "/{id}/presentations/{presentation_id}",
+    response_model=UserPersonaPresentationPublic,
+)
+def update_user_persona_presentation(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    presentation_id: uuid.UUID,
+    presentation_in: UserPersonaPresentationUpdate,
+) -> Any:
+    """
+    Update an audience presentation for a user persona owned by the current user.
+    """
+    user_persona = crud.get_user_persona(
+        session=session,
+        id=id,
+        user_id=current_user.id,
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    presentation = crud.get_user_persona_presentation(
+        session=session,
+        id=presentation_id,
+        user_persona_id=id,
+    )
+    if not presentation:
+        raise HTTPException(status_code=404, detail="User persona presentation not found")
+
+    presentation = crud.update_user_persona_presentation(
+        session=session,
+        db_presentation=presentation,
+        presentation_in=presentation_in,
+    )
+    return presentation
+
+
+@router.delete("/{id}/presentations/{presentation_id}")
+def delete_user_persona_presentation(
+    session: SessionDep,
+    current_user: CurrentUser,
+    id: uuid.UUID,
+    presentation_id: uuid.UUID,
+) -> Message:
+    """
+    Delete an audience presentation for a user persona owned by the current user.
+    """
+    user_persona = crud.get_user_persona(
+        session=session,
+        id=id,
+        user_id=current_user.id,
+    )
+    if not user_persona:
+        raise HTTPException(status_code=404, detail="User persona not found")
+
+    presentation = crud.get_user_persona_presentation(
+        session=session,
+        id=presentation_id,
+        user_persona_id=id,
+    )
+    if not presentation:
+        raise HTTPException(status_code=404, detail="User persona presentation not found")
+
+    crud.delete_user_persona_presentation(
+        session=session,
+        db_presentation=presentation,
+    )
+    return Message(message="User persona presentation deleted successfully")
