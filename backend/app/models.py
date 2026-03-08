@@ -1817,6 +1817,42 @@ class LLMProviderTypeBase(SQLModel):
     validated: bool = Field(default=False, description="updated when proven valid at least once")
     is_system: bool = Field(default=False, description="is this a system-level provider type?")
 
+    # Template gallery fields
+    category: str = Field(
+        default="custom",
+        max_length=30,
+        description="Provider category: major | cloud | self_hosted | custom"
+    )
+    display_name: str = Field(
+        default="",
+        max_length=100,
+        description="User-friendly name like 'OpenAI'"
+    )
+    logo_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Path to provider logo"
+    )
+    docs_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Link to provider documentation"
+    )
+    default_base_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Default API endpoint"
+    )
+    config_schema: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="JSON Schema for provider-specific fields"
+    )
+    sort_order: int = Field(
+        default=0,
+        description="Display ordering within category"
+    )
+
 class LLMProviderTypeCreate(LLMProviderTypeBase):
     """Input model for creating an LLMProviderType"""
     pass
@@ -1827,6 +1863,42 @@ class LLMProviderTypeBasePartial(SQLModel):
     details: str | None = Field(default=None, max_length=500, description="notes if necessary")
     validated: bool | None = Field(default=None, description="updated when proven valid at least once",)
     is_system: bool | None = Field(default=None, description="is this a validated provider_type?" )
+
+    # Template gallery fields (all optional for updates)
+    category: str | None = Field(
+        default=None,
+        max_length=30,
+        description="Provider category: major | cloud | self_hosted | custom"
+    )
+    display_name: str | None = Field(
+        default=None,
+        max_length=100,
+        description="User-friendly name like 'OpenAI'"
+    )
+    logo_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Path to provider logo"
+    )
+    docs_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Link to provider documentation"
+    )
+    default_base_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Default API endpoint"
+    )
+    config_schema: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="JSON Schema for provider-specific fields"
+    )
+    sort_order: int | None = Field(
+        default=None,
+        description="Display ordering within category"
+    )
 
 class LLMProviderTypeUpdate(LLMProviderTypeBasePartial):
     pass
