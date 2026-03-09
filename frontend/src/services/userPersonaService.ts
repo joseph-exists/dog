@@ -56,7 +56,9 @@ function toUserPersonaSummary(
   persona: Persona,
 ): UserPersonaSummary {
   const tags =
-    entry.tags_json?.map((tag) => toWeightedTag(tag)).filter(Boolean) ?? []
+    entry.tags_json?.map((tag) => toWeightedTag(tag)).filter(
+      (tag): tag is WeightedTag => tag !== null,
+    ) ?? []
 
   return {
     id: entry.persona_id,

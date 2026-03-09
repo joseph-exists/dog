@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 export interface AudiencePresentationDraft {
   id?: string
+  userPersonaId?: string | null
   personaId: string
   audienceScope: AudienceScope
   audienceLabel: string
@@ -77,6 +78,7 @@ export function AudiencePresentationSheet({
   const handleSave = async () => {
     await onSave({
       id: presentation?.id,
+      userPersonaId: presentation?.userPersonaId ?? null,
       personaId,
       audienceScope,
       audienceLabel: audienceLabel.trim(),
