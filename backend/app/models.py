@@ -2008,6 +2008,74 @@ class LLMModelsPublic(SQLModel):
     count: int
 
 
+# ==================== UserModelPin Models ====================
+# Junction table for user-pinned favorite LLM models
+# Allows users to pin/favorite models for quick access
+
+
+class UserModelPinBase(SQLModel):
+    """Base model for user model pins."""
+
+    sort_order: int = Field(default=0, description="Sort order for pinned models")
+
+
+class UserModelPinCreate(UserModelPinBase):
+    """Create model for user model pins."""
+
+    llm_model_id: uuid.UUID = Field(description="The LLM model to pin")
+
+
+class UserModelPin(UserModelPinBase, table=True):
+    """
+    Database model for user-pinned LLM models.
+
+    Junction table allowing users to pin/favorite specific LLM models
+    for quick access. Each user can pin a model only once.
+    """
+
+    __tablename__ = "user_model_pin"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "llm_model_id", name="uq_user_model_pin_user_model"
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        description="User who pinned the model",
+    )
+    llm_model_id: uuid.UUID = Field(
+        foreign_key="llmmodel.id",
+        nullable=False,
+        index=True,
+        description="The pinned LLM model",
+    )
+    pinned_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        nullable=False,
+        description="When the model was pinned",
+    )
+
+
+class UserModelPinPublic(UserModelPinBase):
+    """Public API response for a user model pin."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    llm_model_id: uuid.UUID
+    pinned_at: datetime
+
+
+class UserModelPinsPublic(SQLModel):
+    """Collection response for user model pins."""
+
+    data: list[UserModelPinPublic]
+    count: int
+
+
 class Event(EventBase, table=True):
     """Database model for events."""
 
