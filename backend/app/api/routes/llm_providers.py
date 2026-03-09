@@ -6,28 +6,71 @@ API keys and custom endpoints. API keys are encrypted at rest.
 """
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import select, func
+from pydantic import BaseModel, Field
+from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.security import encrypt_api_key
 from app.models import (
     LLMProviderType,
+    LLMProviderTypePublic,
     LLMProviderTypesPublic,
     Message,
     UserAccessProvider,
     UserAccessProviderCreate,
     UserAccessProviderPublic,
-    UserAccessProviderUpdate,
     UserAccessProvidersPublic,
-    LLMProviderTypePublic
+    UserAccessProviderUpdate,
+)
+from app.services.provider_adapters import (
+    AccountInfo,
+    ModelInfo,
+    RateLimitInfo,
+    TestResult,
+    get_provider_account_info,
+    list_provider_models,
+    test_provider_connection,
 )
 
 router = APIRouter(prefix="/llm-providers", tags=["llm-providers"])
 logger = logging.getLogger(__name__)
+
+# Cache freshness threshold (1 hour)
+MODELS_CACHE_MAX_AGE = timedelta(hours=1)
+
+
+# =============================================================================
+# Response Models for Validation/Testing Endpoints
+# =============================================================================
+
+
+class QuickTestResult(BaseModel):
+    """Quick pass/fail validation result."""
+    valid: bool = Field(description="Whether the provider credentials are valid")
+    error: str | None = Field(default=None, description="Error message if invalid")
+    error_code: str | None = Field(default=None, description="Error code for programmatic handling")
+
+
+class DetailedTestResult(BaseModel):
+    """Detailed test result with diagnostics."""
+    valid: bool = Field(description="Whether the provider credentials are valid")
+    error: str | None = Field(default=None, description="Error message if invalid")
+    error_code: str | None = Field(default=None, description="Error code for programmatic handling")
+    models: list[ModelInfo] = Field(default_factory=list, description="Available models from provider")
+    rate_limits: RateLimitInfo | None = Field(default=None, description="Current rate limit status")
+    account_info: AccountInfo | None = Field(default=None, description="Account information if available")
+    latency_ms: int | None = Field(default=None, description="Connection latency in milliseconds")
+
+
+class ModelsListResponse(BaseModel):
+    """Response for cached/live model listing."""
+    models: list[str] = Field(description="List of available model IDs")
+    cached: bool = Field(description="Whether this was served from cache")
+    cached_at: datetime | None = Field(default=None, description="When the cache was last updated")
 
 
 @router.get("/", response_model=UserAccessProvidersPublic)
@@ -215,21 +258,162 @@ def delete_provider(
     return Message(message="Provider deleted successfully")
 
 
-# TODO: Redesign test endpoint - need model_id to know which API protocol to test
-# @router.post("/{provider_id}/test", response_model=Message)
-# async def test_provider(
-#     provider_id: uuid.UUID,
-#     session: SessionDep,
-#     current_user: CurrentUser,
-#     model_id: uuid.UUID,  # Need this to determine API protocol
-# ) -> Any:
-#     """
-#     Test LLM provider connection with a specific model.
-#
-#     Since provider can serve multiple API types (OpenAI + Google),
-#     we need to know which model to test against.
-#     """
-#     pass
+# =============================================================================
+# Validation/Testing Endpoints
+# =============================================================================
+
+
+@router.post("/{provider_id}/test", response_model=QuickTestResult)
+async def test_provider(
+    provider_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> QuickTestResult:
+    """
+    Quick pass/fail validation of provider credentials.
+
+    Tests the API key and connection to the provider.
+    Updates the provider's validation state fields.
+    """
+    # Load provider
+    provider = session.get(UserAccessProvider, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    if provider.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to test this provider")
+
+    # Test connection using adapter service
+    result: TestResult = await test_provider_connection(provider)
+
+    # Update provider validation state
+    provider.is_validated = result.success
+    provider.last_validated_at = datetime.now(timezone.utc)
+    provider.validation_error = None if result.success else result.message
+
+    session.add(provider)
+    session.commit()
+    session.refresh(provider)
+
+    return QuickTestResult(
+        valid=result.success,
+        error=None if result.success else result.message,
+        error_code=None if result.success else result.status.value,
+    )
+
+
+@router.post("/{provider_id}/test/detailed", response_model=DetailedTestResult)
+async def test_provider_detailed(
+    provider_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> DetailedTestResult:
+    """
+    Detailed provider validation with full diagnostics.
+
+    Tests credentials, retrieves available models, and gets account info.
+    Updates the provider's validation state and model cache.
+    """
+    # Load provider
+    provider = session.get(UserAccessProvider, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    if provider.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to test this provider")
+
+    # Test connection using adapter service
+    test_result: TestResult = await test_provider_connection(provider)
+
+    # Update provider validation state
+    provider.is_validated = test_result.success
+    provider.last_validated_at = datetime.now(timezone.utc)
+    provider.validation_error = None if test_result.success else test_result.message
+
+    # If connection succeeded, fetch models and account info
+    models: list[ModelInfo] = []
+    account_info: AccountInfo | None = None
+
+    if test_result.success:
+        # Fetch models
+        models = await list_provider_models(provider)
+
+        # Update model cache with model IDs
+        now = datetime.now(timezone.utc)
+        provider.available_models_cache = [m.model_id for m in models]
+        provider.models_cached_at = now
+
+        # Fetch account info
+        account_info = await get_provider_account_info(provider)
+
+    session.add(provider)
+    session.commit()
+    session.refresh(provider)
+
+    return DetailedTestResult(
+        valid=test_result.success,
+        error=None if test_result.success else test_result.message,
+        error_code=None if test_result.success else test_result.status.value,
+        models=models,
+        rate_limits=account_info.rate_limits if account_info else None,
+        account_info=account_info,
+        latency_ms=test_result.latency_ms,
+    )
+
+
+@router.get("/{provider_id}/models", response_model=ModelsListResponse)
+async def get_provider_models(
+    provider_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    force_refresh: bool = False,
+) -> ModelsListResponse:
+    """
+    Get available models for a provider.
+
+    Returns cached models if available and fresh (< 1 hour).
+    Otherwise fetches live from the provider API and updates cache.
+
+    Args:
+        force_refresh: If True, bypass cache and fetch fresh data
+    """
+    # Load provider
+    provider = session.get(UserAccessProvider, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    if provider.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to access this provider")
+
+    # Check if cache is fresh
+    now = datetime.now(timezone.utc)
+    cache_is_fresh = (
+        not force_refresh
+        and provider.available_models_cache is not None
+        and provider.models_cached_at is not None
+        and (now - provider.models_cached_at.replace(tzinfo=timezone.utc)) < MODELS_CACHE_MAX_AGE
+    )
+
+    if cache_is_fresh:
+        return ModelsListResponse(
+            models=provider.available_models_cache or [],
+            cached=True,
+            cached_at=provider.models_cached_at,
+        )
+
+    # Fetch fresh models
+    models = await list_provider_models(provider)
+    model_ids = [m.model_id for m in models]
+
+    # Update cache
+    provider.available_models_cache = model_ids
+    provider.models_cached_at = now
+    session.add(provider)
+    session.commit()
+    session.refresh(provider)
+
+    return ModelsListResponse(
+        models=model_ids,
+        cached=False,
+        cached_at=now,
+    )
 
 
 def _unset_defaults(session: SessionDep, user_id: uuid.UUID) -> None:
@@ -243,6 +427,4 @@ def _unset_defaults(session: SessionDep, user_id: uuid.UUID) -> None:
         session.add(provider)
 
 
-# TODO: Add back test connection helpers when test endpoint is redesigned
-# Will need to test specific model + provider combinations
 
