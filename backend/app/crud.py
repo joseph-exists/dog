@@ -293,7 +293,6 @@ def get_llm_models_with_pin_status(
         tuple (list of models with pin status, total count)
     """
     from sqlalchemy import case
-    from sqlalchemy.orm import aliased
 
     # Build filters (LLMModel columns only)
     filters: list[Any] = []
