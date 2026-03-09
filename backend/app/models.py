@@ -1765,6 +1765,26 @@ class UserAccessProviderBase(SQLModel):
     last_validated_at: datetime | None = Field(default=None, description="Timestamp of last successful validation")
     validation_error: str | None = Field(default=None, max_length=1000, description="Last validation error message")
 
+    # Provider-specific config and headers (JSON in table model)
+    provider_config: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-specific settings (org_id, deployment_name, etc.)",
+    )
+    custom_headers: dict[str, Any] | None = Field(
+        default=None,
+        description="Additional HTTP headers for API requests",
+    )
+
+    # Model cache (JSON in table model)
+    available_models_cache: list[Any] | None = Field(
+        default=None,
+        description="Cached list of available models from provider API",
+    )
+    models_cached_at: datetime | None = Field(
+        default=None,
+        description="When the models cache was last refreshed",
+    )
+
 class UserAccessProviderCreate(UserAccessProviderBase):
     """Input model for creating provider"""
     pass
