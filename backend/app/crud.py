@@ -28,7 +28,9 @@ from app.models import (
     LLMModel,
     LLMModelCreate,
     LLMModelPublic,
+    LLMModelPublicWithPinStatus,
     LLMModelsPublic,
+    LLMModelsPublicWithPinStatus,
     LLMModelUpdate,
     LLMProviderType,
     LLMProviderTypeCreate,
@@ -257,6 +259,110 @@ def get_llm_models(
     models = list(session.exec(statement).all())
 
     return models, count
+
+
+def get_llm_models_with_pin_status(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    primary_provider_type_id: uuid.UUID | None = None,
+    skip: int = 0,
+    limit: int = 100,
+    is_default: bool | None = None,
+    has_vision: bool | None = None,
+    has_function_calling: bool | None = None,
+    has_streaming: bool | None = None,
+    has_json_mode: bool | None = None,
+    model_id: str | None = None,
+) -> tuple[list[LLMModelPublicWithPinStatus], int]:
+    """
+    Get list of LLM Models with pin status for the specified user.
+
+    Uses LEFT JOIN with UserModelPin to include pin information for each model.
+    Pinned models are sorted first, then by model sort_order and model_id.
+
+    Args:
+        session: Database session
+        user_id: User UUID for pin status lookup
+        primary_provider_type_id: Filter by provider type
+        skip, limit: Pagination
+        is_default, has_vision, etc.: Capability filters
+        model_id: Search by model_id
+
+    Returns:
+        tuple (list of models with pin status, total count)
+    """
+    from sqlalchemy import case
+    from sqlalchemy.orm import aliased
+
+    # Build filters (LLMModel columns only)
+    filters: list[Any] = []
+    if has_vision is not None:
+        filters.append(LLMModel.has_vision == has_vision)
+    if has_streaming is not None:
+        filters.append(LLMModel.has_streaming == has_streaming)
+    if has_function_calling is not None:
+        filters.append(LLMModel.has_function_calling == has_function_calling)
+    if has_json_mode is not None:
+        filters.append(LLMModel.has_json_mode == has_json_mode)
+    if is_default is not None:
+        filters.append(LLMModel.is_default == is_default)
+    if primary_provider_type_id is not None:
+        filters.append(LLMModel.primary_provider_type_id == primary_provider_type_id)
+    if model_id is not None:
+        filters.append(LLMModel.model_id == model_id)
+
+    base_filter = and_(*filters) if filters else true()
+
+    # Count query (same as non-pin version)
+    count_statement = select(func.count()).select_from(LLMModel).where(base_filter)
+    count = session.exec(count_statement).one()
+
+    # Create aliased UserModelPin for the join
+    # Filter to only this user's pins in the join condition
+    statement = (
+        select(
+            LLMModel,
+            UserModelPin.id.label("pin_id"),
+            UserModelPin.sort_order.label("pin_sort_order"),
+        )
+        .outerjoin(
+            UserModelPin,
+            and_(
+                LLMModel.id == UserModelPin.llm_model_id,
+                UserModelPin.user_id == user_id,
+            )
+        )
+        .where(base_filter)
+        .order_by(
+            # Pinned models first (NULL pins sort last with desc on non-null indicator)
+            case((UserModelPin.id.isnot(None), 0), else_=1),
+            # Then by pin sort_order for pinned models
+            UserModelPin.sort_order.asc().nullslast(),
+            # Then by model's native sort_order and model_id
+            LLMModel.sort_order,
+            LLMModel.model_id,
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+
+    results = session.exec(statement).all()
+
+    # Transform results to LLMModelPublicWithPinStatus
+    models_with_pin: list[LLMModelPublicWithPinStatus] = []
+    for row in results:
+        model = row[0]  # LLMModel
+        pin_id = row[1]  # pin_id or None
+        pin_sort_order = row[2]  # pin_sort_order or None
+
+        model_data = model.model_dump()
+        model_data["is_pinned"] = pin_id is not None
+        model_data["pin_sort_order"] = pin_sort_order
+
+        models_with_pin.append(LLMModelPublicWithPinStatus(**model_data))
+
+    return models_with_pin, count
 
 
 def get_llm_model(

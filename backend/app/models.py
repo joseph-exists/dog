@@ -2095,6 +2095,23 @@ class LLMModelsPublic(SQLModel):
     count: int
 
 
+class LLMModelPublicWithPinStatus(LLMModelPublic):
+    """
+    Public API response for a model catalog entry with pin status.
+
+    Extends LLMModelPublic with optional pin information for the current user.
+    Pin fields are only populated when include_pin_status=true and user is authenticated.
+    """
+    is_pinned: bool = Field(default=False, description="Whether the model is pinned by the current user")
+    pin_sort_order: int | None = Field(default=None, description="Sort order of the pin (if pinned)")
+
+
+class LLMModelsPublicWithPinStatus(SQLModel):
+    """Collection response for LLMModels with pin status."""
+    data: list[LLMModelPublicWithPinStatus]
+    count: int
+
+
 # ==================== UserModelPin Models ====================
 # Junction table for user-pinned favorite LLM models
 # Allows users to pin/favorite models for quick access

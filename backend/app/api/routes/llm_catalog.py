@@ -13,11 +13,17 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.api.deps import (
+    CurrentUser,
+    OptionalUser,
+    SessionDep,
+    get_current_active_superuser,
+)
 from app.models import (
     LLMModelCreate,
     LLMModelPublic,
     LLMModelsPublic,
+    LLMModelsPublicWithPinStatus,
     LLMModelUpdate,
     LLMProviderType,
     LLMProviderTypePublic,
@@ -162,14 +168,37 @@ def list_provider_models(
 # =============================================================================
 
 
-@router.get("/models", response_model=LLMModelsPublic)
+@router.get("/models", response_model=LLMModelsPublic | LLMModelsPublicWithPinStatus)
 def list_models(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: OptionalUser,
     skip: int = 0,
     limit: int = 100,
+    include_pin_status: bool = False,
 ) -> Any:
-    """List all LLM models available to current user."""
+    """
+    List all LLM models available.
+
+    Query Parameters:
+        include_pin_status: When true and user is authenticated, includes
+            pin status (is_pinned, pin_sort_order) for each model and
+            sorts pinned models first.
+    """
+    # If pin status requested and user is authenticated, use the enhanced query
+    if include_pin_status and current_user is not None:
+        models_with_pin, count = crud.get_llm_models_with_pin_status(
+            session=session,
+            user_id=current_user.id,
+            primary_provider_type_id=None,
+            skip=skip,
+            limit=limit,
+        )
+        return LLMModelsPublicWithPinStatus(
+            data=models_with_pin,
+            count=count,
+        )
+
+    # Standard query without pin status
     models, count = crud.get_llm_models(
         session=session,
         primary_provider_type_id=None,
@@ -182,15 +211,22 @@ def list_models(
     )
 
 
-@router.get("/models/uap", response_model=LLMModelsPublic)
+@router.get("/models/uap", response_model=LLMModelsPublic | LLMModelsPublicWithPinStatus)
 def list_models_for_uap(
     session: SessionDep,
     current_user: CurrentUser,
     user_access_provider_id: uuid.UUID,
     skip: int = 0,
     limit: int = 100,
+    include_pin_status: bool = False,
 ) -> Any:
-    """List all models for a specific user's user access provider's provider_type."""
+    """
+    List all models for a specific user's user access provider's provider_type.
+
+    Query Parameters:
+        include_pin_status: When true, includes pin status (is_pinned, pin_sort_order)
+            for each model and sorts pinned models first.
+    """
     user_access_provider = crud.get_user_access_provider(
         session=session,
         user_access_provider_id=user_access_provider_id,
@@ -198,6 +234,22 @@ def list_models_for_uap(
     )
     if not user_access_provider:
         raise HTTPException(status_code=404, detail="user access provider not found")
+
+    # If pin status requested, use the enhanced query
+    if include_pin_status:
+        models_with_pin, count = crud.get_llm_models_with_pin_status(
+            session=session,
+            user_id=current_user.id,
+            primary_provider_type_id=user_access_provider.alpha_provider_type_id,
+            skip=skip,
+            limit=limit,
+        )
+        return LLMModelsPublicWithPinStatus(
+            data=models_with_pin,
+            count=count,
+        )
+
+    # Standard query without pin status
     models, count = crud.get_llm_models(
         session=session,
         primary_provider_type_id=user_access_provider.alpha_provider_type_id,
