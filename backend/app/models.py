@@ -2045,12 +2045,14 @@ class UserModelPin(UserModelPinBase, table=True):
         foreign_key="user.id",
         nullable=False,
         index=True,
+        ondelete="CASCADE",
         description="User who pinned the model",
     )
     llm_model_id: uuid.UUID = Field(
         foreign_key="llmmodel.id",
         nullable=False,
         index=True,
+        ondelete="CASCADE",
         description="The pinned LLM model",
     )
     pinned_at: datetime = Field(
