@@ -1,16 +1,15 @@
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Any, Literal, Annotated, Union
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import  EmailStr, field_validator, model_validator
+from pydantic import EmailStr, field_validator, model_validator
 from sqlalchemy import JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, Relationship, SQLModel
 
 from app.core.provider_types import TYPE1, TYPE3
-
 
 # ===== Model Overview for Relational References Ordering
 #
@@ -767,12 +766,12 @@ class Story(StoryBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     owner_id: uuid.UUID = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
-    
+
     # Versioning fields
     current_version: int = Field(default=1)
     published_version: int | None = Field(default=None)
     is_published: bool = Field(default=False)
-    
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
@@ -843,12 +842,12 @@ class StoryNode(StoryNodeBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
     story_version: int = Field(nullable=False)  # Which version this node belongs to
-    
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)
-    
+
     # Relationships defined after all models
     # story: "Story" = Relationship(back_populates="nodes")
     # choices_from: list["NodeChoice"] = Relationship(back_populates="from_node")
@@ -878,7 +877,7 @@ class NodeChoiceBase(SQLModel):
     """Base model for NodeChoice (decision branch in story template)"""
     text: str = Field(min_length=1, max_length=500)
     order: int = Field(default=0)  # Display order for choices
-    
+
     # State management for conditional branches
     requires_state: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))  # Conditions to show this choice
     sets_state: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))  # State changes when chosen
@@ -908,7 +907,7 @@ class NodeChoice(NodeChoiceBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     from_node_id: uuid.UUID = Field(foreign_key="storynode.id", nullable=False, ondelete="CASCADE")
     to_node_id: uuid.UUID = Field(foreign_key="storynode.id", nullable=False, ondelete="CASCADE")
-    
+
     # Relationships defined after all models
     # from_node: "StoryNode" = Relationship(back_populates="choices_from")
     # to_node: "StoryNode" = Relationship(back_populates="choices_to")
@@ -955,7 +954,7 @@ class StoryRequirement(StoryRequirementBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
-    
+
     # Relationships defined after all models
     # story: "Story" = Relationship(back_populates="requirements")
 
@@ -981,7 +980,7 @@ class UserStoryProgressBase(SQLModel):
     """
     current_node_id: uuid.UUID | None = Field(default=None)
     is_completed: bool = Field(default=False)
-    
+
     # State accumulator - grows as player makes choices
     story_state: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
@@ -1016,7 +1015,7 @@ class UserStoryProgress(UserStoryProgressBase, table=True):
     user_persona_id: uuid.UUID = Field(foreign_key="userpersona.id", nullable=False, ondelete="CASCADE")
     story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
     story_version: int = Field(nullable=False)  # Locked at creation
-    
+
     # NEW: Head pointer (active timeline position) - Phase 1
     head_choice_id: uuid.UUID | None = Field(
         default=None,
@@ -1115,7 +1114,7 @@ class UserNodeChoiceBase(SQLModel):
     choice_text: str = Field(max_length=1000)
     from_node_id: uuid.UUID
     to_node_id: uuid.UUID
-    
+
     # Snapshot of state changes applied by this choice
     state_changes: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
@@ -1141,15 +1140,15 @@ class UserNodeChoice(UserNodeChoiceBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     progress_id: uuid.UUID = Field(foreign_key="userstoryprogress.id", nullable=False, ondelete="CASCADE")
-    
+
     parent_choice_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="usernodechoice.id",
         description="Parent event in timeline tree (null for initial state)"
     )
-    
+
     choice_time: datetime = Field(default_factory=datetime.now)
-    
+
     # Relationships defined after all models
     # progress: "UserStoryProgress" = Relationship(back_populates="choice_history")
     # from_node: "StoryNode" = Relationship()
@@ -2164,6 +2163,21 @@ class UserModelPinsPublic(SQLModel):
 
     data: list[UserModelPinPublic]
     count: int
+
+
+class UserModelPinReorderItem(SQLModel):
+    """Single item for reordering a user model pin."""
+
+    llm_model_id: uuid.UUID = Field(description="The pinned LLM model to reorder")
+    sort_order: int = Field(description="New sort order for this pin")
+
+
+class UserModelPinReorder(SQLModel):
+    """Request body for reordering user model pins."""
+
+    order: list[UserModelPinReorderItem] = Field(
+        description="List of pins with their new sort orders"
+    )
 
 
 class Event(EventBase, table=True):
@@ -5550,8 +5564,7 @@ class DemoStrangePanelSpec(DemoPanelSpecBase):
 
 
 DemoPanelSpec = Annotated[
-    Union[
-        DemoChatPanelSpec
+    DemoChatPanelSpec
         | DemoStoryRuntimePanelSpec
         | DemoContentPanelSpec
         | DemoParticipantPanelSpec
@@ -5561,8 +5574,7 @@ DemoPanelSpec = Annotated[
         | DemoStoryEditorPanelSpec
         | DemoStoryPlayerPanelSpec
         | DemoStoryPlayerLegacyPanelSpec
-        | DemoStrangePanelSpec
-    ],
+        | DemoStrangePanelSpec,
     Field(discriminator="kind"),
 ]
 
@@ -5652,8 +5664,7 @@ class DemoStrangeBlockSpec(DemoBlockSpecBase):
 
 
 DemoBlockSpec = Annotated[
-    Union[
-        DemoContextBlockSpec
+    DemoContextBlockSpec
         | DemoContentBlockSpec
         | DemoStoryBlockSpec
         | DemoStoryMetadataBlockSpec
@@ -5663,8 +5674,7 @@ DemoBlockSpec = Annotated[
         | DemoContributionFeedBlockSpec
         | DemoGitViewBlockSpec
         | DemoFileExplorerBlockSpec
-        | DemoStrangeBlockSpec
-    ],
+        | DemoStrangeBlockSpec,
     Field(discriminator="type"),
 ]
 
