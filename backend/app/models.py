@@ -1776,7 +1776,7 @@ class UserAccessProviderBase(SQLModel):
     )
 
     # Model cache (JSON in table model)
-    available_models_cache: list[Any] | None = Field(
+    available_models_cache: list[str] | None = Field(
         default=None,
         description="Cached list of available models from provider API",
     )
