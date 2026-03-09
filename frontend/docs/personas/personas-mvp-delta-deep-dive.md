@@ -40,6 +40,17 @@ That changes the state of the plan in an important way:
 - the backend now has the right primitives for persona-mediated publication and persona-mediated collaboration
 - the remaining MVP work is now primarily integration, audience-resolution policy, frontend adoption, and migration rather than greenfield modeling
 
+There is one important correction to the earlier framing:
+
+- the frontend is no longer purely page-JSON based for persona authoring
+- the owner path now partially uses the backend persona contracts
+- the system is currently hybrid rather than fully migrated
+
+That hybrid state is useful progress, but it changes the next-slice plan:
+
+- the next MVP work is less about adding more persona CRUD
+- it is more about converging owner authoring, visitor rendering, and publication rules into one coherent path
+
 ## What Changed
 
 ### Persona model is now coherent enough for MVP
@@ -246,14 +257,28 @@ So the repo already supports the authoring flow at a UI level.
 
 This is the key delta.
 
-### 1. Frontend user pages still do not consume the new backend persona model
+### 1. Frontend user pages are now partially rewired, but the system is still hybrid
 
-The backend model now exists, but the frontend user-page runtime/composer still largely hydrates from page block content.
+Current state:
+
+- owner-side user-page view-model composition now reads backend `UserPersona` and `UserPersonaPresentation` data
+- owner-side persona creation and audience-view editing now persist through exported SDK services
+- page block content is still mirrored as a snapshot/fallback layer
 
 Consequence:
 
-- the old page-JSON source-of-truth behavior still exists in the frontend layer
-- the main remaining gap is now adapter/integration work rather than missing backend entities
+- this is no longer a missing-CRUD problem
+- it is now a convergence problem
+- the product still has two overlapping persistence modes:
+  - backend-owned persona entities
+  - page-owned representational snapshots
+
+What remains is deciding which layer is authoritative for:
+
+- owner editing
+- visitor rendering
+- publication
+- unsaved composer drafts
 
 ### 2. Audience views exist as authored content, but audience resolution is not real
 
@@ -275,14 +300,19 @@ Consequence:
 
 This remains the biggest product gap for the "disassociated from each other for other users" requirement.
 
-### 3. Visitor-visible persona isolation is representational, not enforced
+### 3. Visitor-visible persona isolation is still snapshot-based
 
-The backend now has the right publication entities, but the frontend visitor flow has not yet been rewired to them.
+The owner path is now partially backend-backed. The visitor path is not.
+
+Current state:
+
+- visitors still depend on the saved page snapshot for persona and audience presentation rendering
+- there is not yet a clear published visitor read path that treats backend persona presentation records as the canonical public runtime source
 
 Consequence:
 
-- this is no longer a schema problem
-- it is now a runtime integration and policy-enforcement problem
+- persona isolation is still soft at publication/runtime
+- product and UX should treat this as the main remaining MVP integrity gap
 
 ### 4. Work is still page-authored metadata, not a canonical work system
 
@@ -327,13 +357,21 @@ then these are the highest-priority remaining gaps.
 
 ### P0: Rewire frontend user-page composition and runtime to the backend persona contracts
 
-This is now the most important item.
+This is still the most important item, but it has split into two subproblems.
 
-The key backend records exist. The MVP now depends on:
+Implemented already:
 
-- reading `UserPersona` from backend data using exported client services 
-- reading `UserPersonaPresentation` from backend data using exported client services
-- persisting changes through those APIs rather than only through page block JSON
+- owner-side view-model composition reads backend persona and presentation data
+- owner-side create/update flows for personas and audience presentations now persist through exported SDK services
+
+Still required:
+
+- make visitor rendering consume an explicit published source, not just page snapshots
+- reduce ambiguity between unsaved composer state and backend-persisted persona state
+- decide whether page blocks store:
+  - references only
+  - a publication snapshot
+  - or both by design
 
 ### P0: Define how visitor audience is resolved
 
@@ -359,7 +397,7 @@ The runtime should guarantee:
 - visitors only see work explicitly attached to that presentation
 - visitors do not see unpublished persona metadata
 
-The current frontend approximates this, but the data contract does not yet guarantee it.
+The current frontend approximates this for owners and snapshots it for visitors, but the product contract still does not guarantee it.
 
 ### P1: Integrate persona-group collaboration into project/workspace UX
 
@@ -369,15 +407,17 @@ The backend primitives now exist, but the frontend still needs:
 - project/workspace sharing UI that can target persona groups and user personas
 - clear display of why a user has access through a particular persona/group path
 
-### P1: Move authored persona fields out of page JSON
+### P1: Complete the migration away from page-owned persona objects
 
-The page can still reference persona ids and presentation ids, but the persona's authored metadata should not live only inside block content if the feature is considered core product data.
+The recent frontend slice moved owner editing toward backend product entities, but page JSON still carries mirrored persona/presentation objects.
 
-Otherwise:
+That is acceptable as a temporary coexistence strategy. It is not a clean final MVP shape unless product explicitly wants publication snapshots embedded in pages.
 
-- edits do not have a clean transactional boundary
-- page duplication can duplicate persona state incorrectly
-- other surfaces cannot reliably consume the persona
+Product still needs to decide whether page blocks are:
+
+- layout plus references
+- layout plus published snapshots
+- or a mixed authoring shell by design
 
 ### P1: Clarify primary persona semantics
 
@@ -446,6 +486,91 @@ That would satisfy the user-facing requirement without implementing vouch.
 
 ## Concrete Remaining Work
 
+The remaining work is now best understood in sequence rather than as one flat list.
+
+## Recommended Next Slice
+
+This is the most coherent near-term sequence for product, UX, and implementation.
+
+### Slice 1: Lock the MVP publication model
+
+This is the immediate next decision point.
+
+Product and UX need to choose one of these explicitly:
+
+1. page snapshot publication for MVP
+2. backend canonical publication for MVP
+
+If we choose `page snapshot publication for MVP`:
+
+- owner editing can remain backend-backed
+- save/publish writes a visitor-safe persona presentation snapshot into the page
+- visitor runtime can stay page-driven
+- this is the lowest-risk path to ship
+
+If we choose `backend canonical publication for MVP`:
+
+- we need a public/published persona presentation read path
+- visitor runtime needs to be rewired now
+- page blocks should move toward references rather than carrying presentation objects
+
+Recommendation:
+
+- choose `page snapshot publication for MVP`
+- keep backend entities authoritative for owner authoring
+- keep page layout plus published snapshot as the visitor contract for MVP
+
+That matches where the implementation has naturally drifted and is the shortest path to an honest release.
+
+### Slice 2: Define the audience model we will actually ship
+
+Without this, UX can design interfaces that runtime cannot truthfully support.
+
+Recommended MVP rule:
+
+- `public` is the only guaranteed audience scope at launch
+- `trusted`, `collaborators`, and `custom` remain authored labels or staged future scopes unless product commits a real resolution policy
+
+Optional slightly larger MVP:
+
+- `public`
+- one manually assigned non-public scope driven by explicit group/access assignment
+
+What product should avoid for MVP:
+
+- implying the system can infer nuanced audience identity when no such runtime policy exists
+
+### Slice 3: Make the composer coherent
+
+The current hybrid implementation means:
+
+- persona edits are persisted immediately to backend entities
+- page layout and some page-owned constructs still have unsaved draft behavior
+
+UX needs this made explicit.
+
+Recommended behavior:
+
+- personas and audience views are product entities edited immediately
+- page layout, work-feed arrangement, and other page shell choices remain draft-until-save
+- the composer should visually distinguish these two save behaviors
+
+If UX wants a single global save affordance instead, we need additional staging logic that does not exist today.
+
+### Slice 4: Finish the page-snapshot contract for visitors
+
+If Slice 1 chooses snapshot publication for MVP, the next implementation step is:
+
+- make the save/publish path intentionally write the visitor-safe persona/presentation snapshot
+- remove ambiguity about whether mirrored block content is temporary draft state or the actual published visitor representation
+- ensure unpublished personas and non-eligible audience views are never serialized into the visitor snapshot
+
+### Slice 5: Defer persona-mediated workspace UX to post-MVP unless product raises it
+
+The backend primitives now exist, but this is no longer the blocker for personas MVP.
+
+It should be treated as adjacent leverage, not as the immediate release gate for user-page personas.
+
 ### Backend work required for MVP
 
 #### 1. Add migrations and tests for the new persona, presentation, and persona-group models
@@ -456,11 +581,15 @@ The shape now exists in backend code, but the remaining backend-critical work is
 - CRUD and route test coverage
 - integrity constraints where still only service-enforced
 
-#### 2. Define and implement audience resolution policy
+#### 2. Define and implement the chosen audience resolution policy
 
 The backend now stores audience-facing presentations, but the runtime still needs a deterministic policy for mapping viewer -> audience scope.
 
-#### 3. Extend collaboration/audience policy from backend primitives to product rules
+#### 3. If we do not choose snapshot publication, add a canonical published visitor read path
+
+This is only required if product wants backend canonical publication rather than page snapshot publication for MVP.
+
+#### 4. Extend collaboration/audience policy from backend primitives to product rules
 
 The system now has persona groups and persona-mediated grants. Product still needs to decide:
 
@@ -469,33 +598,41 @@ The system now has persona groups and persona-mediated grants. Product still nee
 
 ### Frontend work required for MVP
 
-#### 1. Stop treating page JSON as the source of truth for persona metadata
+#### 1. Finish the hybrid migration deliberately
 
-The page should reference backend-owned persona state, not carry the entire persona object as primary persistence.
+Part of this is already implemented.
 
-#### 2. Update `useUserPageViewModel` to derive from backend persona/presentation records
+Still required:
 
-Today it hydrates from block content plus owner-only library data.
+- treat backend entities as the owner-authoring source for personas and audience views
+- decide what the page stores for visitor publication
+- make composer save behavior explicit and non-confusing
 
-For MVP it should instead compose:
+#### 2. Make visitor audience selection deterministic
 
-- page layout
-- user-owned persona records
-- audience presentation records
-- viewer audience resolution
+Current behavior still falls back to representational logic.
 
-#### 3. Make visitor audience selection deterministic
+That should be replaced with the explicit MVP audience policy product chooses.
 
-Current behavior uses the first available presentation or `public`.
+#### 3. Finish visitor rendering against the chosen publication contract
 
-That should be replaced with explicit runtime audience resolution.
+If MVP uses page snapshots:
 
-#### 4. Decide whether composer still edits page blocks or edits product entities plus page references
+- build/save the snapshot intentionally
+- render only the published snapshot
 
-Recommended:
+If MVP uses backend canonical publication:
 
-- composer edits product entities for personas/presentations
-- page blocks remain the layout and rendering shell
+- fetch published persona presentations directly at runtime
+
+#### 4. Keep work and relations in scope only as far as needed for honest persona presentation
+
+For MVP, the requirement is not a full work graph.
+
+The requirement is:
+
+- audience views can point at visible work
+- relations do not falsely imply a real access or trust model that runtime does not enforce
 
 ### Optional frontend work that can wait
 

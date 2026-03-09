@@ -50,7 +50,7 @@ export type AccessGrantsPublic = {
 /**
  * Subject types supported by AccessGrant.
  */
-export type AccessGrantSubjectType = 'user' | 'group';
+export type AccessGrantSubjectType = 'user' | 'group' | 'user_persona' | 'persona_group';
 
 /**
  * Request model for granting access to a resource.
@@ -61,6 +61,44 @@ export type AccessGrantUpsertRequest = {
     subject_type: AccessGrantSubjectType;
     subject_id: string;
     role?: AccessGrantRole;
+};
+
+/**
+ * Account/billing information from a provider.
+ */
+export type AccountInfo = {
+    /**
+     * Account or organization name
+     */
+    account_name?: (string | null);
+    /**
+     * Account tier (free, paid, enterprise, etc.)
+     */
+    account_type?: (string | null);
+    /**
+     * Account email if available
+     */
+    email?: (string | null);
+    /**
+     * Organization identifier
+     */
+    organization_id?: (string | null);
+    /**
+     * Current rate limit status
+     */
+    rate_limits?: (RateLimitInfo | null);
+    /**
+     * Remaining API credits if applicable
+     */
+    credits_remaining?: (number | null);
+    /**
+     * Hard spending limit in USD
+     */
+    hard_limit_usd?: (number | null);
+    /**
+     * Soft spending limit in USD
+     */
+    soft_limit_usd?: (number | null);
 };
 
 export type AgentPersonaCreate = {
@@ -1226,6 +1264,40 @@ export type DemoToolCapabilityBlockSpec = {
 };
 
 /**
+ * Detailed test result with diagnostics.
+ */
+export type DetailedTestResult = {
+    /**
+     * Whether the provider credentials are valid
+     */
+    valid: boolean;
+    /**
+     * Error message if invalid
+     */
+    error?: (string | null);
+    /**
+     * Error code for programmatic handling
+     */
+    error_code?: (string | null);
+    /**
+     * Available models from provider
+     */
+    models?: Array<ModelInfo>;
+    /**
+     * Current rate limit status
+     */
+    rate_limits?: (RateLimitInfo | null);
+    /**
+     * Account information if available
+     */
+    account_info?: (AccountInfo | null);
+    /**
+     * Connection latency in milliseconds
+     */
+    latency_ms?: (number | null);
+};
+
+/**
  * Optional context for resolving authored bindings.
  * Provides information about the entity being viewed.
  */
@@ -1457,10 +1529,94 @@ export type LLMModelPublic = {
 };
 
 /**
+ * Public API response for a model catalog entry with pin status.
+ *
+ * Extends LLMModelPublic with optional pin information for the current user.
+ * Pin fields are only populated when include_pin_status=true and user is authenticated.
+ */
+export type LLMModelPublicWithPinStatus = {
+    owner_id?: string;
+    /**
+     * Model identifier (e.g., 'gpt-4o', no provider prefix)
+     */
+    model_id: string;
+    /**
+     * Human-friendly name (e.g., 'GPT 4o')
+     */
+    display_name: string;
+    primary_provider_type_id: string;
+    /**
+     * this overload might be neat in the future for swapping?
+     */
+    multiple_provider_type_support?: boolean;
+    description?: (string | null);
+    /**
+     * Max tokens in context window
+     */
+    context_window?: (number | null);
+    /**
+     * Default/cheapest model for this provider
+     */
+    is_default?: boolean;
+    /**
+     * Whether model is available for use
+     */
+    is_enabled?: boolean;
+    /**
+     * Model is deprecated (still works)
+     */
+    is_deprecated?: boolean;
+    /**
+     * Display ordering within provider
+     */
+    sort_order?: number;
+    /**
+     * system level model
+     */
+    is_system?: boolean;
+    /**
+     * Supports image input
+     */
+    has_vision?: (boolean | null);
+    /**
+     * Supports function/tool calling
+     */
+    has_function_calling?: (boolean | null);
+    /**
+     * Supports streaming responses
+     */
+    has_streaming?: (boolean | null);
+    /**
+     * Supports JSON output mode
+     */
+    has_json_mode?: (boolean | null);
+    secondary_capabilities?: (Array<{
+    [key: string]: unknown;
+}> | null);
+    id: string;
+    /**
+     * Whether the model is pinned by the current user
+     */
+    is_pinned?: boolean;
+    /**
+     * Sort order of the pin (if pinned)
+     */
+    pin_sort_order?: (number | null);
+};
+
+/**
  * Collection response for LLMModels.
  */
 export type LLMModelsPublic = {
     data: Array<LLMModelPublic>;
+    count: number;
+};
+
+/**
+ * Collection response for LLMModels with pin status.
+ */
+export type LLMModelsPublicWithPinStatus = {
+    data: Array<LLMModelPublicWithPinStatus>;
     count: number;
 };
 
@@ -1535,6 +1691,36 @@ export type LLMProviderTypePublic = {
      * is this a system-level provider type?
      */
     is_system?: boolean;
+    /**
+     * Provider category: major | cloud | self_hosted | custom
+     */
+    category?: string;
+    /**
+     * User-friendly name like 'OpenAI'
+     */
+    display_name?: string;
+    /**
+     * Path to provider logo
+     */
+    logo_url?: (string | null);
+    /**
+     * Link to provider documentation
+     */
+    docs_url?: (string | null);
+    /**
+     * Default API endpoint
+     */
+    default_base_url?: (string | null);
+    /**
+     * JSON Schema for provider-specific fields
+     */
+    config_schema?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Display ordering within category
+     */
+    sort_order?: number;
     id: string;
 };
 
@@ -1574,6 +1760,74 @@ export type MessageResponse = {
      * Success message
      */
     message: string;
+};
+
+/**
+ * Information about a model available from a provider.
+ */
+export type ModelInfo = {
+    /**
+     * The model identifier used in API calls
+     */
+    model_id: string;
+    /**
+     * Human-readable model name
+     */
+    display_name?: (string | null);
+    /**
+     * Model description
+     */
+    description?: (string | null);
+    /**
+     * Maximum context window size in tokens
+     */
+    context_window?: (number | null);
+    /**
+     * Maximum output tokens
+     */
+    max_output_tokens?: (number | null);
+    /**
+     * Whether model supports image inputs
+     */
+    supports_vision?: boolean;
+    /**
+     * Whether model supports function/tool calling
+     */
+    supports_function_calling?: boolean;
+    /**
+     * Whether model supports streaming responses
+     */
+    supports_streaming?: boolean;
+    /**
+     * Whether model is deprecated
+     */
+    is_deprecated?: boolean;
+    /**
+     * When the model was created/released
+     */
+    created_at?: (string | null);
+    /**
+     * Organization that owns/created the model
+     */
+    owned_by?: (string | null);
+};
+
+/**
+ * Response for cached/live model listing.
+ */
+export type ModelsListResponse = {
+    /**
+     * List of available model IDs
+     */
+    models: Array<(string)>;
+    /**
+     * Whether this was served from cache
+     */
+    cached: boolean;
+    /**
+     * When the cache was last updated
+     */
+    cached_at?: (string | null);
 };
 
 export type NewPassword = {
@@ -1801,6 +2055,82 @@ export type PersonaCreate = {
      */
     owner_user_id?: (string | null);
 };
+
+/**
+ * Input model for creating a persona group.
+ */
+export type PersonaGroupCreate = {
+    name: string;
+    description?: (string | null);
+    group_type?: PersonaGroupType;
+    is_active?: boolean;
+    owner_user_persona_id: string;
+};
+
+/**
+ * Input model for adding a user persona to a persona group.
+ */
+export type PersonaGroupMembershipCreate = {
+    role?: UserGroupMembershipRole;
+    is_active?: boolean;
+    user_persona_id: string;
+};
+
+/**
+ * Public API response model for persona-group memberships.
+ */
+export type PersonaGroupMembershipPublic = {
+    role?: UserGroupMembershipRole;
+    is_active?: boolean;
+    id: string;
+    group_id: string;
+    user_persona_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Collection response for persona-group memberships.
+ */
+export type PersonaGroupMembershipsPublic = {
+    data: Array<PersonaGroupMembershipPublic>;
+    count: number;
+};
+
+/**
+ * Update model for persona-group memberships.
+ */
+export type PersonaGroupMembershipUpdate = {
+    role?: (UserGroupMembershipRole | null);
+    is_active?: (boolean | null);
+};
+
+/**
+ * Public API response model for a persona group.
+ */
+export type PersonaGroupPublic = {
+    name: string;
+    description?: (string | null);
+    group_type?: PersonaGroupType;
+    is_active?: boolean;
+    id: string;
+    owner_user_persona_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Collection response for persona groups.
+ */
+export type PersonaGroupsPublic = {
+    data: Array<PersonaGroupPublic>;
+    count: number;
+};
+
+/**
+ * Persona-mediated collaboration container type.
+ */
+export type PersonaGroupType = 'group' | 'workspace';
 
 /**
  * Public model for Persona API responses.
@@ -2184,6 +2514,50 @@ export type QualityTraitLinkPublic = {
 export type QualityUpdate = {
     name?: (string | null);
     description?: (string | null);
+};
+
+/**
+ * Quick pass/fail validation result.
+ */
+export type QuickTestResult = {
+    /**
+     * Whether the provider credentials are valid
+     */
+    valid: boolean;
+    /**
+     * Error message if invalid
+     */
+    error?: (string | null);
+    /**
+     * Error code for programmatic handling
+     */
+    error_code?: (string | null);
+};
+
+/**
+ * Rate limit information for an account.
+ */
+export type RateLimitInfo = {
+    /**
+     * Maximum requests per time period
+     */
+    requests_limit?: (number | null);
+    /**
+     * Remaining requests in current period
+     */
+    requests_remaining?: (number | null);
+    /**
+     * Maximum tokens per time period
+     */
+    tokens_limit?: (number | null);
+    /**
+     * Remaining tokens in current period
+     */
+    tokens_remaining?: (number | null);
+    /**
+     * When the rate limit resets
+     */
+    reset_at?: (string | null);
 };
 
 /**
@@ -3663,44 +4037,80 @@ export type UserAccessProviderCreate = {
      */
     is_validated?: boolean;
     description?: (string | null);
+    /**
+     * Request timeout in seconds
+     */
+    timeout_seconds?: number;
+    /**
+     * Maximum retry count for failed requests
+     */
+    max_retries?: number;
+    /**
+     * Base delay between retries in milliseconds
+     */
+    retry_delay_ms?: number;
+    /**
+     * Optional HTTP proxy URL
+     */
+    proxy_url?: (string | null);
+    /**
+     * Timestamp of last successful validation
+     */
+    last_validated_at?: (string | null);
+    /**
+     * Last validation error message
+     */
+    validation_error?: (string | null);
+    /**
+     * Provider-specific settings (org_id, deployment_name, etc.)
+     */
+    provider_config?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Additional HTTP headers for API requests
+     */
+    custom_headers?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Cached list of available models from provider API
+     */
+    available_models_cache?: (Array<(string)> | null);
+    /**
+     * When the models cache was last refreshed
+     */
+    models_cached_at?: (string | null);
 };
 
 /**
  * Public API response - NEVER includes API key.
  */
 export type UserAccessProviderPublic = {
-    /**
-     * New API key to encrypt, if changing
-     */
-    api_key?: (string | null);
-    owner_id?: string;
-    /**
-     * Endpoint URL
-     */
+    id: string;
+    owner_id: string;
     base_url?: (string | null);
-    /**
-     * User-friendly name like 'My OpenAI' or 'Work Azure'
-     */
     name: string;
-    /**
-     * if there's more than one provider type.
-     */
     provider_type_multiple?: boolean;
-    alpha_provider_type_id?: string;
-    /**
-     * Whether this provider is active
-     */
+    alpha_provider_type_id: string;
     is_enabled?: boolean;
-    /**
-     * is this the user's default access provider?
-     */
     is_default?: boolean;
-    /**
-     * has this api key and url been tested?
-     */
     is_validated?: boolean;
     description?: (string | null);
-    id: string;
+    provider_config?: ({
+    [key: string]: unknown;
+} | null);
+    timeout_seconds?: number;
+    max_retries?: number;
+    retry_delay_ms?: number;
+    proxy_url?: (string | null);
+    custom_headers?: ({
+    [key: string]: unknown;
+} | null);
+    last_validated_at?: (string | null);
+    validation_error?: (string | null);
+    available_models_cache?: (Array<(string)> | null);
+    models_cached_at?: (string | null);
 };
 
 /**
@@ -3723,6 +4133,20 @@ export type UserAccessProviderUpdate = {
      */
     api_key?: (string | null);
     alpha_provider_type_id?: string;
+    provider_config?: ({
+    [key: string]: unknown;
+} | null);
+    timeout_seconds?: (number | null);
+    max_retries?: (number | null);
+    retry_delay_ms?: (number | null);
+    proxy_url?: (string | null);
+    custom_headers?: ({
+    [key: string]: unknown;
+} | null);
+    last_validated_at?: (string | null);
+    validation_error?: (string | null);
+    available_models_cache?: (Array<(string)> | null);
+    models_cached_at?: (string | null);
 };
 
 export type UserAgentConfigPublic = {
@@ -3867,6 +4291,66 @@ export type UserGroupPublic = {
  */
 export type UserGroupsPublic = {
     data: Array<UserGroupPublic>;
+    count: number;
+};
+
+/**
+ * Create model for user model pins.
+ */
+export type UserModelPinCreate = {
+    /**
+     * Sort order for pinned models
+     */
+    sort_order?: number;
+    /**
+     * The LLM model to pin
+     */
+    llm_model_id: string;
+};
+
+/**
+ * Public API response for a user model pin.
+ */
+export type UserModelPinPublic = {
+    /**
+     * Sort order for pinned models
+     */
+    sort_order?: number;
+    id: string;
+    user_id: string;
+    llm_model_id: string;
+    pinned_at: string;
+};
+
+/**
+ * Request body for reordering user model pins.
+ */
+export type UserModelPinReorder = {
+    /**
+     * List of pins with their new sort orders
+     */
+    order: Array<UserModelPinReorderItem>;
+};
+
+/**
+ * Single item for reordering a user model pin.
+ */
+export type UserModelPinReorderItem = {
+    /**
+     * The pinned LLM model to reorder
+     */
+    llm_model_id: string;
+    /**
+     * New sort order for this pin
+     */
+    sort_order: number;
+};
+
+/**
+ * Collection response for user model pins.
+ */
+export type UserModelPinsPublic = {
+    data: Array<UserModelPinPublic>;
     count: number;
 };
 
@@ -4714,11 +5198,12 @@ export type LlmCatalogListProviderModelsData = {
 export type LlmCatalogListProviderModelsResponse = (LLMModelsPublic);
 
 export type LlmCatalogListModelsData = {
+    includePinStatus?: boolean;
     limit?: number;
     skip?: number;
 };
 
-export type LlmCatalogListModelsResponse = (LLMModelsPublic);
+export type LlmCatalogListModelsResponse = ((LLMModelsPublic | LLMModelsPublicWithPinStatus));
 
 export type LlmCatalogCreateModelData = {
     requestBody: LLMModelCreate;
@@ -4727,12 +5212,13 @@ export type LlmCatalogCreateModelData = {
 export type LlmCatalogCreateModelResponse = (LLMModelPublic);
 
 export type LlmCatalogListModelsForUapData = {
+    includePinStatus?: boolean;
     limit?: number;
     skip?: number;
     userAccessProviderId: string;
 };
 
-export type LlmCatalogListModelsForUapResponse = (LLMModelsPublic);
+export type LlmCatalogListModelsForUapResponse = ((LLMModelsPublic | LLMModelsPublicWithPinStatus));
 
 export type LlmCatalogGetModelData = {
     modelId: string;
@@ -4752,6 +5238,31 @@ export type LlmCatalogDeleteModelData = {
 };
 
 export type LlmCatalogDeleteModelResponse = (Message);
+
+export type LlmCatalogListPinnedModelsData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type LlmCatalogListPinnedModelsResponse = (UserModelPinsPublic);
+
+export type LlmCatalogPinModelData = {
+    requestBody: UserModelPinCreate;
+};
+
+export type LlmCatalogPinModelResponse = (UserModelPinPublic);
+
+export type LlmCatalogUnpinModelData = {
+    llmModelId: string;
+};
+
+export type LlmCatalogUnpinModelResponse = (Message);
+
+export type LlmCatalogReorderPinnedModelsData = {
+    requestBody: UserModelPinReorder;
+};
+
+export type LlmCatalogReorderPinnedModelsResponse = (UserModelPinsPublic);
 
 export type LlmProvidersListProvidersData = {
     limit?: number;
@@ -4799,6 +5310,25 @@ export type LlmProvidersDeleteProviderData = {
 };
 
 export type LlmProvidersDeleteProviderResponse = (Message);
+
+export type LlmProvidersTestProviderData = {
+    providerId: string;
+};
+
+export type LlmProvidersTestProviderResponse = (QuickTestResult);
+
+export type LlmProvidersTestProviderDetailedData = {
+    providerId: string;
+};
+
+export type LlmProvidersTestProviderDetailedResponse = (DetailedTestResult);
+
+export type LlmProvidersGetProviderModelsData = {
+    forceRefresh?: boolean;
+    providerId: string;
+};
+
+export type LlmProvidersGetProviderModelsResponse = (ModelsListResponse);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
@@ -4907,6 +5437,53 @@ export type PersonaEventsProcessPersonaEventData = {
 };
 
 export type PersonaEventsProcessPersonaEventResponse = (Message);
+
+export type PersonaGroupsCreateNewPersonaGroupData = {
+    requestBody: PersonaGroupCreate;
+};
+
+export type PersonaGroupsCreateNewPersonaGroupResponse = (PersonaGroupPublic);
+
+export type PersonaGroupsListPersonaGroupsData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type PersonaGroupsListPersonaGroupsResponse = (PersonaGroupsPublic);
+
+export type PersonaGroupsDeletePersonaGroupRouteData = {
+    groupId: string;
+};
+
+export type PersonaGroupsDeletePersonaGroupRouteResponse = (Message);
+
+export type PersonaGroupsListPersonaGroupMembersData = {
+    groupId: string;
+};
+
+export type PersonaGroupsListPersonaGroupMembersResponse = (PersonaGroupMembershipsPublic);
+
+export type PersonaGroupsAddPersonaGroupMemberData = {
+    groupId: string;
+    requestBody: PersonaGroupMembershipCreate;
+};
+
+export type PersonaGroupsAddPersonaGroupMemberResponse = (PersonaGroupMembershipPublic);
+
+export type PersonaGroupsPatchPersonaGroupMemberData = {
+    groupId: string;
+    requestBody: PersonaGroupMembershipUpdate;
+    userPersonaId: string;
+};
+
+export type PersonaGroupsPatchPersonaGroupMemberResponse = (PersonaGroupMembershipPublic);
+
+export type PersonaGroupsDeletePersonaGroupMemberData = {
+    groupId: string;
+    userPersonaId: string;
+};
+
+export type PersonaGroupsDeletePersonaGroupMemberResponse = (Message);
 
 export type PersonaQualitiesReadPersonaQualitiesData = {
     personaId: string;

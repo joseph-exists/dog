@@ -104,7 +104,7 @@ superusers manage shares. \`manager\` is reserved for future expansion.`
 
 export const AccessGrantSubjectTypeSchema = {
     type: 'string',
-    enum: ['user', 'group'],
+    enum: ['user', 'group', 'user_persona', 'persona_group'],
     title: 'AccessGrantSubjectType',
     description: 'Subject types supported by AccessGrant.'
 } as const;
@@ -150,6 +150,109 @@ export const AccessGrantsPublicSchema = {
     required: ['data', 'count'],
     title: 'AccessGrantsPublic',
     description: 'Collection response for access grants.'
+} as const;
+
+export const AccountInfoSchema = {
+    properties: {
+        account_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Account Name',
+            description: 'Account or organization name'
+        },
+        account_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Account Type',
+            description: 'Account tier (free, paid, enterprise, etc.)'
+        },
+        email: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Email',
+            description: 'Account email if available'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id',
+            description: 'Organization identifier'
+        },
+        rate_limits: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/RateLimitInfo'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'Current rate limit status'
+        },
+        credits_remaining: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Credits Remaining',
+            description: 'Remaining API credits if applicable'
+        },
+        hard_limit_usd: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Hard Limit Usd',
+            description: 'Hard spending limit in USD'
+        },
+        soft_limit_usd: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Soft Limit Usd',
+            description: 'Soft spending limit in USD'
+        }
+    },
+    type: 'object',
+    title: 'AccountInfo',
+    description: 'Account/billing information from a provider.'
 } as const;
 
 export const AgentPersonaCreateSchema = {
@@ -5103,6 +5206,86 @@ export const DemoToolCapabilityBlockSpecSchema = {
     title: 'DemoToolCapabilityBlockSpec'
 } as const;
 
+export const DetailedTestResultSchema = {
+    properties: {
+        valid: {
+            type: 'boolean',
+            title: 'Valid',
+            description: 'Whether the provider credentials are valid'
+        },
+        error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error',
+            description: 'Error message if invalid'
+        },
+        error_code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error Code',
+            description: 'Error code for programmatic handling'
+        },
+        models: {
+            items: {
+                '$ref': '#/components/schemas/ModelInfo'
+            },
+            type: 'array',
+            title: 'Models',
+            description: 'Available models from provider'
+        },
+        rate_limits: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/RateLimitInfo'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'Current rate limit status'
+        },
+        account_info: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/AccountInfo'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'Account information if available'
+        },
+        latency_ms: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latency Ms',
+            description: 'Connection latency in milliseconds'
+        }
+    },
+    type: 'object',
+    required: ['valid'],
+    title: 'DetailedTestResult',
+    description: 'Detailed test result with diagnostics.'
+} as const;
+
 export const EntityContextSchema = {
     properties: {
         entity_type: {
@@ -5753,6 +5936,186 @@ export const LLMModelPublicSchema = {
     description: 'Public API response for a model catalog entry.'
 } as const;
 
+export const LLMModelPublicWithPinStatusSchema = {
+    properties: {
+        owner_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner Id'
+        },
+        model_id: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Model Id',
+            description: "Model identifier (e.g., 'gpt-4o', no provider prefix)"
+        },
+        display_name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Display Name',
+            description: "Human-friendly name (e.g., 'GPT 4o')"
+        },
+        primary_provider_type_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Primary Provider Type Id'
+        },
+        multiple_provider_type_support: {
+            type: 'boolean',
+            title: 'Multiple Provider Type Support',
+            description: 'this overload might be neat in the future for swapping?',
+            default: false
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        context_window: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Window',
+            description: 'Max tokens in context window'
+        },
+        is_default: {
+            type: 'boolean',
+            title: 'Is Default',
+            description: 'Default/cheapest model for this provider',
+            default: false
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            description: 'Whether model is available for use',
+            default: true
+        },
+        is_deprecated: {
+            type: 'boolean',
+            title: 'Is Deprecated',
+            description: 'Model is deprecated (still works)',
+            default: false
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Display ordering within provider',
+            default: 0
+        },
+        is_system: {
+            type: 'boolean',
+            title: 'Is System',
+            description: 'system level model',
+            default: false
+        },
+        has_vision: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Vision',
+            description: 'Supports image input'
+        },
+        has_function_calling: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Function Calling',
+            description: 'Supports function/tool calling'
+        },
+        has_streaming: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Streaming',
+            description: 'Supports streaming responses'
+        },
+        has_json_mode: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Has Json Mode',
+            description: 'Supports JSON output mode'
+        },
+        secondary_capabilities: {
+            anyOf: [
+                {
+                    items: {
+                        additionalProperties: true,
+                        type: 'object'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Secondary Capabilities'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        is_pinned: {
+            type: 'boolean',
+            title: 'Is Pinned',
+            description: 'Whether the model is pinned by the current user',
+            default: false
+        },
+        pin_sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Pin Sort Order',
+            description: 'Sort order of the pin (if pinned)'
+        }
+    },
+    type: 'object',
+    required: ['model_id', 'display_name', 'primary_provider_type_id', 'id'],
+    title: 'LLMModelPublicWithPinStatus',
+    description: `Public API response for a model catalog entry with pin status.
+
+Extends LLMModelPublic with optional pin information for the current user.
+Pin fields are only populated when include_pin_status=true and user is authenticated.`
+} as const;
+
 export const LLMModelUpdateSchema = {
     properties: {
         primary_provider_type_id: {
@@ -5941,6 +6304,26 @@ export const LLMModelsPublicSchema = {
     description: 'Collection response for LLMModels.'
 } as const;
 
+export const LLMModelsPublicWithPinStatusSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/LLMModelPublicWithPinStatus'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'LLMModelsPublicWithPinStatus',
+    description: 'Collection response for LLMModels with pin status.'
+} as const;
+
 export const LLMProviderTypePublicSchema = {
     properties: {
         name: {
@@ -5973,6 +6356,78 @@ export const LLMProviderTypePublicSchema = {
             title: 'Is System',
             description: 'is this a system-level provider type?',
             default: false
+        },
+        category: {
+            type: 'string',
+            maxLength: 30,
+            title: 'Category',
+            description: 'Provider category: major | cloud | self_hosted | custom',
+            default: 'custom'
+        },
+        display_name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Display Name',
+            description: "User-friendly name like 'OpenAI'",
+            default: ''
+        },
+        logo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Logo Url',
+            description: 'Path to provider logo'
+        },
+        docs_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Docs Url',
+            description: 'Link to provider documentation'
+        },
+        default_base_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Base Url',
+            description: 'Default API endpoint'
+        },
+        config_schema: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Config Schema',
+            description: 'JSON Schema for provider-specific fields'
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Display ordering within category',
+            default: 0
         },
         id: {
             type: 'string',
@@ -6058,6 +6513,152 @@ export const MessageResponseSchema = {
     description: `Generic success message response.
 
 Used for operations that need to return a simple success message.`
+} as const;
+
+export const ModelInfoSchema = {
+    properties: {
+        model_id: {
+            type: 'string',
+            title: 'Model Id',
+            description: 'The model identifier used in API calls'
+        },
+        display_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Display Name',
+            description: 'Human-readable model name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description',
+            description: 'Model description'
+        },
+        context_window: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Context Window',
+            description: 'Maximum context window size in tokens'
+        },
+        max_output_tokens: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Output Tokens',
+            description: 'Maximum output tokens'
+        },
+        supports_vision: {
+            type: 'boolean',
+            title: 'Supports Vision',
+            description: 'Whether model supports image inputs',
+            default: false
+        },
+        supports_function_calling: {
+            type: 'boolean',
+            title: 'Supports Function Calling',
+            description: 'Whether model supports function/tool calling',
+            default: false
+        },
+        supports_streaming: {
+            type: 'boolean',
+            title: 'Supports Streaming',
+            description: 'Whether model supports streaming responses',
+            default: true
+        },
+        is_deprecated: {
+            type: 'boolean',
+            title: 'Is Deprecated',
+            description: 'Whether model is deprecated',
+            default: false
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At',
+            description: 'When the model was created/released'
+        },
+        owned_by: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owned By',
+            description: 'Organization that owns/created the model'
+        }
+    },
+    type: 'object',
+    required: ['model_id'],
+    title: 'ModelInfo',
+    description: 'Information about a model available from a provider.'
+} as const;
+
+export const ModelsListResponseSchema = {
+    properties: {
+        models: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Models',
+            description: 'List of available model IDs'
+        },
+        cached: {
+            type: 'boolean',
+            title: 'Cached',
+            description: 'Whether this was served from cache'
+        },
+        cached_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cached At',
+            description: 'When the cache was last updated'
+        }
+    },
+    type: 'object',
+    required: ['models', 'cached'],
+    title: 'ModelsListResponse',
+    description: 'Response for cached/live model listing.'
 } as const;
 
 export const NewPasswordSchema = {
@@ -6798,6 +7399,245 @@ export const PersonaCreateSchema = {
     type: 'object',
     required: ['name'],
     title: 'PersonaCreate'
+} as const;
+
+export const PersonaGroupCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        group_type: {
+            '$ref': '#/components/schemas/PersonaGroupType',
+            default: 'group'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        owner_user_persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner User Persona Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'owner_user_persona_id'],
+    title: 'PersonaGroupCreate',
+    description: 'Input model for creating a persona group.'
+} as const;
+
+export const PersonaGroupMembershipCreateSchema = {
+    properties: {
+        role: {
+            '$ref': '#/components/schemas/UserGroupMembershipRole',
+            default: 'member'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        user_persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Persona Id'
+        }
+    },
+    type: 'object',
+    required: ['user_persona_id'],
+    title: 'PersonaGroupMembershipCreate',
+    description: 'Input model for adding a user persona to a persona group.'
+} as const;
+
+export const PersonaGroupMembershipPublicSchema = {
+    properties: {
+        role: {
+            '$ref': '#/components/schemas/UserGroupMembershipRole',
+            default: 'member'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        group_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Group Id'
+        },
+        user_persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Persona Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'group_id', 'user_persona_id', 'created_at', 'updated_at'],
+    title: 'PersonaGroupMembershipPublic',
+    description: 'Public API response model for persona-group memberships.'
+} as const;
+
+export const PersonaGroupMembershipUpdateSchema = {
+    properties: {
+        role: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/UserGroupMembershipRole'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        is_active: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Active'
+        }
+    },
+    type: 'object',
+    title: 'PersonaGroupMembershipUpdate',
+    description: 'Update model for persona-group memberships.'
+} as const;
+
+export const PersonaGroupMembershipsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PersonaGroupMembershipPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PersonaGroupMembershipsPublic',
+    description: 'Collection response for persona-group memberships.'
+} as const;
+
+export const PersonaGroupPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        group_type: {
+            '$ref': '#/components/schemas/PersonaGroupType',
+            default: 'group'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_user_persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner User Persona Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'owner_user_persona_id', 'created_at', 'updated_at'],
+    title: 'PersonaGroupPublic',
+    description: 'Public API response model for a persona group.'
+} as const;
+
+export const PersonaGroupTypeSchema = {
+    type: 'string',
+    enum: ['group', 'workspace'],
+    title: 'PersonaGroupType',
+    description: 'Persona-mediated collaboration container type.'
+} as const;
+
+export const PersonaGroupsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PersonaGroupPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PersonaGroupsPublic',
+    description: 'Collection response for persona groups.'
 } as const;
 
 export const PersonaPublicSchema = {
@@ -8727,6 +9567,113 @@ export const QualityUpdateSchema = {
     },
     type: 'object',
     title: 'QualityUpdate'
+} as const;
+
+export const QuickTestResultSchema = {
+    properties: {
+        valid: {
+            type: 'boolean',
+            title: 'Valid',
+            description: 'Whether the provider credentials are valid'
+        },
+        error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error',
+            description: 'Error message if invalid'
+        },
+        error_code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error Code',
+            description: 'Error code for programmatic handling'
+        }
+    },
+    type: 'object',
+    required: ['valid'],
+    title: 'QuickTestResult',
+    description: 'Quick pass/fail validation result.'
+} as const;
+
+export const RateLimitInfoSchema = {
+    properties: {
+        requests_limit: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Requests Limit',
+            description: 'Maximum requests per time period'
+        },
+        requests_remaining: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Requests Remaining',
+            description: 'Remaining requests in current period'
+        },
+        tokens_limit: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tokens Limit',
+            description: 'Maximum tokens per time period'
+        },
+        tokens_remaining: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tokens Remaining',
+            description: 'Remaining tokens in current period'
+        },
+        reset_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reset At',
+            description: 'When the rate limit resets'
+        }
+    },
+    type: 'object',
+    title: 'RateLimitInfo',
+    description: 'Rate limit information for an account.'
 } as const;
 
 export const RepoRoomEventRequestSchema = {
@@ -13796,6 +14743,117 @@ export const UserAccessProviderCreateSchema = {
                 }
             ],
             title: 'Description'
+        },
+        timeout_seconds: {
+            type: 'integer',
+            title: 'Timeout Seconds',
+            description: 'Request timeout in seconds',
+            default: 30
+        },
+        max_retries: {
+            type: 'integer',
+            title: 'Max Retries',
+            description: 'Maximum retry count for failed requests',
+            default: 3
+        },
+        retry_delay_ms: {
+            type: 'integer',
+            title: 'Retry Delay Ms',
+            description: 'Base delay between retries in milliseconds',
+            default: 1000
+        },
+        proxy_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Proxy Url',
+            description: 'Optional HTTP proxy URL'
+        },
+        last_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Validated At',
+            description: 'Timestamp of last successful validation'
+        },
+        validation_error: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Validation Error',
+            description: 'Last validation error message'
+        },
+        provider_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Config',
+            description: 'Provider-specific settings (org_id, deployment_name, etc.)'
+        },
+        custom_headers: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom Headers',
+            description: 'Additional HTTP headers for API requests'
+        },
+        available_models_cache: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Available Models Cache',
+            description: 'Cached list of available models from provider API'
+        },
+        models_cached_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Models Cached At',
+            description: 'When the models cache was last refreshed'
         }
     },
     type: 'object',
@@ -13806,17 +14864,10 @@ export const UserAccessProviderCreateSchema = {
 
 export const UserAccessProviderPublicSchema = {
     properties: {
-        api_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Api Key',
-            description: 'New API key to encrypt, if changing'
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
         },
         owner_id: {
             type: 'string',
@@ -13826,26 +14877,21 @@ export const UserAccessProviderPublicSchema = {
         base_url: {
             anyOf: [
                 {
-                    type: 'string',
-                    maxLength: 100
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Base Url',
-            description: 'Endpoint URL'
+            title: 'Base Url'
         },
         name: {
             type: 'string',
-            maxLength: 100,
-            title: 'Name',
-            description: "User-friendly name like 'My OpenAI' or 'Work Azure'"
+            title: 'Name'
         },
         provider_type_multiple: {
             type: 'boolean',
             title: 'Provider Type Multiple',
-            description: "if there's more than one provider type.",
             default: false
         },
         alpha_provider_type_id: {
@@ -13856,26 +14902,22 @@ export const UserAccessProviderPublicSchema = {
         is_enabled: {
             type: 'boolean',
             title: 'Is Enabled',
-            description: 'Whether this provider is active',
             default: true
         },
         is_default: {
             type: 'boolean',
             title: 'Is Default',
-            description: "is this the user's default access provider?",
             default: false
         },
         is_validated: {
             type: 'boolean',
             title: 'Is Validated',
-            description: 'has this api key and url been tested?',
             default: false
         },
         description: {
             anyOf: [
                 {
-                    type: 'string',
-                    maxLength: 500
+                    type: 'string'
                 },
                 {
                     type: 'null'
@@ -13883,14 +14925,108 @@ export const UserAccessProviderPublicSchema = {
             ],
             title: 'Description'
         },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
+        provider_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Config'
+        },
+        timeout_seconds: {
+            type: 'integer',
+            title: 'Timeout Seconds',
+            default: 30
+        },
+        max_retries: {
+            type: 'integer',
+            title: 'Max Retries',
+            default: 3
+        },
+        retry_delay_ms: {
+            type: 'integer',
+            title: 'Retry Delay Ms',
+            default: 1000
+        },
+        proxy_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Proxy Url'
+        },
+        custom_headers: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom Headers'
+        },
+        last_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Validated At'
+        },
+        validation_error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Validation Error'
+        },
+        available_models_cache: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Available Models Cache'
+        },
+        models_cached_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Models Cached At'
         }
     },
     type: 'object',
-    required: ['name', 'id'],
+    required: ['id', 'owner_id', 'name', 'alpha_provider_type_id'],
     title: 'UserAccessProviderPublic',
     description: 'Public API response - NEVER includes API key.'
 } as const;
@@ -13982,6 +15118,125 @@ export const UserAccessProviderUpdateSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Alpha Provider Type Id'
+        },
+        provider_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Config'
+        },
+        timeout_seconds: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Timeout Seconds'
+        },
+        max_retries: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Retries'
+        },
+        retry_delay_ms: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Retry Delay Ms'
+        },
+        proxy_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Proxy Url'
+        },
+        custom_headers: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom Headers'
+        },
+        last_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Validated At'
+        },
+        validation_error: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Validation Error'
+        },
+        available_models_cache: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Available Models Cache'
+        },
+        models_cached_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Models Cached At'
         }
     },
     type: 'object',
@@ -14590,6 +15845,119 @@ export const UserGroupsPublicSchema = {
     required: ['data', 'count'],
     title: 'UserGroupsPublic',
     description: 'Collection response for user groups.'
+} as const;
+
+export const UserModelPinCreateSchema = {
+    properties: {
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Sort order for pinned models',
+            default: 0
+        },
+        llm_model_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Llm Model Id',
+            description: 'The LLM model to pin'
+        }
+    },
+    type: 'object',
+    required: ['llm_model_id'],
+    title: 'UserModelPinCreate',
+    description: 'Create model for user model pins.'
+} as const;
+
+export const UserModelPinPublicSchema = {
+    properties: {
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'Sort order for pinned models',
+            default: 0
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        llm_model_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Llm Model Id'
+        },
+        pinned_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Pinned At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'user_id', 'llm_model_id', 'pinned_at'],
+    title: 'UserModelPinPublic',
+    description: 'Public API response for a user model pin.'
+} as const;
+
+export const UserModelPinReorderSchema = {
+    properties: {
+        order: {
+            items: {
+                '$ref': '#/components/schemas/UserModelPinReorderItem'
+            },
+            type: 'array',
+            title: 'Order',
+            description: 'List of pins with their new sort orders'
+        }
+    },
+    type: 'object',
+    required: ['order'],
+    title: 'UserModelPinReorder',
+    description: 'Request body for reordering user model pins.'
+} as const;
+
+export const UserModelPinReorderItemSchema = {
+    properties: {
+        llm_model_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Llm Model Id',
+            description: 'The pinned LLM model to reorder'
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            description: 'New sort order for this pin'
+        }
+    },
+    type: 'object',
+    required: ['llm_model_id', 'sort_order'],
+    title: 'UserModelPinReorderItem',
+    description: 'Single item for reordering a user model pin.'
+} as const;
+
+export const UserModelPinsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/UserModelPinPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'UserModelPinsPublic',
+    description: 'Collection response for user model pins.'
 } as const;
 
 export const UserPanelDefaultsPublicSchema = {
