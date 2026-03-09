@@ -1,16 +1,15 @@
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Any, Literal, Annotated, Union
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import  EmailStr, field_validator, model_validator
+from pydantic import EmailStr, field_validator, model_validator
 from sqlalchemy import JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, Relationship, SQLModel
 
 from app.core.provider_types import TYPE1, TYPE3
-
 
 # ===== Model Overview for Relational References Ordering
 #
@@ -767,12 +766,12 @@ class Story(StoryBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     owner_id: uuid.UUID = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
-    
+
     # Versioning fields
     current_version: int = Field(default=1)
     published_version: int | None = Field(default=None)
     is_published: bool = Field(default=False)
-    
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
@@ -843,12 +842,12 @@ class StoryNode(StoryNodeBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
     story_version: int = Field(nullable=False)  # Which version this node belongs to
-    
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     content_format: ContentFormat | None = Field(default=ContentFormat.TEXT)
-    
+
     # Relationships defined after all models
     # story: "Story" = Relationship(back_populates="nodes")
     # choices_from: list["NodeChoice"] = Relationship(back_populates="from_node")
@@ -878,7 +877,7 @@ class NodeChoiceBase(SQLModel):
     """Base model for NodeChoice (decision branch in story template)"""
     text: str = Field(min_length=1, max_length=500)
     order: int = Field(default=0)  # Display order for choices
-    
+
     # State management for conditional branches
     requires_state: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))  # Conditions to show this choice
     sets_state: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))  # State changes when chosen
@@ -908,7 +907,7 @@ class NodeChoice(NodeChoiceBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     from_node_id: uuid.UUID = Field(foreign_key="storynode.id", nullable=False, ondelete="CASCADE")
     to_node_id: uuid.UUID = Field(foreign_key="storynode.id", nullable=False, ondelete="CASCADE")
-    
+
     # Relationships defined after all models
     # from_node: "StoryNode" = Relationship(back_populates="choices_from")
     # to_node: "StoryNode" = Relationship(back_populates="choices_to")
@@ -955,7 +954,7 @@ class StoryRequirement(StoryRequirementBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
-    
+
     # Relationships defined after all models
     # story: "Story" = Relationship(back_populates="requirements")
 
@@ -981,7 +980,7 @@ class UserStoryProgressBase(SQLModel):
     """
     current_node_id: uuid.UUID | None = Field(default=None)
     is_completed: bool = Field(default=False)
-    
+
     # State accumulator - grows as player makes choices
     story_state: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
@@ -1016,7 +1015,7 @@ class UserStoryProgress(UserStoryProgressBase, table=True):
     user_persona_id: uuid.UUID = Field(foreign_key="userpersona.id", nullable=False, ondelete="CASCADE")
     story_id: uuid.UUID = Field(foreign_key="story.id", nullable=False, ondelete="CASCADE")
     story_version: int = Field(nullable=False)  # Locked at creation
-    
+
     # NEW: Head pointer (active timeline position) - Phase 1
     head_choice_id: uuid.UUID | None = Field(
         default=None,
@@ -1115,7 +1114,7 @@ class UserNodeChoiceBase(SQLModel):
     choice_text: str = Field(max_length=1000)
     from_node_id: uuid.UUID
     to_node_id: uuid.UUID
-    
+
     # Snapshot of state changes applied by this choice
     state_changes: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
@@ -1141,15 +1140,15 @@ class UserNodeChoice(UserNodeChoiceBase, table=True):
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     progress_id: uuid.UUID = Field(foreign_key="userstoryprogress.id", nullable=False, ondelete="CASCADE")
-    
+
     parent_choice_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="usernodechoice.id",
         description="Parent event in timeline tree (null for initial state)"
     )
-    
+
     choice_time: datetime = Field(default_factory=datetime.now)
-    
+
     # Relationships defined after all models
     # progress: "UserStoryProgress" = Relationship(back_populates="choice_history")
     # from_node: "StoryNode" = Relationship()
@@ -1755,6 +1754,36 @@ class UserAccessProviderBase(SQLModel):
     is_validated: bool =Field(default=False, description="has this api key and url been tested?")
     description: str | None = Field(default=None, max_length=500)
 
+    # Adapter configuration fields
+    timeout_seconds: int = Field(default=30, description="Request timeout in seconds")
+    max_retries: int = Field(default=3, description="Maximum retry count for failed requests")
+    retry_delay_ms: int = Field(default=1000, description="Base delay between retries in milliseconds")
+    proxy_url: str | None = Field(default=None, max_length=255, description="Optional HTTP proxy URL")
+
+    # Validation state fields
+    last_validated_at: datetime | None = Field(default=None, description="Timestamp of last successful validation")
+    validation_error: str | None = Field(default=None, max_length=1000, description="Last validation error message")
+
+    # Provider-specific config and headers (JSON in table model)
+    provider_config: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-specific settings (org_id, deployment_name, etc.)",
+    )
+    custom_headers: dict[str, Any] | None = Field(
+        default=None,
+        description="Additional HTTP headers for API requests",
+    )
+
+    # Model cache (JSON in table model)
+    available_models_cache: list[str] | None = Field(
+        default=None,
+        description="Cached list of available models from provider API",
+    )
+    models_cached_at: datetime | None = Field(
+        default=None,
+        description="When the models cache was last refreshed",
+    )
+
 class UserAccessProviderCreate(UserAccessProviderBase):
     """Input model for creating provider"""
     pass
@@ -1770,6 +1799,20 @@ class UserAccessProviderBasePartial(SQLModel):
     description: str | None = Field(default=None, max_length=500)
     api_key: str | None = Field(default=None, description="New API key to encrypt, if changing")
     alpha_provider_type_id: uuid.UUID = Field(default_factory=uuid.uuid4)
+
+    # Adapter configuration fields (optional for updates)
+    provider_config: dict[str, Any] | None = None
+    timeout_seconds: int | None = None
+    max_retries: int | None = None
+    retry_delay_ms: int | None = None
+    proxy_url: str | None = Field(default=None, max_length=255)
+    custom_headers: dict[str, Any] | None = None
+
+    # Validation state fields (optional for updates)
+    last_validated_at: datetime | None = None
+    validation_error: str | None = Field(default=None, max_length=1000)
+    available_models_cache: list[str] | None = None
+    models_cached_at: datetime | None = None
 
 class UserAccessProviderUpdate(UserAccessProviderBasePartial):
     pass
@@ -1799,9 +1842,53 @@ class UserAccessProvider(UserAccessProviderBase, table=True):
         description="api base (anthropic, google, openai, openai_compatible, multiple, custom, empty)"
     )
 
-class UserAccessProviderPublic(UserAccessProviderBase):
+    # JSON fields that need sa_column for database storage
+    provider_config: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Provider-specific settings (org_id, deployment_name, etc.)"
+    )
+    custom_headers: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Additional HTTP headers for API requests"
+    )
+    available_models_cache: list[str] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Cached list of available models from provider API"
+    )
+    models_cached_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when models cache was last refreshed"
+    )
+
+class UserAccessProviderPublic(SQLModel):
     """Public API response - NEVER includes API key."""
     id: uuid.UUID
+    owner_id: uuid.UUID
+    base_url: str | None = None
+    name: str
+    provider_type_multiple: bool = False
+    alpha_provider_type_id: uuid.UUID
+    is_enabled: bool = True
+    is_default: bool = False
+    is_validated: bool = False
+    description: str | None = None
+
+    # Adapter configuration fields
+    provider_config: dict[str, Any] | None = None
+    timeout_seconds: int = 30
+    max_retries: int = 3
+    retry_delay_ms: int = 1000
+    proxy_url: str | None = None
+    custom_headers: dict[str, Any] | None = None
+
+    # Validation state fields
+    last_validated_at: datetime | None = None
+    validation_error: str | None = None
+    available_models_cache: list[str] | None = None
+    models_cached_at: datetime | None = None
 
 
 class UserAccessProvidersPublic(SQLModel):
@@ -1817,6 +1904,42 @@ class LLMProviderTypeBase(SQLModel):
     validated: bool = Field(default=False, description="updated when proven valid at least once")
     is_system: bool = Field(default=False, description="is this a system-level provider type?")
 
+    # Template gallery fields
+    category: str = Field(
+        default="custom",
+        max_length=30,
+        description="Provider category: major | cloud | self_hosted | custom"
+    )
+    display_name: str = Field(
+        default="",
+        max_length=100,
+        description="User-friendly name like 'OpenAI'"
+    )
+    logo_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Path to provider logo"
+    )
+    docs_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Link to provider documentation"
+    )
+    default_base_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Default API endpoint"
+    )
+    config_schema: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="JSON Schema for provider-specific fields"
+    )
+    sort_order: int = Field(
+        default=0,
+        description="Display ordering within category"
+    )
+
 class LLMProviderTypeCreate(LLMProviderTypeBase):
     """Input model for creating an LLMProviderType"""
     pass
@@ -1827,6 +1950,42 @@ class LLMProviderTypeBasePartial(SQLModel):
     details: str | None = Field(default=None, max_length=500, description="notes if necessary")
     validated: bool | None = Field(default=None, description="updated when proven valid at least once",)
     is_system: bool | None = Field(default=None, description="is this a validated provider_type?" )
+
+    # Template gallery fields (all optional for updates)
+    category: str | None = Field(
+        default=None,
+        max_length=30,
+        description="Provider category: major | cloud | self_hosted | custom"
+    )
+    display_name: str | None = Field(
+        default=None,
+        max_length=100,
+        description="User-friendly name like 'OpenAI'"
+    )
+    logo_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Path to provider logo"
+    )
+    docs_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Link to provider documentation"
+    )
+    default_base_url: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Default API endpoint"
+    )
+    config_schema: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="JSON Schema for provider-specific fields"
+    )
+    sort_order: int | None = Field(
+        default=None,
+        description="Display ordering within category"
+    )
 
 class LLMProviderTypeUpdate(LLMProviderTypeBasePartial):
     pass
@@ -1934,6 +2093,108 @@ class LLMModelsPublic(SQLModel):
     """Collection response for LLMModels."""
     data: list[LLMModelPublic]
     count: int
+
+
+class LLMModelPublicWithPinStatus(LLMModelPublic):
+    """
+    Public API response for a model catalog entry with pin status.
+
+    Extends LLMModelPublic with optional pin information for the current user.
+    Pin fields are only populated when include_pin_status=true and user is authenticated.
+    """
+    is_pinned: bool = Field(default=False, description="Whether the model is pinned by the current user")
+    pin_sort_order: int | None = Field(default=None, description="Sort order of the pin (if pinned)")
+
+
+class LLMModelsPublicWithPinStatus(SQLModel):
+    """Collection response for LLMModels with pin status."""
+    data: list[LLMModelPublicWithPinStatus]
+    count: int
+
+
+# ==================== UserModelPin Models ====================
+# Junction table for user-pinned favorite LLM models
+# Allows users to pin/favorite models for quick access
+
+
+class UserModelPinBase(SQLModel):
+    """Base model for user model pins."""
+
+    sort_order: int = Field(default=0, description="Sort order for pinned models")
+
+
+class UserModelPinCreate(UserModelPinBase):
+    """Create model for user model pins."""
+
+    llm_model_id: uuid.UUID = Field(description="The LLM model to pin")
+
+
+class UserModelPin(UserModelPinBase, table=True):
+    """
+    Database model for user-pinned LLM models.
+
+    Junction table allowing users to pin/favorite specific LLM models
+    for quick access. Each user can pin a model only once.
+    """
+
+    __tablename__ = "user_model_pin"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "llm_model_id", name="uq_user_model_pin_user_model"
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+        description="User who pinned the model",
+    )
+    llm_model_id: uuid.UUID = Field(
+        foreign_key="llmmodel.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+        description="The pinned LLM model",
+    )
+    pinned_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        nullable=False,
+        description="When the model was pinned",
+    )
+
+
+class UserModelPinPublic(UserModelPinBase):
+    """Public API response for a user model pin."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    llm_model_id: uuid.UUID
+    pinned_at: datetime
+
+
+class UserModelPinsPublic(SQLModel):
+    """Collection response for user model pins."""
+
+    data: list[UserModelPinPublic]
+    count: int
+
+
+class UserModelPinReorderItem(SQLModel):
+    """Single item for reordering a user model pin."""
+
+    llm_model_id: uuid.UUID = Field(description="The pinned LLM model to reorder")
+    sort_order: int = Field(description="New sort order for this pin")
+
+
+class UserModelPinReorder(SQLModel):
+    """Request body for reordering user model pins."""
+
+    order: list[UserModelPinReorderItem] = Field(
+        description="List of pins with their new sort orders"
+    )
 
 
 class Event(EventBase, table=True):
@@ -5320,8 +5581,7 @@ class DemoStrangePanelSpec(DemoPanelSpecBase):
 
 
 DemoPanelSpec = Annotated[
-    Union[
-        DemoChatPanelSpec
+    DemoChatPanelSpec
         | DemoStoryRuntimePanelSpec
         | DemoContentPanelSpec
         | DemoParticipantPanelSpec
@@ -5331,8 +5591,7 @@ DemoPanelSpec = Annotated[
         | DemoStoryEditorPanelSpec
         | DemoStoryPlayerPanelSpec
         | DemoStoryPlayerLegacyPanelSpec
-        | DemoStrangePanelSpec
-    ],
+        | DemoStrangePanelSpec,
     Field(discriminator="kind"),
 ]
 
@@ -5422,8 +5681,7 @@ class DemoStrangeBlockSpec(DemoBlockSpecBase):
 
 
 DemoBlockSpec = Annotated[
-    Union[
-        DemoContextBlockSpec
+    DemoContextBlockSpec
         | DemoContentBlockSpec
         | DemoStoryBlockSpec
         | DemoStoryMetadataBlockSpec
@@ -5433,8 +5691,7 @@ DemoBlockSpec = Annotated[
         | DemoContributionFeedBlockSpec
         | DemoGitViewBlockSpec
         | DemoFileExplorerBlockSpec
-        | DemoStrangeBlockSpec
-    ],
+        | DemoStrangeBlockSpec,
     Field(discriminator="type"),
 ]
 

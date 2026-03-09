@@ -13,21 +13,25 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.api.deps import (
+    CurrentUser,
+    OptionalUser,
+    SessionDep,
+    get_current_active_superuser,
+)
 from app.models import (
-    LLMModel,
     LLMModelCreate,
     LLMModelPublic,
     LLMModelsPublic,
+    LLMModelsPublicWithPinStatus,
     LLMModelUpdate,
     LLMProviderType,
-    LLMProviderTypesPublic,
-    LLMProviderTypeCreate,
     LLMProviderTypePublic,
     Message,
-    UserAccessProvider,
-    UserAccessProviderPublic,
-    UserAccessProvidersPublic,
+    UserModelPinCreate,
+    UserModelPinPublic,
+    UserModelPinReorder,
+    UserModelPinsPublic,
 )
 
 router = APIRouter(prefix="/llm-catalog", tags=["llm-catalog"])
@@ -139,7 +143,7 @@ def list_provider_models(
 # TODO: maybe this is easier than I'm thinking it is - use the secondary capabilities dict?
 # @router.get("/models/custom", response_model=LLMModelsPublic)
 
-# # TODO: 
+# # TODO:
 # @router.post("/models/custom", response_model=LLMModelPublic)
 # def create_custom_model(
 #     session: SessionDep,
@@ -164,14 +168,37 @@ def list_provider_models(
 # =============================================================================
 
 
-@router.get("/models", response_model=LLMModelsPublic)
+@router.get("/models", response_model=LLMModelsPublic | LLMModelsPublicWithPinStatus)
 def list_models(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: OptionalUser,
     skip: int = 0,
     limit: int = 100,
+    include_pin_status: bool = False,
 ) -> Any:
-    """List all LLM models available to current user."""
+    """
+    List all LLM models available.
+
+    Query Parameters:
+        include_pin_status: When true and user is authenticated, includes
+            pin status (is_pinned, pin_sort_order) for each model and
+            sorts pinned models first.
+    """
+    # If pin status requested and user is authenticated, use the enhanced query
+    if include_pin_status and current_user is not None:
+        models_with_pin, count = crud.get_llm_models_with_pin_status(
+            session=session,
+            user_id=current_user.id,
+            primary_provider_type_id=None,
+            skip=skip,
+            limit=limit,
+        )
+        return LLMModelsPublicWithPinStatus(
+            data=models_with_pin,
+            count=count,
+        )
+
+    # Standard query without pin status
     models, count = crud.get_llm_models(
         session=session,
         primary_provider_type_id=None,
@@ -184,15 +211,22 @@ def list_models(
     )
 
 
-@router.get("/models/uap", response_model=LLMModelsPublic)
+@router.get("/models/uap", response_model=LLMModelsPublic | LLMModelsPublicWithPinStatus)
 def list_models_for_uap(
     session: SessionDep,
     current_user: CurrentUser,
     user_access_provider_id: uuid.UUID,
     skip: int = 0,
     limit: int = 100,
+    include_pin_status: bool = False,
 ) -> Any:
-    """List all models for a specific user's user access provider's provider_type."""
+    """
+    List all models for a specific user's user access provider's provider_type.
+
+    Query Parameters:
+        include_pin_status: When true, includes pin status (is_pinned, pin_sort_order)
+            for each model and sorts pinned models first.
+    """
     user_access_provider = crud.get_user_access_provider(
         session=session,
         user_access_provider_id=user_access_provider_id,
@@ -200,6 +234,22 @@ def list_models_for_uap(
     )
     if not user_access_provider:
         raise HTTPException(status_code=404, detail="user access provider not found")
+
+    # If pin status requested, use the enhanced query
+    if include_pin_status:
+        models_with_pin, count = crud.get_llm_models_with_pin_status(
+            session=session,
+            user_id=current_user.id,
+            primary_provider_type_id=user_access_provider.alpha_provider_type_id,
+            skip=skip,
+            limit=limit,
+        )
+        return LLMModelsPublicWithPinStatus(
+            data=models_with_pin,
+            count=count,
+        )
+
+    # Standard query without pin status
     models, count = crud.get_llm_models(
         session=session,
         primary_provider_type_id=user_access_provider.alpha_provider_type_id,
@@ -340,3 +390,127 @@ def delete_model(
 
     crud.delete_llm_model(session=session, llm_model=model)
     return Message(message=f"Model '{model.display_name}' deleted successfully")
+
+
+# =============================================================================
+# Model Pinning Endpoints (Authenticated)
+# =============================================================================
+
+
+@router.get("/pins", response_model=UserModelPinsPublic)
+def list_pinned_models(
+    session: SessionDep,
+    current_user: CurrentUser,
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    """
+    List current user's pinned models.
+
+    Returns all models the user has pinned for quick access,
+    ordered by sort_order.
+    """
+    pins, count = crud.get_user_model_pins(
+        session=session,
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit,
+    )
+    return UserModelPinsPublic(
+        data=[UserModelPinPublic(**pin.model_dump()) for pin in pins],
+        count=count,
+    )
+
+
+@router.post("/pins", response_model=UserModelPinPublic)
+def pin_model(
+    session: SessionDep,
+    current_user: CurrentUser,
+    pin_in: UserModelPinCreate,
+) -> Any:
+    """
+    Pin a model for quick access.
+
+    Each user can pin a model only once. Duplicate pins will return 400.
+    """
+    # Verify model exists
+    model = crud.get_llm_model(session=session, llm_model_id=pin_in.llm_model_id)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    # Check if already pinned
+    existing_pin = crud.get_user_model_pin(
+        session=session,
+        user_id=current_user.id,
+        llm_model_id=pin_in.llm_model_id,
+    )
+    if existing_pin:
+        raise HTTPException(status_code=400, detail="Model already pinned")
+
+    pin = crud.create_user_model_pin(
+        session=session,
+        user_id=current_user.id,
+        pin_in=pin_in,
+    )
+    return UserModelPinPublic(**pin.model_dump())
+
+
+@router.delete("/pins/{llm_model_id}", response_model=Message)
+def unpin_model(
+    llm_model_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Unpin a model.
+
+    Removes the model from the user's pinned list.
+    """
+    # Check if pin exists
+    existing_pin = crud.get_user_model_pin(
+        session=session,
+        user_id=current_user.id,
+        llm_model_id=llm_model_id,
+    )
+    if not existing_pin:
+        raise HTTPException(status_code=404, detail="Pin not found")
+
+    crud.delete_user_model_pin(
+        session=session,
+        user_id=current_user.id,
+        llm_model_id=llm_model_id,
+    )
+    return Message(message="Model unpinned successfully")
+
+
+@router.patch("/pins/reorder", response_model=UserModelPinsPublic)
+def reorder_pinned_models(
+    session: SessionDep,
+    current_user: CurrentUser,
+    reorder_in: UserModelPinReorder,
+) -> Any:
+    """
+    Reorder pinned models.
+
+    Updates the sort_order for each specified pin.
+    All referenced pins must exist.
+    """
+    # Convert to list of dicts for CRUD function
+    order = [
+        {"llm_model_id": item.llm_model_id, "sort_order": item.sort_order}
+        for item in reorder_in.order
+    ]
+
+    try:
+        updated_pins = crud.reorder_user_model_pins(
+            session=session,
+            user_id=current_user.id,
+            order=order,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return UserModelPinsPublic(
+        data=[UserModelPinPublic(**pin.model_dump()) for pin in updated_pins],
+        count=len(updated_pins),
+    )

@@ -28,7 +28,9 @@ from app.models import (
     LLMModel,
     LLMModelCreate,
     LLMModelPublic,
+    LLMModelPublicWithPinStatus,
     LLMModelsPublic,
+    LLMModelsPublicWithPinStatus,
     LLMModelUpdate,
     LLMProviderType,
     LLMProviderTypeCreate,
@@ -109,6 +111,8 @@ from app.models import (
     UserPersonaPresentationCreate,
     UserPersonaPresentationUpdate,
     UserPersonaUpdate,
+    UserModelPin,
+    UserModelPinCreate,
     UserStoryProgress,
     UserStoryProgressCreate,
     UserStoryProgressUpdate,
@@ -255,6 +259,109 @@ def get_llm_models(
     models = list(session.exec(statement).all())
 
     return models, count
+
+
+def get_llm_models_with_pin_status(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    primary_provider_type_id: uuid.UUID | None = None,
+    skip: int = 0,
+    limit: int = 100,
+    is_default: bool | None = None,
+    has_vision: bool | None = None,
+    has_function_calling: bool | None = None,
+    has_streaming: bool | None = None,
+    has_json_mode: bool | None = None,
+    model_id: str | None = None,
+) -> tuple[list[LLMModelPublicWithPinStatus], int]:
+    """
+    Get list of LLM Models with pin status for the specified user.
+
+    Uses LEFT JOIN with UserModelPin to include pin information for each model.
+    Pinned models are sorted first, then by model sort_order and model_id.
+
+    Args:
+        session: Database session
+        user_id: User UUID for pin status lookup
+        primary_provider_type_id: Filter by provider type
+        skip, limit: Pagination
+        is_default, has_vision, etc.: Capability filters
+        model_id: Search by model_id
+
+    Returns:
+        tuple (list of models with pin status, total count)
+    """
+    from sqlalchemy import case
+
+    # Build filters (LLMModel columns only)
+    filters: list[Any] = []
+    if has_vision is not None:
+        filters.append(LLMModel.has_vision == has_vision)
+    if has_streaming is not None:
+        filters.append(LLMModel.has_streaming == has_streaming)
+    if has_function_calling is not None:
+        filters.append(LLMModel.has_function_calling == has_function_calling)
+    if has_json_mode is not None:
+        filters.append(LLMModel.has_json_mode == has_json_mode)
+    if is_default is not None:
+        filters.append(LLMModel.is_default == is_default)
+    if primary_provider_type_id is not None:
+        filters.append(LLMModel.primary_provider_type_id == primary_provider_type_id)
+    if model_id is not None:
+        filters.append(LLMModel.model_id == model_id)
+
+    base_filter = and_(*filters) if filters else true()
+
+    # Count query (same as non-pin version)
+    count_statement = select(func.count()).select_from(LLMModel).where(base_filter)
+    count = session.exec(count_statement).one()
+
+    # Create aliased UserModelPin for the join
+    # Filter to only this user's pins in the join condition
+    statement = (
+        select(
+            LLMModel,
+            UserModelPin.id.label("pin_id"),
+            UserModelPin.sort_order.label("pin_sort_order"),
+        )
+        .outerjoin(
+            UserModelPin,
+            and_(
+                LLMModel.id == UserModelPin.llm_model_id,
+                UserModelPin.user_id == user_id,
+            )
+        )
+        .where(base_filter)
+        .order_by(
+            # Pinned models first (NULL pins sort last with desc on non-null indicator)
+            case((UserModelPin.id.isnot(None), 0), else_=1),
+            # Then by pin sort_order for pinned models
+            UserModelPin.sort_order.asc().nullslast(),
+            # Then by model's native sort_order and model_id
+            LLMModel.sort_order,
+            LLMModel.model_id,
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+
+    results = session.exec(statement).all()
+
+    # Transform results to LLMModelPublicWithPinStatus
+    models_with_pin: list[LLMModelPublicWithPinStatus] = []
+    for row in results:
+        model = row[0]  # LLMModel
+        pin_id = row[1]  # pin_id or None
+        pin_sort_order = row[2]  # pin_sort_order or None
+
+        model_data = model.model_dump()
+        model_data["is_pinned"] = pin_id is not None
+        model_data["pin_sort_order"] = pin_sort_order
+
+        models_with_pin.append(LLMModelPublicWithPinStatus(**model_data))
+
+    return models_with_pin, count
 
 
 def get_llm_model(
@@ -5099,3 +5206,191 @@ def update_user_agent_config(
 def delete_user_agent_config(*, session: Session, db_agent: UserAgentConfig) -> None:
     session.delete(db_agent)
     session.commit()
+
+
+# User Model Pin CRUD functions
+
+
+def get_user_model_pins(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 100,
+) -> tuple[list[UserModelPin], int]:
+    """
+    Get list of user's pinned models.
+
+    Args:
+        session: Database session
+        user_id: User UUID to filter by
+        skip: Number of records to skip (pagination)
+        limit: Maximum number of records to return
+
+    Returns:
+        Tuple of (list of pins, total count)
+    """
+    filters = [UserModelPin.user_id == user_id]
+
+    # Count query
+    count_statement = (
+        select(func.count())
+        .select_from(UserModelPin)
+        .where(*filters)
+    )
+    count = session.exec(count_statement).one()
+
+    # Data query - ordered by sort_order
+    statement = (
+        select(UserModelPin)
+        .where(*filters)
+        .order_by(UserModelPin.sort_order)
+        .offset(skip)
+        .limit(limit)
+    )
+    pins = list(session.exec(statement).all())
+
+    return pins, count
+
+
+def get_user_model_pin(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    llm_model_id: uuid.UUID,
+) -> UserModelPin | None:
+    """
+    Get a single user model pin by user and model ID.
+
+    Args:
+        session: Database session
+        user_id: User UUID
+        llm_model_id: LLM model UUID
+
+    Returns:
+        UserModelPin if found, None otherwise
+    """
+    statement = select(UserModelPin).where(
+        UserModelPin.user_id == user_id,
+        UserModelPin.llm_model_id == llm_model_id,
+    )
+    return session.exec(statement).first()
+
+
+def create_user_model_pin(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    pin_in: UserModelPinCreate,
+) -> UserModelPin:
+    """
+    Create a new user model pin.
+
+    Args:
+        session: Database session
+        user_id: User UUID
+        pin_in: Pin creation data
+
+    Returns:
+        Created UserModelPin
+
+    Raises:
+        ValueError: If the model is already pinned by this user
+    """
+    # Check if pin already exists
+    existing = get_user_model_pin(
+        session=session,
+        user_id=user_id,
+        llm_model_id=pin_in.llm_model_id,
+    )
+    if existing:
+        raise ValueError("Model is already pinned")
+
+    db_pin = UserModelPin.model_validate(pin_in, update={"user_id": user_id})
+    session.add(db_pin)
+    session.commit()
+    session.refresh(db_pin)
+    return db_pin
+
+
+def delete_user_model_pin(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    llm_model_id: uuid.UUID,
+) -> None:
+    """
+    Delete a user model pin.
+
+    Args:
+        session: Database session
+        user_id: User UUID
+        llm_model_id: LLM model UUID
+
+    Raises:
+        ValueError: If pin not found
+    """
+    pin = get_user_model_pin(
+        session=session,
+        user_id=user_id,
+        llm_model_id=llm_model_id,
+    )
+    if not pin:
+        raise ValueError("Pin not found")
+
+    session.delete(pin)
+    session.commit()
+
+
+def reorder_user_model_pins(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    order: list[dict[str, Any]],
+) -> list[UserModelPin]:
+    """
+    Reorder user's pinned models.
+
+    Args:
+        session: Database session
+        user_id: User UUID
+        order: List of dicts with 'llm_model_id' and 'sort_order' keys
+
+    Returns:
+        Updated list of UserModelPin in new order
+
+    Raises:
+        ValueError: If any referenced pin is not found
+    """
+    updated_pins = []
+
+    for item in order:
+        llm_model_id = item.get("llm_model_id")
+        sort_order = item.get("sort_order", 0)
+
+        if llm_model_id is None:
+            raise ValueError("llm_model_id is required in order items")
+
+        # Convert string to UUID if needed
+        if isinstance(llm_model_id, str):
+            llm_model_id = uuid.UUID(llm_model_id)
+
+        pin = get_user_model_pin(
+            session=session,
+            user_id=user_id,
+            llm_model_id=llm_model_id,
+        )
+        if not pin:
+            raise ValueError(f"Pin for model {llm_model_id} not found")
+
+        pin.sort_order = sort_order
+        session.add(pin)
+        updated_pins.append(pin)
+
+    session.commit()
+
+    # Refresh all pins and return sorted
+    for pin in updated_pins:
+        session.refresh(pin)
+
+    return sorted(updated_pins, key=lambda p: p.sort_order)
