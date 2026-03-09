@@ -1755,6 +1755,16 @@ class UserAccessProviderBase(SQLModel):
     is_validated: bool =Field(default=False, description="has this api key and url been tested?")
     description: str | None = Field(default=None, max_length=500)
 
+    # Adapter configuration fields
+    timeout_seconds: int = Field(default=30, description="Request timeout in seconds")
+    max_retries: int = Field(default=3, description="Maximum retry count for failed requests")
+    retry_delay_ms: int = Field(default=1000, description="Base delay between retries in milliseconds")
+    proxy_url: str | None = Field(default=None, max_length=255, description="Optional HTTP proxy URL")
+
+    # Validation state fields
+    last_validated_at: datetime | None = Field(default=None, description="Timestamp of last successful validation")
+    validation_error: str | None = Field(default=None, max_length=1000, description="Last validation error message")
+
 class UserAccessProviderCreate(UserAccessProviderBase):
     """Input model for creating provider"""
     pass
@@ -1770,6 +1780,20 @@ class UserAccessProviderBasePartial(SQLModel):
     description: str | None = Field(default=None, max_length=500)
     api_key: str | None = Field(default=None, description="New API key to encrypt, if changing")
     alpha_provider_type_id: uuid.UUID = Field(default_factory=uuid.uuid4)
+
+    # Adapter configuration fields (optional for updates)
+    provider_config: dict[str, Any] | None = None
+    timeout_seconds: int | None = None
+    max_retries: int | None = None
+    retry_delay_ms: int | None = None
+    proxy_url: str | None = Field(default=None, max_length=255)
+    custom_headers: dict[str, Any] | None = None
+
+    # Validation state fields (optional for updates)
+    last_validated_at: datetime | None = None
+    validation_error: str | None = Field(default=None, max_length=1000)
+    available_models_cache: list[str] | None = None
+    models_cached_at: datetime | None = None
 
 class UserAccessProviderUpdate(UserAccessProviderBasePartial):
     pass
@@ -1799,9 +1823,53 @@ class UserAccessProvider(UserAccessProviderBase, table=True):
         description="api base (anthropic, google, openai, openai_compatible, multiple, custom, empty)"
     )
 
-class UserAccessProviderPublic(UserAccessProviderBase):
+    # JSON fields that need sa_column for database storage
+    provider_config: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Provider-specific settings (org_id, deployment_name, etc.)"
+    )
+    custom_headers: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Additional HTTP headers for API requests"
+    )
+    available_models_cache: list[str] | None = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Cached list of available models from provider API"
+    )
+    models_cached_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when models cache was last refreshed"
+    )
+
+class UserAccessProviderPublic(SQLModel):
     """Public API response - NEVER includes API key."""
     id: uuid.UUID
+    owner_id: uuid.UUID
+    base_url: str | None = None
+    name: str
+    provider_type_multiple: bool = False
+    alpha_provider_type_id: uuid.UUID
+    is_enabled: bool = True
+    is_default: bool = False
+    is_validated: bool = False
+    description: str | None = None
+
+    # Adapter configuration fields
+    provider_config: dict[str, Any] | None = None
+    timeout_seconds: int = 30
+    max_retries: int = 3
+    retry_delay_ms: int = 1000
+    proxy_url: str | None = None
+    custom_headers: dict[str, Any] | None = None
+
+    # Validation state fields
+    last_validated_at: datetime | None = None
+    validation_error: str | None = None
+    available_models_cache: list[str] | None = None
+    models_cached_at: datetime | None = None
 
 
 class UserAccessProvidersPublic(SQLModel):
