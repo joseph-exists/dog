@@ -630,6 +630,40 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
+export const CloneAgentRequestSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        },
+        retain_user_access_provider: {
+            type: 'boolean',
+            title: 'Retain User Access Provider',
+            default: false
+        }
+    },
+    type: 'object',
+    title: 'CloneAgentRequest'
+} as const;
+
 export const ContentFormatSchema = {
     type: 'string',
     enum: ['text', 'html', 'markdown', 'json', 'yaml', 'mdx', 'code', 'svg', 'image', 'audio', 'video', 'empty', 'unknown', 'test'],
@@ -5286,6 +5320,88 @@ export const DetailedTestResultSchema = {
     description: 'Detailed test result with diagnostics.'
 } as const;
 
+export const DiscoveredUserPersonaPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        persona_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Persona Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        nickname: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nickname'
+        },
+        short_bio: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Short Bio'
+        },
+        publication_state: {
+            '$ref': '#/components/schemas/UserPersonaPublicationState'
+        },
+        owner_display_name: {
+            type: 'string',
+            title: 'Owner Display Name'
+        },
+        is_primary: {
+            type: 'boolean',
+            title: 'Is Primary',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['id', 'user_id', 'persona_id', 'name', 'publication_state', 'owner_display_name'],
+    title: 'DiscoveredUserPersonaPublic',
+    description: 'Search result for a discoverable published user persona.'
+} as const;
+
+export const DiscoveredUserPersonasPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/DiscoveredUserPersonaPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'DiscoveredUserPersonasPublic',
+    description: 'Collection response for discoverable user persona search.'
+} as const;
+
 export const EntityContextSchema = {
     properties: {
         entity_type: {
@@ -9868,6 +9984,62 @@ export const ResolvedThemeResponseSchema = {
     required: ['theme', 'source'],
     title: 'ResolvedThemeResponse',
     description: 'Output from theme resolution domain service.'
+} as const;
+
+export const ResolvedUserPageAudiencePublicSchema = {
+    properties: {
+        scope: {
+            '$ref': '#/components/schemas/AudienceScope'
+        },
+        is_owner: {
+            type: 'boolean',
+            title: 'Is Owner',
+            default: false
+        },
+        matched_user_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Matched User Ids'
+        },
+        matched_user_persona_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Matched User Persona Ids'
+        },
+        matched_group_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Matched Group Ids'
+        },
+        matched_persona_group_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Matched Persona Group Ids'
+        },
+        matched_audience_keys: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Matched Audience Keys'
+        }
+    },
+    type: 'object',
+    required: ['scope'],
+    title: 'ResolvedUserPageAudiencePublic',
+    description: 'Resolved visitor audience context for a user page.'
 } as const;
 
 export const RoomAgentSettingsBundleSchema = {
@@ -16794,6 +16966,78 @@ export const UserRegisterSchema = {
     title: 'UserRegister'
 } as const;
 
+export const UserRepoCommitRequestSchema = {
+    properties: {
+        branch: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Branch',
+            default: 'main'
+        },
+        mutations: {
+            items: {
+                '$ref': '#/components/schemas/UserRepoFileMutationInput'
+            },
+            type: 'array',
+            title: 'Mutations'
+        },
+        commit_message: {
+            type: 'string',
+            maxLength: 500,
+            title: 'Commit Message'
+        },
+        expected_head_sha: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Expected Head Sha'
+        }
+    },
+    type: 'object',
+    required: ['commit_message', 'expected_head_sha'],
+    title: 'UserRepoCommitRequest'
+} as const;
+
+export const UserRepoCommitResponseSchema = {
+    properties: {
+        repo_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Repo Id'
+        },
+        branch: {
+            type: 'string',
+            title: 'Branch'
+        },
+        previous_head_sha: {
+            type: 'string',
+            title: 'Previous Head Sha'
+        },
+        new_head_sha: {
+            type: 'string',
+            title: 'New Head Sha'
+        },
+        commit_message: {
+            type: 'string',
+            title: 'Commit Message'
+        },
+        committed_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Committed At'
+        },
+        changed_paths: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Changed Paths'
+        }
+    },
+    type: 'object',
+    required: ['repo_id', 'branch', 'previous_head_sha', 'new_head_sha', 'commit_message', 'committed_at'],
+    title: 'UserRepoCommitResponse'
+} as const;
+
 export const UserRepoFileContentSchema = {
     properties: {
         path: {
@@ -16858,6 +17102,41 @@ export const UserRepoFileContentSchema = {
     type: 'object',
     required: ['path', 'ref', 'content', 'size_bytes'],
     title: 'UserRepoFileContent'
+} as const;
+
+export const UserRepoFileMutationInputSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            maxLength: 2000,
+            title: 'Path'
+        },
+        operation: {
+            type: 'string',
+            maxLength: 20,
+            title: 'Operation'
+        },
+        content: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content'
+        },
+        encoding: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Encoding',
+            default: 'utf-8'
+        }
+    },
+    type: 'object',
+    required: ['path', 'operation'],
+    title: 'UserRepoFileMutationInput'
 } as const;
 
 export const UserRepoImportStatusSchema = {

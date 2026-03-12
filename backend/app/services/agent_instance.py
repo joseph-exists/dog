@@ -15,6 +15,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.security import decrypt_api_key
 from app.models import (
     LLMProviderType,
@@ -24,7 +25,9 @@ from app.models import (
 from app.services.agent_tools import (
     AgentDeps,
     emit_ui_component,
+    read_repo_file,
     request_agent_assistance,
+    write_repo_files,
 )
 from app.services.logfire_client import ServiceLogfire
 from app.services.prompt_runtime_resolver import (
@@ -91,6 +94,33 @@ def _normalize_request_limit(value: Any) -> int:
     if isinstance(value, int) and value > 0:
         return value
     return 10
+
+
+def _tool_is_enabled(
+    tool_name: str,
+    *,
+    effective_payload: Any,
+    config: UserAgentConfig,
+) -> bool:
+    """
+    Resolve tool enablement from tool_config.
+
+    Supported shapes:
+    - {"enabled_tools": ["read_repo_file", "write_repo_files", ...]}
+    - {"read_repo_file": true, "write_repo_files": true}
+    """
+    raw = _get(effective_payload, "tool_config")
+    if not isinstance(raw, dict):
+        raw = getattr(config, "tool_config", None)
+    if not isinstance(raw, dict):
+        return False
+
+    enabled_tools = raw.get("enabled_tools")
+    if isinstance(enabled_tools, list) and tool_name in enabled_tools:
+        return True
+
+    explicit = raw.get(tool_name)
+    return explicit is True
 
 
 def _log_runtime_resolution(
@@ -397,16 +427,34 @@ async def get_agent_instance_with_tools(
 
     effective_a2a = enable_a2a_tool or config_a2a
     effective_ag_ui = enable_ag_ui_tool or config_ag_ui
+    effective_repo_write = _tool_is_enabled(
+        "write_repo_files",
+        effective_payload=effective,
+        config=config,
+    )
+    effective_repo_read = _tool_is_enabled(
+        "read_repo_file",
+        effective_payload=effective,
+        config=config,
+    )
+
+    if not settings.AGENT_REPO_TOOLS_ENABLED:
+        effective_repo_read = False
+        effective_repo_write = False
 
     tools: list[Any] = []
     if effective_a2a:
         tools.append(request_agent_assistance)
     if effective_ag_ui:
         tools.append(emit_ui_component)
+    if effective_repo_read:
+        tools.append(read_repo_file)
+    if effective_repo_write:
+        tools.append(write_repo_files)
 
     # INFO level so we can trace tool resolution in production
     logger.info(
-        "[AGENT_INSTANCE.tool_resolution] slug=%s config_a2a=%s config_ag_ui=%s runtime_a2a=%s runtime_ag_ui=%s effective_a2a=%s effective_ag_ui=%s tools_count=%d",
+        "[AGENT_INSTANCE.tool_resolution] slug=%s config_a2a=%s config_ag_ui=%s runtime_a2a=%s runtime_ag_ui=%s effective_a2a=%s effective_ag_ui=%s repo_tools_enabled=%s effective_repo_read=%s effective_repo_write=%s tools_count=%d",
         slug,
         config_a2a,
         config_ag_ui,
@@ -414,6 +462,9 @@ async def get_agent_instance_with_tools(
         enable_ag_ui_tool,
         effective_a2a,
         effective_ag_ui,
+        settings.AGENT_REPO_TOOLS_ENABLED,
+        effective_repo_read,
+        effective_repo_write,
         len(tools),
     )
 

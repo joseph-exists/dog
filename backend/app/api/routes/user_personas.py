@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    DiscoveredUserPersonasPublic,
     Message,
     UserPersonaCreate,
     UserPersonaPresentationBase,
@@ -19,6 +20,27 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/user-personas", tags=["user-personas"])
+
+
+@router.get("/discoverable", response_model=DiscoveredUserPersonasPublic)
+def search_discoverable_user_personas(
+    session: SessionDep,
+    current_user: CurrentUser,
+    q: str,
+    limit: int = 20,
+    exclude_current_user: bool = True,
+) -> Any:
+    """
+    Search published user personas that are discoverable for collaboration targeting.
+    """
+    discovered, count = crud.search_discoverable_user_personas(
+        session=session,
+        query=q,
+        actor_user_id=current_user.id,
+        limit=min(max(limit, 1), 50),
+        exclude_current_user=exclude_current_user,
+    )
+    return DiscoveredUserPersonasPublic(data=discovered, count=count)
 
 
 @router.get("/", response_model=UserPersonasPublic)

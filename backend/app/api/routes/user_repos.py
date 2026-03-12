@@ -11,6 +11,8 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    UserRepoCommitRequest,
+    UserRepoCommitResponse,
     UserRepoFileContent,
     UserRepoImportStatus,
     UserRepoProvisionRequest,
@@ -19,7 +21,17 @@ from app.models import (
     UserRepoViewResponse,
     UserReposPublic,
 )
-from app.services.user_repo_service import user_repo_service
+from app.services.user_repo_service import (
+    UserRepoFileMutation,
+    UserRepoWriteConflict,
+    UserRepoWriteFailed,
+    UserRepoWriteNotFound,
+    UserRepoWriteNotReady,
+    UserRepoWriteUnauthorized,
+    UserRepoWriteUnsupportedBranch,
+    UserRepoWriteValidationError,
+    user_repo_service,
+)
 from app.services.user_repo_outbox_worker import create_user_repo_outbox_job
 from app.services.user_repo_view_service import (
     UserRepoBackendUnavailable,
@@ -62,6 +74,39 @@ def _raise_user_repo_read_error(exc: Exception) -> None:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if isinstance(exc, UserRepoBackendUnavailable):
         raise HTTPException(status_code=503, detail="User repo backend unavailable") from exc
+    raise exc
+
+
+def _raise_user_repo_write_error(exc: Exception) -> None:
+    if isinstance(exc, UserRepoWriteNotFound):
+        raise HTTPException(status_code=404, detail="UserRepo not found") from exc
+    if isinstance(exc, UserRepoWriteUnauthorized):
+        raise HTTPException(status_code=404, detail="UserRepo not found") from exc
+    if isinstance(exc, UserRepoWriteNotReady):
+        raise HTTPException(
+            status_code=409,
+            detail={"message": str(exc), "error_code": "REPO_NOT_READY"},
+        ) from exc
+    if isinstance(exc, UserRepoWriteUnsupportedBranch):
+        raise HTTPException(
+            status_code=400,
+            detail={"message": str(exc), "error_code": "BRANCH_NOT_WRITABLE"},
+        ) from exc
+    if isinstance(exc, UserRepoWriteConflict):
+        raise HTTPException(
+            status_code=409,
+            detail={"message": str(exc), "error_code": "HEAD_CONFLICT"},
+        ) from exc
+    if isinstance(exc, UserRepoWriteValidationError):
+        raise HTTPException(
+            status_code=422,
+            detail={"message": str(exc), "error_code": "INVALID_WRITE_REQUEST"},
+        ) from exc
+    if isinstance(exc, UserRepoWriteFailed):
+        raise HTTPException(
+            status_code=503,
+            detail={"message": "User repo write failed", "error_code": "WRITE_FAILED"},
+        ) from exc
     raise exc
 
 
@@ -248,3 +293,52 @@ def get_user_repo_readme(
         UserRepoBackendUnavailable,
     ) as exc:
         _raise_user_repo_read_error(exc)
+
+
+@router.post("/{repo_id}/commits", response_model=UserRepoCommitResponse)
+def commit_user_repo_changes(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    repo_id: uuid.UUID,
+    commit_in: UserRepoCommitRequest,
+) -> UserRepoCommitResponse:
+    try:
+        result = user_repo_service.commit_user_repo_changes(
+            session=session,
+            repo_id=repo_id,
+            actor_user_id=current_user.id,
+            branch=commit_in.branch,
+            mutations=[
+                UserRepoFileMutation(
+                    path=mutation.path,
+                    operation=mutation.operation,
+                    content=mutation.content,
+                    encoding=mutation.encoding,
+                )
+                for mutation in commit_in.mutations
+            ],
+            commit_message=commit_in.commit_message,
+            expected_head_sha=commit_in.expected_head_sha,
+            is_superuser=current_user.is_superuser,
+        )
+    except (
+        UserRepoWriteNotFound,
+        UserRepoWriteUnauthorized,
+        UserRepoWriteNotReady,
+        UserRepoWriteUnsupportedBranch,
+        UserRepoWriteConflict,
+        UserRepoWriteValidationError,
+        UserRepoWriteFailed,
+    ) as exc:
+        _raise_user_repo_write_error(exc)
+
+    return UserRepoCommitResponse(
+        repo_id=result.repo_id,
+        branch=result.branch,
+        previous_head_sha=result.previous_head_sha,
+        new_head_sha=result.new_head_sha,
+        commit_message=result.commit_message,
+        committed_at=result.committed_at,
+        changed_paths=result.changed_paths,
+    )

@@ -44,6 +44,12 @@ export function WorkFeedBlock({
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<UserWorkFeedItem | null>(null)
 
+  const findPersonaByReference = (personaId: string) =>
+    viewModel?.personas.find(
+      (candidate) =>
+        candidate.id === personaId || candidate.userPersonaId === personaId,
+    )
+
   const items = content?.items ?? viewModel?.workFeed ?? []
   const visibleItems = useMemo(() => {
     const filtered = filterWorkFeedForAudience(
@@ -51,6 +57,7 @@ export function WorkFeedBlock({
       viewModel?.audiencePresentations ?? [],
       viewModel?.selectedAudienceScope ?? "public",
       viewModel?.isOwner ?? false,
+      viewModel?.resolvedAudienceKeys ?? [],
     )
     const maxVisible = config.maxVisible ?? filtered.length
     return filtered.slice(0, maxVisible)
@@ -59,6 +66,7 @@ export function WorkFeedBlock({
     viewModel?.audiencePresentations,
     viewModel?.selectedAudienceScope,
     viewModel?.isOwner,
+    viewModel?.resolvedAudienceKeys,
     config.maxVisible,
   ])
 
@@ -164,9 +172,7 @@ export function WorkFeedBlock({
                     ))}
                   {config.showPersonaBadges &&
                     item.associatedPersonaIds.map((personaId) => {
-                      const persona = viewModel?.personas.find(
-                        (candidate) => candidate.id === personaId,
-                      )
+                      const persona = findPersonaByReference(personaId)
                       return persona ? (
                         <Badge key={`${item.id}-${personaId}`}>
                           {persona.nickname || persona.name}

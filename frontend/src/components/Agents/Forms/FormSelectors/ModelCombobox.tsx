@@ -41,6 +41,8 @@ interface ModelComboboxProps {
   onModelSelected?: (model: LLMModelPublic | null) => void
   /** Filter to specific provider type (hint: provider_type is not the same as user_access_provider) */
   providerType?: string
+  /** Optional user access provider to scope model query server-side */
+  userAccessProviderId?: string | null
   /** Disable the combobox */
   disabled?: boolean
   /** Additional className for trigger button */
@@ -56,6 +58,7 @@ export default function ModelCombobox({
   onChange,
   onModelSelected,
   providerType,
+  userAccessProviderId,
   placeholder = "Select a model...",
   disabled = false,
   className,
@@ -64,8 +67,14 @@ export default function ModelCombobox({
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const { data, isLoading: catalogLoading } = useQuery({
-    queryKey: ["llm-catalog", "models"],
-    queryFn: () => LlmCatalogService.listModels(),
+    queryKey: ["llm-catalog", "models", userAccessProviderId ?? "all"],
+    queryFn: () =>
+      userAccessProviderId
+        ? LlmCatalogService.listModelsForUap({
+            userAccessProviderId,
+            limit: 1000,
+          })
+        : LlmCatalogService.listModels({ limit: 1000 }),
   })
 
   const models: LLMModelPublic[] = data?.data ?? []

@@ -15,12 +15,19 @@ from app.models import (
     ShadowRepoTreeEntry,
     User,
     UserCreate,
+    UserRepoCommitResponse,
     UserRepo,
     UserRepoFileContent,
     UserRepoImportStatus,
     UserRepoOutboxJob,
     UserRepoReadmeContent,
     UserRepoViewResponse,
+)
+from app.services.user_repo_service import (
+    UserRepoWriteConflict,
+    UserRepoWriteNotReady,
+    UserRepoWriteValidationError,
+    user_repo_service,
 )
 from app.services.user_repo_view_service import (
     UserRepoBranchNotFound,
@@ -480,3 +487,185 @@ def test_get_user_repo_tree_rejects_unsupported_branch(
 
     assert response.status_code == 400
     assert response.json()["detail"]["error_code"] == "BRANCH_NOT_FOUND"
+
+
+def test_commit_user_repo_changes_returns_commit_summary(
+    client: TestClient,
+    db: Session,
+    monkeypatch,
+) -> None:
+    owner, headers = _create_user_with_headers(client=client, db=db)
+    repo = _create_user_repo(db=db, owner=owner)
+
+    def _fake_commit_user_repo_changes(
+        *,
+        session,
+        repo_id,
+        actor_user_id,
+        branch,
+        mutations,
+        commit_message,
+        expected_head_sha,
+        is_superuser=False,
+    ):
+        assert repo_id == repo.id
+        assert actor_user_id == owner.id
+        assert branch == "main"
+        assert expected_head_sha == "abc123"
+        assert commit_message == "Update README"
+        assert len(mutations) == 1
+        assert mutations[0].path == "README.md"
+        return UserRepoCommitResponse(
+            repo_id=repo.id,
+            branch="main",
+            previous_head_sha="abc123",
+            new_head_sha="def456",
+            commit_message=commit_message,
+            committed_at=datetime.now(timezone.utc),
+            changed_paths=["README.md"],
+        )
+
+    monkeypatch.setattr(
+        user_repo_service,
+        "commit_user_repo_changes",
+        _fake_commit_user_repo_changes,
+    )
+
+    response = client.post(
+        f"{settings.API_V1_STR}/user-repos/{repo.id}/commits",
+        headers=headers,
+        json={
+            "branch": "main",
+            "mutations": [
+                {
+                    "path": "README.md",
+                    "operation": "upsert",
+                    "content": "# Hello\n",
+                }
+            ],
+            "commit_message": "Update README",
+            "expected_head_sha": "abc123",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["repo_id"] == str(repo.id)
+    assert payload["previous_head_sha"] == "abc123"
+    assert payload["new_head_sha"] == "def456"
+    assert payload["changed_paths"] == ["README.md"]
+
+
+def test_commit_user_repo_changes_returns_409_for_stale_head(
+    client: TestClient,
+    db: Session,
+    monkeypatch,
+) -> None:
+    owner, headers = _create_user_with_headers(client=client, db=db)
+    repo = _create_user_repo(db=db, owner=owner)
+
+    monkeypatch.setattr(
+        user_repo_service,
+        "commit_user_repo_changes",
+        lambda **kwargs: (_ for _ in ()).throw(
+            UserRepoWriteConflict("Repo head no longer matches expected_head_sha")
+        ),
+    )
+
+    response = client.post(
+        f"{settings.API_V1_STR}/user-repos/{repo.id}/commits",
+        headers=headers,
+        json={
+            "branch": "main",
+            "mutations": [
+                {
+                    "path": "README.md",
+                    "operation": "upsert",
+                    "content": "# Hello\n",
+                }
+            ],
+            "commit_message": "Update README",
+            "expected_head_sha": "abc123",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error_code"] == "HEAD_CONFLICT"
+
+
+def test_commit_user_repo_changes_returns_409_for_not_ready_repo(
+    client: TestClient,
+    db: Session,
+    monkeypatch,
+) -> None:
+    owner, headers = _create_user_with_headers(client=client, db=db)
+    repo = _create_user_repo(
+        db=db,
+        owner=owner,
+        import_status=UserRepoImportStatus.IMPORTING,
+    )
+
+    monkeypatch.setattr(
+        user_repo_service,
+        "commit_user_repo_changes",
+        lambda **kwargs: (_ for _ in ()).throw(
+            UserRepoWriteNotReady("User repo is not ready for writes")
+        ),
+    )
+
+    response = client.post(
+        f"{settings.API_V1_STR}/user-repos/{repo.id}/commits",
+        headers=headers,
+        json={
+            "branch": "main",
+            "mutations": [
+                {
+                    "path": "README.md",
+                    "operation": "upsert",
+                    "content": "# Hello\n",
+                }
+            ],
+            "commit_message": "Update README",
+            "expected_head_sha": "abc123",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error_code"] == "REPO_NOT_READY"
+
+
+def test_commit_user_repo_changes_returns_422_for_invalid_request(
+    client: TestClient,
+    db: Session,
+    monkeypatch,
+) -> None:
+    owner, headers = _create_user_with_headers(client=client, db=db)
+    repo = _create_user_repo(db=db, owner=owner)
+
+    monkeypatch.setattr(
+        user_repo_service,
+        "commit_user_repo_changes",
+        lambda **kwargs: (_ for _ in ()).throw(
+            UserRepoWriteValidationError("Invalid repo path: ../README.md")
+        ),
+    )
+
+    response = client.post(
+        f"{settings.API_V1_STR}/user-repos/{repo.id}/commits",
+        headers=headers,
+        json={
+            "branch": "main",
+            "mutations": [
+                {
+                    "path": "../README.md",
+                    "operation": "upsert",
+                    "content": "# Hello\n",
+                }
+            ],
+            "commit_message": "Update README",
+            "expected_head_sha": "abc123",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["error_code"] == "INVALID_WRITE_REQUEST"

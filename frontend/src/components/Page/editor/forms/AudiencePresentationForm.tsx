@@ -20,10 +20,12 @@ const presentationSchema = z.object({
   id: z.string(),
   personaId: z.string().min(1, "Persona id is required"),
   audienceScope: z.enum(["public", "trusted", "collaborators", "custom"]),
+  audienceKey: z.string().optional(),
   audienceLabel: z.string().min(1, "Audience label is required"),
   headline: z.string().min(1, "Headline is required"),
   framingText: z.string().optional(),
   visibleWorkIdsCsv: z.string().optional(),
+  publicationState: z.enum(["draft", "published"]),
   relationCallToAction: z.enum([
     "none",
     "request_contact",
@@ -64,10 +66,12 @@ export function AudiencePresentationForm({
           id: presentation.id,
           personaId: presentation.personaId,
           audienceScope: presentation.audienceScope,
+          audienceKey: presentation.audienceKey ?? "",
           audienceLabel: presentation.audienceLabel,
           headline: presentation.headline,
           framingText: presentation.framingText ?? "",
           visibleWorkIdsCsv: presentation.visibleWorkIds.join(", "),
+          publicationState: presentation.publicationState,
           relationCallToAction: presentation.relationCallToAction,
         })),
       },
@@ -86,10 +90,12 @@ export function AudiencePresentationForm({
             id: presentation.id,
             personaId: presentation.personaId.trim(),
             audienceScope: presentation.audienceScope,
+            audienceKey: presentation.audienceKey?.trim() || null,
             audienceLabel: presentation.audienceLabel.trim(),
             headline: presentation.headline.trim(),
             framingText: presentation.framingText?.trim() || null,
             visibleWorkIds: csvToList(presentation.visibleWorkIdsCsv),
+            publicationState: presentation.publicationState,
             relationCallToAction: presentation.relationCallToAction,
           })),
         }),
@@ -145,6 +151,17 @@ export function AudiencePresentationForm({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor={`presentations.${index}.audienceKey`}>
+                Audience Key
+              </Label>
+              <Input
+                id={`presentations.${index}.audienceKey`}
+                {...register(`presentations.${index}.audienceKey`)}
+                placeholder="Optional target id for custom audience views"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor={`presentations.${index}.audienceLabel`}>
@@ -185,6 +202,27 @@ export function AudiencePresentationForm({
             </div>
 
             <div className="space-y-2">
+              <Label>Publication State</Label>
+              <Select
+                value={watch(`presentations.${index}.publicationState`)}
+                onValueChange={(value) =>
+                  setValue(
+                    `presentations.${index}.publicationState`,
+                    value as AudiencePresentationFormData["presentations"][number]["publicationState"],
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Relation Call To Action</Label>
               <Select
                 value={watch(`presentations.${index}.relationCallToAction`)}
@@ -221,10 +259,12 @@ export function AudiencePresentationForm({
             id: crypto.randomUUID(),
             personaId: "",
             audienceScope: "public",
+            audienceKey: "",
             audienceLabel: "Public",
             headline: "",
             framingText: "",
             visibleWorkIdsCsv: "",
+            publicationState: "draft",
             relationCallToAction: "none",
           })
         }

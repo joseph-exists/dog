@@ -39,7 +39,7 @@ class StreamingAgentRunner:
         is_agent_available: Callable[[AsyncSession, str], Awaitable[bool]],
         get_agent_instance_with_tools: Callable[..., Awaitable[Any]],
         build_agent_prompt: Callable[[str, Any, str | None], str],
-        deps_factory: Callable[[AsyncSession, uuid.UUID, str, int], Any],
+        deps_factory: Callable[[AsyncSession, uuid.UUID, str, int, uuid.UUID | None], Any],
         a2a_orchestrator: A2AOrchestrator,
         run_agent: Callable[..., Awaitable[dict[str, Any]]],
     ) -> None:
@@ -115,7 +115,13 @@ class StreamingAgentRunner:
                         error=f"Failed to instantiate the boogereaters agent '{agent_name}'",
                     )
 
-                deps = self._deps_factory(session, room_id, agent_name, req.a2a_depth)
+                deps = self._deps_factory(
+                    session,
+                    room_id,
+                    agent_name,
+                    req.a2a_depth,
+                    req.user_id,
+                )
                 request_limit = _get_agent_request_limit(agent)
 
                 full_prompt = self._build_agent_prompt(

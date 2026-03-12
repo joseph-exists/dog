@@ -3,6 +3,7 @@ import type {
   UserPersonaSummary,
   WeightedTag,
 } from "@/components/UserPage/types"
+import type { TemplateBlock } from "@/components/Page/registry"
 import type {
   Persona,
   UserPersonaPresentationPublic,
@@ -93,10 +94,12 @@ function toAudiencePresentationSummary(
     userPersonaId: entry.id,
     personaId: entry.persona_id,
     audienceScope,
+    audienceKey: presentation.audience_key ?? null,
     audienceLabel: presentation.audience_label,
     headline: presentation.headline,
     framingText: presentation.framing_text ?? null,
     visibleWorkIds: presentation.visible_work_ids_json ?? [],
+    publicationState: presentation.publication_state ?? "draft",
     relationCallToAction,
   }
 }
@@ -106,12 +109,37 @@ export interface UserPersonaPageData {
   presentations: AudiencePresentationSummary[]
 }
 
+export interface UserPersonaAuthoringBundle extends UserPersonaPageData {
+  userPersonas: UserPersonaPublic[]
+  personaPresentations: UserPersonaPresentationPublic[]
+}
+
+function replaceBlockContent(
+  blocks: TemplateBlock[],
+  type: TemplateBlock["type"],
+  content: Record<string, unknown>,
+): TemplateBlock[] {
+  return blocks.map((block) =>
+    block.type === type
+      ? {
+          ...block,
+          content,
+        }
+      : block,
+  )
+}
+
 export const UserPersonaService = {
-  async getUserPageData(): Promise<UserPersonaPageData> {
+  async getUserPageAuthoringBundle(): Promise<UserPersonaAuthoringBundle> {
     const userPersonas = await UserPersonasService.readUserPersonas({ limit: 100 })
 
     if (userPersonas.data.length === 0) {
-      return { personas: [], presentations: [] }
+      return {
+        personas: [],
+        presentations: [],
+        userPersonas: [],
+        personaPresentations: [],
+      }
     }
 
     const personaIds = [...new Set(userPersonas.data.map((entry) => entry.persona_id))]
@@ -154,6 +182,71 @@ export const UserPersonaService = {
       ),
     )
 
-    return { personas, presentations }
+    const personaPresentations = userPersonas.data.flatMap(
+      (entry) => presentationsByUserPersonaId.get(entry.id) ?? [],
+    )
+
+    return { personas, presentations, userPersonas: userPersonas.data, personaPresentations }
+  },
+
+  async getUserPageData(): Promise<UserPersonaPageData> {
+    const bundle = await UserPersonaService.getUserPageAuthoringBundle()
+    return {
+      personas: bundle.personas,
+      presentations: bundle.presentations,
+    }
+  },
+
+  buildPublishedSnapshot(
+    blocks: TemplateBlock[],
+    authoringBundle: UserPersonaAuthoringBundle,
+  ): TemplateBlock[] {
+    const publishedUserPersonas = authoringBundle.userPersonas.filter(
+      (persona) => persona.publication_state === "published",
+    )
+    const publishedUserPersonaIds = new Set(
+      publishedUserPersonas.map((persona) => persona.id),
+    )
+    const publishedPersonaIds = new Set(
+      publishedUserPersonas.map((persona) => persona.persona_id),
+    )
+    const publishedPersonas = authoringBundle.personas.filter((persona) =>
+      publishedPersonaIds.has(persona.id),
+    )
+    const publishedPresentations = authoringBundle.presentations.filter(
+      (presentation) =>
+        publishedUserPersonaIds.has(presentation.userPersonaId ?? "") &&
+        authoringBundle.personaPresentations.some(
+          (candidate) =>
+            candidate.id === presentation.id &&
+            candidate.publication_state === "published",
+        ) &&
+        publishedPersonaIds.has(presentation.personaId),
+    )
+
+    const primaryPersonaId =
+      blocks.find((block) => block.type === "primaryPersona")?.content
+        ?.primaryPersonaId
+    const nextPrimaryPersonaId =
+      typeof primaryPersonaId === "string" && publishedPersonaIds.has(primaryPersonaId)
+        ? primaryPersonaId
+        : null
+
+    const nextBlocks = replaceBlockContent(
+      replaceBlockContent(
+        replaceBlockContent(blocks, "personaManager", {
+          personas: publishedPersonas,
+        }),
+        "audiencePresentation",
+        { presentations: publishedPresentations },
+      ),
+      "primaryPersona",
+      {
+        ...(blocks.find((block) => block.type === "primaryPersona")?.content ?? {}),
+        primaryPersonaId: nextPrimaryPersonaId,
+      },
+    )
+
+    return nextBlocks
   },
 }

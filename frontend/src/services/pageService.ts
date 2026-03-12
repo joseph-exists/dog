@@ -9,6 +9,7 @@ import { OpenAPI } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
 import type { TemplateBlock } from "@/components/Page/registry"
+import type { AudienceScope } from "@/components/UserPage/types"
 
 // ============================================================================
 // Type Definitions - ViewModels
@@ -32,6 +33,16 @@ export interface SavePageLayoutInput {
   layoutVersion?: number
 }
 
+export interface ResolvedUserPageAudience {
+  scope: AudienceScope
+  isOwner: boolean
+  matchedUserIds: string[]
+  matchedUserPersonaIds: string[]
+  matchedGroupIds: string[]
+  matchedPersonaGroupIds: string[]
+  matchedAudienceKeys: string[]
+}
+
 // ============================================================================
 // API Types (local mirror)
 // ============================================================================
@@ -50,6 +61,16 @@ interface PagePublicResponse {
 interface PageLayoutPayload {
   layout_json: TemplateBlock[]
   layout_version?: number
+}
+
+interface ResolvedUserPageAudienceResponse {
+  scope: AudienceScope
+  is_owner: boolean
+  matched_user_ids: string[]
+  matched_user_persona_ids: string[]
+  matched_group_ids: string[]
+  matched_persona_group_ids: string[]
+  matched_audience_keys: string[]
 }
 
 // ============================================================================
@@ -111,6 +132,31 @@ export const PageService = {
 
     const response = await __request<PagePublicResponse>(OpenAPI, options)
     return transformPage(response)
+  },
+
+  async getResolvedUserPageAudience(
+    entityType: string,
+    entityId: string,
+  ): Promise<ResolvedUserPageAudience> {
+    const options: ApiRequestOptions<ResolvedUserPageAudienceResponse> = {
+      method: "GET",
+      url: `/api/v1/pages/${entityType}/${entityId}/audience`,
+    }
+
+    const response = await __request<ResolvedUserPageAudienceResponse>(
+      OpenAPI,
+      options,
+    )
+
+    return {
+      scope: response.scope,
+      isOwner: response.is_owner,
+      matchedUserIds: response.matched_user_ids ?? [],
+      matchedUserPersonaIds: response.matched_user_persona_ids ?? [],
+      matchedGroupIds: response.matched_group_ids ?? [],
+      matchedPersonaGroupIds: response.matched_persona_group_ids ?? [],
+      matchedAudienceKeys: response.matched_audience_keys ?? [],
+    }
   },
 
   /**

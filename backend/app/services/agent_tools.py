@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import uuid
 from dataclasses import dataclass
@@ -7,13 +9,34 @@ from typing import Any
 
 from pydantic import BaseModel
 from pydantic_ai import RunContext
+from sqlmodel import Session, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.db import engine
+from app.models import RoomParticipant, User
 from app.schemas.ag_ui import UIComponent, UIComponentType
 from app.services.a2a_orchestrator import DEFAULT_MAX_A2A_DEPTH, A2AOrchestrator
 from app.services.agent_prompt import build_agent_prompt
 from app.services.context_provider import build_room_context
 from app.services.context_store import RedisContextStore
+from app.services.user_repo_service import (
+    UserRepoFileMutation,
+    UserRepoWriteConflict,
+    UserRepoWriteFailed,
+    UserRepoWriteNotFound,
+    UserRepoWriteNotReady,
+    UserRepoWriteUnauthorized,
+    UserRepoWriteUnsupportedBranch,
+    UserRepoWriteValidationError,
+    user_repo_service,
+)
+from app.services.user_repo_view_service import (
+    UserRepoBackendUnavailable,
+    UserRepoBranchNotFound,
+    UserRepoPathError,
+    UserRepoViewNotFound,
+    user_repo_view_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +64,7 @@ class AgentDeps:
     session: AsyncSession
     room_id: uuid.UUID
     current_agent_slug: str
+    acting_user_id: uuid.UUID | None = None
     a2a_depth: int = 0
     # AG-UI: Collected UI components (populated by emit_ui_component tool)
     ui_components: list[UIComponent] | None = None
@@ -174,6 +198,265 @@ async def _run_agent_for_tool_call(
             "success": False,
             "error": str(exc),
         }
+
+
+def _write_repo_files_sync(
+    *,
+    room_id: uuid.UUID,
+    acting_user_id: uuid.UUID,
+    repo_id: uuid.UUID,
+    branch: str,
+    commit_message: str,
+    mutations: list[dict[str, Any]],
+    expected_head_sha: str | None,
+) -> str:
+    with Session(engine) as sync_session:
+        participant = sync_session.exec(
+            select(RoomParticipant).where(
+                RoomParticipant.room_id == room_id,
+                RoomParticipant.participant_type == "user",
+                RoomParticipant.participant_id == str(acting_user_id),
+                RoomParticipant.active.is_(True),
+            )
+        ).first()
+        if not participant:
+            return "Write blocked: acting user is not an active room participant."
+
+        actor = sync_session.get(User, acting_user_id)
+        if not actor:
+            return "Write blocked: acting user not found."
+
+        if len(mutations) == 0:
+            return "Write blocked: at least one mutation is required."
+        if len(mutations) > 100:
+            return "Write blocked: too many mutations in one request (max 100)."
+
+        parsed_mutations: list[UserRepoFileMutation] = []
+        for idx, mutation in enumerate(mutations):
+            if not isinstance(mutation, dict):
+                return f"Write blocked: mutation at index {idx} must be an object."
+            path = str(mutation.get("path") or "").strip()
+            operation = str(mutation.get("operation") or "").strip()
+            content = mutation.get("content")
+            encoding = str(mutation.get("encoding") or "utf-8").strip()
+            parsed_mutations.append(
+                UserRepoFileMutation(
+                    path=path,
+                    operation=operation,
+                    content=content if content is None or isinstance(content, str) else str(content),
+                    encoding=encoding,
+                )
+            )
+
+        normalized_expected_head_sha = (expected_head_sha or "").strip()
+        normalized_branch = (branch or "").strip()
+        if not normalized_expected_head_sha:
+            # Preserve optimistic concurrency by snapshotting HEAD right before commit.
+            user_repo = user_repo_service.authorize_user_repo_write(
+                session=sync_session,
+                current_user_id=acting_user_id,
+                is_superuser=bool(actor.is_superuser),
+                repo_id=repo_id,
+            )
+            normalized_expected_head_sha = user_repo_service._resolve_repo_head_sha(  # noqa: SLF001
+                user_repo=user_repo,
+                ref=normalized_branch,
+            )
+
+        result = user_repo_service.commit_user_repo_changes(
+            session=sync_session,
+            repo_id=repo_id,
+            actor_user_id=acting_user_id,
+            branch=normalized_branch,
+            mutations=parsed_mutations,
+            commit_message=(commit_message or "").strip(),
+            expected_head_sha=normalized_expected_head_sha,
+            is_superuser=bool(actor.is_superuser),
+        )
+
+    changed_paths = ", ".join(result.changed_paths[:10])
+    if len(result.changed_paths) > 10:
+        changed_paths += ", ..."
+    return (
+        f"Committed {len(result.changed_paths)} file change(s) to repo {result.repo_id} on branch "
+        f"'{result.branch}'. New HEAD: {result.new_head_sha}. Paths: {changed_paths}"
+    )
+
+
+def _read_repo_file_sync(
+    *,
+    room_id: uuid.UUID,
+    acting_user_id: uuid.UUID,
+    repo_id: uuid.UUID,
+    path: str,
+    ref: str | None,
+) -> str:
+    with Session(engine) as sync_session:
+        participant = sync_session.exec(
+            select(RoomParticipant).where(
+                RoomParticipant.room_id == room_id,
+                RoomParticipant.participant_type == "user",
+                RoomParticipant.participant_id == str(acting_user_id),
+                RoomParticipant.active.is_(True),
+            )
+        ).first()
+        if not participant:
+            return "Read blocked: acting user is not an active room participant."
+
+        actor = sync_session.get(User, acting_user_id)
+        if not actor:
+            return "Read blocked: acting user not found."
+
+        user_repo = user_repo_view_service.authorize_user_repo_read(
+            session=sync_session,
+            current_user_id=acting_user_id,
+            is_superuser=bool(actor.is_superuser),
+            repo_id=repo_id,
+        )
+        file_content = user_repo_view_service.get_file_content(
+            session=sync_session,
+            repo_id=repo_id,
+            path=path,
+            ref=ref,
+        )
+
+        write_branch = user_repo.source_branch
+        if not write_branch:
+            return "Read failed: repo default branch is unavailable."
+        expected_head_sha = user_repo_service._resolve_repo_head_sha(  # noqa: SLF001
+            user_repo=user_repo,
+            ref=write_branch,
+        )
+
+        payload = {
+            "repo_id": str(repo_id),
+            "path": file_content.path,
+            "resolved_ref": file_content.ref,
+            "is_binary": file_content.is_binary,
+            "is_truncated": file_content.is_truncated,
+            "content_type": file_content.content_type,
+            "size_bytes": file_content.size_bytes,
+            "encoding": file_content.encoding,
+            "content": file_content.content,
+            "write_hint": {
+                "branch": write_branch,
+                "expected_head_sha": expected_head_sha,
+            },
+        }
+        return json.dumps(payload, ensure_ascii=True)
+
+
+async def write_repo_files(
+    ctx: RunContext[AgentDeps],
+    repo_id: str,
+    branch: str,
+    commit_message: str,
+    mutations: list[dict[str, Any]],
+    expected_head_sha: str | None = None,
+) -> str:
+    """
+    Write files to a user repo and commit the change.
+
+    Mutations must be a list of objects:
+    - upsert: {"path":"src/app.py","operation":"upsert","content":"...","encoding":"utf-8"}
+    - delete: {"path":"old.txt","operation":"delete"}
+    """
+    deps = ctx.deps
+    if deps.acting_user_id is None:
+        return "Write blocked: no acting user context is available for this room agent run."
+
+    try:
+        repo_uuid = uuid.UUID(repo_id)
+    except ValueError:
+        return f"Write blocked: invalid repo_id '{repo_id}'."
+
+    try:
+        return await asyncio.to_thread(
+            _write_repo_files_sync,
+            room_id=deps.room_id,
+            acting_user_id=deps.acting_user_id,
+            repo_id=repo_uuid,
+            branch=branch,
+            commit_message=commit_message,
+            mutations=mutations,
+            expected_head_sha=expected_head_sha,
+        )
+    except UserRepoWriteNotFound:
+        return "Write failed: repo not found."
+    except UserRepoWriteUnauthorized:
+        return "Write failed: user is not allowed to modify this repo."
+    except UserRepoWriteNotReady as exc:
+        return f"Write failed: {exc}"
+    except UserRepoWriteUnsupportedBranch as exc:
+        return f"Write failed: {exc}"
+    except UserRepoWriteConflict as exc:
+        return f"Write conflict: {exc}. Refresh HEAD and retry."
+    except UserRepoWriteValidationError as exc:
+        return f"Write validation failed: {exc}"
+    except UserRepoWriteFailed as exc:
+        return f"Write failed: {exc}"
+    except Exception as exc:
+        logger.exception(
+            "write_repo_files tool error room_id=%s agent=%s repo_id=%s",
+            deps.room_id,
+            deps.current_agent_slug,
+            repo_id,
+        )
+        return f"Write failed due to unexpected error: {exc}"
+
+
+async def read_repo_file(
+    ctx: RunContext[AgentDeps],
+    repo_id: str,
+    path: str,
+    ref: str | None = None,
+) -> str:
+    """
+    Read one file from a user repo and return JSON payload.
+
+    The JSON includes a write hint:
+    - write_hint.branch
+    - write_hint.expected_head_sha
+    """
+    deps = ctx.deps
+    if deps.acting_user_id is None:
+        return "Read blocked: no acting user context is available for this room agent run."
+
+    normalized_path = (path or "").strip()
+    if not normalized_path:
+        return "Read blocked: path is required."
+
+    try:
+        repo_uuid = uuid.UUID(repo_id)
+    except ValueError:
+        return f"Read blocked: invalid repo_id '{repo_id}'."
+
+    try:
+        return await asyncio.to_thread(
+            _read_repo_file_sync,
+            room_id=deps.room_id,
+            acting_user_id=deps.acting_user_id,
+            repo_id=repo_uuid,
+            path=normalized_path,
+            ref=(ref or "").strip() or None,
+        )
+    except UserRepoViewNotFound:
+        return "Read failed: repo not found."
+    except UserRepoBranchNotFound as exc:
+        return f"Read failed: {exc}"
+    except UserRepoPathError as exc:
+        return f"Read failed: {exc}"
+    except UserRepoBackendUnavailable as exc:
+        return f"Read failed: {exc}"
+    except Exception as exc:
+        logger.exception(
+            "read_repo_file tool error room_id=%s agent=%s repo_id=%s path=%s",
+            deps.room_id,
+            deps.current_agent_slug,
+            repo_id,
+            normalized_path,
+        )
+        return f"Read failed due to unexpected error: {exc}"
 
 
 def emit_ui_component(

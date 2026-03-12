@@ -27,6 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
+import useAuth from "@/hooks/useAuth"
 
 import AgentAvatar from "../Display/AgentAvatar"
 import {
@@ -37,7 +38,6 @@ import {
   AgentStatusBadge,
 } from "../Display/AgentBadge"
 import AgentForm, { type AgentFormData } from "../Forms/AgentForm"
-import { useProviderTypeName } from "../hooks"
 import { isAgentScope, isParticipationMode } from "../types"
 import { sparseAgentUpdate } from "../utils"
 
@@ -48,11 +48,6 @@ function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
   const mode = isParticipationMode(agent.participation_mode)
     ? agent.participation_mode
     : undefined
-  //const providerName  = useProviderTypeName(agent.provider_type)
-  const providerNameQuery = useProviderTypeName(agent.provider_type)
-  const providerName =
-    providerNameQuery.data ?? agent.provider_type ?? "Unknown"
-  // providerNameQuery.data && <AgentProviderBadge providerType={providerNameQuery.data} />
 
   return (
     <div className="space-y-4">
@@ -62,12 +57,7 @@ function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
         {scope && <AgentScopeBadge scope={scope} />}
         {mode && <AgentModeBadge mode={mode} />}
         {agent.is_coordinator && <AgentCoordinatorBadge />}
-        {providerNameQuery.data && (
-          <AgentProviderBadge providerType={providerNameQuery.data} />
-        )}
-        {agent.provider_type && (
-          <AgentProviderBadge providerType={providerName} />
-        )}
+        {agent.provider_type && <AgentProviderBadge providerType={agent.provider_type} />}
       </div>
 
       {/* Description */}
@@ -149,6 +139,7 @@ export default function AgentDetailDialog({
   trigger,
   className,
 }: AgentDetailDialogProps) {
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<"view" | "edit">("view")
   const queryClient = useQueryClient()
@@ -216,6 +207,7 @@ export default function AgentDetailDialog({
   }
 
   const isPersonal = agent?.scope === "personal"
+  const canEdit = Boolean(isPersonal || user?.is_superuser)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -260,7 +252,7 @@ export default function AgentDetailDialog({
                 Edit mode footer is inside AgentForm (its own submit button). */}
             {mode === "view" && (
               <DialogFooter>
-                {isPersonal && (
+                {canEdit && (
                   <Button
                     variant="outline"
                     size="sm"

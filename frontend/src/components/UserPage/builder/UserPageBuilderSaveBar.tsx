@@ -7,6 +7,7 @@ interface UserPageBuilderSaveBarProps {
   isDirty: boolean
   isSaving: boolean
   canSave: boolean
+  statusNote?: string
   onSave: () => void
 }
 
@@ -15,13 +16,19 @@ export function UserPageBuilderSaveBar({
   isDirty,
   isSaving,
   canSave,
+  statusNote,
   onSave,
 }: UserPageBuilderSaveBarProps) {
   return (
     <div className="sticky bottom-4 flex items-center justify-between rounded-md border bg-background/95 px-4 py-3 backdrop-blur">
-      <div className="text-sm text-muted-foreground">
-        {label}
-        {isDirty ? " · unsaved changes" : " · saved"}
+      <div className="space-y-1">
+        <div className="text-sm text-muted-foreground">
+          {label}
+          {isDirty ? " · unsaved changes" : " · saved"}
+        </div>
+        {statusNote ? (
+          <div className="text-xs text-muted-foreground">{statusNote}</div>
+        ) : null}
       </div>
       <Button onClick={onSave} disabled={!canSave || isSaving}>
         {isSaving ? (

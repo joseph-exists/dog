@@ -1,3 +1,4 @@
+export { UserPageAudiencePreviewPanel } from "./UserPageAudiencePreviewPanel"
 export { UserPageBuilderNavigator } from "./UserPageBuilderNavigator"
 export { UserPageBuilderPreview } from "./UserPageBuilderPreview"
 export { UserPageBuilderSaveBar } from "./UserPageBuilderSaveBar"

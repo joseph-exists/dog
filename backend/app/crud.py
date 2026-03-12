@@ -107,9 +107,11 @@ from app.models import (
     UserNodeChoice,
     UserPersona,
     UserPersonaCreate,
+    DiscoveredUserPersonaPublic,
     UserPersonaPresentation,
     UserPersonaPresentationCreate,
     UserPersonaPresentationUpdate,
+    UserPersonaPublicationState,
     UserPersonaUpdate,
     UserModelPin,
     UserModelPinCreate,
@@ -1054,6 +1056,83 @@ def get_user_persona(
         UserPersona.id == id, UserPersona.user_id == user_id
     )
     return session.exec(statement).first()
+
+
+def search_discoverable_user_personas(
+    *,
+    session: Session,
+    query: str,
+    actor_user_id: uuid.UUID,
+    limit: int = 20,
+    exclude_current_user: bool = True,
+) -> tuple[list[DiscoveredUserPersonaPublic], int]:
+    trimmed_query = query.strip()
+    if len(trimmed_query) < 2:
+        return [], 0
+
+    search_term = f"%{trimmed_query}%"
+    filters = [
+        UserPersona.publication_state == UserPersonaPublicationState.PUBLISHED,
+        UserPersona.is_active == True,  # noqa: E712
+        User.is_active == True,  # noqa: E712
+        or_(
+            Persona.name.ilike(search_term),
+            UserPersona.nickname.ilike(search_term),
+            UserPersona.description.ilike(search_term),
+            UserPersona.short_bio.ilike(search_term),
+            User.full_name.ilike(search_term),
+            User.email.ilike(search_term),
+        ),
+    ]
+
+    if exclude_current_user:
+        filters.append(UserPersona.user_id != actor_user_id)
+
+    base_statement = (
+        select(UserPersona, Persona, User)
+        .join(Persona, Persona.id == UserPersona.persona_id)
+        .join(User, User.id == UserPersona.user_id)
+        .where(*filters)
+    )
+
+    count_statement = (
+        select(func.count())
+        .select_from(UserPersona)
+        .join(Persona, Persona.id == UserPersona.persona_id)
+        .join(User, User.id == UserPersona.user_id)
+        .where(*filters)
+    )
+    count = session.exec(count_statement).one()
+
+    statement = (
+        base_statement.order_by(
+            UserPersona.is_primary.desc(),
+            UserPersona.updated_at.desc(),
+            Persona.name.asc(),
+        )
+        .limit(limit)
+    )
+
+    results = session.exec(statement).all()
+    discovered = [
+        DiscoveredUserPersonaPublic(
+            id=user_persona.id,
+            user_id=user_persona.user_id,
+            persona_id=user_persona.persona_id,
+            name=persona.name,
+            nickname=user_persona.nickname,
+            short_bio=user_persona.short_bio or user_persona.description,
+            publication_state=user_persona.publication_state,
+            owner_display_name=(
+                user.full_name.strip()
+                if isinstance(user.full_name, str) and user.full_name.strip()
+                else f"User {str(user.id)[:8]}"
+            ),
+            is_primary=user_persona.is_primary,
+        )
+        for user_persona, persona, user in results
+    ]
+    return discovered, count
 
 
 def update_user_persona(

@@ -3,9 +3,11 @@ import {
   AgentsService,
   DemosService,
   GroupsService,
+  PersonaGroupsService,
   ProjectsService,
   RoomsService,
   StoriesService,
+  UserPersonasService,
   UsersService,
   UserReposService,
   type AccessGrantPublic,
@@ -14,11 +16,16 @@ import {
   type AccessGrantSubjectType,
   type AccessGrantUpsertRequest,
   type ProjectCreate,
+  type PersonaGroupCreate,
+  type PersonaGroupMembershipCreate,
+  type PersonaGroupMembershipPublic,
+  type PersonaGroupPublic,
   type ProjectPublic,
   type ProjectResourceCreate,
   type ProjectResourcePublic,
   type ProjectUpdate,
   type UserGroupPublic,
+  type UserPersonaPublic,
 } from "@/client"
 import { OpenAPI } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
@@ -132,6 +139,37 @@ export const ProjectsAppService = {
   async listMyGroups(): Promise<UserGroupPublic[]> {
     const response = await GroupsService.listUserGroups()
     return response.data
+  },
+
+  async listMyUserPersonas(): Promise<UserPersonaPublic[]> {
+    const response = await UserPersonasService.readUserPersonas({ skip: 0, limit: 100 })
+    return response.data
+  },
+
+  async listMyPersonaGroups(): Promise<PersonaGroupPublic[]> {
+    const response = await PersonaGroupsService.listPersonaGroups({ skip: 0, limit: 100 })
+    return response.data
+  },
+
+  async createPersonaGroup(input: PersonaGroupCreate): Promise<PersonaGroupPublic> {
+    return PersonaGroupsService.createNewPersonaGroup({ requestBody: input })
+  },
+
+  async listPersonaGroupMembers(
+    groupId: string,
+  ): Promise<PersonaGroupMembershipPublic[]> {
+    const response = await PersonaGroupsService.listPersonaGroupMembers({ groupId })
+    return response.data
+  },
+
+  async addPersonaGroupMember(
+    groupId: string,
+    input: PersonaGroupMembershipCreate,
+  ): Promise<PersonaGroupMembershipPublic> {
+    return PersonaGroupsService.addPersonaGroupMember({
+      groupId,
+      requestBody: input,
+    })
   },
 
   async listAttachableResourceOptions(): Promise<AttachableResourceOption[]> {

@@ -23,10 +23,13 @@ from app.models import (
     AccessGrant,
     AccessGrantRole,
     AccessGrantSubjectType,
+    AudienceScope,
     DemoSession,
+    Page,
     PersonaGroupMembership,
     Project,
     ProjectResource,
+    ResolvedUserPageAudiencePublic,
     Story,
     User,
     UserGroupMembership,
@@ -51,6 +54,7 @@ _RESOURCE_REGISTRY: dict[str, ResourceSpec] = {
     "story": ResourceSpec(model=Story, owner_attr="owner_id"),
     "demo_session": ResourceSpec(model=DemoSession, owner_attr="user_id"),
     "project": ResourceSpec(model=Project, owner_attr="owner_id"),
+    "page": ResourceSpec(model=Page, owner_attr="owner_id"),
 }
 
 
@@ -280,3 +284,151 @@ async def require_access(
     ):
         return
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
+
+def _extract_custom_audience_keys(page: Page) -> set[str]:
+    for block in page.layout_json:
+        if block.get("type") != "audiencePresentation":
+            continue
+        content = block.get("content")
+        if not isinstance(content, dict):
+            continue
+        presentations = content.get("presentations")
+        if not isinstance(presentations, list):
+            continue
+
+        keys: set[str] = set()
+        for presentation in presentations:
+            if not isinstance(presentation, dict):
+                continue
+            if presentation.get("audienceScope") != "custom":
+                continue
+            audience_key = presentation.get("audienceKey")
+            if isinstance(audience_key, str) and audience_key.strip():
+                keys.add(audience_key.strip())
+        return keys
+
+    return set()
+
+
+async def resolve_user_page_audience(
+    session: AsyncSession,
+    *,
+    page: Page,
+    viewer: User | None,
+) -> ResolvedUserPageAudiencePublic:
+    if viewer is None:
+        return ResolvedUserPageAudiencePublic(scope=AudienceScope.PUBLIC)
+
+    if viewer.is_superuser or viewer.id == page.owner_id:
+        return ResolvedUserPageAudiencePublic(
+            scope=AudienceScope.CUSTOM,
+            is_owner=True,
+            matched_user_ids=[viewer.id],
+        )
+
+    owned_persona_ids_stmt = select(UserPersona.id).where(UserPersona.user_id == viewer.id)
+    owned_persona_ids = list((await session.exec(owned_persona_ids_stmt)).all())
+
+    user_group_ids_stmt = select(UserGroupMembership.group_id).where(
+        UserGroupMembership.user_id == viewer.id
+    )
+    user_group_ids = list((await session.exec(user_group_ids_stmt)).all())
+
+    persona_group_ids: list[UUID] = []
+    if owned_persona_ids:
+        persona_group_ids_stmt = select(PersonaGroupMembership.group_id).where(
+            PersonaGroupMembership.user_persona_id.in_(owned_persona_ids),
+            PersonaGroupMembership.is_active == True,  # noqa: E712
+        )
+        persona_group_ids = list((await session.exec(persona_group_ids_stmt)).all())
+
+    matched_user_ids = list(
+        (
+            await session.exec(
+                select(AccessGrant.subject_id).where(
+                    AccessGrant.resource_type == "page",
+                    AccessGrant.resource_id == page.id,
+                    AccessGrant.subject_type == AccessGrantSubjectType.user,
+                    AccessGrant.subject_id == viewer.id,
+                )
+            )
+        ).all()
+    )
+
+    matched_user_persona_ids: list[UUID] = []
+    if owned_persona_ids:
+        matched_user_persona_ids = list(
+            (
+                await session.exec(
+                    select(AccessGrant.subject_id).where(
+                        AccessGrant.resource_type == "page",
+                        AccessGrant.resource_id == page.id,
+                        AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+                        AccessGrant.subject_id.in_(owned_persona_ids),
+                    )
+                )
+            ).all()
+        )
+
+    matched_group_ids: list[UUID] = []
+    if user_group_ids:
+        matched_group_ids = list(
+            (
+                await session.exec(
+                    select(AccessGrant.subject_id).where(
+                        AccessGrant.resource_type == "page",
+                        AccessGrant.resource_id == page.id,
+                        AccessGrant.subject_type == AccessGrantSubjectType.group,
+                        AccessGrant.subject_id.in_(user_group_ids),
+                    )
+                )
+            ).all()
+        )
+
+    matched_persona_group_ids: list[UUID] = []
+    if persona_group_ids:
+        matched_persona_group_ids = list(
+            (
+                await session.exec(
+                    select(AccessGrant.subject_id).where(
+                        AccessGrant.resource_type == "page",
+                        AccessGrant.resource_id == page.id,
+                        AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                        AccessGrant.subject_id.in_(persona_group_ids),
+                    )
+                )
+            ).all()
+        )
+
+    candidate_audience_keys = {
+        str(viewer.id),
+        *(str(subject_id) for subject_id in owned_persona_ids),
+        *(str(subject_id) for subject_id in user_group_ids),
+        *(str(subject_id) for subject_id in persona_group_ids),
+        *(str(subject_id) for subject_id in matched_user_ids),
+        *(str(subject_id) for subject_id in matched_user_persona_ids),
+        *(str(subject_id) for subject_id in matched_group_ids),
+        *(str(subject_id) for subject_id in matched_persona_group_ids),
+    }
+    matched_audience_keys = sorted(
+        _extract_custom_audience_keys(page).intersection(candidate_audience_keys)
+    )
+
+    if matched_audience_keys:
+        scope = AudienceScope.CUSTOM
+    elif matched_user_ids or matched_user_persona_ids:
+        scope = AudienceScope.TRUSTED
+    elif matched_group_ids or matched_persona_group_ids:
+        scope = AudienceScope.COLLABORATORS
+    else:
+        scope = AudienceScope.PUBLIC
+
+    return ResolvedUserPageAudiencePublic(
+        scope=scope,
+        matched_user_ids=matched_user_ids,
+        matched_user_persona_ids=matched_user_persona_ids,
+        matched_group_ids=matched_group_ids,
+        matched_persona_group_ids=matched_persona_group_ids,
+        matched_audience_keys=matched_audience_keys,
+    )

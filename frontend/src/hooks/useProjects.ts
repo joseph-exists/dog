@@ -3,6 +3,8 @@ import type {
   ApiError,
   AccessGrantRevokeRequest,
   AccessGrantUpsertRequest,
+  PersonaGroupCreate,
+  PersonaGroupMembershipCreate,
   ProjectCreate,
   ProjectResourceCreate,
   ProjectUpdate,
@@ -21,6 +23,10 @@ export const projectsQueryKeys = {
   myRole: (projectId: string) =>
     [...projectsQueryKeys.detail(projectId), "my-role"] as const,
   groups: () => ["groups", "mine"] as const,
+  userPersonas: () => ["user-personas", "mine"] as const,
+  personaGroups: () => ["persona-groups", "mine"] as const,
+  personaGroupMembers: (groupId: string) =>
+    [...projectsQueryKeys.personaGroups(), groupId, "members"] as const,
   attachable: () => ["projects", "attachable"] as const,
 }
 
@@ -71,11 +77,66 @@ export function useMyGroups(enabled = true) {
   })
 }
 
+export function useMyUserPersonas(enabled = true) {
+  return useQuery({
+    queryKey: projectsQueryKeys.userPersonas(),
+    queryFn: () => ProjectsAppService.listMyUserPersonas(),
+    enabled,
+  })
+}
+
+export function useMyPersonaGroups(enabled = true) {
+  return useQuery({
+    queryKey: projectsQueryKeys.personaGroups(),
+    queryFn: () => ProjectsAppService.listMyPersonaGroups(),
+    enabled,
+  })
+}
+
+export function usePersonaGroupMembers(groupId: string, enabled = true) {
+  return useQuery({
+    queryKey: projectsQueryKeys.personaGroupMembers(groupId),
+    queryFn: () => ProjectsAppService.listPersonaGroupMembers(groupId),
+    enabled: Boolean(groupId) && enabled,
+  })
+}
+
 export function useAttachableResources(enabled = true) {
   return useQuery({
     queryKey: projectsQueryKeys.attachable(),
     queryFn: () => ProjectsAppService.listAttachableResourceOptions(),
     enabled,
+  })
+}
+
+export function useCreatePersonaGroup() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: PersonaGroupCreate) => ProjectsAppService.createPersonaGroup(input),
+    onSuccess: () => {
+      showSuccessToast("Persona group created")
+      queryClient.invalidateQueries({ queryKey: projectsQueryKeys.personaGroups() })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err as ApiError)
+    },
+  })
+}
+
+export function useAddPersonaGroupMember(groupId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: PersonaGroupMembershipCreate) =>
+      ProjectsAppService.addPersonaGroupMember(groupId, input),
+    onSuccess: () => {
+      showSuccessToast("Persona added to group")
+      queryClient.invalidateQueries({
+        queryKey: projectsQueryKeys.personaGroupMembers(groupId),
+      })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err as ApiError)
+    },
   })
 }
 

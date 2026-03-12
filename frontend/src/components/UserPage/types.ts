@@ -9,6 +9,7 @@ export type AudienceScope =
 export type WorkVisibilityState = "draft" | "published"
 
 export type PersonaPublicationState = "draft" | "published"
+export type AudiencePresentationPublicationState = "draft" | "published"
 
 export type UserWorkType =
   | "demo"
@@ -59,10 +60,12 @@ export interface AudiencePresentationSummary {
   userPersonaId?: string | null
   personaId: string
   audienceScope: AudienceScope
+  audienceKey?: string | null
   audienceLabel: string
   headline: string
   framingText: string | null
   visibleWorkIds: string[]
+  publicationState: AudiencePresentationPublicationState
   relationCallToAction:
     | "none"
     | "request_contact"
@@ -90,6 +93,7 @@ export interface UserPageViewModel {
   selectedPersonaId: string | null
   selectedAudienceScope: AudienceScope
   selectedAudienceLabel: string
+  resolvedAudienceKeys: string[]
   workFeed: UserWorkFeedItem[]
   personas: UserPersonaSummary[]
   audiencePresentations: AudiencePresentationSummary[]

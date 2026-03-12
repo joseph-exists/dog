@@ -14,11 +14,18 @@ import type {
   WeightedTag,
 } from "@/components/UserPage/types"
 import { PersonaLibraryService } from "@/services/personaLibraryService"
+import { PageService } from "@/services/pageService"
 import { UserPersonaService } from "@/services/userPersonaService"
 import useAuth from "./useAuth"
 import { usePageEditor } from "./usePageEditor"
 
 const DEFAULT_AUDIENCE_SCOPE: AudienceScope = "public"
+const AUDIENCE_SCOPE_PRIORITY: AudienceScope[] = [
+  "public",
+  "trusted",
+  "collaborators",
+  "custom",
+]
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
@@ -166,6 +173,13 @@ function normalizeAudiencePresentation(
         : null,
     personaId: input.personaId.trim(),
     audienceScope,
+    audienceKey:
+      typeof input.audienceKey === "string" && input.audienceKey.trim().length > 0
+        ? input.audienceKey.trim()
+        : typeof input.audience_key === "string" &&
+            input.audience_key.trim().length > 0
+          ? input.audience_key.trim()
+          : null,
     audienceLabel:
       typeof input.audienceLabel === "string" && input.audienceLabel.trim()
         ? input.audienceLabel.trim()
@@ -175,6 +189,7 @@ function normalizeAudiencePresentation(
     visibleWorkIds: Array.isArray(input.visibleWorkIds)
       ? input.visibleWorkIds.filter((id): id is string => typeof id === "string")
       : [],
+    publicationState: input.publicationState === "published" ? "published" : "draft",
     relationCallToAction,
   }
 }
@@ -304,12 +319,47 @@ export function resolvePrimaryPersonaId(
 export function getActiveAudiencePresentation(
   presentations: AudiencePresentationSummary[],
   selectedAudienceScope: AudienceScope,
+  resolvedAudienceKeys: string[] = [],
 ): AudiencePresentationSummary | null {
   return (
     presentations.find(
-      (presentation) => presentation.audienceScope === selectedAudienceScope,
+      (presentation) =>
+        presentation.audienceScope === selectedAudienceScope &&
+        (selectedAudienceScope !== "custom" ||
+          (presentation.audienceKey !== null &&
+            presentation.audienceKey !== undefined &&
+            resolvedAudienceKeys.includes(presentation.audienceKey))),
     ) ?? null
   )
+}
+
+function getPreferredAudienceScope(
+  presentations: AudiencePresentationSummary[],
+  personas: UserPersonaSummary[],
+  primaryPersonaId: string | null,
+  isOwner: boolean,
+): AudienceScope {
+  if (isOwner && primaryPersonaId) {
+    for (const scope of AUDIENCE_SCOPE_PRIORITY) {
+      if (
+        presentations.some(
+          (presentation) =>
+            presentation.audienceScope === scope &&
+            resolvePersonaReference(presentation.personaId, personas) ===
+              primaryPersonaId,
+        )
+      ) {
+        return scope
+      }
+    }
+  }
+
+  for (const scope of AUDIENCE_SCOPE_PRIORITY) {
+    if (presentations.some((presentation) => presentation.audienceScope === scope)) {
+      return scope
+    }
+  }
+  return DEFAULT_AUDIENCE_SCOPE
 }
 
 export function filterWorkFeedForAudience(
@@ -317,6 +367,7 @@ export function filterWorkFeedForAudience(
   presentations: AudiencePresentationSummary[],
   selectedAudienceScope: AudienceScope,
   isOwner: boolean,
+  resolvedAudienceKeys: string[] = [],
 ): UserWorkFeedItem[] {
   if (isOwner) {
     return workFeed.filter((item) => item.isRepresentative)
@@ -325,6 +376,7 @@ export function filterWorkFeedForAudience(
   const activePresentation = getActiveAudiencePresentation(
     presentations,
     selectedAudienceScope,
+    resolvedAudienceKeys,
   )
 
   if (!activePresentation) return []
@@ -342,6 +394,8 @@ export function buildUserPageViewModel(input: {
   libraryPersonas: LibraryPersona[]
   ownerPersonas?: UserPersonaSummary[]
   ownerPresentations?: AudiencePresentationSummary[]
+  resolvedAudienceScope?: AudienceScope
+  resolvedAudienceKeys?: string[]
 }): UserPageViewModel {
   const {
     slug,
@@ -352,6 +406,8 @@ export function buildUserPageViewModel(input: {
     libraryPersonas,
     ownerPersonas = [],
     ownerPresentations = [],
+    resolvedAudienceScope,
+    resolvedAudienceKeys = [],
   } = input
 
   const primaryContent = getBlockContent(
@@ -447,10 +503,17 @@ export function buildUserPageViewModel(input: {
   const primaryPersonaId =
     resolvePersonaReference(primaryContent?.primaryPersonaId ?? null, personas) ??
     resolvePrimaryPersonaId(primaryContent?.primaryPersonaId ?? null, personaIds)
-  const selectedAudienceScope =
-    presentations[0]?.audienceScope ?? DEFAULT_AUDIENCE_SCOPE
-  const selectedAudienceLabel =
-    presentations[0]?.audienceLabel ?? slugToDisplayLabel(selectedAudienceScope)
+  const normalizedResolvedAudienceKeys = resolvedAudienceKeys
+    .map((audienceKey) => audienceKey.trim())
+    .filter((audienceKey) => audienceKey.length > 0)
+  const selectedAudienceScope = isOwner
+    ? getPreferredAudienceScope(
+        presentations,
+        personas,
+        primaryPersonaId,
+        isOwner,
+      )
+    : resolvedAudienceScope ?? DEFAULT_AUDIENCE_SCOPE
 
   const resolvedPersonas = personas.map((persona) => {
     const associatedWorkCount = workItems.filter((item) =>
@@ -459,6 +522,10 @@ export function buildUserPageViewModel(input: {
     const isVisibleInCurrentAudience = presentations.some(
       (presentation) =>
         presentation.audienceScope === selectedAudienceScope &&
+        (selectedAudienceScope !== "custom" ||
+          (presentation.audienceKey !== null &&
+            presentation.audienceKey !== undefined &&
+            normalizedResolvedAudienceKeys.includes(presentation.audienceKey))) &&
         personaMatchesId(persona, presentation.personaId),
     )
 
@@ -470,14 +537,25 @@ export function buildUserPageViewModel(input: {
     }
   })
 
+  const activePresentation = getActiveAudiencePresentation(
+    presentations,
+    selectedAudienceScope,
+    normalizedResolvedAudienceKeys,
+  )
+  const selectedAudienceLabel =
+    activePresentation?.audienceLabel ?? slugToDisplayLabel(selectedAudienceScope)
   const selectedPersonaId =
-    primaryPersonaId ??
-    resolvePersonaReference(
-      presentations.find(
-        (presentation) => presentation.audienceScope === selectedAudienceScope,
-      )?.personaId,
-      resolvedPersonas,
-    ) ??
+    resolvePersonaReference(activePresentation?.personaId, resolvedPersonas) ??
+    (primaryPersonaId &&
+    resolvedPersonas.some(
+      (persona) =>
+        persona.id === primaryPersonaId &&
+        (isOwner || persona.isVisibleInCurrentAudience),
+    )
+      ? primaryPersonaId
+      : null) ??
+    resolvedPersonas.find((persona) => isOwner || persona.isVisibleInCurrentAudience)
+      ?.id ??
     resolvedPersonas[0]?.id ??
     null
 
@@ -494,6 +572,7 @@ export function buildUserPageViewModel(input: {
     selectedPersonaId,
     selectedAudienceScope,
     selectedAudienceLabel,
+    resolvedAudienceKeys: normalizedResolvedAudienceKeys,
     workFeed: workItems,
     personas: resolvedPersonas,
     audiencePresentations: presentations,
@@ -525,6 +604,12 @@ export function useUserPageViewModel(slug: string) {
     enabled: Boolean(userId) && isOwner,
   })
 
+  const resolvedAudienceQuery = useQuery({
+    queryKey: ["pages", "user", userId, "audience"],
+    queryFn: () => PageService.getResolvedUserPageAudience("user", userId),
+    enabled: Boolean(userId) && !isOwner && pageEditor.pageExists,
+  })
+
   const viewModel = useMemo(
     () =>
       buildUserPageViewModel({
@@ -536,6 +621,8 @@ export function useUserPageViewModel(slug: string) {
         libraryPersonas: personaLibraryQuery.data ?? [],
         ownerPersonas: ownerPersonaQuery.data?.personas ?? [],
         ownerPresentations: ownerPersonaQuery.data?.presentations ?? [],
+        resolvedAudienceScope: resolvedAudienceQuery.data?.scope,
+        resolvedAudienceKeys: resolvedAudienceQuery.data?.matchedAudienceKeys ?? [],
       }),
     [
       slug,
@@ -545,6 +632,7 @@ export function useUserPageViewModel(slug: string) {
       pageEditor.blocks,
       personaLibraryQuery.data,
       ownerPersonaQuery.data,
+      resolvedAudienceQuery.data,
     ],
   )
 
@@ -556,7 +644,8 @@ export function useUserPageViewModel(slug: string) {
     isLoading:
       pageEditor.isLoading ||
       personaLibraryQuery.isLoading ||
-      ownerPersonaQuery.isLoading,
+      ownerPersonaQuery.isLoading ||
+      resolvedAudienceQuery.isLoading,
     personaLibrary: personaLibraryQuery.data ?? [],
   }
 }

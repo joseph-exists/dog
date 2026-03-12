@@ -51,6 +51,22 @@ That hybrid state is useful progress, but it changes the next-slice plan:
 - the next MVP work is less about adding more persona CRUD
 - it is more about converging owner authoring, visitor rendering, and publication rules into one coherent path
 
+Latest implementation status:
+
+- owner authoring now uses backend `UserPersona` and `UserPersonaPresentation` APIs
+- composer save now builds an intentional published page snapshot from backend persona/presentation state
+- user-page runtime now resolves the active persona/audience presentation deterministically
+- user pages now have a backend audience-resolution path based on page-level access grants plus custom audience keys
+- owner composer now exposes page audience grant management for `user`, `user_persona`, `group`, and `persona_group` subjects
+- owner composer now includes an audience-outcome preview panel for simulating the published visitor result by audience lens
+- owner authoring surfaces now show clearer publication-state inclusion cues for personas and audience views
+- project and page audience flows now support published collaborator-persona discovery instead of requiring raw persona ids in the common path
+- project access UI now supports persona-mediated grants to:
+  - `user_persona`
+  - `persona_group`
+- project access UI now supports basic persona-group creation and member addition
+- project access UI now uses named discovery controls for owned personas, persona groups, and legacy groups where the SDK already provides them
+
 ## What Changed
 
 ### Persona model is now coherent enough for MVP
@@ -263,7 +279,8 @@ Current state:
 
 - owner-side user-page view-model composition now reads backend `UserPersona` and `UserPersonaPresentation` data
 - owner-side persona creation and audience-view editing now persist through exported SDK services
-- page block content is still mirrored as a snapshot/fallback layer
+- composer save now writes a publication snapshot intentionally rather than incidentally
+- page block content remains the visitor/runtime snapshot layer
 
 Consequence:
 
@@ -279,6 +296,13 @@ What remains is deciding which layer is authoritative for:
 - visitor rendering
 - publication
 - unsaved composer drafts
+
+Current answer:
+
+- owner editing: backend persona entities
+- visitor rendering: saved page snapshot
+- publication: save/publish path that serializes backend-authored published state into the page
+- unsaved drafts: page shell/layout constructs and other block-owned state
 
 ### 2. Audience views exist as authored content, but audience resolution is not real
 
@@ -338,12 +362,12 @@ For MVP this may be acceptable if the requirement is only "author a persona-shap
 
 ### 5. Persona-mediated collaboration exists, but frontend workspaces/projects have not adopted it yet
 
-The backend now supports persona groups and persona-mediated grants, but this is still backend-first.
+The backend now supports persona groups and persona-mediated grants, and the frontend project access surface has begun adopting them.
 
 Consequence:
 
-- the plan now has viable collaboration primitives
-- the remaining work is exposing them through frontend workflows and aligning project/workspace UX to those primitives
+- the plan now has viable collaboration primitives in both backend and initial frontend form
+- the remaining work is now mostly coverage, explanation, and cross-user discovery rather than first enablement
 
 ## High-Priority Mismatches Against MVP Needs
 
@@ -399,13 +423,22 @@ The runtime should guarantee:
 
 The current frontend approximates this for owners and snapshots it for visitors, but the product contract still does not guarantee it.
 
-### P1: Integrate persona-group collaboration into project/workspace UX
+### P1: Deepen persona-group collaboration in project/workspace UX
 
-The backend primitives now exist, but the frontend still needs:
+Initial project access support now exists for:
 
-- persona-group creation and management flows
-- project/workspace sharing UI that can target persona groups and user personas
-- clear display of why a user has access through a particular persona/group path
+- persona-group creation
+- persona-group membership addition
+- project grants to `user_persona`
+- project grants to `persona_group`
+- discovery-driven selection for owned personas and groups in the project access tab
+- the same discovery combobox pattern now rolls into user-page audience grant management
+
+What remains:
+
+- clearer access-path explanation
+- broader adoption across related collaboration surfaces
+- richer inherited-access explanation across downstream workspace and resource surfaces
 
 ### P1: Complete the migration away from page-owned persona objects
 
@@ -567,7 +600,7 @@ If Slice 1 chooses snapshot publication for MVP, the next implementation step is
 
 ### Slice 5: Defer persona-mediated workspace UX to post-MVP unless product raises it
 
-The backend primitives now exist, but this is no longer the blocker for personas MVP.
+The backend primitives now exist, and initial frontend project adoption now exists, so this is no longer a blocker for the core personas MVP path.
 
 It should be treated as adjacent leverage, not as the immediate release gate for user-page personas.
 

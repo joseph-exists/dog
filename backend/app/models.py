@@ -315,6 +315,27 @@ class UserPersonasPublic(SQLModel):
     data: list[UserPersonaPublic]
     count: int
 
+
+class DiscoveredUserPersonaPublic(SQLModel):
+    """Search result for a discoverable published user persona."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    persona_id: uuid.UUID
+    name: str
+    nickname: str | None = None
+    short_bio: str | None = None
+    publication_state: UserPersonaPublicationState
+    owner_display_name: str
+    is_primary: bool = False
+
+
+class DiscoveredUserPersonasPublic(SQLModel):
+    """Collection response for discoverable user persona search."""
+
+    data: list[DiscoveredUserPersonaPublic]
+    count: int
+
 # ---------------------------------------------------------------------------
 # Recommended UserPersonaPresentation model
 # ---------------------------------------------------------------------------
@@ -1567,6 +1588,18 @@ class AccessEffectiveRolePublic(SQLModel):
     resource_type: str
     resource_id: uuid.UUID
     role: AccessGrantRole | None
+
+
+class ResolvedUserPageAudiencePublic(SQLModel):
+    """Resolved visitor audience context for a user page."""
+
+    scope: AudienceScope
+    is_owner: bool = False
+    matched_user_ids: list[uuid.UUID] = Field(default_factory=list)
+    matched_user_persona_ids: list[uuid.UUID] = Field(default_factory=list)
+    matched_group_ids: list[uuid.UUID] = Field(default_factory=list)
+    matched_persona_group_ids: list[uuid.UUID] = Field(default_factory=list)
+    matched_audience_keys: list[str] = Field(default_factory=list)
 
 
 class AccessGrantUpsertRequest(SQLModel):
@@ -6376,6 +6409,30 @@ class UserRepoFileContent(ShadowRepoFileContent):
 
 class UserRepoReadmeContent(UserRepoFileContent):
     resolved_from_path: str
+
+
+class UserRepoFileMutationInput(SQLModel):
+    path: str = Field(max_length=2000)
+    operation: str = Field(max_length=20)
+    content: str | None = None
+    encoding: str = Field(default="utf-8", max_length=50)
+
+
+class UserRepoCommitRequest(SQLModel):
+    branch: str = Field(default="main", max_length=255)
+    mutations: list[UserRepoFileMutationInput] = Field(default_factory=list)
+    commit_message: str = Field(max_length=500)
+    expected_head_sha: str = Field(max_length=255)
+
+
+class UserRepoCommitResponse(SQLModel):
+    repo_id: uuid.UUID
+    branch: str
+    previous_head_sha: str
+    new_head_sha: str
+    commit_message: str
+    committed_at: datetime
+    changed_paths: list[str] = Field(default_factory=list)
 
 class UserRepoOutboxJob(SQLModel, table=True):
     """

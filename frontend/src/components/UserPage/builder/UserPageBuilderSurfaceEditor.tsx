@@ -74,12 +74,15 @@ function getSurfaceMetrics(
     return [
       { label: "Primary Persona", value: viewModel.primaryPersonaId ? 1 : 0 },
       { label: "Published", value: viewModel.personas.filter((persona) => persona.publicationState === "published").length },
+      { label: "Draft Only", value: viewModel.personas.filter((persona) => persona.publicationState !== "published").length },
     ]
   }
   if (surface === "audiences") {
     return [
       { label: "Audience Views", value: viewModel.audiencePresentations.length },
       { label: "Visible Work Links", value: viewModel.audiencePresentations.reduce((count, item) => count + item.visibleWorkIds.length, 0) },
+      { label: "Published Views", value: viewModel.audiencePresentations.filter((item) => item.publicationState === "published").length },
+      { label: "Draft Only", value: viewModel.audiencePresentations.filter((item) => item.publicationState !== "published").length },
     ]
   }
   if (surface === "relations") {

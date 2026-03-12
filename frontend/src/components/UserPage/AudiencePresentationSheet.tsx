@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 
 import { PersonaPicker } from "@/components/Persona"
 import type {
+  AudiencePresentationPublicationState,
   AudiencePresentationSummary,
   AudienceScope,
   UserWorkFeedItem,
@@ -25,10 +26,12 @@ export interface AudiencePresentationDraft {
   userPersonaId?: string | null
   personaId: string
   audienceScope: AudienceScope
+  audienceKey?: string | null
   audienceLabel: string
   headline: string
   framingText: string | null
   visibleWorkIds: string[]
+  publicationState: AudiencePresentationPublicationState
   relationCallToAction: AudiencePresentationSummary["relationCallToAction"]
 }
 
@@ -51,10 +54,13 @@ export function AudiencePresentationSheet({
 }: AudiencePresentationSheetProps) {
   const [personaId, setPersonaId] = useState("")
   const [audienceScope, setAudienceScope] = useState<AudienceScope>("public")
+  const [audienceKey, setAudienceKey] = useState("")
   const [audienceLabel, setAudienceLabel] = useState("Public")
   const [headline, setHeadline] = useState("")
   const [framingText, setFramingText] = useState("")
   const [visibleWorkIds, setVisibleWorkIds] = useState<string[]>([])
+  const [publicationState, setPublicationState] =
+    useState<AudiencePresentationPublicationState>("draft")
   const [relationCallToAction, setRelationCallToAction] =
     useState<AudiencePresentationSummary["relationCallToAction"]>("none")
 
@@ -62,10 +68,12 @@ export function AudiencePresentationSheet({
     if (!open) return
     setPersonaId(presentation?.personaId ?? "")
     setAudienceScope(presentation?.audienceScope ?? "public")
+    setAudienceKey(presentation?.audienceKey ?? "")
     setAudienceLabel(presentation?.audienceLabel ?? "Public")
     setHeadline(presentation?.headline ?? "")
     setFramingText(presentation?.framingText ?? "")
     setVisibleWorkIds(presentation?.visibleWorkIds ?? [])
+    setPublicationState(presentation?.publicationState ?? "draft")
     setRelationCallToAction(presentation?.relationCallToAction ?? "none")
   }, [open, presentation])
 
@@ -81,10 +89,12 @@ export function AudiencePresentationSheet({
       userPersonaId: presentation?.userPersonaId ?? null,
       personaId,
       audienceScope,
+      audienceKey: audienceKey.trim() || null,
       audienceLabel: audienceLabel.trim(),
       headline: headline.trim(),
       framingText: framingText.trim() || null,
       visibleWorkIds,
+      publicationState,
       relationCallToAction,
     })
     onOpenChange(false)
@@ -143,6 +153,38 @@ export function AudiencePresentationSheet({
                 onChange={(event) => setAudienceLabel(event.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Publication State</Label>
+            <Select
+              value={publicationState}
+              onValueChange={(value) =>
+                setPublicationState(value as AudiencePresentationPublicationState)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="audience-key">Audience Key</Label>
+            <Input
+              id="audience-key"
+              value={audienceKey}
+              onChange={(event) => setAudienceKey(event.target.value)}
+              placeholder="Optional target id for custom audience views"
+            />
+            <p className="text-xs text-muted-foreground">
+              Use this when a custom audience view should match a specific
+              user, persona, group, or persona-group id.
+            </p>
           </div>
 
           <div className="space-y-2">

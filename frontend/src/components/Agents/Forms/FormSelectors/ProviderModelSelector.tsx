@@ -237,6 +237,8 @@ export function ProviderModelSelector({
             value={modelName || agentDefaultModel}
             onChange={handleModelChange}
             onModelSelected={onModelSelected}
+            providerType={selectedProvider?.alpha_provider_type_id}
+            userAccessProviderId={selectedProvider?.id ?? null}
             placeholder={`Select model (default: ${agentDefaultModel || "auto"})`}
             disabled={disabled}
             className={isCompact ? "h-8 text-sm" : ""}

@@ -11,11 +11,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from sqlmodel import func, select
+from sqlmodel import and_, func, select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.core.security import encrypt_api_key
+from app.core.provider_types import TYPE1, TYPE2, TYPE5
+from app.core.security import decrypt_api_key, encrypt_api_key
 from app.models import (
+    LLMModel,
     LLMProviderType,
     LLMProviderTypePublic,
     LLMProviderTypesPublic,
@@ -31,16 +33,17 @@ from app.services.provider_adapters import (
     ModelInfo,
     RateLimitInfo,
     TestResult,
+    TestResultStatus,
     get_provider_account_info,
     list_provider_models,
     test_provider_connection,
 )
-
 router = APIRouter(prefix="/llm-providers", tags=["llm-providers"])
 logger = logging.getLogger(__name__)
 
 # Cache freshness threshold (1 hour)
 MODELS_CACHE_MAX_AGE = timedelta(hours=1)
+API_KEY_REQUIRED_PROVIDER_TYPE_IDS = {TYPE1, TYPE2, TYPE5}
 
 
 # =============================================================================
@@ -71,6 +74,150 @@ class ModelsListResponse(BaseModel):
     models: list[str] = Field(description="List of available model IDs")
     cached: bool = Field(description="Whether this was served from cache")
     cached_at: datetime | None = Field(default=None, description="When the cache was last updated")
+
+
+def _sync_models_into_catalog(
+    *,
+    session: SessionDep,
+    provider: UserAccessProvider,
+    models: list[ModelInfo],
+    owner_id: uuid.UUID,
+) -> tuple[int, int]:
+    """
+    Upsert provider-returned models into llmmodel for this provider type.
+
+    Returns:
+        (created_count, updated_count)
+    """
+    if not models:
+        return (0, 0)
+
+    # De-duplicate by model_id while preserving the first-seen order.
+    unique_models: dict[str, ModelInfo] = {}
+    for model in models:
+        model_id = model.model_id.strip()
+        if not model_id:
+            continue
+        if len(model_id) > 100:
+            logger.warning(
+                "Skipping model with model_id longer than 100 chars: provider_id=%s model_id=%s",
+                provider.id,
+                model_id,
+            )
+            continue
+        if model_id not in unique_models:
+            unique_models[model_id] = model
+
+    if not unique_models:
+        return (0, 0)
+
+    model_ids = list(unique_models.keys())
+    existing_rows = session.exec(
+        select(LLMModel).where(
+            and_(
+                LLMModel.primary_provider_type_id == provider.alpha_provider_type_id,
+                LLMModel.model_id.in_(model_ids),
+            )
+        )
+    ).all()
+    existing_by_model_id = {row.model_id: row for row in existing_rows}
+
+    created = 0
+    updated = 0
+
+    for sort_index, (model_id, model) in enumerate(unique_models.items()):
+        existing = existing_by_model_id.get(model_id)
+        display_name = (model.display_name or model_id).strip() or model_id
+        description = model.description[:500] if model.description else None
+
+        if existing is None:
+            session.add(
+                LLMModel(
+                    owner_id=owner_id,
+                    model_id=model_id,
+                    display_name=display_name[:100],
+                    primary_provider_type_id=provider.alpha_provider_type_id,
+                    description=description,
+                    context_window=model.context_window,
+                    is_default=False,
+                    is_enabled=True,
+                    is_deprecated=bool(model.is_deprecated),
+                    sort_order=sort_index,
+                    is_system=False,
+                    has_vision=model.supports_vision,
+                    has_function_calling=model.supports_function_calling,
+                    has_streaming=model.supports_streaming,
+                    has_json_mode=None,
+                )
+            )
+            created += 1
+            continue
+
+        # Existing model rows are typically curated catalog entries.
+        # Only fill in missing metadata rather than overriding curated fields.
+        changed = False
+        if (not existing.display_name or existing.display_name == existing.model_id) and display_name:
+            existing.display_name = display_name[:100]
+            changed = True
+        if not existing.description and description:
+            existing.description = description
+            changed = True
+        if existing.context_window is None and model.context_window is not None:
+            existing.context_window = model.context_window
+            changed = True
+        if existing.has_vision is None:
+            existing.has_vision = model.supports_vision
+            changed = True
+        if existing.has_function_calling is None:
+            existing.has_function_calling = model.supports_function_calling
+            changed = True
+        if existing.has_streaming is None:
+            existing.has_streaming = model.supports_streaming
+            changed = True
+        if model.is_deprecated and not existing.is_deprecated:
+            existing.is_deprecated = True
+            changed = True
+        if changed:
+            session.add(existing)
+            updated += 1
+
+    return (created, updated)
+
+
+def _provider_type_requires_api_key(provider_type_id: uuid.UUID | str | None) -> bool:
+    return str(provider_type_id) in API_KEY_REQUIRED_PROVIDER_TYPE_IDS
+
+
+def _provider_has_non_empty_api_key(provider: UserAccessProvider) -> bool:
+    if hasattr(provider, "api_key_encrypted") and provider.api_key_encrypted:
+        try:
+            return bool(decrypt_api_key(provider.api_key_encrypted).strip())
+        except Exception:
+            return False
+
+    raw_api_key = getattr(provider, "api_key", None)
+    if not raw_api_key:
+        return False
+
+    raw_api_key_str = str(raw_api_key).strip()
+    if not raw_api_key_str:
+        return False
+
+    if raw_api_key_str.startswith("gAAAA"):
+        try:
+            return bool(decrypt_api_key(raw_api_key_str).strip())
+        except Exception:
+            return False
+
+    return True
+
+
+def _missing_api_key_result() -> TestResult:
+    return TestResult(
+        success=False,
+        status=TestResultStatus.INVALID_CONFIG,
+        message="API key is required before this provider can be validated.",
+    )
 
 
 @router.get("/", response_model=UserAccessProvidersPublic)
@@ -178,18 +325,24 @@ def create_provider(
     provider_in: UserAccessProviderCreate,
 ) -> Any:
     """Create a new access provider configuration."""
+    if _provider_type_requires_api_key(provider_in.alpha_provider_type_id) and (
+        not provider_in.api_key or not provider_in.api_key.strip()
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="API key is required for this provider type",
+        )
+
     # If setting as default, unset other defaults for this user
     # TODO: add this back in once it's working again.
     # if provider_in.is_default:
     #     _unset_defaults(session, current_user.id)
 
-    provider = UserAccessProvider.model_validate(provider_in, update={"user_id": current_user.id})
-    # provider_data = provider_in.model_dump(exclude={"api_key"})
-    provider_data = provider_in.model_dump()
+    provider_data = provider_in.model_dump(exclude={"api_key"})
     provider = UserAccessProvider(
         **provider_data,
         user_id=current_user.id,
-        api_key_encrypted=encrypt_api_key(provider_in.api_key),
+        api_key=encrypt_api_key(provider_in.api_key) if provider_in.api_key else None,
     )
     session.add(provider)
     session.commit()
@@ -225,6 +378,17 @@ def update_provider(
 
     update_data = provider_in.model_dump(exclude_unset=True)
 
+    incoming_api_key = update_data.get("api_key")
+    if (
+        _provider_type_requires_api_key(provider.alpha_provider_type_id)
+        and ((incoming_api_key is not None and not str(incoming_api_key).strip()) or
+             (incoming_api_key is None and not _provider_has_non_empty_api_key(provider)))
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="API key is required for this provider type",
+        )
+
     # Handle default flag - unset others if setting this as default
     if update_data.get("is_default"):
         _unset_defaults(session, current_user.id)
@@ -233,7 +397,7 @@ def update_provider(
     if "api_key" in update_data:
         api_key = update_data.pop("api_key")
         if api_key:
-            provider.api_key_encrypted = encrypt_api_key(api_key)
+            provider.api_key = encrypt_api_key(api_key)
 
     # Update other fields
     provider.sqlmodel_update(update_data)
@@ -283,7 +447,10 @@ async def test_provider(
         raise HTTPException(status_code=403, detail="Not authorized to test this provider")
 
     # Test connection using adapter service
-    result: TestResult = await test_provider_connection(provider)
+    if _provider_type_requires_api_key(provider.alpha_provider_type_id) and not _provider_has_non_empty_api_key(provider):
+        result = _missing_api_key_result()
+    else:
+        result = await test_provider_connection(provider)
 
     # Update provider validation state
     provider.is_validated = result.success
@@ -321,7 +488,10 @@ async def test_provider_detailed(
         raise HTTPException(status_code=403, detail="Not authorized to test this provider")
 
     # Test connection using adapter service
-    test_result: TestResult = await test_provider_connection(provider)
+    if _provider_type_requires_api_key(provider.alpha_provider_type_id) and not _provider_has_non_empty_api_key(provider):
+        test_result = _missing_api_key_result()
+    else:
+        test_result = await test_provider_connection(provider)
 
     # Update provider validation state
     provider.is_validated = test_result.success
@@ -335,6 +505,14 @@ async def test_provider_detailed(
     if test_result.success:
         # Fetch models
         models = await list_provider_models(provider)
+
+        # Sync models into llm catalog so they appear in provider model lists and agent selectors
+        _sync_models_into_catalog(
+            session=session,
+            provider=provider,
+            models=models,
+            owner_id=provider.user_id,
+        )
 
         # Update model cache with model IDs
         now = datetime.now(timezone.utc)
@@ -392,6 +570,19 @@ async def get_provider_models(
     )
 
     if cache_is_fresh:
+        # Heal older providers (cache populated before catalog sync existed)
+        # by inserting minimal catalog rows from cached model IDs.
+        if provider.available_models_cache:
+            cached_models = [ModelInfo(model_id=model_id) for model_id in provider.available_models_cache]
+            created, updated = _sync_models_into_catalog(
+                session=session,
+                provider=provider,
+                models=cached_models,
+                owner_id=provider.user_id,
+            )
+            if created > 0 or updated > 0:
+                session.commit()
+
         return ModelsListResponse(
             models=provider.available_models_cache or [],
             cached=True,
@@ -401,6 +592,13 @@ async def get_provider_models(
     # Fetch fresh models
     models = await list_provider_models(provider)
     model_ids = [m.model_id for m in models]
+
+    _sync_models_into_catalog(
+        session=session,
+        provider=provider,
+        models=models,
+        owner_id=provider.user_id,
+    )
 
     # Update cache
     provider.available_models_cache = model_ids
@@ -425,6 +623,3 @@ def _unset_defaults(session: SessionDep, user_id: uuid.UUID) -> None:
     for provider in session.exec(statement).all():
         provider.is_default = False
         session.add(provider)
-
-
-

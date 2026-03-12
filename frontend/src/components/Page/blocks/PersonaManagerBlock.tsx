@@ -214,6 +214,9 @@ export function PersonaManagerBlock({
     await queryClient.invalidateQueries({
       queryKey: ["user-persona-page-data", entityId],
     })
+    await queryClient.invalidateQueries({
+      queryKey: ["user-persona-authoring-bundle", entityId],
+    })
 
     showSuccessToast(
       hasExisting
@@ -261,6 +264,11 @@ export function PersonaManagerBlock({
                       </span>
                       {persona.isPrimary && <Badge>Primary</Badge>}
                       <Badge variant="outline">{persona.publicationState}</Badge>
+                      <Badge variant="secondary">
+                        {persona.publicationState === "published"
+                          ? "Included in visitor snapshot"
+                          : "Draft only"}
+                      </Badge>
                     </div>
                     {persona.shortBio && (
                       <p className="text-sm text-muted-foreground">

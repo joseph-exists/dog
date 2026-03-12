@@ -2,8 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Loader2, Trash2, Unplug, Users2 } from "lucide-react"
 import { PageShell } from "@/components/Page"
+import { DiscoverUserPersonaCombobox } from "@/components/UserPage/DiscoverUserPersonaCombobox"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import type { EntityComboboxOption } from "@/components/ui/entity-combobox"
+import { EntityCombobox } from "@/components/ui/entity-combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,9 +17,14 @@ import useAuth from "@/hooks/useAuth"
 import { usePageEditor } from "@/hooks/usePageEditor"
 import {
   useAddProjectResource,
+  useAddPersonaGroupMember,
   useAttachableResources,
+  useCreatePersonaGroup,
   useDeleteProject,
   useMyGroups,
+  useMyPersonaGroups,
+  useMyUserPersonas,
+  usePersonaGroupMembers,
   useProject,
   useProjectAccessGrants,
   useProjectMyRole,
@@ -71,6 +79,8 @@ function ProjectDetailPage() {
     canManageProject,
   )
   const { data: groups } = useMyGroups(canManageProject)
+  const { data: userPersonas } = useMyUserPersonas(canManageProject)
+  const { data: personaGroups } = useMyPersonaGroups(canManageProject)
   const { data: attachable } = useAttachableResources(canManageProject)
 
   const updateProject = useUpdateProject(projectId)
@@ -79,6 +89,7 @@ function ProjectDetailPage() {
   const removeResource = useRemoveProjectResource(projectId)
   const upsertGrant = useUpsertProjectGrant(projectId)
   const revokeGrant = useRevokeProjectGrant(projectId)
+  const createPersonaGroup = useCreatePersonaGroup()
 
   const [nameDraft, setNameDraft] = useState("")
   const [descriptionDraft, setDescriptionDraft] = useState("")
@@ -86,9 +97,76 @@ function ProjectDetailPage() {
   const [resourceScope, setResourceScope] = useState<"owned" | "available">("owned")
   const [resourceId, setResourceId] = useState("")
   const [attachSelection, setAttachSelection] = useState("")
-  const [grantSubjectType, setGrantSubjectType] = useState<"user" | "group">("group")
+  const [grantSubjectType, setGrantSubjectType] = useState<
+    "user" | "group" | "user_persona" | "persona_group"
+  >("persona_group")
   const [grantRole, setGrantRole] = useState<"viewer" | "editor">("viewer")
   const [grantSubjectId, setGrantSubjectId] = useState("")
+  const [newPersonaGroupName, setNewPersonaGroupName] = useState("")
+  const [newPersonaGroupOwnerId, setNewPersonaGroupOwnerId] = useState("")
+  const [selectedPersonaGroupId, setSelectedPersonaGroupId] = useState("")
+  const [personaGroupMemberId, setPersonaGroupMemberId] = useState("")
+
+  const { data: personaGroupMembers } = usePersonaGroupMembers(
+    selectedPersonaGroupId,
+    canManageProject,
+  )
+  const addPersonaGroupMember = useAddPersonaGroupMember(selectedPersonaGroupId)
+
+  const ownedPersonaOptions = useMemo<EntityComboboxOption[]>(
+    () =>
+      (userPersonas ?? []).map((persona) => ({
+        value: persona.id,
+        label: persona.nickname?.trim() || `Persona ${persona.id.slice(0, 8)}`,
+        subtitle: persona.description?.trim() || persona.persona_id,
+        keywords: [persona.persona_id, persona.id, persona.nickname ?? ""],
+      })),
+    [userPersonas],
+  )
+
+  const personaGroupOptions = useMemo<EntityComboboxOption[]>(
+    () =>
+      (personaGroups ?? []).map((group) => {
+        const ownerPersona = ownedPersonaOptions.find(
+          (persona) => persona.value === group.owner_user_persona_id,
+        )
+        return {
+          value: group.id,
+          label: group.name,
+          subtitle: ownerPersona
+            ? `Owned by ${ownerPersona.label}`
+            : group.group_type ?? "persona group",
+          keywords: [group.id, group.name, group.owner_user_persona_id],
+        }
+      }),
+    [ownedPersonaOptions, personaGroups],
+  )
+
+  const groupOptions = useMemo<EntityComboboxOption[]>(
+    () =>
+      (groups ?? []).map((group) => ({
+        value: group.id,
+        label: group.name,
+        subtitle: group.id,
+        keywords: [group.id, group.name],
+      })),
+    [groups],
+  )
+
+  const personaOptionById = useMemo(
+    () => new Map(ownedPersonaOptions.map((option) => [option.value, option])),
+    [ownedPersonaOptions],
+  )
+  const personaGroupOptionById = useMemo(
+    () => new Map(personaGroupOptions.map((option) => [option.value, option])),
+    [personaGroupOptions],
+  )
+  const groupOptionById = useMemo(
+    () => new Map(groupOptions.map((option) => [option.value, option])),
+    [groupOptions],
+  )
+
+  const selectedPersonaGroupOption = personaGroupOptionById.get(selectedPersonaGroupId)
 
   const selectedAttachOption = useMemo(
     () =>
@@ -197,9 +275,75 @@ function ProjectDetailPage() {
       subject_id: subjectId,
       role: grantRole,
     })
-    if (grantSubjectType === "user") {
+    if (grantSubjectType === "user" || grantSubjectType === "user_persona") {
       setGrantSubjectId("")
     }
+  }
+
+  const grantSubjectDescriptor =
+    grantSubjectType === "persona_group"
+      ? "Persona group"
+      : grantSubjectType === "user_persona"
+        ? "User persona"
+        : grantSubjectType === "group"
+          ? "Legacy user group"
+          : "User account"
+
+  const describeGrantSubject = (subjectType: typeof grantSubjectType, subjectId: string) => {
+    if (subjectType === "persona_group") {
+      return (
+        personaGroupOptionById.get(subjectId) ?? {
+          value: subjectId,
+          label: "Persona group",
+          subtitle: subjectId,
+        }
+      )
+    }
+    if (subjectType === "user_persona") {
+      return (
+        personaOptionById.get(subjectId) ?? {
+          value: subjectId,
+          label: "User persona",
+          subtitle: subjectId,
+        }
+      )
+    }
+    if (subjectType === "group") {
+      return (
+        groupOptionById.get(subjectId) ?? {
+          value: subjectId,
+          label: "Legacy user group",
+          subtitle: subjectId,
+        }
+      )
+    }
+    return {
+      value: subjectId,
+      label: "User account",
+      subtitle: subjectId,
+    }
+  }
+
+  const onCreatePersonaGroup = async () => {
+    if (!newPersonaGroupName.trim() || !newPersonaGroupOwnerId) return
+    const group = await createPersonaGroup.mutateAsync({
+      name: newPersonaGroupName.trim(),
+      owner_user_persona_id: newPersonaGroupOwnerId,
+      group_type: "workspace",
+      is_active: true,
+    })
+    setNewPersonaGroupName("")
+    setSelectedPersonaGroupId(group.id)
+  }
+
+  const onAddPersonaGroupMember = async () => {
+    if (!selectedPersonaGroupId || !personaGroupMemberId.trim()) return
+    await addPersonaGroupMember.mutateAsync({
+      user_persona_id: personaGroupMemberId.trim(),
+      is_active: true,
+      role: "member",
+    })
+    setPersonaGroupMemberId("")
   }
 
   return (
@@ -390,7 +534,8 @@ function ProjectDetailPage() {
               <CardHeader>
                 <CardTitle>Project Access</CardTitle>
                 <CardDescription>
-                  Grant viewer/editor access to users or groups for this project.
+                  Persona groups are the preferred workspace path. Direct persona, user,
+                  and legacy group grants remain available during coexistence.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -399,12 +544,19 @@ function ProjectDetailPage() {
                     <Label>Subject type</Label>
                     <Select
                       value={grantSubjectType}
-                      onValueChange={(value: "user" | "group") => setGrantSubjectType(value)}
+                      onValueChange={(
+                        value: "user" | "group" | "user_persona" | "persona_group",
+                      ) => {
+                        setGrantSubjectType(value)
+                        setGrantSubjectId("")
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="persona_group">persona_group</SelectItem>
+                        <SelectItem value="user_persona">user_persona</SelectItem>
                         <SelectItem value="group">group</SelectItem>
                         <SelectItem value="user">user</SelectItem>
                       </SelectContent>
@@ -426,26 +578,62 @@ function ProjectDetailPage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
-                    <Label>Subject ID</Label>
+                    <Label>{grantSubjectDescriptor}</Label>
                     {grantSubjectType === "group" ? (
-                      <Select value={grantSubjectId} onValueChange={setGrantSubjectId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose one of your groups" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(groups ?? []).map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
+                      <EntityCombobox
                         value={grantSubjectId}
-                        onChange={(event) => setGrantSubjectId(event.target.value)}
-                        placeholder="User UUID"
+                        onChange={setGrantSubjectId}
+                        options={groupOptions}
+                        placeholder="Choose one of your groups"
+                        searchPlaceholder="Search groups..."
+                        emptyMessage="No groups available."
                       />
+                    ) : grantSubjectType === "persona_group" ? (
+                      <EntityCombobox
+                        value={grantSubjectId}
+                        onChange={setGrantSubjectId}
+                        options={personaGroupOptions}
+                        placeholder="Choose one of your persona groups"
+                        searchPlaceholder="Search persona groups..."
+                        emptyMessage="No persona groups available."
+                      />
+                    ) : grantSubjectType === "user_persona" ? (
+                      <div className="space-y-2">
+                        <EntityCombobox
+                          value={personaOptionById.has(grantSubjectId) ? grantSubjectId : ""}
+                          onChange={setGrantSubjectId}
+                          options={ownedPersonaOptions}
+                          placeholder="Quick pick one of your personas"
+                          searchPlaceholder="Search your personas..."
+                          emptyMessage="No personas available."
+                        />
+                        <DiscoverUserPersonaCombobox
+                          value={personaOptionById.has(grantSubjectId) ? "" : grantSubjectId}
+                          onChange={setGrantSubjectId}
+                          placeholder="Search published collaborator personas"
+                        />
+                        <Input
+                          value={grantSubjectId}
+                          onChange={(event) => setGrantSubjectId(event.target.value)}
+                          placeholder="Or paste a collaborator UserPersona UUID"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Use quick pick for one of your personas, or paste another
+                          collaborator persona ID when sharing across users.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Input
+                          value={grantSubjectId}
+                          onChange={(event) => setGrantSubjectId(event.target.value)}
+                          placeholder="User UUID"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Direct user grants remain available, but persona-mediated grants
+                          are preferred for workspace collaboration.
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -462,13 +650,21 @@ function ProjectDetailPage() {
                       <p className="text-sm text-muted-foreground">No explicit grants yet.</p>
                     ) : (
                       (grants ?? []).map((grant) => (
+                        (() => {
+                          const subject = describeGrantSubject(
+                            grant.subject_type,
+                            grant.subject_id,
+                          )
+                          return (
                         <div
                           key={grant.id}
                           className="flex items-center justify-between rounded-lg border p-3"
                         >
                           <div className="text-sm">
-                            <div className="font-medium">
-                              {grant.subject_type}:{grant.subject_id}
+                            <div className="font-medium">{subject.label}</div>
+                            <div className="text-muted-foreground">
+                              {grant.subject_type}
+                              {subject.subtitle ? ` · ${subject.subtitle}` : ""}
                             </div>
                             <div className="text-muted-foreground">role: {grant.role}</div>
                           </div>
@@ -486,10 +682,159 @@ function ProjectDetailPage() {
                             Revoke
                           </Button>
                         </div>
+                          )
+                        })()
                       ))
                     )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Persona Collaboration Groups</CardTitle>
+                <CardDescription>
+                  Create persona-owned groups for workspace and project access.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label>Group name</Label>
+                    <Input
+                      value={newPersonaGroupName}
+                      onChange={(event) => setNewPersonaGroupName(event.target.value)}
+                      placeholder="Design collaborators"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Owner persona</Label>
+                    <EntityCombobox
+                      value={newPersonaGroupOwnerId}
+                      onChange={setNewPersonaGroupOwnerId}
+                      options={ownedPersonaOptions}
+                      placeholder="Select one of your personas"
+                      searchPlaceholder="Search your personas..."
+                      emptyMessage="No personas available."
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={onCreatePersonaGroup}
+                      disabled={
+                        createPersonaGroup.isPending ||
+                        !newPersonaGroupName.trim() ||
+                        !newPersonaGroupOwnerId
+                      }
+                    >
+                      Create Persona Group
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Manage group</Label>
+                    <EntityCombobox
+                      value={selectedPersonaGroupId}
+                      onChange={setSelectedPersonaGroupId}
+                      options={personaGroupOptions}
+                      placeholder="Select persona group"
+                      searchPlaceholder="Search persona groups..."
+                      emptyMessage="No persona groups available."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Add persona member</Label>
+                    <div className="space-y-2">
+                      <EntityCombobox
+                        value={personaOptionById.has(personaGroupMemberId) ? personaGroupMemberId : ""}
+                        onChange={setPersonaGroupMemberId}
+                        options={ownedPersonaOptions}
+                        placeholder="Quick pick one of your personas"
+                        searchPlaceholder="Search your personas..."
+                        emptyMessage="No personas available."
+                        disabled={!selectedPersonaGroupId}
+                      />
+                      <DiscoverUserPersonaCombobox
+                        value={
+                          personaOptionById.has(personaGroupMemberId)
+                            ? ""
+                            : personaGroupMemberId
+                        }
+                        onChange={setPersonaGroupMemberId}
+                        placeholder="Search published collaborator personas"
+                        disabled={!selectedPersonaGroupId}
+                      />
+                      <Input
+                        value={personaGroupMemberId}
+                        onChange={(event) => setPersonaGroupMemberId(event.target.value)}
+                        placeholder="Or paste another user's UserPersona UUID"
+                        disabled={!selectedPersonaGroupId}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Workspace groups can include your personas and collaborator personas.
+                    </p>
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      variant="outline"
+                      onClick={onAddPersonaGroupMember}
+                      disabled={
+                        addPersonaGroupMember.isPending ||
+                        !selectedPersonaGroupId ||
+                        !personaGroupMemberId.trim()
+                      }
+                    >
+                      Add Persona
+                    </Button>
+                  </div>
+                </div>
+
+                {selectedPersonaGroupId ? (
+                  <div className="space-y-2 rounded-lg border p-3">
+                    <div>
+                      <div className="text-sm font-medium">
+                        {selectedPersonaGroupOption?.label ?? "Group members"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {selectedPersonaGroupOption?.subtitle ??
+                          "Persona-mediated collaboration members"}
+                      </div>
+                    </div>
+                    {(personaGroupMembers ?? []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No persona members yet.
+                      </p>
+                    ) : (
+                      (personaGroupMembers ?? []).map((member) => (
+                        (() => {
+                          const persona = personaOptionById.get(member.user_persona_id)
+                          return (
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between rounded border p-2 text-sm"
+                        >
+                          <div>
+                            <div className="font-medium">
+                              {persona?.label ?? "User persona"}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {persona?.subtitle ?? member.user_persona_id}
+                            </div>
+                            <div className="text-muted-foreground">
+                              role: {member.role ?? "member"}
+                            </div>
+                          </div>
+                        </div>
+                          )
+                        })()
+                      ))
+                    )}
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </TabsContent>

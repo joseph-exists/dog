@@ -74,7 +74,7 @@ async def test_streaming_runner_uses_resolved_runtime_request_limit() -> None:
     def build_agent_prompt(trigger_message, context, current_agent_slug=None) -> str:  # noqa: ARG001
         return f"prompt:{trigger_message}"
 
-    def deps_factory(session, room_id, agent_name, depth):
+    def deps_factory(session, room_id, agent_name, depth, acting_user_id):  # noqa: ARG001
         return SimpleNamespace(ui_components=[])
 
     async def run_agent(**kwargs):

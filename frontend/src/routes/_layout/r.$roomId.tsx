@@ -184,6 +184,95 @@ function RoomRepoPanel({
     enabled: Boolean(repoId),
   })
 
+  const lastSelectionEmitRef = useRef<string | null>(null)
+  const lastOpenEmitRef = useRef<string | null>(null)
+  const lastRefEmitRef = useRef<string | null>(null)
+
+  const emitSelectionEvent = useCallback(
+    (selectionKey: string, path: string | null) => {
+      const activeRepoId = repo?.id
+      if (!activeRepoId) return
+      const emitKey = `${panelId}|${activeRepoId}|${selectionKey}|${path ?? ""}`
+      if (lastSelectionEmitRef.current === emitKey) return
+      lastSelectionEmitRef.current = emitKey
+
+      void RoomService.emitRepoEvent(roomId, {
+        action: "selection",
+        panel_id: panelId,
+        selection_key: selectionKey,
+        path,
+        repo_id: activeRepoId,
+      }).catch((error) => {
+        console.error("Failed to emit repo selection event", error)
+      })
+    },
+    [panelId, repo?.id, roomId],
+  )
+
+  const emitOpenEvent = useCallback(
+    (path: string, ref: string) => {
+      const activeRepoId = repo?.id
+      if (!activeRepoId) return
+      const emitKey = `${panelId}|${activeRepoId}|${path}|${ref}`
+      if (lastOpenEmitRef.current === emitKey) return
+      lastOpenEmitRef.current = emitKey
+
+      void RoomService.emitRepoEvent(roomId, {
+        action: "open",
+        panel_id: panelId,
+        path,
+        ref,
+        repo_id: activeRepoId,
+      }).catch((error) => {
+        console.error("Failed to emit repo open event", error)
+      })
+    },
+    [panelId, repo?.id, roomId],
+  )
+
+  const emitRefEvent = useCallback(
+    (ref: string, path?: string | null) => {
+      const activeRepoId = repo?.id
+      if (!activeRepoId) return
+      const emitKey = `${panelId}|${activeRepoId}|${path ?? ""}|${ref}`
+      if (lastRefEmitRef.current === emitKey) return
+      lastRefEmitRef.current = emitKey
+
+      void RoomService.emitRepoEvent(roomId, {
+        action: "ref",
+        panel_id: panelId,
+        path,
+        ref,
+        repo_id: activeRepoId,
+      }).catch((error) => {
+        console.error("Failed to emit repo ref event", error)
+      })
+    },
+    [panelId, repo?.id, roomId],
+  )
+
+  const handleSetPanelSelection = useCallback(
+    (selectionKey: string, path: string | null) => {
+      setPanelSelection(selectionKey, path)
+      emitSelectionEvent(selectionKey, path)
+    },
+    [emitSelectionEvent, setPanelSelection],
+  )
+
+  const handleFileOpened = useCallback(
+    ({ path, ref }: { path: string; ref: string }) => {
+      emitOpenEvent(path, ref)
+    },
+    [emitOpenEvent],
+  )
+
+  const handleRefObserved = useCallback(
+    ({ ref, path }: { ref: string; path?: string | null }) => {
+      emitRefEvent(ref, path)
+    },
+    [emitRefEvent],
+  )
+
   if (!repoId) {
     return (
       <PanelContainer title="Repository Panel">
@@ -227,89 +316,6 @@ function RoomRepoPanel({
       </PanelContainer>
     )
   }
-
-  const lastSelectionEmitRef = useRef<string | null>(null)
-  const lastOpenEmitRef = useRef<string | null>(null)
-  const lastRefEmitRef = useRef<string | null>(null)
-
-  const emitSelectionEvent = useCallback(
-    (selectionKey: string, path: string | null) => {
-      const emitKey = `${panelId}|${repo.id}|${selectionKey}|${path ?? ""}`
-      if (lastSelectionEmitRef.current === emitKey) return
-      lastSelectionEmitRef.current = emitKey
-
-      void RoomService.emitRepoEvent(roomId, {
-        action: "selection",
-        panel_id: panelId,
-        selection_key: selectionKey,
-        path,
-        repo_id: repo.id,
-      }).catch((error) => {
-        console.error("Failed to emit repo selection event", error)
-      })
-    },
-    [panelId, repo.id, roomId],
-  )
-
-  const emitOpenEvent = useCallback(
-    (path: string, ref: string) => {
-      const emitKey = `${panelId}|${repo.id}|${path}|${ref}`
-      if (lastOpenEmitRef.current === emitKey) return
-      lastOpenEmitRef.current = emitKey
-
-      void RoomService.emitRepoEvent(roomId, {
-        action: "open",
-        panel_id: panelId,
-        path,
-        ref,
-        repo_id: repo.id,
-      }).catch((error) => {
-        console.error("Failed to emit repo open event", error)
-      })
-    },
-    [panelId, repo.id, roomId],
-  )
-
-  const emitRefEvent = useCallback(
-    (ref: string, path?: string | null) => {
-      const emitKey = `${panelId}|${repo.id}|${path ?? ""}|${ref}`
-      if (lastRefEmitRef.current === emitKey) return
-      lastRefEmitRef.current = emitKey
-
-      void RoomService.emitRepoEvent(roomId, {
-        action: "ref",
-        panel_id: panelId,
-        path,
-        ref,
-        repo_id: repo.id,
-      }).catch((error) => {
-        console.error("Failed to emit repo ref event", error)
-      })
-    },
-    [panelId, repo.id, roomId],
-  )
-
-  const handleSetPanelSelection = useCallback(
-    (selectionKey: string, path: string | null) => {
-      setPanelSelection(selectionKey, path)
-      emitSelectionEvent(selectionKey, path)
-    },
-    [emitSelectionEvent, setPanelSelection],
-  )
-
-  const handleFileOpened = useCallback(
-    ({ path, ref }: { path: string; ref: string }) => {
-      emitOpenEvent(path, ref)
-    },
-    [emitOpenEvent],
-  )
-
-  const handleRefObserved = useCallback(
-    ({ ref, path }: { ref: string; path?: string | null }) => {
-      emitRefEvent(ref, path)
-    },
-    [emitRefEvent],
-  )
 
   return renderRepoPanel(
     {
@@ -461,6 +467,14 @@ function RoomView() {
       navigate({ to: "/rooms" })
     }
   }, [roomError, navigate])
+
+  const canManage = currentUserRole === "owner"
+  const {
+    repoContextFiles,
+    getFileRoomContextState,
+    toggleFileRoomContext,
+    removeRepoContextFile,
+  } = useRoomRepoContext(roomId, canManage)
 
   // Convert data for components
   const roomParticipants: Participant[] = participants.map(toParticipant)
@@ -619,14 +633,6 @@ function RoomView() {
       </div>
     )
   }
-
-  const canManage = currentUserRole === "owner"
-  const {
-    repoContextFiles,
-    getFileRoomContextState,
-    toggleFileRoomContext,
-    removeRepoContextFile,
-  } = useRoomRepoContext(roomId, canManage)
 
   // ==========================================================================
   // Panel component registry - maps panel kinds to render functions

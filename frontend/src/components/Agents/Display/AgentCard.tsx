@@ -21,7 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { useProviderTypeName } from "../hooks"
 import { presentationToStyle, resolveAgentPresentation } from "../resolve"
 import type { AgentPresentation, UserAgentConfigData } from "../types"
 import { isAgentScope, isAgentTypeKey, isParticipationMode } from "../types"
@@ -163,8 +162,7 @@ function AgentCardFull({
   AgentCardProps,
   "href" | "isSelected" | "onClick" | "action" | "className"
 >) {
-  const providerTypeQuery = useProviderTypeName(agent.model_name)
-  const providerType = providerTypeQuery.data
+  const providerType = agent.provider_type
 
   const displayModel = agent.model_name
 
@@ -335,8 +333,7 @@ function AgentCardCompact({
   resolved: AgentPresentation
   presentationEnabled: boolean
 } & Pick<AgentCardProps, "isSelected" | "onClick" | "action" | "className">) {
-  const providerTypeQuery = useProviderTypeName(agent.model_name)
-  const providerType = providerTypeQuery.data
+  const providerType = agent.provider_type
   const scope = isAgentScope(agent.scope) ? agent.scope : undefined
   const participationMode = isParticipationMode(agent.participation_mode)
     ? agent.participation_mode

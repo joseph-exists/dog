@@ -97,8 +97,7 @@ def build_adapter_config(provider: UserAccessProvider) -> AdapterConfig:
     Raises:
         ValueError: If API key cannot be decrypted
     """
-    # Decrypt the API key
-    # Note: The model stores encrypted key in api_key_encrypted
+    # Decrypt the API key if it is stored as a Fernet token.
     api_key = ""
     if hasattr(provider, "api_key_encrypted") and provider.api_key_encrypted:
         try:
@@ -107,8 +106,16 @@ def build_adapter_config(provider: UserAccessProvider) -> AdapterConfig:
             logger.error(f"Failed to decrypt API key for provider {provider.id}: {e}")
             raise ValueError("Failed to decrypt API key") from e
     elif hasattr(provider, "api_key") and provider.api_key:
-        # Fallback for when api_key is already decrypted (e.g., in tests)
-        api_key = provider.api_key
+        raw_api_key = str(provider.api_key).strip()
+        if raw_api_key.startswith("gAAAA"):
+            try:
+                api_key = decrypt_api_key(raw_api_key)
+            except Exception as e:
+                logger.error(f"Failed to decrypt API key for provider {provider.id}: {e}")
+                raise ValueError("Failed to decrypt API key") from e
+        else:
+            # Fallback for plaintext keys (e.g. tests/legacy rows)
+            api_key = raw_api_key
 
     return AdapterConfig(
         api_key=api_key,

@@ -19,7 +19,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ChevronDownIcon, Loader2 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 
 import { z } from "zod/v4"
@@ -57,6 +57,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useAvailableThemes } from "@/hooks/useThemeRegistry"
+import useAuth from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { ProviderModelSelector } from "./FormSelectors/ProviderModelSelector"
 
@@ -238,6 +239,66 @@ function safeJsonParse(val: string | null): Record<string, unknown> | null {
   }
 }
 
+function readRepoToolFlags(toolConfigRaw: string | null): {
+  readRepoFile: boolean
+  writeRepoFiles: boolean
+} {
+  const parsed = safeJsonParse(toolConfigRaw)
+  if (!parsed) return { readRepoFile: false, writeRepoFiles: false }
+
+  const enabledTools = Array.isArray(parsed.enabled_tools)
+    ? parsed.enabled_tools
+    : []
+
+  const readRepoFile =
+    parsed.read_repo_file === true ||
+    enabledTools.includes("read_repo_file")
+  const writeRepoFiles =
+    parsed.write_repo_files === true ||
+    enabledTools.includes("write_repo_files")
+
+  return { readRepoFile, writeRepoFiles }
+}
+
+function updateRepoToolFlags(
+  toolConfigRaw: string | null,
+  updates: Partial<{ readRepoFile: boolean; writeRepoFiles: boolean }>,
+): string {
+  const parsed = safeJsonParse(toolConfigRaw) ?? {}
+  const current = readRepoToolFlags(toolConfigRaw)
+  const next = {
+    readRepoFile: updates.readRepoFile ?? current.readRepoFile,
+    writeRepoFiles: updates.writeRepoFiles ?? current.writeRepoFiles,
+  }
+
+  const enabledToolsSet = new Set<string>(
+    Array.isArray(parsed.enabled_tools)
+      ? parsed.enabled_tools
+          .map((v) => (typeof v === "string" ? v.trim() : ""))
+          .filter(Boolean)
+      : [],
+  )
+
+  if (next.readRepoFile) enabledToolsSet.add("read_repo_file")
+  else enabledToolsSet.delete("read_repo_file")
+
+  if (next.writeRepoFiles) enabledToolsSet.add("write_repo_files")
+  else enabledToolsSet.delete("write_repo_files")
+
+  const nextConfig: Record<string, unknown> = {
+    ...parsed,
+    read_repo_file: next.readRepoFile,
+    write_repo_files: next.writeRepoFiles,
+  }
+  if (enabledToolsSet.size > 0) {
+    nextConfig.enabled_tools = Array.from(enabledToolsSet).sort()
+  } else {
+    delete nextConfig.enabled_tools
+  }
+
+  return JSON.stringify(nextConfig, null, 2)
+}
+
 // ── Presentation Section ──────────────────────────────────────────────────
 
 interface PresentationSectionProps {
@@ -355,8 +416,12 @@ export default function AgentForm({
   submitLabel,
   className,
 }: AgentFormProps) {
+  const { user } = useAuth()
   const isEdit = mode === "edit"
   const dv = defaultValues
+  const scopeOptions = user?.is_superuser
+    ? SCOPE_OPTIONS
+    : SCOPE_OPTIONS.filter((option) => option.value === "personal")
 
   // ── Form Setup ──────────────────────────────────────────────────────────
 
@@ -498,6 +563,11 @@ export default function AgentForm({
   const systemPrompt = form.watch("system_prompt")
   const customSystemPrompt = form.watch("custom_system_prompt")
   const instructions = form.watch("instructions")
+  const toolConfigRaw = form.watch("tool_config_raw")
+  const repoToolFlags = useMemo(
+    () => readRepoToolFlags(toolConfigRaw),
+    [toolConfigRaw],
+  )
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -805,7 +875,7 @@ export default function AgentForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {SCOPE_OPTIONS.map((opt) => (
+                      {scopeOptions.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           <div className="flex flex-col">
                             <span>{opt.label}</span>
@@ -962,6 +1032,54 @@ export default function AgentForm({
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-sm">Repo Read Tool</FormLabel>
+                  <FormDescription className="text-xs">
+                    Enables <code>read_repo_file</code>
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={repoToolFlags.readRepoFile}
+                    onCheckedChange={(checked) => {
+                      form.setValue(
+                        "tool_config_raw",
+                        updateRepoToolFlags(toolConfigRaw, {
+                          readRepoFile: checked,
+                        }),
+                        { shouldValidate: true, shouldDirty: true },
+                      )
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+
+              <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-sm">Repo Write Tool</FormLabel>
+                  <FormDescription className="text-xs">
+                    Enables <code>write_repo_files</code>
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={repoToolFlags.writeRepoFiles}
+                    onCheckedChange={(checked) => {
+                      form.setValue(
+                        "tool_config_raw",
+                        updateRepoToolFlags(toolConfigRaw, {
+                          writeRepoFiles: checked,
+                        }),
+                        { shouldValidate: true, shouldDirty: true },
+                      )
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            </div>
           </div>
         </fieldset>
 

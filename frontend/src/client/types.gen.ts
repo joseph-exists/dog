@@ -208,6 +208,12 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
+export type CloneAgentRequest = {
+    name?: (string | null);
+    slug?: (string | null);
+    retain_user_access_provider?: boolean;
+};
+
 export type ContentFormat = 'text' | 'html' | 'markdown' | 'json' | 'yaml' | 'mdx' | 'code' | 'svg' | 'image' | 'audio' | 'video' | 'empty' | 'unknown' | 'test';
 
 /**
@@ -1295,6 +1301,29 @@ export type DetailedTestResult = {
      * Connection latency in milliseconds
      */
     latency_ms?: (number | null);
+};
+
+/**
+ * Search result for a discoverable published user persona.
+ */
+export type DiscoveredUserPersonaPublic = {
+    id: string;
+    user_id: string;
+    persona_id: string;
+    name: string;
+    nickname?: (string | null);
+    short_bio?: (string | null);
+    publication_state: UserPersonaPublicationState;
+    owner_display_name: string;
+    is_primary?: boolean;
+};
+
+/**
+ * Collection response for discoverable user persona search.
+ */
+export type DiscoveredUserPersonasPublic = {
+    data: Array<DiscoveredUserPersonaPublic>;
+    count: number;
 };
 
 /**
@@ -2651,6 +2680,19 @@ export type ResolvedThemeResponse = {
      * Which binding context_key matched (null for system_default/none)
      */
     context_key_matched?: (string | null);
+};
+
+/**
+ * Resolved visitor audience context for a user page.
+ */
+export type ResolvedUserPageAudiencePublic = {
+    scope: AudienceScope;
+    is_owner?: boolean;
+    matched_user_ids?: Array<(string)>;
+    matched_user_persona_ids?: Array<(string)>;
+    matched_group_ids?: Array<(string)>;
+    matched_persona_group_ids?: Array<(string)>;
+    matched_audience_keys?: Array<(string)>;
 };
 
 export type RoomAgentSettingsBundle = {
@@ -4568,6 +4610,23 @@ export type UserRegister = {
     full_name?: (string | null);
 };
 
+export type UserRepoCommitRequest = {
+    branch?: string;
+    mutations?: Array<UserRepoFileMutationInput>;
+    commit_message: string;
+    expected_head_sha: string;
+};
+
+export type UserRepoCommitResponse = {
+    repo_id: string;
+    branch: string;
+    previous_head_sha: string;
+    new_head_sha: string;
+    commit_message: string;
+    committed_at: string;
+    changed_paths?: Array<(string)>;
+};
+
 export type UserRepoFileContent = {
     path: string;
     ref: string;
@@ -4579,6 +4638,13 @@ export type UserRepoFileContent = {
     is_truncated?: boolean;
     truncation_reason?: (string | null);
     is_unsupported_preview?: boolean;
+};
+
+export type UserRepoFileMutationInput = {
+    path: string;
+    operation: string;
+    content?: (string | null);
+    encoding?: string;
 };
 
 export type UserRepoImportStatus = 'pending' | 'importing' | 'ready' | 'failed';
@@ -4840,6 +4906,13 @@ export type AgentsListAvailableAgentsData = {
 export type AgentsListAvailableAgentsResponse = (UserAgentConfigsPublic);
 
 export type AgentsGenerateAgentSlugResponse = (GeneratedSlugResponse);
+
+export type AgentsCloneAgentData = {
+    agentId: string;
+    requestBody: CloneAgentRequest;
+};
+
+export type AgentsCloneAgentResponse = (UserAgentConfigPublic);
 
 export type AgentsGetAgentData = {
     agentId: string;
@@ -5407,6 +5480,13 @@ export type PagesGetPageLayoutData = {
 };
 
 export type PagesGetPageLayoutResponse = ((PagePublic | null));
+
+export type PagesResolvePageAudienceData = {
+    entityId: string;
+    entityType: string;
+};
+
+export type PagesResolvePageAudienceResponse = (ResolvedUserPageAudiencePublic);
 
 export type PagesUpsertPageLayoutData = {
     entityId: string;
@@ -6507,6 +6587,14 @@ export type UserPanelsUpdateMyPanelDefaultsData = {
 
 export type UserPanelsUpdateMyPanelDefaultsResponse = (UserPanelDefaultsPublic);
 
+export type UserPersonasSearchDiscoverableUserPersonasData = {
+    excludeCurrentUser?: boolean;
+    limit?: number;
+    q: string;
+};
+
+export type UserPersonasSearchDiscoverableUserPersonasResponse = (DiscoveredUserPersonasPublic);
+
 export type UserPersonasReadUserPersonasData = {
     limit?: number;
     skip?: number;
@@ -6613,6 +6701,13 @@ export type UserReposGetUserRepoReadmeData = {
 };
 
 export type UserReposGetUserRepoReadmeResponse = (UserRepoReadmeContent);
+
+export type UserReposCommitUserRepoChangesData = {
+    repoId: string;
+    requestBody: UserRepoCommitRequest;
+};
+
+export type UserReposCommitUserRepoChangesResponse = (UserRepoCommitResponse);
 
 export type UsersReadUsersData = {
     limit?: number;

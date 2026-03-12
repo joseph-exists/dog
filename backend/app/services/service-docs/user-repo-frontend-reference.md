@@ -63,6 +63,85 @@ Returns the current user's repos only.
 
 Returns a single repo record if the current user owns it or is a superuser.
 
+### Commit File Changes
+
+`POST /api/v1/user-repos/{repo_id}/commits`
+
+Request body:
+
+```json
+{
+  "branch": "main",
+  "mutations": [
+    {
+      "path": "README.md",
+      "operation": "upsert",
+      "content": "# Hello\n",
+      "encoding": "utf-8"
+    }
+  ],
+  "commit_message": "Update README",
+  "expected_head_sha": "abc123def456"
+}
+```
+
+Response: **`200 OK`**
+
+```json
+{
+  "repo_id": "uuid",
+  "branch": "main",
+  "previous_head_sha": "abc123def456",
+  "new_head_sha": "def456abc123",
+  "commit_message": "Update README",
+  "committed_at": "2026-03-11T12:34:56Z",
+  "changed_paths": ["README.md"]
+}
+```
+
+Behavior:
+
+- Applies one or more file mutations as a single commit.
+- `expected_head_sha` is required for all writes.
+- Writes are currently limited to the repo default branch, currently `main`.
+- Supported mutation operations in v1:
+  - `upsert`
+  - `delete`
+- The backend owns git execution, commit creation, and push back to Gogs.
+
+Error responses to handle:
+
+- `409` with `error_code = "HEAD_CONFLICT"`
+  - The repo moved since the frontend last loaded HEAD.
+- `409` with `error_code = "REPO_NOT_READY"`
+  - Repo exists but is not yet writable.
+- `422` with `error_code = "INVALID_WRITE_REQUEST"`
+  - Invalid path, unsupported mutation shape, missing required fields, or no-op write request.
+- `400` with `error_code = "BRANCH_NOT_WRITABLE"`
+  - Requested branch is not supported for writes.
+- `404`
+  - Repo not found or not writable by current user.
+- `503` with `error_code = "WRITE_FAILED"`
+  - Backend could not complete git clone/commit/push.
+
+### Frontend Note: `expected_head_sha`
+
+The write route requires the frontend to send the repo HEAD it believes it is editing.
+
+Recommended frontend behavior:
+
+- read the current HEAD SHA from `GET /api/v1/user-repos/{repo_id}/tree`
+- use `summary.latest_commit_sha` as `expected_head_sha` for subsequent write requests
+- if the write returns `409` with `HEAD_CONFLICT`, refresh repo state before allowing retry
+- after a successful write, replace local HEAD state with `new_head_sha`
+
+Important implications:
+
+- do not cache `expected_head_sha` indefinitely across long-lived editing sessions
+- refresh HEAD after any successful commit
+- refresh HEAD after any failed commit with `HEAD_CONFLICT`
+- if the UI allows multiple editor panels for the same repo, they should share or invalidate HEAD state together
+
 ## Current Frontend State
 
 The frontend now has more than list/detail/import-status UX.

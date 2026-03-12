@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     USER_REPO_GOGS_ORG: str = "dog"
     USER_REPO_GOGS_TIMEOUT_SECONDS: float = 10.0
     USER_REPO_DEFAULT_BRANCH: str = "main"
+    USER_REPO_WRITES_PATH: str = "/tmp/user-repo-writes"
+    USER_REPO_GIT_USERNAME: str | None = None
+    USER_REPO_GIT_PASSWORD: str | None = None
+    AGENT_REPO_TOOLS_ENABLED: bool = True
 
     @computed_field  # type: ignore[prop-decorator]
     @property

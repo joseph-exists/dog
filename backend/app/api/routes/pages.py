@@ -9,7 +9,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
-from app.api.deps import AsyncSessionDep, AsyncSessionTransactionDep, CurrentUser
+from app.api.deps import (
+    AsyncSessionDep,
+    AsyncSessionTransactionDep,
+    CurrentUser,
+    OptionalUser,
+)
 from app.crud_pages import (
     create_page_layout,
     delete_page_layout,
@@ -18,8 +23,14 @@ from app.crud_pages import (
     search_pages,
     update_page_layout,
 )
-from app.models import AccessGrantRole, PageLayoutUpdate, PagePublic, PagesPublic
-from app.services.access_control import require_access
+from app.models import (
+    AccessGrantRole,
+    PageLayoutUpdate,
+    PagePublic,
+    PagesPublic,
+    ResolvedUserPageAudiencePublic,
+)
+from app.services.access_control import require_access, resolve_user_page_audience
 
 router = APIRouter(prefix="/pages", tags=["pages"])
 
@@ -85,10 +96,12 @@ async def get_page_layout(
     entity_type: str,
     entity_id: str,
     session: AsyncSessionDep,
-    current_user: CurrentUser,
+    current_user: OptionalUser,
 ) -> Any:
     """Get the persisted page layout for an entity."""
     if entity_type == "project":
+        if current_user is None:
+            raise HTTPException(status_code=401, detail="Authentication required")
         await _require_project_page_access(
             session=session,
             current_user=current_user,
@@ -96,6 +109,31 @@ async def get_page_layout(
             minimum_role=AccessGrantRole.viewer,
         )
     return await get_page_by_entity(session, entity_type, entity_id)
+
+
+@router.get(
+    "/{entity_type}/{entity_id}/audience",
+    response_model=ResolvedUserPageAudiencePublic,
+)
+async def resolve_page_audience(
+    *,
+    entity_type: str,
+    entity_id: str,
+    session: AsyncSessionDep,
+    current_user: OptionalUser,
+) -> Any:
+    if entity_type != "user":
+        raise HTTPException(status_code=400, detail="Audience resolution is only supported for user pages")
+
+    page = await get_page_by_entity(session, entity_type, entity_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    return await resolve_user_page_audience(
+        session,
+        page=page,
+        viewer=current_user,
+    )
 
 
 @router.post("/{entity_type}/{entity_id}/layout", response_model=PagePublic)

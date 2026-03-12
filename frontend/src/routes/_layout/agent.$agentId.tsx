@@ -33,6 +33,7 @@ import {
   AgentScopeBadge,
   AgentStatusBadge,
 } from "@/components/Agents/Display/AgentBadge"
+import useAuth from "@/hooks/useAuth"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -76,6 +77,7 @@ function AgentDetailSkeleton() {
 }
 
 function AgentDetailContent({ agentId }: { agentId: string }) {
+  const { user } = useAuth()
   const navigate = useNavigate()
 
   const {
@@ -111,6 +113,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
 
   const isPersonal = agent.scope === "personal"
   const isSystem = agent.scope === "system"
+  const canEditAgent = Boolean(isPersonal || user?.is_superuser)
 
   return (
     <div className="space-y-6">
@@ -175,7 +178,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
               }
             />
           )}
-          {isPersonal && <AgentDetailDialog agentId={agent.id} />}
+          {canEditAgent && <AgentDetailDialog agentId={agent.id} />}
         </div>
       </div>
 
@@ -191,7 +194,7 @@ function AgentDetailContent({ agentId }: { agentId: string }) {
             <SettingsIcon className="size-4" />
             My Settings
           </TabsTrigger>
-          {isPersonal && (
+          {canEditAgent && (
             <TabsTrigger value="settings">
               <SettingsIcon className="size-4" />
               Agent Settings

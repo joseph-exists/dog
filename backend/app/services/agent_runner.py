@@ -76,12 +76,14 @@ def _make_agent_deps(
     room_id: uuid.UUID,
     agent_slug: str,
     a2a_depth: int,
+    acting_user_id: uuid.UUID | None,
 ) -> AgentDeps:
     return AgentDeps(
         session=session,
         room_id=room_id,
         current_agent_slug=agent_slug,
         a2a_depth=a2a_depth,
+        acting_user_id=acting_user_id,
     )
 
 

@@ -39,6 +39,7 @@ function toContentSnapshot(
     presentations: presentations.map((presentation) => ({
       ...presentation,
       userPersonaId: presentation.userPersonaId ?? null,
+      audienceKey: presentation.audienceKey ?? null,
     })),
   }
 }
@@ -64,8 +65,9 @@ export function AudiencePresentationBlock({
       getActiveAudiencePresentation(
         presentations,
         viewModel?.selectedAudienceScope ?? "public",
+        viewModel?.resolvedAudienceKeys ?? [],
       ),
-    [presentations, viewModel?.selectedAudienceScope],
+    [presentations, viewModel?.selectedAudienceScope, viewModel?.resolvedAudienceKeys],
   )
 
   const renderCards = viewModel?.isOwner
@@ -95,10 +97,12 @@ export function AudiencePresentationBlock({
             presentationId: draft.id,
             requestBody: {
               audience_scope: draft.audienceScope,
+              audience_key: draft.audienceKey,
               audience_label: draft.audienceLabel,
               headline: draft.headline,
               framing_text: draft.framingText,
               visible_work_ids_json: draft.visibleWorkIds,
+              publication_state: draft.publicationState,
               relation_call_to_action: draft.relationCallToAction,
             },
           })
@@ -106,10 +110,12 @@ export function AudiencePresentationBlock({
             id: userPersonaId,
             requestBody: {
               audience_scope: draft.audienceScope,
+              audience_key: draft.audienceKey,
               audience_label: draft.audienceLabel,
               headline: draft.headline,
               framing_text: draft.framingText,
               visible_work_ids_json: draft.visibleWorkIds,
+              publication_state: draft.publicationState,
               relation_call_to_action: draft.relationCallToAction,
             },
           })
@@ -119,10 +125,12 @@ export function AudiencePresentationBlock({
         userPersonaId,
         personaId: draft.personaId,
         audienceScope: persistedPresentation.audience_scope ?? draft.audienceScope,
+        audienceKey: persistedPresentation.audience_key ?? draft.audienceKey ?? null,
         audienceLabel: persistedPresentation.audience_label,
         headline: persistedPresentation.headline,
         framingText: persistedPresentation.framing_text ?? null,
         visibleWorkIds: persistedPresentation.visible_work_ids_json ?? [],
+        publicationState: persistedPresentation.publication_state ?? draft.publicationState,
         relationCallToAction:
           persistedPresentation.relation_call_to_action === "request_contact" ||
           persistedPresentation.relation_call_to_action ===
@@ -148,6 +156,9 @@ export function AudiencePresentationBlock({
 
       await queryClient.invalidateQueries({
         queryKey: ["user-persona-page-data", entityId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["user-persona-authoring-bundle", entityId],
       })
 
       showSuccessToast(
@@ -203,6 +214,12 @@ export function AudiencePresentationBlock({
                       <div className="flex flex-wrap gap-2">
                         <Badge variant="outline">
                           {presentation.audienceLabel}
+                        </Badge>
+                        <Badge variant="outline">{presentation.publicationState}</Badge>
+                        <Badge variant="secondary">
+                          {presentation.publicationState === "published"
+                            ? "Included in visitor snapshot"
+                            : "Draft only"}
                         </Badge>
                         {persona && (
                           <Badge>{persona.nickname || persona.name}</Badge>
