@@ -41,6 +41,7 @@ import AgentQuickAdd from "@/components/Agents/RoomManagers/AgentQuickAdd"
 
 // PRI0 yuck we have to review Rooms
 import AgentToggle from "@/components/Room/Dialogs/AgentToggle"
+import UserQuickAdd from "@/components/Room/Dialogs/UserQuickAdd"
 
 import RemoveParticipantButton from "@/components/Room/Dialogs/RemoveParticipantButton"
 import type { ParticipantViewModel } from "@/services/roomService"
@@ -57,6 +58,8 @@ interface ParticipantPanelProps {
   existingAgentIds: string[]
   /** Add agent callback */
   onAddAgent: (agent: UserAgentConfigData) => Promise<void>
+  /** Add user callback */
+  onAddUser?: (userId: string) => Promise<void>
   /** Remove agent callback */
   onRemoveAgent: (agent: RoomAgentData) => Promise<void>
   /** Toggle agent activate/deactivate callback */
@@ -86,6 +89,7 @@ export function ParticipantPanel({
   availableAgents,
   existingAgentIds,
   onAddAgent,
+  onAddUser,
   onRemoveAgent,
   onToggleAgent,
   onRemoveParticipant,
@@ -103,12 +107,15 @@ export function ParticipantPanel({
   }
 
   const headerActions = canManage ? (
-    <AgentQuickAdd
-      availableAgents={availableAgents}
-      existingAgentIds={existingAgentIds}
-      onAdd={onAddAgent}
-      buttonSize="sm"
-    />
+    <div className="flex items-center gap-2">
+      <AgentQuickAdd
+        availableAgents={availableAgents}
+        existingAgentIds={existingAgentIds}
+        onAdd={onAddAgent}
+        buttonSize="sm"
+      />
+      {onAddUser ? <UserQuickAdd onAdd={onAddUser} buttonSize="sm" /> : null}
+    </div>
   ) : undefined
 
   const totalCount = activeUsers.length + roomAgents.length

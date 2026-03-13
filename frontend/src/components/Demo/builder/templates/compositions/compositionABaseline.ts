@@ -61,12 +61,12 @@ export function buildCompositionABaselineTemplate(context: TemplateBuilderContex
       id: "instructions-footer",
       region: "footer",
       order: 1,
-      title: "Instructions",
+      title: "Demo Footer",
       visibility: "visible",
       content_json: {
         format: "markdown",
         value:
-          "### Test Steps\n1. Run story\n2. Send chat message\n3. Verify instructions remain visible.",
+          "### Just an Extra Block for Funsies",
         metadata: {
           variant: "card",
         },

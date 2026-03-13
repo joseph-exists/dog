@@ -65,6 +65,7 @@ export interface DemoPanelRendererContext {
   availableAgents: UserAgentConfigPublic[]
   existingAgentIds: string[]
   onAddAgent: (agent: { id: string; name?: string | null }) => Promise<void>
+  onAddUser: (userId: string) => Promise<void>
   onRemoveAgent: (agent: { id: string; name?: string | null }) => Promise<void>
   onToggleAgent: (agentId: string, activate: boolean) => Promise<void>
   onRemoveUser: (participantId: string) => Promise<void>
@@ -424,6 +425,7 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
       availableAgents={ctx.availableAgents}
       existingAgentIds={ctx.existingAgentIds}
       onAddAgent={ctx.onAddAgent}
+      onAddUser={ctx.onAddUser}
       onRemoveAgent={ctx.onRemoveAgent}
       onToggleAgent={ctx.onToggleAgent}
       onRemoveParticipant={ctx.onRemoveUser}

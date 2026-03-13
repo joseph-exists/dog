@@ -173,6 +173,7 @@ export function DemoBuilderPreview({
       availableAgents: [],
       existingAgentIds: [],
       onAddAgent: async () => {},
+      onAddUser: async () => {},
       onRemoveAgent: async () => {},
       onToggleAgent: async () => {},
       onRemoveUser: async () => {},

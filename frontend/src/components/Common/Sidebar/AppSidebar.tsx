@@ -1,12 +1,10 @@
 // src/components/Common/Sidebar/AppSidebar.tsx
 
-import { IconRobotFace } from "@tabler/icons-react"
 import { useRouterState } from "@tanstack/react-router"
 import {
   BookHeart,
   BookOpen,
   Bot,
-  Briefcase,
   Crown,
   FolderKanban,
   FolderGit2,
@@ -18,8 +16,9 @@ import {
   User2,
   Users,
   GrapeIcon,
-  MonitorSpeaker,
   MoonStar,
+  BirdhouseIcon,
+  CircuitBoard,
 } from "lucide-react"
 import { Logo } from "@/components/Common/Logo"
 import { Sidebar } from "@/components/ui/sidebar"
@@ -52,22 +51,22 @@ import type { NavItem, NavSection, SidebarUser } from "./types"
 
 const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", title: "Dashboard", path: "/", icon: Home },
-  { id: "stories", title: "Stories", path: "/stories", icon: BookOpen },
-  { id: "story", title: "Story", path: "/story", icon: BookHeart },
+  { id: "stories", title: "Story Desk", path: "/stories", icon: BookOpen },
+  { id: "story", title: "Library", path: "/story", icon: BookHeart },
   { id: "rooms", title: "Rooms", path: "/rooms", icon: MessageSquare },
   { id: "agents", title: "Agents", path: "/agents", icon: Bot },
   { id: "projects", title: "Projects", path: "/projects", icon: FolderKanban },
-  { id: "repos", title: "Repos", path: "/repos", icon: FolderGit2 },
-  { id: "personas", title: "Personas", path: "/personas", icon: Smile },
-  { id: "items", title: "Items", path: "/items", icon: Briefcase },
+  { id: "repos", title: "Repo Library", path: "/repos", icon: FolderGit2 },
+  { id: "personas", title: "Identity Manager", path: "/personas", icon: Smile },
+  // { id: "items", title: "Items", path: "/items", icon: Briefcase },
   {
     id: "chatster",
     title: "Debug-Chatster",
     path: "/chatster",
-    icon: IconRobotFace,
+    icon: BirdhouseIcon,
   },
   { id: "prompt-builder", icon: GrapeIcon, title: "prompt builder", path: "/prompt-builder"},
-  { id: "demo-builder", icon: MonitorSpeaker, title: "demo builder", path: "/demo-builder"},
+  { id: "demo-builder", icon:CircuitBoard, title: "demo builder", path: "/demo-builder"},
   { id: "demo-library", icon: MoonStar, title: "demo library", path: "/demos"},
 ]
 

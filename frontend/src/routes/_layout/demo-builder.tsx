@@ -430,6 +430,9 @@ function DemoBuilderPage() {
   const [selectedDemoConfigId, setSelectedDemoConfigId] = useState<string>("")
   const [newSlug, setNewSlug] = useState("")
   const [newTitle, setNewTitle] = useState("")
+  const [newDemoScope, setNewDemoScope] = useState<"personal" | "shared">(
+    "personal",
+  )
   const [isSlugLoading, setIsSlugLoading] = useState(false)
   const slugFetched = useRef(false)
   const [selectedTemplateId, setSelectedTemplateId] =
@@ -670,6 +673,7 @@ function DemoBuilderPage() {
   interface CreateDemoMutationVars {
     slug?: string
     title?: string
+    scope?: "personal" | "shared"
     suppressFeedback?: boolean
   }
 
@@ -684,7 +688,7 @@ function DemoBuilderPage() {
         requestBody: {
           slug,
           title,
-          scope: "personal",
+          scope: variables?.scope ?? newDemoScope,
           is_active: true,
           default_auto_respond: true,
           metadata_json: {
@@ -1025,6 +1029,7 @@ function DemoBuilderPage() {
       const created = await createDemoMutation.mutateAsync({
         slug,
         title: slug,
+        scope: newDemoScope,
         suppressFeedback: true,
       })
 
@@ -1368,6 +1373,28 @@ function DemoBuilderPage() {
                 value={newTitle}
                 onChange={(event) => setNewTitle(event.target.value)}
               />
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  Access Scope
+                </label>
+                <Select
+                  value={newDemoScope}
+                  onValueChange={(value) =>
+                    setNewDemoScope(value as "personal" | "shared")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select scope..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="shared">Shared</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Shared demos are visible to all logged-in users.
+                </p>
+              </div>
               <Button
                 type="button"
                 onClick={() => createDemoMutation.mutate({})}

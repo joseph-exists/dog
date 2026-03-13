@@ -190,6 +190,94 @@ def test_project_grant_inherits_to_attached_story(
     assert read.status_code == 200, read.text
 
 
+def test_project_shared_demo_session_resolves_by_slug(
+    client: TestClient,
+    db: Session,
+    normal_user_token_headers: dict[str, str],
+) -> None:
+    other_email = "phase0.project.demo.member@example.com"
+    other_headers = authentication_token_from_email(client=client, email=other_email, db=db)
+    other_user = db.exec(select(User).where(User.email == other_email)).first()
+    assert other_user is not None
+
+    # Owner creates a personal demo and backing session.
+    slug = f"phase0-project-demo-{uuid.uuid4().hex[:10]}"
+    config_resp = client.post(
+        f"{settings.API_V1_STR}/demos/",
+        headers=normal_user_token_headers,
+        json={
+            "slug": slug,
+            "title": "Project Shared Demo",
+            "scope": "personal",
+        },
+    )
+    assert config_resp.status_code == 201, config_resp.text
+    demo_config_id = config_resp.json()["id"]
+
+    owner_session_resp = client.post(
+        f"{settings.API_V1_STR}/demos/sessions",
+        headers=normal_user_token_headers,
+        json={"demo_config_id": demo_config_id},
+    )
+    assert owner_session_resp.status_code == 201, owner_session_resp.text
+    owner_demo_session_id = owner_session_resp.json()["id"]
+
+    # Attach the demo session to a project and grant project editor access.
+    project_resp = client.post(
+        f"{settings.API_V1_STR}/projects/",
+        headers=normal_user_token_headers,
+        json={"name": f"Phase0 Demo Project {uuid.uuid4().hex[:8]}"},
+    )
+    assert project_resp.status_code == 201, project_resp.text
+    project_id = project_resp.json()["id"]
+
+    attach = client.post(
+        f"{settings.API_V1_STR}/projects/{project_id}/resources",
+        headers=normal_user_token_headers,
+        json={"resource_type": "demo_session", "resource_id": owner_demo_session_id},
+    )
+    assert attach.status_code == 201, attach.text
+
+    grant = client.post(
+        f"{settings.API_V1_STR}/access/project/{project_id}",
+        headers=normal_user_token_headers,
+        json={
+            "subject_type": "user",
+            "subject_id": str(other_user.id),
+            "role": "editor",
+        },
+    )
+    assert grant.status_code == 200, grant.text
+
+    # Collaborator should resolve by slug via project-derived demo_session access.
+    resolved = client.post(
+        f"{settings.API_V1_STR}/demos/{slug}/session",
+        headers=other_headers,
+    )
+    assert resolved.status_code == 200, resolved.text
+    payload = resolved.json()
+    assert payload["created"] is False
+    assert payload["demo_session_id"] == owner_demo_session_id
+
+    # Collaborator can initialize runtime via editor access inherited from project.
+    personas = client.get(
+        f"{settings.API_V1_STR}/user-personas/?limit=1",
+        headers=other_headers,
+    )
+    assert personas.status_code == 200, personas.text
+    persona_rows = personas.json().get("data", [])
+    assert persona_rows
+    user_persona_id = persona_rows[0]["id"]
+
+    room_id = payload["room"]["room_id"]
+    runtime_start = client.put(
+        f"{settings.API_V1_STR}/rooms/{room_id}/runtime",
+        headers=other_headers,
+        json={"user_persona_id": user_persona_id},
+    )
+    assert runtime_start.status_code == 200, runtime_start.text
+
+
 def test_project_page_auth_viewer_read_editor_write(
     client: TestClient,
     db: Session,

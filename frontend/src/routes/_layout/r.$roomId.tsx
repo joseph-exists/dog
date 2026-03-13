@@ -529,6 +529,11 @@ function RoomView() {
     showSuccessToast(`Added ${agent.name ?? "Agent"} to the room`)
   }
 
+  const handleAddUser = async (userId: string) => {
+    await addParticipant(userId, "user")
+    showSuccessToast("Added user to the room")
+  }
+
   const handleAddMultipleAgents = async (
     agents: { id: string; name?: string | null }[],
   ) => {
@@ -708,6 +713,7 @@ function RoomView() {
         availableAgents={availableAgents}
         existingAgentIds={existingAgentIds}
         onAddAgent={handleAddAgent}
+        onAddUser={handleAddUser}
         onRemoveAgent={handleRemoveAgent}
         onToggleAgent={async (agentId, activate) => {
           if (activate) {

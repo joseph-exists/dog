@@ -1,2 +1,0 @@
-2026/03/12 16:15:53 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.295ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "persona-d90975d1-2660-47b7-8d34-6030220df50d" ORDER BY `repository`.`id` LIMIT 1

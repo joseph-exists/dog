@@ -13,6 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
+    AccessGrantRole,
     AgentPersona,
     AgentPersonaCreate,
     AgentPersonaUpdate,
@@ -36,6 +37,7 @@ from app.models import (
     LLMProviderTypeCreate,
     LLMProviderTypeUpdate,
     Message,
+    DemoSession,
     NodeChoice,
     NodeChoicePublic,
     Persona,
@@ -123,6 +125,7 @@ from app.models import (
 
 logger = logging.getLogger(__name__)
 from app.services.context_store import ContextItem, ContextItemStore, RedisContextStore
+from app.services.access_control import has_access
 from app.services.event_emitter import emit_event
 
 
@@ -2304,6 +2307,58 @@ async def check_room_owner(
     return participant is not None
 
 
+async def can_modify_room_runtime(
+    *,
+    room_id: UUID,
+    user_id: UUID,
+    session: AsyncSession,
+) -> bool:
+    """
+    Runtime writes are allowed for:
+    - room owners
+    - users with editor+ access to the room story
+    - users with editor+ access to any demo session bound to the room
+      (including project-derived access)
+    """
+    if await check_room_owner(room_id=room_id, user_id=user_id, session=session):
+        return True
+
+    user = await session.get(User, user_id)
+    if not user:
+        return False
+
+    room = await session.get(Room, room_id)
+    if not room:
+        return False
+
+    if room.story_id:
+        if await has_access(
+            session,
+            user=user,
+            resource_type="story",
+            resource_id=room.story_id,
+            minimum_role=AccessGrantRole.editor,
+        ):
+            return True
+
+    demo_session_ids = (
+        await session.exec(
+            select(DemoSession.id).where(DemoSession.room_id == room_id)
+        )
+    ).all()
+    for demo_session_id in demo_session_ids:
+        if await has_access(
+            session,
+            user=user,
+            resource_type="demo_session",
+            resource_id=demo_session_id,
+            minimum_role=AccessGrantRole.editor,
+        ):
+            return True
+
+    return False
+
+
 # ============================================================================
 # Room Runtime (Shared Room Run)
 # ============================================================================
@@ -2440,8 +2495,8 @@ async def start_room_runtime(
     """
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Not a member of this room")
-    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
-        raise HTTPException(status_code=403, detail="Only room owners can start the room runtime")
+    if not await can_modify_room_runtime(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Insufficient privileges to start room runtime")
 
     room_result = await session.exec(select(Room).where(Room.room_id == room_id))
     room = room_result.one_or_none()
@@ -2582,8 +2637,8 @@ async def advance_room_runtime(
     )
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Not a member of this room")
-    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
-        raise HTTPException(status_code=403, detail="Only room owners can advance the room runtime")
+    if not await can_modify_room_runtime(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Insufficient privileges to advance room runtime")
 
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)
@@ -2723,8 +2778,8 @@ async def rewind_room_runtime(
     )
     if not await check_room_membership(room_id=room_id, user_id=user_id, session=session):
         raise HTTPException(status_code=403, detail="Not a member of this room")
-    if not await check_room_owner(room_id=room_id, user_id=user_id, session=session):
-        raise HTTPException(status_code=403, detail="Only room owners can rewind the room runtime")
+    if not await can_modify_room_runtime(room_id=room_id, user_id=user_id, session=session):
+        raise HTTPException(status_code=403, detail="Insufficient privileges to rewind room runtime")
 
     rsp_result = await session.exec(
         select(RoomStoryProgress).where(RoomStoryProgress.room_id == room_id)

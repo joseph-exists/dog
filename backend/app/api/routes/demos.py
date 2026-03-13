@@ -27,12 +27,13 @@ from app.crud_demo import (
     create_demo_session,
     delete_demo_config,
     delete_demo_session,
+    get_accessible_demo_session_for_slug,
+    get_demo_config_by_slug,
     get_demo_page_composition_by_demo_config_id,
     get_or_create_demo_page_composition,
     get_or_create_demo_session_by_slug,
     patch_demo_page_composition,
     get_demo_config_by_id,
-    get_demo_config_by_slug_visible_to_user,
     get_demo_config_visible_to_user,
     get_demo_session_by_id,
     get_demo_session_for_user,
@@ -1314,30 +1315,37 @@ async def resolve_demo_session_for_slug(
 
     This is the primary route entrypoint for /demo/{slug}.
     """
-    config = await get_demo_config_by_slug_visible_to_user(
-        session,
-        slug=demo_slug,
-        user_id=current_user.id,
-    )
+    config = await get_demo_config_by_slug(session, demo_slug)
     if not config or not config.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Demo not found",
         )
 
-    existing = await get_demo_session_for_user(
+    # First: allow resolving any session the user can access (including
+    # project-derived access grants on demo_session resources).
+    existing = await get_accessible_demo_session_for_slug(
         session,
-        user_id=current_user.id,
+        viewer=current_user,
         demo_config_id=config.id,
     )
     if existing:
-        existing = await touch_demo_session(session, existing)
+        if existing.user_id == current_user.id:
+            existing = await touch_demo_session(session, existing)
         return await build_resolve_demo_entry_payload(
             session,
             user_id=current_user.id,
             demo_config=config,
             demo_session=existing,
             created=False,
+        )
+
+    # No accessible session exists; only users who can view this config can
+    # create a new per-user session via slug resolution.
+    if not await get_demo_config_visible_to_user(session, config.id, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Demo not found",
         )
 
     room = await create_room(

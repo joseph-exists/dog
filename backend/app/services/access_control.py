@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import String, cast
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -56,6 +57,10 @@ _RESOURCE_REGISTRY: dict[str, ResourceSpec] = {
     "project": ResourceSpec(model=Project, owner_attr="owner_id"),
     "page": ResourceSpec(model=Page, owner_attr="owner_id"),
 }
+
+
+def _subject_type_matches(*values: str):
+    return cast(AccessGrant.subject_type, String).in_(values)
 
 
 def _role_meets_minimum(*, role: AccessGrantRole, minimum: AccessGrantRole) -> bool:
@@ -128,7 +133,10 @@ async def get_effective_role(
         persona_direct_stmt = select(AccessGrant.role).where(
             AccessGrant.resource_type == resource_type,
             AccessGrant.resource_id == resource_id,
-            AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+            _subject_type_matches(
+                AccessGrantSubjectType.user_persona.value,
+                "userpersona",
+            ),
             AccessGrant.subject_id.in_(owned_persona_ids),
         )
         persona_direct = (await session.exec(persona_direct_stmt)).all()
@@ -160,7 +168,10 @@ async def get_effective_role(
             persona_group_stmt = select(AccessGrant.role).where(
                 AccessGrant.resource_type == resource_type,
                 AccessGrant.resource_id == resource_id,
-                AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                _subject_type_matches(
+                    AccessGrantSubjectType.persona_group.value,
+                    "personagroup",
+                ),
                 AccessGrant.subject_id.in_(persona_group_ids),
             )
             persona_group_roles = (await session.exec(persona_group_stmt)).all()
@@ -200,7 +211,10 @@ async def get_effective_role(
                 project_persona_direct_stmt = select(AccessGrant.role).where(
                     AccessGrant.resource_type == "project",
                     AccessGrant.resource_id.in_(project_ids),
-                    AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+                    _subject_type_matches(
+                        AccessGrantSubjectType.user_persona.value,
+                        "userpersona",
+                    ),
                     AccessGrant.subject_id.in_(owned_persona_ids),
                 )
                 project_persona_direct = (await session.exec(project_persona_direct_stmt)).all()
@@ -224,7 +238,10 @@ async def get_effective_role(
                 project_persona_group_stmt = select(AccessGrant.role).where(
                     AccessGrant.resource_type == "project",
                     AccessGrant.resource_id.in_(project_ids),
-                    AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                    _subject_type_matches(
+                        AccessGrantSubjectType.persona_group.value,
+                        "personagroup",
+                    ),
                     AccessGrant.subject_id.in_(persona_group_ids),
                 )
                 project_persona_group = (
@@ -364,7 +381,10 @@ async def resolve_user_page_audience(
                     select(AccessGrant.subject_id).where(
                         AccessGrant.resource_type == "page",
                         AccessGrant.resource_id == page.id,
-                        AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+                        _subject_type_matches(
+                            AccessGrantSubjectType.user_persona.value,
+                            "userpersona",
+                        ),
                         AccessGrant.subject_id.in_(owned_persona_ids),
                     )
                 )
@@ -394,7 +414,10 @@ async def resolve_user_page_audience(
                     select(AccessGrant.subject_id).where(
                         AccessGrant.resource_type == "page",
                         AccessGrant.resource_id == page.id,
-                        AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                        _subject_type_matches(
+                            AccessGrantSubjectType.persona_group.value,
+                            "personagroup",
+                        ),
                         AccessGrant.subject_id.in_(persona_group_ids),
                     )
                 )

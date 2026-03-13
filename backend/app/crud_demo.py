@@ -19,6 +19,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud import get_room_runtime
 from app.models import (
+    AccessGrantRole,
     DemoConfig,
     DemoConfigCreate,
     DemoCompositionSource,
@@ -39,8 +40,10 @@ from app.models import (
     Room,
     RoomParticipant,
     Story,
+    User,
     UserDemoPageCompositionOverride,
 )
+from app.services.access_control import has_access
 
 
 # =============================================================================
@@ -282,6 +285,47 @@ async def list_demo_sessions_for_user(
     count_result = await session.exec(count_statement)
     count = count_result.one()
     return sessions, count
+
+
+async def get_accessible_demo_session_for_slug(
+    session: AsyncSession,
+    *,
+    viewer: User,
+    demo_config_id: UUID,
+) -> DemoSession | None:
+    """
+    Resolve a demo session for a config that the viewer can access.
+
+    Order:
+    1) Viewer-owned session for this config
+    2) Most recently accessed shared session where viewer has at least viewer access
+       (including project-derived access)
+    """
+    own = await get_demo_session_for_user(
+        session,
+        user_id=viewer.id,
+        demo_config_id=demo_config_id,
+    )
+    if own:
+        return own
+
+    stmt = (
+        select(DemoSession)
+        .where(DemoSession.demo_config_id == demo_config_id)
+        .order_by(DemoSession.last_accessed_at.desc())
+    )
+    candidates = list((await session.exec(stmt)).all())
+    for candidate in candidates:
+        allowed = await has_access(
+            session,
+            user=viewer,
+            resource_type="demo_session",
+            resource_id=candidate.id,
+            minimum_role=AccessGrantRole.viewer,
+        )
+        if allowed:
+            return candidate
+    return None
 
 
 async def create_demo_session(

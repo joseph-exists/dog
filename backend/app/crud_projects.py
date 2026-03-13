@@ -13,6 +13,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import String, cast
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -31,6 +32,10 @@ from app.models import (
 )
 from app.services.access_control import require_access
 from app.models import AccessGrantRole
+
+
+def _subject_type_matches(*values: str):
+    return cast(AccessGrant.subject_type, String).in_(values)
 
 
 async def create_project(
@@ -102,7 +107,10 @@ async def list_projects_visible_to_user(
     if owned_persona_ids:
         persona_direct_stmt = select(AccessGrant.resource_id).where(
             AccessGrant.resource_type == "project",
-            AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+            _subject_type_matches(
+                AccessGrantSubjectType.user_persona.value,
+                "userpersona",
+            ),
             AccessGrant.subject_id.in_(owned_persona_ids),
         )
         shared_ids.update((await session.exec(persona_direct_stmt)).all())
@@ -118,7 +126,10 @@ async def list_projects_visible_to_user(
     if persona_group_ids:
         persona_group_stmt = select(AccessGrant.resource_id).where(
             AccessGrant.resource_type == "project",
-            AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+            _subject_type_matches(
+                AccessGrantSubjectType.persona_group.value,
+                "personagroup",
+            ),
             AccessGrant.subject_id.in_(persona_group_ids),
         )
         shared_ids.update((await session.exec(persona_group_stmt)).all())

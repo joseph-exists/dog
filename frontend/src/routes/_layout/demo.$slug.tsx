@@ -423,6 +423,14 @@ function ResolvedDemoRoute({
     [addParticipant],
   )
 
+  const handleAddUser = useCallback(
+    async (userId: string) => {
+      await addParticipant({ participantId: userId, type: "user" })
+      showSuccessToast("Added user to the room")
+    },
+    [addParticipant],
+  )
+
   const handleRemoveAgent = useCallback(
     async (agent: { id: string; name?: string | null }) => {
       await removeParticipant(agent.id)
@@ -798,6 +806,7 @@ function ResolvedDemoRoute({
                   availableAgents,
                   existingAgentIds,
                   onAddAgent: handleAddAgent,
+                  onAddUser: handleAddUser,
                   onRemoveAgent: handleRemoveAgent,
                   onToggleAgent: handleToggleAgent,
                   onRemoveUser: handleRemoveUser,
@@ -839,6 +848,7 @@ function ResolvedDemoRoute({
       autoRespond,
       availableAgents,
       handleAddAgent,
+      handleAddUser,
       handleRemoveAgent,
       handleRemoveUser,
       handleToggleAgent,

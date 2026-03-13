@@ -10,6 +10,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import String, cast
 from sqlmodel import Session, select
 
 from app.models import (
@@ -32,6 +33,10 @@ _ROLE_LEVEL: dict[AccessGrantRole, int] = {
     AccessGrantRole.editor: 20,
     AccessGrantRole.manager: 30,
 }
+
+
+def _subject_type_matches(*values: str):
+    return cast(AccessGrant.subject_type, String).in_(values)
 
 
 def _role_meets_minimum(*, role: AccessGrantRole, minimum: AccessGrantRole) -> bool:
@@ -88,7 +93,10 @@ def get_effective_role_sync(
         persona_direct_stmt = select(AccessGrant.role).where(
             AccessGrant.resource_type == resource_type,
             AccessGrant.resource_id == resource_id,
-            AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+            _subject_type_matches(
+                AccessGrantSubjectType.user_persona.value,
+                "userpersona",
+            ),
             AccessGrant.subject_id.in_(owned_persona_ids),
         )
         persona_direct = session.exec(persona_direct_stmt).all()
@@ -119,7 +127,10 @@ def get_effective_role_sync(
             persona_group_stmt = select(AccessGrant.role).where(
                 AccessGrant.resource_type == resource_type,
                 AccessGrant.resource_id == resource_id,
-                AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                _subject_type_matches(
+                    AccessGrantSubjectType.persona_group.value,
+                    "personagroup",
+                ),
                 AccessGrant.subject_id.in_(persona_group_ids),
             )
             persona_group_roles = session.exec(persona_group_stmt).all()
@@ -152,7 +163,10 @@ def get_effective_role_sync(
                 project_persona_direct_stmt = select(AccessGrant.role).where(
                     AccessGrant.resource_type == "project",
                     AccessGrant.resource_id.in_(project_ids),
-                    AccessGrant.subject_type == AccessGrantSubjectType.user_persona,
+                    _subject_type_matches(
+                        AccessGrantSubjectType.user_persona.value,
+                        "userpersona",
+                    ),
                     AccessGrant.subject_id.in_(owned_persona_ids),
                 )
                 project_persona_direct = session.exec(project_persona_direct_stmt).all()
@@ -176,7 +190,10 @@ def get_effective_role_sync(
                 project_persona_group_stmt = select(AccessGrant.role).where(
                     AccessGrant.resource_type == "project",
                     AccessGrant.resource_id.in_(project_ids),
-                    AccessGrant.subject_type == AccessGrantSubjectType.persona_group,
+                    _subject_type_matches(
+                        AccessGrantSubjectType.persona_group.value,
+                        "personagroup",
+                    ),
                     AccessGrant.subject_id.in_(persona_group_ids),
                 )
                 project_persona_group = session.exec(project_persona_group_stmt).all()
