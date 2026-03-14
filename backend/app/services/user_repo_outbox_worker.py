@@ -23,7 +23,7 @@ from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app.core.db import engine
-from app.models import UserRepo, UserRepoOutboxJob
+from app.models import UserRepo, UserRepoImportStatus, UserRepoOutboxJob
 from app.services.user_repo_service import (
     UserRepoProvisioningError,
     user_repo_service,
@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 BATCH_SIZE = int(os.getenv("USER_REPO_OUTBOX_BATCH_SIZE", "5"))
 LOCK_TTL_SECONDS = int(os.getenv("USER_REPO_OUTBOX_LOCK_TTL_SECONDS", "300"))
 MAX_ATTEMPTS = int(os.getenv("USER_REPO_OUTBOX_MAX_ATTEMPTS", "5"))
+ACTIVE_JOB_STATUSES = ("queued", "retryable_error", "processing")
 
 
 def _now() -> datetime:
@@ -96,6 +97,22 @@ def _process_job(job_id: uuid.UUID, worker_id: str) -> None:
             logger.warning(f"User repo {job.user_repo_id} not found for job {job_id}")
             return
 
+        # Respect terminal repo states: once canceled/failed, stop processing retries.
+        if user_repo.import_status == UserRepoImportStatus.FAILED:
+            job.status = "canceled"
+            job.locked_at = None
+            job.locked_by = None
+            job.updated_at = _now()
+            if not job.last_error:
+                job.last_error = "import_canceled_or_failed"
+                job.last_error_at = _now()
+            session.add(job)
+            session.commit()
+            logger.info(
+                f"Skipped user repo job {job_id}; repo {user_repo.id} is failed/canceled"
+            )
+            return
+
         attempt_number = job.attempt_count + 1
 
         try:
@@ -143,7 +160,6 @@ def _process_job(job_id: uuid.UUID, worker_id: str) -> None:
                 job.status = "dead"
                 # Also mark the user repo import as failed
                 if user_repo.source_repo_url:
-                    from app.models import UserRepoImportStatus
                     user_repo.import_status = UserRepoImportStatus.FAILED
                     user_repo.import_error = job.last_error
                     session.add(user_repo)
@@ -168,7 +184,7 @@ def _claim_jobs(session: Session, worker_id: str) -> list[uuid.UUID]:
     stmt = (
         select(UserRepoOutboxJob)
         .where(
-            UserRepoOutboxJob.status.in_(["queued", "retryable_error", "processing"]),
+            UserRepoOutboxJob.status.in_(ACTIVE_JOB_STATUSES),
             UserRepoOutboxJob.run_after <= now,
             or_(
                 UserRepoOutboxJob.locked_at.is_(None),
@@ -212,6 +228,18 @@ def create_user_repo_outbox_job(
     Call this instead of user_repo_service.ensure_user_repo_remote()
     when you want async processing.
     """
+    existing = session.exec(
+        select(UserRepoOutboxJob)
+        .where(
+            UserRepoOutboxJob.user_repo_id == user_repo.id,
+            UserRepoOutboxJob.status.in_(ACTIVE_JOB_STATUSES),
+        )
+        .order_by(UserRepoOutboxJob.created_at.desc())
+        .limit(1)
+    ).first()
+    if existing is not None:
+        return existing
+
     job = UserRepoOutboxJob(
         user_repo_id=user_repo.id,
         status="queued",
@@ -222,3 +250,52 @@ def create_user_repo_outbox_job(
     session.add(job)
     session.flush()
     return job
+
+
+def cancel_user_repo_outbox_jobs(
+    *,
+    session: Session,
+    user_repo_id: uuid.UUID,
+    reason: str = "canceled_by_user",
+) -> int:
+    """Mark active user-repo outbox jobs as canceled so worker will ignore them."""
+    jobs = list(
+        session.exec(
+            select(UserRepoOutboxJob).where(
+                UserRepoOutboxJob.user_repo_id == user_repo_id,
+                UserRepoOutboxJob.status.in_(ACTIVE_JOB_STATUSES),
+            )
+        ).all()
+    )
+    if not jobs:
+        return 0
+
+    now = _now()
+    for job in jobs:
+        job.status = "canceled"
+        job.locked_at = None
+        job.locked_by = None
+        job.run_after = now
+        job.updated_at = now
+        job.last_error = reason
+        job.last_error_at = now
+        session.add(job)
+    session.flush()
+    return len(jobs)
+
+
+def delete_user_repo_outbox_jobs(
+    *,
+    session: Session,
+    user_repo_id: uuid.UUID,
+) -> int:
+    """Delete all outbox jobs for a user repo."""
+    jobs = list(
+        session.exec(
+            select(UserRepoOutboxJob).where(UserRepoOutboxJob.user_repo_id == user_repo_id)
+        ).all()
+    )
+    for job in jobs:
+        session.delete(job)
+    session.flush()
+    return len(jobs)

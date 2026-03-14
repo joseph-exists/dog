@@ -142,6 +142,109 @@ def test_create_user_repo_creates_outbox_job(
     assert job.attempt_count == 0
 
 
+def test_cancel_user_repo_import_marks_repo_failed_and_cancels_jobs(
+    client: TestClient,
+    db: Session,
+) -> None:
+    owner, headers = _create_user_with_headers(client=client, db=db)
+    repo = _create_user_repo(
+        db=db,
+        owner=owner,
+        import_status=UserRepoImportStatus.IMPORTING,
+    )
+    job_one = UserRepoOutboxJob(
+        user_repo_id=repo.id,
+        status="queued",
+        priority=100,
+    )
+    job_two = UserRepoOutboxJob(
+        user_repo_id=repo.id,
+        status="retryable_error",
+        priority=100,
+    )
+    db.add(job_one)
+    db.add(job_two)
+    db.commit()
+
+    response = client.post(
+        f"{settings.API_V1_STR}/user-repos/{repo.id}/cancel",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["import_status"] == UserRepoImportStatus.FAILED
+    assert "Import canceled by user" in (payload.get("import_error") or "")
+
+    updated_jobs = list(
+        db.exec(
+            select(UserRepoOutboxJob).where(UserRepoOutboxJob.user_repo_id == repo.id)
+        ).all()
+    )
+    assert len(updated_jobs) == 2
+    assert all(job.status == "canceled" for job in updated_jobs)
+
+
+def test_cancel_user_repo_import_rejects_ready_repo(
+    client: TestClient,
+    db: Session,
+) -> None:
+    owner, headers = _create_user_with_headers(client=client, db=db)
+    repo = _create_user_repo(db=db, owner=owner, import_status=UserRepoImportStatus.READY)
+
+    response = client.post(
+        f"{settings.API_V1_STR}/user-repos/{repo.id}/cancel",
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error_code"] == "REPO_NOT_IMPORTING"
+
+
+def test_delete_user_repo_removes_repo_and_outbox_jobs(
+    client: TestClient,
+    db: Session,
+    monkeypatch,
+) -> None:
+    owner, headers = _create_user_with_headers(client=client, db=db)
+    repo = _create_user_repo(
+        db=db,
+        owner=owner,
+        import_status=UserRepoImportStatus.IMPORTING,
+    )
+    db.add(
+        UserRepoOutboxJob(
+            user_repo_id=repo.id,
+            status="queued",
+            priority=100,
+        )
+    )
+    db.commit()
+
+    monkeypatch.setattr(
+        user_repo_service,
+        "delete_user_repo_remote",
+        lambda **kwargs: True,
+    )
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/user-repos/{repo.id}",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert "User repo deleted" in response.json()["message"]
+
+    deleted_repo = db.get(UserRepo, repo.id)
+    assert deleted_repo is None
+    remaining_jobs = list(
+        db.exec(
+            select(UserRepoOutboxJob).where(UserRepoOutboxJob.user_repo_id == repo.id)
+        ).all()
+    )
+    assert remaining_jobs == []
+
+
 def test_create_user_repo_rejects_non_https_urls(
     client: TestClient,
     db: Session,

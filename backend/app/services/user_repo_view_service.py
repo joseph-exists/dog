@@ -144,11 +144,16 @@ class UserRepoViewService:
         ref: str | None = None,
     ) -> UserRepoFileContent:
         user_repo = self._require_ready_repo(session=session, repo_id=repo_id)
-        _resolved_ref, commit_sha = self._resolve_commit_ref(
+        resolved_ref, commit_sha = self._resolve_commit_ref(
             user_repo=user_repo,
             requested_ref=ref,
         )
-        return self._read_file(user_repo=user_repo, commit_sha=commit_sha, path=path)
+        return self._read_file(
+            user_repo=user_repo,
+            commit_sha=commit_sha,
+            resolved_ref=resolved_ref,
+            path=path,
+        )
 
     def get_readme(
         self,
@@ -158,7 +163,7 @@ class UserRepoViewService:
         ref: str | None = None,
     ) -> UserRepoReadmeContent:
         user_repo = self._require_ready_repo(session=session, repo_id=repo_id)
-        _resolved_ref, commit_sha = self._resolve_commit_ref(
+        resolved_ref, commit_sha = self._resolve_commit_ref(
             user_repo=user_repo,
             requested_ref=ref,
         )
@@ -167,6 +172,7 @@ class UserRepoViewService:
                 file_content = self._read_file(
                     user_repo=user_repo,
                     commit_sha=commit_sha,
+                    resolved_ref=resolved_ref,
                     path=candidate,
                 )
             except UserRepoPathError:
@@ -423,6 +429,7 @@ class UserRepoViewService:
         *,
         user_repo: UserRepo,
         commit_sha: str,
+        resolved_ref: str,
         path: str,
     ) -> UserRepoFileContent:
         normalized_path = path.strip("/")
@@ -460,7 +467,7 @@ class UserRepoViewService:
 
         return UserRepoFileContent(
             path=normalized_path,
-            ref=commit_sha,
+            ref=resolved_ref,
             content=content,
             encoding="utf-8",
             size_bytes=size_bytes,

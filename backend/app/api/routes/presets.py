@@ -32,10 +32,14 @@ SYSTEM_PRESETS = {
     "collaborate": {
         "id": "collaborate",
         "name": "Collaborate",
-        "description": "Chat with agents sidebar",
+        "description": "Chat with participants sidebar",
         "panels": [
             {"id": "chat", "kind": "chat", "prominence": "primary"},
-            {"id": "agents", "kind": "agentPanel", "prominence": "auxiliary"},
+            {
+                "id": "participants",
+                "kind": "participantPanel",
+                "prominence": "auxiliary",
+            },
         ],
         "is_system": True,
     },
@@ -46,7 +50,11 @@ SYSTEM_PRESETS = {
         "panels": [
             {"id": "story", "kind": "storyEditor", "prominence": "primary"},
             {"id": "chat", "kind": "chat", "prominence": "primary"},
-            {"id": "agents", "kind": "agentPanel", "prominence": "auxiliary"},
+            {
+                "id": "participants",
+                "kind": "participantPanel",
+                "prominence": "auxiliary",
+            },
         ],
         "is_system": True,
     },
@@ -57,7 +65,11 @@ SYSTEM_PRESETS = {
         "panels": [
             {"id": "chat", "kind": "chat", "prominence": "primary"},
             {"id": "debug", "kind": "debug", "prominence": "auxiliary"},
-            {"id": "agents", "kind": "agentPanel", "prominence": "auxiliary"},
+            {
+                "id": "participants",
+                "kind": "participantPanel",
+                "prominence": "auxiliary",
+            },
         ],
         "is_system": True,
     },
@@ -68,7 +80,11 @@ SYSTEM_PRESETS = {
         "panels": [
             {"id": "canvas", "kind": "canvas", "prominence": "primary"},
             {"id": "chat", "kind": "chat", "prominence": "primary"},
-            {"id": "agents", "kind": "agentPanel", "prominence": "auxiliary"},
+            {
+                "id": "participants",
+                "kind": "participantPanel",
+                "prominence": "auxiliary",
+            },
         ],
         "is_system": True,
     },

@@ -1,0 +1,10 @@
+✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/hybrid_control_systems.gif
+   camera=hybrid duration=12.0s dt=0.030 transitions=8
+   t= 4.32s  CRUISE -> AVOID  (obstacle_near)
+   t= 4.95s  AVOID -> RECOVER  (clearance)
+   t= 6.57s  RECOVER -> CRUISE  (recover_done)
+   t= 6.60s  CRUISE -> AVOID  (obstacle_near)
+   t= 7.86s  AVOID -> RECOVER  (clearance)
+   t= 9.48s  RECOVER -> CRUISE  (recover_done)
+   t= 9.51s  CRUISE -> AVOID  (obstacle_near)
+   t=11.61s  AVOID -> RECOVER  (clearance)

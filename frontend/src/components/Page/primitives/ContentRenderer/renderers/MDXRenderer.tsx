@@ -91,6 +91,7 @@ const RESTRICTED_COMPONENT_NAMES = new Set([
   "h5",
   "h6",
   "p",
+  "svg",
   "strong",
   "em",
   "ul",

@@ -5,6 +5,7 @@
  * Uses dynamic import to avoid bundling the compiler for non-MDX content.
  */
 import { useCallback, useEffect, useRef, useState } from "react"
+import type { RunOptions } from "@mdx-js/mdx"
 import type { MDXCompilationState, MDXCompiledResult } from "../types"
 
 // Cache for compiled MDX to avoid recompilation
@@ -51,19 +52,24 @@ async function compileMDX(source: string): Promise<MDXCompiledResult> {
 
   // Load compiler
   const { compile, run } = await getCompiler()
+  const isDevelopment = process.env.NODE_ENV === "development"
 
   // Compile MDX to JS
   const compiled = await compile(source, {
     outputFormat: "function-body",
-    development: process.env.NODE_ENV === "development",
+    development: isDevelopment,
   })
 
   // Run the compiled code to get the component
-  const { default: runtime } = await import("react/jsx-runtime")
-  const result = await run(compiled, {
-    ...runtime,
-    baseUrl: import.meta.url,
-  })
+  let runtimeOptions: RunOptions
+  if (isDevelopment) {
+    const { Fragment, jsxDEV } = await import("react/jsx-dev-runtime")
+    runtimeOptions = { Fragment, jsxDEV, baseUrl: import.meta.url }
+  } else {
+    const { Fragment, jsx, jsxs } = await import("react/jsx-runtime")
+    runtimeOptions = { Fragment, jsx, jsxs, baseUrl: import.meta.url }
+  }
+  const result = await run(compiled, runtimeOptions)
 
   // Cache and return
   compilationCache.set(cacheKey, result as MDXCompiledResult)
@@ -90,7 +96,7 @@ export function useMDXCompiler(
   sourceRef.current = source
 
   const compile = useCallback(async () => {
-    if (!enabled || !source) {
+    if (!enabled) {
       setState({ status: "idle" })
       return
     }

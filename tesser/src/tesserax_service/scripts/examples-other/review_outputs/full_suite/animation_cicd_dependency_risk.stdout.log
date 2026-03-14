@@ -1,0 +1,3 @@
+✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_cicd_dependency_risk.gif
+   scenario=flaky_tests policy=balanced phase=STABLE packets=264 transitions=5
+   success_rate=0.779 peak_stage_risk=1.000 blocked_stage_count=4 mttd=0.48s mttr=8.94s

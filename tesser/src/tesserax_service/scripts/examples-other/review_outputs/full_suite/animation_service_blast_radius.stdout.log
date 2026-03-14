@@ -1,0 +1,3 @@
+✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_service_blast_radius.gif
+   scenario=auth_outage policy=balanced phase=POST packets=299 transitions=4
+   service_level=0.886 peak_impact=0.425 blast_radius=3 mttd=1.11s mttr=5.70s

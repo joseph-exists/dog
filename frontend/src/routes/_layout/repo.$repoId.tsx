@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   AlertCircleIcon,
@@ -17,6 +17,7 @@ import {
   buildRepoUserLayoutPresetId,
   createUserRepoLayoutPreset,
   getSystemRepoLayoutPresets,
+  repoQueryKeys,
   getUserRepoQueryOptions,
   renderRepoPanel,
   RepoLayout,
@@ -40,7 +41,9 @@ import {
   writeUserRepoLayoutPresets,
 } from "@/components/Repo/panels/repoLayoutPresets"
 import { formatRepoDate } from "@/components/Repo/utils"
-import { showSuccessToast } from "@/hooks/useCustomToast"
+import type { ApiError } from "@/client/core/ApiError"
+import useAuth from "@/hooks/useAuth"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -66,6 +69,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UserRepoAppService } from "@/services/userRepoService"
+import { handleError } from "@/utils"
 import { useEffect, useMemo, useState } from "react"
 
 export const Route = createFileRoute("/_layout/repo/$repoId")({
@@ -97,6 +102,8 @@ function RepoDetailSkeleton() {
 function RepoDetailPage() {
   const { repoId } = Route.useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [layoutMode, setLayoutMode] = useState<"panels" | "tabs">("panels")
   const [isQuickLayoutDialogOpen, setIsQuickLayoutDialogOpen] = useState(false)
   const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false)
@@ -213,6 +220,34 @@ function RepoDetailPage() {
     [activePreset.items, panelLayoutItems],
   )
   const canDeleteActivePreset = activePreset.source === "user"
+  const canManageRepo = Boolean(
+    user && repo && (user.is_superuser || user.id === repo.owner_user_id),
+  )
+  const canCancelImport = repo?.import_status !== "ready"
+  const cancelImportMutation = useMutation({
+    mutationFn: async () => UserRepoAppService.cancelUserRepoImport(repoId),
+    onSuccess: async () => {
+      showSuccessToast(`Import canceled for ${repo?.display_name ?? "repository"}.`)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: repoQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: repoQueryKeys.detail(repoId) }),
+      ])
+    },
+    onError: (error: ApiError) => {
+      handleError.call(showErrorToast, error)
+    },
+  })
+  const deleteRepoMutation = useMutation({
+    mutationFn: async () => UserRepoAppService.deleteUserRepo(repoId),
+    onSuccess: async () => {
+      showSuccessToast(`Deleted ${repo?.display_name ?? "repository"}.`)
+      await queryClient.invalidateQueries({ queryKey: repoQueryKeys.all })
+      navigate({ to: "/repos" })
+    },
+    onError: (error: ApiError) => {
+      handleError.call(showErrorToast, error)
+    },
+  })
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -475,6 +510,46 @@ function RepoDetailPage() {
                 <DropdownMenuItem onClick={handleResetPanelLayout}>
                   <RefreshCwIcon className="mr-2 size-4" />
                   Reset to Preset
+                </DropdownMenuItem>
+              ) : null}
+              {canManageRepo ? <DropdownMenuSeparator /> : null}
+              {canManageRepo && canCancelImport ? (
+                <DropdownMenuItem
+                  disabled={cancelImportMutation.isPending || deleteRepoMutation.isPending}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        `Cancel import for "${repo.display_name}"? Any queued retries will be stopped.`,
+                      )
+                    ) {
+                      return
+                    }
+                    cancelImportMutation.mutate()
+                  }}
+                >
+                  <RefreshCwIcon className="mr-2 size-4" />
+                  {cancelImportMutation.isPending
+                    ? "Canceling Import..."
+                    : "Cancel Import"}
+                </DropdownMenuItem>
+              ) : null}
+              {canManageRepo ? (
+                <DropdownMenuItem
+                  disabled={deleteRepoMutation.isPending || cancelImportMutation.isPending}
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        `Delete "${repo.display_name}"? This removes the platform repo record and attempts to delete the managed forge repository.`,
+                      )
+                    ) {
+                      return
+                    }
+                    deleteRepoMutation.mutate()
+                  }}
+                >
+                  <Trash2Icon className="mr-2 size-4" />
+                  {deleteRepoMutation.isPending ? "Deleting..." : "Delete Repository"}
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>

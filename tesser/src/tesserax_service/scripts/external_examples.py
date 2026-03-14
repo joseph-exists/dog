@@ -12,7 +12,7 @@ from typing import Any
 from tesserax_service.registry import register_script
 
 _SCRIPT_ROOT = Path(__file__).resolve().parent
-_EXAMPLES_ROOT = _SCRIPT_ROOT / "examples_other"
+_EXAMPLES_ROOT = _SCRIPT_ROOT / "examples-other"
 _SRC_ROOT = _SCRIPT_ROOT.parents[1]
 _MANIFEST_PATH = _EXAMPLES_ROOT / "examples_manifest.yaml"
 

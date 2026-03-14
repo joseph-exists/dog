@@ -6,11 +6,13 @@ repositories that are provisioned in the platform's Gogs instance.
 """
 
 import uuid
+import logging
 
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    Message,
     UserRepoCommitRequest,
     UserRepoCommitResponse,
     UserRepoFileContent,
@@ -32,7 +34,11 @@ from app.services.user_repo_service import (
     UserRepoWriteValidationError,
     user_repo_service,
 )
-from app.services.user_repo_outbox_worker import create_user_repo_outbox_job
+from app.services.user_repo_outbox_worker import (
+    cancel_user_repo_outbox_jobs,
+    create_user_repo_outbox_job,
+    delete_user_repo_outbox_jobs,
+)
 from app.services.user_repo_view_service import (
     UserRepoBackendUnavailable,
     UserRepoBranchNotFound,
@@ -42,6 +48,7 @@ from app.services.user_repo_view_service import (
 )
 
 router = APIRouter(prefix="/user-repos", tags=["user-repos"])
+logger = logging.getLogger(__name__)
 
 
 def _require_user_repo_access(
@@ -59,6 +66,23 @@ def _require_user_repo_access(
             repo_id=repo_id,
         )
     except UserRepoViewNotFound as exc:
+        raise HTTPException(status_code=404, detail="UserRepo not found") from exc
+
+
+def _require_user_repo_write_access(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    repo_id: uuid.UUID,
+):
+    try:
+        return user_repo_service.authorize_user_repo_write(
+            session=session,
+            current_user_id=current_user.id,
+            is_superuser=current_user.is_superuser,
+            repo_id=repo_id,
+        )
+    except (UserRepoWriteNotFound, UserRepoWriteUnauthorized) as exc:
         raise HTTPException(status_code=404, detail="UserRepo not found") from exc
 
 
@@ -103,6 +127,7 @@ def _raise_user_repo_write_error(exc: Exception) -> None:
             detail={"message": str(exc), "error_code": "INVALID_WRITE_REQUEST"},
         ) from exc
     if isinstance(exc, UserRepoWriteFailed):
+        logger.exception("User repo write failed: %s", exc)
         raise HTTPException(
             status_code=503,
             detail={"message": "User repo write failed", "error_code": "WRITE_FAILED"},
@@ -150,6 +175,84 @@ def get_user_repo(
         repo_id=repo_id,
     )
     return user_repo_view_service.to_public_model(user_repo=user_repo)
+
+
+@router.post("/{repo_id}/cancel", response_model=UserRepoPublic)
+def cancel_user_repo_import(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    repo_id: uuid.UUID,
+) -> UserRepoPublic:
+    user_repo = _require_user_repo_write_access(
+        session=session,
+        current_user=current_user,
+        repo_id=repo_id,
+    )
+
+    if user_repo.import_status == UserRepoImportStatus.READY:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Ready repositories cannot be canceled.",
+                "error_code": "REPO_NOT_IMPORTING",
+            },
+        )
+
+    canceled_jobs = cancel_user_repo_outbox_jobs(
+        session=session,
+        user_repo_id=user_repo.id,
+        reason="canceled_by_user",
+    )
+    user_repo.import_status = UserRepoImportStatus.FAILED
+    user_repo.import_error = (
+        f"Import canceled by user. Stopped {canceled_jobs} pending job(s)."
+    )
+    session.add(user_repo)
+    session.commit()
+    session.refresh(user_repo)
+    return user_repo_view_service.to_public_model(user_repo=user_repo)
+
+
+@router.delete("/{repo_id}", response_model=Message)
+def delete_user_repo(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    repo_id: uuid.UUID,
+) -> Message:
+    user_repo = _require_user_repo_write_access(
+        session=session,
+        current_user=current_user,
+        repo_id=repo_id,
+    )
+
+    cancel_user_repo_outbox_jobs(
+        session=session,
+        user_repo_id=user_repo.id,
+        reason="deleted_by_user",
+    )
+    deleted_jobs = delete_user_repo_outbox_jobs(
+        session=session,
+        user_repo_id=user_repo.id,
+    )
+
+    try:
+        user_repo_service.delete_user_repo_remote(user_repo=user_repo)
+    except Exception:
+        logger.exception(
+            "User repo remote delete failed for %s/%s",
+            user_repo.owner_user_id,
+            user_repo.gogs_repo_name,
+        )
+
+    session.delete(user_repo)
+    session.commit()
+    return Message(
+        message=(
+            f"User repo deleted. Removed {deleted_jobs} queued import job(s)."
+        )
+    )
 
 
 @router.post("/", response_model=UserRepoPublic, status_code=status.HTTP_202_ACCEPTED)

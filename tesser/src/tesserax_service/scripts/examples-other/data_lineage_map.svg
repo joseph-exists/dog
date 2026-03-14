@@ -1,0 +1,172 @@
+<svg width="2200" height="1400" viewBox="-26.0 -345.07540425910724 2252.0 1986.4656336136125" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arrow" viewBox="-10 -4 10 8" refX="0" refY="0" orient="auto" markerWidth="10" markerHeight="8"><path d="M -10 -4 L 0 0 L -10 4 Z" fill="rgba(0,0,0,1.0)" stroke="rgba(0,0,0,0.0)" stroke-width="1.0"   /></marker></defs>
+  <g transform="translate(1100.0 700.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-1100.0" y="-700.0" width="2200" height="1400" stroke="rgba(0,0,0,0.0)" fill="rgba(255,255,255,1.0)" />
+</g>
+  <g transform="translate(1100.0 74.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="34" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">Static Data Lineage Map</text>
+</g>
+  <g transform="translate(1100.0 102.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(128,128,128,1.0)" text-anchor="middle" dominant-baseline="middle">scenario=late_arrivals policy=balanced corruption=0.22 drift=0.08</text>
+</g>
+  <g transform="translate(1319.1873349324744 1284.4463538383618) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(255,255,224,1.0)" />
+</g>
+<g transform="translate(1116.4682385028477 1581.3902293545052) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(255,255,224,1.0)" />
+</g>
+<g transform="translate(761.3239257898788 1527.5158441657372) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(255,255,224,1.0)" />
+</g>
+<g transform="translate(968.3769784995033 1241.0409847951667) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(144,238,144,1.0)" />
+</g>
+<g transform="translate(760.6890446800496 763.5029299271921) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(224,255,255,1.0)" />
+</g>
+<g transform="translate(501.8349049747888 459.44142903291424) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(224,255,255,1.0)" />
+</g>
+<g transform="translate(715.110597466381 366.22737973706296) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(224,255,255,1.0)" />
+</g>
+<g transform="translate(461.8164041021926 75.31558445281848) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(255,228,225,1.0)" />
+</g>
+<g transform="translate(159.60388092740232 -129.211650933981) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(255,228,225,1.0)" />
+</g>
+<g transform="translate(519.7690166980456 -285.07540425910724) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="28" stroke="rgba(0,0,139,0.72)" fill="rgba(255,228,225,1.0)" />
+</g>
+  <path d="M 1319.1873349324744 1284.4463538383618 L 968.3769784995033 1241.0409847951667" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 1116.4682385028477 1581.3902293545052 L 968.3769784995033 1241.0409847951667" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 761.3239257898788 1527.5158441657372 L 968.3769784995033 1241.0409847951667" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 968.3769784995033 1241.0409847951667 L 760.6890446800496 763.5029299271921" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 760.6890446800496 763.5029299271921 L 501.8349049747888 459.44142903291424" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 760.6890446800496 763.5029299271921 L 715.110597466381 366.22737973706296" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 501.8349049747888 459.44142903291424 L 461.8164041021926 75.31558445281848" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 715.110597466381 366.22737973706296 L 461.8164041021926 75.31558445281848" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 461.8164041021926 75.31558445281848 L 159.60388092740232 -129.211650933981" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <path d="M 461.8164041021926 75.31558445281848 L 519.7690166980456 -285.07540425910724" fill="rgba(0,0,0,0.0)" stroke="rgba(220,20,60,0.3)" stroke-width="1.2"   />
+  <g transform="translate(1319.1873349324744 1284.4463538383618) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(1385.1873349324744 1284.4463538383618) rotate(0.0) scale(1.0 0.31499999999999995)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(1319.1873349324744 1284.4463538383618) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">CRM</text>
+</g>
+  <g transform="translate(1116.4682385028477 1581.3902293545052) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(1182.4682385028477 1581.3902293545052) rotate(0.0) scale(1.0 0.33999999999999997)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(1116.4682385028477 1581.3902293545052) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">ERP</text>
+</g>
+  <g transform="translate(761.3239257898788 1527.5158441657372) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(827.3239257898788 1527.5158441657372) rotate(0.0) scale(1.0 0.2899999999999999)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(761.3239257898788 1527.5158441657372) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">WEB</text>
+</g>
+  <g transform="translate(968.3769784995033 1241.0409847951667) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(1034.3769784995034 1241.0409847951667) rotate(0.0) scale(1.0 0.5346000000000003)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(968.3769784995033 1241.0409847951667) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">RAW</text>
+</g>
+  <g transform="translate(760.6890446800496 763.5029299271921) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(826.6890446800496 763.5029299271921) rotate(0.0) scale(1.0 0.6823600000000003)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(760.6890446800496 763.5029299271921) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">STAGE</text>
+</g>
+  <g transform="translate(501.8349049747888 459.44142903291424) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(567.8349049747887 459.44142903291424) rotate(0.0) scale(1.0 0.6610432000000002)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(501.8349049747888 459.44142903291424) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">DIM</text>
+</g>
+  <g transform="translate(715.110597466381 366.22737973706296) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(781.110597466381 366.22737973706296) rotate(0.0) scale(1.0 0.6860432000000002)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(715.110597466381 366.22737973706296) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">FACT</text>
+</g>
+  <g transform="translate(461.8164041021926 75.31558445281848) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(527.8164041021926 75.31558445281848) rotate(0.0) scale(1.0 0.7148338944000001)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(461.8164041021926 75.31558445281848) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">MART</text>
+</g>
+  <g transform="translate(159.60388092740232 -129.211650933981) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(225.60388092740232 -129.211650933981) rotate(0.0) scale(1.0 0.691647440896)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(159.60388092740232 -129.211650933981) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">DASH</text>
+</g>
+  <g transform="translate(519.7690166980456 -285.07540425910724) rotate(0.0) scale(1.0 1.0)">
+<circle cx="0" cy="0" r="34" stroke="rgba(220,20,60,0.72)" fill="rgba(0,0,0,0.0)" />
+</g>
+  <g transform="translate(585.7690166980456 -285.07540425910724) rotate(0.0) scale(1.0 0.766647440896)">
+<rect x="-5.5" y="-21.0" width="11" height="42" stroke="rgba(169,169,169,0.4)" fill="rgba(46,139,87,0.6)" />
+</g>
+  <g transform="translate(519.7690166980456 -285.07540425910724) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="9" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">ML</text>
+</g>
+  <g transform="translate(1880.0 320.0) rotate(0.0) scale(1.0 1.0)">
+<rect x="-260.0" y="-150.0" width="520" height="300" stroke="rgba(169,169,169,0.64)" fill="rgba(255,255,255,0.94)" />
+</g>
+  <g transform="translate(1880.0 186.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="14" fill="rgba(0,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">Legend and Notation</text>
+</g>
+  <g transform="translate(1559.0 226.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Halo width ~ lineage risk_i</text>
+</g>
+  <g transform="translate(1547.0 244.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Bar scale ~ freshness deficit_i</text>
+</g>
+  <g transform="translate(1538.0 262.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(0,0,0,1.0)" text-anchor="start" dominant-baseline="middle">Edge width/color ~ corruption flow</text>
+</g>
+  <g transform="translate(1490.0 284.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">trust_i = clamp(confidence_i - corruption_i, 0, 1)</text>
+</g>
+  <g transform="translate(1508.0 302.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="10" fill="rgba(169,169,169,1.0)" text-anchor="start" dominant-baseline="middle">global_trust = mean(trust_i * criticality_i)</text>
+</g>
+  <g transform="translate(1880.0 444.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(0,0,139,1.0)" text-anchor="middle" dominant-baseline="middle">global_trust=1.000</text>
+</g>
+  <g transform="translate(1880.0 468.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(139,0,0,1.0)" text-anchor="middle" dominant-baseline="middle">lineage_risk=0.000</text>
+</g>
+  <g transform="translate(1880.0 492.0) rotate(0.0) scale(1.0 1.0)">
+<text x="0" y="0" font-family="sans-serif" font-size="12" fill="rgba(169,169,169,1.0)" text-anchor="middle" dominant-baseline="middle">blast_radius=0  unresolved_alerts=0</text>
+</g>
+</svg>

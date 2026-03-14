@@ -1,15 +1,49 @@
-import { useQuery } from "@tanstack/react-query"
-import { CheckIcon, CopyIcon, FileCode2, FileQuestion, Loader2, PlusIcon } from "lucide-react"
-import { useEffect } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  CheckIcon,
+  CopyIcon,
+  FileCode2,
+  FileQuestion,
+  Loader2,
+  PencilIcon,
+  PlusIcon,
+  SaveIcon,
+  XIcon,
+} from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import type { ApiError } from "@/client/core/ApiError"
 import { UserReposService } from "@/client/sdk.gen"
 import type { UserRepoPublic } from "@/client/types.gen"
-import { RepoContentRenderer, toRepoRenderableContent } from "@/components/Repo"
 import { PanelContainer } from "@/components/Page/primitives"
+import {
+  getUserRepoHeadQueryOptions,
+  RepoContentRenderer,
+  repoQueryKeys,
+  toRepoRenderableContent,
+} from "@/components/Repo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { showSuccessToast } from "@/hooks/useCustomToast"
-import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { parseRepoFileViewerPanelConfig } from "./config"
+import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
+
+function extractCommitErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null
+  const body = (error as { body?: unknown }).body
+  if (!body || typeof body !== "object") return null
+
+  const errorCode = (body as { error_code?: unknown }).error_code
+  if (typeof errorCode === "string" && errorCode.trim().length > 0)
+    return errorCode
+
+  const detail = (body as { detail?: unknown }).detail
+  if (!detail || typeof detail !== "object") return null
+  const nestedErrorCode = (detail as { error_code?: unknown }).error_code
+  return typeof nestedErrorCode === "string" &&
+    nestedErrorCode.trim().length > 0
+    ? nestedErrorCode
+    : null
+}
 
 export function RepoFileViewerPanel({
   repo,
@@ -67,6 +101,7 @@ export function RepoFileViewerPanel({
     truncationReason: string | null
   }) => Promise<void> | void
 }) {
+  const queryClient = useQueryClient()
   const resolvedConfig = parseRepoFileViewerPanelConfig(config, panelId)
   const resolvedPath =
     resolvedConfig.path_mode === "fixed"
@@ -74,16 +109,9 @@ export function RepoFileViewerPanel({
       : selectedPath
   const explicitRef = resolvedConfig.ref?.trim() || null
   const isReadmeMode = resolvedConfig.path_mode === "readme"
-
-  if (!enabled) {
-    return (
-      <RepoCapabilityPlaceholderPanel
-        title={resolvedConfig.title || "File Viewer"}
-        description="Repository file viewing is config-driven and multi-instance ready, but this repository is not currently viewer-enabled."
-        unmetRequirements={["user-repo blob read capability"]}
-      />
-    )
-  }
+  const [isEditing, setIsEditing] = useState(false)
+  const [draftContent, setDraftContent] = useState("")
+  const [draftPath, setDraftPath] = useState<string | null>(null)
 
   const fileQuery = useQuery({
     queryKey: [
@@ -108,7 +136,11 @@ export function RepoFileViewerPanel({
             path: resolvedPath!,
             ref: explicitRef || undefined,
           }),
-    enabled: isReadmeMode || Boolean(resolvedPath),
+    enabled: enabled && (isReadmeMode || Boolean(resolvedPath)),
+  })
+  const headQuery = useQuery({
+    ...getUserRepoHeadQueryOptions(repo.id, fileQuery.data?.ref || explicitRef),
+    enabled,
   })
 
   useEffect(() => {
@@ -133,6 +165,18 @@ export function RepoFileViewerPanel({
     panelId,
     repo.id,
   ])
+  useEffect(() => {
+    if (!fileQuery.data?.path) return
+    if (draftPath !== fileQuery.data.path) {
+      setDraftPath(fileQuery.data.path)
+      setDraftContent(fileQuery.data.content ?? "")
+      setIsEditing(false)
+      return
+    }
+    if (!isEditing) {
+      setDraftContent(fileQuery.data.content ?? "")
+    }
+  }, [draftPath, fileQuery.data?.content, fileQuery.data?.path, isEditing])
 
   const roomContextState =
     fileQuery.data?.path && fileQuery.data?.ref && getRoomContextState
@@ -145,6 +189,117 @@ export function RepoFileViewerPanel({
           hasContent: typeof fileQuery.data.content === "string",
         })
       : null
+  const defaultBranch =
+    repo.default_branch ||
+    repo.capabilities?.default_branch ||
+    repo.source_branch ||
+    "main"
+  const canEditText =
+    isReadmeMode !== true &&
+    fileQuery.data != null &&
+    fileQuery.data.is_binary !== true &&
+    fileQuery.data.is_unsupported_preview !== true &&
+    fileQuery.data.is_truncated !== true &&
+    typeof fileQuery.data.content === "string"
+  const hasDraftChanges =
+    canEditText && isEditing && draftContent !== (fileQuery.data?.content ?? "")
+  const headSha = headQuery.data?.expectedHeadSha
+  const commitMutation = useMutation({
+    mutationFn: async (payload: {
+      path: string
+      content: string
+      encoding: string
+      branch: string
+      expectedHeadSha: string
+    }) =>
+      UserReposService.commitUserRepoChanges({
+        repoId: repo.id,
+        requestBody: {
+          branch: payload.branch,
+          commit_message: `Update ${payload.path}`,
+          expected_head_sha: payload.expectedHeadSha,
+          mutations: [
+            {
+              path: payload.path,
+              operation: "upsert",
+              content: payload.content,
+              encoding: payload.encoding,
+            },
+          ],
+        },
+      }),
+    onSuccess: async (response, payload) => {
+      setIsEditing(false)
+      setDraftContent(payload.content)
+      showSuccessToast(`Saved ${payload.path}.`)
+      queryClient.setQueryData(
+        repoQueryKeys.head(repo.id, payload.branch),
+        () => ({ ref: payload.branch, expectedHeadSha: response.new_head_sha }),
+      )
+      await Promise.all([
+        fileQuery.refetch(),
+        headQuery.refetch(),
+        queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) &&
+            query.queryKey[0] === "repo-explorer-view" &&
+            query.queryKey.includes(repo.id),
+        }),
+        queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) &&
+            query.queryKey[0] === "user-repo-head" &&
+            query.queryKey[1] === repo.id,
+        }),
+      ])
+    },
+    onError: async (error: ApiError) => {
+      const errorCode = extractCommitErrorCode(error)
+      if (errorCode === "HEAD_CONFLICT") {
+        showErrorToast(
+          "This repo has moved. Reloading latest head before retry.",
+        )
+        await Promise.all([fileQuery.refetch(), headQuery.refetch()])
+        return
+      }
+      if (errorCode === "REPO_NOT_READY") {
+        showErrorToast("Repository is not writable yet.")
+        return
+      }
+      if (errorCode === "INVALID_WRITE_REQUEST") {
+        showErrorToast(
+          "Write request was rejected. Check file path and payload.",
+        )
+        return
+      }
+      if (errorCode === "BRANCH_NOT_WRITABLE") {
+        showErrorToast("Only the repo default branch is writable.")
+        return
+      }
+      if (errorCode === "WRITE_FAILED") {
+        showErrorToast("Backend failed to commit and push this change.")
+        return
+      }
+      showErrorToast("Failed to save file changes.")
+    },
+  })
+  const saveDisabled = !hasDraftChanges || commitMutation.isPending || !headSha
+  const headerTitle = useMemo(() => {
+    if (!canEditText) return null
+    if (headQuery.isLoading) return "Resolving latest head..."
+    if (!headSha) return "No writable head available."
+    return `Head ${headSha.slice(0, 8)}`
+  }, [canEditText, headQuery.isLoading, headSha])
+
+  if (!enabled) {
+    return (
+      <RepoCapabilityPlaceholderPanel
+        title={resolvedConfig.title || "File Viewer"}
+        description="Repository file viewing is config-driven and multi-instance ready, but this repository is not currently viewer-enabled."
+        unmetRequirements={["user-repo blob read capability"]}
+      />
+    )
+  }
 
   return (
     <PanelContainer
@@ -172,6 +327,63 @@ export function RepoFileViewerPanel({
               <CopyIcon className="size-3.5" />
               Copy
             </Button>
+          ) : null}
+          {canEditText && !isEditing ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => {
+                setDraftContent(fileQuery.data?.content ?? "")
+                setIsEditing(true)
+              }}
+            >
+              <PencilIcon className="size-3.5" />
+              Edit
+            </Button>
+          ) : null}
+          {canEditText && isEditing ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  setDraftContent(fileQuery.data?.content ?? "")
+                  setIsEditing(false)
+                }}
+              >
+                <XIcon className="size-3.5" />
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={saveDisabled}
+                title={!headSha ? "Syncing latest repo head..." : undefined}
+                onClick={() => {
+                  if (!fileQuery.data?.path || !headSha) return
+                  void commitMutation.mutateAsync({
+                    path: fileQuery.data.path,
+                    content: draftContent,
+                    encoding: fileQuery.data.encoding || "utf-8",
+                    branch: fileQuery.data.ref || explicitRef || defaultBranch,
+                    expectedHeadSha: headSha,
+                  })
+                }}
+              >
+                {commitMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <SaveIcon className="size-3.5" />
+                )}
+                Save
+              </Button>
+            </>
           ) : null}
           {onToggleRoomContext &&
           fileQuery.data?.path &&
@@ -228,6 +440,10 @@ export function RepoFileViewerPanel({
                   Resolved from {fileQuery.data.resolved_from_path}
                 </div>
               ) : null}
+              {headerTitle ? <div>{headerTitle}</div> : null}
+              {hasDraftChanges ? (
+                <Badge variant="secondary">Unsaved changes</Badge>
+              ) : null}
             </div>
           </div>
         ) : null
@@ -237,7 +453,10 @@ export function RepoFileViewerPanel({
       {!resolvedPath && !isReadmeMode ? (
         <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
           <FileQuestion className="size-6" />
-          <div>{resolvedConfig.empty_label || "No file is selected for this viewer instance."}</div>
+          <div>
+            {resolvedConfig.empty_label ||
+              "No file is selected for this viewer instance."}
+          </div>
         </div>
       ) : fileQuery.isLoading ? (
         <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
@@ -248,6 +467,16 @@ export function RepoFileViewerPanel({
           {isReadmeMode
             ? "No README is available for this repository."
             : "Could not load file content for this panel instance."}
+        </div>
+      ) : isEditing && canEditText ? (
+        <div className="flex h-full flex-col p-4">
+          <textarea
+            value={draftContent}
+            onChange={(event) => setDraftContent(event.target.value)}
+            className="min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 font-mono text-xs leading-relaxed"
+            spellCheck={false}
+            aria-label={`Editing ${fileQuery.data.path}`}
+          />
         </div>
       ) : (
         <RepoContentRenderer

@@ -354,8 +354,10 @@ def test_commit_user_repo_changes_detects_stale_head(db, monkeypatch) -> None:
     )
     monkeypatch.setattr(
         user_repo_service,
-        "_resolve_repo_head_sha",
-        lambda **kwargs: "actual-head-sha",
+        "_commit_changes_to_remote",
+        lambda **kwargs: (_ for _ in ()).throw(
+            UserRepoWriteConflict("Repo head no longer matches expected_head_sha")
+        ),
     )
 
     try:
@@ -423,12 +425,6 @@ def test_commit_user_repo_changes_returns_commit_result(db, monkeypatch) -> None
         import_status=UserRepoImportStatus.READY,
         imported_at=datetime.now(timezone.utc),
     )
-    monkeypatch.setattr(
-        user_repo_service,
-        "_resolve_repo_head_sha",
-        lambda **kwargs: "abc123",
-    )
-
     def _fake_commit_changes_to_remote(
         *,
         user_repo,
@@ -525,3 +521,131 @@ def test_build_git_auth_env_writes_askpass_script(monkeypatch, tmp_path: Path) -
     script = askpass_path.read_text(encoding="utf-8")
     assert "service-user" in script
     assert "service-pass" in script
+
+
+def test_build_authenticated_git_remote_url_prefers_internal_gogs_base_host(
+    db,
+    monkeypatch,
+) -> None:
+    owner = _create_user(db)
+    repo = user_repo_service.create_user_repo_db_only(
+        session=db,
+        owner=owner,
+        display_name="Write URL Test Repo",
+        slug="write-url-test-repo",
+        import_status=UserRepoImportStatus.READY,
+        imported_at=datetime.now(timezone.utc),
+    )
+    repo.gogs_full_name = f"dog/{repo.gogs_repo_name}"
+    repo.gogs_html_url = f"http://localhost:3001/dog/{repo.gogs_repo_name}"
+
+    monkeypatch.setattr(
+        "app.services.user_repo_service.settings.USER_REPO_GOGS_BASE_URL",
+        "http://gittin:3000",
+    )
+
+    remote_url = user_repo_service._build_authenticated_git_remote_url(user_repo=repo)
+
+    assert remote_url == f"http://gittin:3000/dog/{repo.gogs_repo_name}.git"
+
+
+def test_build_authenticated_git_remote_url_preserves_base_path_prefix(
+    db,
+    monkeypatch,
+) -> None:
+    owner = _create_user(db)
+    repo = user_repo_service.create_user_repo_db_only(
+        session=db,
+        owner=owner,
+        display_name="Write URL Prefix Repo",
+        slug="write-url-prefix-repo",
+        import_status=UserRepoImportStatus.READY,
+        imported_at=datetime.now(timezone.utc),
+    )
+    repo.gogs_full_name = f"dog/{repo.gogs_repo_name}"
+    repo.gogs_html_url = f"http://localhost:3001/dog/{repo.gogs_repo_name}"
+
+    monkeypatch.setattr(
+        "app.services.user_repo_service.settings.USER_REPO_GOGS_BASE_URL",
+        "http://gittin:3000/gogs",
+    )
+
+    remote_url = user_repo_service._build_authenticated_git_remote_url(user_repo=repo)
+
+    assert remote_url == f"http://gittin:3000/gogs/dog/{repo.gogs_repo_name}.git"
+
+
+def test_commit_changes_to_remote_uses_separate_clone_worktree_from_auth_files(
+    db,
+    monkeypatch,
+) -> None:
+    owner = _create_user(db)
+    repo = user_repo_service.create_user_repo_db_only(
+        session=db,
+        owner=owner,
+        display_name="Write Isolation Repo",
+        slug="write-isolation-repo",
+        import_status=UserRepoImportStatus.READY,
+        imported_at=datetime.now(timezone.utc),
+    )
+
+    captured: dict[str, Path] = {}
+
+    monkeypatch.setattr(
+        user_repo_service,
+        "_build_authenticated_git_remote_url",
+        lambda **kwargs: "http://gittin:3000/dog/repo.git",
+    )
+
+    def _fake_build_git_auth_env(*, worktree_dir: Path):
+        captured["auth_dir"] = worktree_dir
+        (worktree_dir / ".git-askpass").write_text("askpass", encoding="utf-8")
+        return {}
+
+    def _fake_git_clone_for_write(*, remote_url, branch, worktree_dir: Path, env):
+        del remote_url, branch, env
+        captured["clone_dir"] = worktree_dir
+        assert not (worktree_dir / ".git-askpass").exists()
+        worktree_dir.mkdir(parents=True, exist_ok=False)
+
+    monkeypatch.setattr(user_repo_service, "_build_git_auth_env", _fake_build_git_auth_env)
+    monkeypatch.setattr(user_repo_service, "_git_clone_for_write", _fake_git_clone_for_write)
+    monkeypatch.setattr(user_repo_service, "_git_ensure_head", lambda **kwargs: None)
+    monkeypatch.setattr(user_repo_service, "_git_config_commit_identity", lambda **kwargs: None)
+    monkeypatch.setattr(
+        user_repo_service,
+        "_apply_write_mutations",
+        lambda **kwargs: ["README.md"],
+    )
+    monkeypatch.setattr(
+        user_repo_service,
+        "_git_has_staged_changes",
+        lambda **kwargs: True,
+    )
+    monkeypatch.setattr(user_repo_service, "_git_commit", lambda **kwargs: None)
+    monkeypatch.setattr(
+        user_repo_service,
+        "_git_rev_parse_head",
+        lambda **kwargs: "def456",
+    )
+    monkeypatch.setattr(user_repo_service, "_git_push", lambda **kwargs: None)
+
+    result = user_repo_service._commit_changes_to_remote(
+        user_repo=repo,
+        actor=owner,
+        branch="main",
+        mutations=[
+            UserRepoFileMutation(
+                path="README.md",
+                operation="upsert",
+                content="# Hello\n",
+                encoding="utf-8",
+            )
+        ],
+        commit_message="Update README",
+        expected_head_sha="abc123",
+    )
+
+    assert result.previous_head_sha == "abc123"
+    assert captured["auth_dir"] != captured["clone_dir"]
+    assert captured["clone_dir"].parent == captured["auth_dir"]

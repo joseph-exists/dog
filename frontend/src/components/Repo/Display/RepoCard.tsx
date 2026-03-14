@@ -1,12 +1,41 @@
 import { Link } from "@tanstack/react-router"
-import { ArrowUpRightIcon, GitBranchIcon, LockIcon, UnlockIcon } from "lucide-react"
+import {
+  ArrowUpRightIcon,
+  GitBranchIcon,
+  LockIcon,
+  MoreVerticalIcon,
+  Trash2Icon,
+  UnlockIcon,
+} from "lucide-react"
 import type { UserRepoPublic } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { RepoStatusBadge } from "./RepoStatusBadge"
 import { formatRepoShortDate, getRepoInitial } from "../utils"
 
-export function RepoCard({ repo }: { repo: UserRepoPublic }) {
+export function RepoCard({
+  repo,
+  canManage = false,
+  canCancelImport = false,
+  onCancelImport,
+  onDeleteRepo,
+  isCancelPending = false,
+  isDeletePending = false,
+}: {
+  repo: UserRepoPublic
+  canManage?: boolean
+  canCancelImport?: boolean
+  onCancelImport?: (repo: UserRepoPublic) => void
+  onDeleteRepo?: (repo: UserRepoPublic) => void
+  isCancelPending?: boolean
+  isDeletePending?: boolean
+}) {
   return (
     <Card className="group flex h-full flex-col border-border/70 transition-colors hover:border-primary/40">
       <CardHeader className="space-y-4">
@@ -53,12 +82,41 @@ export function RepoCard({ repo }: { repo: UserRepoPublic }) {
 
       <CardFooter className="flex items-center justify-between gap-3 border-t pt-4 text-xs text-muted-foreground">
         <span>Created {formatRepoShortDate(repo.created_at)}</span>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/repo/$repoId" params={{ repoId: repo.id }}>
-            Review
-            <ArrowUpRightIcon className="size-4" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-1">
+          {canManage ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Repository actions">
+                  <MoreVerticalIcon className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canCancelImport ? (
+                  <DropdownMenuItem
+                    disabled={isCancelPending || isDeletePending}
+                    onClick={() => onCancelImport?.(repo)}
+                  >
+                    {isCancelPending ? "Canceling import..." : "Cancel import"}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem
+                  disabled={isDeletePending || isCancelPending}
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDeleteRepo?.(repo)}
+                >
+                  <Trash2Icon className="mr-2 size-4" />
+                  {isDeletePending ? "Deleting..." : "Delete repository"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/repo/$repoId" params={{ repoId: repo.id }}>
+              Review
+              <ArrowUpRightIcon className="size-4" />
+            </Link>
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   )

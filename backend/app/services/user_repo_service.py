@@ -201,13 +201,6 @@ class UserRepoService:
             raise UserRepoWriteValidationError("commit_message is required")
 
         normalized_mutations = self._normalize_write_mutations(mutations)
-        current_head_sha = self._resolve_repo_head_sha(
-            user_repo=user_repo,
-            ref=normalized_branch,
-        )
-        if current_head_sha != normalized_expected_head_sha:
-            raise UserRepoWriteConflict("Repo head no longer matches expected_head_sha")
-
         actor = session.get(User, actor_user_id)
         if actor is None:
             raise UserRepoWriteUnauthorized("Actor user not found")
@@ -313,6 +306,29 @@ class UserRepoService:
             session.refresh(user_repo)
 
         return remote
+
+    def delete_user_repo_remote(self, *, user_repo: UserRepo) -> bool:
+        """
+        Best-effort remote delete for a user repo.
+
+        Returns True when a remote repo was deleted, False when it was already absent
+        or provisioning is not configured.
+        """
+        if not self.is_configured():
+            return False
+
+        owner = self._repo_api_owner(user_repo=user_repo)
+        path = f"/api/v1/repos/{owner}/{user_repo.gogs_repo_name}"
+        with self._client() as client:
+            response = client.delete(path)
+
+        if response.status_code == 404:
+            return False
+        if response.status_code in {200, 202, 204}:
+            return True
+        raise UserRepoProvisioningError(
+            f"Gogs user repo delete failed: DELETE {path} returned {response.status_code}"
+        )
 
     def _client(self) -> httpx.Client:
         return httpx.Client(
@@ -579,9 +595,10 @@ class UserRepoService:
             with tempfile.TemporaryDirectory(
                 dir=writes_root,
                 prefix=f"{user_repo.id}-",
-            ) as worktree_dir_name:
-                worktree_dir = Path(worktree_dir_name)
-                git_env = self._build_git_auth_env(worktree_dir=worktree_dir)
+            ) as temp_dir_name:
+                temp_dir = Path(temp_dir_name)
+                worktree_dir = temp_dir / "repo"
+                git_env = self._build_git_auth_env(worktree_dir=temp_dir)
                 self._git_clone_for_write(
                     remote_url=remote_url,
                     branch=branch,
@@ -635,14 +652,17 @@ class UserRepoService:
         )
 
     def _build_authenticated_git_remote_url(self, *, user_repo: UserRepo) -> str:
+        base_url = urlparse(str(settings.USER_REPO_GOGS_BASE_URL).rstrip("/"))
+        base_path_prefix = base_url.path.rstrip("/")
+
         if user_repo.gogs_html_url:
             parsed = urlparse(user_repo.gogs_html_url)
             path = parsed.path if parsed.path.endswith(".git") else f"{parsed.path}.git"
             return urlunparse(
                 (
-                    parsed.scheme,
-                    parsed.netloc,
-                    path,
+                    base_url.scheme,
+                    base_url.netloc,
+                    f"{base_path_prefix}{path}",
                     "",
                     "",
                     "",
@@ -650,12 +670,11 @@ class UserRepoService:
             )
 
         owner = self._repo_api_owner(user_repo=user_repo)
-        base_url = urlparse(str(settings.USER_REPO_GOGS_BASE_URL).rstrip("/"))
         return urlunparse(
             (
                 base_url.scheme,
                 base_url.netloc,
-                f"/{owner}/{user_repo.gogs_repo_name}.git",
+                f"{base_path_prefix}/{owner}/{user_repo.gogs_repo_name}.git",
                 "",
                 "",
                 "",

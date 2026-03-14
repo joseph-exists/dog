@@ -24,12 +24,20 @@ from app.models import (
 DEFAULT_PANELS = {
     "chat": [
         {"id": "chat", "kind": "chat", "prominence": "primary"},
-        {"id": "agents", "kind": "agentPanel", "prominence": "auxiliary"},
+        {
+            "id": "participants",
+            "kind": "participantPanel",
+            "prominence": "auxiliary",
+        },
     ],
     "story": [
         {"id": "story", "kind": "storyEditor", "prominence": "primary"},
         {"id": "chat", "kind": "chat", "prominence": "primary"},
-        {"id": "agents", "kind": "agentPanel", "prominence": "auxiliary"},
+        {
+            "id": "participants",
+            "kind": "participantPanel",
+            "prominence": "auxiliary",
+        },
     ],
     "workspace": [],
 }

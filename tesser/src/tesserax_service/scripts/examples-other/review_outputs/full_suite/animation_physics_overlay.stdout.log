@@ -1,0 +1,4 @@
+✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_physics_overlay.gif
+   balls=8, duration=8.0s, dt=0.020, frames=192
+   events=before:400 after:400 start:113 persist:1126 end:105 joint_limits:0
+   hooks=before_play,before_save,after_save after_frame=192
