@@ -160,6 +160,13 @@ class ContentFormat(str, PyEnum):
     TEST = "test"
 
 
+class SvgAssetVisibility(str, PyEnum):
+    """Visibility states for SVG assets."""
+
+    PRIVATE = "private"
+    PUBLIC = "public"
+
+
 class UserRepoImportStatus(str, PyEnum):
     PENDING = "pending"
     IMPORTING = "importing"
@@ -2886,6 +2893,156 @@ class Tag(TagBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 
 
+class SvgAssetBase(SQLModel):
+    """Shared validated contract for SVG assets."""
+
+    visibility: SvgAssetVisibility = Field(default=SvgAssetVisibility.PRIVATE, index=True)
+    name: str = Field(min_length=1, max_length=255, index=True)
+    description: str | None = Field(default=None, max_length=2000)
+    svg_markup: str = Field(min_length=1)
+    metadata_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False),
+        description="Arbitrary metadata for model/prompt/style provenance.",
+    )
+    source_private_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="svgasset.id",
+        index=True,
+    )
+
+    @field_validator("svg_markup")
+    @classmethod
+    def validate_svg_markup(cls, v: str) -> str:
+        normalized = v.strip()
+        if not normalized:
+            raise ValueError("svg_markup cannot be empty")
+        lower = normalized.lower()
+        if "<svg" not in lower or "</svg>" not in lower:
+            raise ValueError("svg_markup must include a valid <svg> root element")
+        return v
+
+    @model_validator(mode="after")
+    def validate_visibility_source_pair(self) -> "SvgAssetBase":
+        if self.visibility == SvgAssetVisibility.PUBLIC and self.source_private_id is None:
+            raise ValueError("source_private_id is required when visibility is public")
+        if self.visibility == SvgAssetVisibility.PRIVATE and self.source_private_id is not None:
+            raise ValueError("source_private_id must be null when visibility is private")
+        return self
+
+
+class SvgAssetCreatePrivate(SQLModel):
+    """Input contract for creating a private SVG asset."""
+
+    visibility: Literal[SvgAssetVisibility.PRIVATE] = Field(default=SvgAssetVisibility.PRIVATE)
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    svg_markup: str = Field(min_length=1)
+    metadata_json: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("svg_markup")
+    @classmethod
+    def validate_svg_markup(cls, v: str) -> str:
+        normalized = v.strip()
+        if not normalized:
+            raise ValueError("svg_markup cannot be empty")
+        lower = normalized.lower()
+        if "<svg" not in lower or "</svg>" not in lower:
+            raise ValueError("svg_markup must include a valid <svg> root element")
+        return v
+
+
+class SvgAssetCreatePublicFromPrivate(SQLModel):
+    """Input contract for creating a public copy from an existing private asset."""
+
+    visibility: Literal[SvgAssetVisibility.PUBLIC] = Field(default=SvgAssetVisibility.PUBLIC)
+    source_private_id: uuid.UUID
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    metadata_json: dict[str, Any] | None = None
+
+
+SvgAssetCreate = Annotated[
+    SvgAssetCreatePrivate | SvgAssetCreatePublicFromPrivate,
+    Field(discriminator="visibility"),
+]
+
+
+class SvgAssetUpdate(SQLModel):
+    """Patch contract for SVG assets."""
+
+    visibility: SvgAssetVisibility | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    svg_markup: str | None = Field(default=None, min_length=1)
+    metadata_json: dict[str, Any] | None = None
+    source_private_id: uuid.UUID | None = None
+
+    @field_validator("svg_markup")
+    @classmethod
+    def validate_svg_markup(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if not normalized:
+            raise ValueError("svg_markup cannot be empty")
+        lower = normalized.lower()
+        if "<svg" not in lower or "</svg>" not in lower:
+            raise ValueError("svg_markup must include a valid <svg> root element")
+        return v
+
+    @model_validator(mode="after")
+    def validate_visibility_source_pair(self) -> "SvgAssetUpdate":
+        if self.visibility is None:
+            return self
+        source_was_provided = "source_private_id" in self.model_fields_set
+        if (
+            self.visibility == SvgAssetVisibility.PUBLIC
+            and source_was_provided
+            and self.source_private_id is None
+        ):
+            raise ValueError("source_private_id is required when visibility is public")
+        if self.visibility == SvgAssetVisibility.PRIVATE and self.source_private_id is not None:
+            raise ValueError("source_private_id must be null when visibility is private")
+        return self
+
+
+class SvgAsset(SvgAssetBase, table=True):
+    """Database model for persisted SVG assets."""
+
+    __tablename__ = "svgasset"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True,
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow},
+        index=True,
+    )
+
+
+class SvgAssetPublic(SvgAssetBase):
+    """Public API response model for SVG assets."""
+
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class SvgAssetsPublic(SQLModel):
+    """Collection response model for SVG assets."""
+
+    data: list[SvgAssetPublic]
+    count: int
+
+
 # Many-to-many relationship between Story and Tag
 class StoryToTag(SQLModel, table=True):
     story_id: uuid.UUID = Field(
@@ -3019,8 +3176,30 @@ User.user_personas = Relationship(
     sa_relationship_kwargs={"cascade": "all, delete-orphan"},
 )
 
+# User to SvgAsset relationship
+User.svg_assets = Relationship(
+    back_populates="owner",
+    sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+)
+
 # UserPersona to User relationship
 UserPersona.user = Relationship(back_populates="user_personas")
+
+# SvgAsset to User relationship
+SvgAsset.owner = Relationship(back_populates="svg_assets")
+
+# SvgAsset self-referential copy lineage relationships
+SvgAsset.source_private = Relationship(
+    back_populates="public_copies",
+    sa_relationship_kwargs={
+        "foreign_keys": "[SvgAsset.source_private_id]",
+        "remote_side": "[SvgAsset.id]",
+    },
+)
+SvgAsset.public_copies = Relationship(
+    back_populates="source_private",
+    sa_relationship_kwargs={"foreign_keys": "[SvgAsset.source_private_id]"},
+)
 
 # Persona to UserPersona relationship
 Persona.user_personas = Relationship(back_populates="persona")

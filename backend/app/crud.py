@@ -91,6 +91,12 @@ from app.models import (
     StoryStateVariableCreate,
     StoryStateVariableUpdate,
     StoryUpdate,
+    SvgAsset,
+    SvgAssetCreate,
+    SvgAssetCreatePrivate,
+    SvgAssetCreatePublicFromPrivate,
+    SvgAssetUpdate,
+    SvgAssetVisibility,
     Trait,
     TraitConflictGroup,
     TraitConflictGroupCreate,
@@ -932,6 +938,136 @@ def delete_story(*, session: Session, story_id: uuid.UUID) -> Message:
     session.add(story)
     session.commit()
     return Message(message="Story deleted successfully")
+
+
+# SVG Asset CRUD functions
+
+
+def get_svg_asset(
+    *,
+    session: Session,
+    id: uuid.UUID,
+    owner_id: uuid.UUID,
+) -> SvgAsset | None:
+    """Get one SVG asset scoped to an owner."""
+    statement = select(SvgAsset).where(
+        SvgAsset.id == id,
+        SvgAsset.owner_id == owner_id,
+    )
+    return session.exec(statement).first()
+
+
+def get_svg_assets(
+    *,
+    session: Session,
+    owner_id: uuid.UUID,
+    visibility: SvgAssetVisibility | None = None,
+    skip: int = 0,
+    limit: int = 100,
+) -> tuple[list[SvgAsset], int]:
+    """Get owner-scoped SVG assets with optional visibility filtering."""
+    filters = [SvgAsset.owner_id == owner_id]
+    if visibility is not None:
+        filters.append(SvgAsset.visibility == visibility)
+
+    count_statement = select(func.count()).select_from(SvgAsset).where(*filters)
+    count = session.exec(count_statement).one()
+
+    statement = (
+        select(SvgAsset)
+        .where(*filters)
+        .order_by(SvgAsset.updated_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    assets = session.exec(statement).all()
+    return list(assets), count
+
+
+def create_svg_asset(
+    *,
+    session: Session,
+    owner_id: uuid.UUID,
+    svg_asset_in: SvgAssetCreate,
+) -> SvgAsset:
+    """
+    Create SVG asset from a discriminated create contract.
+
+    Public-variant creation copies markup from an existing private source asset.
+    """
+    payload: dict[str, Any]
+    if isinstance(svg_asset_in, SvgAssetCreatePublicFromPrivate):
+        source = get_svg_asset(
+            session=session,
+            id=svg_asset_in.source_private_id,
+            owner_id=owner_id,
+        )
+        if source is None:
+            raise HTTPException(status_code=404, detail="Source private SVG asset not found")
+        if source.visibility != SvgAssetVisibility.PRIVATE:
+            raise HTTPException(status_code=400, detail="Source SVG asset must be private")
+
+        payload = {
+            "owner_id": owner_id,
+            "visibility": SvgAssetVisibility.PUBLIC,
+            "name": svg_asset_in.name if svg_asset_in.name is not None else source.name,
+            "description": (
+                svg_asset_in.description
+                if svg_asset_in.description is not None
+                else source.description
+            ),
+            "svg_markup": source.svg_markup,
+            "metadata_json": (
+                svg_asset_in.metadata_json
+                if svg_asset_in.metadata_json is not None
+                else source.metadata_json
+            ),
+            "source_private_id": source.id,
+        }
+    elif isinstance(svg_asset_in, SvgAssetCreatePrivate):
+        payload = {**svg_asset_in.model_dump(), "owner_id": owner_id}
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported SVG asset create variant")
+
+    db_svg_asset = SvgAsset.model_validate(payload)
+    session.add(db_svg_asset)
+    session.commit()
+    session.refresh(db_svg_asset)
+    return db_svg_asset
+
+
+def update_svg_asset(
+    *,
+    session: Session,
+    db_svg_asset: SvgAsset,
+    svg_asset_in: SvgAssetUpdate,
+) -> SvgAsset:
+    """
+    Patch and re-validate canonical SVG asset state before persistence.
+    """
+    update_data = svg_asset_in.model_dump(exclude_unset=True)
+    if not update_data:
+        return db_svg_asset
+
+    merged_payload = {
+        **db_svg_asset.model_dump(),
+        **update_data,
+    }
+    validated = SvgAsset.model_validate(merged_payload)
+
+    db_svg_asset.sqlmodel_update(
+        validated.model_dump(exclude={"id", "owner_id", "created_at", "updated_at"})
+    )
+    session.add(db_svg_asset)
+    session.commit()
+    session.refresh(db_svg_asset)
+    return db_svg_asset
+
+
+def delete_svg_asset(*, session: Session, db_svg_asset: SvgAsset) -> None:
+    """Delete an SVG asset."""
+    session.delete(db_svg_asset)
+    session.commit()
 
 
 # User Persona CRUD functions
