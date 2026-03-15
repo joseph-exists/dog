@@ -37,6 +37,7 @@ from app.api.routes import (
     shadow_repos,
     stories,
     storynodes,
+    svgs,
     tesser,
     theme_bindings,
     themes,
@@ -75,6 +76,7 @@ api_router.include_router(persona_qualities.router)
 api_router.include_router(persona_traits.router)
 api_router.include_router(persona_events.router)
 api_router.include_router(storynodes.router)
+api_router.include_router(svgs.router)
 api_router.include_router(stories.router)
 api_router.include_router(catalog.router)
 api_router.include_router(user_personas.router)

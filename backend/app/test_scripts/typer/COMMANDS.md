@@ -2672,6 +2672,114 @@ python main.py stories create "Test" --verbose
 python main.py stories publish bad-id-here
 ```
 
+## SVG Commands
+
+Commands for managing and bulk-populating the `/svgs` library with deterministic combinatoric generation.
+
+### List SVG Assets
+
+```bash
+python main.py svgs list --limit 25
+python main.py svgs list --visibility private --json
+```
+
+**Options:**
+- `--limit INTEGER` - Max assets to list (default: 50)
+- `--skip INTEGER` - Pagination offset (default: 0)
+- `--visibility TEXT` - Filter by `private` or `public`
+- `--json` - Output as JSON
+
+### Get SVG Asset
+
+```bash
+python main.py svgs get SVG_ID
+python main.py svgs get SVG_ID --json
+```
+
+### Create Private SVG
+
+```bash
+# From file
+python main.py svgs create-private "grid-wave-01" --svg-file ./my_asset.svg --desc "hero background"
+
+# Inline SVG
+python main.py svgs create-private "inline-test" --svg '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>'
+```
+
+**Options:**
+- `--svg-file PATH` - Read SVG markup from a file
+- `--svg TEXT` - Inline SVG markup (mutually exclusive with `--svg-file`)
+- `--desc, -d TEXT` - Optional description
+- `--metadata TEXT` - JSON object string for `metadata_json`
+
+### Create Public Copy from Private
+
+```bash
+python main.py svgs copy-public PRIVATE_SVG_ID --name "public-grid-wave-01"
+```
+
+**Options:**
+- `--name TEXT` - Optional display name override
+- `--desc TEXT` - Optional description override
+- `--metadata TEXT` - JSON object string to override metadata
+
+### Patch SVG Asset
+
+```bash
+python main.py svgs patch SVG_ID --name "renamed-asset"
+python main.py svgs patch SVG_ID --svg-file ./updated.svg --metadata '{"tag":"v2"}'
+python main.py svgs patch SVG_ID --visibility public --source-private-id PRIVATE_SVG_ID
+```
+
+### Delete SVG Asset
+
+```bash
+python main.py svgs delete SVG_ID --force
+```
+
+### Build Generation Plan
+
+```bash
+python main.py svgs plan \
+  --count 1000 \
+  --seed 20260315 \
+  --output app/test_scripts/render_things/svg_library_plan.json
+```
+
+Produces a deterministic plan with:
+- Pairwise core coverage rows
+- Style-family quotas (`organic`, `geometric`, `glitch`, `minimal`, `atmospheric`, `diagrammatic`)
+- Hero and safe utility tiers
+
+### Seed SVG Library
+
+```bash
+# Dry run first (recommended)
+python main.py svgs seed --plan app/test_scripts/render_things/svg_library_plan.json --dry-run -v
+
+# Actual population run
+python main.py svgs seed \
+  --plan app/test_scripts/render_things/svg_library_plan.json \
+  --name-prefix svg-lib \
+  --public-copy-ratio 0.1 \
+  --manifest-out app/test_scripts/render_things/svg_library_seed_report.json
+```
+
+**Recommended Batch Sizes**
+- Local smoke: `--count 50` to `--count 200`
+- Staging population: `--count 500` to `--count 2000`
+- Large runs: split into repeated batches and review each manifest before continuing
+
+### SVG Smoke Test Script
+
+```bash
+# Local validation only (no API writes)
+python app/test_scripts/render_things/test_svg_library_population.py --count 24 --seed 20260315
+
+# Live API smoke (creates, patches, copies, lists, optional cleanup)
+python app/test_scripts/render_things/test_svg_library_population.py --post --create-count 5 --cleanup
+```
+
 ## Authentication
 
 All commands automatically handle authentication using credentials from `test.env`:

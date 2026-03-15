@@ -1,4 +1,4 @@
-I finished both UI/keyboard improvements and documented the preview-config reuse pattern.
+
 
 In [RepoPanelLayoutDialog.tsx](/home/josep/dog/frontend/src/components/Repo/Dialogs/RepoPanelLayoutDialog.tsx), the lightweight dialog now exposes visible shortcut hints on the relevant controls:
 - `Ctrl/Cmd+Shift+A` for `Add Panel`

@@ -12459,6 +12459,286 @@ export const StoryValidationResultSchema = {
     description: "Result of validating a story's graph structure for publishing."
 } as const;
 
+export const SvgAssetCreatePrivateSchema = {
+    properties: {
+        visibility: {
+            type: 'string',
+            const: 'private',
+            title: 'Visibility',
+            default: 'private'
+        },
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        svg_markup: {
+            type: 'string',
+            minLength: 1,
+            title: 'Svg Markup'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Metadata Json'
+        }
+    },
+    type: 'object',
+    required: ['name', 'svg_markup'],
+    title: 'SvgAssetCreatePrivate',
+    description: 'Input contract for creating a private SVG asset.'
+} as const;
+
+export const SvgAssetCreatePublicFromPrivateSchema = {
+    properties: {
+        visibility: {
+            type: 'string',
+            const: 'public',
+            title: 'Visibility',
+            default: 'public'
+        },
+        source_private_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Private Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        metadata_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata Json'
+        }
+    },
+    type: 'object',
+    required: ['source_private_id'],
+    title: 'SvgAssetCreatePublicFromPrivate',
+    description: 'Input contract for creating a public copy from an existing private asset.'
+} as const;
+
+export const SvgAssetPublicSchema = {
+    properties: {
+        visibility: {
+            '$ref': '#/components/schemas/SvgAssetVisibility',
+            default: 'private'
+        },
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        svg_markup: {
+            type: 'string',
+            minLength: 1,
+            title: 'Svg Markup'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Metadata Json',
+            description: 'Arbitrary metadata for model/prompt/style provenance.'
+        },
+        source_private_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Private Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        }
+    },
+    type: 'object',
+    required: ['name', 'svg_markup', 'id', 'owner_id', 'created_at', 'updated_at'],
+    title: 'SvgAssetPublic',
+    description: 'Public API response model for SVG assets.'
+} as const;
+
+export const SvgAssetUpdateSchema = {
+    properties: {
+        visibility: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/SvgAssetVisibility'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        svg_markup: {
+            anyOf: [
+                {
+                    type: 'string',
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Svg Markup'
+        },
+        metadata_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Metadata Json'
+        },
+        source_private_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Private Id'
+        }
+    },
+    type: 'object',
+    title: 'SvgAssetUpdate',
+    description: 'Patch contract for SVG assets.'
+} as const;
+
+export const SvgAssetVisibilitySchema = {
+    type: 'string',
+    enum: ['private', 'public'],
+    title: 'SvgAssetVisibility',
+    description: 'Visibility states for SVG assets.'
+} as const;
+
+export const SvgAssetsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/SvgAssetPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'SvgAssetsPublic',
+    description: 'Collection response model for SVG assets.'
+} as const;
+
 export const TesserExamplesIndexResponseSchema = {
     properties: {
         path: {

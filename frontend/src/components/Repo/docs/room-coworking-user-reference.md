@@ -79,9 +79,9 @@ These are intentional explicit states for operator/developer visibility.
 
 ## Current Limitations
 
-- Room-level repo attachment is not yet a fully explicit/stable typed contract; panel-level `repo_id` is the reliable setup path.
-- Runtime cadence controls for repo events are not yet exposed (current behavior is direct roomstream sync/invalidation).
-- Story-wide import of repo panel kinds is not fully enabled yet (room path is primary for this feature).
+UNKNOWN IF TRUE: Room-level repo attachment is not yet a fully explicit/stable typed contract; panel-level `repo_id` is the reliable setup path.
+UNKNOWN IF TRUE: Runtime cadence controls for repo events are not yet exposed (current behavior is direct roomstream sync/invalidation).
+UNKNOWN IF TRUE: Story-wide import of repo panel kinds is not fully enabled yet (room path is primary for this feature).
 - Presence details (who selected what) are not yet represented as dedicated cursor/presence UX.
 
 ## Recommended Demo Script (5 Minutes)

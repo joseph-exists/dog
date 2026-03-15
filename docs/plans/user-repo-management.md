@@ -1,4 +1,4 @@
-Our end goal is enabling users to create and manage platform-owned repositories through our interfaces.
+Our end goal is enabling users to create and manage platform-owned repositories through our interfaces - including editing files, adding new folders, and otherwise manipulating content and file structure.
 
 Today, the backend already supports one important slice of that product:
 

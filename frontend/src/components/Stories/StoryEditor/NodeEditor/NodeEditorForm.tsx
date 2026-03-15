@@ -12,6 +12,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  ChevronsUpDown,
   Eye,
   FileCode2,
   Layers,
@@ -22,7 +23,13 @@ import {
   WandSparkles,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import type { ContentFormat, StoryNodePublic, StoryNodeUpdate } from "@/client"
+import type {
+  ContentFormat,
+  StoryNodePublic,
+  StoryNodeUpdate,
+  SvgAssetPublic,
+} from "@/client"
+import { SvgsService } from "@/client"
 import {
   type Content,
   type ContentVariant,
@@ -31,6 +38,11 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -506,6 +518,16 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     "svg" | "mdx"
   >("mdx")
   const [svgBackgroundMinHeight, setSvgBackgroundMinHeight] = useState(320)
+  const [svgLibraryAssets, setSvgLibraryAssets] = useState<SvgAssetPublic[]>([])
+  const [isSvgLibraryLoading, setIsSvgLibraryLoading] = useState(false)
+  const [svgLibraryError, setSvgLibraryError] = useState<string | null>(null)
+  const [svgLibraryQuery, setSvgLibraryQuery] = useState("")
+  const [svgLibraryVisibility, setSvgLibraryVisibility] = useState<
+    "all" | "private" | "public"
+  >("all")
+  const [svgLibraryReloadToken, setSvgLibraryReloadToken] = useState(0)
+  const [showRawSvgMarkup, setShowRawSvgMarkup] = useState(false)
+  const [showApplyPlanning, setShowApplyPlanning] = useState(false)
 
   useEffect(() => {
     setTitle(node.title)
@@ -525,6 +547,44 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
       setActiveLayerId(svgLayers[0].id)
     }
   }, [activeLayer, svgLayers])
+
+  useEffect(() => {
+    if (activeTab !== "svg-studio") return
+
+    let ignore = false
+    const loadSvgLibrary = async () => {
+      setIsSvgLibraryLoading(true)
+      setSvgLibraryError(null)
+      try {
+        const response = await SvgsService.listSvgs({
+          limit: 200,
+          skip: 0,
+          visibility:
+            svgLibraryVisibility === "all" ? undefined : svgLibraryVisibility,
+        })
+        if (!ignore) {
+          setSvgLibraryAssets(response.data ?? [])
+        }
+      } catch (error) {
+        if (!ignore) {
+          setSvgLibraryError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load SVG library",
+          )
+        }
+      } finally {
+        if (!ignore) {
+          setIsSvgLibraryLoading(false)
+        }
+      }
+    }
+
+    loadSvgLibrary()
+    return () => {
+      ignore = true
+    }
+  }, [activeTab, svgLibraryVisibility, svgLibraryReloadToken])
 
   const mutateNode = (patch: StoryNodeUpdate) => {
     if (Object.keys(patch).length === 0) return
@@ -664,6 +724,15 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
         : "border-border bg-background"
 
   const contentLines = toLineCount(content)
+  const filteredSvgLibraryAssets = useMemo(() => {
+    const query = svgLibraryQuery.trim().toLowerCase()
+    if (!query) return svgLibraryAssets
+    return svgLibraryAssets.filter((asset) => {
+      const name = asset.name.toLowerCase()
+      const description = (asset.description || "").toLowerCase()
+      return name.includes(query) || description.includes(query)
+    })
+  }, [svgLibraryAssets, svgLibraryQuery])
 
   const patchPreview: StoryNodeUpdate = {
     title,
@@ -703,6 +772,31 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     const layer = createSvgLayer(templateIndex)
     setSvgLayers((prev) => [...prev, layer])
     setActiveLayerId(layer.id)
+  }
+
+  const importSvgAssetAsLayer = (asset: SvgAssetPublic) => {
+    const newLayer: SvgLayer = {
+      ...createSvgLayer(0),
+      name: asset.name,
+      svg: asset.svg_markup,
+      filterPreset: "none",
+      filterChain: [],
+    }
+    setSvgLayers((prev) => [...prev, newLayer])
+    setActiveLayerId(newLayer.id)
+  }
+
+  const replaceActiveLayerWithAsset = (asset: SvgAssetPublic) => {
+    if (!activeLayer) {
+      importSvgAssetAsLayer(asset)
+      return
+    }
+    upsertActiveLayer({
+      name: asset.name,
+      svg: asset.svg_markup,
+      filterPreset: "none",
+      filterChain: [],
+    })
   }
 
   const removeLayer = (layerId: string) => {
@@ -751,27 +845,28 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     upsertActiveLayer({ filterPreset: preset, filterChain: nextChain })
   }
 
-  const buildSvgApplyPlan = (
+  const buildSvgApplyPlanForMarkup = (
+    svgMarkup: string,
     targetFormat: "svg" | "mdx",
     mode: SvgApplyMode,
   ): SvgApplyPlan => {
     if (targetFormat === "svg") {
       return {
-        nextContent: compositeSvg,
+        nextContent: svgMarkup,
         nextFormat: "svg",
         overwritesBody: true,
         convertedToMdx: false,
       }
     }
 
-    const sceneMdx = buildLayeredMdx(compositeSvg, svgCanvasWidth, svgCanvasHeight)
+    const sceneMdx = buildLayeredMdx(svgMarkup, svgCanvasWidth, svgCanvasHeight)
     const normalizedMode = mode
     const shouldMerge = normalizedMode !== "replace"
 
     if (normalizedMode === "background") {
       const existingBody = convertNodeBodyToMdx(content, contentFormat)
       const backgroundMdx = buildBackgroundContainerMdx(
-        compositeSvg,
+        svgMarkup,
         existingBody,
         svgBackgroundMinHeight,
       )
@@ -806,6 +901,13 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     }
   }
 
+  const buildSvgApplyPlan = (
+    targetFormat: "svg" | "mdx",
+    mode: SvgApplyMode,
+  ): SvgApplyPlan => {
+    return buildSvgApplyPlanForMarkup(compositeSvg, targetFormat, mode)
+  }
+
   const svgApplyPreview = useMemo(
     () => buildSvgApplyPlan(svgApplyTargetPreview, svgApplyMode),
     [
@@ -820,23 +922,28 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     ],
   )
 
-  const applySvgLayersToContent = (targetFormat: "svg" | "mdx") => {
-    const plan = buildSvgApplyPlan(targetFormat, svgApplyMode)
+  const applySvgMarkupToContent = (
+    svgMarkup: string,
+    targetFormat: "svg" | "mdx",
+    mode: SvgApplyMode,
+    sourceLabel: string,
+  ) => {
+    const plan = buildSvgApplyPlanForMarkup(svgMarkup, targetFormat, mode)
     const hasExistingBody = Boolean(content.trim())
 
     if (
       plan.overwritesBody &&
       hasExistingBody &&
       targetFormat !== "svg" &&
-      svgApplyMode === "replace"
+      mode === "replace"
     ) {
       const confirmed = window.confirm(
-        "Replace current node body with SVG composition? This will overwrite existing content text.",
+        `Replace current node body with ${sourceLabel}? This will overwrite existing content text.`,
       )
       if (!confirmed) return
     }
 
-    if (targetFormat === "svg" && svgApplyMode !== "replace" && hasExistingBody) {
+    if (targetFormat === "svg" && mode !== "replace" && hasExistingBody) {
       const confirmed = window.confirm(
         "SVG format supports replace-only apply. Continue and replace existing body?",
       )
@@ -850,6 +957,24 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
       patch.content_format = plan.nextFormat
     }
     mutateNode(patch)
+  }
+
+  const applySvgLayersToContent = (targetFormat: "svg" | "mdx") => {
+    applySvgMarkupToContent(
+      compositeSvg,
+      targetFormat,
+      svgApplyMode,
+      "SVG composition",
+    )
+  }
+
+  const importSvgAssetToBody = (asset: SvgAssetPublic) => {
+    applySvgMarkupToContent(
+      asset.svg_markup,
+      svgApplyTargetPreview,
+      svgApplyMode,
+      `library asset "${asset.name}"`,
+    )
   }
 
   const reloadLocalFromNode = () => {
@@ -1202,6 +1327,106 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
             </div>
           </div>
 
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center justify-between">
+              <Label>Import From SVG Library</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSvgLibraryReloadToken((prev) => prev + 1)
+                }}
+                disabled={isSvgLibraryLoading}
+              >
+                Refresh
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input
+                value={svgLibraryQuery}
+                onChange={(e) => setSvgLibraryQuery(e.target.value)}
+                placeholder="Search name or description"
+              />
+              <Select
+                value={svgLibraryVisibility}
+                onValueChange={(value) =>
+                  setSvgLibraryVisibility(value as "all" | "private" | "public")
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">all visibility</SelectItem>
+                  <SelectItem value="private">private</SelectItem>
+                  <SelectItem value="public">public</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-muted-foreground flex items-center">
+                {isSvgLibraryLoading
+                  ? "Loading assets..."
+                  : `${filteredSvgLibraryAssets.length} assets`}
+              </div>
+            </div>
+
+            {svgLibraryError ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {svgLibraryError}
+              </div>
+            ) : (
+              <div className="max-h-[220px] space-y-2 overflow-auto rounded-md border bg-background p-2">
+                {!isSvgLibraryLoading && filteredSvgLibraryAssets.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No SVG assets found.</p>
+                )}
+                {filteredSvgLibraryAssets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="flex items-center justify-between gap-2 rounded-md border p-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{asset.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {asset.description || "No description"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{asset.visibility || "private"}</Badge>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => replaceActiveLayerWithAsset(asset)}
+                      >
+                        Replace Layer
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => importSvgAssetAsLayer(asset)}
+                      >
+                        Add Layer
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => importSvgAssetToBody(asset)}
+                        disabled={
+                          svgApplyTargetPreview === "svg" &&
+                          svgApplyMode !== "replace"
+                        }
+                      >
+                        Import to Body
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-5">
             <div className="space-y-2 lg:col-span-2">
               <div className="flex items-center justify-between">
@@ -1540,105 +1765,143 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Raw SVG Markup</Label>
-                    <Textarea
-                      value={activeLayer.svg}
-                      onChange={(e) => upsertActiveLayer({ svg: e.target.value })}
-                      className="min-h-[220px] font-mono text-xs"
-                    />
-                  </div>
+                  <Collapsible
+                    open={showRawSvgMarkup}
+                    onOpenChange={setShowRawSvgMarkup}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <Label>Raw SVG Markup</Label>
+                      <CollapsibleTrigger asChild>
+                        <Button type="button" size="sm" variant="outline">
+                          <ChevronsUpDown className="mr-1 h-4 w-4" />
+                          {showRawSvgMarkup ? "Hide" : "Show"}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                    <CollapsibleContent>
+                      <Textarea
+                        value={activeLayer.svg}
+                        onChange={(e) => upsertActiveLayer({ svg: e.target.value })}
+                        className="min-h-[220px] font-mono text-xs"
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
                 </>
               )}
             </div>
           </div>
 
           <div className="space-y-3 rounded-lg border p-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Apply Mode</Label>
-                <Select
-                  value={svgApplyMode}
-                  onValueChange={(value) => setSvgApplyMode(value as SvgApplyMode)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="replace">replace body</SelectItem>
-                    <SelectItem value="prepend">prepend to body</SelectItem>
-                    <SelectItem value="append">append to body</SelectItem>
-                    <SelectItem value="background">background wrapper</SelectItem>
-                  </SelectContent>
-                </Select>
+            <Collapsible
+              open={showApplyPlanning}
+              onOpenChange={setShowApplyPlanning}
+              className="space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <Label>Apply Planning</Label>
+                <CollapsibleTrigger asChild>
+                  <Button type="button" size="sm" variant="outline">
+                    <ChevronsUpDown className="mr-1 h-4 w-4" />
+                    {showApplyPlanning ? "Hide" : "Show"}
+                  </Button>
+                </CollapsibleTrigger>
               </div>
-              <div className="space-y-2">
-                <Label>Preview Target</Label>
-                <Select
-                  value={svgApplyTargetPreview}
-                  onValueChange={(value) =>
-                    setSvgApplyTargetPreview(value as "svg" | "mdx")
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mdx">mdx</SelectItem>
-                    <SelectItem value="svg">svg</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
-                <p>
-                  {svgApplyPreview.overwritesBody
-                    ? "This apply plan overwrites node body."
-                    : "This apply plan preserves existing node body."}
-                </p>
-                <p>
-                  Output format:{" "}
-                  <span className="font-medium">{svgApplyPreview.nextFormat}</span>
-                </p>
-                {svgApplyPreview.convertedToMdx && (
-                  <p>Existing body will be converted to MDX-compatible form.</p>
-                )}
-              </div>
-            </div>
 
-            {svgApplyMode === "background" && (
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Background Min Height (px)</Label>
-                  <Input
-                    type="number"
-                    min={120}
-                    value={svgBackgroundMinHeight}
-                    onChange={(e) =>
-                      setSvgBackgroundMinHeight(Number(e.target.value) || 320)
-                    }
-                  />
+              <CollapsibleContent className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Apply Mode</Label>
+                    <Select
+                      value={svgApplyMode}
+                      onValueChange={(value) => setSvgApplyMode(value as SvgApplyMode)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="replace">replace body</SelectItem>
+                        <SelectItem value="prepend">prepend to body</SelectItem>
+                        <SelectItem value="append">append to body</SelectItem>
+                        <SelectItem value="background">background wrapper</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preview Target</Label>
+                    <Select
+                      value={svgApplyTargetPreview}
+                      onValueChange={(value) =>
+                        setSvgApplyTargetPreview(value as "svg" | "mdx")
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mdx">mdx</SelectItem>
+                        <SelectItem value="svg">svg</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
+                    <p>
+                      {svgApplyPreview.overwritesBody
+                        ? "This apply plan overwrites node body."
+                        : "This apply plan preserves existing node body."}
+                    </p>
+                    <p>
+                      Output format:{" "}
+                      <span className="font-medium">{svgApplyPreview.nextFormat}</span>
+                    </p>
+                    {svgApplyPreview.convertedToMdx && (
+                      <p>Existing body will be converted to MDX-compatible form.</p>
+                    )}
+                    {svgApplyTargetPreview === "svg" && svgApplyMode !== "replace" && (
+                      <p>
+                        SVG target is replace-only. Import-to-body actions are disabled
+                        for non-replace modes.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Before (current body)</Label>
-                <Textarea
-                  readOnly
-                  value={content}
-                  className="min-h-[160px] font-mono text-xs"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>After (apply result)</Label>
-                <Textarea
-                  readOnly
-                  value={svgApplyPreview.nextContent}
-                  className="min-h-[160px] font-mono text-xs"
-                />
-              </div>
-            </div>
+                {svgApplyMode === "background" && (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>Background Min Height (px)</Label>
+                      <Input
+                        type="number"
+                        min={120}
+                        value={svgBackgroundMinHeight}
+                        onChange={(e) =>
+                          setSvgBackgroundMinHeight(Number(e.target.value) || 320)
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Before (current body)</Label>
+                    <Textarea
+                      readOnly
+                      value={content}
+                      className="min-h-[160px] font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>After (apply result)</Label>
+                    <Textarea
+                      readOnly
+                      value={svgApplyPreview.nextContent}
+                      className="min-h-[160px] font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             <div className="flex items-center justify-between">
               <Label>Composite Preview</Label>

@@ -3280,6 +3280,80 @@ export type StoryValidationResult = {
     state_schema_validation?: (StateSchemaValidationResult | null);
 };
 
+/**
+ * Input contract for creating a private SVG asset.
+ */
+export type SvgAssetCreatePrivate = {
+    visibility?: "private";
+    name: string;
+    description?: (string | null);
+    svg_markup: string;
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * Input contract for creating a public copy from an existing private asset.
+ */
+export type SvgAssetCreatePublicFromPrivate = {
+    visibility?: "public";
+    source_private_id: string;
+    name?: (string | null);
+    description?: (string | null);
+    metadata_json?: ({
+    [key: string]: unknown;
+} | null);
+};
+
+/**
+ * Public API response model for SVG assets.
+ */
+export type SvgAssetPublic = {
+    visibility?: SvgAssetVisibility;
+    name: string;
+    description?: (string | null);
+    svg_markup: string;
+    /**
+     * Arbitrary metadata for model/prompt/style provenance.
+     */
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+    source_private_id?: (string | null);
+    id: string;
+    owner_id: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Collection response model for SVG assets.
+ */
+export type SvgAssetsPublic = {
+    data: Array<SvgAssetPublic>;
+    count: number;
+};
+
+/**
+ * Patch contract for SVG assets.
+ */
+export type SvgAssetUpdate = {
+    visibility?: (SvgAssetVisibility | null);
+    name?: (string | null);
+    description?: (string | null);
+    svg_markup?: (string | null);
+    metadata_json?: ({
+    [key: string]: unknown;
+} | null);
+    source_private_id?: (string | null);
+};
+
+/**
+ * Visibility states for SVG assets.
+ */
+export type SvgAssetVisibility = 'private' | 'public';
+
 export type TesserExamplesIndexResponse = {
     path: string;
     content: string;
@@ -6341,6 +6415,39 @@ export type StorynodesCreateNodeChoiceFromNodeData = {
 
 export type StorynodesCreateNodeChoiceFromNodeResponse = (NodeChoicePublic);
 
+export type SvgsListSvgsData = {
+    limit?: number;
+    skip?: number;
+    visibility?: (SvgAssetVisibility | null);
+};
+
+export type SvgsListSvgsResponse = (SvgAssetsPublic);
+
+export type SvgsCreateSvgData = {
+    requestBody: (SvgAssetCreatePrivate | SvgAssetCreatePublicFromPrivate);
+};
+
+export type SvgsCreateSvgResponse = (SvgAssetPublic);
+
+export type SvgsGetSvgData = {
+    svgId: string;
+};
+
+export type SvgsGetSvgResponse = (SvgAssetPublic);
+
+export type SvgsPatchSvgData = {
+    requestBody: SvgAssetUpdate;
+    svgId: string;
+};
+
+export type SvgsPatchSvgResponse = (SvgAssetPublic);
+
+export type SvgsDeleteSvgData = {
+    svgId: string;
+};
+
+export type SvgsDeleteSvgResponse = (Message);
+
 export type TesserListScriptsResponse = (TesserScriptsPublic);
 
 export type TesserGetExamplesIndexResponse = (TesserExamplesIndexResponse);
@@ -6677,6 +6784,18 @@ export type UserReposGetUserRepoData = {
 };
 
 export type UserReposGetUserRepoResponse = (UserRepoPublic);
+
+export type UserReposDeleteUserRepoData = {
+    repoId: string;
+};
+
+export type UserReposDeleteUserRepoResponse = (Message);
+
+export type UserReposCancelUserRepoImportData = {
+    repoId: string;
+};
+
+export type UserReposCancelUserRepoImportResponse = (UserRepoPublic);
 
 export type UserReposGetUserRepoTreeData = {
     commitLimit?: number;

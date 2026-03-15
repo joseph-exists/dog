@@ -54,6 +54,7 @@ from commands import (
     panels,
     embedder,
     story_affordances,
+    svgs,
 )
 
 app.add_typer(items.app, name="items")
@@ -73,6 +74,7 @@ app.add_typer(affordances.app, name="affordances", help="Affordance introspectio
 app.add_typer(demos.app, name="demos", help="Demo configuration and styling commands")
 app.add_typer(story_affordances.app, name="story-affordances", help="Story affordance introspection commands")
 app.add_typer(gauntlet.app, name="gauntlet", help="The Gauntlet Protocol - integrated demo system")
+app.add_typer(svgs.app, name="svgs", help="SVG library commands and combinatoric seeding")
 
 # TODO: Add more command modules
 # from commands import tests
