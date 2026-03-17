@@ -1,32 +1,40 @@
+# kennel/src/server.py  — full updated file
+
 import asyncio
 import json
 import subprocess
 import uuid
+import threading
 from contextlib import asynccontextmanager
 from enum import Enum
 
 import redis.asyncio as aioredis
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
+from tokens import token_store, TokenStore
+
+
+# ── Settings ──────────────────────────────────────────────────────────────────
 
 class Settings(BaseSettings):
-    kennel_redis_host: str = "redis"
-    kennel_redis_port: int = 6379
+    kennel_redis_host:          str = "redis"
+    kennel_redis_port:          int = 6379
     kennel_redis_event_channel: str = "kennel:events"
-    kennel_secret: str = ""
-    kennel_base_image: str = "ubuntu"
-    kennel_base_release: str = "noble"
-    kennel_max_envs: int = 20
+    kennel_secret:              str = ""
+    kennel_base_image:          str = "ubuntu"
+    kennel_base_release:        str = "noble"
+    kennel_max_envs:            int = 20
 
     class Config:
         env_file = ".env"
 
-settings = Settings()
+settings  = Settings()
 redis_client: aioredis.Redis = None
 
+
+# ── Lifespan ──────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,8 +42,10 @@ async def lifespan(app: FastAPI):
     redis_client = aioredis.Redis(
         host=settings.kennel_redis_host,
         port=settings.kennel_redis_port,
-        decode_responses=True
+        decode_responses=True,
     )
+    # Start background token reaper
+    asyncio.create_task(token_store.reap_expired())
     yield
     await redis_client.aclose()
 
@@ -43,82 +53,178 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
+# ── Auth helpers ──────────────────────────────────────────────────────────────
 
-def verify_secret(x_kennel_secret: str = Header(None)):
+def require_management_secret(x_kennel_secret: str = Header(None)):
+    """
+    Used on all management endpoints (create, destroy, inject, list).
+    This is the shared backend→kennel secret, never exposed to browser clients.
+    """
     if settings.kennel_secret and x_kennel_secret != settings.kennel_secret:
         raise HTTPException(status_code=403, detail="Invalid kennel secret")
+
+
+def verify_ws_token(token: str, env_name: str) -> None:
+    """
+    Used on WebSocket endpoints.
+    Validates per-workspace short-lived token — not the management secret.
+    """
+    valid, reason = token_store.validate(token, env_name)
+    if not valid:
+        raise HTTPException(403, detail=f"Token rejected: {reason}")
 
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
 class EnvKind(str, Enum):
-    ephemeral = "ephemeral"
+    ephemeral  = "ephemeral"
     persistent = "persistent"
 
+class JobStatus(str, Enum):
+    pending = "pending"
+    running = "running"
+    done    = "done"
+    failed  = "failed"
+
 class CreateEnvRequest(BaseModel):
-    name: str | None = None        # auto-generated if not provided
-    kind: EnvKind = EnvKind.ephemeral
-    template: str = "ubuntu"
-    release: str = "noble"
-    # optional: clone from a named base snapshot
-    base_snapshot: str | None = None
+    name:               str | None = None
+    kind:               EnvKind    = EnvKind.ephemeral
+    flavour:            str        = "dev"
+    template:           str        = "ubuntu"
+    release:            str        = "noble"
+    base_snapshot:      str | None = None
+    base_snapshot_name: str | None = None
 
 class EnvAction(BaseModel):
     action: str   # start | stop | restart
 
+class InjectRequest(BaseModel):
+    """
+    Workspace personalisation — applied after container is running.
+    All fields optional so callers can inject incrementally.
+    """
+    user:       str             = "dev"
+    ssh_pubkey: str | None      = None
+    repo_url:   str | None      = None
+    env_vars:   dict[str, str]  = {}
+    git_name:   str | None      = None
+    git_email:  str | None      = None
+    # TTL for the issued terminal token (seconds)
+    token_ttl:  int             = 3600
+
+
+# ── Job state ─────────────────────────────────────────────────────────────────
+
+jobs: dict[str, dict] = {}
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def lxc(*args) -> subprocess.CompletedProcess:
+def lxc(*args, timeout: int = 60) -> subprocess.CompletedProcess:
     return subprocess.run(
-        list(args), capture_output=True, text=True, timeout=60
+        list(args), capture_output=True, text=True, timeout=timeout
     )
+
 
 async def publish_event(env_name: str, event: str, data: dict = {}):
     payload = json.dumps({"env": env_name, "event": event, **data})
     await redis_client.publish(settings.kennel_redis_event_channel, payload)
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
+def _attach_exec(env_name: str, cmd: str, timeout: int = 30) -> subprocess.CompletedProcess:
+    """Run a shell command inside a running LXC container."""
+    return subprocess.run(
+        ["lxc-attach", "-n", env_name, "--", "bash", "-c", cmd],
+        capture_output=True, text=True, timeout=timeout
+    )
+
+
+# ── Background create worker ──────────────────────────────────────────────────
+
+def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
+    jobs[job_id]["status"] = JobStatus.running
+    try:
+        if req.base_snapshot:
+            r = subprocess.run(
+                ["lxc-copy", "-n", req.base_snapshot,
+                 "-N", name, "-s",
+                 *(["-B", req.base_snapshot_name] if req.base_snapshot_name else [])],
+                capture_output=True, text=True, timeout=300,
+            )
+        else:
+            r = subprocess.run(
+                ["lxc-create", "-n", name, "-t", req.template,
+                 "--", "--release", req.release],
+                capture_output=True, text=True, timeout=600,
+            )
+
+        if r.returncode != 0:
+            jobs[job_id].update({"status": JobStatus.failed, "error": r.stderr})
+            return
+
+        start_args = ["lxc-start", "-n", name]
+        if req.kind == EnvKind.ephemeral:
+            start_args.append("-e")
+        subprocess.run(start_args, timeout=30, capture_output=True)
+
+        jobs[job_id]["status"] = JobStatus.done
+
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(
+            publish_event(name, "created", {"kind": req.kind})
+        )
+        loop.close()
+
+    except subprocess.TimeoutExpired as e:
+        jobs[job_id].update({"status": JobStatus.failed, "error": str(e)})
+    except Exception as e:
+        jobs[job_id].update({"status": JobStatus.failed, "error": str(e)})
+
+
+# ── Routes: management (require_management_secret) ────────────────────────────
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
 @app.get("/envs")
-def list_envs():
-    result = lxc("lxc-ls", "--fancy",
-                 "--fancy-format", "name,state,ipv4,pid")
-    lines = result.stdout.strip().splitlines()
-    return {"envs": lines}
+def list_envs(_=Depends(require_management_secret)):
+    result = lxc("lxc-ls", "--fancy", "--fancy-format", "name,state,ipv4,pid")
+    return {"envs": result.stdout.strip().splitlines()}
 
-@app.post("/envs")
-async def create_env(req: CreateEnvRequest):
-    name = req.name or f"env-{uuid.uuid4().hex[:8]}"
 
-    if req.base_snapshot:
-        # Clone from snapshot for fast boot
-        r = lxc("lxc-copy", "-n", req.base_snapshot, "-N", name, "-s")
-    else:
-        r = lxc("lxc-create", "-n", name,
-                "-t", req.template,
-                "--", "--release", req.release)
+@app.post("/envs", status_code=202)
+async def create_env(req: CreateEnvRequest, _=Depends(require_management_secret)):
+    name   = req.name or f"env-{uuid.uuid4().hex[:8]}"
+    job_id = f"job-{uuid.uuid4().hex[:8]}"
 
-    if r.returncode != 0:
-        raise HTTPException(500, detail=r.stderr)
+    jobs[job_id] = {"status": JobStatus.pending, "env_name": name, "error": None}
 
-    if req.kind == EnvKind.ephemeral:
-        # Ephemeral: auto-destroys on stop
-        lxc("lxc-start", "-n", name, "-e")
-    else:
-        lxc("lxc-start", "-n", name)
+    thread = threading.Thread(
+        target=_create_env_worker, args=(job_id, name, req), daemon=True
+    )
+    thread.start()
 
-    await publish_event(name, "created", {"kind": req.kind})
-    return {"name": name, "kind": req.kind}
+    return {
+        "job_id": job_id,
+        "name":   name,
+        "kind":   req.kind,
+        "status": JobStatus.pending,
+        "poll":   f"/jobs/{job_id}",
+    }
+
+
+@app.get("/jobs/{job_id}")
+def get_job(job_id: str, _=Depends(require_management_secret)):
+    if job_id not in jobs:
+        raise HTTPException(404, "Job not found")
+    return jobs[job_id]
+
 
 @app.delete("/envs/{name}")
-async def destroy_env(name: str):
+async def destroy_env(name: str, _=Depends(require_management_secret)):
+    token_store.revoke_for_env(name)      # invalidate any live terminal token
     lxc("lxc-stop", "-n", name, "-k")
     r = lxc("lxc-destroy", "-n", name)
     if r.returncode != 0:
@@ -126,8 +232,9 @@ async def destroy_env(name: str):
     await publish_event(name, "destroyed")
     return {"destroyed": name}
 
+
 @app.post("/envs/{name}/action")
-async def env_action(name: str, body: EnvAction):
+async def env_action(name: str, body: EnvAction, _=Depends(require_management_secret)):
     cmds = {
         "start":   ["lxc-start", "-n", name],
         "stop":    ["lxc-stop",  "-n", name],
@@ -135,31 +242,108 @@ async def env_action(name: str, body: EnvAction):
     }
     if body.action not in cmds:
         raise HTTPException(400, "Unknown action")
+
     lxc(*cmds[body.action])
+
     if body.action == "restart":
         lxc("lxc-start", "-n", name)
+    if body.action in ("stop", "restart"):
+        token_store.revoke_for_env(name)  # force re-auth on next connect
+
     await publish_event(name, body.action)
     return {"env": name, "action": body.action}
 
-@app.get("/envs/{name}/snapshot")
-def snapshot_env(name: str, snapshot_name: str | None = None):
-    snap = snapshot_name or f"snap-{uuid.uuid4().hex[:6]}"
-    r = lxc("lxc-snapshot", "-n", name, "-c", snap)
-    if r.returncode != 0:
-        raise HTTPException(500, detail=r.stderr)
-    return {"env": name, "snapshot": snap}
+
+# ── Inject endpoint ───────────────────────────────────────────────────────────
+
+@app.post("/envs/{name}/inject")
+async def inject_workspace(
+    name: str,
+    req:  InjectRequest,
+    _=Depends(require_management_secret),
+):
+    """
+    Applies workspace personalisation to a running container, then
+    issues and returns a short-lived terminal token for that env.
+
+    Called by the backend provisioner after lxc-create completes.
+    Never called by browser clients.
+    """
+    errors = []
+
+    # 1. SSH public key
+    if req.ssh_pubkey:
+        r = _attach_exec(name, f"""
+            mkdir -p /home/{req.user}/.ssh
+            chmod 700 /home/{req.user}/.ssh
+            echo '{req.ssh_pubkey}' >> /home/{req.user}/.ssh/authorized_keys
+            chmod 600 /home/{req.user}/.ssh/authorized_keys
+            chown -R {req.user}:{req.user} /home/{req.user}/.ssh
+        """)
+        if r.returncode != 0:
+            errors.append(f"ssh_pubkey: {r.stderr.strip()}")
+
+    # 2. Git identity
+    if req.git_name or req.git_email:
+        git_cmds = []
+        if req.git_name:
+            git_cmds.append(f"git config --global user.name '{req.git_name}'")
+        if req.git_email:
+            git_cmds.append(f"git config --global user.email '{req.git_email}'")
+        r = _attach_exec(name, f"su - {req.user} -c \"{' && '.join(git_cmds)}\"")
+        if r.returncode != 0:
+            errors.append(f"git_config: {r.stderr.strip()}")
+
+    # 3. Environment variables → .bashrc and .profile
+    if req.env_vars:
+        env_block = "\n".join(
+            f"export {k}={v}" for k, v in req.env_vars.items()
+        )
+        r = _attach_exec(name, f"""
+            cat >> /home/{req.user}/.bashrc << 'ENVEOF'
+# kennel workspace env
+{env_block}
+ENVEOF
+        """)
+        if r.returncode != 0:
+            errors.append(f"env_vars: {r.stderr.strip()}")
+
+    # 4. Repo clone
+    if req.repo_url:
+        r = _attach_exec(
+            name,
+            f"su - {req.user} -c "
+            f"'git clone {req.repo_url} /home/{req.user}/workspace'",
+            timeout=120,
+        )
+        if r.returncode != 0:
+            errors.append(f"repo_clone: {r.stderr.strip()}")
+
+    # 5. Issue terminal token — always issued even if some inject steps soft-failed
+    ws_token = token_store.issue(name, ttl=req.token_ttl)
+
+    await publish_event(name, "injected", {"errors": errors})
+
+    return {
+        "env":      name,
+        "token":    ws_token,
+        "errors":   errors,          # soft failures — non-fatal, logged by backend
+        "terminal": f"/envs/{name}/ws",
+    }
 
 
-# ── WebSocket terminal ─────────────────────────────────────────────────────────
-#
-# ws://kennel.domain/envs/{name}/ws
-# Bidirectional: client sends stdin, server streams stdout+stderr
-#
+# ── WebSocket: terminal ───────────────────────────────────────────────────────
+
 @app.websocket("/envs/{name}/ws")
 async def env_terminal(websocket: WebSocket, name: str):
-    # Validate secret in query param for WS (headers unreliable in browsers)
+    """
+    Browser connects here with the token issued by /inject.
+    Token is validated before the lxc-attach subprocess is spawned.
+    """
     token = websocket.query_params.get("token", "")
-    if settings.kennel_secret and token != settings.kennel_secret:
+
+    valid, reason = token_store.validate(token, name)
+    if not valid:
         await websocket.close(code=4001)
         return
 
@@ -174,7 +358,6 @@ async def env_terminal(websocket: WebSocket, name: str):
     )
 
     async def read_output():
-        """Pump proc stdout → WebSocket."""
         try:
             while True:
                 chunk = await proc.stdout.read(4096)
@@ -187,7 +370,6 @@ async def env_terminal(websocket: WebSocket, name: str):
             await websocket.close()
 
     async def read_input():
-        """Pump WebSocket → proc stdin."""
         try:
             while True:
                 data = await websocket.receive_bytes()
@@ -203,13 +385,14 @@ async def env_terminal(websocket: WebSocket, name: str):
     await publish_event(name, "ws_disconnected")
 
 
-# ── Log stream WebSocket ───────────────────────────────────────────────────────
-#
-# ws://kennel.domain/envs/{name}/logs
-# Server-only stream of lxc-monitor output for this container
-#
+# ── WebSocket: log stream ─────────────────────────────────────────────────────
+
 @app.websocket("/envs/{name}/logs")
 async def env_logs(websocket: WebSocket, name: str):
+    """
+    Streams lxc-monitor output. Uses the management secret —
+    this is a backend/admin tool, not exposed to end users.
+    """
     token = websocket.query_params.get("token", "")
     if settings.kennel_secret and token != settings.kennel_secret:
         await websocket.close(code=4001)

@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     TESSER_REQUEST_CHANNEL: str = "tesser:requests"
     TESSER_RESPONSE_CHANNEL: str = "tesser:responses"
     TESSER_DEMO_CANVAS_CALLBACK_CHANNEL: str = "tesser:demo-canvas:callbacks"
+    KENNEL_BASE_URL: str = "http://kennel:8090"
+    KENNEL_WS_BASE_URL: str = "ws://kennel:8090"
+    KENNEL_EXTERNAL_WS_BASE_URL: str = "ws://localhost:8090"
+    KENNEL_SECRET: str = ""
+    KENNEL_REDIS_EVENT_CHANNEL: str = "kennel:events"
 
     # Shadow Configuration (git-based entity versioning)
     # Repos are cached locally at SHADOW_REPOS_PATH and optionally synced to

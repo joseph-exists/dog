@@ -7236,3 +7236,88 @@ DemoSession.demo_config = Relationship(back_populates="sessions")
 # Note: User model assumed to exist in models.py
 # owner relationship added where Theme is integrated into main models.py
 Theme.owner = Relationship(back_populates="themes")
+
+
+# ============================================================================
+# Workspace Models (Kennel-backed development environments)
+# ============================================================================
+
+
+class WorkspaceStatus(str, PyEnum):
+    """Lifecycle state for a kennel-backed workspace."""
+
+    provisioning = "provisioning"
+    ready = "ready"
+    stopping = "stopping"
+    stopped = "stopped"
+    destroyed = "destroyed"
+
+
+class WorkspaceFlavour(str, PyEnum):
+    """Requested workspace image/profile."""
+
+    base = "base"
+    dev = "dev"
+    python = "python"
+    node = "node"
+    jupyter = "jupyter"
+
+
+class WorkspaceBase(SQLModel):
+    """Shared workspace fields for persistence and API models."""
+
+    name: str = Field(min_length=1, max_length=120, index=True)
+    flavour: WorkspaceFlavour = Field(default=WorkspaceFlavour.dev)
+    kind: str = Field(default="ephemeral", min_length=1, max_length=32)
+    status: WorkspaceStatus = Field(default=WorkspaceStatus.provisioning)
+    kennel_name: str | None = Field(default=None, max_length=120)
+    kennel_job: str | None = Field(default=None, max_length=120)
+    ws_token: str | None = Field(default=None, max_length=255)
+    meta: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+
+
+class WorkspaceCreate(SQLModel):
+    """Request model for provisioning a workspace."""
+
+    name: str = Field(min_length=1, max_length=120)
+    flavour: WorkspaceFlavour = WorkspaceFlavour.dev
+    kind: str = Field(default="ephemeral", min_length=1, max_length=32)
+    repo_url: str | None = Field(default=None, max_length=2000)
+    ssh_pubkey: str | None = None
+    env_vars: dict[str, str] = Field(default_factory=dict)
+
+
+class Workspace(WorkspaceBase, table=True):
+    """Database model for a user-owned kennel workspace."""
+
+    __tablename__ = "workspaces"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column_kwargs={"onupdate": datetime.utcnow},
+    )
+
+
+class WorkspacePublic(WorkspaceBase):
+    """Public API response model for a workspace."""
+
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    terminal_url: str | None = None
+
+
+class WorkspacesPublic(SQLModel):
+    """Collection response model for workspaces."""
+
+    data: list[WorkspacePublic]
+    count: int

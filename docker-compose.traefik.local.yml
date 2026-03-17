@@ -1,0 +1,24 @@
+services:
+  traefik:
+    ports:
+      - 80:80
+    labels:
+      - traefik.http.routers.traefik-dashboard-http.entrypoints=http
+      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.traefik-dashboard-http.service=api@internal
+      - traefik.http.routers.traefik-dashboard-http.middlewares=admin-auth
+      - traefik.http.routers.traefik-dashboard-https.rule=Host(`disabled.invalid`)
+      - traefik.http.routers.traefik-dashboard-https.entrypoints=http
+      - traefik.http.routers.traefik-dashboard-https.tls=false
+      - traefik.http.routers.traefik-dashboard-https.tls.certresolver=
+      - traefik.http.routers.traefik-dashboard-https.service=api@internal
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=http
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=false
+    command:
+      - --providers.docker
+      - --providers.docker.constraints=Label(`traefik.constraint-label`, `traefik-public`)
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.http.address=:80
+      - --accesslog
+      - --log
+      - --api

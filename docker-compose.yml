@@ -59,6 +59,9 @@ services:
       - /lib/modules:/lib/modules:ro        # kernel modules
       - kennel-containers:/var/lib/lxc      # persisted container storage
       - kennel-logs:/var/log/lxc
+    tmpfs:
+      - /run
+      - /run/lock
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
@@ -173,6 +176,9 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT:-6379}
+      - KENNEL_BASE_URL=http://kennel:8090
+      - KENNEL_WS_BASE_URL=ws://kennel:8090
+      - KENNEL_EXTERNAL_WS_BASE_URL=ws://kennel.${DOMAIN?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - SHADOW_REPOS_PATH=/tmp/shadows
       - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-}

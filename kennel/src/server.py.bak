@@ -1,0 +1,356 @@
+import asyncio
+import json
+import subprocess
+import uuid
+from contextlib import asynccontextmanager
+from enum import Enum as PyEnum
+import threading
+
+import redis.asyncio as aioredis
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    kennel_redis_host: str = "redis"
+    kennel_redis_port: int = 6379
+    kennel_redis_event_channel: str = "kennel:events"
+    kennel_secret: str = ""
+    kennel_base_image: str = "ubuntu"
+    kennel_base_release: str = "noble"
+    kennel_max_envs: int = 20
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+redis_client: aioredis.Redis = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global redis_client
+    redis_client = aioredis.Redis(
+        host=settings.kennel_redis_host,
+        port=settings.kennel_redis_port,
+        decode_responses=True
+    )
+    yield
+    await redis_client.aclose()
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+def verify_secret(x_kennel_secret: str = Header(None)):
+    if settings.kennel_secret and x_kennel_secret != settings.kennel_secret:
+        raise HTTPException(status_code=403, detail="Invalid kennel secret")
+
+
+# ── Models ────────────────────────────────────────────────────────────────────
+
+class EnvKind(str, PyEnum):
+    ephemeral = "ephemeral"
+    persistent = "persistent"
+
+class CreateEnvRequest(BaseModel):
+    name: str | None = None        # auto-generated if not provided
+    kind: EnvKind = EnvKind.ephemeral
+    template: str = "ubuntu"
+    release: str = "noble"
+    # optional: clone from a named base snapshot
+    base_snapshot: str | None = None
+
+class EnvAction(BaseModel):
+    action: str   # start | stop | restart
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def lxc(*args) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        list(args), capture_output=True, text=True, timeout=60
+    )
+
+async def publish_event(env_name: str, event: str, data: dict = {}):
+    payload = json.dumps({"env": env_name, "event": event, **data})
+    await redis_client.publish(settings.kennel_redis_event_channel, payload)
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/envs")
+def list_envs():
+    result = lxc("lxc-ls", "--fancy",
+                 "--fancy-format", "name,state,ipv4,pid")
+    lines = result.stdout.strip().splitlines()
+    return {"envs": lines}
+
+@app.delete("/envs/{name}")
+async def destroy_env(name: str):
+    lxc("lxc-stop", "-n", name, "-k")
+    r = lxc("lxc-destroy", "-n", name)
+    if r.returncode != 0:
+        raise HTTPException(500, detail=r.stderr)
+    await publish_event(name, "destroyed")
+    return {"destroyed": name}
+
+@app.post("/envs/{name}/action")
+async def env_action(name: str, body: EnvAction):
+    cmds = {
+        "start":   ["lxc-start", "-n", name],
+        "stop":    ["lxc-stop",  "-n", name],
+        "restart": ["lxc-stop",  "-n", name],
+    }
+    if body.action not in cmds:
+        raise HTTPException(400, "Unknown action")
+    lxc(*cmds[body.action])
+    if body.action == "restart":
+        lxc("lxc-start", "-n", name)
+    await publish_event(name, body.action)
+    return {"env": name, "action": body.action}
+
+@app.get("/envs/{name}/snapshot")
+def snapshot_env(name: str, snapshot_name: str | None = None):
+    snap = snapshot_name or f"snap-{uuid.uuid4().hex[:6]}"
+    r = lxc("lxc-snapshot", "-n", name, "-c", snap)
+    if r.returncode != 0:
+        raise HTTPException(500, detail=r.stderr)
+    return {"env": name, "snapshot": snap}
+
+# ── Snapshot / flavour management ─────────────────────────────────────────────
+
+BUILTIN_SNAPSHOTS = {
+    "base":    ("base-noble", "snap0"),
+    "dev":     ("base-dev",   "snap0"),
+    "python":  ("base-python","snap0"),
+    "node":    ("base-node",  "snap0"),
+    "jupyter": ("base-jupyter","snap0"),
+}
+
+@app.get("/flavours")
+def list_flavours():
+    """Available base snapshots for fast cloning."""
+    available = {}
+    for flavour, (container, snap) in BUILTIN_SNAPSHOTS.items():
+        result = lxc("lxc-snapshot", "-n", container, "-L")
+        available[flavour] = {
+            "container": container,
+            "snapshot": snap,
+            "ready": result.returncode == 0
+        }
+    return available
+
+
+@app.post("/envs", status_code=202)
+async def create_env(req: CreateEnvRequest):
+    name = req.name or f"env-{uuid.uuid4().hex[:8]}"
+    job_id = f"job-{uuid.uuid4().hex[:8]}"
+
+    # Resolve flavour → snapshot if provided
+    if req.flavour and req.flavour in BUILTIN_SNAPSHOTS:
+        container, snap = BUILTIN_SNAPSHOTS[req.flavour]
+        req.base_snapshot = container
+        req.base_snapshot_name = snap
+
+    jobs[job_id] = {"status": JobStatus.pending, "env_name": name, "error": None}
+    thread = threading.Thread(
+        target=_create_env_worker, args=(job_id, name, req), daemon=True
+    )
+    thread.start()
+    return {"job_id": job_id, "name": name, "kind": req.kind, "poll": f"/jobs/{job_id}"}
+
+
+@app.post("/snapshots/rebuild")
+async def rebuild_snapshot(flavour: str, background_tasks: BackgroundTasks):
+    """Re-run provisioning and re-snapshot. Called after provisioning script changes."""
+    if flavour not in BUILTIN_SNAPSHOTS:
+        raise HTTPException(404, "Unknown flavour")
+    # kick off rebuild in background
+    background_tasks.add_task(_rebuild_flavour, flavour)
+    return {"rebuilding": flavour}
+
+
+# Update CreateEnvRequest model too:
+class CreateEnvRequest(BaseModel):
+    name: str | None = None
+    kind: EnvKind = EnvKind.ephemeral
+    flavour: str = "dev"              # ← new: picks the snapshot tier
+    template: str = "ubuntu"
+    release: str = "noble"
+    base_snapshot: str | None = None
+# ── WebSocket terminal ─────────────────────────────────────────────────────────
+#
+# ws://kennel.domain/envs/{name}/ws
+# Bidirectional: client sends stdin, server streams stdout+stderr
+#
+@app.websocket("/envs/{name}/ws")
+async def env_terminal(websocket: WebSocket, name: str):
+    # Validate secret in query param for WS (headers unreliable in browsers)
+    token = websocket.query_params.get("token", "")
+    if settings.kennel_secret and token != settings.kennel_secret:
+        await websocket.close(code=4001)
+        return
+
+    await websocket.accept()
+
+    proc = await asyncio.create_subprocess_exec(
+        "lxc-attach", "-n", name, "--",
+        "bash", "--login",
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+
+    async def read_output():
+        """Pump proc stdout → WebSocket."""
+        try:
+            while True:
+                chunk = await proc.stdout.read(4096)
+                if not chunk:
+                    break
+                await websocket.send_bytes(chunk)
+        except Exception:
+            pass
+        finally:
+            await websocket.close()
+
+    async def read_input():
+        """Pump WebSocket → proc stdin."""
+        try:
+            while True:
+                data = await websocket.receive_bytes()
+                proc.stdin.write(data)
+                await proc.stdin.drain()
+        except WebSocketDisconnect:
+            pass
+        finally:
+            proc.stdin.close()
+
+    await asyncio.gather(read_output(), read_input())
+    proc.kill()
+    await publish_event(name, "ws_disconnected")
+
+
+# ── Log stream WebSocket ───────────────────────────────────────────────────────
+#
+# ws://kennel.domain/envs/{name}/logs
+# Server-only stream of lxc-monitor output for this container
+#
+@app.websocket("/envs/{name}/logs")
+async def env_logs(websocket: WebSocket, name: str):
+    token = websocket.query_params.get("token", "")
+    if settings.kennel_secret and token != settings.kennel_secret:
+        await websocket.close(code=4001)
+        return
+
+    await websocket.accept()
+
+    proc = await asyncio.create_subprocess_exec(
+        "lxc-monitor", "--name", name,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    try:
+        while True:
+            line = await proc.stdout.readline()
+            if not line:
+                break
+            await websocket.send_text(line.decode())
+    except WebSocketDisconnect:
+        pass
+    finally:
+        proc.kill()
+
+# ── Job state (in-memory for prototype) ───────────────────────────────────────
+# Replace with Redis or DB for multi-process scenarios
+
+class JobStatus(str, PyEnum):
+    pending  = "pending"
+    running  = "running"
+    done     = "done"
+    failed   = "failed"
+
+jobs: dict[str, dict] = {}   # job_id → {status, env_name, error}
+
+
+def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
+    """Runs in a thread — lxc-create blocks for minutes."""
+    jobs[job_id]["status"] = JobStatus.running
+
+    try:
+        if req.base_snapshot:
+            r = subprocess.run(
+                ["lxc-copy", "-n", req.base_snapshot, "-N", name, "-s"],
+                capture_output=True, text=True, timeout=300
+            )
+        else:
+            r = subprocess.run(
+                ["lxc-create", "-n", name, "-t", req.template,
+                 "--", "--release", req.release],
+                capture_output=True, text=True,
+                timeout=600   # 10 min ceiling — first pull can be slow
+            )
+
+        if r.returncode != 0:
+            jobs[job_id].update({"status": JobStatus.failed, "error": r.stderr})
+            return
+
+        # Start it after creation
+        if req.kind == EnvKind.ephemeral:
+            subprocess.run(["lxc-start", "-n", name, "-e"],
+                           timeout=30, capture_output=True)
+        else:
+            subprocess.run(["lxc-start", "-n", name],
+                           timeout=30, capture_output=True)
+
+        jobs[job_id]["status"] = JobStatus.done
+
+        # Publish to Redis synchronously from thread
+        import asyncio
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(publish_event(name, "created", {"kind": req.kind}))
+        loop.close()
+
+    except subprocess.TimeoutExpired as e:
+        jobs[job_id].update({"status": JobStatus.failed, "error": str(e)})
+    except Exception as e:
+        jobs[job_id].update({"status": JobStatus.failed, "error": str(e)})
+
+
+@app.post("/envs", status_code=202)   # 202 Accepted — work is async
+async def create_env(req: CreateEnvRequest):
+    name = req.name or f"env-{uuid.uuid4().hex[:8]}"
+    job_id = f"job-{uuid.uuid4().hex[:8]}"
+
+    jobs[job_id] = {"status": JobStatus.pending, "env_name": name, "error": None}
+
+    thread = threading.Thread(
+        target=_create_env_worker,
+        args=(job_id, name, req),
+        daemon=True
+    )
+    thread.start()
+
+    return {
+        "job_id":  job_id,
+        "name":    name,
+        "kind":    req.kind,
+        "status":  JobStatus.pending,
+        "poll":    f"/jobs/{job_id}"
+    }
+
+
+@app.get("/jobs/{job_id}")
+def get_job(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(404, "Job not found")
+    return jobs[job_id]

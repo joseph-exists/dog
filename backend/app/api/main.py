@@ -52,6 +52,7 @@ from app.api.routes import (
     utils,
     groups,
     websocket,
+    workspaces,
 )
 from app.core.config import settings
 
@@ -97,6 +98,7 @@ api_router.include_router(room_panels.router, prefix="/rooms", tags=["room-panel
 api_router.include_router(room_participant_bindings.router)
 api_router.include_router(node_choices.router)
 api_router.include_router(websocket.router)
+api_router.include_router(workspaces.router)
 api_router.include_router(trait_conflicts.router)
 api_router.include_router(trait_users.router)
 api_router.include_router(quality_users.router)

@@ -81,6 +81,8 @@ echo $HASHED_PASSWORD
 export DOMAIN=fastapi-project.example.com
 ```
 
+**Note**: this public Traefik compose is intended for a real server-facing domain. Using `localhost` here will generate routes like `traefik.localhost` and will not work with Let's Encrypt certificate issuance.
+
 * Create an environment variable with the email for Let's Encrypt, e.g.:
 
 ```bash
@@ -103,6 +105,12 @@ Now with the environment variables set and the `docker-compose.traefik.yml` in p
 docker compose -f docker-compose.traefik.yml up -d
 ```
 
+For local-only HTTP use, disable ACME/TLS by adding the local override:
+
+```bash
+docker compose -f docker-compose.traefik.yml -f docker-compose.traefik.local.yml up -d
+```
+
 ## Deploy the FastAPI Project
 
 Now that you have Traefik in place you can deploy your FastAPI project with Docker Compose.
@@ -113,7 +121,7 @@ Now that you have Traefik in place you can deploy your FastAPI project with Dock
 
 You need to set some environment variables first.
 
-Set the `ENVIRONMENT`, by default `local` (for development), but when deploying to a server you would put something like `staging` or `production`:
+Set the `ENVIRONMENT`, by default `local` (for development), but when deploying the application stack to a server you would put something like `staging` or `production`:
 
 ```bash
 export ENVIRONMENT=production
@@ -169,6 +177,12 @@ With the environment variables in place, you can deploy with Docker Compose:
 
 ```bash
 docker compose -f docker-compose.yml up -d
+```
+
+For local-only HTTP use behind the local Traefik override, add the local HTTP override so service labels and URLs do not force HTTPS:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local-http.yml up -d
 ```
 
 For production you wouldn't want to have the overrides in `docker-compose.override.yml`, that's why we explicitly specify `docker-compose.yml` as the file to use.
