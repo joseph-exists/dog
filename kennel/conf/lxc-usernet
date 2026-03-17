@@ -1,0 +1,4 @@
+# lxc-usernet — managed by kennel
+# Format: <username> <type> <bridge> <count>
+# Unprivileged container networking rules go here if/as needed
+root veth lxcbr0 64

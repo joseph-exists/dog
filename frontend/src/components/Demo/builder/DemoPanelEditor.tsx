@@ -1,6 +1,11 @@
 import { CopyPlus, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
 import {
+  DemoGitViewConfigFields,
+  DemoLiveRepoExplorerConfigFields,
+  DemoLiveRepoFileViewerConfigFields,
+} from "@/components/Demo/builder/DemoLiveRepoConfigFields"
+import {
   BUILDER_PANEL_CAPABILITIES,
   type BuilderPanelCapability,
   getPanelCapabilityAvailability,
@@ -14,6 +19,14 @@ import {
   type EditablePanel,
   getBuilderPanelKindSchema,
 } from "@/components/Demo/builder/demoBuilderSchema"
+import {
+  createDefaultLiveRepoExplorerConfig,
+  isLiveRepoExplorerConfig,
+} from "@/components/Demo/liveRepoExplorerConfig"
+import {
+  createDefaultLiveRepoFileViewerConfig,
+  isLiveRepoFileViewerConfig,
+} from "@/components/Demo/liveRepoFileViewerConfig"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -398,6 +411,11 @@ export function DemoPanelEditor({
                       {jsonFields.map((field) => {
                         const currentJson =
                           (panel as Record<string, unknown>)[field.key] ?? {}
+                        const panelId =
+                          typeof panel.id === "string" && panel.id.trim().length > 0
+                            ? panel.id.trim()
+                            : `panel-${index + 1}`
+                        const fallbackSelectionKey = `${panelId}.selection`
                         const showGuidedPresentation =
                           field.key === "presentation_json" &&
                           (panelCapability?.presentationFieldSpecs?.length ??
@@ -427,6 +445,98 @@ export function DemoPanelEditor({
                                   ? `${field.label} (Advanced JSON Fallback)`
                                   : field.label}
                               </label>
+                              {field.key === "options" &&
+                                panelKind === "gitView" && (
+                                  <DemoGitViewConfigFields
+                                    value={currentJson}
+                                    fallbackSelectionKey={fallbackSelectionKey}
+                                    onChange={(nextValue) =>
+                                      onUpdatePanel(index, {
+                                        options: nextValue,
+                                      })
+                                    }
+                                  />
+                                )}
+                              {field.key === "options" &&
+                                panelKind === "fileExplorer" && (
+                                  <div className="space-y-2">
+                                    {isLiveRepoExplorerConfig(currentJson) ? (
+                                      <DemoLiveRepoExplorerConfigFields
+                                        value={currentJson}
+                                        fallbackSelectionKey={fallbackSelectionKey}
+                                        onChange={(nextValue) =>
+                                          onUpdatePanel(index, {
+                                            options: nextValue,
+                                          })
+                                        }
+                                      />
+                                    ) : (
+                                      <div className="rounded border p-3 space-y-2">
+                                        <p className="text-[11px] text-muted-foreground">
+                                          This panel is still using non-live
+                                          explorer JSON. Switch it to a live repo
+                                          surface when it needs to coordinate with
+                                          repo viewers through a shared selection
+                                          key.
+                                        </p>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() =>
+                                            onUpdatePanel(index, {
+                                              options:
+                                                createDefaultLiveRepoExplorerConfig(
+                                                  fallbackSelectionKey,
+                                                ),
+                                            })
+                                          }
+                                        >
+                                          Enable Live Repo Controls
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              {field.key === "options" &&
+                                panelKind === "fileViewer" && (
+                                  <div className="space-y-2">
+                                    {isLiveRepoFileViewerConfig(currentJson) ? (
+                                      <DemoLiveRepoFileViewerConfigFields
+                                        value={currentJson}
+                                        fallbackSelectionKey={fallbackSelectionKey}
+                                        onChange={(nextValue) =>
+                                          onUpdatePanel(index, {
+                                            options: nextValue,
+                                          })
+                                        }
+                                      />
+                                    ) : (
+                                      <div className="rounded border p-3 space-y-2">
+                                        <p className="text-[11px] text-muted-foreground">
+                                          Switch this panel to the live repo file
+                                          viewer when it should follow a repo
+                                          explorer or pin a specific file.
+                                        </p>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() =>
+                                            onUpdatePanel(index, {
+                                              options:
+                                                createDefaultLiveRepoFileViewerConfig(
+                                                  fallbackSelectionKey,
+                                                ),
+                                            })
+                                          }
+                                        >
+                                          Enable Live File Viewer
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               {field.key === "options" &&
                                 panelKind === "chat" && (
                                   <div className="rounded border p-2 space-y-2">

@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutTraitsRouteImport } from './routes/_layout/traits'
+import { Route as LayoutSvgsRouteImport } from './routes/_layout/svgs'
 import { Route as LayoutStoryRouteImport } from './routes/_layout/story'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutRoomsRouteImport } from './routes/_layout/rooms'
@@ -82,6 +83,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
 const LayoutTraitsRoute = LayoutTraitsRouteImport.update({
   id: '/traits',
   path: '/traits',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSvgsRoute = LayoutSvgsRouteImport.update({
+  id: '/svgs',
+  path: '/svgs',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutStoryRoute = LayoutStoryRouteImport.update({
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
   '/story': typeof LayoutStoryRoute
+  '/svgs': typeof LayoutSvgsRoute
   '/traits': typeof LayoutTraitsRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
   '/archetype/$archetypeId': typeof LayoutArchetypeArchetypeIdRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/rooms': typeof LayoutRoomsRoute
   '/settings': typeof LayoutSettingsRoute
   '/story': typeof LayoutStoryRoute
+  '/svgs': typeof LayoutSvgsRoute
   '/traits': typeof LayoutTraitsRoute
   '/': typeof LayoutIndexRoute
   '/agent/$agentId': typeof LayoutAgentAgentIdRoute
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   '/_layout/rooms': typeof LayoutRoomsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/story': typeof LayoutStoryRoute
+  '/_layout/svgs': typeof LayoutSvgsRoute
   '/_layout/traits': typeof LayoutTraitsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/agent/$agentId': typeof LayoutAgentAgentIdRoute
@@ -399,6 +408,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/settings'
     | '/story'
+    | '/svgs'
     | '/traits'
     | '/agent/$agentId'
     | '/archetype/$archetypeId'
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/settings'
     | '/story'
+    | '/svgs'
     | '/traits'
     | '/'
     | '/agent/$agentId'
@@ -480,6 +491,7 @@ export interface FileRouteTypes {
     | '/_layout/rooms'
     | '/_layout/settings'
     | '/_layout/story'
+    | '/_layout/svgs'
     | '/_layout/traits'
     | '/_layout/'
     | '/_layout/agent/$agentId'
@@ -559,6 +571,13 @@ declare module '@tanstack/react-router' {
       path: '/traits'
       fullPath: '/traits'
       preLoaderRoute: typeof LayoutTraitsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/svgs': {
+      id: '/_layout/svgs'
+      path: '/svgs'
+      fullPath: '/svgs'
+      preLoaderRoute: typeof LayoutSvgsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/story': {
@@ -825,6 +844,7 @@ interface LayoutRouteChildren {
   LayoutRoomsRoute: typeof LayoutRoomsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutStoryRoute: typeof LayoutStoryRoute
+  LayoutSvgsRoute: typeof LayoutSvgsRoute
   LayoutTraitsRoute: typeof LayoutTraitsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAgentAgentIdRoute: typeof LayoutAgentAgentIdRoute
@@ -861,6 +881,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutRoomsRoute: LayoutRoomsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutStoryRoute: LayoutStoryRoute,
+  LayoutSvgsRoute: LayoutSvgsRoute,
   LayoutTraitsRoute: LayoutTraitsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAgentAgentIdRoute: LayoutAgentAgentIdRoute,

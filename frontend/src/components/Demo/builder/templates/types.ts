@@ -1,5 +1,7 @@
 export type BuilderTemplateAssumptionKey =
   | "story_id"
+  | "repo_id"
+  | "repo_id_secondary"
   | "runtime_policy"
   | "persona_policy"
   | "chat_mode"
@@ -21,6 +23,8 @@ export type BuilderTemplateId =
   | "composition_g_ux_style_matrix"
   | "composition_h_chaotic_combinatorics"
   | "composition_i_intensity"
+  | "composition_j_repo_explorer_dual_viewers"
+  | "composition_k_parallel_repo_clusters"
 
 export interface BuilderCompositionTemplateOption {
   id: BuilderTemplateId

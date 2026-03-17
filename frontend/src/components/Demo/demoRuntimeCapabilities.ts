@@ -3,6 +3,8 @@ export const ACTIVE_RUNTIME_DEMO_PANEL_KINDS = [
   "chat",
   "content",
   "gitView",
+  "fileExplorer",
+  "fileViewer",
   "participantPanel",
   "canvas",
   "a2ui",
@@ -22,6 +24,7 @@ export const ACTIVE_RUNTIME_DEMO_BLOCK_TYPES = [
   "contributionFeed",
   "gitView",
   "fileExplorer",
+  "fileViewer",
 ] as const
 
 export type RuntimeDemoPanelKind =

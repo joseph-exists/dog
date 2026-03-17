@@ -115,6 +115,9 @@ export function DemoBuilderPreview({
   const [canvasSvgOverrideByPanelId, setCanvasSvgOverrideByPanelId] = useState<
     Record<string, string>
   >({})
+  const [repoSelectedPathsByKey, setRepoSelectedPathsByKey] = useState<
+    Record<string, string | null>
+  >({})
   const [canvasRenderStateByPanelId, setCanvasRenderStateByPanelId] = useState<
     Record<
       string,
@@ -181,6 +184,13 @@ export function DemoBuilderPreview({
       debugMessages: [],
       showInternalMessages: false,
       onToggleInternalMessages: () => {},
+      repoSelections: repoSelectedPathsByKey,
+      setRepoSelection: (selectionKey: string, path: string | null) => {
+        setRepoSelectedPathsByKey((current) => ({
+          ...current,
+          [selectionKey]: path,
+        }))
+      },
       renderContentPayload,
       onRenderCanvas: async (panelId, payload) => {
         const nextScriptName = payload?.scriptName ?? "simple_svg"
@@ -365,6 +375,7 @@ export function DemoBuilderPreview({
       tesserExamplesIndex,
       tesserHelpByScriptName,
       previewSession?.room.room_id,
+      repoSelectedPathsByKey,
       waitForJob,
       isConnected,
     ],
@@ -392,8 +403,20 @@ export function DemoBuilderPreview({
       activeUsers: [],
       roomAgentsAsAgentData: [],
       availableAgents: [],
+      repoSelections: repoSelectedPathsByKey,
+      setRepoSelection: (selectionKey: string, path: string | null) => {
+        setRepoSelectedPathsByKey((current) => ({
+          ...current,
+          [selectionKey]: path,
+        }))
+      },
     }),
-    [composition.metadata_json, composition.runtime_policy, roomStoryId],
+    [
+      composition.metadata_json,
+      composition.runtime_policy,
+      repoSelectedPathsByKey,
+      roomStoryId,
+    ],
   )
 
   const panels: DemoLayoutPanelConfig[] = useMemo(

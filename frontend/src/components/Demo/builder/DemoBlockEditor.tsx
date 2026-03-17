@@ -15,16 +15,23 @@ import {
   getBuilderBlockTypeSchema,
 } from "@/components/Demo/builder/demoBuilderSchema"
 import {
-  GIT_VIEW_METADATA_KEY_PRESETS,
-  createDefaultShadowRepoGitViewConfig,
-  parseShadowRepoGitViewConfig,
-  type GitViewEntityIdMode,
-} from "@/components/Demo/gitViewConfig"
+  DemoGitViewConfigFields,
+  DemoLiveRepoExplorerConfigFields,
+  DemoLiveRepoFileViewerConfigFields,
+} from "@/components/Demo/builder/DemoLiveRepoConfigFields"
 import {
   CLICK_PROMPT_DISPATCH_KIND,
   createClickPromptDispatchStarterConfig,
   parseClickPromptDispatchConfig,
 } from "@/components/Demo/demoInteractionHandlers"
+import {
+  createDefaultLiveRepoExplorerConfig,
+  isLiveRepoExplorerConfig,
+} from "@/components/Demo/liveRepoExplorerConfig"
+import {
+  createDefaultLiveRepoFileViewerConfig,
+  isLiveRepoFileViewerConfig,
+} from "@/components/Demo/liveRepoFileViewerConfig"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -261,18 +268,6 @@ function getChatPanelOptions(composition: EditableComposition): Array<{
   }))
 }
 
-function updateGitViewConfig(
-  current: unknown,
-  patch: Record<string, unknown>,
-): Record<string, unknown> {
-  const base =
-    parseShadowRepoGitViewConfig(current) ?? createDefaultShadowRepoGitViewConfig()
-  return {
-    ...base,
-    ...patch,
-  }
-}
-
 function updateInteractionConfig(
   current: unknown,
   patch: {
@@ -434,6 +429,11 @@ export function DemoBlockEditor({
                         {jsonFields.map((field) => {
                           const currentJson =
                             (block as Record<string, unknown>)[field.key] ?? {}
+                          const blockId =
+                            typeof block.id === "string" && block.id.trim().length > 0
+                              ? block.id.trim()
+                              : `block-${index + 1}`
+                          const fallbackSelectionKey = `${blockId}.selection`
                           const showGuidedPresentation =
                             field.key === "presentation_json" &&
                             (blockCapability?.presentationFieldSpecs?.length ??
@@ -465,289 +465,96 @@ export function DemoBlockEditor({
                                     : field.label}
                                 </label>
                                 {field.key === "config_json" &&
-                                  blockType === "gitView" &&
-                                  (() => {
-                                    const gitViewConfig =
-                                      parseShadowRepoGitViewConfig(currentJson) ??
-                                      createDefaultShadowRepoGitViewConfig()
-                                    return (
-                                      <div className="rounded border p-3 space-y-3">
-                                        <div className="rounded border border-dashed bg-muted/20 p-2 text-[11px] text-muted-foreground">
-                                          Existing story/shadow-repo authoring remains
-                                          supported. For platform-managed repositories,
-                                          set <code>entity_type</code> to{" "}
-                                          <code>user_repo</code> and resolve the ID from{" "}
-                                          <code>repo_id</code> or an explicit repo ID.
+                                  blockType === "gitView" && (
+                                    <DemoGitViewConfigFields
+                                      value={currentJson}
+                                      fallbackSelectionKey={fallbackSelectionKey}
+                                      onChange={(nextValue) =>
+                                        onUpdateBlock(index, {
+                                          config_json: nextValue,
+                                        })
+                                      }
+                                    />
+                                  )}
+                                {field.key === "config_json" &&
+                                  blockType === "fileExplorer" && (
+                                    <div className="space-y-2">
+                                      {isLiveRepoExplorerConfig(currentJson) ? (
+                                        <DemoLiveRepoExplorerConfigFields
+                                          value={currentJson}
+                                          fallbackSelectionKey={fallbackSelectionKey}
+                                          onChange={(nextValue) =>
+                                            onUpdateBlock(index, {
+                                              config_json: nextValue,
+                                            })
+                                          }
+                                        />
+                                      ) : (
+                                        <div className="rounded border p-3 space-y-2">
+                                          <p className="text-[11px] text-muted-foreground">
+                                            This block is still using static explorer
+                                            JSON. Switch to live repo mode when the
+                                            room needs shared multi-repo selection and
+                                            file-context controls.
+                                          </p>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                              onUpdateBlock(index, {
+                                                config_json:
+                                                  createDefaultLiveRepoExplorerConfig(
+                                                    fallbackSelectionKey,
+                                                  ),
+                                              })
+                                            }
+                                          >
+                                            Enable Live Repo Controls
+                                          </Button>
                                         </div>
-                                        <div className="grid gap-3 md:grid-cols-2">
-                                          <div className="space-y-1">
-                                            <label className="text-xs text-muted-foreground">
-                                              Source
-                                            </label>
-                                            <Input value="shadow_repo" disabled />
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-xs text-muted-foreground">
-                                              Entity Type
-                                            </label>
-                                            <Input
-                                              value={gitViewConfig.entity_type}
-                                              placeholder="story"
-                                              onChange={(event) =>
-                                                onUpdateBlock(index, {
-                                                  config_json: updateGitViewConfig(
-                                                    currentJson,
-                                                    {
-                                                      source: "shadow_repo",
-                                                      entity_type:
-                                                        event.target.value,
-                                                    },
+                                      )}
+                                    </div>
+                                  )}
+                                {field.key === "config_json" &&
+                                  blockType === "fileViewer" && (
+                                    <div className="space-y-2">
+                                      {isLiveRepoFileViewerConfig(currentJson) ? (
+                                        <DemoLiveRepoFileViewerConfigFields
+                                          value={currentJson}
+                                          fallbackSelectionKey={fallbackSelectionKey}
+                                          onChange={(nextValue) =>
+                                            onUpdateBlock(index, {
+                                              config_json: nextValue,
+                                            })
+                                          }
+                                        />
+                                      ) : (
+                                        <div className="rounded border p-3 space-y-2">
+                                          <p className="text-[11px] text-muted-foreground">
+                                            Switch this surface to the live repo
+                                            file viewer when you want one explorer
+                                            to drive multiple focused viewers.
+                                          </p>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                              onUpdateBlock(index, {
+                                                config_json:
+                                                  createDefaultLiveRepoFileViewerConfig(
+                                                    fallbackSelectionKey,
                                                   ),
-                                                })
-                                              }
-                                            />
-                                            <p className="text-[11px] text-muted-foreground">
-                                              Common values: <code>story</code> for
-                                              existing shadow-repo demos,{" "}
-                                              <code>user_repo</code> for platform-managed
-                                              repositories.
-                                            </p>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-xs text-muted-foreground">
-                                              Entity ID Source
-                                            </label>
-                                            <Select
-                                              value={gitViewConfig.entity_id_mode}
-                                              onValueChange={(nextValue) => {
-                                                const entityIdMode =
-                                                  nextValue as GitViewEntityIdMode
-                                                onUpdateBlock(index, {
-                                                  config_json: updateGitViewConfig(
-                                                    currentJson,
-                                                    {
-                                                      entity_id_mode: entityIdMode,
-                                                      entity_id:
-                                                        entityIdMode === "explicit"
-                                                          ? gitViewConfig.entity_id ??
-                                                            ""
-                                                          : undefined,
-                                                      entity_id_metadata_key:
-                                                        entityIdMode === "metadata"
-                                                          ? gitViewConfig.entity_id_metadata_key ??
-                                                            "story_id"
-                                                          : undefined,
-                                                    },
-                                                  ),
-                                                })
-                                              }}
-                                            >
-                                              <SelectTrigger>
-                                                <SelectValue placeholder="Select ID source" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="metadata">
-                                                  metadata_json
-                                                </SelectItem>
-                                                <SelectItem value="explicit">
-                                                  explicit entity ID
-                                                </SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                          {gitViewConfig.entity_id_mode ===
-                                          "explicit" ? (
-                                            <div className="space-y-1">
-                                              <label className="text-xs text-muted-foreground">
-                                                Entity ID
-                                              </label>
-                                              <Input
-                                                value={gitViewConfig.entity_id ?? ""}
-                                                placeholder="uuid"
-                                                onChange={(event) =>
-                                                  onUpdateBlock(index, {
-                                                    config_json:
-                                                      updateGitViewConfig(
-                                                        currentJson,
-                                                        {
-                                                          entity_id:
-                                                            event.target.value,
-                                                        },
-                                                      ),
-                                                  })
-                                                }
-                                              />
-                                            </div>
-                                          ) : (
-                                            <div className="space-y-2">
-                                              <div className="space-y-1">
-                                                <label className="text-xs text-muted-foreground">
-                                                  metadata_json key
-                                                </label>
-                                                <Select
-                                                  value={
-                                                    gitViewConfig.entity_id_metadata_key ??
-                                                    "__custom"
-                                                  }
-                                                  onValueChange={(nextValue) =>
-                                                    onUpdateBlock(index, {
-                                                      config_json:
-                                                        updateGitViewConfig(
-                                                          currentJson,
-                                                          {
-                                                            entity_id_metadata_key:
-                                                              nextValue ===
-                                                              "__custom"
-                                                                ? ""
-                                                                : nextValue,
-                                                          },
-                                                        ),
-                                                    })
-                                                  }
-                                                >
-                                                  <SelectTrigger>
-                                                    <SelectValue placeholder="Select metadata key" />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    {GIT_VIEW_METADATA_KEY_PRESETS.map(
-                                                      (preset) => (
-                                                        <SelectItem
-                                                          key={preset}
-                                                          value={preset}
-                                                        >
-                                                          {preset}
-                                                        </SelectItem>
-                                                      ),
-                                                    )}
-                                                    <SelectItem value="__custom">
-                                                      Custom key
-                                                    </SelectItem>
-                                                  </SelectContent>
-                                                </Select>
-                                              </div>
-                                              <Input
-                                                value={
-                                                  gitViewConfig.entity_id_metadata_key ??
-                                                  ""
-                                                }
-                                                placeholder="story_id"
-                                                onChange={(event) =>
-                                                  onUpdateBlock(index, {
-                                                    config_json:
-                                                      updateGitViewConfig(
-                                                        currentJson,
-                                                        {
-                                                          entity_id_metadata_key:
-                                                            event.target.value,
-                                                        },
-                                                      ),
-                                                  })
-                                                }
-                                              />
-                                              <p className="text-[11px] text-muted-foreground">
-                                                Resolved from
-                                                {" "}
-                                                <code>metadata_json</code>
-                                                {" "}
-                                                at preview/runtime. Keep using{" "}
-                                                <code>story_id</code> for story-backed
-                                                demos; use <code>repo_id</code> for
-                                                user-repo-backed demos.
-                                              </p>
-                                            </div>
-                                          )}
-                                          <div className="space-y-1">
-                                            <label className="text-xs text-muted-foreground">
-                                              Initial Path
-                                            </label>
-                                            <Input
-                                              value={gitViewConfig.initial_path}
-                                              placeholder="notes"
-                                              onChange={(event) =>
-                                                onUpdateBlock(index, {
-                                                  config_json: updateGitViewConfig(
-                                                    currentJson,
-                                                    {
-                                                      initial_path:
-                                                        event.target.value,
-                                                    },
-                                                  ),
-                                                })
-                                              }
-                                            />
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-xs text-muted-foreground">
-                                              Commit Limit
-                                            </label>
-                                            <Input
-                                              value={String(
-                                                gitViewConfig.commit_limit,
-                                              )}
-                                              placeholder="10"
-                                              onChange={(event) =>
-                                                onUpdateBlock(index, {
-                                                  config_json: updateGitViewConfig(
-                                                    currentJson,
-                                                    {
-                                                      commit_limit:
-                                                        parseInteger(
-                                                          event.target.value,
-                                                        ) ?? 10,
-                                                    },
-                                                  ),
-                                                })
-                                              }
-                                            />
-                                          </div>
+                                              })
+                                            }
+                                          >
+                                            Enable Live File Viewer
+                                          </Button>
                                         </div>
-                                        <div className="grid gap-3 md:grid-cols-2">
-                                          <div className="flex items-center justify-between gap-2 rounded border p-2">
-                                            <label className="text-xs text-muted-foreground">
-                                              Show File Content
-                                            </label>
-                                            <Switch
-                                              checked={
-                                                gitViewConfig.show_file_content
-                                              }
-                                              onCheckedChange={(checked) =>
-                                                onUpdateBlock(index, {
-                                                  config_json: updateGitViewConfig(
-                                                    currentJson,
-                                                    {
-                                                      show_file_content:
-                                                        checked,
-                                                    },
-                                                  ),
-                                                })
-                                              }
-                                            />
-                                          </div>
-                                          <div className="flex items-center justify-between gap-2 rounded border p-2">
-                                            <label className="text-xs text-muted-foreground">
-                                              Show Config JSON
-                                            </label>
-                                            <Switch
-                                              checked={
-                                                gitViewConfig.show_config_json
-                                              }
-                                              onCheckedChange={(checked) =>
-                                                onUpdateBlock(index, {
-                                                  config_json: updateGitViewConfig(
-                                                    currentJson,
-                                                    {
-                                                      show_config_json:
-                                                        checked,
-                                                    },
-                                                  ),
-                                                })
-                                              }
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )
-                                  })()}
+                                      )}
+                                    </div>
+                                  )}
                                 {field.key === "config_json" &&
                                   getConfigJsonHelpText(blockType) && (
                                     <div className="space-y-2">

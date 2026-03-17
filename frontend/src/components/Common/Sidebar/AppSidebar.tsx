@@ -19,6 +19,7 @@ import {
   MoonStar,
   BirdhouseIcon,
   CircuitBoard,
+  Images,
 } from "lucide-react"
 import { Logo } from "@/components/Common/Logo"
 import { Sidebar } from "@/components/ui/sidebar"
@@ -57,6 +58,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "agents", title: "Agents", path: "/agents", icon: Bot },
   { id: "projects", title: "Projects", path: "/projects", icon: FolderKanban },
   { id: "repos", title: "Repo Library", path: "/repos", icon: FolderGit2 },
+  { id: "svgs", title: "SVG Library", path: "/svgs", icon: Images },
   { id: "personas", title: "Identity Manager", path: "/personas", icon: Smile },
   // { id: "items", title: "Items", path: "/items", icon: Briefcase },
   {

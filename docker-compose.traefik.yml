@@ -1,5 +1,6 @@
 services:
   traefik:
+    user: root
     image: traefik:3.0
     ports:
       # Listen on port 80, default for HTTP, necessary to redirect to HTTPS
@@ -44,7 +45,7 @@ services:
       # Enable Docker in Traefik, so that it reads labels from Docker services
       - --providers.docker
       # Do not expose all Docker services, only the ones explicitly exposed
-      - --providers.docker.exposedbydefault=false
+      - --providers.docker.exposedbydefault=true
       # Create an entrypoint "http" listening on port 80
       - --entrypoints.http.address=:80
       # Create an entrypoint "https" listening on port 443
@@ -61,6 +62,9 @@ services:
       - --log
       # Enable the Dashboard and API
       - --api
+      - --entrypoints.https.transport.respondingTimeouts.readTimeout=0    # no timeout for WS
+      - --entrypoints.https.transport.respondingTimeouts.writeTimeout=0
+      - --entrypoints.https.transport.respondingTimeouts.idleTimeout=3600s
     networks:
       # Use the public network created to be shared between Traefik and
       # any other service that needs to be publicly available with HTTPS

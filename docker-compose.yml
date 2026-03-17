@@ -30,6 +30,54 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
 
+  kennel:
+    build:
+      context: ./kennel
+    restart: always
+    privileged: true                        # required for LXC namespace control
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - seccomp:unconfined
+    networks:
+      - traefik-public
+      - default
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - KENNEL_REDIS_HOST=redis
+      - KENNEL_REDIS_PORT=${REDIS_PORT:-6379}
+      - KENNEL_REDIS_EVENT_CHANNEL=${KENNEL_REDIS_EVENT_CHANNEL:-kennel:events}
+      - KENNEL_BASE_IMAGE=${KENNEL_BASE_IMAGE:-ubuntu}
+      - KENNEL_BASE_RELEASE=${KENNEL_BASE_RELEASE:-noble}
+      - KENNEL_MAX_ENVS=${KENNEL_MAX_ENVS:-20}
+      - KENNEL_SECRET=${KENNEL_SECRET?Variable not set}  # shared with backend for auth
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw   # cgroup access for LXC
+      - /lib/modules:/lib/modules:ro        # kernel modules
+      - kennel-containers:/var/lib/lxc      # persisted container storage
+      - kennel-logs:/var/log/lxc
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.services.${STACK_NAME?Variable not set}-kennel.loadbalancer.server.port=8090
+      # REST API route
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.rule=Host(`kennel.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.entrypoints=https
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.tls=true
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.tls.certresolver=le
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-http.rule=Host(`kennel.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-http.entrypoints=http
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-http.middlewares=https-redirect
+      # WebSocket requires buffering off and timeout extension
+      - traefik.http.middlewares.kennel-ws.buffering.maxRequestBodyBytes=0
+      - traefik.http.middlewares.kennel-ws.buffering.maxResponseBodyBytes=0
+      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.middlewares=kennel-ws
+
+
   # adminer:
   #   image: adminer
   #   restart: always
@@ -296,7 +344,8 @@ volumes:
   tesser_jobs_data:
   tesser_artifacts_data:
   shadow-repos-data:  # Local git staging for shadow versioning
-
+  kennel-containers:
+  kennel-logs:
 
 networks:
   traefik-public:

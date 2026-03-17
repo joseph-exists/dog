@@ -3,7 +3,7 @@ import type {
   EditablePanel,
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
-import { createDefaultShadowRepoGitViewConfig } from "@/components/Demo/gitViewConfig"
+import { createDefaultGitViewConfig } from "@/components/Demo/gitViewConfig"
 
 export function buildCompositionGUXStyleMatrixTemplate(context: TemplateBuilderContext): EditableComposition {
   const { createEmptyComposition, createPanelTemplate, createBlockTemplate } = context
@@ -340,7 +340,8 @@ export function buildCompositionGUXStyleMatrixTemplate(context: TemplateBuilderC
       visibility: "visible",
       theme_id: null,
       config_json: {
-        ...createDefaultShadowRepoGitViewConfig(),
+        ...createDefaultGitViewConfig(),
+        source: "shadow_repo",
         entity_type: "story",
         entity_id_mode: "metadata",
         entity_id_metadata_key: "story_id",
@@ -369,4 +370,3 @@ export function buildCompositionGUXStyleMatrixTemplate(context: TemplateBuilderC
 // a fragment of thought from poetry, philosophy, psychology, or art.
 // No panels. Just the blocks. Just the wonder.
 // ============================================================================
-

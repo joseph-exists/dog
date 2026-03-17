@@ -1,6 +1,13 @@
+import { useQuery } from "@tanstack/react-query"
 import type { ReactNode } from "react"
-import type { UserAgentConfigPublic } from "@/client/types.gen"
-import { resolveShadowRepoGitViewConfig } from "@/components/Demo/gitViewConfig"
+import { UserReposService } from "@/client/sdk.gen"
+import type { UserAgentConfigPublic, UserRepoPublic } from "@/client/types.gen"
+import { resolveGitViewConfig } from "@/components/Demo/gitViewConfig"
+import { resolveLiveRepoExplorerConfig } from "@/components/Demo/liveRepoExplorerConfig"
+import { resolveLiveRepoFileViewerConfig } from "@/components/Demo/liveRepoFileViewerConfig"
+import { RepoCapabilityPlaceholderPanel } from "@/components/Repo/panels/RepoCapabilityPlaceholderPanel"
+import { RepoExplorerPanel } from "@/components/Repo/panels/RepoExplorerPanel"
+import { RepoFileViewerPanel } from "@/components/Repo/panels/RepoFileViewerPanel"
 import {
   A2UIPanel,
   CanvasPanel,
@@ -18,9 +25,7 @@ import type {
 import { AgentRosterBlock } from "./blocks/AgentRosterBlock"
 import { ContributionFeedBlock } from "./blocks/ContributionFeedBlock"
 import { FileExplorerBlock } from "./blocks/FileExplorerBlock"
-import { GitViewBlock } from "./blocks/GitViewBlock"
 import { OrchestratorStateBlock } from "./blocks/OrchestratorStateBlock"
-import { GitViewPanel } from "./panels/GitViewPanel"
 import { StoryMetadataBlock } from "./blocks/StoryMetadataBlock"
 import { ToolCapabilityBlock } from "./blocks/ToolCapabilityBlock"
 import { DemoChatPanel } from "./DemoChatPanel"
@@ -101,6 +106,8 @@ export interface DemoPanelRendererContext {
     isTruncated: boolean
     truncationReason: string | null
   }) => Promise<void>
+  repoSelections: Record<string, string | null>
+  setRepoSelection: (selectionKey: string, path: string | null) => void
   debugSelectedRepoFiles?: Array<{ selectionKey: string; path: string }>
   debugRepoContextFiles?: Array<{
     contextId: string
@@ -187,6 +194,8 @@ export interface DemoBlockRendererContext {
     isTruncated: boolean
     truncationReason: string | null
   }) => Promise<void>
+  repoSelections: Record<string, string | null>
+  setRepoSelection: (selectionKey: string, path: string | null) => void
 }
 
 type DemoPanelRenderer = (
@@ -374,6 +383,354 @@ function renderStructuredBlock(block: DemoBlockSpec, label: string): ReactNode {
   )
 }
 
+function resolveDemoRepoCapabilities(repo: UserRepoPublic) {
+  return {
+    hasRepoIdentity: true,
+    hasFileTree: repo.capabilities?.has_file_tree === true,
+    hasBlobContent: repo.capabilities?.has_blob_content === true,
+    hasCommitHistory: repo.capabilities?.has_commit_history === true,
+  }
+}
+
+function useDemoUserRepo(repoId: string | null) {
+  return useQuery({
+    queryKey: ["demo-live-user-repo", repoId],
+    queryFn: () => UserReposService.getUserRepo({ repoId: repoId ?? "" }),
+    enabled: typeof repoId === "string" && repoId.length > 0,
+  })
+}
+
+function DemoRepoGitViewSurface({
+  surfaceId,
+  title,
+  config,
+  metadataJson,
+  repoSelections,
+  setRepoSelection,
+  getRoomContextState,
+  onToggleRoomContext,
+}: {
+  surfaceId: string
+  title?: string | null
+  config: unknown
+  metadataJson: Record<string, unknown>
+  repoSelections: Record<string, string | null>
+  setRepoSelection: (selectionKey: string, path: string | null) => void
+  getRoomContextState?: DemoBlockRendererContext["getFileRoomContextState"]
+  onToggleRoomContext?: DemoBlockRendererContext["onToggleFileRoomContext"]
+}) {
+  const resolvedConfig = resolveGitViewConfig(config, metadataJson)
+
+  if (!resolvedConfig || resolvedConfig.entity_type !== "user_repo") {
+    return (
+      <RepoCapabilityPlaceholderPanel
+        title={title ?? "Git View"}
+        description="Git view needs a resolvable user repo."
+        unmetRequirements={['metadata_json.repo_id or explicit config for entity_type "user_repo"']}
+      />
+    )
+  }
+  const repoQuery = useDemoUserRepo(resolvedConfig.entity_id)
+
+  if (repoQuery.isLoading) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        Loading repository view...
+      </div>
+    )
+  }
+
+  if (repoQuery.isError || !repoQuery.data) {
+    return (
+      <RepoCapabilityPlaceholderPanel
+        title={title ?? "Git View"}
+        description="Could not load the configured user repo."
+        unmetRequirements={["user repo visibility"]}
+      />
+    )
+  }
+
+  const repo = repoQuery.data
+  const capabilities = resolveDemoRepoCapabilities(repo)
+  const displayMode =
+    resolvedConfig.display_mode ??
+    (resolvedConfig.show_file_content ? "split" : "explorer")
+  const viewerPathMode =
+    displayMode === "viewer" ? resolvedConfig.path_mode ?? "selection" : "selection"
+  const selectionKey =
+    viewerPathMode === "readme"
+      ? null
+      : resolvedConfig.selection_key || `${surfaceId}.selection`
+
+  if (displayMode === "explorer") {
+    return (
+      <RepoExplorerPanel
+        repo={repo}
+        panelId={`${surfaceId}:explorer`}
+        config={{
+          source: "user_repo",
+          entity_type: "user_repo",
+          entity_id_source: "repo_id",
+          repo_id: repo.id,
+          initial_path: resolvedConfig.initial_path,
+          ref: resolvedConfig.ref,
+          selection_key: selectionKey ?? `${surfaceId}.selection`,
+          title: title ?? "Repo Explorer",
+          show_sizes: resolvedConfig.show_sizes !== false,
+          show_commit_badge: resolvedConfig.show_commit_badge !== false,
+          empty_label: resolvedConfig.empty_label,
+        }}
+        enabled={capabilities.hasFileTree}
+        selectedPath={
+          selectionKey ? repoSelections[selectionKey] ?? null : null
+        }
+        onSelectPath={(path) =>
+          setRepoSelection(selectionKey ?? `${surfaceId}.selection`, path)
+        }
+      />
+    )
+  }
+
+  if (displayMode === "viewer") {
+    return (
+      <RepoFileViewerPanel
+        repo={repo}
+        panelId={`${surfaceId}:viewer`}
+        config={{
+          source: "user_repo",
+          entity_type: "user_repo",
+          entity_id_source: "repo_id",
+          repo_id: repo.id,
+          path_mode: viewerPathMode,
+          fixed_path: resolvedConfig.fixed_path ?? "",
+          ref: resolvedConfig.ref,
+          selection_key: selectionKey,
+          title: title ?? "File Viewer",
+          show_path_badge: resolvedConfig.show_path_badge !== false,
+          show_copy_control: resolvedConfig.show_copy_control !== false,
+          empty_label: resolvedConfig.empty_label,
+        }}
+        enabled={capabilities.hasBlobContent}
+        selectedPath={selectionKey ? repoSelections[selectionKey] ?? null : null}
+        getRoomContextState={getRoomContextState}
+        onToggleRoomContext={onToggleRoomContext}
+      />
+    )
+  }
+
+  const splitSelectionKey = selectionKey ?? `${surfaceId}.selection`
+
+  return (
+    <div className="grid h-full min-h-0 gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+      <div className="min-h-0">
+        <RepoExplorerPanel
+          repo={repo}
+          panelId={`${surfaceId}:explorer`}
+          config={{
+            source: "user_repo",
+            entity_type: "user_repo",
+            entity_id_source: "repo_id",
+            repo_id: repo.id,
+            initial_path: resolvedConfig.initial_path,
+            ref: resolvedConfig.ref,
+            selection_key: splitSelectionKey,
+            title: title ?? "Repo Explorer",
+            show_sizes: resolvedConfig.show_sizes !== false,
+            show_commit_badge: resolvedConfig.show_commit_badge !== false,
+            empty_label: resolvedConfig.empty_label,
+          }}
+          enabled={capabilities.hasFileTree}
+          selectedPath={repoSelections[splitSelectionKey] ?? null}
+          onSelectPath={(path) => setRepoSelection(splitSelectionKey, path)}
+        />
+      </div>
+      <div className="min-h-0">
+        <RepoFileViewerPanel
+          repo={repo}
+          panelId={`${surfaceId}:viewer`}
+          config={{
+            source: "user_repo",
+            entity_type: "user_repo",
+            entity_id_source: "repo_id",
+            repo_id: repo.id,
+            path_mode: "selection",
+            fixed_path: "",
+            ref: resolvedConfig.ref,
+            selection_key: splitSelectionKey,
+            title: title ?? "Git View",
+            show_path_badge: resolvedConfig.show_path_badge !== false,
+            show_copy_control: resolvedConfig.show_copy_control !== false,
+            empty_label: resolvedConfig.empty_label,
+          }}
+          enabled={capabilities.hasBlobContent}
+          selectedPath={repoSelections[splitSelectionKey] ?? null}
+          getRoomContextState={getRoomContextState}
+          onToggleRoomContext={onToggleRoomContext}
+        />
+      </div>
+    </div>
+  )
+}
+
+function DemoRepoExplorerSurface({
+  blockId,
+  title,
+  config,
+  metadataJson,
+  repoSelections,
+  setRepoSelection,
+}: {
+  blockId: string
+  title?: string | null
+  config: unknown
+  metadataJson: Record<string, unknown>
+  repoSelections: Record<string, string | null>
+  setRepoSelection: (selectionKey: string, path: string | null) => void
+}) {
+  const liveConfig = resolveLiveRepoExplorerConfig(
+    config,
+    metadataJson,
+    `${blockId}.selection`,
+  )
+
+  if (!liveConfig) {
+    return <FileExplorerBlock title={title} config={config} />
+  }
+
+  const repoQuery = useDemoUserRepo(liveConfig.entity_id)
+
+  if (repoQuery.isLoading) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        Loading repository explorer...
+      </div>
+    )
+  }
+
+  if (repoQuery.isError || !repoQuery.data) {
+    return (
+      <RepoCapabilityPlaceholderPanel
+        title={title ?? liveConfig.title ?? "File Explorer"}
+        description="Could not load the configured user repo."
+        unmetRequirements={["user repo visibility"]}
+      />
+    )
+  }
+
+  const repo = repoQuery.data
+  const capabilities = resolveDemoRepoCapabilities(repo)
+  const selectionKey = liveConfig.selection_key || `${blockId}.selection`
+
+  return (
+    <RepoExplorerPanel
+      repo={repo}
+      panelId={`${blockId}:explorer`}
+      config={{
+        source: "user_repo",
+        entity_type: "user_repo",
+        entity_id_source: "repo_id",
+        repo_id: repo.id,
+        initial_path: liveConfig.initial_path,
+        ref: liveConfig.ref,
+        selection_key: selectionKey,
+        title: title ?? liveConfig.title ?? "File Explorer",
+        show_sizes: liveConfig.show_sizes,
+        show_commit_badge: liveConfig.show_commit_badge,
+        empty_label: liveConfig.empty_label,
+      }}
+      enabled={capabilities.hasFileTree}
+      selectedPath={repoSelections[selectionKey] ?? null}
+      onSelectPath={(path) => setRepoSelection(selectionKey, path)}
+    />
+  )
+}
+
+function DemoRepoFileViewerSurface({
+  surfaceId,
+  title,
+  config,
+  metadataJson,
+  repoSelections,
+  getRoomContextState,
+  onToggleRoomContext,
+}: {
+  surfaceId: string
+  title?: string | null
+  config: unknown
+  metadataJson: Record<string, unknown>
+  repoSelections: Record<string, string | null>
+  getRoomContextState?: DemoBlockRendererContext["getFileRoomContextState"]
+  onToggleRoomContext?: DemoBlockRendererContext["onToggleFileRoomContext"]
+}) {
+  const resolvedConfig = resolveLiveRepoFileViewerConfig(
+    config,
+    metadataJson,
+    `${surfaceId}.selection`,
+  )
+
+  if (!resolvedConfig) {
+    return (
+      <RepoCapabilityPlaceholderPanel
+        title={title ?? "File Viewer"}
+        description="File viewer needs a resolvable user repo."
+        unmetRequirements={['metadata_json.repo_id or explicit config for entity_type "user_repo"']}
+      />
+    )
+  }
+
+  const repoQuery = useDemoUserRepo(resolvedConfig.entity_id)
+
+  if (repoQuery.isLoading) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        Loading repository file viewer...
+      </div>
+    )
+  }
+
+  if (repoQuery.isError || !repoQuery.data) {
+    return (
+      <RepoCapabilityPlaceholderPanel
+        title={title ?? resolvedConfig.title ?? "File Viewer"}
+        description="Could not load the configured user repo."
+        unmetRequirements={["user repo visibility"]}
+      />
+    )
+  }
+
+  const repo = repoQuery.data
+  const capabilities = resolveDemoRepoCapabilities(repo)
+  const selectionKey =
+    resolvedConfig.path_mode === "readme"
+      ? null
+      : resolvedConfig.selection_key || `${surfaceId}.selection`
+
+  return (
+    <RepoFileViewerPanel
+      repo={repo}
+      panelId={`${surfaceId}:viewer`}
+      config={{
+        source: "user_repo",
+        entity_type: "user_repo",
+        entity_id_source: "repo_id",
+        repo_id: repo.id,
+        path_mode: resolvedConfig.path_mode,
+        fixed_path: resolvedConfig.fixed_path ?? "",
+        ref: resolvedConfig.ref,
+        selection_key: selectionKey,
+        title: title ?? resolvedConfig.title ?? "File Viewer",
+        show_path_badge: resolvedConfig.show_path_badge,
+        show_copy_control: resolvedConfig.show_copy_control,
+        empty_label: resolvedConfig.empty_label,
+      }}
+      enabled={capabilities.hasBlobContent}
+      selectedPath={selectionKey ? repoSelections[selectionKey] ?? null : null}
+      getRoomContextState={getRoomContextState}
+      onToggleRoomContext={onToggleRoomContext}
+    />
+  )
+}
+
 const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
   storyRuntime: (_panel, ctx) => (
     <DemoStoryPanel
@@ -407,13 +764,34 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
       "Content panel is configured, but no valid content_json payload was provided.",
     ),
   gitView: (panel, ctx) => (
-    <GitViewPanel
-      panelId={panel.id}
+    <DemoRepoGitViewSurface
+      surfaceId={`gitViewPanel:${panel.id}`}
       title={panel.title}
-      selectionKey={`gitViewPanel:${panel.id}`}
-      options={panel.options}
       metadataJson={ctx.metadataJson}
-      onSelectFileForDebug={ctx.onSelectRepoFileForDebug}
+      config={(panel as { options?: unknown }).options}
+      repoSelections={ctx.repoSelections}
+      setRepoSelection={ctx.setRepoSelection}
+      getRoomContextState={ctx.getFileRoomContextState}
+      onToggleRoomContext={ctx.onToggleFileRoomContext}
+    />
+  ),
+  fileExplorer: (panel, ctx) => (
+    <DemoRepoExplorerSurface
+      blockId={`fileExplorerPanel:${panel.id}`}
+      title={panel.title}
+      config={(panel as { options?: unknown }).options}
+      metadataJson={ctx.metadataJson}
+      repoSelections={ctx.repoSelections}
+      setRepoSelection={ctx.setRepoSelection}
+    />
+  ),
+  fileViewer: (panel, ctx) => (
+    <DemoRepoFileViewerSurface
+      surfaceId={`fileViewerPanel:${panel.id}`}
+      title={panel.title}
+      config={(panel as { options?: unknown }).options}
+      metadataJson={ctx.metadataJson}
+      repoSelections={ctx.repoSelections}
       getRoomContextState={ctx.getFileRoomContextState}
       onToggleRoomContext={ctx.onToggleFileRoomContext}
     />
@@ -581,23 +959,39 @@ const blockRenderers: Record<RuntimeDemoBlockType, DemoBlockRenderer> = {
     )
   },
   gitView: (block, ctx) => (
-    <GitViewBlock
+    <DemoRepoGitViewSurface
+      surfaceId={`gitView:${block.id}`}
       title={block.title}
-      selectionKey={`gitView:${block.id}`}
-      config={resolveShadowRepoGitViewConfig(
+      config={resolveGitViewConfig(
         (block as { config_json?: unknown }).config_json,
         ctx.metadataJson,
       )}
-      rawConfig={(block as { config_json?: unknown }).config_json}
-      onSelectFileForDebug={ctx.onSelectRepoFileForDebug}
+      metadataJson={ctx.metadataJson}
+      repoSelections={ctx.repoSelections}
+      setRepoSelection={ctx.setRepoSelection}
       getRoomContextState={ctx.getFileRoomContextState}
       onToggleRoomContext={ctx.onToggleFileRoomContext}
     />
   ),
-  fileExplorer: (block) => (
-    <FileExplorerBlock
+  fileExplorer: (block, ctx) => (
+    <DemoRepoExplorerSurface
+      blockId={block.id}
       title={block.title}
       config={(block as { config_json?: unknown }).config_json}
+      metadataJson={ctx.metadataJson}
+      repoSelections={ctx.repoSelections}
+      setRepoSelection={ctx.setRepoSelection}
+    />
+  ),
+  fileViewer: (block, ctx) => (
+    <DemoRepoFileViewerSurface
+      surfaceId={`fileViewer:${block.id}`}
+      title={block.title}
+      config={(block as { config_json?: unknown }).config_json}
+      metadataJson={ctx.metadataJson}
+      repoSelections={ctx.repoSelections}
+      getRoomContextState={ctx.getFileRoomContextState}
+      onToggleRoomContext={ctx.onToggleFileRoomContext}
     />
   ),
 }

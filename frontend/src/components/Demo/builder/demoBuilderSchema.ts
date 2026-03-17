@@ -6,7 +6,9 @@ import type {
   DemoPersonaPolicy,
   DemoRuntimePolicy,
 } from "@/client/types.gen"
-import { createDefaultShadowRepoGitViewConfig } from "@/components/Demo/gitViewConfig"
+import { createDefaultGitViewConfig } from "@/components/Demo/gitViewConfig"
+import { createDefaultLiveRepoExplorerConfig } from "@/components/Demo/liveRepoExplorerConfig"
+import { createDefaultLiveRepoFileViewerConfig } from "@/components/Demo/liveRepoFileViewerConfig"
 import {
   BUILDER_COMPOSITION_TEMPLATE_SCHEMAS,
   createCompositionTemplateFromRegistry,
@@ -95,6 +97,8 @@ export const ACTIVE_BUILDER_PANEL_KINDS = [
   "chat",
   "content",
   "gitView",
+  "fileExplorer",
+  "fileViewer",
   "participantPanel",
   "canvas",
   "a2ui",
@@ -114,6 +118,7 @@ export const ACTIVE_BUILDER_BLOCK_TYPES = [
   "contributionFeed",
   "gitView",
   "fileExplorer",
+  "fileViewer",
 ] as const
 
 export type ActiveBuilderPanelKind = (typeof ACTIVE_BUILDER_PANEL_KINDS)[number]
@@ -457,7 +462,37 @@ export const BUILDER_PANEL_KIND_SCHEMAS: Record<
     defaults: {
       prominence: "primary",
       viewport_mode: "panel",
-      options: {},
+      options: {
+        ...createDefaultGitViewConfig(),
+      },
+      presentation_json: {},
+      theme_id: null,
+    },
+    fieldSpecs: PANEL_COMMON_FIELD_SPECS,
+  },
+  fileExplorer: {
+    kind: "fileExplorer",
+    displayName: "File Explorer",
+    defaults: {
+      prominence: "primary",
+      viewport_mode: "panel",
+      options: {
+        ...createDefaultLiveRepoExplorerConfig(),
+      },
+      presentation_json: {},
+      theme_id: null,
+    },
+    fieldSpecs: PANEL_COMMON_FIELD_SPECS,
+  },
+  fileViewer: {
+    kind: "fileViewer",
+    displayName: "File Viewer",
+    defaults: {
+      prominence: "primary",
+      viewport_mode: "panel",
+      options: {
+        ...createDefaultLiveRepoFileViewerConfig(),
+      },
       presentation_json: {},
       theme_id: null,
     },
@@ -650,7 +685,7 @@ export const BUILDER_BLOCK_TYPE_SCHEMAS: Record<
       region: "top",
       visibility: "visible",
       config_json: {
-        ...createDefaultShadowRepoGitViewConfig(),
+        ...createDefaultGitViewConfig(),
       },
       presentation_json: {},
       theme_id: null,
@@ -663,7 +698,23 @@ export const BUILDER_BLOCK_TYPE_SCHEMAS: Record<
     defaults: {
       region: "top",
       visibility: "visible",
-      config_json: {},
+      config_json: {
+        ...createDefaultLiveRepoExplorerConfig(),
+      },
+      presentation_json: {},
+      theme_id: null,
+    },
+    fieldSpecs: BLOCK_COMMON_FIELD_SPECS,
+  },
+  fileViewer: {
+    type: "fileViewer",
+    displayName: "File Viewer",
+    defaults: {
+      region: "top",
+      visibility: "visible",
+      config_json: {
+        ...createDefaultLiveRepoFileViewerConfig(),
+      },
       presentation_json: {},
       theme_id: null,
     },
@@ -897,6 +948,16 @@ function getChecklistItemResolvedState(
 ): boolean {
   if (itemId === "story_id") {
     return Boolean(getCompositionStoryId(composition))
+  }
+  if (itemId === "repo_id") {
+    if (!isObjectRecord(composition.metadata_json)) return false
+    const repoId = composition.metadata_json.repo_id
+    return typeof repoId === "string" && repoId.trim().length > 0
+  }
+  if (itemId === "repo_id_secondary") {
+    if (!isObjectRecord(composition.metadata_json)) return false
+    const repoId = composition.metadata_json.repo_id_secondary
+    return typeof repoId === "string" && repoId.trim().length > 0
   }
   if (itemId === "fixed_user_persona_id") {
     if (composition.persona_policy !== "fixed_user_persona") return true

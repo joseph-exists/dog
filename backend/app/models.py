@@ -5535,6 +5535,9 @@ DemoPanelKind = Literal[
     "storyPlayer",
     "storyPlayerPanel",
     "strange",
+    "gitView",
+    "fileExplorer",
+    "fileViewer",
 ]
 
 DemoPanelProminence = Literal["primary", "auxiliary"]
@@ -5551,6 +5554,7 @@ DemoBlockType = Literal[
     "content",
     "gitView",
     "fileExplorer",
+    "fileViewer",
     "strange",
 ]
 DemoBlockRegion = Literal["top", "primary", "auxiliary", "footer"]
@@ -5607,6 +5611,73 @@ class DemoStoryRuntimePanelOptions(SQLModel):
     send_runtime_events_to_chat: bool = Field(default=True)
     viewer_mode: bool = Field(default=False)
 
+
+DemoRepoSource = Literal["user_repo", "shadow_repo"]
+DemoRepoEntityIdMode = Literal["explicit", "metadata"]
+DemoGitViewDisplayMode = Literal["split", "explorer", "viewer"]
+DemoRepoFileViewerPathMode = Literal["selection", "fixed", "readme"]
+
+
+class DemoGitViewPanelOptions(SQLModel):
+    model_config = {"extra": "forbid"}
+
+    source: DemoRepoSource = Field(default="user_repo")
+    entity_type: str = Field(default="user_repo", max_length=100)
+    entity_id_mode: DemoRepoEntityIdMode = Field(default="metadata")
+    entity_id: str | None = Field(default=None, max_length=255)
+    entity_id_metadata_key: str | None = Field(default="repo_id", max_length=255)
+    selection_key: str | None = Field(default=None, max_length=255)
+    initial_path: str = Field(default="", max_length=2000)
+    display_mode: DemoGitViewDisplayMode = Field(default="split")
+    path_mode: DemoRepoFileViewerPathMode = Field(default="selection")
+    fixed_path: str = Field(default="", max_length=2000)
+    ref: str | None = Field(default=None, max_length=255)
+    commit_limit: int = Field(default=10, ge=1)
+    show_file_content: bool = Field(default=True)
+    show_config_json: bool = Field(default=False)
+    show_path_badge: bool = Field(default=True)
+    show_copy_control: bool = Field(default=True)
+    show_sizes: bool = Field(default=True)
+    show_commit_badge: bool = Field(default=True)
+    empty_label: str | None = Field(default=None, max_length=500)
+    extras: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoFileExplorerPanelOptions(SQLModel):
+    model_config = {"extra": "forbid"}
+
+    source: DemoRepoSource = Field(default="user_repo")
+    entity_type: str = Field(default="user_repo", max_length=100)
+    entity_id_mode: DemoRepoEntityIdMode = Field(default="metadata")
+    entity_id: str | None = Field(default=None, max_length=255)
+    entity_id_metadata_key: str | None = Field(default="repo_id", max_length=255)
+    initial_path: str = Field(default="", max_length=2000)
+    ref: str | None = Field(default=None, max_length=255)
+    selection_key: str | None = Field(default=None, max_length=255)
+    title: str | None = Field(default=None, max_length=200)
+    show_sizes: bool = Field(default=True)
+    show_commit_badge: bool = Field(default=True)
+    empty_label: str | None = Field(default=None, max_length=500)
+    extras: dict[str, Any] = Field(default_factory=dict)
+
+
+class DemoFileViewerPanelOptions(SQLModel):
+    model_config = {"extra": "forbid"}
+
+    source: DemoRepoSource = Field(default="user_repo")
+    entity_type: str = Field(default="user_repo", max_length=100)
+    entity_id_mode: DemoRepoEntityIdMode = Field(default="metadata")
+    entity_id: str | None = Field(default=None, max_length=255)
+    entity_id_metadata_key: str | None = Field(default="repo_id", max_length=255)
+    path_mode: DemoRepoFileViewerPathMode = Field(default="selection")
+    fixed_path: str = Field(default="", max_length=2000)
+    ref: str | None = Field(default=None, max_length=255)
+    selection_key: str | None = Field(default=None, max_length=255)
+    title: str | None = Field(default=None, max_length=200)
+    show_path_badge: bool = Field(default=True)
+    show_copy_control: bool = Field(default=True)
+    empty_label: str | None = Field(default=None, max_length=500)
+    extras: dict[str, Any] = Field(default_factory=dict)
 
 class DemoContentPanelOptions(SQLModel):
     model_config = {"extra": "forbid"}
@@ -5731,6 +5802,19 @@ class DemoChatPanelSpec(DemoPanelSpecBase):
     kind: Literal["chat"] = "chat"
     options: DemoChatPanelOptions = Field(default_factory=DemoChatPanelOptions)
 
+class DemoGitViewPanelSpec(DemoPanelSpecBase):
+    kind: Literal["gitView"] = "gitView"
+    options: DemoGitViewPanelOptions = Field(default_factory=DemoGitViewPanelOptions)
+
+class DemoFileExplorerPanelSpec(DemoPanelSpecBase):
+    kind: Literal["fileExplorer"] = "fileExplorer"
+    options: DemoFileExplorerPanelOptions = Field(default_factory=DemoFileExplorerPanelOptions)
+
+
+class DemoFileViewerPanelSpec(DemoPanelSpecBase):
+    kind: Literal["fileViewer"] = "fileViewer"
+    options: DemoFileViewerPanelOptions = Field(default_factory=DemoFileViewerPanelOptions)
+
 
 class DemoStoryRuntimePanelSpec(DemoPanelSpecBase):
     kind: Literal["storyRuntime"] = "storyRuntime"
@@ -5803,7 +5887,10 @@ DemoPanelSpec = Annotated[
         | DemoStoryEditorPanelSpec
         | DemoStoryPlayerPanelSpec
         | DemoStoryPlayerLegacyPanelSpec
-        | DemoStrangePanelSpec,
+        | DemoStrangePanelSpec
+        | DemoGitViewPanelSpec
+        | DemoFileExplorerPanelSpec
+        | DemoFileViewerPanelSpec,
     Field(discriminator="kind"),
 ]
 
@@ -5887,6 +5974,11 @@ class DemoFileExplorerBlockSpec(DemoBlockSpecBase):
     config_json: dict[str, Any] = Field(default_factory=dict)
 
 
+class DemoFileViewerBlockSpec(DemoBlockSpecBase):
+    type: Literal["fileViewer"] = "fileViewer"
+    config_json: dict[str, Any] = Field(default_factory=dict)
+
+
 class DemoStrangeBlockSpec(DemoBlockSpecBase):
     type: Literal["strange"] = "strange"
     config_json: dict[str, Any] = Field(default_factory=dict)
@@ -5903,6 +5995,7 @@ DemoBlockSpec = Annotated[
         | DemoContributionFeedBlockSpec
         | DemoGitViewBlockSpec
         | DemoFileExplorerBlockSpec
+        | DemoFileViewerBlockSpec
         | DemoStrangeBlockSpec,
     Field(discriminator="type"),
 ]

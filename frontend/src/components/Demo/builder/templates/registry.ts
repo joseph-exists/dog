@@ -10,6 +10,8 @@ import { buildCompositionFPresentationPassthroughAuditTemplate } from "@/compone
 import { buildCompositionGUXStyleMatrixTemplate } from "@/components/Demo/builder/templates/compositions/compositionGUXStyleMatrix"
 import { buildCompositionHChaoticCombinatoricsTemplate } from "@/components/Demo/builder/templates/compositions/compositionHChaoticCombinatorics"
 import { buildCompositionIIntensityTemplate } from "@/components/Demo/builder/templates/compositions/compositionIIntensity"
+import { buildCompositionJRepoExplorerDualViewersTemplate } from "@/components/Demo/builder/templates/compositions/compositionJRepoExplorerDualViewers"
+import { buildCompositionKParallelRepoClustersTemplate } from "@/components/Demo/builder/templates/compositions/compositionKParallelRepoClusters"
 import type {
   BuilderCompositionTemplateOption,
   BuilderCompositionTemplateSchema,
@@ -355,6 +357,59 @@ export const BUILDER_COMPOSITION_TEMPLATE_SCHEMAS: Record<
     requiredAssumptions: [],
     checklistItems: [],
   },
+  composition_j_repo_explorer_dual_viewers: {
+    id: "composition_j_repo_explorer_dual_viewers",
+    label: "Composition J: Repo Explorer + Dual Viewers",
+    description:
+      "Repo-first collaboration layout with one live explorer, one selection-driven file viewer, and one README companion viewer.",
+    requiredAssumptions: ["repo_id", "chat_mode"],
+    checklistItems: [
+      {
+        id: "repo_id",
+        label: "Repo Attachment",
+        description:
+          "Set metadata_json.repo_id so the live repo explorer and file viewers can resolve a user repo.",
+        severity: "error",
+      },
+      {
+        id: "chat_mode",
+        label: "Chat Mode",
+        description:
+          "Confirm participant/observer mode for the repo review session.",
+        severity: "warning",
+      },
+    ],
+  },
+  composition_k_parallel_repo_clusters: {
+    id: "composition_k_parallel_repo_clusters",
+    label: "Composition K: Parallel Repo Clusters",
+    description:
+      "Two independent repo clusters in one room, each with its own explorer and viewer pair plus shared coordination chat.",
+    requiredAssumptions: ["repo_id", "repo_id_secondary", "chat_mode"],
+    checklistItems: [
+      {
+        id: "repo_id",
+        label: "Primary Repo Attachment",
+        description:
+          "Set metadata_json.repo_id for the first explorer/viewer cluster.",
+        severity: "error",
+      },
+      {
+        id: "repo_id_secondary",
+        label: "Secondary Repo Attachment",
+        description:
+          "Set metadata_json.repo_id_secondary for the second explorer/viewer cluster.",
+        severity: "error",
+      },
+      {
+        id: "chat_mode",
+        label: "Chat Mode",
+        description:
+          "Confirm participant/observer mode for cross-repo collaboration.",
+        severity: "warning",
+      },
+    ],
+  },
 }
 
 export const BUILDER_COMPOSITION_TEMPLATES: BuilderCompositionTemplateOption[] =
@@ -378,6 +433,10 @@ const BUILDER_COMPOSITION_TEMPLATE_BUILDERS: Record<
   composition_g_ux_style_matrix: buildCompositionGUXStyleMatrixTemplate,
   composition_h_chaotic_combinatorics: buildCompositionHChaoticCombinatoricsTemplate,
   composition_i_intensity: buildCompositionIIntensityTemplate,
+  composition_j_repo_explorer_dual_viewers:
+    buildCompositionJRepoExplorerDualViewersTemplate,
+  composition_k_parallel_repo_clusters:
+    buildCompositionKParallelRepoClustersTemplate,
 }
 
 export function createCompositionTemplateFromRegistry(

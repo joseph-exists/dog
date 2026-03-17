@@ -61,6 +61,8 @@ interface DemoTemplateSetupChecklistProps {
   onDismiss: () => void
   onResume: () => void
   onStoryIdChange: (value: string | null) => void
+  onRepoIdChange: (value: string | null) => void
+  onSecondaryRepoIdChange: (value: string | null) => void
   onRuntimePolicyChange: (value: DemoRuntimePolicy) => void
   onPersonaPolicyChange: (value: DemoPersonaPolicy) => void
   onChatModeChange: (value: DemoChatMode) => void
@@ -83,6 +85,8 @@ export function DemoTemplateSetupChecklist({
   onDismiss,
   onResume,
   onStoryIdChange,
+  onRepoIdChange,
+  onSecondaryRepoIdChange,
   onRuntimePolicyChange,
   onPersonaPolicyChange,
   onChatModeChange,
@@ -244,6 +248,53 @@ export function DemoTemplateSetupChecklist({
                     onChange={(event) => {
                       const value = event.target.value.trim()
                       onStoryIdChange(value.length > 0 ? value : null)
+                    }}
+                  />
+                )}
+
+                {item.id === "repo_id" && (
+                  <Input
+                    value={
+                      typeof composition.metadata_json === "object" &&
+                      composition.metadata_json &&
+                      !Array.isArray(composition.metadata_json) &&
+                      typeof (
+                        composition.metadata_json as { repo_id?: unknown }
+                      ).repo_id === "string"
+                        ? (composition.metadata_json as { repo_id: string })
+                            .repo_id
+                        : ""
+                    }
+                    placeholder="metadata_json.repo_id"
+                    onChange={(event) => {
+                      const value = event.target.value.trim()
+                      onRepoIdChange(value.length > 0 ? value : null)
+                    }}
+                  />
+                )}
+
+                {item.id === "repo_id_secondary" && (
+                  <Input
+                    value={
+                      typeof composition.metadata_json === "object" &&
+                      composition.metadata_json &&
+                      !Array.isArray(composition.metadata_json) &&
+                      typeof (
+                        composition.metadata_json as {
+                          repo_id_secondary?: unknown
+                        }
+                      ).repo_id_secondary === "string"
+                        ? (
+                            composition.metadata_json as {
+                              repo_id_secondary: string
+                            }
+                          ).repo_id_secondary
+                        : ""
+                    }
+                    placeholder="metadata_json.repo_id_secondary"
+                    onChange={(event) => {
+                      const value = event.target.value.trim()
+                      onSecondaryRepoIdChange(value.length > 0 ? value : null)
                     }}
                   />
                 )}

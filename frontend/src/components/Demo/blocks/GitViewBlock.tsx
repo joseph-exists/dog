@@ -1,6 +1,6 @@
 import {
-  resolveShadowRepoGitViewConfig,
-  type ResolvedShadowRepoGitViewConfig,
+  resolveGitViewConfig,
+  type ResolvedGitViewConfig,
 } from "@/components/Demo/gitViewConfig"
 import {
   GitViewCore,
@@ -21,11 +21,11 @@ interface GitViewBlockProps {
 
 function renderInvalidConfig(title: string | null | undefined) {
   return (
-    <GitViewInvalidConfig
+      <GitViewInvalidConfig
       title={title}
-      subtitle="Git view requires a live shadow repo configuration."
+      subtitle="Git view requires a live repo configuration."
       expectedConfig={{
-        source: "shadow_repo",
+        source: "user_repo",
         entity_type: "user_repo",
         entity_id_mode: "metadata",
         entity_id_metadata_key: "repo_id",
@@ -37,8 +37,8 @@ function renderInvalidConfig(title: string | null | undefined) {
   )
 }
 
-function resolveConfig(config: unknown): ResolvedShadowRepoGitViewConfig | null {
-  return resolveShadowRepoGitViewConfig(config)
+function resolveConfig(config: unknown): ResolvedGitViewConfig | null {
+  return resolveGitViewConfig(config)
 }
 
 export function GitViewBlock({

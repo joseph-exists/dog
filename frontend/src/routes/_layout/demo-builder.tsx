@@ -1099,6 +1099,40 @@ function DemoBuilderPage() {
     })
   }
 
+  function setRepoId(value: string | null) {
+    updateComposition((current) => {
+      const metadata = isObjectRecord(current.metadata_json)
+        ? { ...current.metadata_json }
+        : {}
+      if (value) {
+        metadata.repo_id = value
+      } else {
+        delete metadata.repo_id
+      }
+      return {
+        ...current,
+        metadata_json: metadata,
+      }
+    })
+  }
+
+  function setSecondaryRepoId(value: string | null) {
+    updateComposition((current) => {
+      const metadata = isObjectRecord(current.metadata_json)
+        ? { ...current.metadata_json }
+        : {}
+      if (value) {
+        metadata.repo_id_secondary = value
+      } else {
+        delete metadata.repo_id_secondary
+      }
+      return {
+        ...current,
+        metadata_json: metadata,
+      }
+    })
+  }
+
   function withPresentationThemeRefs(
     input: EditableComposition,
     nextPageThemeId: string | null | undefined,
@@ -1522,6 +1556,8 @@ function DemoBuilderPage() {
             }))
           }
           onStoryIdChange={setStoryId}
+          onRepoIdChange={setRepoId}
+          onSecondaryRepoIdChange={setSecondaryRepoId}
           onRuntimePolicyChange={(value) =>
             updateComposition((current) => ({
               ...current,

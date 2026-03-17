@@ -780,6 +780,117 @@ export type DemoFileExplorerBlockSpec = {
     };
 };
 
+export type DemoFileExplorerPanelOptions = {
+    source?: 'user_repo' | 'shadow_repo';
+    entity_type?: string;
+    entity_id_mode?: 'explicit' | 'metadata';
+    entity_id?: (string | null);
+    entity_id_metadata_key?: (string | null);
+    initial_path?: string;
+    ref?: (string | null);
+    selection_key?: (string | null);
+    title?: (string | null);
+    show_sizes?: boolean;
+    show_commit_badge?: boolean;
+    empty_label?: (string | null);
+    extras?: {
+        [key: string]: unknown;
+    };
+};
+
+export type source = 'user_repo' | 'shadow_repo';
+
+export type entity_id_mode = 'explicit' | 'metadata';
+
+export type DemoFileExplorerPanelSpec = {
+    id: string;
+    kind?: "fileExplorer";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoFileExplorerPanelOptions;
+};
+
+export type DemoFileViewerBlockSpec = {
+    id: string;
+    type?: "fileViewer";
+    region?: 'top' | 'primary' | 'auxiliary' | 'footer';
+    order?: number;
+    title?: (string | null);
+    visibility?: 'visible' | 'hidden_unmounted' | 'hidden_mounted';
+    /**
+     * Optional block-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Block-level presentation overrides (e.g., density, chrome, emphasis).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    config_json?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DemoFileViewerPanelOptions = {
+    source?: 'user_repo' | 'shadow_repo';
+    entity_type?: string;
+    entity_id_mode?: 'explicit' | 'metadata';
+    entity_id?: (string | null);
+    entity_id_metadata_key?: (string | null);
+    path_mode?: 'selection' | 'fixed' | 'readme';
+    fixed_path?: string;
+    ref?: (string | null);
+    selection_key?: (string | null);
+    title?: (string | null);
+    show_path_badge?: boolean;
+    show_copy_control?: boolean;
+    empty_label?: (string | null);
+    extras?: {
+        [key: string]: unknown;
+    };
+};
+
+export type path_mode = 'selection' | 'fixed' | 'readme';
+
+export type DemoFileViewerPanelSpec = {
+    id: string;
+    kind?: "fileViewer";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoFileViewerPanelOptions;
+};
+
 export type DemoGitViewBlockSpec = {
     id: string;
     type?: "gitView";
@@ -800,6 +911,56 @@ export type DemoGitViewBlockSpec = {
     config_json?: {
         [key: string]: unknown;
     };
+};
+
+export type DemoGitViewPanelOptions = {
+    source?: 'user_repo' | 'shadow_repo';
+    entity_type?: string;
+    entity_id_mode?: 'explicit' | 'metadata';
+    entity_id?: (string | null);
+    entity_id_metadata_key?: (string | null);
+    selection_key?: (string | null);
+    initial_path?: string;
+    display_mode?: 'split' | 'explorer' | 'viewer';
+    path_mode?: 'selection' | 'fixed' | 'readme';
+    fixed_path?: string;
+    ref?: (string | null);
+    commit_limit?: number;
+    show_file_content?: boolean;
+    show_config_json?: boolean;
+    show_path_badge?: boolean;
+    show_copy_control?: boolean;
+    show_sizes?: boolean;
+    show_commit_badge?: boolean;
+    empty_label?: (string | null);
+    extras?: {
+        [key: string]: unknown;
+    };
+};
+
+export type display_mode = 'split' | 'explorer' | 'viewer';
+
+export type DemoGitViewPanelSpec = {
+    id: string;
+    kind?: "gitView";
+    prominence?: 'primary' | 'auxiliary';
+    order?: number;
+    title?: (string | null);
+    /**
+     * Optional panel-level theme override. If absent, composition/page theme resolution applies.
+     */
+    theme_id?: (string | null);
+    /**
+     * Panel-level presentation overrides (e.g., viewer/compact/chrome mode).
+     */
+    presentation_json?: {
+        [key: string]: unknown;
+    };
+    default_size?: (number | null);
+    min_size?: (number | null);
+    max_size?: (number | null);
+    viewport_mode?: 'panel' | 'page';
+    options?: DemoGitViewPanelOptions;
 };
 
 /**
@@ -854,8 +1015,8 @@ export type DemoPageCompositionBase_Input = {
     presentation_json?: {
         [key: string]: unknown;
     };
-    panels?: Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Input | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)>;
-    blocks?: Array<(DemoContextBlockSpec_Input | DemoContentBlockSpec_Input | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)>;
+    panels?: Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Input | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec | DemoGitViewPanelSpec | DemoFileExplorerPanelSpec | DemoFileViewerPanelSpec)>;
+    blocks?: Array<(DemoContextBlockSpec_Input | DemoContentBlockSpec_Input | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoFileViewerBlockSpec | DemoStrangeBlockSpec)>;
     metadata_json?: {
         [key: string]: unknown;
     };
@@ -886,8 +1047,8 @@ export type DemoPageCompositionBase_Output = {
     presentation_json?: {
         [key: string]: unknown;
     };
-    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Output | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)>;
-    blocks?: Array<(DemoContextBlockSpec_Output | DemoContentBlockSpec_Output | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)>;
+    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Output | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec | DemoGitViewPanelSpec | DemoFileExplorerPanelSpec | DemoFileViewerPanelSpec)>;
+    blocks?: Array<(DemoContextBlockSpec_Output | DemoContentBlockSpec_Output | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoFileViewerBlockSpec | DemoStrangeBlockSpec)>;
     metadata_json?: {
         [key: string]: unknown;
     };
@@ -911,8 +1072,8 @@ export type DemoPageCompositionPublic = {
     presentation_json?: {
         [key: string]: unknown;
     };
-    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Output | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)>;
-    blocks?: Array<(DemoContextBlockSpec_Output | DemoContentBlockSpec_Output | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)>;
+    panels?: Array<(DemoChatPanelSpec_Output | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Output | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec | DemoGitViewPanelSpec | DemoFileExplorerPanelSpec | DemoFileViewerPanelSpec)>;
+    blocks?: Array<(DemoContextBlockSpec_Output | DemoContentBlockSpec_Output | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoFileViewerBlockSpec | DemoStrangeBlockSpec)>;
     metadata_json?: {
         [key: string]: unknown;
     };
@@ -935,8 +1096,8 @@ export type DemoPageCompositionUpdate = {
     presentation_json?: ({
     [key: string]: unknown;
 } | null);
-    panels?: (Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Input | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec)> | null);
-    blocks?: (Array<(DemoContextBlockSpec_Input | DemoContentBlockSpec_Input | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoStrangeBlockSpec)> | null);
+    panels?: (Array<(DemoChatPanelSpec_Input | DemoStoryRuntimePanelSpec | DemoContentPanelSpec_Input | DemoParticipantPanelSpec | DemoCanvasPanelSpec | DemoA2UIPanelSpec | DemoDebugPanelSpec | DemoStoryEditorPanelSpec | DemoStoryPlayerPanelSpec | DemoStoryPlayerLegacyPanelSpec | DemoStrangePanelSpec | DemoGitViewPanelSpec | DemoFileExplorerPanelSpec | DemoFileViewerPanelSpec)> | null);
+    blocks?: (Array<(DemoContextBlockSpec_Input | DemoContentBlockSpec_Input | DemoStoryBlockSpec | DemoStoryMetadataBlockSpec | DemoAgentRosterBlockSpec | DemoOrchestratorStateBlockSpec | DemoToolCapabilityBlockSpec | DemoContributionFeedBlockSpec | DemoGitViewBlockSpec | DemoFileExplorerBlockSpec | DemoFileViewerBlockSpec | DemoStrangeBlockSpec)> | null);
     metadata_json?: ({
     [key: string]: unknown;
 } | null);

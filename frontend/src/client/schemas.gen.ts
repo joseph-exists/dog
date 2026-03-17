@@ -2914,6 +2914,548 @@ export const DemoFileExplorerBlockSpecSchema = {
     title: 'DemoFileExplorerBlockSpec'
 } as const;
 
+export const DemoFileExplorerPanelOptionsSchema = {
+    properties: {
+        source: {
+            type: 'string',
+            enum: ['user_repo', 'shadow_repo'],
+            title: 'Source',
+            default: 'user_repo'
+        },
+        entity_type: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Entity Type',
+            default: 'user_repo'
+        },
+        entity_id_mode: {
+            type: 'string',
+            enum: ['explicit', 'metadata'],
+            title: 'Entity Id Mode',
+            default: 'metadata'
+        },
+        entity_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Entity Id'
+        },
+        entity_id_metadata_key: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Entity Id Metadata Key',
+            default: 'repo_id'
+        },
+        initial_path: {
+            type: 'string',
+            maxLength: 2000,
+            title: 'Initial Path',
+            default: ''
+        },
+        ref: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ref'
+        },
+        selection_key: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Selection Key'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        show_sizes: {
+            type: 'boolean',
+            title: 'Show Sizes',
+            default: true
+        },
+        show_commit_badge: {
+            type: 'boolean',
+            title: 'Show Commit Badge',
+            default: true
+        },
+        empty_label: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Empty Label'
+        },
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'DemoFileExplorerPanelOptions'
+} as const;
+
+export const DemoFileExplorerPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'fileExplorer',
+            title: 'Kind',
+            default: 'fileExplorer'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoFileExplorerPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoFileExplorerPanelSpec'
+} as const;
+
+export const DemoFileViewerBlockSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        type: {
+            type: 'string',
+            const: 'fileViewer',
+            title: 'Type',
+            default: 'fileViewer'
+        },
+        region: {
+            type: 'string',
+            enum: ['top', 'primary', 'auxiliary', 'footer'],
+            title: 'Region',
+            default: 'top'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        visibility: {
+            type: 'string',
+            enum: ['visible', 'hidden_unmounted', 'hidden_mounted'],
+            title: 'Visibility',
+            default: 'visible'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional block-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Block-level presentation overrides (e.g., density, chrome, emphasis).'
+        },
+        config_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Config Json'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoFileViewerBlockSpec'
+} as const;
+
+export const DemoFileViewerPanelOptionsSchema = {
+    properties: {
+        source: {
+            type: 'string',
+            enum: ['user_repo', 'shadow_repo'],
+            title: 'Source',
+            default: 'user_repo'
+        },
+        entity_type: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Entity Type',
+            default: 'user_repo'
+        },
+        entity_id_mode: {
+            type: 'string',
+            enum: ['explicit', 'metadata'],
+            title: 'Entity Id Mode',
+            default: 'metadata'
+        },
+        entity_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Entity Id'
+        },
+        entity_id_metadata_key: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Entity Id Metadata Key',
+            default: 'repo_id'
+        },
+        path_mode: {
+            type: 'string',
+            enum: ['selection', 'fixed', 'readme'],
+            title: 'Path Mode',
+            default: 'selection'
+        },
+        fixed_path: {
+            type: 'string',
+            maxLength: 2000,
+            title: 'Fixed Path',
+            default: ''
+        },
+        ref: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ref'
+        },
+        selection_key: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Selection Key'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        show_path_badge: {
+            type: 'boolean',
+            title: 'Show Path Badge',
+            default: true
+        },
+        show_copy_control: {
+            type: 'boolean',
+            title: 'Show Copy Control',
+            default: true
+        },
+        empty_label: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Empty Label'
+        },
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'DemoFileViewerPanelOptions'
+} as const;
+
+export const DemoFileViewerPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'fileViewer',
+            title: 'Kind',
+            default: 'fileViewer'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoFileViewerPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoFileViewerPanelSpec'
+} as const;
+
 export const DemoGitViewBlockSpecSchema = {
     properties: {
         id: {
@@ -2986,6 +3528,269 @@ export const DemoGitViewBlockSpecSchema = {
     type: 'object',
     required: ['id'],
     title: 'DemoGitViewBlockSpec'
+} as const;
+
+export const DemoGitViewPanelOptionsSchema = {
+    properties: {
+        source: {
+            type: 'string',
+            enum: ['user_repo', 'shadow_repo'],
+            title: 'Source',
+            default: 'user_repo'
+        },
+        entity_type: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Entity Type',
+            default: 'user_repo'
+        },
+        entity_id_mode: {
+            type: 'string',
+            enum: ['explicit', 'metadata'],
+            title: 'Entity Id Mode',
+            default: 'metadata'
+        },
+        entity_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Entity Id'
+        },
+        entity_id_metadata_key: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Entity Id Metadata Key',
+            default: 'repo_id'
+        },
+        selection_key: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Selection Key'
+        },
+        initial_path: {
+            type: 'string',
+            maxLength: 2000,
+            title: 'Initial Path',
+            default: ''
+        },
+        display_mode: {
+            type: 'string',
+            enum: ['split', 'explorer', 'viewer'],
+            title: 'Display Mode',
+            default: 'split'
+        },
+        path_mode: {
+            type: 'string',
+            enum: ['selection', 'fixed', 'readme'],
+            title: 'Path Mode',
+            default: 'selection'
+        },
+        fixed_path: {
+            type: 'string',
+            maxLength: 2000,
+            title: 'Fixed Path',
+            default: ''
+        },
+        ref: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ref'
+        },
+        commit_limit: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Commit Limit',
+            default: 10
+        },
+        show_file_content: {
+            type: 'boolean',
+            title: 'Show File Content',
+            default: true
+        },
+        show_config_json: {
+            type: 'boolean',
+            title: 'Show Config Json',
+            default: false
+        },
+        show_path_badge: {
+            type: 'boolean',
+            title: 'Show Path Badge',
+            default: true
+        },
+        show_copy_control: {
+            type: 'boolean',
+            title: 'Show Copy Control',
+            default: true
+        },
+        show_sizes: {
+            type: 'boolean',
+            title: 'Show Sizes',
+            default: true
+        },
+        show_commit_badge: {
+            type: 'boolean',
+            title: 'Show Commit Badge',
+            default: true
+        },
+        empty_label: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Empty Label'
+        },
+        extras: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extras'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'DemoGitViewPanelOptions'
+} as const;
+
+export const DemoGitViewPanelSpecSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 100,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            const: 'gitView',
+            title: 'Kind',
+            default: 'gitView'
+        },
+        prominence: {
+            type: 'string',
+            enum: ['primary', 'auxiliary'],
+            title: 'Prominence',
+            default: 'primary'
+        },
+        order: {
+            type: 'integer',
+            minimum: 1,
+            title: 'Order',
+            default: 1
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        theme_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Theme Id',
+            description: 'Optional panel-level theme override. If absent, composition/page theme resolution applies.'
+        },
+        presentation_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Presentation Json',
+            description: 'Panel-level presentation overrides (e.g., viewer/compact/chrome mode).'
+        },
+        default_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Size'
+        },
+        min_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Min Size'
+        },
+        max_size: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Size'
+        },
+        viewport_mode: {
+            type: 'string',
+            enum: ['panel', 'page'],
+            title: 'Viewport Mode',
+            default: 'panel'
+        },
+        options: {
+            '$ref': '#/components/schemas/DemoGitViewPanelOptions'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'DemoGitViewPanelSpec'
 } as const;
 
 export const DemoLayoutModeSchema = {
@@ -3171,6 +3976,15 @@ export const DemoPageCompositionBase_InputSchema = {
                     },
                     {
                         '$ref': '#/components/schemas/DemoStrangePanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGitViewPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileExplorerPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileViewerPanelSpec'
                     }
                 ],
                 discriminator: {
@@ -3181,6 +3995,9 @@ export const DemoPageCompositionBase_InputSchema = {
                         chat: '#/components/schemas/DemoChatPanelSpec-Input',
                         content: '#/components/schemas/DemoContentPanelSpec-Input',
                         debug: '#/components/schemas/DemoDebugPanelSpec',
+                        fileExplorer: '#/components/schemas/DemoFileExplorerPanelSpec',
+                        fileViewer: '#/components/schemas/DemoFileViewerPanelSpec',
+                        gitView: '#/components/schemas/DemoGitViewPanelSpec',
                         participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
                         storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
                         storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
@@ -3227,6 +4044,9 @@ export const DemoPageCompositionBase_InputSchema = {
                         '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
                     },
                     {
+                        '$ref': '#/components/schemas/DemoFileViewerBlockSpec'
+                    },
+                    {
                         '$ref': '#/components/schemas/DemoStrangeBlockSpec'
                     }
                 ],
@@ -3238,6 +4058,7 @@ export const DemoPageCompositionBase_InputSchema = {
                         context: '#/components/schemas/DemoContextBlockSpec-Input',
                         contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
                         fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                        fileViewer: '#/components/schemas/DemoFileViewerBlockSpec',
                         gitView: '#/components/schemas/DemoGitViewBlockSpec',
                         orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
                         story: '#/components/schemas/DemoStoryBlockSpec',
@@ -3367,6 +4188,15 @@ export const DemoPageCompositionBase_OutputSchema = {
                     },
                     {
                         '$ref': '#/components/schemas/DemoStrangePanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGitViewPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileExplorerPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileViewerPanelSpec'
                     }
                 ],
                 discriminator: {
@@ -3377,6 +4207,9 @@ export const DemoPageCompositionBase_OutputSchema = {
                         chat: '#/components/schemas/DemoChatPanelSpec-Output',
                         content: '#/components/schemas/DemoContentPanelSpec-Output',
                         debug: '#/components/schemas/DemoDebugPanelSpec',
+                        fileExplorer: '#/components/schemas/DemoFileExplorerPanelSpec',
+                        fileViewer: '#/components/schemas/DemoFileViewerPanelSpec',
+                        gitView: '#/components/schemas/DemoGitViewPanelSpec',
                         participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
                         storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
                         storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
@@ -3423,6 +4256,9 @@ export const DemoPageCompositionBase_OutputSchema = {
                         '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
                     },
                     {
+                        '$ref': '#/components/schemas/DemoFileViewerBlockSpec'
+                    },
+                    {
                         '$ref': '#/components/schemas/DemoStrangeBlockSpec'
                     }
                 ],
@@ -3434,6 +4270,7 @@ export const DemoPageCompositionBase_OutputSchema = {
                         context: '#/components/schemas/DemoContextBlockSpec-Output',
                         contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
                         fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                        fileViewer: '#/components/schemas/DemoFileViewerBlockSpec',
                         gitView: '#/components/schemas/DemoGitViewBlockSpec',
                         orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
                         story: '#/components/schemas/DemoStoryBlockSpec',
@@ -3563,6 +4400,15 @@ export const DemoPageCompositionPublicSchema = {
                     },
                     {
                         '$ref': '#/components/schemas/DemoStrangePanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoGitViewPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileExplorerPanelSpec'
+                    },
+                    {
+                        '$ref': '#/components/schemas/DemoFileViewerPanelSpec'
                     }
                 ],
                 discriminator: {
@@ -3573,6 +4419,9 @@ export const DemoPageCompositionPublicSchema = {
                         chat: '#/components/schemas/DemoChatPanelSpec-Output',
                         content: '#/components/schemas/DemoContentPanelSpec-Output',
                         debug: '#/components/schemas/DemoDebugPanelSpec',
+                        fileExplorer: '#/components/schemas/DemoFileExplorerPanelSpec',
+                        fileViewer: '#/components/schemas/DemoFileViewerPanelSpec',
+                        gitView: '#/components/schemas/DemoGitViewPanelSpec',
                         participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
                         storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
                         storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
@@ -3619,6 +4468,9 @@ export const DemoPageCompositionPublicSchema = {
                         '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
                     },
                     {
+                        '$ref': '#/components/schemas/DemoFileViewerBlockSpec'
+                    },
+                    {
                         '$ref': '#/components/schemas/DemoStrangeBlockSpec'
                     }
                 ],
@@ -3630,6 +4482,7 @@ export const DemoPageCompositionPublicSchema = {
                         context: '#/components/schemas/DemoContextBlockSpec-Output',
                         contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
                         fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                        fileViewer: '#/components/schemas/DemoFileViewerBlockSpec',
                         gitView: '#/components/schemas/DemoGitViewBlockSpec',
                         orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
                         story: '#/components/schemas/DemoStoryBlockSpec',
@@ -3824,6 +4677,15 @@ export const DemoPageCompositionUpdateSchema = {
                             },
                             {
                                 '$ref': '#/components/schemas/DemoStrangePanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoGitViewPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoFileExplorerPanelSpec'
+                            },
+                            {
+                                '$ref': '#/components/schemas/DemoFileViewerPanelSpec'
                             }
                         ],
                         discriminator: {
@@ -3834,6 +4696,9 @@ export const DemoPageCompositionUpdateSchema = {
                                 chat: '#/components/schemas/DemoChatPanelSpec-Input',
                                 content: '#/components/schemas/DemoContentPanelSpec-Input',
                                 debug: '#/components/schemas/DemoDebugPanelSpec',
+                                fileExplorer: '#/components/schemas/DemoFileExplorerPanelSpec',
+                                fileViewer: '#/components/schemas/DemoFileViewerPanelSpec',
+                                gitView: '#/components/schemas/DemoGitViewPanelSpec',
                                 participantPanel: '#/components/schemas/DemoParticipantPanelSpec',
                                 storyEditor: '#/components/schemas/DemoStoryEditorPanelSpec',
                                 storyPlayer: '#/components/schemas/DemoStoryPlayerPanelSpec',
@@ -3887,6 +4752,9 @@ export const DemoPageCompositionUpdateSchema = {
                                 '$ref': '#/components/schemas/DemoFileExplorerBlockSpec'
                             },
                             {
+                                '$ref': '#/components/schemas/DemoFileViewerBlockSpec'
+                            },
+                            {
                                 '$ref': '#/components/schemas/DemoStrangeBlockSpec'
                             }
                         ],
@@ -3898,6 +4766,7 @@ export const DemoPageCompositionUpdateSchema = {
                                 context: '#/components/schemas/DemoContextBlockSpec-Input',
                                 contributionFeed: '#/components/schemas/DemoContributionFeedBlockSpec',
                                 fileExplorer: '#/components/schemas/DemoFileExplorerBlockSpec',
+                                fileViewer: '#/components/schemas/DemoFileViewerBlockSpec',
                                 gitView: '#/components/schemas/DemoGitViewBlockSpec',
                                 orchestratorState: '#/components/schemas/DemoOrchestratorStateBlockSpec',
                                 story: '#/components/schemas/DemoStoryBlockSpec',

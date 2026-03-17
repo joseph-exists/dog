@@ -36,6 +36,7 @@ const routeTitles: Record<string, string> = {
   "/projects": "Projects",
   "/project": "Project Workspace",
   "/repos": "Repositories",
+  "/svgs": "SVG Library",
   "/story": "Story Reading",
   "/personas": "Personas Managing",
   "/persona": "Persona",
@@ -53,6 +54,7 @@ const routeTitles: Record<string, string> = {
 const fullBleedRoutes = [
   "/agents",
   "/repos",
+  "/svgs",
   "/story",
   "/r/",
   "/room/",

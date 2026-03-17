@@ -1,6 +1,6 @@
 import {
-  createDefaultShadowRepoGitViewConfig,
-  resolveShadowRepoGitViewConfig,
+  createDefaultGitViewConfig,
+  resolveGitViewConfig,
 } from "@/components/Demo/gitViewConfig"
 import {
   GitViewCore,
@@ -17,7 +17,9 @@ function resolvePanelGitViewConfig(options: unknown): unknown {
   if (!isObjectRecord(options)) return null
   const nested = options.git_view_config
   if (isObjectRecord(nested)) return nested
-  return options.source === "shadow_repo" ? options : null
+  return options.source === "shadow_repo" || options.source === "user_repo"
+    ? options
+    : null
 }
 
 interface GitViewPanelProps {
@@ -43,12 +45,12 @@ export function GitViewPanel({
 }: GitViewPanelProps) {
   const panelConfig =
     resolvePanelGitViewConfig(options) ?? {
-      ...createDefaultShadowRepoGitViewConfig(),
+      ...createDefaultGitViewConfig(),
       entity_type: "user_repo",
       entity_id_mode: "metadata",
       entity_id_metadata_key: "repo_id",
     }
-  const resolvedConfig = resolveShadowRepoGitViewConfig(panelConfig, metadataJson)
+  const resolvedConfig = resolveGitViewConfig(panelConfig, metadataJson)
 
   if (!resolvedConfig) {
     return (
@@ -60,7 +62,7 @@ export function GitViewPanel({
             repo_id: "your-user-repo-id",
           },
           options: {
-            source: "shadow_repo",
+            source: "user_repo",
             entity_type: "user_repo",
             entity_id_mode: "metadata",
             entity_id_metadata_key: "repo_id",
