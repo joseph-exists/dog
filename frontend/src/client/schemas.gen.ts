@@ -19102,3 +19102,202 @@ export const ValidationErrorSchema = {
     required: ['loc', 'msg', 'type'],
     title: 'ValidationError'
 } as const;
+
+export const WorkspaceCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 120,
+            minLength: 1,
+            title: 'Name'
+        },
+        flavour: {
+            '$ref': '#/components/schemas/WorkspaceFlavour',
+            default: 'dev'
+        },
+        kind: {
+            type: 'string',
+            maxLength: 32,
+            minLength: 1,
+            title: 'Kind',
+            default: 'ephemeral'
+        },
+        repo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Repo Url'
+        },
+        ssh_pubkey: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ssh Pubkey'
+        },
+        env_vars: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Env Vars'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'WorkspaceCreate',
+    description: 'Request model for provisioning a workspace.'
+} as const;
+
+export const WorkspaceFlavourSchema = {
+    type: 'string',
+    enum: ['base', 'dev', 'python', 'node', 'jupyter'],
+    title: 'WorkspaceFlavour',
+    description: 'Requested workspace image/profile.'
+} as const;
+
+export const WorkspacePublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 120,
+            minLength: 1,
+            title: 'Name'
+        },
+        flavour: {
+            '$ref': '#/components/schemas/WorkspaceFlavour',
+            default: 'dev'
+        },
+        kind: {
+            type: 'string',
+            maxLength: 32,
+            minLength: 1,
+            title: 'Kind',
+            default: 'ephemeral'
+        },
+        status: {
+            '$ref': '#/components/schemas/WorkspaceStatus',
+            default: 'provisioning'
+        },
+        kennel_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Kennel Name'
+        },
+        kennel_job: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Kennel Job'
+        },
+        ws_token: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ws Token'
+        },
+        meta: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Meta'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        owner_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Owner Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        updated_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Updated At'
+        },
+        terminal_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Terminal Url'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'owner_id', 'created_at', 'updated_at'],
+    title: 'WorkspacePublic',
+    description: 'Public API response model for a workspace.'
+} as const;
+
+export const WorkspaceStatusSchema = {
+    type: 'string',
+    enum: ['provisioning', 'ready', 'stopping', 'stopped', 'destroyed'],
+    title: 'WorkspaceStatus',
+    description: 'Lifecycle state for a kennel-backed workspace.'
+} as const;
+
+export const WorkspacesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/WorkspacePublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'WorkspacesPublic',
+    description: 'Collection response model for workspaces.'
+} as const;

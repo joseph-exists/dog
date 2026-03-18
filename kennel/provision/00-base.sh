@@ -31,7 +31,10 @@ sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_c
 systemctl enable ssh
 
 # Create a non-root dev user
-useradd -m -s /bin/bash -G sudo dev
+if ! id -u dev >/dev/null 2>&1; then
+  useradd -m -s /bin/bash -G sudo dev
+fi
 echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
+chmod 0440 /etc/sudoers.d/dev
 
 apt-get clean && rm -rf /var/lib/apt/lists/*

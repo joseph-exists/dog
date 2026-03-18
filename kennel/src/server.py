@@ -13,7 +13,7 @@ from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconn
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
-from tokens import token_store, TokenStore
+from tokens import token_store
 
 
 # ── Settings ──────────────────────────────────────────────────────────────────
@@ -31,23 +31,15 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 settings  = Settings()
-redis_client: aioredis.Redis = None
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global redis_client
-    redis_client = aioredis.Redis(
-        host=settings.kennel_redis_host,
-        port=settings.kennel_redis_port,
-        decode_responses=True,
-    )
     # Start background token reaper
     asyncio.create_task(token_store.reap_expired())
     yield
-    await redis_client.aclose()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -90,8 +82,10 @@ class CreateEnvRequest(BaseModel):
     name:               str | None = None
     kind:               EnvKind    = EnvKind.ephemeral
     flavour:            str        = "dev"
-    template:           str        = "ubuntu"
+    template:           str        = "download"
+    distro:             str        = "ubuntu"
     release:            str        = "noble"
+    arch:               str        = "amd64"
     base_snapshot:      str | None = None
     base_snapshot_name: str | None = None
 
@@ -128,7 +122,15 @@ def lxc(*args, timeout: int = 60) -> subprocess.CompletedProcess:
 
 async def publish_event(env_name: str, event: str, data: dict = {}):
     payload = json.dumps({"env": env_name, "event": event, **data})
-    await redis_client.publish(settings.kennel_redis_event_channel, payload)
+    redis_client = aioredis.Redis(
+        host=settings.kennel_redis_host,
+        port=settings.kennel_redis_port,
+        decode_responses=True,
+    )
+    try:
+        await redis_client.publish(settings.kennel_redis_event_channel, payload)
+    finally:
+        await redis_client.aclose()
 
 
 def _attach_exec(env_name: str, cmd: str, timeout: int = 30) -> subprocess.CompletedProcess:
@@ -152,10 +154,37 @@ def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
                 capture_output=True, text=True, timeout=300,
             )
         else:
+            if req.template == "download":
+                create_cmd = [
+                    "lxc-create",
+                    "-n",
+                    name,
+                    "-t",
+                    "download",
+                    "--",
+                    "-d",
+                    req.distro,
+                    "-r",
+                    req.release,
+                    "-a",
+                    req.arch,
+                ]
+            else:
+                create_cmd = [
+                    "lxc-create",
+                    "-n",
+                    name,
+                    "-t",
+                    req.template,
+                    "--",
+                    "--release",
+                    req.release,
+                ]
             r = subprocess.run(
-                ["lxc-create", "-n", name, "-t", req.template,
-                 "--", "--release", req.release],
-                capture_output=True, text=True, timeout=600,
+                create_cmd,
+                capture_output=True,
+                text=True,
+                timeout=600,
             )
 
         if r.returncode != 0:

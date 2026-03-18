@@ -5051,6 +5051,59 @@ export type ValidationError = {
     type: string;
 };
 
+/**
+ * Request model for provisioning a workspace.
+ */
+export type WorkspaceCreate = {
+    name: string;
+    flavour?: WorkspaceFlavour;
+    kind?: string;
+    repo_url?: (string | null);
+    ssh_pubkey?: (string | null);
+    env_vars?: {
+        [key: string]: (string);
+    };
+};
+
+/**
+ * Requested workspace image/profile.
+ */
+export type WorkspaceFlavour = 'base' | 'dev' | 'python' | 'node' | 'jupyter';
+
+/**
+ * Public API response model for a workspace.
+ */
+export type WorkspacePublic = {
+    name: string;
+    flavour?: WorkspaceFlavour;
+    kind?: string;
+    status?: WorkspaceStatus;
+    kennel_name?: (string | null);
+    kennel_job?: (string | null);
+    ws_token?: (string | null);
+    meta?: ({
+    [key: string]: unknown;
+} | null);
+    id: string;
+    owner_id: string;
+    created_at: string;
+    updated_at: string;
+    terminal_url?: (string | null);
+};
+
+/**
+ * Collection response model for workspaces.
+ */
+export type WorkspacesPublic = {
+    data: Array<WorkspacePublic>;
+    count: number;
+};
+
+/**
+ * Lifecycle state for a kennel-backed workspace.
+ */
+export type WorkspaceStatus = 'provisioning' | 'ready' | 'stopping' | 'stopped' | 'destroyed';
+
 export type AccessGetMyEffectiveResourceRoleData = {
     resourceId: string;
     resourceType: string;
@@ -7140,3 +7193,37 @@ export type UtilsTestEmailData = {
 export type UtilsTestEmailResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);
+
+export type WorkspacesListWorkspacesResponse = (WorkspacesPublic);
+
+export type WorkspacesCreateWorkspaceData = {
+    requestBody: WorkspaceCreate;
+};
+
+export type WorkspacesCreateWorkspaceResponse = (WorkspacePublic);
+
+export type WorkspacesGetWorkspaceData = {
+    workspaceId: string;
+};
+
+export type WorkspacesGetWorkspaceResponse = (WorkspacePublic);
+
+export type WorkspacesDestroyWorkspaceData = {
+    workspaceId: string;
+};
+
+export type WorkspacesDestroyWorkspaceResponse = (Message);
+
+export type WorkspacesGetWorkspaceTerminalData = {
+    workspaceId: string;
+};
+
+export type WorkspacesGetWorkspaceTerminalResponse = ({
+    [key: string]: (string);
+});
+
+export type WorkspacesStopWorkspaceData = {
+    workspaceId: string;
+};
+
+export type WorkspacesStopWorkspaceResponse = (Message);

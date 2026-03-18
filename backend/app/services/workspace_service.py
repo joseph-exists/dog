@@ -36,11 +36,11 @@ async def spawn_workspace(
         },
     )
     db.add(workspace)
-    await db.commit()
+    await db.flush()
     await db.refresh(workspace)
 
     asyncio.create_task(
-        _provision_workspace(
+        _provision_workspace_after_commit(
             ws_id=workspace.id,
             kennel_name=kennel_name,
             req=req,
@@ -48,6 +48,19 @@ async def spawn_workspace(
     )
 
     return workspace
+
+
+async def _provision_workspace_after_commit(
+    ws_id: uuid.UUID,
+    kennel_name: str,
+    req: WorkspaceCreate,
+) -> None:
+    """
+    Yield once so the request-scoped transaction can finish before
+    background provisioning starts using its own session.
+    """
+    await asyncio.sleep(0)
+    await _provision_workspace(ws_id=ws_id, kennel_name=kennel_name, req=req)
 
 
 async def _provision_workspace(
@@ -183,14 +196,14 @@ async def stop_workspace(db: AsyncSession, ws_id: uuid.UUID) -> None:
     workspace.status = WorkspaceStatus.stopping
     workspace.updated_at = datetime.utcnow()
     db.add(workspace)
-    await db.commit()
+    await db.flush()
 
     await kennel_client.stop_env(workspace.kennel_name)
 
     workspace.status = WorkspaceStatus.stopped
     workspace.updated_at = datetime.utcnow()
     db.add(workspace)
-    await db.commit()
+    await db.flush()
 
 
 async def destroy_workspace(db: AsyncSession, ws_id: uuid.UUID) -> None:
@@ -204,4 +217,4 @@ async def destroy_workspace(db: AsyncSession, ws_id: uuid.UUID) -> None:
     workspace.status = WorkspaceStatus.destroyed
     workspace.updated_at = datetime.utcnow()
     db.add(workspace)
-    await db.commit()
+    await db.flush()
