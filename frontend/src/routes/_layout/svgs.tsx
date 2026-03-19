@@ -6,6 +6,7 @@ import {
   SvgOperationsPanel,
   SvgShell,
   SvgsGalleryPanel,
+  TesserStudioPanel,
   type SvgPanelConfig,
 } from "@/components/Svg"
 
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_layout/svgs")({
 function SvgsPage() {
   const panelComponents: Record<string, () => ReactNode> = {
     gallery: () => <SvgsGalleryPanel />,
+    tesserStudio: () => <TesserStudioPanel />,
     operations: () => <SvgOperationsPanel />,
   }
 
@@ -32,20 +34,29 @@ function SvgsPage() {
       min_size: 55,
     },
     {
+      id: "tesser-studio",
+      kind: "tesserStudio",
+      prominence: "auxiliary",
+      title: "Tesser Studio",
+      render: panelComponents.tesserStudio,
+      min_size: 22,
+      default_size: 58,
+    },
+    {
       id: "operations",
       kind: "svgOperations",
       prominence: "auxiliary",
       title: "Operations",
       render: panelComponents.operations,
       min_size: 20,
-      default_size: 100,
+      default_size: 42,
     },
   ]
 
   return (
     <SvgShell
       title="SVG Library"
-      description="Browse your SVG assets, validate quickly in-gallery, and run batch seeding controls for rapid content population."
+      description="Browse the gallery, sculpt quick combinatoric studies, and open a direct line into Tesser Studio for script-driven SVG generation with room to explore both precision and surprise."
       panels={panels}
       actions={
         <div className="flex items-center gap-2">
