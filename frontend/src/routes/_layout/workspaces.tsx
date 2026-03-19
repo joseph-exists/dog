@@ -49,7 +49,9 @@ function WorkspacesPage() {
       render: () => (
         <WorkspaceCreatePanel
           isSubmitting={createWorkspace.isPending}
-          onCreate={(input) => createWorkspace.mutateAsync(input)}
+          onCreate={async (input) => {
+            await createWorkspace.mutateAsync(input)
+          }}
         />
       ),
     },

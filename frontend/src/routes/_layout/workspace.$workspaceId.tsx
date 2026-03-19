@@ -7,7 +7,7 @@ import {
   WorkspaceDetailsPanel,
   WorkspaceTerminalPanel,
 } from "@/components/Workspaces"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useWorkspace } from "@/hooks/useWorkspace"
 import { useWorkspaceTerminal } from "@/hooks/useWorkspaceTerminal"
 import { useDestroyWorkspace, useStopWorkspace } from "@/hooks/useWorkspaces"
@@ -34,19 +34,6 @@ function WorkspaceDetailPage() {
   const { themes: availablePageThemes } = useAvailableThemes("page")
   const { themes: availableCardThemes } = useAvailableThemes("card")
 
-  if (workspaceQuery.isLoading || !workspaceQuery.data) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Loading workspace</CardTitle>
-            <CardDescription>Preparing the workspace detail view.</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
   if (workspaceQuery.error) {
     return (
       <div className="p-6">
@@ -54,6 +41,19 @@ function WorkspaceDetailPage() {
           <CardHeader>
             <CardTitle>Failed to load workspace</CardTitle>
             <CardDescription>{workspaceQuery.error.message}</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
+  if (workspaceQuery.isLoading || !workspaceQuery.data) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading workspace</CardTitle>
+            <CardDescription>Preparing the workspace detail view.</CardDescription>
           </CardHeader>
         </Card>
       </div>
