@@ -10,7 +10,8 @@ import { handleError } from "@/utils"
 
 export const tesserQueryKeys = {
   all: ["tesser"] as const,
-  scripts: () => [...tesserQueryKeys.all, "scripts"] as const,
+  scripts: (input?: { format?: string }) =>
+    [...tesserQueryKeys.all, "scripts", input?.format ?? "all"] as const,
   scriptHelp: (scriptName: string) =>
     [...tesserQueryKeys.all, "scripts", scriptName, "help"] as const,
   examplesIndex: () => [...tesserQueryKeys.all, "examples", "index"] as const,
@@ -18,10 +19,10 @@ export const tesserQueryKeys = {
   job: (jobId: string) => [...tesserQueryKeys.jobs(), jobId] as const,
 }
 
-export function useTesserScripts() {
+export function useTesserScripts(input?: { format?: string }) {
   return useQuery({
-    queryKey: tesserQueryKeys.scripts(),
-    queryFn: () => TesserService.listScripts(),
+    queryKey: tesserQueryKeys.scripts(input),
+    queryFn: () => TesserService.listScripts(input),
   })
 }
 

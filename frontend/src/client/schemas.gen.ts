@@ -13889,6 +13889,13 @@ export const TesserScriptHelpResponseSchema = {
             ],
             title: 'Description'
         },
+        supported_formats: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Supported Formats'
+        },
         input_schema: {
             additionalProperties: true,
             type: 'object',
@@ -13909,6 +13916,13 @@ export const TesserScriptPublicSchema = {
         description: {
             type: 'string',
             title: 'Description'
+        },
+        supported_formats: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Supported Formats'
         },
         input_schema: {
             additionalProperties: true,
@@ -15400,6 +15414,544 @@ export const Type1UpdateSchema = {
     title: 'Type1Update'
 } as const;
 
+export const Type2CreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: '008dc763-4309-43cd-ba5f-1eb1323a0964',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type2Create'
+} as const;
+
+export const Type2UpdateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: '008dc763-4309-43cd-ba5f-1eb1323a0964',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type2Update'
+} as const;
+
 export const Type3CreateSchema = {
     properties: {
         name: {
@@ -15924,6 +16476,1082 @@ export const Type3UpdateSchema = {
     type: 'object',
     required: ['name', 'slug', 'provider_type'],
     title: 'Type3Update'
+} as const;
+
+export const Type4CreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: '186672e2-f50a-4457-a7dd-a50084077ff7',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type4Create'
+} as const;
+
+export const Type4UpdateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: '186672e2-f50a-4457-a7dd-a50084077ff7',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type4Update'
+} as const;
+
+export const Type5CreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: 'ae07eb0b-929e-4844-8b75-4fe6abca09df',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type5Create'
+} as const;
+
+export const Type5UpdateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Name',
+            description: 'Display name'
+        },
+        slug: {
+            type: 'string',
+            maxLength: 50,
+            title: 'Slug',
+            description: 'Unique identifier/registry key'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 500
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        user_access_provider: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Access Provider',
+            description: 'User-selected provider associated with this agent config'
+        },
+        provider_type: {
+            type: 'string',
+            const: 'ae07eb0b-929e-4844-8b75-4fe6abca09df',
+            title: 'Provider Type'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model',
+            description: 'friendly name of model as specified by api and user access providers'
+        },
+        model_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Id',
+            description: 'model associated with this agent config'
+        },
+        model_name: {
+            type: 'string',
+            title: 'Model Name',
+            default: 'friendly model name'
+        },
+        system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'System Prompt'
+        },
+        custom_system_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom System Prompt',
+            description: 'Optional user override for system prompt'
+        },
+        instructions: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Instructions',
+            description: 'big ass text field for lots of words.'
+        },
+        tool_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tool Config'
+        },
+        deps_config: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deps Config'
+        },
+        prompt_config_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Id',
+            description: 'Optional bound PromptConfig for runtime prompt/tool recipe.'
+        },
+        prompt_config_version_policy: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['latest', 'pinned']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Policy',
+            description: 'How runtime resolves prompt version for prompt_config_id.',
+            default: 'latest'
+        },
+        prompt_config_version_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Prompt Config Version Number',
+            description: "Pinned version when prompt_config_version_policy is 'pinned'."
+        },
+        agent_metadata: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Metadata'
+        },
+        agent_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Agent Type',
+            description: 'text for type that can be overloaded in presentation'
+        },
+        presentation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Presentation'
+        },
+        is_enabled: {
+            type: 'boolean',
+            title: 'Is Enabled',
+            default: true
+        },
+        is_clonable: {
+            type: 'boolean',
+            title: 'Is Clonable',
+            default: false
+        },
+        is_visible: {
+            type: 'boolean',
+            title: 'Is Visible',
+            default: false
+        },
+        scope: {
+            type: 'string',
+            title: 'Scope',
+            default: 'personal'
+        },
+        participation_mode: {
+            type: 'string',
+            title: 'Participation Mode',
+            default: 'on_mention'
+        },
+        is_coordinator: {
+            type: 'boolean',
+            title: 'Is Coordinator',
+            default: false
+        },
+        enable_a2a_tool: {
+            type: 'boolean',
+            title: 'Enable A2A Tool',
+            description: 'Enable request_agent_assistance tool for agent-to-agent calls',
+            default: false
+        },
+        enable_ag_ui_tool: {
+            type: 'boolean',
+            title: 'Enable Ag Ui Tool',
+            description: 'Enable emit_ui_component tool for rich UI emission',
+            default: false
+        },
+        max_tool_iterations: {
+            type: 'integer',
+            title: 'Max Tool Iterations',
+            default: 10
+        },
+        capabilities: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        }
+    },
+    type: 'object',
+    required: ['name', 'slug', 'provider_type'],
+    title: 'Type5Update'
 } as const;
 
 export const UIActionRequestSchema = {

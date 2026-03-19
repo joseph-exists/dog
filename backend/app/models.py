@@ -9,7 +9,7 @@ from sqlalchemy import JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, Relationship, SQLModel
 
-from app.core.provider_types import TYPE1, TYPE3
+from app.core.provider_types import TYPE1, TYPE2, TYPE3, TYPE4, TYPE5
 
 # ===== Model Overview for Relational References Ordering
 #
@@ -4927,9 +4927,6 @@ class UserAgentConfigBase(SQLModel):
         payload["prompt_config_version_policy"] = policy
         return payload
 
-class UserAgentConfigCreate(UserAgentConfigBase):
-     pass
-
 class Type1Create(UserAgentConfigBase):
     provider_type: Literal[TYPE1]
     system_prompt: str
@@ -4953,6 +4950,10 @@ class Type1Create(UserAgentConfigBase):
         return v
 
 
+class Type2Create(UserAgentConfigBase):
+    provider_type: Literal[TYPE2]
+
+
 class Type3Create(UserAgentConfigBase):
     provider_type: Literal[TYPE3]
     system_prompt: str = Field(max_length=5000)
@@ -4974,8 +4975,16 @@ class Type3Create(UserAgentConfigBase):
             raise ValueError("system prompt required for Type3")
 
 
+class Type4Create(UserAgentConfigBase):
+    provider_type: Literal[TYPE4]
+
+
+class Type5Create(UserAgentConfigBase):
+    provider_type: Literal[TYPE5]
+
+
 UserAgentConfigCreate = Annotated[
-    Type1Create | Type3Create,
+    Type1Create | Type2Create | Type3Create | Type4Create | Type5Create,
     Field(discriminator='provider_type')
 ]
 
@@ -4984,13 +4993,25 @@ class Type1Update(UserAgentConfigBase):
     description: str | None = None # optional for updates, but this will cause validation if it is passed again
 
 
+class Type2Update(UserAgentConfigBase):
+    provider_type: Literal[TYPE2]
+
+
 class Type3Update(UserAgentConfigBase):
     provider_type: Literal[TYPE3]
     system_prompt: str | None = None # optional for update, but causes validation trigger if passed
 
 
+class Type4Update(UserAgentConfigBase):
+    provider_type: Literal[TYPE4]
+
+
+class Type5Update(UserAgentConfigBase):
+    provider_type: Literal[TYPE5]
+
+
 UserAgentConfigUpdate = Annotated[
-    Type1Update | Type3Update,
+    Type1Update | Type2Update | Type3Update | Type4Update | Type5Update,
     Field(discriminator='provider_type')
 ]
 
@@ -6313,6 +6334,7 @@ class DemoCanvasRenderJobResponse(SQLModel):
 class TesserScriptPublic(SQLModel):
     name: str
     description: str
+    supported_formats: list[str] = Field(default_factory=list)
     input_schema: dict[str, Any] = Field(default_factory=dict)
     help_text: str | None = None
     source_path: str | None = None
@@ -6378,6 +6400,7 @@ class TesserScriptHelpResponse(SQLModel):
     script_name: str
     help_text: str | None = None
     description: str | None = None
+    supported_formats: list[str] = Field(default_factory=list)
     input_schema: dict[str, Any] = Field(default_factory=dict)
 
 

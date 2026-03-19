@@ -250,6 +250,7 @@ def _register_external(spec: ExternalScriptSpec) -> None:
         default_runtime_profile=spec.default_runtime_profile,
         enabled=spec.enabled,
         disabled_reason=spec.disabled_reason,
+        supported_formats=set(spec.supported_formats),
         base_capabilities=_base_capabilities(spec),
     )
     def _run(

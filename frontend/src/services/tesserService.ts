@@ -5,6 +5,7 @@ import { request as __request } from "@/client/core/request"
 export interface TesserScript {
   name: string
   description: string
+  supported_formats: string[]
   input_schema: Record<string, unknown>
   help_text?: string | null
   kind?: string | null
@@ -80,6 +81,7 @@ export interface TesserScriptHelpResponse {
   script_name: string
   help_text?: string | null
   description?: string | null
+  supported_formats: string[]
   input_schema: Record<string, unknown>
 }
 
@@ -89,10 +91,11 @@ export interface TesserExamplesIndexResponse {
 }
 
 export const TesserService = {
-  async listScripts(): Promise<TesserScriptsResponse> {
+  async listScripts(input?: { format?: string }): Promise<TesserScriptsResponse> {
+    const query = input?.format ? `?format=${encodeURIComponent(input.format)}` : ""
     const requestOptions: ApiRequestOptions<TesserScriptsResponse> = {
       method: "GET",
-      url: "/api/v1/tesser/scripts",
+      url: `/api/v1/tesser/scripts${query}`,
     }
     return __request(OpenAPI, requestOptions)
   },

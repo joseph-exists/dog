@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from pydantic_ai import Agent
@@ -12,6 +12,9 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.toolsets.approval_required import ApprovalRequiredToolset
+from pydantic_ai.toolsets.fastmcp import FastMCPToolset
+from pydantic_ai.toolsets.filtered import FilteredToolset
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -30,6 +33,7 @@ from app.services.agent_tools import (
     write_repo_files,
 )
 from app.services.logfire_client import ServiceLogfire
+from app.services.mcp_registry import get_mcp_server_descriptor
 from app.services.prompt_runtime_resolver import (
     ResolvedPromptRuntimeConfig,
     resolve_effective_prompt_runtime_config_for_room,
@@ -123,6 +127,89 @@ def _tool_is_enabled(
     return explicit is True
 
 
+def _resolve_mcp_toolsets(*, effective_payload: Any) -> tuple[list[Any], list[str], list[str]]:
+    raw_tool_config = _get(effective_payload, "tool_config")
+    if not isinstance(raw_tool_config, dict):
+        return [], [], []
+
+    raw_mcp = raw_tool_config.get("mcp")
+    if not isinstance(raw_mcp, dict):
+        return [], [], []
+
+    raw_servers = raw_mcp.get("servers")
+    if not isinstance(raw_servers, list):
+        return [], [], []
+
+    global_allowed_tools = raw_mcp.get("allowed_tools")
+    if not isinstance(global_allowed_tools, list):
+        global_allowed_tools = []
+
+    toolsets: list[Any] = []
+    attached_ids: list[str] = []
+    rejected_ids: list[str] = []
+
+    for raw_server in raw_servers:
+        if not isinstance(raw_server, dict):
+            continue
+
+        server_id = raw_server.get("id")
+        if not isinstance(server_id, str) or not server_id.strip():
+            continue
+        server_id = server_id.strip()
+
+        descriptor = get_mcp_server_descriptor(server_id)
+        if descriptor is None:
+            rejected_ids.append(f"{server_id}:unknown")
+            continue
+        if not descriptor.enabled:
+            rejected_ids.append(f"{server_id}:disabled")
+            continue
+
+        toolset: Any = FastMCPToolset(descriptor.url, id=descriptor.id)
+
+        server_allowed_tools = raw_server.get("allowed_tools")
+        allowed_tools = server_allowed_tools if isinstance(server_allowed_tools, list) else global_allowed_tools
+        if allowed_tools:
+            allowed_tool_names = {
+                name.strip() for name in allowed_tools if isinstance(name, str) and name.strip()
+            }
+            if allowed_tool_names:
+                toolset = FilteredToolset(
+                    wrapped=toolset,
+                    filter_func=lambda ctx, tool_def, allowed=allowed_tool_names: tool_def.name in allowed,
+                )
+
+        require_approval = raw_server.get("require_approval")
+        if require_approval not in {"always", "never"}:
+            require_approval = descriptor.require_approval_default
+        if require_approval == "always":
+            toolset = ApprovalRequiredToolset(wrapped=toolset)
+
+        toolsets.append(toolset)
+        attached_ids.append(server_id)
+
+    return toolsets, attached_ids, rejected_ids
+
+
+def _requested_mcp_server_ids(*, effective_payload: Any) -> list[str]:
+    raw_tool_config = _get(effective_payload, "tool_config")
+    if not isinstance(raw_tool_config, dict):
+        return []
+    raw_mcp = raw_tool_config.get("mcp")
+    if not isinstance(raw_mcp, dict):
+        return []
+    raw_servers = raw_mcp.get("servers")
+    if not isinstance(raw_servers, list):
+        return []
+    return [
+        server_id.strip()
+        for server in raw_servers
+        if isinstance(server, dict)
+        and isinstance((server_id := server.get("id")), str)
+        and server_id.strip()
+    ]
+
+
 def _log_runtime_resolution(
     *,
     slug: str,
@@ -164,6 +251,14 @@ def _attach_runtime_resolution_metadata(
         "_runtime_request_limit",
         _normalize_request_limit(resolved.payload.get("max_tool_iterations")),
     )
+
+
+def _merge_toolsets(existing: Any, additions: Sequence[Any]) -> list[Any] | None:
+    merged: list[Any] = []
+    if isinstance(existing, Sequence) and not isinstance(existing, str | bytes | bytearray):
+        merged.extend(existing)
+    merged.extend(additions)
+    return merged or None
 
 async def get_user_agent_config_by_slug(
     *, session: AsyncSession, slug: str
@@ -442,6 +537,12 @@ async def get_agent_instance_with_tools(
         effective_repo_read = False
         effective_repo_write = False
 
+    requested_mcp_ids = _requested_mcp_server_ids(effective_payload=effective)
+    mcp_toolsets, attached_mcp_ids, rejected_mcp_ids = _resolve_mcp_toolsets(
+        effective_payload=effective
+    )
+    merged_toolsets = _merge_toolsets(getattr(config, "toolsets", None), mcp_toolsets)
+
     tools: list[Any] = []
     if effective_a2a:
         tools.append(request_agent_assistance)
@@ -454,7 +555,7 @@ async def get_agent_instance_with_tools(
 
     # INFO level so we can trace tool resolution in production
     logger.info(
-        "[AGENT_INSTANCE.tool_resolution] slug=%s config_a2a=%s config_ag_ui=%s runtime_a2a=%s runtime_ag_ui=%s effective_a2a=%s effective_ag_ui=%s repo_tools_enabled=%s effective_repo_read=%s effective_repo_write=%s tools_count=%d",
+        "[AGENT_INSTANCE.tool_resolution] slug=%s config_a2a=%s config_ag_ui=%s runtime_a2a=%s runtime_ag_ui=%s effective_a2a=%s effective_ag_ui=%s repo_tools_enabled=%s effective_repo_read=%s effective_repo_write=%s requested_mcp_ids=%s attached_mcp_ids=%s rejected_mcp_ids=%s tools_count=%d toolsets_count=%d",
         slug,
         config_a2a,
         config_ag_ui,
@@ -465,7 +566,11 @@ async def get_agent_instance_with_tools(
         settings.AGENT_REPO_TOOLS_ENABLED,
         effective_repo_read,
         effective_repo_write,
+        requested_mcp_ids,
+        attached_mcp_ids,
+        rejected_mcp_ids,
         len(tools),
+        len(merged_toolsets or []),
     )
 
     agent_kwargs: dict[str, Any] = {
@@ -474,7 +579,7 @@ async def get_agent_instance_with_tools(
         "deps_type": AgentDeps,
         "tools": tools or None,
         # Optional extras if present on config (each getattr is resilient to missing attrs):
-        "toolsets": getattr(config, "toolsets", None),
+        "toolsets": merged_toolsets,
         "builtintools": getattr(config, "builtin_tools", None),
         "preparetools": getattr(config, "prepare_tools", None),
         "prepareoutputtools": getattr(config, "prepare_output_tools", None),
@@ -488,11 +593,15 @@ async def get_agent_instance_with_tools(
 
     agent = Agent(**agent_kwargs)
     _attach_runtime_resolution_metadata(agent=agent, resolved=resolved)
+    setattr(agent, "_runtime_mcp_attached_ids", attached_mcp_ids)
+    setattr(agent, "_runtime_mcp_rejected_ids", rejected_mcp_ids)
     logger.debug(
-        "[AGENT_INSTANCE.get_agent_instance_with_tools] instantiated slug=%s model=%s tools=%d a2a=%s ag_ui=%s (config: a2a=%s ag_ui=%s)",
+        "[AGENT_INSTANCE.get_agent_instance_with_tools] instantiated slug=%s model=%s tools=%d toolsets=%d mcp_attached=%s a2a=%s ag_ui=%s (config: a2a=%s ag_ui=%s)",
         slug,
         model_name,
         len(tools),
+        len(merged_toolsets or []),
+        attached_mcp_ids,
         effective_a2a,
         effective_ag_ui,
         config_a2a,

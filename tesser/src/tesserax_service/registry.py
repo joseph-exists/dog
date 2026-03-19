@@ -16,6 +16,7 @@ class ScriptSpec:
     default_runtime_profile: str
     enabled: bool = True
     disabled_reason: str | None = None
+    supported_formats: set[str] = field(default_factory=lambda: {"svg"})
     base_capabilities: set[str] = field(default_factory=set)
     resolve_capabilities: CapabilityResolver | None = None
 
@@ -26,6 +27,7 @@ class ScriptSpec:
             "default_runtime_profile": self.default_runtime_profile,
             "enabled": self.enabled,
             "disabled_reason": self.disabled_reason,
+            "supported_formats": sorted(self.supported_formats),
             "base_capabilities": sorted(self.base_capabilities),
         }
 
@@ -41,6 +43,7 @@ def register_script(
     default_runtime_profile: str = "core",
     enabled: bool = True,
     disabled_reason: str | None = None,
+    supported_formats: set[str] | None = None,
     base_capabilities: set[str] | None = None,
     resolve_capabilities: CapabilityResolver | None = None,
 ) -> Callable[[ScriptFn], ScriptFn]:
@@ -54,6 +57,7 @@ def register_script(
             default_runtime_profile=default_runtime_profile,
             enabled=enabled,
             disabled_reason=disabled_reason,
+            supported_formats=supported_formats or {"svg"},
             base_capabilities=base_capabilities or set(),
             resolve_capabilities=resolve_capabilities,
         )
@@ -84,4 +88,3 @@ def list_scripts() -> list[str]:
 
 def list_script_specs() -> list[ScriptSpec]:
     return [_SPECS[script_id] for script_id in sorted(_SPECS)]
-

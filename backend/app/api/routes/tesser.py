@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentUser
 from app.models import (
@@ -34,7 +34,10 @@ router = APIRouter()
 
 
 @router.get("/scripts", response_model=TesserScriptsPublic)
-async def list_scripts(current_user: CurrentUser) -> Any:
+async def list_scripts(
+    current_user: CurrentUser,
+    format: str | None = Query(default=None),
+) -> Any:
     _ = current_user
     try:
         scripts_payload = await list_tesser_scripts()
@@ -48,6 +51,18 @@ async def list_scripts(current_user: CurrentUser) -> Any:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from exc
+    if format:
+        requested_format = format.strip().lower()
+        scripts_payload = [
+            item
+            for item in scripts_payload
+            if requested_format
+            in {
+                str(candidate).strip().lower()
+                for candidate in item.get("supported_formats", [])
+                if isinstance(candidate, str)
+            }
+        ]
     scripts = [TesserScriptPublic.model_validate(item) for item in scripts_payload]
     return TesserScriptsPublic(data=scripts, count=len(scripts))
 
@@ -101,6 +116,11 @@ async def get_script_help(current_user: CurrentUser, script_name: str) -> Any:
         script_name=script_name,
         help_text=response.get("help_text"),
         description=response.get("description"),
+        supported_formats=(
+            list(response.get("supported_formats"))
+            if isinstance(response.get("supported_formats"), list)
+            else []
+        ),
         input_schema=response.get("input_schema")
         if isinstance(response.get("input_schema"), dict)
         else {},

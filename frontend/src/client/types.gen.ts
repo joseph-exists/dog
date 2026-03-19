@@ -3564,6 +3564,7 @@ export type TesserScriptHelpResponse = {
     script_name: string;
     help_text?: (string | null);
     description?: (string | null);
+    supported_formats?: Array<(string)>;
     input_schema?: {
         [key: string]: unknown;
     };
@@ -3572,6 +3573,7 @@ export type TesserScriptHelpResponse = {
 export type TesserScriptPublic = {
     name: string;
     description: string;
+    supported_formats?: Array<(string)>;
     input_schema?: {
         [key: string]: unknown;
     };
@@ -4093,6 +4095,164 @@ export type Type1Update = {
     capabilities?: Array<(string)>;
 };
 
+export type Type2Create = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "008dc763-4309-43cd-ba5f-1eb1323a0964";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type Type2Update = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "008dc763-4309-43cd-ba5f-1eb1323a0964";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
 export type Type3Create = {
     /**
      * Display name
@@ -4184,6 +4344,322 @@ export type Type3Update = {
      */
     user_access_provider?: (string | null);
     provider_type: "e09ade10-8563-4748-8deb-1a6c87c97134";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type Type4Create = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "186672e2-f50a-4457-a7dd-a50084077ff7";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type Type4Update = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "186672e2-f50a-4457-a7dd-a50084077ff7";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type Type5Create = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "ae07eb0b-929e-4844-8b75-4fe6abca09df";
+    /**
+     * friendly name of model as specified by api and user access providers
+     */
+    model?: (string | null);
+    /**
+     * model associated with this agent config
+     */
+    model_id?: (string | null);
+    model_name?: string;
+    system_prompt?: (string | null);
+    /**
+     * Optional user override for system prompt
+     */
+    custom_system_prompt?: (string | null);
+    /**
+     * big ass text field for lots of words.
+     */
+    instructions?: (string | null);
+    tool_config?: ({
+    [key: string]: unknown;
+} | null);
+    deps_config?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Optional bound PromptConfig for runtime prompt/tool recipe.
+     */
+    prompt_config_id?: (string | null);
+    /**
+     * How runtime resolves prompt version for prompt_config_id.
+     */
+    prompt_config_version_policy?: ('latest' | 'pinned' | null);
+    /**
+     * Pinned version when prompt_config_version_policy is 'pinned'.
+     */
+    prompt_config_version_number?: (number | null);
+    agent_metadata?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * text for type that can be overloaded in presentation
+     */
+    agent_type?: (string | null);
+    presentation?: ({
+    [key: string]: unknown;
+} | null);
+    is_enabled?: boolean;
+    is_clonable?: boolean;
+    is_visible?: boolean;
+    scope?: string;
+    participation_mode?: string;
+    is_coordinator?: boolean;
+    /**
+     * Enable request_agent_assistance tool for agent-to-agent calls
+     */
+    enable_a2a_tool?: boolean;
+    /**
+     * Enable emit_ui_component tool for rich UI emission
+     */
+    enable_ag_ui_tool?: boolean;
+    max_tool_iterations?: number;
+    capabilities?: Array<(string)>;
+};
+
+export type Type5Update = {
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Unique identifier/registry key
+     */
+    slug: string;
+    description?: (string | null);
+    /**
+     * User-selected provider associated with this agent config
+     */
+    user_access_provider?: (string | null);
+    provider_type: "ae07eb0b-929e-4844-8b75-4fe6abca09df";
     /**
      * friendly name of model as specified by api and user access providers
      */
@@ -5180,7 +5656,7 @@ export type AgentsListAgentsData = {
 export type AgentsListAgentsResponse = (UserAgentConfigsPublic);
 
 export type AgentsCreateAgentData = {
-    requestBody: (Type1Create | Type3Create);
+    requestBody: (Type1Create | Type2Create | Type3Create | Type4Create | Type5Create);
 };
 
 export type AgentsCreateAgentResponse = (UserAgentConfigPublic);
@@ -5210,7 +5686,7 @@ export type AgentsGetAgentResponse = (UserAgentConfigPublic);
 
 export type AgentsUpdateAgentData = {
     agentId: string;
-    requestBody: (Type1Update | Type3Update);
+    requestBody: (Type1Update | Type2Update | Type3Update | Type4Update | Type5Update);
 };
 
 export type AgentsUpdateAgentResponse = (UserAgentConfigPublic);
@@ -6661,6 +7137,10 @@ export type SvgsDeleteSvgData = {
 };
 
 export type SvgsDeleteSvgResponse = (Message);
+
+export type TesserListScriptsData = {
+    format?: (string | null);
+};
 
 export type TesserListScriptsResponse = (TesserScriptsPublic);
 

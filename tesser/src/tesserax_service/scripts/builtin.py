@@ -17,6 +17,7 @@ def _demo_logo_caps(params: dict[str, object], formats: list[str]) -> set[str]:
     "demo.logo",
     kind="static",
     default_runtime_profile="core",
+    supported_formats={"svg"},
     base_capabilities={"render.svg"},
     resolve_capabilities=_demo_logo_caps,
 )

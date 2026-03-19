@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     USER_REPO_GIT_USERNAME: str | None = None
     USER_REPO_GIT_PASSWORD: str | None = None
     AGENT_REPO_TOOLS_ENABLED: bool = True
+    MCPMVP_BASE_URL: str = "http://mcpmvp:8080"
+    MCPMVP_AFFORDANCE_ENABLED: bool = True
+    MCPMVP_STORY_ENABLED: bool = True
 
     @computed_field  # type: ignore[prop-decorator]
     @property

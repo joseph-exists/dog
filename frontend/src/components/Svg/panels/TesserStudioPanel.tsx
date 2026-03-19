@@ -415,7 +415,7 @@ function TesserJobRow({
 }
 
 export function TesserStudioPanel() {
-  const scriptsQuery = useTesserScripts()
+  const scriptsQuery = useTesserScripts({ format: "svg" })
   const enqueueMutation = useEnqueueTesserScript()
   const createSvgMutation = useCreatePrivateSvg()
 

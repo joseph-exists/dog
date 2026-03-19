@@ -42,6 +42,7 @@ BUILTIN_SCRIPT_METADATA: dict[str, dict[str, Any]] = {
     "simple_svg": {
         "name": "simple_svg",
         "description": "Render a basic title/subtitle SVG card.",
+        "supported_formats": ["svg"],
         "input_schema": {
             "type": "object",
             "properties": {
@@ -55,6 +56,7 @@ BUILTIN_SCRIPT_METADATA: dict[str, dict[str, Any]] = {
     "entity_badge": {
         "name": "entity_badge",
         "description": "Render entity badge SVG for entity_type/entity_id.",
+        "supported_formats": ["svg"],
         "input_schema": {
             "type": "object",
             "properties": {
@@ -70,6 +72,7 @@ BUILTIN_SCRIPT_METADATA: dict[str, dict[str, Any]] = {
     "status_strip": {
         "name": "status_strip",
         "description": "Render status-strip SVG with heading and detail line.",
+        "supported_formats": ["svg"],
         "input_schema": {
             "type": "object",
             "properties": {
@@ -177,6 +180,7 @@ def _registry_script_metadata() -> list[dict[str, Any]]:
             {
                 "name": spec.script_id,
                 "description": f"{spec.kind} script ({spec.default_runtime_profile})",
+                "supported_formats": sorted(spec.supported_formats),
                 "input_schema": {"type": "object", "additionalProperties": True},
                 "help_text": (
                     f"script: {spec.script_id}\n"
@@ -454,6 +458,7 @@ def _build_script_help_response(payload: dict[str, Any]) -> dict[str, Any]:
         metadata = {
             "name": script_name,
             "description": f"{spec.kind} script ({spec.default_runtime_profile})",
+            "supported_formats": sorted(spec.supported_formats),
             "input_schema": {"type": "object", "additionalProperties": True},
             "help_text": (
                 f"script: {script_name}\n"
@@ -472,6 +477,7 @@ def _build_script_help_response(payload: dict[str, Any]) -> dict[str, Any]:
         "help_text": metadata.get("help_text"),
         "input_schema": metadata.get("input_schema"),
         "description": metadata.get("description"),
+        "supported_formats": metadata.get("supported_formats"),
         "completed_at": _now_iso(),
     }
 

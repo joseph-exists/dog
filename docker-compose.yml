@@ -139,6 +139,25 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - SENTRY_DSN=${SENTRY_DSN}
 
+  mcpmvp:
+    build:
+      context: ./mcpmvp
+    restart: always
+    environment:
+      - MCPMVP_HOST=0.0.0.0
+      - MCPMVP_PORT=8080
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
   backend:
     image: "${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}"
     restart: always
@@ -149,6 +168,8 @@ services:
       db:
         condition: service_healthy
         restart: true
+      mcpmvp:
+        condition: service_healthy
       tesser:
         condition: service_started
       gittin:
@@ -191,6 +212,7 @@ services:
       - TESSER_REDIS_PORT=${REDIS_PORT:-6379}
       - TESSER_REQUEST_CHANNEL=${TESSER_REQUEST_CHANNEL:-tesser:requests}
       - TESSER_RESPONSE_CHANNEL=${TESSER_RESPONSE_CHANNEL:-tesser:responses}
+      - MCPMVP_BASE_URL=http://mcpmvp:8080
 
     healthcheck:
       test:
