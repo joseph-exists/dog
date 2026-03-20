@@ -8,9 +8,17 @@ svg_library_tools.py (combinatorics planner) alike.
 from __future__ import annotations
 
 import hashlib
+import io as _io
 import math
 import random
 from typing import Any
+
+try:
+    import numpy as _np
+    from PIL import Image as _Image
+    _IMAGE_DEPS_AVAILABLE = True
+except ImportError:
+    _IMAGE_DEPS_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
 # Palette tables
@@ -608,6 +616,197 @@ def render_rings_warp(params: dict[str, Any]) -> str:
 
     content.append("</svg>")
     return "\n".join(content)
+
+
+# ---------------------------------------------------------------------------
+# Image palette extraction (PIL + numpy required)
+# ---------------------------------------------------------------------------
+
+
+def _rgb_arr_to_lab(arr):
+    """Convert (N, 3) uint8 RGB array to (N, 3) float32 LAB."""
+    rgb = arr.astype(_np.float32) / 255.0
+    linear = _np.where(rgb > 0.04045, ((rgb + 0.055) / 1.055) ** 2.4, rgb / 12.92)
+    M = _np.array([[0.4124, 0.3576, 0.1805],
+                   [0.2126, 0.7152, 0.0722],
+                   [0.0193, 0.1192, 0.9505]], dtype=_np.float32)
+    xyz = linear @ M.T
+    xyz /= _np.array([0.95047, 1.0, 1.08883], dtype=_np.float32)
+    xyz = _np.where(xyz > 0.008856, xyz ** (1.0 / 3.0), 7.787 * xyz + 16.0 / 116.0)
+    L = 116.0 * xyz[:, 1] - 16.0
+    a = 500.0 * (xyz[:, 0] - xyz[:, 1])
+    b = 200.0 * (xyz[:, 1] - xyz[:, 2])
+    return _np.stack([L, a, b], axis=-1)
+
+
+def _lab_to_hex(lab):
+    """Convert single (3,) LAB float32 to hex string."""
+    L, a, b = float(lab[0]), float(lab[1]), float(lab[2])
+    fy = (L + 16.0) / 116.0
+    fx = a / 500.0 + fy
+    fz = fy - b / 200.0
+
+    def f_inv(t):
+        return t**3 if t**3 > 0.008856 else (t - 16.0 / 116.0) / 7.787
+
+    xyz = _np.array([f_inv(fx), f_inv(fy), f_inv(fz)], dtype=_np.float32)
+    xyz *= _np.array([0.95047, 1.0, 1.08883], dtype=_np.float32)
+    M_inv = _np.array([[ 3.2406, -1.5372, -0.4986],
+                       [-0.9689,  1.8758,  0.0415],
+                       [ 0.0557, -0.2040,  1.0570]], dtype=_np.float32)
+    rgb_lin = xyz @ M_inv.T
+    rgb_lin = _np.clip(rgb_lin, 0.0, 1.0)
+    rgb = _np.where(rgb_lin > 0.0031308,
+                    1.055 * rgb_lin ** (1.0 / 2.4) - 0.055,
+                    12.92 * rgb_lin)
+    rgb = (_np.clip(rgb, 0.0, 1.0) * 255).astype(_np.uint8)
+    return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+
+
+def _kmeans_lab(pixels_lab, k, seed=0, max_iter=50):
+    """Simple k-means in LAB space. Returns (k, 3) centroid array."""
+    rng = _np.random.default_rng(seed)
+    idx = rng.choice(len(pixels_lab), k, replace=False)
+    centers = pixels_lab[idx].copy()
+    for _ in range(max_iter):
+        dists = _np.linalg.norm(pixels_lab[:, None, :] - centers[None, :, :], axis=-1)
+        labels = _np.argmin(dists, axis=-1)
+        new_centers = _np.array([
+            pixels_lab[labels == i].mean(axis=0) if (labels == i).any() else centers[i]
+            for i in range(k)
+        ])
+        if _np.allclose(centers, new_centers, atol=0.5):
+            break
+        centers = new_centers
+    return centers
+
+
+def _apply_palette_mode(centers_lab, mode):
+    """Transform extracted LAB centroids per palette_mode."""
+    import math as _m
+    out = centers_lab.copy()
+    if mode == "dominant":
+        pass
+    elif mode == "ghost":
+        out[:, 1] *= 0.15
+        out[:, 2] *= 0.15
+    elif mode == "complement":
+        out[:, 1] = -out[:, 1]
+        out[:, 2] = -out[:, 2]
+    elif mode == "harmonize":
+        angles = _np.arctan2(out[:, 2], out[:, 1])
+        chroma = _np.sqrt(out[:, 1]**2 + out[:, 2]**2)
+        base_angle = float(angles[0])
+        k = len(out)
+        for i in range(k):
+            new_angle = base_angle + (2 * _m.pi * i / k)
+            out[i, 1] = chroma[i] * _m.cos(new_angle)
+            out[i, 2] = chroma[i] * _m.sin(new_angle)
+    elif mode == "coolshift":
+        out[:, 1] -= 15.0
+        out[:, 2] += 10.0
+        out[:, 0] = _np.clip(out[:, 0], 20.0, 85.0)
+    elif mode == "warmshift":
+        out[:, 1] += 18.0
+        out[:, 2] -= 8.0
+        out[:, 0] = _np.clip(out[:, 0], 25.0, 90.0)
+    return out
+
+
+def _derive_tonal_params(pixels_lab):
+    """Derive luminance_bias and saturation_band from LAB statistics."""
+    mean_L = float(_np.mean(pixels_lab[:, 0]))
+    mean_C = float(_np.mean(_np.sqrt(pixels_lab[:, 1]**2 + pixels_lab[:, 2]**2)))
+    luminance_bias = "dark" if mean_L < 35 else ("light" if mean_L > 65 else "balanced")
+    saturation_band = "desat" if mean_C < 15 else ("vivid" if mean_C > 40 else "balanced")
+    return {"luminance_bias": luminance_bias, "saturation_band": saturation_band}
+
+
+def extract_palette_from_image_bytes(image_bytes, *, k=4, mode="dominant", seed=0):
+    """
+    Extract k colors from image bytes using k-means in LAB color space.
+    Returns list of hex strings. Requires PIL + numpy.
+    """
+    if not _IMAGE_DEPS_AVAILABLE:
+        raise RuntimeError("PIL and numpy required for image palette extraction")
+    img = _Image.open(_io.BytesIO(image_bytes)).convert("RGB")
+    img.thumbnail((120, 120))
+    arr = _np.array(img).reshape(-1, 3)
+    if len(arr) > 5000:
+        rng = _np.random.default_rng(seed)
+        arr = arr[rng.choice(len(arr), 5000, replace=False)]
+    pixels_lab = _rgb_arr_to_lab(arr)
+    centers = _kmeans_lab(pixels_lab, k=k, seed=seed)
+    centers = _apply_palette_mode(centers, mode)
+    order = _np.argsort(-centers[:, 0])  # sort light->dark
+    centers = centers[order]
+    return [_lab_to_hex(c) for c in centers]
+
+
+# ---------------------------------------------------------------------------
+# Soft gradient renderer
+# ---------------------------------------------------------------------------
+
+SOFT_GRADIENT_INPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "seed":             {"type": "integer", "default": 42},
+        "source_image_url": {"type": "string", "description": "URL to derive palette from (optional)"},
+        "palette_mode":     {"type": "string",
+                             "enum": ["dominant", "harmonize", "ghost", "complement", "coolshift", "warmshift"],
+                             "default": "dominant"},
+        "palette_count":    {"type": "integer", "enum": [2, 3, 4, 6], "default": 4},
+    },
+}
+
+
+def render_soft_gradient(params: dict[str, Any]) -> str:
+    """
+    Soft gradient SVG. If source_image_url provided, derives palette via LAB k-means.
+    Auto-derives luminance_bias and saturation_band from image statistics.
+    The stored SVG contains only extracted hex colors — no external refs.
+    Falls back gracefully on any network/decode error.
+    """
+    seed          = int(params.get("seed", 42))
+    palette_mode  = str(params.get("palette_mode", "dominant"))
+    palette_count = int(params.get("palette_count", 4))
+    image_url     = params.get("source_image_url")
+
+    base_params: dict[str, Any] = {
+        "seed": seed,
+        "style_family": "minimal",
+        "shape_family": "stripes",
+        "displacement_scale": "0",
+        "gaussian_blur": "0",
+        "blend_mode_primary": "normal",
+        "density": "sparse",
+        "layer_count": "1",
+        "opacity_stack": "flat(1.0)",
+        "saturation_band": "balanced",
+        "luminance_bias": "balanced",
+        "palette_family": "cool",
+        "palette_cardinality": str(palette_count),
+    }
+
+    override_palette = None
+
+    if image_url and _IMAGE_DEPS_AVAILABLE:
+        import urllib.request
+        try:
+            with urllib.request.urlopen(str(image_url), timeout=8) as resp:
+                image_bytes = resp.read()
+            img = _Image.open(_io.BytesIO(image_bytes)).convert("RGB")
+            img.thumbnail((120, 120))
+            arr = _np.array(img).reshape(-1, 3)
+            pixels_lab = _rgb_arr_to_lab(arr)
+            base_params.update(_derive_tonal_params(pixels_lab))
+            override_palette = extract_palette_from_image_bytes(
+                image_bytes, k=palette_count, mode=palette_mode, seed=seed
+            )
+        except Exception:
+            override_palette = None  # graceful fallback
+
+    return render_svg(base_params, override_palette=override_palette)
 
 
 # ---------------------------------------------------------------------------

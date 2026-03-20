@@ -3,7 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from tesserax_service.registry import register_script
-from tesserax_service.scripts.svg_compose import render_svg, validate_svg, INPUT_SCHEMA, render_rings_warp, RINGS_INPUT_SCHEMA
+from tesserax_service.scripts.svg_compose import (
+    render_svg, validate_svg, INPUT_SCHEMA, render_rings_warp, RINGS_INPUT_SCHEMA,
+    render_soft_gradient, SOFT_GRADIENT_INPUT_SCHEMA,
+)
 
 
 def _demo_logo_caps(params: dict[str, object], formats: list[str]) -> set[str]:
@@ -172,3 +175,36 @@ def svg_vector_rings(params: dict[str, object], output_dir: Path, basename: str,
 
 
 svg_vector_rings.__tesser_input_schema__ = RINGS_INPUT_SCHEMA  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# svg.soft-gradient — soft gradient with optional image-derived palette
+# ---------------------------------------------------------------------------
+
+@register_script(
+    "svg.soft-gradient",
+    kind="static",
+    default_runtime_profile="core",
+    supported_formats={"svg"},
+    base_capabilities={"render.svg"},
+)
+def svg_soft_gradient(params: dict[str, object], output_dir: Path, basename: str, formats: list[str]) -> list[Path]:
+    """
+    Soft gradient SVG with optional image-derived palette.
+    Pass source_image_url to extract palette via LAB k-means.
+    palette_mode: dominant | harmonize | ghost | complement | coolshift | warmshift
+    Stored SVG has no external references.
+    """
+    if "svg" not in formats:
+        raise ValueError("svg.soft-gradient supports only svg output")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    svg = render_soft_gradient(dict(params))
+    errors = validate_svg(svg)
+    if errors:
+        raise ValueError(f"svg.soft-gradient produced invalid SVG: {errors}")
+    out = output_dir / f"{basename}.svg"
+    out.write_text(svg, encoding="utf-8")
+    return [out]
+
+
+svg_soft_gradient.__tesser_input_schema__ = SOFT_GRADIENT_INPUT_SCHEMA  # type: ignore[attr-defined]
