@@ -1,220 +1,139 @@
-# Tesser Script Reference Card
+# Tesser Script Reference
 
-## Purpose
+> *"Tell me, what is it you plan to do / with your one wild and precious life?"*
+> — Mary Oliver
 
-Use this as the quick engineer-facing reference when adding or extending Tesser scripts.
+This is a companion for anyone adding to or extending Tesser's script library.
+The goal isn't just to make something runnable — it's to make something that can
+be found, understood, and used well, by people and by agents alike.
 
-The goal is not only to make a script runnable, but to make it discoverable and compatible with how the current frontend consumes Tesser, especially the SVG Library and Tesser Studio surfaces.
+## What Tesser Scripts Are For
 
-## Current Frontend Reality
+A Tesser script is a small, deliberate thing. It takes a set of parameters and
+returns an artifact — most often an SVG. That's the whole contract. But within
+that contract is a lot of room: for layered noise, for palette choices that feel
+like weather, for shapes that are quiet or shapes that argue with each other.
 
-The frontend currently has a first-class path for **SVG** generation.
+The SVG Library and Tesser Studio are the current first-class surfaces. If you
+want a script to appear there, SVG is the format you need to speak.
 
-That means:
+## What's Available Right Now
 
-- the SVG Library requests only scripts with `supported_formats` containing `svg`
-- Tesser Studio expects scripts that can return SVG artifacts
-- completed SVG jobs can be saved into the `/svgs` library
+| Script | What it does |
+|--------|-------------|
+| `svg.compose` | Full 30-knob creative instrument. Every parameter is tunable. Pass `{}` for a beautiful default. |
+| `svg.mist-field` | Soft atmospheric particles, low-frequency noise, screen blend, cool palette. |
+| `svg.signal-glitch` | Heavy displacement, neon, global distortion, vivid contrast. |
+| `svg.paper-grain` | Quiet, warm, desaturated, multiply blend, subtle noise. |
+| `svg.vector-rings` | Radially-symmetric rings with tunable warp: `none`, `wave`, `spiral`, or `tilt`. |
+| `svg.soft-gradient` | The most gentle option. Pass a `source_image_url` and it derives a palette via LAB k-means — the stored SVG carries no external references, only the extracted colors. |
+| `demo.logo` | A simple proof-of-execution artifact. Good for testing the pipeline. |
 
-GIF and MP4 are possible in Tesser, but they are **not** first-class in the current SVG library flow. If you are adding a script for the SVG Library, SVG support is the key requirement.
+## The Knobs
 
-## The Minimum Contract For New Scripts
+`svg.compose` exposes 30 parameters grouped across seven creative dimensions:
 
-Every script that should appear in the SVG Library must satisfy all of the following:
+- **Geometry** — `style_family`, `shape_family`, `layer_count`, `density`, `symmetry`, `viewbox`
+- **Turbulence** — `turbulence_type`, `base_frequency`, `num_octaves`, `seed`, `stitch_tiles`
+- **Displacement** — `displacement_scale`, `channel_x`, `channel_y`, `distortion_scope`
+- **Blur / Edge** — `gaussian_blur`, `morphology`, `drop_shadow`, `fuzz_mask`
+- **Palette** — `palette_family`, `palette_cardinality`, `contrast_band`, `saturation_band`, `luminance_bias`
+- **Blending** — `blend_mode_primary`, `blend_mode_secondary`, `opacity_stack`, `composite_op`
+- **Motion-texture** — `directionality`, `frequency_jitter`, `phase_offset`
 
-1. It must be registered in `tesser/src/tesserax_service/registry.py`.
-2. It must declare `supported_formats` and include `"svg"`.
-3. It must produce at least one `.svg` artifact when called with `formats=["svg"]`.
-4. It should expose a useful `input_schema` through the Tesser metadata path.
-5. It should be safe for the frontend’s current guided/JSON input patterns:
-   - simple top-level object parameters are best
-   - deeper or irregular shapes are allowed, but the frontend will fall back to JSON mode
+Run `python main.py svgs knobs` from the typer CLI to see all valid values at a glance.
+Run `python main.py svgs knobs --script svg.vector-rings` to inspect a preset's schema.
 
-## Where To Wire Things
+## What a Script Needs
 
-## 1. Registry metadata
+To appear in the SVG Library, a script needs four things:
 
-Primary declaration point:
+1. Registration via `@register_script` in `tesserax_service/scripts/builtin.py`
+2. `supported_formats` that includes `"svg"`
+3. An actual `.svg` artifact when called with `formats=["svg"]`
+4. An `input_schema` that honestly describes what it accepts
 
-- `tesser/src/tesserax_service/registry.py`
+That last one matters more than it might seem. The schema is how the frontend
+knows what to offer a user. It's how an agent knows what to ask for. Write it
+with care — and with curiosity about who might be reading it.
 
-Important fields on `ScriptSpec`:
+## Where Things Live
 
-- `script_id`
-- `kind`
-- `default_runtime_profile`
-- `enabled`
-- `disabled_reason`
-- `supported_formats`
-- `base_capabilities`
-- `resolve_capabilities`
-
-If a script should appear in the SVG Library, `supported_formats` must contain `svg`.
-
-## 2. Builtin scripts
-
-Builtin registrations live in:
-
-- `tesser/src/tesserax_service/scripts/builtin.py`
-
-Use explicit metadata. Do not rely on implied defaults if the script is intended for frontend discovery.
-
-Example shape:
-
-```python
-@register_script(
-    "my.script",
-    kind="static",
-    default_runtime_profile="core",
-    supported_formats={"svg"},
-    base_capabilities={"render.svg"},
-)
-```
-
-## 3. External example-backed scripts
-
-External script registration flows through:
-
-- `tesser/src/tesserax_service/scripts/external_examples.py`
-
-That path already derives `supported_formats`. If you are working in the examples-based system, make sure the script’s actual CLI/output behavior matches the inferred formats.
-
-## Output Expectations
-
-## SVG scripts
-
-For SVG-facing scripts:
-
-- when invoked with `formats=["svg"]`, return a `.svg` file path
-- keep the primary artifact valid SVG
-- avoid surprising non-SVG-only behavior if the script is advertised as SVG-capable
-
-The runtime turns returned file paths into `RenderArtifact`s in:
-
-- `tesser/src/tesserax_service/runtime.py`
-
-The worker/bridge then promotes SVG specially so frontend consumers can preview it inline.
-
-## Multi-format scripts
-
-If the script can return multiple formats:
-
-- declare all of them in `supported_formats`
-- ensure format selection is actually honored
-- keep SVG in the set if you want it exposed in the SVG Library
-
-Example:
-
-```python
-supported_formats={"svg", "gif", "mp4"}
-```
-
-This does **not** mean the SVG Library will expose GIF/MP4 today. It only means the script truthfully advertises its output capabilities.
+| What | Where |
+|------|-------|
+| Script registration + implementations | `tesserax_service/scripts/builtin.py` |
+| SVG render engine (all 30 knobs) | `tesserax_service/scripts/svg_compose.py` |
+| Combinatorics planner + metadata builder | `backend/app/test_scripts/render_things/svg_library_tools.py` |
+| External/example-backed scripts | `tesserax_service/scripts/external_examples.py` |
+| Script registry | `tesserax_service/registry.py` |
 
 ## Input Schema Guidance
 
-Frontend Tesser Studio currently supports:
+The frontend has two modes: **guided** (for simple flat schemas) and **JSON fallback**
+(for everything else). Either works. Guided mode feels nicer for humans; JSON mode
+is fine for agents.
 
-- guided mode for simple top-level object schemas
-- JSON fallback for everything else
+`svg.compose` uses a flat enum schema for all 30 knobs — guided mode all the way.
+Each parameter has a sensible default. `{}` is a valid input and produces
+something worth looking at.
 
-If you want a script to feel good in the current UI, prefer:
+If you're adding a new script and want guided mode, keep properties flat:
+`string` enums, `integer` ranges, `boolean` flags. Nested objects work, but
+they fall back to JSON mode.
 
-- `type: "object"`
-- top-level `properties`
-- `string`
-- `number` / `integer`
-- `boolean`
-- string `enum`
-- `required`
-- `default`
-- `description`
+## Adding a New Script
 
-The frontend can also interpret:
+1. Add render logic to `svg_compose.py` (for SVG-related work) or inline in `builtin.py`
+2. Define an `INPUT_SCHEMA` dict
+3. Register with `@register_script` — choose `kind`, `default_runtime_profile`, `supported_formats`
+4. Attach the schema: `your_fn.__tesser_input_schema__ = YOUR_SCHEMA`
+5. Add `output_dir.mkdir(parents=True, exist_ok=True)` at the top of the function body
+6. Run the tests: `cd tesser && .venv/bin/python -m pytest tests/test_svg_compose.py -v`
+7. Check the checklist below
 
-- deep nested objects
-- complex conditional schemas
-- polymorphic unions
-- advanced array/object nesting
+## The Checklist
 
-Note that these will land in JSON mode rather than guided mode, so may need additional text guidance or --help.
+Before calling a script ready for the SVG Library:
 
-## Where Metadata Reaches The Frontend
+- [ ] Registered, enabled, `supported_formats` includes `"svg"`
+- [ ] `formats=["svg"]` returns a real `.svg` file
+- [ ] `input_schema` present and accurate
+- [ ] Basic path works with `{}` payload
+- [ ] `output_dir.mkdir(parents=True, exist_ok=True)` called before writing
+- [ ] Not a utility/runner that should stay hidden from render surfaces
 
-Script discovery/help metadata flows through:
+## A Few Good Patterns
 
-- `tesser/src/tesserax_service/redis_bridge.py`
+- Keep `script_id` stable and readable — it's how both humans and agents navigate
+- Match `default_runtime_profile` to actual output needs (`core` for SVG-only, `export` for heavier work)
+- When in doubt about the schema: write what you'd want to read if you were an agent discovering a new tool for the first time
+- Preset scripts should expose only `seed` in their schema — full knobs belong in `svg.compose`
+
+## Where Metadata Reaches the Frontend
+
+Script discovery metadata flows through:
+
+- `tesserax_service/redis_bridge.py`
 - `backend/app/api/routes/tesser.py`
 - `frontend/src/services/tesserService.ts`
 - `frontend/src/hooks/useTesser.ts`
 - `frontend/src/components/Svg/panels/TesserStudioPanel.tsx`
 
-If you add script-facing metadata that should be visible to the frontend, this is the chain you need to maintain.
-
-## Checklist For SVG Library Compatibility
-
-Before considering a script "ready" for frontend SVG use, confirm:
-
-- [ ] Script is registered.
-- [ ] `supported_formats` includes `svg`.
-- [ ] `formats=["svg"]` produces a  `.svg` file.
-- [ ] The script is enabled.
-- [ ] The script is not a utility/runner that should stay hidden from end-user render surfaces.
-- [ ] `input_schema` is present and reflects real parameters.
-- [ ] At least the basic path works with a simple JSON object payload.
-- [ ] If guided mode friendliness matters, the schema stays close to top-level primitives/enums.
-
-## Good Patterns
-
-- Keep `script_id` stable and readable.
-- Prefer explicit `supported_formats` declarations.
-- Match runtime profile to actual output needs:
-  - SVG-only scripts usually stay in `core`
-  - export-heavy scripts may resolve to `export`
-- Keep parameter names legible for both CLI users and frontend users.
-- Provide clear descriptions and help text where possible.
-
-
-
-## Practical Rule Of Thumb
-
-If the question is:
-
-`Should this script show up in the SVG Library?`
-
-the answer should come from:
-
-- `supported_formats`
-
-If the question is:
-
-`What runtime profile and dependencies does this request need?`
-
-the answer should come from:
-
-- `profiles.py`
-
-Keep those concerns separate.
-
 ## Related Files
 
-- `tesser/src/tesserax_service/registry.py`
-- `tesser/src/tesserax_service/profiles.py`
-- `tesser/src/tesserax_service/runtime.py`
-- `tesser/src/tesserax_service/worker.py`
-- `tesser/src/tesserax_service/redis_bridge.py`
-- `tesser/src/tesserax_service/scripts/builtin.py`
-- `tesser/src/tesserax_service/scripts/external_examples.py`
-- `frontend/src/services/tesserService.ts`
-- `frontend/src/components/Svg/panels/TesserStudioPanel.tsx`
+- `tesserax_service/scripts/svg_compose.py` — render engine, palette tables, filter builders, all schemas
+- `tesserax_service/scripts/builtin.py` — registered scripts
+- `tesserax_service/registry.py` — `ScriptSpec`, `register_script`, `get_script`
+- `tesserax_service/profiles.py` — runtime profile resolution
+- `tesserax_service/runtime.py` — artifact promotion to `RenderArtifact`
+- `tesser/tests/test_svg_compose.py` — render engine test suite
+- `backend/app/test_scripts/typer/commands/svgs.py` — CLI (`knobs`, `render`, `seed`, `plan`)
+- `backend/app/test_scripts/render_things/svg_library_tools.py` — combinatorics planner
 
-## Bottom Line
+## The Practical Rule
 
-If you want frontend SVG compatibility, design and register the script as an SVG-capable script on purpose.
+If the question is **"Should this script show up in the SVG Library?"** — the answer comes from `supported_formats`.
 
-That means:
+If the question is **"What runtime profile does this need?"** — the answer comes from `profiles.py`.
 
-- declare `supported_formats={"svg"}`
-- return real SVG artifacts
-- expose a usable `input_schema`
-
+Keep those two concerns separate, and the rest tends to fall into place.
