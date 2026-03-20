@@ -128,3 +128,41 @@ def test_phase_offset_distinct_for_seed_zero():
         assert validate_svg(svg) == []
     # All four must differ
     assert len(set(svgs)) == 4, "All 4 phase_offset values must produce distinct output at seed=0"
+
+
+def test_svg_compose_registered():
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import list_scripts
+    scripts = list_scripts()
+    for s in ["demo.logo", "svg.compose", "svg.mist-field", "svg.signal-glitch", "svg.paper-grain"]:
+        assert s in scripts, f"Script not registered: {s}"
+
+
+def test_svg_compose_spec():
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script_spec
+    spec = get_script_spec("svg.compose")
+    assert "svg" in spec.supported_formats
+    assert spec.enabled is True
+
+
+def test_preset_scripts_produce_valid_svg(tmp_path):
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script
+    from tesserax_service.scripts.svg_compose import validate_svg
+    for script_id in ["svg.mist-field", "svg.signal-glitch", "svg.paper-grain"]:
+        fn = get_script(script_id)
+        paths = fn({"seed": 7}, tmp_path / script_id, "out", ["svg"])
+        assert len(paths) == 1
+        svg = paths[0].read_text(encoding="utf-8")
+        assert validate_svg(svg) == [], f"{script_id} produced invalid SVG"
+
+
+def test_svg_compose_produces_file(tmp_path):
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script
+    fn = get_script("svg.compose")
+    paths = fn({"style_family": "glitch", "seed": 42}, tmp_path, "out", ["svg"])
+    assert len(paths) == 1
+    assert paths[0].suffix == ".svg"
+    assert paths[0].stat().st_size > 100
