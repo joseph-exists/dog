@@ -256,9 +256,11 @@ def _jitter_frequency(base: str, jitter: str, rng: random.Random) -> str:
     return f"{f:.5f}"
 
 
+_PHASE_CONSTANTS = {"0": 0, "0.25": 1000, "0.5": 5000, "0.75": 25000}
+
+
 def _phase_seed(seed: int, phase_offset: str) -> int:
-    multipliers = {"0": 1, "0.25": 4, "0.5": 16, "0.75": 64}
-    return seed * multipliers.get(phase_offset, 1)
+    return seed + _PHASE_CONSTANTS.get(phase_offset, 0)
 
 
 def _saturation_filter_markup(saturation_band: str, filter_id: str) -> str:
@@ -272,14 +274,15 @@ def _saturation_filter_markup(saturation_band: str, filter_id: str) -> str:
     )
 
 
-def _build_filter(params: dict[str, Any], filter_id: str, rng: random.Random) -> tuple[str, int]:
+def _build_filter(params: dict[str, Any], filter_id: str, seed_val: int) -> tuple[str, int]:
     primitives: list[str] = []
 
     turb_type = params.get("turbulence_type", "fractalNoise")
+    jitter_rng = random.Random(seed_val + 99991)  # isolated from shape rng
     base_freq = _jitter_frequency(
         params.get("base_frequency", "0.01"),
         params.get("frequency_jitter", "none"),
-        rng,
+        jitter_rng,
     )
     octaves = params.get("num_octaves", "2")
     seed_val = _phase_seed(int(params.get("seed", 42)), params.get("phase_offset", "0"))
@@ -365,7 +368,7 @@ def render_svg(params: dict[str, Any], *, override_palette: list[str] | None = N
     elements_per_layer = max(3, density_scale)
 
     filter_id = f"f-{hashlib.sha256(str(seed_val).encode()).hexdigest()[:8]}"
-    filter_markup, filter_primitives = _build_filter(params, filter_id, rng)
+    filter_markup, filter_primitives = _build_filter(params, filter_id, seed_val)
     distortion_scope = params.get("distortion_scope", "global")
 
     sat_filter = _saturation_filter_markup(params.get("saturation_band", "balanced"), filter_id)
@@ -396,10 +399,9 @@ def render_svg(params: dict[str, Any], *, override_palette: list[str] | None = N
         if distortion_scope in {"background-only", "global"}
         else ""
     )
-    sat_attr = f' filter="url(#{filter_id}-sat)"' if sat_filter and not bg_filter else ""
     content.append(
         f'  <rect x="0" y="0" width="{width}" height="{height}" '
-        f'fill="url(#bg-grad)"{bg_filter}{sat_attr}/>'
+        f'fill="url(#bg-grad)"{bg_filter}/>'
     )
 
     for li in range(layers):
@@ -418,8 +420,9 @@ def render_svg(params: dict[str, Any], *, override_palette: list[str] | None = N
         # secondary blend applies to layers beyond the first
         blend = blend_secondary if (blend_secondary != "none" and li > 0) else blend_primary
 
+        sat_layer = f' filter="url(#{filter_id}-sat)"' if sat_filter and not layer_filter else ""
         content.append(
-            f'  <g opacity="{opacity:.3f}" style="mix-blend-mode:{blend}"{transform}{layer_filter}>'
+            f'  <g opacity="{opacity:.3f}" style="mix-blend-mode:{blend}"{transform}{layer_filter}{sat_layer}>'
         )
 
         for i in range(elements_per_layer):
