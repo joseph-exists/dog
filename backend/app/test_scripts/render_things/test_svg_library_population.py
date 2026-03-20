@@ -21,6 +21,15 @@ from typing import Any
 
 from svg_library_tools import build_asset_metadata, build_generation_plan, render_svg, validate_svg
 
+
+def test_render_svg_imported_from_tesser():
+    """render_svg and validate_svg should come from tesserax svg_compose after refactor."""
+    from svg_library_tools import render_svg, validate_svg, build_generation_plan
+    plan = build_generation_plan(total_count=4, seed=42)
+    for row in plan["rows"]:
+        svg = render_svg(row)
+        assert validate_svg(svg) == [], f"Row {row.get('scenario_id')} produced invalid SVG"
+
 BASE_URL = "http://localhost:8000/api/v1"
 
 

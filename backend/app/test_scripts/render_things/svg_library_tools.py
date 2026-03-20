@@ -1,12 +1,9 @@
 """
-SVG Library Planning + Rendering Utilities
+SVG Library Planning Utilities
 
-Implements a practical subset of the combinatorics strategy from
-`svg_combinatorics_reference_card.md`:
-1. Pairwise planning for core knobs
-2. Family quotas
-3. Additional hero/safe tiers
-4. Deterministic rendering and validation helpers
+Combinatorics planner, pairwise coverage, family quotas, and metadata builder.
+Rendering is handled by tesserax_service.scripts.svg_compose — import from there
+for any render/validate needs.
 """
 
 from __future__ import annotations
@@ -14,8 +11,24 @@ from __future__ import annotations
 import hashlib
 import math
 import random
+import sys
 from itertools import combinations, product
+from pathlib import Path
 from typing import Any
+
+# ---------------------------------------------------------------------------
+# Import render engine from Tesser
+# ---------------------------------------------------------------------------
+
+_TESSER_SRC = Path(__file__).resolve().parents[4] / "tesser" / "src"
+if str(_TESSER_SRC) not in sys.path:
+    sys.path.insert(0, str(_TESSER_SRC))
+
+from tesserax_service.scripts.svg_compose import render_svg, validate_svg, _palette_for_params  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Domain definitions (authoritative source for planner)
+# ---------------------------------------------------------------------------
 
 STYLE_FAMILIES = [
     "organic",
@@ -66,15 +79,6 @@ PAIRWISE_DOMAINS: dict[str, list[str]] = {
     "directionality": ["none", "horizontal", "vertical", "diagonal", "radial"],
     "frequency_jitter": ["none", "low", "high"],
     "phase_offset": ["0", "0.25", "0.5", "0.75"],
-}
-
-PALETTE_BY_FAMILY: dict[str, list[str]] = {
-    "organic": ["#6BA292", "#82BFA0", "#4E7A63", "#D8E2C9", "#244739", "#90B77D"],
-    "geometric": ["#1E293B", "#334155", "#64748B", "#CBD5E1", "#0F172A", "#38BDF8"],
-    "glitch": ["#0B0F1A", "#00E5FF", "#FF006E", "#FFE600", "#7C3AED", "#12F7B6"],
-    "minimal": ["#111827", "#374151", "#6B7280", "#9CA3AF", "#D1D5DB", "#F3F4F6"],
-    "atmospheric": ["#1A2A6C", "#3F4C6B", "#4B79A1", "#7F7FD5", "#B993D6", "#E0EAFC"],
-    "diagrammatic": ["#0F172A", "#1D4ED8", "#2563EB", "#3B82F6", "#93C5FD", "#E2E8F0"],
 }
 
 
@@ -297,260 +301,11 @@ def build_generation_plan(
     }
 
 
-def _parse_viewbox(value: str) -> tuple[int, int]:
-    if value == "square(1024)":
-        return 1024, 1024
-    if value == "landscape(1366x768)":
-        return 1366, 768
-    if value == "portrait(768x1366)":
-        return 768, 1366
-    return 1024, 1024
-
-
-def _palette_for_row(row: dict[str, str]) -> list[str]:
-    family = row.get("style_family", "geometric")
-    base = list(PALETTE_BY_FAMILY.get(family, PALETTE_BY_FAMILY["geometric"]))
-    cardinality = max(1, int(float(row.get("palette_cardinality", "4"))))
-    if cardinality <= len(base):
-        return base[:cardinality]
-    out = list(base)
-    while len(out) < cardinality:
-        out.extend(base)
-    return out[:cardinality]
-
-
-def _opacity_sequence(kind: str, n: int) -> list[float]:
-    if n <= 0:
-        return []
-    if kind == "flat(1.0)":
-        return [1.0 for _ in range(n)]
-    if kind == "stepped(1/0.7/0.4)":
-        base = [1.0, 0.7, 0.4]
-        return [base[i % len(base)] for i in range(n)]
-    if kind == "mist(0.15-0.55)":
-        if n == 1:
-            return [0.55]
-        return [0.55 - (0.40 * (i / (n - 1))) for i in range(n)]
-    return [1.0 for _ in range(n)]
-
-
-def _build_filter(row: dict[str, str], filter_id: str) -> tuple[str, int]:
-    primitives: list[str] = []
-    turb_type = row.get("turbulence_type", "fractalNoise")
-    base_frequency = row.get("base_frequency", "0.01")
-    octaves = row.get("num_octaves", "2")
-    seed_bucket = row.get("seed_bucket", "0-99")
-    if seed_bucket == "0-99":
-        seed = "37"
-    elif seed_bucket == "100-999":
-        seed = "421"
-    else:
-        seed = "1337"
-    stitch = "stitch" if row.get("stitch_tiles") == "stitch" else "noStitch"
-    primitives.append(
-        (
-            f'<feTurbulence type="{turb_type}" baseFrequency="{base_frequency}" '
-            f'numOctaves="{octaves}" seed="{seed}" stitchTiles="{stitch}" result="noise"/>'
-        )
-    )
-    disp = float(row.get("displacement_scale", "0"))
-    if disp > 0:
-        cx = row.get("channel_x", "R")
-        cy = row.get("channel_y", "G")
-        primitives.append(
-            (
-                f'<feDisplacementMap in="SourceGraphic" in2="noise" scale="{disp}" '
-                f'xChannelSelector="{cx}" yChannelSelector="{cy}" result="distorted"/>'
-            )
-        )
-    blur = float(row.get("gaussian_blur", "0"))
-    if blur > 0:
-        stddev = min(blur, 14.0)
-        blur_input = "distorted" if disp > 0 else "SourceGraphic"
-        primitives.append(
-            f'<feGaussianBlur in="{blur_input}" stdDeviation="{stddev}" result="blurred"/>'
-        )
-    if row.get("drop_shadow") in {"subtle", "strong"}:
-        shadow_std = "2.5" if row.get("drop_shadow") == "subtle" else "6.0"
-        primitives.append(
-            (
-                '<feDropShadow dx="0" dy="2" '
-                f'stdDeviation="{shadow_std}" flood-opacity="0.28" />'
-            )
-        )
-    body = "\n      ".join(primitives)
-    return f'<filter id="{filter_id}">\n      {body}\n    </filter>', len(primitives)
-
-
-def render_svg(row: dict[str, str]) -> str:
-    """
-    Render deterministic SVG markup for one scenario row.
-    """
-    seed = int(row.get("scenario_seed", 0))
-    rng = random.Random(seed)
-    width, height = _parse_viewbox(row.get("viewbox", "square(1024)"))
-    layers = int(float(row.get("layer_count", "2")))
-    density = row.get("density", "medium")
-    shape_family = row.get("shape_family", "curves")
-    symmetry = row.get("symmetry", "none")
-    blend_primary = row.get("blend_mode_primary", "normal")
-    opacities = _opacity_sequence(row.get("opacity_stack", "flat(1.0)"), layers)
-    palette = _palette_for_row(row)
-
-    density_scale = {"sparse": 6, "medium": 14, "dense": 26}.get(density, 14)
-    elements_per_layer = max(3, density_scale)
-
-    filter_id = f"f-{row.get('scenario_id', 'svg')[-8:]}"
-    filter_markup, filter_primitives = _build_filter(row, filter_id)
-    distortion_scope = row.get("distortion_scope", "global")
-
-    defs = [
-        "<defs>",
-        (
-            f'    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">'
-            f'<stop offset="0%" stop-color="{palette[0]}"/>'
-            f'<stop offset="100%" stop-color="{palette[-1]}"/>'
-            "</linearGradient>"
-        ),
-        f"    {filter_markup}",
-        "</defs>",
-    ]
-
-    content: list[str] = [
-        (
-            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
-            f'role="img" aria-label="{row.get("scenario_id", "svg")}">'
-        ),
-        *defs,
-    ]
-
-    bg_filter = f' filter="url(#{filter_id})"' if distortion_scope in {"background-only", "global"} else ""
-    content.append(
-        f'  <rect x="0" y="0" width="{width}" height="{height}" fill="url(#bg-grad)"{bg_filter}/>'
-    )
-
-    for li in range(layers):
-        opacity = opacities[li] if li < len(opacities) else 1.0
-        color = palette[li % len(palette)]
-        transform = ""
-        if row.get("directionality") == "diagonal":
-            transform = f' transform="rotate({12 + li * 7} {width // 2} {height // 2})"'
-        if row.get("directionality") == "radial":
-            transform = f' transform="rotate({li * 19} {width // 2} {height // 2})"'
-
-        layer_filter = ""
-        if distortion_scope == "subject-only":
-            layer_filter = f' filter="url(#{filter_id})"'
-
-        content.append(
-            f'  <g opacity="{opacity:.3f}" style="mix-blend-mode:{blend_primary}"{transform}{layer_filter}>'
-        )
-
-        for i in range(elements_per_layer):
-            x = rng.randint(0, width)
-            y = rng.randint(0, height)
-            w = rng.randint(max(8, width // 32), max(16, width // 6))
-            h = rng.randint(max(8, height // 32), max(16, height // 6))
-            c = palette[(li + i) % len(palette)]
-            stroke = palette[(li + i + 1) % len(palette)]
-
-            if shape_family == "stripes":
-                if row.get("directionality") in {"vertical", "radial"}:
-                    content.append(
-                        f'    <rect x="{x}" y="0" width="{max(2, w // 8)}" height="{height}" '
-                        f'fill="{c}" fill-opacity="0.28"/>'
-                    )
-                else:
-                    content.append(
-                        f'    <rect x="0" y="{y}" width="{width}" height="{max(2, h // 9)}" '
-                        f'fill="{c}" fill-opacity="0.26"/>'
-                    )
-            elif shape_family == "rings":
-                r = max(6, min(w, h) // 2)
-                content.append(
-                    f'    <circle cx="{x}" cy="{y}" r="{r}" fill="none" stroke="{stroke}" stroke-width="2.2" />'
-                )
-            elif shape_family == "particles":
-                r = max(1, min(w, h) // 12)
-                content.append(
-                    f'    <circle cx="{x}" cy="{y}" r="{r}" fill="{c}" fill-opacity="0.7" />'
-                )
-            elif shape_family == "polygons":
-                points = [
-                    f"{x},{y}",
-                    f"{min(width, x + w)},{y}",
-                    f"{min(width, x + (w // 2))},{min(height, y + h)}",
-                ]
-                content.append(
-                    f'    <polygon points="{" ".join(points)}" fill="{c}" fill-opacity="0.24" '
-                    f'stroke="{stroke}" stroke-width="1.2"/>'
-                )
-            else:  # curves
-                x2 = min(width, x + w)
-                y2 = min(height, y + h)
-                cx = min(width, x + (w // 2))
-                cy = max(0, y - (h // 3))
-                content.append(
-                    f'    <path d="M {x} {y} Q {cx} {cy}, {x2} {y2}" '
-                    f'stroke="{stroke}" stroke-width="2" fill="none" />'
-                )
-
-            if symmetry == "mirror-x":
-                mx = max(0, width - x)
-                content.append(
-                    f'    <circle cx="{mx}" cy="{y}" r="{max(2, min(w, h) // 16)}" fill="{stroke}" fill-opacity="0.22"/>'
-                )
-            elif symmetry == "mirror-y":
-                my = max(0, height - y)
-                content.append(
-                    f'    <circle cx="{x}" cy="{my}" r="{max(2, min(w, h) // 16)}" fill="{stroke}" fill-opacity="0.22"/>'
-                )
-            elif symmetry == "radial":
-                rx = width - x
-                ry = height - y
-                content.append(
-                    f'    <circle cx="{rx}" cy="{ry}" r="{max(2, min(w, h) // 18)}" fill="{stroke}" fill-opacity="0.18"/>'
-                )
-
-        content.append("  </g>")
-
-    content.append("</svg>")
-    svg = "\n".join(content)
-
-    # Keep constraints practical for API payloads.
-    if len(svg.encode("utf-8")) > 240_000:
-        svg = svg[:220_000] + "\n</svg>"
-    if filter_primitives > 12:
-        svg = svg.replace(f' filter="url(#{filter_id})"', "")
-    return svg
-
-
-def validate_svg(svg_markup: str) -> list[str]:
-    """
-    Check compatibility/safety constraints and return validation errors.
-    """
-    errors: list[str] = []
-    lower = svg_markup.lower()
-    if "<svg" not in lower or "</svg>" not in lower:
-        errors.append("missing-svg-root")
-    if "viewbox=" not in lower:
-        errors.append("missing-viewbox")
-    for token in ("<script", "onload=", "onerror=", "<foreignobject", "xlink:href=\"http"):
-        if token in lower:
-            errors.append(f"forbidden-token:{token}")
-    if len(svg_markup.encode("utf-8")) > 250_000:
-        errors.append("exceeds-hard-size-cap")
-    element_count = svg_markup.count("<") - svg_markup.count("</svg>")
-    if element_count > 2000:
-        errors.append("element-cap-exceeded")
-    return errors
-
-
 def build_asset_metadata(row: dict[str, str], svg_markup: str) -> dict[str, Any]:
     """
     Create metadata payload aligned with the reference card.
     """
-    colors = _palette_for_row(row)
+    colors = _palette_for_params(row)
     has_turbulence = "<feturbulence" in svg_markup.lower()
     has_displacement = "<fedisplacementmap" in svg_markup.lower()
     element_count = max(0, svg_markup.count("<") - svg_markup.count("</svg>"))
@@ -581,4 +336,3 @@ def build_asset_metadata(row: dict[str, str], svg_markup: str) -> dict[str, Any]
         "contrast_score": contrast_lookup.get(row.get("contrast_band", "mid"), 0.56),
         "complexity_score": round(complexity, 3),
     }
-
