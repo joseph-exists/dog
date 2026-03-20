@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tesserax_service.registry import register_script
-from tesserax_service.scripts.svg_compose import render_svg, validate_svg, INPUT_SCHEMA
+from tesserax_service.scripts.svg_compose import render_svg, validate_svg, INPUT_SCHEMA, render_rings_warp, RINGS_INPUT_SCHEMA
 
 
 def _demo_logo_caps(params: dict[str, object], formats: list[str]) -> set[str]:
@@ -144,3 +144,31 @@ _make_preset("svg.paper-grain", {
     "displacement_scale": "0", "density": "sparse",
     "gaussian_blur": "0.8", "layer_count": "2",
 })
+
+
+# ---------------------------------------------------------------------------
+# svg.vector-rings — radially-symmetric rings with tunable warp
+# ---------------------------------------------------------------------------
+
+@register_script(
+    "svg.vector-rings",
+    kind="static",
+    default_runtime_profile="core",
+    supported_formats={"svg"},
+    base_capabilities={"render.svg"},
+)
+def svg_vector_rings(params: dict[str, object], output_dir: Path, basename: str, formats: list[str]) -> list[Path]:
+    """Radially-symmetric rings with tunable warp: none | wave | spiral | tilt."""
+    if "svg" not in formats:
+        raise ValueError("svg.vector-rings supports only svg output")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    svg = render_rings_warp(dict(params))
+    errors = validate_svg(svg)
+    if errors:
+        raise ValueError(f"svg.vector-rings produced invalid SVG: {errors}")
+    out = output_dir / f"{basename}.svg"
+    out.write_text(svg, encoding="utf-8")
+    return [out]
+
+
+svg_vector_rings.__tesser_input_schema__ = RINGS_INPUT_SCHEMA  # type: ignore[attr-defined]

@@ -504,6 +504,113 @@ def render_svg(params: dict[str, Any], *, override_palette: list[str] | None = N
 
 
 # ---------------------------------------------------------------------------
+# Rings warp renderer
+# ---------------------------------------------------------------------------
+
+RINGS_INPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "seed":                {"type": "integer", "default": 42},
+        "ring_count":          {"type": "integer", "default": 8, "minimum": 3, "maximum": 24},
+        "palette_family":      {"type": "string", "enum": ["warm", "cool", "duotone", "neon", "earth", "mono"], "default": "mono"},
+        "contrast_band":       {"type": "string", "enum": ["low", "mid", "high"], "default": "high"},
+        "ring_warp":           {"type": "string", "enum": ["none", "wave", "spiral", "tilt"], "default": "none"},
+        "ring_warp_intensity": {"type": "string", "enum": ["low", "mid", "high"], "default": "mid"},
+    },
+}
+
+_AMPLITUDE_MAP = {"low": 0.08, "mid": 0.18, "high": 0.38}
+
+
+def render_rings_warp(params: dict[str, Any]) -> str:
+    """Render radially-symmetric rings with tunable warp: none | wave | spiral | tilt."""
+    seed_val = int(params.get("seed", 42))
+    rng = random.Random(seed_val)
+
+    ring_count = max(3, min(24, int(params.get("ring_count", 8))))
+    warp = params.get("ring_warp", "none")
+    intensity = params.get("ring_warp_intensity", "mid")
+    amplitude = _AMPLITUDE_MAP.get(intensity, 0.18)
+
+    cx = 512
+    cy = 512
+    max_radius = int(1024 * 0.46)
+
+    palette_params = dict(params)
+    palette_params.setdefault("style_family", "geometric")
+    palette_params.setdefault("palette_cardinality", "4")
+    palette = _palette_for_params(palette_params)
+
+    bg_color = palette[-1]
+    stroke0 = palette[0]
+    stroke1 = palette[1] if len(palette) > 1 else palette[0]
+
+    content: list[str] = [
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" '
+        f'role="img" aria-label="vector-rings-{seed_val}">',
+        f'  <rect x="0" y="0" width="1024" height="1024" fill="{bg_color}"/>',
+    ]
+
+    for i in range(ring_count):
+        # Evenly space radii from innermost to outermost
+        r = max(4, int(max_radius * (i + 1) / ring_count))
+        stroke_color = stroke0 if i % 2 == 0 else stroke1
+        stroke_width = max(0.8, 2.5 - i * 0.15)
+
+        if warp == "none":
+            content.append(
+                f'  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" '
+                f'stroke="{stroke_color}" stroke-width="{stroke_width:.2f}"/>'
+            )
+
+        elif warp == "wave":
+            n_pts = 64
+            freq = rng.randint(3, 7)
+            phase = rng.uniform(0, math.tau)
+            pts_list: list[str] = []
+            for k in range(n_pts):
+                angle = math.tau * k / n_pts
+                r_mod = r * (1 + amplitude * math.sin(freq * angle + phase))
+                px = cx + r_mod * math.cos(angle)
+                py = cy + r_mod * math.sin(angle)
+                pts_list.append(f"{px:.2f},{py:.2f}")
+            points_str = " ".join(pts_list)
+            content.append(
+                f'  <polygon points="{points_str}" fill="none" '
+                f'stroke="{stroke_color}" stroke-width="{stroke_width:.2f}"/>'
+            )
+
+        elif warp == "spiral":
+            offset_angle = math.tau * i / ring_count
+            offset_dist = r * amplitude
+            ox = cx + int(offset_dist * math.cos(offset_angle))
+            oy = cy + int(offset_dist * math.sin(offset_angle))
+            content.append(
+                f'  <circle cx="{ox}" cy="{oy}" r="{r}" fill="none" '
+                f'stroke="{stroke_color}" stroke-width="{stroke_width:.2f}"/>'
+            )
+
+        elif warp == "tilt":
+            tilt_angle_deg = 15 + int(amplitude * 60)
+            tilt_rad = math.radians(tilt_angle_deg)
+            ry = max(2, int(r * math.cos(tilt_rad)))
+            content.append(
+                f'  <ellipse cx="{cx}" cy="{cy}" rx="{r}" ry="{ry}" fill="none" '
+                f'stroke="{stroke_color}" stroke-width="{stroke_width:.2f}" '
+                f'transform="rotate({tilt_angle_deg} {cx} {cy})"/>'
+            )
+
+        else:
+            content.append(
+                f'  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" '
+                f'stroke="{stroke_color}" stroke-width="{stroke_width:.2f}"/>'
+            )
+
+    content.append("</svg>")
+    return "\n".join(content)
+
+
+# ---------------------------------------------------------------------------
 # Validator
 # ---------------------------------------------------------------------------
 

@@ -166,3 +166,96 @@ def test_svg_compose_produces_file(tmp_path):
     assert len(paths) == 1
     assert paths[0].suffix == ".svg"
     assert paths[0].stat().st_size > 100
+
+
+def test_vector_rings_warp_modes(tmp_path):
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script
+    from tesserax_service.scripts.svg_compose import validate_svg
+    fn = get_script("svg.vector-rings")
+    for warp in ["none", "wave", "spiral", "tilt"]:
+        out_dir = tmp_path / f"rings-{warp}"
+        out_dir.mkdir()
+        paths = fn({"seed": 42, "ring_warp": warp}, out_dir, f"rings-{warp}", ["svg"])
+        svg = paths[0].read_text(encoding="utf-8")
+        assert validate_svg(svg) == [], f"ring_warp={warp} invalid"
+
+def test_vector_rings_warp_intensity(tmp_path):
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script
+    from tesserax_service.scripts.svg_compose import validate_svg
+    fn = get_script("svg.vector-rings")
+    for intensity in ["low", "mid", "high"]:
+        out_dir = tmp_path / f"intensity-{intensity}"
+        out_dir.mkdir()
+        paths = fn({"seed": 42, "ring_warp": "wave", "ring_warp_intensity": intensity},
+                   out_dir, f"rings-wave-{intensity}", ["svg"])
+        assert paths[0].exists()
+        svg = paths[0].read_text(encoding="utf-8")
+        assert validate_svg(svg) == []
+
+def test_vector_rings_warp_produces_distinct_outputs(tmp_path):
+    """Each warp mode produces visually distinct SVG."""
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script
+    fn = get_script("svg.vector-rings")
+    svgs = []
+    for warp in ["none", "wave", "spiral", "tilt"]:
+        out_dir = tmp_path / warp
+        out_dir.mkdir()
+        paths = fn({"seed": 42, "ring_warp": warp}, out_dir, "r", ["svg"])
+        svgs.append(paths[0].read_text(encoding="utf-8"))
+    assert len(set(svgs)) == 4, "All warp modes must produce distinct SVG"
+
+
+def test_extract_palette_dominant():
+    """LAB k-means extraction returns valid hex colors."""
+    import io
+    from PIL import Image
+    from tesserax_service.scripts.svg_compose import extract_palette_from_image_bytes
+    img = Image.new("RGB", (20, 20), color=(200, 50, 50))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    colors = extract_palette_from_image_bytes(buf.getvalue(), k=3, mode="dominant")
+    assert len(colors) == 3
+    for c in colors:
+        assert c.startswith("#") and len(c) == 7, f"Invalid hex: {c}"
+
+
+def test_extract_palette_modes():
+    """All palette_mode values produce valid hex colors."""
+    import io
+    from PIL import Image
+    from tesserax_service.scripts.svg_compose import extract_palette_from_image_bytes
+    img = Image.new("RGB", (30, 30), color=(100, 150, 200))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    for mode in ["dominant", "harmonize", "ghost", "complement", "coolshift", "warmshift"]:
+        colors = extract_palette_from_image_bytes(buf.getvalue(), k=4, mode=mode)
+        assert len(colors) == 4, f"mode={mode} returned {len(colors)} colors"
+        for c in colors:
+            assert c.startswith("#") and len(c) == 7
+
+
+def test_soft_gradient_no_image_url(tmp_path):
+    """soft-gradient works without source_image_url."""
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script
+    from tesserax_service.scripts.svg_compose import validate_svg
+    fn = get_script("svg.soft-gradient")
+    paths = fn({"seed": 42}, tmp_path, "sg", ["svg"])
+    svg = paths[0].read_text(encoding="utf-8")
+    assert validate_svg(svg) == []
+
+
+def test_soft_gradient_invalid_url_falls_back(tmp_path):
+    """soft-gradient falls back gracefully when image URL fails."""
+    from tesserax_service.scripts import builtin  # noqa: F401
+    from tesserax_service.registry import get_script
+    from tesserax_service.scripts.svg_compose import validate_svg
+    fn = get_script("svg.soft-gradient")
+    # Use an obviously invalid URL — should not raise, should fall back
+    paths = fn({"seed": 42, "source_image_url": "http://localhost:1/no-such-image.png"},
+               tmp_path, "sg-fallback", ["svg"])
+    svg = paths[0].read_text(encoding="utf-8")
+    assert validate_svg(svg) == []
