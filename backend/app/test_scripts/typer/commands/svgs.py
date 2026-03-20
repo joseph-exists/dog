@@ -16,11 +16,25 @@ import typer
 
 from auth_helper import get_authenticated_session
 
+# Render engine lives in Tesser
+_TESSER_SRC = Path(__file__).resolve().parents[5] / "tesser" / "src"
+if str(_TESSER_SRC) not in sys.path:
+    sys.path.insert(0, str(_TESSER_SRC))
+
+from tesserax_service.scripts.svg_compose import (  # noqa: E402
+    INPUT_SCHEMA,
+    RINGS_INPUT_SCHEMA,
+    SOFT_GRADIENT_INPUT_SCHEMA,
+    render_svg,
+    validate_svg,
+)
+
+# Planner stays in render_things
 RENDER_THINGS_DIR = Path(__file__).resolve().parents[2] / "render_things"
 if str(RENDER_THINGS_DIR) not in sys.path:
     sys.path.append(str(RENDER_THINGS_DIR))
 
-from svg_library_tools import build_asset_metadata, build_generation_plan, render_svg, validate_svg
+from svg_library_tools import build_asset_metadata, build_generation_plan  # noqa: E402
 
 app = typer.Typer(help="SVG library management and generation commands", no_args_is_help=True)
 
@@ -450,6 +464,85 @@ def seed_library(
 
     if failed:
         raise typer.Exit(2)
+
+
+@app.command("knobs")
+def list_knobs(
+    script: Annotated[
+        str,
+        typer.Option("--script", "-s", help="Script to inspect (default: svg.compose)"),
+    ] = "svg.compose",
+) -> None:
+    """List all available knobs and their valid values for a script."""
+    schema_map = {
+        "svg.compose":        INPUT_SCHEMA,
+        "svg.vector-rings":   RINGS_INPUT_SCHEMA,
+        "svg.soft-gradient":  SOFT_GRADIENT_INPUT_SCHEMA,
+    }
+    schema = schema_map.get(script)
+    if schema is None:
+        typer.secho(
+            f"❌ Unknown script: {script}. Known: {', '.join(schema_map)}",
+            fg=typer.colors.RED, err=True,
+        )
+        raise typer.Exit(1)
+
+    typer.echo(f"\n🎛  Knobs for {script}:\n")
+    for knob, spec in schema.get("properties", {}).items():
+        enum_vals = spec.get("enum", [])
+        default   = spec.get("default", "")
+        desc      = spec.get("description", "")
+        if enum_vals:
+            vals_str = " | ".join(str(v) for v in enum_vals)
+            typer.secho(f"  {knob}", fg=typer.colors.CYAN, nl=False)
+            typer.echo(f"  [{vals_str}]  default={default}")
+        else:
+            typer.secho(f"  {knob}", fg=typer.colors.CYAN, nl=False)
+            typer.echo(f"  {spec.get('type','')}  default={default}  {desc}")
+    typer.echo()
+
+
+@app.command("render")
+def render_single(
+    output: Annotated[Path, typer.Argument(help="Output .svg file path")],
+    params_json: Annotated[
+        str | None,
+        typer.Option("--params", "-p", help="JSON object of knob overrides"),
+    ] = None,
+    seed: Annotated[int | None, typer.Option("--seed", help="Seed override")] = None,
+    style_family: Annotated[str | None, typer.Option("--family", "-f")] = None,
+    open_after: Annotated[bool, typer.Option("--open", help="Open in browser after render")] = False,
+) -> None:
+    """
+    Render a single SVG to a local file with hand-picked knobs.
+
+    Example:
+      svgs render out.svg --family glitch --seed 99
+      svgs render out.svg --params '{"palette_family":"neon","displacement_scale":"64"}'
+    """
+    params: dict[str, Any] = {}
+    if params_json:
+        params = _json_loads_or_exit(params_json, label="params")
+    if seed is not None:
+        params["seed"] = seed
+    if style_family is not None:
+        params["style_family"] = style_family
+
+    svg = render_svg(params)
+    errors = validate_svg(svg)
+    if errors:
+        typer.secho(f"❌ Render produced invalid SVG: {errors}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(svg, encoding="utf-8")
+    typer.secho(f"✅ Rendered to {output}", fg=typer.colors.GREEN)
+    typer.echo(f"   Bytes: {len(svg.encode('utf-8'))}")
+    if open_after:
+        import subprocess
+        import platform
+        opener = "open" if platform.system() == "Darwin" else "xdg-open"
+        subprocess.Popen([opener, str(output)])
 
 
 if __name__ == "__main__":
