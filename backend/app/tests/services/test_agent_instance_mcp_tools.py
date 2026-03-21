@@ -42,6 +42,8 @@ def _resolved_payload(tool_config: dict) -> SimpleNamespace:
     return SimpleNamespace(
         payload={
             "model_name": "gpt-4.1-mini",
+            "instructions": "Use MCP tools when appropriate.",
+            "model_settings": {"parallel_tool_calls": True},
             "tool_config": tool_config,
         },
         provenance={"tool_config": "prompt_config"},
@@ -59,6 +61,8 @@ def _install_common_mocks(
         def __init__(self, **kwargs):
             captured["toolsets"] = kwargs.get("toolsets")
             captured["tools"] = kwargs.get("tools") or []
+            captured["instructions"] = kwargs.get("instructions")
+            captured["model_settings"] = kwargs.get("model_settings")
 
     async def fake_get_agent_config(session, slug):  # noqa: ARG001
         return config
@@ -137,6 +141,8 @@ async def test_mcp_toolset_uses_registry_descriptor_not_prompt_url(
     assert isinstance(toolset, _FakeFastMCPToolset)
     assert toolset.client == "http://mcpmvp:8080/mcp/affordance"
     assert toolset.id == "affordance"
+    assert captured["model_settings"] == {"parallel_tool_calls": True}
+    assert "Use MCP tools when appropriate." in str(captured["instructions"])
     assert getattr(agent, "_runtime_mcp_attached_ids") == ["affordance"]
     assert getattr(agent, "_runtime_mcp_rejected_ids") == []
 
@@ -150,6 +156,7 @@ async def test_mcp_toolset_wraps_allowlist_and_approval_and_preserves_existing_t
     config = _base_config(slug="story-agent", toolsets=[existing_toolset])
     resolved = _resolved_payload(
         {
+            "require_tools": True,
             "mcp": {
                 "allowed_tools": ["ignored_global_tool"],
                 "servers": [
@@ -196,6 +203,7 @@ async def test_mcp_toolset_wraps_allowlist_and_approval_and_preserves_existing_t
     filter_func = wrapped.wrapped.filter_func
     assert filter_func(None, SimpleNamespace(name="story_affordance_list")) is True
     assert filter_func(None, SimpleNamespace(name="story_affordance_get")) is False
+    assert "Do not simulate tool use by printing JSON" in str(captured["instructions"])
 
 
 @pytest.mark.asyncio

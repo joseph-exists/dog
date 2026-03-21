@@ -4184,11 +4184,6 @@ class RoomAgentSettingsBundle(SQLModel):
     room_defaults: RoomAgentSettingsPublic | None
     agent_overrides: list[RoomAgentSettingsPublic]
 
-    participant_type: Literal["user", "agent"]
-    persona_id: uuid.UUID | None = None
-    model_name: str | None = Field(default=None, max_length=100)
-    user_llm_provider_id: uuid.UUID | None = None
-
 # ============================================================================
 # Message Models (Projection)
 # ============================================================================

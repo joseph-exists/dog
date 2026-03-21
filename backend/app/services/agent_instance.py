@@ -260,6 +260,27 @@ def _merge_toolsets(existing: Any, additions: Sequence[Any]) -> list[Any] | None
     merged.extend(additions)
     return merged or None
 
+
+def _compose_instructions(*, effective_payload: Any) -> str | None:
+    instructions = _get(effective_payload, "instructions")
+    if not isinstance(instructions, str) or not instructions.strip():
+        instructions_text: str | None = None
+    else:
+        instructions_text = instructions.strip()
+
+    raw_tool_config = _get(effective_payload, "tool_config")
+    require_tools = isinstance(raw_tool_config, dict) and raw_tool_config.get("require_tools") is True
+    if not require_tools:
+        return instructions_text
+
+    tool_guard = (
+        "If a relevant tool is available, call the tool directly through the runtime tool interface. "
+        "Do not simulate tool use by printing JSON such as {'tool': ..., 'arguments': ...}."
+    )
+    if instructions_text:
+        return f"{instructions_text}\n\n{tool_guard}"
+    return tool_guard
+
 async def get_user_agent_config_by_slug(
     *, session: AsyncSession, slug: str
 ) -> UserAgentConfig | None:
@@ -506,6 +527,8 @@ async def get_agent_instance_with_tools(
     system_prompt = _get(effective, "custom_system_prompt", "system_prompt") or (
         f"You are {getattr(config, 'name', slug)}. {getattr(config, 'description', '')}".strip()
     )
+    instructions = _compose_instructions(effective_payload=effective)
+    model_settings = _get(effective, "model_settings")
 
 
     # this might be where we pass instructions, pass skills, etc - agent_personas/archetypes?
@@ -576,6 +599,8 @@ async def get_agent_instance_with_tools(
     agent_kwargs: dict[str, Any] = {
         "model": model_final_form,
         "system_prompt": system_prompt,
+        "instructions": instructions,
+        "model_settings": model_settings,
         "deps_type": AgentDeps,
         "tools": tools or None,
         # Optional extras if present on config (each getattr is resilient to missing attrs):

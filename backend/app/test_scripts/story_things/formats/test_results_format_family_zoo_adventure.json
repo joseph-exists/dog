@@ -1,0 +1,32 @@
+{
+  "test_suite": "F-3: Family Zoo Adventure Story",
+  "start_time": "2026-03-21T06:31:18.181972",
+  "end_time": "2026-03-21T06:31:19.951228",
+  "story_id": "fa929330-093c-4a6c-bd6a-207c8177b45e",
+  "node_ids": {
+    "zoo_entrance": "bdfdfc08-d04f-49de-a4bc-f84b549a25f8",
+    "big_cats_first": "dd8f385b-5f7c-4b22-aa94-afc4968da832",
+    "primates_first": "066732d1-6c81-4120-9d9a-962a0cb2bbbd",
+    "aquarium_first": "e8d87caa-6847-469d-a48e-d50485ac8b1f",
+    "lunch_decision": "02d3b5fe-0c2c-41f0-a5aa-c944915a6133",
+    "perfect_day_ending": "b7f424d6-c58c-4f37-99fe-fb2b16469739",
+    "compromise_day_ending": "7a141992-21bd-4708-894a-12f5a7d4df52",
+    "educational_focus_ending": "10482534-1582-4eda-8667-b2a951e604dc",
+    "chaos_management_ending": "afeabd6f-0fd2-4abc-85fc-66470cd2ba23"
+  },
+  "choice_ids": [
+    "bc2ce74f-5305-4a63-ab93-b72f82841b32",
+    "440698f0-cbb3-45ac-97b5-617732f130b4",
+    "b0b1439b-b116-4941-9029-e7091136609a",
+    "1e05784b-8987-40af-a366-35ceeb012f0f",
+    "3265e4d8-6aaf-4cad-bb3f-7d6eb3544569",
+    "4be540a7-8dc9-4d57-b982-113e2d74a661",
+    "43b40062-85f5-45d2-9e0e-1d2ade7ac405",
+    "71cb8b75-aad6-4b40-be69-180d92baed55",
+    "9400e7e8-8364-48af-92e2-653af053c46f",
+    "b0c01ddf-d81f-4616-97d8-38daf8a1d937"
+  ],
+  "state_variable_ids": {},
+  "success": true,
+  "errors": []
+}

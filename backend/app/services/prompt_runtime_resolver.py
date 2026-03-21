@@ -53,11 +53,10 @@ def _prompt_draft_to_runtime_patch(prompt: PromptConfigDraft) -> dict[str, Any]:
     patch: dict[str, Any] = {}
     model_id = prompt.model.model_id
     model_name = prompt.model.model_name
+    if model_name:
+        patch["model_name"] = model_name
     if model_id:
         patch["model"] = model_id
-        patch["model_name"] = model_id
-    elif model_name:
-        patch["model_name"] = model_name
 
     provider_id = prompt.provider.user_access_provider_id
     if provider_id is not None:
@@ -82,6 +81,33 @@ def _prompt_draft_to_runtime_patch(prompt: PromptConfigDraft) -> dict[str, Any]:
         if prompt.tools.mcp is not None:
             tool_config["mcp"] = prompt.tools.mcp
         patch["tool_config"] = tool_config
+
+    model_settings: dict[str, Any] = {}
+    if prompt.params.temperature is not None:
+        model_settings["temperature"] = prompt.params.temperature
+    if prompt.params.top_p is not None:
+        model_settings["top_p"] = prompt.params.top_p
+    if prompt.params.max_output_tokens is not None:
+        model_settings["max_tokens"] = prompt.params.max_output_tokens
+    if prompt.params.stop is not None:
+        model_settings["stop_sequences"] = prompt.params.stop
+    if prompt.params.seed is not None:
+        model_settings["seed"] = prompt.params.seed
+    if prompt.params.parallel_tool_calls is not None:
+        model_settings["parallel_tool_calls"] = prompt.params.parallel_tool_calls
+    if prompt.params.reasoning_effort is not None:
+        model_settings["openai_reasoning_effort"] = prompt.params.reasoning_effort
+    if prompt.params.openai is not None:
+        previous_response_id = prompt.params.openai.get("previous_response_id")
+        if previous_response_id:
+            model_settings["openai_previous_response_id"] = previous_response_id
+        reasoning = prompt.params.openai.get("reasoning")
+        if isinstance(reasoning, dict):
+            summary = reasoning.get("summary")
+            if summary in {"concise", "detailed"}:
+                model_settings["openai_reasoning_summary"] = summary
+    if model_settings:
+        patch["model_settings"] = model_settings
 
     if prompt.input.kind == "simple_text":
         if prompt.input.text.strip():
@@ -143,6 +169,7 @@ def _agent_base_payload(config: UserAgentConfig) -> dict[str, Any]:
         "provider_type": config.provider_type,
         "tool_config": deepcopy(config.tool_config) if config.tool_config else None,
         "deps_config": deepcopy(config.deps_config) if config.deps_config else None,
+        "model_settings": None,
         "max_tool_iterations": config.max_tool_iterations,
     }
 

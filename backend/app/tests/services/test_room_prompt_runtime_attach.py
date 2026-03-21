@@ -7,8 +7,14 @@ import pytest
 from fastapi import HTTPException
 
 import app.crud as crud_module
-from app.crud import upsert_room_agent_settings
-from app.models import PromptConfig, PromptConfigDraft, PromptConfigVersion, RoomAgentSettingsUpdate
+from app.crud import list_room_agent_settings, upsert_room_agent_settings
+from app.models import (
+    PromptConfig,
+    PromptConfigDraft,
+    PromptConfigVersion,
+    RoomAgentSettings,
+    RoomAgentSettingsUpdate,
+)
 from app.services.prompt_runtime_resolver import _resolve_room_settings_prompt_patch
 
 
@@ -231,3 +237,56 @@ async def test_upsert_room_agent_settings_rejects_foreign_prompt_binding(
 
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Access denied for PromptConfig binding"
+
+
+@pytest.mark.asyncio
+async def test_list_room_agent_settings_returns_bundle_without_participant_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    room_id = uuid.uuid4()
+    owner_id = uuid.uuid4()
+    room_defaults = RoomAgentSettings(
+        id=uuid.uuid4(),
+        room_id=room_id,
+        agent_slug=None,
+        revision=0,
+    )
+    agent_override = RoomAgentSettings(
+        id=uuid.uuid4(),
+        room_id=room_id,
+        agent_slug="story-advisor",
+        revision=1,
+    )
+    session = _FakeSession(existing_settings=None)
+
+    async def fake_exec(stmt):
+        query_text = str(stmt)
+        if "room_agent_settings" in query_text:
+            return _ExecResult(first=None, one_or_none=None)
+        raise AssertionError(f"Unexpected query: {query_text}")
+
+    session.exec = fake_exec  # type: ignore[method-assign]
+
+    async def _true(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(crud_module, "check_room_membership", _true)
+
+    async def fake_session_exec(stmt):
+        query_text = str(stmt)
+        if "room_agent_settings" in query_text:
+            return SimpleNamespace(all=lambda: [room_defaults, agent_override])
+        raise AssertionError(f"Unexpected query: {query_text}")
+
+    session.exec = fake_session_exec  # type: ignore[method-assign]
+
+    bundle = await list_room_agent_settings(
+        room_id=room_id,
+        user_id=owner_id,
+        session=session,  # type: ignore[arg-type]
+    )
+
+    assert bundle.room_defaults is not None
+    assert bundle.room_defaults.agent_slug is None
+    assert len(bundle.agent_overrides) == 1
+    assert bundle.agent_overrides[0].agent_slug == "story-advisor"

@@ -50,7 +50,12 @@ def _draft_payload(
                 "system": system,
                 "messages": [{"role": "user", "content": user_message}],
             },
-            "params": {"provider_kind": "openai_compatible"},
+            "params": {
+                "provider_kind": "openai_compatible",
+                "parallel_tool_calls": True,
+                "max_output_tokens": 123,
+                "temperature": 0.4,
+            },
             "tools": {
                 "tool_mode": "required",
                 "tool_allowlist": ["search_docs"],
@@ -80,8 +85,12 @@ def test_resolver_applies_bound_prompt_patch() -> None:
         bound_prompt=bound,
     )
     assert resolved.payload["model"] == "gpt-4.1"
+    assert resolved.payload["model_name"] == "gpt-4.1"
     assert resolved.payload["custom_system_prompt"] == "Prompt system"
     assert resolved.payload["tool_config"]["require_tools"] is True
+    assert resolved.payload["model_settings"]["parallel_tool_calls"] is True
+    assert resolved.payload["model_settings"]["max_tokens"] == 123
+    assert resolved.payload["model_settings"]["temperature"] == 0.4
     assert resolved.provenance["model"] == "bound_prompt_config"
     assert resolved.payload["max_tool_iterations"] == 10
     assert resolved.provenance["max_tool_iterations"] == "user_agent_config"
@@ -104,3 +113,42 @@ def test_resolver_room_agent_override_wins_over_room_defaults_and_bound() -> Non
     assert resolved.payload["custom_system_prompt"] == "Room agent system"
     assert resolved.provenance["model"] == "room_agent_override"
     assert resolved.provenance["custom_system_prompt"] == "room_agent_override"
+
+
+def test_resolver_keeps_provider_model_name_when_model_id_is_internal_uuid() -> None:
+    agent = _agent_stub()
+    internal_model_uuid = str(uuid4())
+    bound = PromptConfigDraft.model_validate(
+        {
+            "provider": {
+                "user_access_provider_id": None,
+                "provider_type_id": None,
+                "provider_kind": "openai_compatible",
+                "base_url": None,
+                "account_label": None,
+            },
+            "model": {
+                "model_catalog_id": None,
+                "model_id": internal_model_uuid,
+                "model_name": "gpt-4o-mini",
+                "model_family": "gpt-4o",
+            },
+            "input": {
+                "kind": "simple_text",
+                "text": "Use tools",
+                "system": None,
+                "messages": [],
+            },
+            "params": {"provider_kind": "openai_compatible"},
+            "tools": {"tool_mode": "optional", "tool_allowlist": []},
+            "metadata": {},
+        }
+    )
+
+    resolved = resolve_effective_prompt_runtime_config(
+        agent_config=agent,
+        bound_prompt=bound,
+    )
+
+    assert resolved.payload["model"] == internal_model_uuid
+    assert resolved.payload["model_name"] == "gpt-4o-mini"
