@@ -205,3 +205,66 @@ Adminer: http://localhost.tiangolo.com:8080
 Traefik UI: http://localhost.tiangolo.com:8090
 
 MailCatcher: http://localhost.tiangolo.com:1080
+
+
+  docker compose \
+    -f docker-compose.yml \
+    -f docker-compose.traefik.yml \
+    -f docker-compose.traefik.local.yml \
+    -f docker-compose.local-http.yml \
+    up -d
+
+
+     The breakage is from switching compose workflows, not from the terminal fix itself.
+
+  When you run docker compose with explicit -f files, Compose stops auto-loading docker-compose.override.yml. That override is what gives you:
+
+  - backend port 8000:8000 in docker-compose.override.yml:52
+  - frontend port 5173:80 in docker-compose.override.yml:124
+  - frontend VITE_API_URL=http://localhost:8000 in docker-compose.override.yml:128
+
+  Without that file, the stack shifts to the Traefik-routed hostnames:
+
+  - frontend is built against https://api.${DOMAIN} in docker-compose.yml:346
+  - the local HTTP override changes that to http://api.${DOMAIN} in docker-compose.local-http.yml:52
+
+  So your current result makes sense:
+
+  - localhost:8000/docs is gone because the backend port mapping from the override is missing
+  - localhost:5173 may still be serving an old container or a separately started frontend, but login fails because the frontend is now trying to
+    talk to api.localhost, not localhost:8000
+
+  The fix is to include the normal dev override again, and make sure it is last so its ports and VITE_API_URL win:
+
+  docker compose \
+    -f docker-compose.yml \
+    -f docker-compose.traefik.yml \
+    -f docker-compose.traefik.local.yml \
+    -f docker-compose.local-http.yml \
+    -f docker-compose.override.yml \
+    up -d --build
+
+  That gives you both:
+
+  - your usual direct dev endpoints: http://localhost:8000/docs and http://localhost:5173
+  - the local Traefik host routes needed for kennel websocket access: http://kennel.localhost, http://api.localhost, etc.
+
+  Two important rules:
+
+  1. Use one browser access pattern consistently.
+     If you want direct dev mode, use localhost:5173 and localhost:8000.
+     If you want routed mode, use dashboard.localhost and api.localhost.
+     Mixing them causes auth/cookie/CORS confusion.
+  2. Keep docker-compose.local-http.yml in the stack for local Traefik.
+     That file removes the broken https/le labels and is what makes kennel.localhost valid in local dev.
+
+  After restarting, verify:
+
+  docker compose ps
+  curl -I http://localhost:8000/docs
+  curl -I http://kennel.localhost/health
+
+  If you want, I can patch the workspace issue doc or add a short development.md section with the exact compose commands for:
+
+  - direct dev with Traefik-enabled kennel
+  - fully routed local Traefik mode

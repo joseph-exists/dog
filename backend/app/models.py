@@ -7264,10 +7264,14 @@ Theme.owner = Relationship(back_populates="themes")
 class WorkspaceStatus(str, PyEnum):
     """Lifecycle state for a kennel-backed workspace."""
 
+    requested = "requested"
     provisioning = "provisioning"
+    starting = "starting"
     ready = "ready"
     stopping = "stopping"
     stopped = "stopped"
+    failed = "failed"
+    destroying = "destroying"
     destroyed = "destroyed"
 
 
@@ -7281,16 +7285,56 @@ class WorkspaceFlavour(str, PyEnum):
     jupyter = "jupyter"
 
 
+class WorkspaceAction(str, PyEnum):
+    """Backend-authoritative actions currently allowed for a workspace."""
+
+    destroy = "destroy"
+    stop = "stop"
+    start = "start"
+    request_terminal = "request_terminal"
+    discover_services = "discover_services"
+
+
+class WorkspaceVisibility(str, PyEnum):
+    """Projected visibility state for a workspace."""
+
+    private = "private"
+    project = "project"
+    shared = "shared"
+
+
+class WorkspaceTerminalStatus(str, PyEnum):
+    """Projected terminal availability state for a workspace."""
+
+    unavailable = "unavailable"
+    available = "available"
+    expired = "expired"
+
+
+class WorkspaceProjectSummary(SQLModel):
+    """Lightweight project projection for workspace responses."""
+
+    id: uuid.UUID
+    name: str
+
+
 class WorkspaceBase(SQLModel):
     """Shared workspace fields for persistence and API models."""
 
     name: str = Field(min_length=1, max_length=120, index=True)
     flavour: WorkspaceFlavour = Field(default=WorkspaceFlavour.dev)
     kind: str = Field(default="ephemeral", min_length=1, max_length=32)
-    status: WorkspaceStatus = Field(default=WorkspaceStatus.provisioning)
+    status: WorkspaceStatus = Field(default=WorkspaceStatus.requested)
     kennel_name: str | None = Field(default=None, max_length=120)
     kennel_job: str | None = Field(default=None, max_length=120)
     ws_token: str | None = Field(default=None, max_length=255)
+    failure_message: str | None = Field(default=None)
+    last_transition_at: datetime = Field(default_factory=datetime.utcnow)
+    requested_at: datetime | None = Field(default_factory=datetime.utcnow)
+    started_at: datetime | None = Field(default=None)
+    ready_at: datetime | None = Field(default=None)
+    stopped_at: datetime | None = Field(default=None)
+    destroyed_at: datetime | None = Field(default=None)
     meta: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
 
@@ -7329,6 +7373,11 @@ class WorkspacePublic(WorkspaceBase):
 
     id: uuid.UUID
     owner_id: uuid.UUID
+    allowed_actions: list[WorkspaceAction] = Field(default_factory=list)
+    visibility: WorkspaceVisibility = Field(default=WorkspaceVisibility.private)
+    project_id: uuid.UUID | None = None
+    project_summary: WorkspaceProjectSummary | None = None
+    terminal_status: WorkspaceTerminalStatus = Field(default=WorkspaceTerminalStatus.unavailable)
     created_at: datetime
     updated_at: datetime
     terminal_url: str | None = None

@@ -68,5 +68,3 @@ So my recommended shape is:
 - `frontend/src/components/Workspaces/panels/WorkspaceDetailsPanel.tsx`
 - `frontend/src/routes/_layout/workspaces.tsx`
 - `frontend/src/routes/_layout/workspace.$workspaceId.tsx`
-
-If you want, the next step should be a short roadmap artifact for this frontend slice: route structure, panel set, service/viewmodel shapes, and a first-pass file touch list before we start implementing.

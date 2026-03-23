@@ -1,20 +1,23 @@
-# kennel/src/server.py  — full updated file
-
 import asyncio
 import json
+import logging
 import subprocess
 import uuid
 import threading
 from contextlib import asynccontextmanager
 from enum import Enum
+import time
 
 import redis.asyncio as aioredis
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 from tokens import token_store
-
+from rebuild_jobs import rebuild_store, RebuildStatus
+from rebuild_worker import rebuild_flavour
+from flavours import FLAVOURS
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +34,7 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 settings  = Settings()
+logger = logging.getLogger(__name__)
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -105,6 +109,10 @@ class InjectRequest(BaseModel):
     git_email:  str | None      = None
     # TTL for the issued terminal token (seconds)
     token_ttl:  int             = 3600
+
+
+class IssueTerminalTokenRequest(BaseModel):
+    token_ttl: int = 3600
 
 
 # ── Job state ─────────────────────────────────────────────────────────────────
@@ -222,6 +230,132 @@ def list_envs(_=Depends(require_management_secret)):
     result = lxc("lxc-ls", "--fancy", "--fancy-format", "name,state,ipv4,pid")
     return {"envs": result.stdout.strip().splitlines()}
 
+@app.get("/flavours")
+def list_flavours(_=Depends(require_management_secret)):
+    """List all flavours and their current snapshot status."""
+    result = {}
+    for name, defn in FLAVOURS.items():
+        base = f"base-{name}"
+        snap_check = subprocess.run(
+            ["lxc-snapshot", "-n", base, "-L"],
+            capture_output=True, text=True
+        )
+        latest_job = rebuild_store.latest_for(name)
+        result[name] = {
+            "description":     defn.description,
+            "parent":          defn.parent,
+            "scripts":         defn.scripts,
+            "snapshot_ready":  "snap0" in snap_check.stdout,
+            "latest_job":      latest_job.job_id if latest_job else None,
+            "latest_status":   latest_job.status if latest_job else None,
+        }
+    return result
+
+
+@app.post("/flavours/{flavour}/rebuild")
+def trigger_rebuild(
+    flavour:          str,
+    force:            bool = False,
+    _=Depends(require_management_secret),
+):
+    """
+    Kick off a flavour rebuild. Returns immediately with a job_id.
+    Poll /rebuild-jobs/{job_id} for status, or stream logs via
+    GET /rebuild-jobs/{job_id}/logs
+    """
+    if flavour not in FLAVOURS:
+        raise HTTPException(404, f"Unknown flavour: {flavour}")
+
+    # Prevent concurrent rebuilds of the same flavour
+    existing = rebuild_store.latest_for(flavour)
+    if existing and existing.status == RebuildStatus.running:
+        return {
+            "job_id":  existing.job_id,
+            "status":  existing.status,
+            "message": "rebuild already in progress",
+        }
+
+    job_id = f"rebuild-{uuid.uuid4().hex[:8]}"
+    rebuild_store.create(job_id, flavour)
+
+    thread = threading.Thread(
+        target=rebuild_flavour,
+        args=(job_id, flavour, force),
+        daemon=True,
+    )
+    thread.start()
+
+    return {
+        "job_id":  job_id,
+        "flavour": flavour,
+        "status":  RebuildStatus.pending,
+        "logs":    f"/rebuild-jobs/{job_id}/logs",
+        "poll":    f"/rebuild-jobs/{job_id}",
+    }
+
+
+@app.get("/rebuild-jobs/{job_id}")
+def get_rebuild_job(job_id: str, _=Depends(require_management_secret)):
+    job = rebuild_store.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    elapsed = (
+        round(time.monotonic() - job.started_at, 1)
+        if job.started_at else None
+    )
+    return {
+        "job_id":     job.job_id,
+        "flavour":    job.flavour,
+        "status":     job.status,
+        "error":      job.error,
+        "elapsed_s":  elapsed,
+        "log_lines":  job.log_lines,
+    }
+
+
+@app.get("/rebuild-jobs/{job_id}/logs")
+async def stream_rebuild_logs(
+    job_id:    str,
+    websocket: WebSocket,
+):
+    """
+    WebSocket stream of live build output.
+    Connect immediately after triggering a rebuild — replays
+    buffered lines then streams new ones as they arrive.
+    """
+    # Use management secret for log streaming too
+    token = websocket.query_params.get("token", "")
+    if settings.kennel_secret and token != settings.kennel_secret:
+        await websocket.close(code=4001)
+        return
+
+    job = rebuild_store.get(job_id)
+    if not job:
+        await websocket.close(code=4004)
+        return
+
+    await websocket.accept()
+    queue = job.subscribe()
+
+    try:
+        while True:
+            # Check if job finished and queue is drained
+            try:
+                line = queue.get_nowait()
+                await websocket.send_text(line)
+            except asyncio.QueueEmpty:
+                if job.status in (RebuildStatus.done, RebuildStatus.failed):
+                    # Send a final sentinel and close
+                    await websocket.send_text(
+                        f"[build {job.status} — {job.error or 'ok'}]"
+                    )
+                    break
+                # Still running — wait for next line
+                await asyncio.sleep(0.1)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        job.unsubscribe(queue)
 
 @app.post("/envs", status_code=202)
 async def create_env(req: CreateEnvRequest, _=Depends(require_management_secret)):
@@ -361,6 +495,24 @@ ENVEOF
     }
 
 
+@app.post("/envs/{name}/terminal-token")
+async def issue_terminal_token(
+    name: str,
+    req: IssueTerminalTokenRequest,
+    _=Depends(require_management_secret),
+):
+    r = lxc("lxc-info", "-n", name)
+    if r.returncode != 0:
+        raise HTTPException(404, detail=f"Environment not found: {name}")
+
+    ws_token = token_store.issue(name, ttl=req.token_ttl)
+    return {
+        "env": name,
+        "token": ws_token,
+        "terminal": f"/envs/{name}/ws",
+    }
+
+
 # ── WebSocket: terminal ───────────────────────────────────────────────────────
 
 @app.websocket("/envs/{name}/ws")
@@ -370,13 +522,33 @@ async def env_terminal(websocket: WebSocket, name: str):
     Token is validated before the lxc-attach subprocess is spawned.
     """
     token = websocket.query_params.get("token", "")
+    client_host = getattr(websocket.client, "host", None)
+    origin = websocket.headers.get("origin")
+    user_agent = websocket.headers.get("user-agent")
+
+    logger.info(
+        "terminal websocket attempt env=%s client=%s origin=%s user_agent=%s token_prefix=%s",
+        name,
+        client_host,
+        origin,
+        user_agent,
+        token[:8],
+    )
 
     valid, reason = token_store.validate(token, name)
     if not valid:
+        logger.warning(
+            "terminal websocket rejected env=%s client=%s reason=%s token_prefix=%s",
+            name,
+            client_host,
+            reason,
+            token[:8],
+        )
         await websocket.close(code=4001)
         return
 
     await websocket.accept()
+    logger.info("terminal websocket accepted env=%s client=%s", name, client_host)
 
     proc = await asyncio.create_subprocess_exec(
         "lxc-attach", "-n", name, "--",
@@ -394,23 +566,36 @@ async def env_terminal(websocket: WebSocket, name: str):
                     break
                 await websocket.send_bytes(chunk)
         except Exception:
-            pass
+            logger.exception("terminal websocket output pump failed env=%s", name)
         finally:
             await websocket.close()
 
     async def read_input():
         try:
             while True:
-                data = await websocket.receive_bytes()
+                message = await websocket.receive()
+                if message["type"] == "websocket.disconnect":
+                    break
+
+                data = message.get("bytes")
+                if data is None:
+                    text = message.get("text")
+                    if text is None:
+                        continue
+                    data = text.encode()
+
                 proc.stdin.write(data)
                 await proc.stdin.drain()
         except WebSocketDisconnect:
-            pass
+            logger.info("terminal websocket client disconnected env=%s client=%s", name, client_host)
+        except Exception:
+            logger.exception("terminal websocket input pump failed env=%s", name)
         finally:
             proc.stdin.close()
 
     await asyncio.gather(read_output(), read_input())
     proc.kill()
+    logger.info("terminal websocket closed env=%s client=%s", name, client_host)
     await publish_event(name, "ws_disconnected")
 
 

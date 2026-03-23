@@ -182,10 +182,21 @@ async def get_terminal_url(
         raise ValueError("Workspace not found")
     if workspace.status != WorkspaceStatus.ready:
         raise ValueError(f"Workspace not ready: {workspace.status}")
-    if not workspace.kennel_name or not workspace.ws_token:
+    if not workspace.kennel_name:
         raise ValueError("Workspace terminal is not available")
 
-    return kennel_client.terminal_url(workspace.kennel_name, workspace.ws_token)
+    token_result = await kennel_client.issue_terminal_token(workspace.kennel_name)
+    token = token_result.get("token")
+    if not token:
+        raise ValueError("Workspace terminal is not available")
+
+    workspace.ws_token = token
+    workspace.updated_at = datetime.utcnow()
+    db.add(workspace)
+    await db.commit()
+    await db.refresh(workspace)
+
+    return kennel_client.terminal_url(workspace.kennel_name, token)
 
 
 async def stop_workspace(db: AsyncSession, ws_id: uuid.UUID) -> None:

@@ -117,7 +117,7 @@ export function useTerminalSession({
         return false
       }
 
-      wsRef.current.send(data)
+      wsRef.current.send(new TextEncoder().encode(data))
       setSession((current) =>
         appendTerminalFrame(current, createTerminalFrame("input", data), {
           maxFrames,

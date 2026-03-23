@@ -38,6 +38,8 @@ services:
     cap_add:
       - SYS_ADMIN
       - NET_ADMIN
+    devices:
+      - /dev/dxg:/dev/dxg # WSL2 GPU paravirt interface
     security_opt:
       - seccomp:unconfined
     networks:
@@ -59,6 +61,7 @@ services:
       - /lib/modules:/lib/modules:ro        # kernel modules
       - kennel-containers:/var/lib/lxc      # persisted container storage
       - kennel-logs:/var/log/lxc
+      - /usr/lib/wsl/lib:/usr/lib/wsl/lib:ro # WSL2 CUDA BRIDGE LIBS
     tmpfs:
       - /run
       - /run/lock

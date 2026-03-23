@@ -43,6 +43,15 @@ async def inject_workspace(kennel_name: str, config: dict) -> dict:
     return response.json()
 
 
+async def issue_terminal_token(kennel_name: str, ttl: int = 3600) -> dict:
+    response = await get_client().post(
+        f"/envs/{kennel_name}/terminal-token",
+        json={"token_ttl": ttl},
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 async def destroy_env(kennel_name: str) -> dict:
     response = await get_client().delete(f"/envs/{kennel_name}")
     response.raise_for_status()

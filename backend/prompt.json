@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "tags": [],
+    "notes": "validation of MCP server tools calls within the stack",
+    "template_id": null,
+    "template_setup": null
+  },
+  "provider": {
+    "user_access_provider_id": "ef8b71aa-89ac-41d4-bcbf-c2e75657b14d",
+    "provider_type_id": "673f1787-8474-4e1c-986c-8e19f14c989c",
+    "provider_kind": "openai",
+    "base_url": "https://api.openai.com/v1",
+    "account_label": "Wizards-OpenAI-API"
+  },
+  "model": {
+    "model_catalog_id": null,
+    "model_id": "7dfa7ff3-b369-4ffd-9a6b-053fdbb0c51f",
+    "model_name": "gpt-4o-mini",
+    "model_family": "7dfa7ff3"
+  },
+  "input": {
+    "kind": "messages",
+    "text": null,
+    "system": "You are a planning agent for the Dog tech stack project.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Use MCP affordance introspection before recommending composition actions."
+      }
+    ]
+  },
+  "params": {
+    "provider_kind": "openai",
+    "temperature": null,
+    "top_p": null,
+    "max_output_tokens": null,
+    "stop": null,
+    "seed": null,
+    "response_format": null,
+    "response_format_json": null,
+    "openai": null,
+    "parallel_tool_calls": null,
+    "reasoning_effort": null,
+    "top_k": null
+  },
+      "tools": {
+        "tool_mode": "optional",
+        "tool_allowlist": [],
+        "tool_choice": null,
+        "max_tool_calls": 6,
+        "builtin": [],
+        "mcp": {
+          "servers": [
+            {
+              "id": "affordance",
+              "require_approval": "never",
+              "allowed_tools": [
+                "affordance_list",
+                "affordance_available",
+                "affordance_get",
+                "affordance_elaborate",
+                "affordance_preview",
+                "affordance_patterns"
+              ]
+            }
+          ]
+        }
+      }
+}

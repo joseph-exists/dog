@@ -50,6 +50,9 @@ curl -X POST http://kennel:8090/envs \
   -H "x-kennel-secret: pooppoop" \
   -d '{"kind": "ephemeral", "template": "ubuntu", "release": "noble"}'
 
+curl -s http://kennel:8090/jobs/rebuild-24f7b729 -H "x-kennel-secret: woohoo"
+
+
 it'll return a job id
 
 then:  
@@ -280,11 +283,15 @@ def exec_in_env(name: str, cmd: str):
 ## Key Design Decisions to Think Through
 
 **Storage backend** — LXC's default is a directory backend, which is fine but slow. If your Docker host has btrfs or ZFS, use that as the LXC storage backend for fast snapshot-based cloning:
-```
+
 lxc-create -n myenv -t ubuntu -B btrfs
+
 Networking — The default lxcbr0 bridge works inside the container, but you'll need to decide whether LXC containers should be reachable from outside the lxc-host container. That requires either host networking or veth pairs punched through to the Docker bridge.
+
 Ephemeral vs. long-running — lxc-start -e (ephemeral) creates an overlay on top of a base container image, so it's very fast and leaves no state. This maps cleanly to your existing thinking around ephemeral dev environments — the base image is like your pre-baked workspace snapshot.
+
 State persistence — Bind-mount /var/lib/lxc from the host so long-running containers survive lxc-host restarts.
+
 Where This Fits in Your Stack
 Given the dev environment work you've been doing, this is essentially a LXC-flavored alternative to Kubernetes ephemeral containers. The tradeoffs vs. your current Kubernetes path:
 LXC-in-DockerK8s PodsIsolationOS-level (namespaces)SameBoot speed~1–2s~5–30sKernel accessFull (good for CUDA, dev tools)LimitedOrchestrationDIY APINative K8sJupyter interopManual setupEasier via sidecar
@@ -295,414 +302,10 @@ Backend → kennel via internal HTTP for lifecycle management (spawn/destroy/sta
 Frontend clients → kennel via Traefik-routed WebSocket for terminal streaming
 Redis already in the stack — useful for state/event broadcasting across lxc container events
 
-Here's the full picture:
 
-1. Addition to docker-compose.yml
-Add this service and volume:
-yaml  kennel:
-    build:
-      context: ./kennel
-    restart: always
-    privileged: true                        # required for LXC namespace control
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
-    security_opt:
-      - seccomp:unconfined
-    networks:
-      - traefik-public
-      - default
-    depends_on:
-      redis:
-        condition: service_healthy
-    environment:
-      - KENNEL_REDIS_HOST=redis
-      - KENNEL_REDIS_PORT=${REDIS_PORT:-6379}
-      - KENNEL_REDIS_EVENT_CHANNEL=${KENNEL_REDIS_EVENT_CHANNEL:-kennel:events}
-      - KENNEL_BASE_IMAGE=${KENNEL_BASE_IMAGE:-ubuntu}
-      - KENNEL_BASE_RELEASE=${KENNEL_BASE_RELEASE:-noble}
-      - KENNEL_MAX_ENVS=${KENNEL_MAX_ENVS:-20}
-      - KENNEL_SECRET=${KENNEL_SECRET?Variable not set}  # shared with backend for auth
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw   # cgroup access for LXC
-      - /lib/modules:/lib/modules:ro        # kernel modules
-      - kennel-containers:/var/lib/lxc      # persisted container storage
-      - kennel-logs:/var/log/lxc
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.constraint-label=traefik-public
-      - traefik.http.services.${STACK_NAME?Variable not set}-kennel.loadbalancer.server.port=8090
-      # REST API route
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.rule=Host(`kennel.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.tls=true
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.tls.certresolver=le
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-http.rule=Host(`kennel.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-http.entrypoints=http
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-http.middlewares=https-redirect
-      # WebSocket requires buffering off and timeout extension
-      - traefik.http.middlewares.kennel-ws.buffering.maxRequestBodyBytes=0
-      - traefik.http.middlewares.kennel-ws.buffering.maxResponseBodyBytes=0
-      - traefik.http.routers.${STACK_NAME?Variable not set}-kennel-https.middlewares=kennel-ws
-
-# Add to the volumes: block at bottom
-volumes:
-  kennel-containers:
-  kennel-logs:
-
-2. ./kennel/Dockerfile
-dockerfileFROM ubuntu:24.04
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y \
-    lxc \
-    lxc-templates \
-    lxc-utils \
-    uidmap \
-    bridge-utils \
-    iproute2 \
-    iptables \
-    dnsmasq \
-    cgroupfs-mount \
-    libpam-cgfs \
-    python3 \
-    python3-pip \
-    python3-venv \
-    curl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# LXC storage and runtime dirs
-RUN mkdir -p /var/lib/lxc /var/log/lxc /run/lxc
-
-# LXC default network config
-COPY conf/lxc-default.conf /etc/lxc/default.conf
-COPY conf/lxc-usernet /etc/lxc/lxc-usernet
-
-# Python API server
-WORKDIR /opt/kennel
-COPY requirements.txt .
-RUN python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-
-COPY src/ .
-
-EXPOSE 8090
-
-# cgroup mount needed before lxc works inside docker
-CMD ["/bin/bash", "-c", "cgroupfs-mount || true && .venv/bin/uvicorn server:app --host 0.0.0.0 --port 8090"]
-```
-
-### `./kennel/conf/lxc-default.conf`
-```
-lxc.net.0.type = veth
-lxc.net.0.link = lxcbr0
-lxc.net.0.flags = up
-lxc.apparmor.profile = unconfined
-lxc.cap.drop =
-```
-
-### `./kennel/requirements.txt`
-```
-fastapi>=0.115
-uvicorn[standard]>=0.30
-websockets>=12.0
-redis[asyncio]>=5.0
-pydantic>=2.0
-pydantic-settings>=2.0
-
-3. ./kennel/src/server.py — API + WebSocket terminal server
-pythonimport asyncio
-import json
-import subprocess
-import uuid
-from contextlib import asynccontextmanager
-from enum import Enum
-
-import redis.asyncio as aioredis
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from pydantic_settings import BaseSettings
-
-
-class Settings(BaseSettings):
-    kennel_redis_host: str = "redis"
-    kennel_redis_port: int = 6379
-    kennel_redis_event_channel: str = "kennel:events"
-    kennel_secret: str = ""
-    kennel_base_image: str = "ubuntu"
-    kennel_base_release: str = "noble"
-    kennel_max_envs: int = 20
-
-    class Config:
-        env_file = ".env"
-
-settings = Settings()
-redis_client: aioredis.Redis = None
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global redis_client
-    redis_client = aioredis.Redis(
-        host=settings.kennel_redis_host,
-        port=settings.kennel_redis_port,
-        decode_responses=True
-    )
-    yield
-    await redis_client.aclose()
-
-
-app = FastAPI(lifespan=lifespan)
-
-
-# ── Auth ──────────────────────────────────────────────────────────────────────
-
-def verify_secret(x_kennel_secret: str = Header(None)):
-    if settings.kennel_secret and x_kennel_secret != settings.kennel_secret:
-        raise HTTPException(status_code=403, detail="Invalid kennel secret")
-
-
-# ── Models ────────────────────────────────────────────────────────────────────
-
-class EnvKind(str, Enum):
-    ephemeral = "ephemeral"
-    persistent = "persistent"
-
-class CreateEnvRequest(BaseModel):
-    name: str | None = None        # auto-generated if not provided
-    kind: EnvKind = EnvKind.ephemeral
-    template: str = "ubuntu"
-    release: str = "noble"
-    # optional: clone from a named base snapshot
-    base_snapshot: str | None = None
-
-class EnvAction(BaseModel):
-    action: str   # start | stop | restart
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def lxc(*args) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        list(args), capture_output=True, text=True, timeout=60
-    )
-
-async def publish_event(env_name: str, event: str, data: dict = {}):
-    payload = json.dumps({"env": env_name, "event": event, **data})
-    await redis_client.publish(settings.kennel_redis_event_channel, payload)
-
-
-# ── Routes ────────────────────────────────────────────────────────────────────
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-@app.get("/envs")
-def list_envs():
-    result = lxc("lxc-ls", "--fancy",
-                 "--fancy-format", "name,state,ipv4,pid")
-    lines = result.stdout.strip().splitlines()
-    return {"envs": lines}
-
-@app.post("/envs")
-async def create_env(req: CreateEnvRequest):
-    name = req.name or f"env-{uuid.uuid4().hex[:8]}"
-
-    if req.base_snapshot:
-        # Clone from snapshot for fast boot
-        r = lxc("lxc-copy", "-n", req.base_snapshot, "-N", name, "-s")
-    else:
-        r = lxc("lxc-create", "-n", name,
-                "-t", req.template,
-                "--", "--release", req.release)
-
-    if r.returncode != 0:
-        raise HTTPException(500, detail=r.stderr)
-
-    if req.kind == EnvKind.ephemeral:
-        # Ephemeral: auto-destroys on stop
-        lxc("lxc-start", "-n", name, "-e")
-    else:
-        lxc("lxc-start", "-n", name)
-
-    await publish_event(name, "created", {"kind": req.kind})
-    return {"name": name, "kind": req.kind}
-
-@app.delete("/envs/{name}")
-async def destroy_env(name: str):
-    lxc("lxc-stop", "-n", name, "-k")
-    r = lxc("lxc-destroy", "-n", name)
-    if r.returncode != 0:
-        raise HTTPException(500, detail=r.stderr)
-    await publish_event(name, "destroyed")
-    return {"destroyed": name}
-
-@app.post("/envs/{name}/action")
-async def env_action(name: str, body: EnvAction):
-    cmds = {
-        "start":   ["lxc-start", "-n", name],
-        "stop":    ["lxc-stop",  "-n", name],
-        "restart": ["lxc-stop",  "-n", name],
-    }
-    if body.action not in cmds:
-        raise HTTPException(400, "Unknown action")
-    lxc(*cmds[body.action])
-    if body.action == "restart":
-        lxc("lxc-start", "-n", name)
-    await publish_event(name, body.action)
-    return {"env": name, "action": body.action}
-
-@app.get("/envs/{name}/snapshot")
-def snapshot_env(name: str, snapshot_name: str | None = None):
-    snap = snapshot_name or f"snap-{uuid.uuid4().hex[:6]}"
-    r = lxc("lxc-snapshot", "-n", name, "-c", snap)
-    if r.returncode != 0:
-        raise HTTPException(500, detail=r.stderr)
-    return {"env": name, "snapshot": snap}
-
-
-# ── WebSocket terminal ─────────────────────────────────────────────────────────
-#
-# ws://kennel.domain/envs/{name}/ws
-# Bidirectional: client sends stdin, server streams stdout+stderr
-#
-@app.websocket("/envs/{name}/ws")
-async def env_terminal(websocket: WebSocket, name: str):
-    # Validate secret in query param for WS (headers unreliable in browsers)
-    token = websocket.query_params.get("token", "")
-    if settings.kennel_secret and token != settings.kennel_secret:
-        await websocket.close(code=4001)
-        return
-
-    await websocket.accept()
-
-    proc = await asyncio.create_subprocess_exec(
-        "lxc-attach", "-n", name, "--",
-        "bash", "--login",
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,
-    )
-
-    async def read_output():
-        """Pump proc stdout → WebSocket."""
-        try:
-            while True:
-                chunk = await proc.stdout.read(4096)
-                if not chunk:
-                    break
-                await websocket.send_bytes(chunk)
-        except Exception:
-            pass
-        finally:
-            await websocket.close()
-
-    async def read_input():
-        """Pump WebSocket → proc stdin."""
-        try:
-            while True:
-                data = await websocket.receive_bytes()
-                proc.stdin.write(data)
-                await proc.stdin.drain()
-        except WebSocketDisconnect:
-            pass
-        finally:
-            proc.stdin.close()
-
-    await asyncio.gather(read_output(), read_input())
-    proc.kill()
-    await publish_event(name, "ws_disconnected")
-
-
-# ── Log stream WebSocket ───────────────────────────────────────────────────────
-#
-# ws://kennel.domain/envs/{name}/logs
-# Server-only stream of lxc-monitor output for this container
-#
-@app.websocket("/envs/{name}/logs")
-async def env_logs(websocket: WebSocket, name: str):
-    token = websocket.query_params.get("token", "")
-    if settings.kennel_secret and token != settings.kennel_secret:
-        await websocket.close(code=4001)
-        return
-
-    await websocket.accept()
-
-    proc = await asyncio.create_subprocess_exec(
-        "lxc-monitor", "--name", name,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,
-    )
-    try:
-        while True:
-            line = await proc.stdout.readline()
-            if not line:
-                break
-            await websocket.send_text(line.decode())
-    except WebSocketDisconnect:
-        pass
-    finally:
-        proc.kill()
-
-4. Backend client — ./backend/app/services/kennel_client.py
-pythonimport httpx
-from app.core.config import settings  # your existing settings
-
-KENNEL_BASE = "http://kennel:8090"
-KENNEL_HEADERS = {"x-kennel-secret": settings.KENNEL_SECRET}
-
-
-async def create_env(
-    name: str | None = None,
-    kind: str = "ephemeral",
-    base_snapshot: str | None = None,
-) -> dict:
-    async with httpx.AsyncClient() as client:
-        r = await client.post(
-            f"{KENNEL_BASE}/envs",
-            json={"name": name, "kind": kind, "base_snapshot": base_snapshot},
-            headers=KENNEL_HEADERS,
-            timeout=120,  # lxc-create can be slow first time
-        )
-        r.raise_for_status()
-        return r.json()
-
-
-async def destroy_env(name: str) -> dict:
-    async with httpx.AsyncClient() as client:
-        r = await client.delete(
-            f"{KENNEL_BASE}/envs/{name}",
-            headers=KENNEL_HEADERS,
-        )
-        r.raise_for_status()
-        return r.json()
-
-
-async def list_envs() -> list:
-    async with httpx.AsyncClient() as client:
-        r = await client.get(f"{KENNEL_BASE}/envs", headers=KENNEL_HEADERS)
-        r.raise_for_status()
-        return r.json()["envs"]
-
-
-def ws_terminal_url(env_name: str, external: bool = False) -> str:
-    """
-    Returns the WebSocket URL for terminal access.
-    external=True: URL for browser clients (goes through Traefik)
-    external=False: internal URL (for server-side proxying)
-    """
-    base = f"wss://kennel.{settings.DOMAIN}" if external else "ws://kennel:8090"
-    return f"{base}/envs/{env_name}/ws?token={settings.KENNEL_SECRET}"
-```
-
----
 
 ## Architecture Flow
-```
+
 Browser
   │
   │ wss://kennel.domain/envs/env-abc123/ws?token=...
@@ -935,53 +538,9 @@ dockerfile# At the end of the Dockerfile, before CMD
 RUN lxc-create -n base-noble -t ubuntu -- --release noble && \
     lxc-snapshot -n base-noble -c snap0 && \
     lxc-stop -n base-noble -k 2>/dev/null || true
-Then in your create requests you'd pass "base_snapshot": "base-noble/snap0" and creation goes from 3 minutes → 2-3 seconds.perfect.  we're seeing these: kennel-1  | mount: /sys/fs/cgroup/cpuset: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/cpu: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/cpuacct: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/blkio: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/memory: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/devices: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/freezer: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/net_cls: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/perf_event: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/net_prio: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/hugetlb: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/pids: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.
-kennel-1  | mount: /sys/fs/cgroup/rdma: permission denied.
-kennel-1  |        dmesg(1) may have more information after failed mount system call.Show more12:16 PMDiagnosed cgroupv1 incompatibility, prescribed removal of legacy mount commandsDiagnosed cgroupv1 incompatibility, prescribed removal of legacy mount commandsThis is a cgroupv2 vs cgroupv1 mismatch. Your host is running the unified cgroupv2 hierarchy, but cgroupfs-mount inside the container is trying to mount legacy v1 subsystem directories (cpuset, memory, etc.) that don't exist in that form on a v2 host. They're not just permission denied — they literally aren't there to mount.
-Three things to fix:
-1. Dockerfile CMD — drop cgroupfs-mount
-dockerfile# Before (wrong on cgroupv2 hosts):
-CMD ["/bin/bash", "-c", "cgroupfs-mount || true && .venv/bin/uvicorn server:app --host 0.0.0.0 --port 8090"]
+Then in your create requests you'd pass "base_snapshot": "base-noble/snap0" and creation goes from 3 minutes → 2-3 seconds.perfect. 
 
-# After:
-CMD [".venv/bin/uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8090"]
-Also remove cgroupfs-mount and libpam-cgfs from the apt-get install list — they're v1 tools and add noise.
-2. docker-compose.yml — fix the cgroup mount
-yaml# Before (ambiguous, causes v1 remount attempts):
-- /sys/fs/cgroup:/sys/fs/cgroup:rw
 
-# After (explicit cgroupv2 unified hierarchy):
-- /sys/fs/cgroup:/sys/fs/cgroup:rw
-Actually the mount path stays the same — but add this alongside it:
-yamlvolumes:
-  - /sys/fs/cgroup:/sys/fs/cgroup:rw
-tmpfs:
-  - /run
-  - /run/lock
-```
 
 The `tmpfs` mounts give LXC the runtime scratch space it needs without touching cgroup subsystems.
 
@@ -1007,27 +566,21 @@ docker compose exec kennel mount | grep cgroup
 # And NOT show: cpuset, memory, blkio etc as separate mounts
 
 # Confirm LXC sees cgroupv2
+
 docker compose exec kennel lxc-checkconfig 2>&1 | grep -i cgroup
-If lxc-checkconfig shows cgroup support as enabled after this, you're clear to retry the POST /envs call. The lxc-create download was working fine before — this cgroup noise was a separate issue that would have caused problems at container start time rather than creation time.we're working forward, and we've hit this: lxc-attach: env-3bba5384: ../src/lxc/attach.c: get_attach_context: 406 Connection refused - Failed to get init pid
-lxc-attach: env-3bba5384: ../src/lxc/attach.c: lxc_attach: 1470 Connection refused - Failed to get attach context12:45 PMDiagnosed container connectivity failure and planned troubleshooting approachDiagnosed container connectivity failure and planned troubleshooting approachThis means lxc-attach can't reach the container's init process via the LXC control socket — the container either didn't fully start, started then exited, or the monitor process isn't running. Let's triage.
-Step 1 — Check actual container state
-bashdocker compose exec kennel lxc-ls --fancy
-Look at the STATE column. The possibilities and what they mean:
-StateMeaningRUNNINGContainer is up but attach socket is broken — cgroup issueSTOPPEDContainer exited immediately after startFROZENSuspended — shouldn't happen here
-Step 2 — If STOPPED, check why it exited
-bashdocker compose exec kennel lxc-start -n env-3bba5384 -F
-# -F = foreground, shows console output directly
-This will show you exactly what the container's init process printed before dying. The most common causes at this stage:
 
-cgroup delegation not working (init can't set up its own cgroup subtree)
-missing /sbin/init in the rootfs
-networking setup failure on lxcbr0
+docker compose exec kennel lxc-ls --fancy
 
-Step 3 — Check the LXC log for that container
-bashdocker compose exec kennel cat /var/log/lxc/env-3bba5384.log
+
+
+docker compose exec kennel lxc-start -n env-3bba5384 -F
+
+
+docker compose exec kennel cat /var/log/lxc/env-3bba5384.log
+
 # or if that's empty:
-docker compose exec kennel lxc-start -n env-3bba5384 -l DEBUG -o /tmp/lxc-debug.log && \
-  cat /tmp/lxc-debug.log
+docker compose exec kennel lxc-start -n env-3bba5384 -l DEBUG -o /tmp/lxc-debug.log && cat /tmp/lxc-debug.log
+
 Step 4 — Check cgroup delegation specifically
 This is the most likely culprit given where you just came from with the cgroupv2 fixes:
 bashdocker compose exec kennel bash -c "
@@ -1077,24 +630,12 @@ echo 1 > /proc/sys/net/ipv4/ip_forward
 
 exec .venv/bin/uvicorn server:app --host 0.0.0.0 --port 8090
 
-Run steps 1 and 2 first and paste what you see — the lxc-start -F output in particular will pinpoint which of these is the actual blocker.josep@asimov:~/dog$ docker compose exec kennel lxc-start -n env-68f665f7 -F
-WARN[0000] The "CI" variable is not set. Defaulting to a blank string.
-lxc-start: env-68f665f7: ../src/lxc/tools/lxc_start.c: main: 266 No container config specified1:06 PMDiagnosed missing container config file and potential causesDiagnosed missing container config file and potential causesThat error means LXC can't find the container's config file at all — it knows the name but the directory is empty or missing. The container was registered in LXC's name list but the config was never written, which usually means a volume mount path issue during creation.
-Diagnose immediately
-bash# Does the container directory exist at all?
 docker compose exec kennel ls -la /var/lib/lxc/
 
 # Check if it's there but empty
 docker compose exec kennel ls -la /var/lib/lxc/env-68f665f7/
 
 
-The most likely result is either the directory is missing entirely, or it exists but has no config file inside it.
-
-
-Root cause — volume shadowing
-
-The problem is almost certainly this: your docker-compose.yml mounts kennel-containers:/var/lib/lxc as a named volume, but lxc-create may have written the rootfs to a different effective path depending on how the mount initialized.
-Check where the volume actually landed:
 bash# On the host — find where Docker put the named volume
 docker volume inspect dog_kennel-containers
 
@@ -1103,3 +644,4 @@ docker compose exec kennel mount | grep lxc
 see where lxc-create puts config:
 
 docker compose exec kennel find / -name "config" 2>/dev/null | grep lxc
+
