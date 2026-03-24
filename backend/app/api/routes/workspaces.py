@@ -23,7 +23,7 @@ async def create_workspace(
         current_user.id,
         workspace_in,
     )
-    return WorkspacePublic.model_validate(workspace)
+    return await workspace_service.to_workspace_public(session, workspace)
 
 
 @router.get("/", response_model=WorkspacesPublic)
@@ -36,7 +36,10 @@ async def list_workspaces(
     )
     workspaces = result.all()
     return WorkspacesPublic(
-        data=[WorkspacePublic.model_validate(workspace) for workspace in workspaces],
+        data=[
+            await workspace_service.to_workspace_public(session, workspace)
+            for workspace in workspaces
+        ],
         count=len(workspaces),
     )
 
@@ -50,7 +53,7 @@ async def get_workspace(
     workspace = await session.get(Workspace, workspace_id)
     if workspace is None or workspace.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    return WorkspacePublic.model_validate(workspace)
+    return await workspace_service.to_workspace_public(session, workspace)
 
 
 @router.get("/{workspace_id}/terminal")
@@ -84,6 +87,23 @@ async def stop_workspace(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
     await workspace_service.stop_workspace(session, workspace_id)
     return Message(message="Workspace stopped")
+
+
+@router.post("/{workspace_id}/start", response_model=Message)
+async def start_workspace(
+    *,
+    workspace_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> Any:
+    workspace = await session.get(Workspace, workspace_id)
+    if workspace is None or workspace.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    try:
+        await workspace_service.start_workspace(session, workspace_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return Message(message="Workspace started")
 
 
 @router.delete("/{workspace_id}", response_model=Message)

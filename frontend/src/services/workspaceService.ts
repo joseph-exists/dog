@@ -1,8 +1,12 @@
 import {
+  type WorkspaceAction,
   type WorkspaceCreate,
   type WorkspaceFlavour,
+  type WorkspaceProjectSummary,
   type WorkspacePublic,
   type WorkspaceStatus,
+  type WorkspaceTerminalStatus,
+  type WorkspaceVisibility,
   WorkspacesService,
 } from "@/client"
 
@@ -14,6 +18,12 @@ export interface WorkspaceListItemViewModel {
   status: WorkspaceStatus
   createdAt: Date
   updatedAt: Date
+  visibility: WorkspaceVisibility
+  projectId: string | null
+  projectSummary: WorkspaceProjectSummary | null
+  failureMessage: string | null
+  terminalStatus: WorkspaceTerminalStatus
+  allowedActions: WorkspaceAction[]
   hasTerminal: boolean
 }
 
@@ -24,10 +34,19 @@ export interface WorkspaceDetailViewModel extends WorkspaceListItemViewModel {
   wsToken: string | null
   meta: Record<string, unknown>
   terminalUrl: string | null
+  lastTransitionAt: Date | null
+  requestedAt: Date | null
+  startedAt: Date | null
+  readyAt: Date | null
+  stoppedAt: Date | null
+  destroyedAt: Date | null
   isProvisioning: boolean
+  isStarting: boolean
   isReady: boolean
+  isFailed: boolean
   canOpenTerminal: boolean
   canStop: boolean
+  canStart: boolean
   canDestroy: boolean
 }
 
@@ -48,8 +67,10 @@ export interface CreateWorkspaceInput {
 }
 
 function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetailViewModel {
-  const status = workspace.status ?? "provisioning"
+  const status = workspace.status ?? "requested"
   const terminalUrl = workspace.terminal_url ?? null
+  const allowedActions = workspace.allowed_actions ?? []
+  const terminalStatus = workspace.terminal_status ?? "unavailable"
 
   return {
     id: workspace.id,
@@ -61,16 +82,31 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
     kennelName: workspace.kennel_name ?? null,
     kennelJob: workspace.kennel_job ?? null,
     wsToken: workspace.ws_token ?? null,
+    failureMessage: workspace.failure_message ?? null,
+    lastTransitionAt: workspace.last_transition_at ? new Date(workspace.last_transition_at) : null,
+    requestedAt: workspace.requested_at ? new Date(workspace.requested_at) : null,
+    startedAt: workspace.started_at ? new Date(workspace.started_at) : null,
+    readyAt: workspace.ready_at ? new Date(workspace.ready_at) : null,
+    stoppedAt: workspace.stopped_at ? new Date(workspace.stopped_at) : null,
+    destroyedAt: workspace.destroyed_at ? new Date(workspace.destroyed_at) : null,
     meta: (workspace.meta ?? {}) as Record<string, unknown>,
+    visibility: workspace.visibility ?? "private",
+    projectId: workspace.project_id ?? null,
+    projectSummary: workspace.project_summary ?? null,
+    terminalStatus,
+    allowedActions,
     createdAt: new Date(workspace.created_at),
     updatedAt: new Date(workspace.updated_at),
     terminalUrl,
-    hasTerminal: status === "ready",
-    isProvisioning: status === "provisioning",
+    hasTerminal: terminalStatus === "available" || terminalStatus === "expired",
+    isProvisioning: status === "requested" || status === "provisioning",
+    isStarting: status === "starting",
     isReady: status === "ready",
-    canOpenTerminal: status === "ready",
-    canStop: status === "ready" || status === "provisioning",
-    canDestroy: status !== "destroyed",
+    isFailed: status === "failed",
+    canOpenTerminal: allowedActions.includes("request_terminal"),
+    canStop: allowedActions.includes("stop"),
+    canStart: allowedActions.includes("start"),
+    canDestroy: allowedActions.includes("destroy"),
   }
 }
 
@@ -84,6 +120,12 @@ function toWorkspaceListItemViewModel(workspace: WorkspacePublic): WorkspaceList
     status: detail.status,
     createdAt: detail.createdAt,
     updatedAt: detail.updatedAt,
+    visibility: detail.visibility,
+    projectId: detail.projectId,
+    projectSummary: detail.projectSummary,
+    failureMessage: detail.failureMessage,
+    terminalStatus: detail.terminalStatus,
+    allowedActions: detail.allowedActions,
     hasTerminal: detail.hasTerminal,
   }
 }
@@ -125,6 +167,10 @@ export const WorkspaceService = {
 
   async stopWorkspace(workspaceId: string): Promise<void> {
     await WorkspacesService.stopWorkspace({ workspaceId })
+  },
+
+  async startWorkspace(workspaceId: string): Promise<void> {
+    await WorkspacesService.startWorkspace({ workspaceId })
   },
 
   async destroyWorkspace(workspaceId: string): Promise<void> {

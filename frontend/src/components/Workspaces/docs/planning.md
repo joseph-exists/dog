@@ -500,5 +500,26 @@ Current artifact:
 - [workspace-domain-contract.md](/home/josep/dog/frontend/src/components/Workspaces/docs/workspace-domain-contract.md)
 - [domain-contract-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/domain-contract-implementation-roadmap.md)
 - [repo-bootstrap-contract.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-contract.md)
+- [repo-bootstrap-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-implementation-roadmap.md)
 - [project-workspace-relationship.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-workspace-relationship.md)
 - [room-workspace-connectivity.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-connectivity.md)
+
+Track 1 status:
+
+- Step 1 completed: backend workspace model and migration expanded for lifecycle truth
+- Step 2 completed: backend service lifecycle transitions now use the richer status model and failure semantics
+- Step 3 completed: backend routes now project the richer workspace contract and expose workspace start
+- Step 4 completed: frontend service and hook alignment now consume the richer contract
+- Step 5 completed: key list/detail/terminal surfaces now present the richer operational state
+
+Sequencing review:
+
+- the current sequencing still holds
+- Track 1 did what it needed to do: it made workspace lifecycle, actions, and projected project context explicit enough that subsequent work has a stable operational base
+- the main remaining ambiguity is no longer lifecycle truth; it is repo/bootstrap intent and readiness
+
+Recommended next move:
+
+- proceed to Track 2
+- keep Track 1 open only for targeted cleanup discovered while implementing repo/bootstrap semantics
+- begin Track 2 from the backend contract expansion and repo-source validation slice described in [repo-bootstrap-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-implementation-roadmap.md)

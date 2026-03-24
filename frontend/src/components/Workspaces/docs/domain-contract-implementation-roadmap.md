@@ -14,6 +14,31 @@ The current backend implementation is functional but too small for the next mile
 
 This roadmap intentionally focuses on the narrowest useful subset of the domain contract draft so we can improve truth at the source without accidentally pulling in all later tracks at once.
 
+## Current Implementation Status
+
+Completed so far:
+
+- Step 1: backend model expansion and migration
+- Step 2: backend service lifecycle truth in `workspace_service.py`
+- Step 3: backend route/API projection and `start` endpoint exposure
+- Step 4: frontend service and hook alignment
+- Step 5: panel and route presentation alignment
+
+What is now true in the backend service layer:
+
+- workspace creation begins at `requested`
+- provisioning transitions through `provisioning`
+- bootstrap/injection transitions through `starting`
+- successful completion reaches `ready`
+- provisioning, stop, restart, and destroy failures now resolve to `failed` with `failure_message`
+- destroy now transitions through `destroying` before `destroyed`
+- terminal eligibility is now aligned with backend-owned action semantics via `get_allowed_actions()`
+
+What is still pending for Track 1:
+
+- close-out documentation and sequencing review
+- optional UX refinement if we decide the current panel surface still hides important state
+
 ## Scope
 
 This pass should implement:
@@ -188,6 +213,12 @@ Important constraint:
 
 - do not implement repo/bootstrap expansion here beyond status correctness
 
+Status:
+
+- implemented
+- `start_workspace()` now exists in the service layer and uses kennel's restart action
+- route exposure for restart is still pending in Step 3
+
 ### Step 3: Workspace Projection Layer
 
 Teach workspace routes to return the richer projected contract.
@@ -213,6 +244,18 @@ Important constraint:
 - project projection should derive from `ProjectResource(resource_type="workspace")`
 - enforce near-term zero-or-one relationship rule in projection code
 
+Status:
+
+- implemented
+- create/list/detail now project:
+  - `allowed_actions`
+  - `visibility`
+  - `project_id`
+  - `project_summary`
+  - `terminal_status`
+- `POST /workspaces/{id}/start` now exists at the route layer
+- project linkage is projected from `ProjectResource(resource_type="workspace")`
+
 ### Step 4: Frontend Service And Hook Alignment
 
 Update frontend service and query logic to consume the new contract without continuing to infer old semantics.
@@ -235,6 +278,17 @@ Important constraint:
 
 - keep view models concise
 - do not pull in repo/bootstrap contract fields yet unless needed for compatibility
+
+Status:
+
+- implemented
+- frontend service and hooks now consume:
+  - expanded lifecycle states
+  - `allowed_actions`
+  - projected project context
+  - terminal status
+  - lifecycle timestamps
+- `useStartWorkspace()` now exists and is wired to the regenerated client
 
 ### Step 5: UI Surface Update
 
@@ -262,6 +316,18 @@ Important constraint:
 - keep layout stable
 - do not redesign the feature shell in this pass
 
+Status:
+
+- implemented
+- detail route now wires the new `start` mutation
+- status badge supports the expanded lifecycle
+- list/detail/terminal panels now surface:
+  - failure state
+  - project projection
+  - terminal availability
+  - current backend action surface
+- frontend typecheck passes against the regenerated client
+
 ### Step 6: Verification And Documentation
 
 Verify the backend/frontend contract and update planning docs to reflect reality.
@@ -280,6 +346,13 @@ Verification targets:
 - terminal request is denied when `request_terminal` is absent
 - list/detail surfaces render projected project context and failure state correctly
 - frontend typecheck passes
+
+Status:
+
+- partial completion
+- Python syntax checks passed for the backend files touched in this track
+- frontend `npm run typecheck` passes after the alignment work
+- route/API behavior still needs runtime verification in the app before this track should be considered fully closed
 
 ## File Touch List
 
@@ -327,3 +400,18 @@ Docs:
 4. frontend service/hook alignment
 5. panel and route updates
 6. verification and document updates
+
+## Sequencing Review
+
+The sequencing still holds.
+
+Why:
+
+- Track 1 successfully made workspace identity and lifecycle legible without dragging in Track 2 complexity prematurely
+- the API and UI now have a stable enough operational model to support repo/bootstrap work next
+- the remaining uncertainty is no longer “what is a workspace?” but “how should repo/bootstrap intent and readiness be expressed on top of that workspace?”
+
+Recommendation:
+
+- move into Track 2 next
+- keep Track 1 open only for targeted cleanup discovered while implementing repo/bootstrap semantics

@@ -10,7 +10,7 @@ import {
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useWorkspace } from "@/hooks/useWorkspace"
 import { useWorkspaceTerminal } from "@/hooks/useWorkspaceTerminal"
-import { useDestroyWorkspace, useStopWorkspace } from "@/hooks/useWorkspaces"
+import { useDestroyWorkspace, useStartWorkspace, useStopWorkspace } from "@/hooks/useWorkspaces"
 import { usePageThemes } from "@/hooks/useThemeBinding"
 import { useAvailableThemes, useUserThemeBindings } from "@/hooks/useThemeRegistry"
 
@@ -25,6 +25,7 @@ function WorkspaceDetailPage() {
   const { workspaceId } = Route.useParams()
   const workspaceQuery = useWorkspace(workspaceId)
   const terminalQuery = useWorkspaceTerminal(workspaceId, { enabled: false })
+  const startWorkspace = useStartWorkspace()
   const stopWorkspace = useStopWorkspace()
   const destroyWorkspace = useDestroyWorkspace()
 
@@ -93,8 +94,10 @@ function WorkspaceDetailPage() {
       render: () => (
         <WorkspaceControlsPanel
           workspace={workspace}
+          isStarting={startWorkspace.isPending}
           isStopping={stopWorkspace.isPending}
           isDestroying={destroyWorkspace.isPending}
+          onStart={() => startWorkspace.mutateAsync(workspace.id)}
           onStop={() => stopWorkspace.mutateAsync(workspace.id)}
           onDestroy={() => destroyWorkspace.mutateAsync(workspace.id)}
         />

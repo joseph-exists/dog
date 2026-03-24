@@ -29,6 +29,46 @@ Current weaknesses:
 - important operational intent is stored only in `meta`
 - terminal access exists, but broader connectivity is not yet modeled
 
+## Current Implementation Snapshot
+
+After the first implementation pass on backend models and service logic, the following parts of this draft are now partially real:
+
+- expanded lifecycle states exist in the backend model:
+  - `requested`
+  - `provisioning`
+  - `starting`
+  - `ready`
+  - `stopping`
+  - `stopped`
+  - `failed`
+  - `destroying`
+  - `destroyed`
+- persisted lifecycle fields now exist for:
+  - `failure_message`
+  - `last_transition_at`
+  - `requested_at`
+  - `started_at`
+  - `ready_at`
+  - `stopped_at`
+  - `destroyed_at`
+- backend service transitions in `workspace_service.py` now use the expanded lifecycle and no longer collapse provisioning failure into `destroyed`
+- backend service helpers now define:
+  - `get_allowed_actions(workspace)`
+  - `get_terminal_status(workspace)`
+- backend route responses now project:
+  - `allowed_actions`
+  - `visibility`
+  - `project_id`
+  - `project_summary`
+  - `terminal_status`
+- `POST /api/v1/workspaces/{workspace_id}/start` is now exposed
+- frontend service and main detail/list surfaces now consume the richer contract and render the new lifecycle and projection fields
+
+Still pending:
+
+- project projection currently assumes a near-term zero-or-one attachment model and will need a deliberate follow-up if that rule changes
+- runtime verification in the app is still needed before this first pass should be considered fully closed
+
 ## Design Goals
 
 The next workspace contract should make these things explicit:

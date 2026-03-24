@@ -28,11 +28,19 @@ export function WorkspaceTerminalPanel({
         <div className="space-y-3">
           <div className="rounded-xl border bg-muted/30 p-4 text-sm">
             Workspace status: <span className="font-medium">{workspace.status}</span>
+            <span className="mx-2 text-muted-foreground">·</span>
+            Terminal status: <span className="font-medium">{workspace.terminalStatus}</span>
           </div>
+
+          {workspace.failureMessage ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              {workspace.failureMessage}
+            </div>
+          ) : null}
 
           {!workspace.canOpenTerminal ? (
             <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              Terminal access becomes available once the workspace reaches `ready`.
+              Terminal access becomes available when the backend exposes the `request_terminal` action for this workspace.
             </div>
           ) : null}
 

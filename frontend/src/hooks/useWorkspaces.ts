@@ -89,6 +89,21 @@ export function useStopWorkspace() {
   })
 }
 
+export function useStartWorkspace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (workspaceId: string) => WorkspaceService.startWorkspace(workspaceId),
+    onSuccess: () => {
+      showSuccessToast("Workspace start requested.")
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err)
+    },
+  })
+}
+
 export function useDestroyWorkspace() {
   const queryClient = useQueryClient()
 

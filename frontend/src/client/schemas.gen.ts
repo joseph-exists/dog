@@ -10929,51 +10929,10 @@ export const RoomAgentSettingsBundleSchema = {
             },
             type: 'array',
             title: 'Agent Overrides'
-        },
-        participant_type: {
-            type: 'string',
-            enum: ['user', 'agent'],
-            title: 'Participant Type'
-        },
-        persona_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Persona Id'
-        },
-        model_name: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 100
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Model Name'
-        },
-        user_llm_provider_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'User Llm Provider Id'
         }
     },
     type: 'object',
-    required: ['room_defaults', 'agent_overrides', 'participant_type'],
+    required: ['room_defaults', 'agent_overrides'],
     title: 'RoomAgentSettingsBundle'
 } as const;
 
@@ -20731,6 +20690,13 @@ export const ValidationErrorSchema = {
     title: 'ValidationError'
 } as const;
 
+export const WorkspaceActionSchema = {
+    type: 'string',
+    enum: ['destroy', 'stop', 'start', 'request_terminal', 'discover_services'],
+    title: 'WorkspaceAction',
+    description: 'Backend-authoritative actions currently allowed for a workspace.'
+} as const;
+
 export const WorkspaceCreateSchema = {
     properties: {
         name: {
@@ -20794,6 +20760,24 @@ export const WorkspaceFlavourSchema = {
     description: 'Requested workspace image/profile.'
 } as const;
 
+export const WorkspaceProjectSummarySchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'WorkspaceProjectSummary',
+    description: 'Lightweight project projection for workspace responses.'
+} as const;
+
 export const WorkspacePublicSchema = {
     properties: {
         name: {
@@ -20815,7 +20799,7 @@ export const WorkspacePublicSchema = {
         },
         status: {
             '$ref': '#/components/schemas/WorkspaceStatus',
-            default: 'provisioning'
+            default: 'requested'
         },
         kennel_name: {
             anyOf: [
@@ -20853,6 +20837,82 @@ export const WorkspacePublicSchema = {
             ],
             title: 'Ws Token'
         },
+        failure_message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Failure Message'
+        },
+        last_transition_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Last Transition At'
+        },
+        requested_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Requested At'
+        },
+        started_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Started At'
+        },
+        ready_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ready At'
+        },
+        stopped_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Stopped At'
+        },
+        destroyed_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Destroyed At'
+        },
         meta: {
             anyOf: [
                 {
@@ -20874,6 +20934,43 @@ export const WorkspacePublicSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Owner Id'
+        },
+        allowed_actions: {
+            items: {
+                '$ref': '#/components/schemas/WorkspaceAction'
+            },
+            type: 'array',
+            title: 'Allowed Actions'
+        },
+        visibility: {
+            '$ref': '#/components/schemas/WorkspaceVisibility',
+            default: 'private'
+        },
+        project_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
+        project_summary: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceProjectSummary'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        terminal_status: {
+            '$ref': '#/components/schemas/WorkspaceTerminalStatus',
+            default: 'unavailable'
         },
         created_at: {
             type: 'string',
@@ -20905,9 +21002,23 @@ export const WorkspacePublicSchema = {
 
 export const WorkspaceStatusSchema = {
     type: 'string',
-    enum: ['provisioning', 'ready', 'stopping', 'stopped', 'destroyed'],
+    enum: ['requested', 'provisioning', 'starting', 'ready', 'stopping', 'stopped', 'failed', 'destroying', 'destroyed'],
     title: 'WorkspaceStatus',
     description: 'Lifecycle state for a kennel-backed workspace.'
+} as const;
+
+export const WorkspaceTerminalStatusSchema = {
+    type: 'string',
+    enum: ['unavailable', 'available', 'expired'],
+    title: 'WorkspaceTerminalStatus',
+    description: 'Projected terminal availability state for a workspace.'
+} as const;
+
+export const WorkspaceVisibilitySchema = {
+    type: 'string',
+    enum: ['private', 'project', 'shared'],
+    title: 'WorkspaceVisibility',
+    description: 'Projected visibility state for a workspace.'
 } as const;
 
 export const WorkspacesPublicSchema = {

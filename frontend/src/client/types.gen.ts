@@ -2859,10 +2859,6 @@ export type ResolvedUserPageAudiencePublic = {
 export type RoomAgentSettingsBundle = {
     room_defaults: (RoomAgentSettingsPublic | null);
     agent_overrides: Array<RoomAgentSettingsPublic>;
-    participant_type: 'user' | 'agent';
-    persona_id?: (string | null);
-    model_name?: (string | null);
-    user_llm_provider_id?: (string | null);
 };
 
 export type RoomAgentSettingsPublic = {
@@ -5528,6 +5524,11 @@ export type ValidationError = {
 };
 
 /**
+ * Backend-authoritative actions currently allowed for a workspace.
+ */
+export type WorkspaceAction = 'destroy' | 'stop' | 'start' | 'request_terminal' | 'discover_services';
+
+/**
  * Request model for provisioning a workspace.
  */
 export type WorkspaceCreate = {
@@ -5547,6 +5548,14 @@ export type WorkspaceCreate = {
 export type WorkspaceFlavour = 'base' | 'dev' | 'python' | 'node' | 'jupyter';
 
 /**
+ * Lightweight project projection for workspace responses.
+ */
+export type WorkspaceProjectSummary = {
+    id: string;
+    name: string;
+};
+
+/**
  * Public API response model for a workspace.
  */
 export type WorkspacePublic = {
@@ -5557,11 +5566,23 @@ export type WorkspacePublic = {
     kennel_name?: (string | null);
     kennel_job?: (string | null);
     ws_token?: (string | null);
+    failure_message?: (string | null);
+    last_transition_at?: string;
+    requested_at?: (string | null);
+    started_at?: (string | null);
+    ready_at?: (string | null);
+    stopped_at?: (string | null);
+    destroyed_at?: (string | null);
     meta?: ({
     [key: string]: unknown;
 } | null);
     id: string;
     owner_id: string;
+    allowed_actions?: Array<WorkspaceAction>;
+    visibility?: WorkspaceVisibility;
+    project_id?: (string | null);
+    project_summary?: (WorkspaceProjectSummary | null);
+    terminal_status?: WorkspaceTerminalStatus;
     created_at: string;
     updated_at: string;
     terminal_url?: (string | null);
@@ -5578,7 +5599,17 @@ export type WorkspacesPublic = {
 /**
  * Lifecycle state for a kennel-backed workspace.
  */
-export type WorkspaceStatus = 'provisioning' | 'ready' | 'stopping' | 'stopped' | 'destroyed';
+export type WorkspaceStatus = 'requested' | 'provisioning' | 'starting' | 'ready' | 'stopping' | 'stopped' | 'failed' | 'destroying' | 'destroyed';
+
+/**
+ * Projected terminal availability state for a workspace.
+ */
+export type WorkspaceTerminalStatus = 'unavailable' | 'available' | 'expired';
+
+/**
+ * Projected visibility state for a workspace.
+ */
+export type WorkspaceVisibility = 'private' | 'project' | 'shared';
 
 export type AccessGetMyEffectiveResourceRoleData = {
     resourceId: string;
@@ -7707,3 +7738,9 @@ export type WorkspacesStopWorkspaceData = {
 };
 
 export type WorkspacesStopWorkspaceResponse = (Message);
+
+export type WorkspacesStartWorkspaceData = {
+    workspaceId: string;
+};
+
+export type WorkspacesStartWorkspaceResponse = (Message);

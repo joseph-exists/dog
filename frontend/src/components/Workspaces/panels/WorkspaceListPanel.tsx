@@ -64,18 +64,31 @@ export function WorkspaceListPanel({
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium">{workspace.name}</div>
                     <WorkspaceStatusBadge status={workspace.status} />
+                    {workspace.projectSummary ? (
+                      <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">
+                        Project: {workspace.projectSummary.name}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {workspace.flavour} · {workspace.kind} · updated{" "}
                     {workspace.updatedAt.toLocaleString()}
                   </div>
+                  <div className="text-sm text-muted-foreground">
+                    Visibility: {workspace.visibility} · Terminal: {workspace.terminalStatus}
+                  </div>
+                  {workspace.failureMessage ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                      {workspace.failureMessage}
+                    </div>
+                  ) : null}
                 </div>
                 <Button asChild variant="outline" size="sm" className="w-fit">
                   <Link
                     to="/workspace/$workspaceId"
                     params={{ workspaceId: workspace.id }}
                   >
-                    Open
+                    Open Details
                     <ArrowUpRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
