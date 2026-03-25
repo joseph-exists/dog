@@ -504,6 +504,7 @@ Current artifact:
 - [agent-service-runtime-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/agent-service-runtime-roadmap.md)
 - [service-readiness-discovery-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/service-readiness-discovery-roadmap.md)
 - [project-workspace-relationship.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-workspace-relationship.md)
+- [project-management-access-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-management-access-roadmap.md)
 - [room-workspace-connectivity.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-connectivity.md)
 
 Track 1 status:
@@ -591,11 +592,19 @@ Track 3 status:
 - backend now enforces the near-term zero-or-one project rule for workspace attachment
 - workspace detail now exposes attach/detach through the canonical project-resource path rather than inventing a second mechanism
 - project/workspace relationship is therefore no longer only architectural intent; it is now becoming a real product affordance
+- Track 3 Step 1 is now complete:
+  - workspace list/detail visibility is no longer owner-only
+  - project-attached workspaces can now be retrieved through the shared access-control path when the current user has project viewer access or higher
+- Track 3 Step 2 is now complete:
+  - backend `allowed_actions` is now actor-aware
+  - project-derived viewers can receive use-oriented actions such as terminal and service discovery
+  - destructive runtime operations remain owner-anchored in this slice
 
 Current next pending step:
 
-- continue Track 3 by tightening project-aware workspace access and management semantics, or
-- deepen the first Track 4 descriptor slice now that the preferred shared-project authorization path is materially real
+- continue Track 3 through Step 3 in [project-management-access-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-management-access-roadmap.md):
+  - frontend service alignment for shared-workspace access semantics
+- after that pass, reassess whether the next best move is remaining Track 3 management work or a return to richer Track 4 descriptor behavior
 
 Track 4 status:
 

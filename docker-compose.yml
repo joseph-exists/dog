@@ -45,6 +45,8 @@ services:
     networks:
       - traefik-public
       - default
+    ports:
+      - "8090:8090"
     depends_on:
       redis:
         condition: service_healthy
@@ -202,7 +204,7 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - KENNEL_BASE_URL=http://kennel:8090
       - KENNEL_WS_BASE_URL=ws://kennel:8090
-      - KENNEL_EXTERNAL_WS_BASE_URL=ws://kennel.${DOMAIN?Variable not set}
+      - KENNEL_EXTERNAL_WS_BASE_URL=${KENNEL_EXTERNAL_WS_BASE_URL:-ws://localhost:8090}
       - SENTRY_DSN=${SENTRY_DSN}
       - SHADOW_REPOS_PATH=/tmp/shadows
       - SHADOW_REPO_URL_TEMPLATE=${SHADOW_REPO_URL_TEMPLATE:-}

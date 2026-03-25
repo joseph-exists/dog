@@ -23,7 +23,10 @@ from app.models import (
     WorkspaceServiceStatus,
     WorkspaceStatus,
 )
-from app.services.workspace_service import get_allowed_actions, get_workspace_service_summaries
+from app.services.workspace_service import (
+    get_lifecycle_allowed_actions,
+    get_workspace_service_summaries,
+)
 
 
 async def _get_project_ids_for_resource(
@@ -98,7 +101,7 @@ async def build_room_workspace_connection_descriptor(
             reason=f"Workspace is not connectable in state '{workspace.status.value}'.",
         )
 
-    allowed_actions = get_allowed_actions(workspace)
+    allowed_actions = get_lifecycle_allowed_actions(workspace)
     if WorkspaceAction.discover_services not in allowed_actions:
         return RoomWorkspaceConnectionDescriptor(
             room_id=room.room_id,

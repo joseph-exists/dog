@@ -35,6 +35,7 @@ from app.models import (
     User,
     UserGroupMembership,
     UserPersona,
+    Workspace,
 )
 
 
@@ -56,6 +57,7 @@ _RESOURCE_REGISTRY: dict[str, ResourceSpec] = {
     "demo_session": ResourceSpec(model=DemoSession, owner_attr="user_id"),
     "project": ResourceSpec(model=Project, owner_attr="owner_id"),
     "page": ResourceSpec(model=Page, owner_attr="owner_id"),
+    "workspace": ResourceSpec(model=Workspace, owner_attr="owner_id"),
 }
 
 

@@ -12,8 +12,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import async_session_maker
 from app.models import (
+    AccessGrantRole,
     Project,
     ProjectResource,
+    User,
     UserRepo,
     UserRepoImportStatus,
     Workspace,
@@ -43,6 +45,7 @@ from app.models import (
     WorkspaceVisibility,
 )
 from app.services import kennel_client
+from app.services.access_control import get_effective_role, has_access
 from app.services.workspace_bootstrap_service import (
     WorkspaceBootstrapPlan,
     WorkspaceBootstrapValidationError,
@@ -360,7 +363,7 @@ async def _update_workspace(
         await session.commit()
 
 
-def get_allowed_actions(workspace: Workspace) -> list[WorkspaceAction]:
+def get_lifecycle_allowed_actions(workspace: Workspace) -> list[WorkspaceAction]:
     if workspace.status in {
         WorkspaceStatus.requested,
         WorkspaceStatus.provisioning,
@@ -383,8 +386,37 @@ def get_allowed_actions(workspace: Workspace) -> list[WorkspaceAction]:
     return []
 
 
+async def get_allowed_actions_for_user(
+    db: AsyncSession,
+    *,
+    workspace: Workspace,
+    user: User,
+) -> list[WorkspaceAction]:
+    lifecycle_actions = get_lifecycle_allowed_actions(workspace)
+    if not lifecycle_actions:
+        return []
+
+    if user.is_superuser or workspace.owner_id == user.id:
+        return lifecycle_actions
+
+    role = await get_effective_role(
+        db,
+        user=user,
+        resource_type="workspace",
+        resource_id=workspace.id,
+    )
+    if role is None:
+        return []
+
+    use_actions = {
+        WorkspaceAction.request_terminal,
+        WorkspaceAction.discover_services,
+    }
+    return [action for action in lifecycle_actions if action in use_actions]
+
+
 def get_terminal_status(workspace: Workspace) -> WorkspaceTerminalStatus:
-    if WorkspaceAction.request_terminal not in get_allowed_actions(workspace):
+    if WorkspaceAction.request_terminal not in get_lifecycle_allowed_actions(workspace):
         return WorkspaceTerminalStatus.unavailable
     if workspace.ws_token:
         return WorkspaceTerminalStatus.expired
@@ -531,6 +563,56 @@ async def get_workspace_project_summary(
     if project is None:
         return None
     return WorkspaceProjectSummary(id=project.id, name=project.name)
+
+
+async def user_can_view_workspace(
+    db: AsyncSession,
+    *,
+    workspace: Workspace,
+    user: User,
+) -> bool:
+    if user.is_superuser or workspace.owner_id == user.id:
+        return True
+
+    return await has_access(
+        db,
+        user=user,
+        resource_type="workspace",
+        resource_id=workspace.id,
+        minimum_role=AccessGrantRole.viewer,
+    )
+
+
+async def get_workspace_for_user(
+    db: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    user: User,
+) -> Workspace | None:
+    workspace = await db.get(Workspace, workspace_id)
+    if workspace is None:
+        return None
+
+    if await user_can_view_workspace(db, workspace=workspace, user=user):
+        return workspace
+
+    return None
+
+
+async def list_workspaces_visible_to_user(
+    db: AsyncSession,
+    *,
+    user: User,
+) -> list[Workspace]:
+    stmt = select(Workspace).order_by(Workspace.created_at.desc())
+    workspaces = list((await db.exec(stmt)).all())
+
+    visible: list[Workspace] = []
+    for workspace in workspaces:
+        if await user_can_view_workspace(db, workspace=workspace, user=user):
+            visible.append(workspace)
+
+    return visible
 
 
 def _service_kind_from_value(value: str | None) -> WorkspaceServiceKind:
@@ -727,6 +809,8 @@ async def get_flavour_health_snapshot(flavour: str) -> FlavourHealthSnapshot | N
 async def to_workspace_public(
     db: AsyncSession,
     workspace: Workspace,
+    *,
+    user: User | None = None,
 ) -> WorkspacePublic:
     project_summary = await get_workspace_project_summary(db, workspace.id)
     services = await get_workspace_service_summaries(workspace)
@@ -742,6 +826,11 @@ async def to_workspace_public(
         bootstrap_progress_data = workspace.meta.get("bootstrap_progress")
         if isinstance(bootstrap_progress_data, dict):
             bootstrap_progress = WorkspaceBootstrapProgress.model_validate(bootstrap_progress_data)
+    allowed_actions = (
+        await get_allowed_actions_for_user(db, workspace=workspace, user=user)
+        if user is not None
+        else get_lifecycle_allowed_actions(workspace)
+    )
     return WorkspacePublic.model_validate(
         workspace,
         update={
@@ -778,7 +867,7 @@ async def to_workspace_public(
                 latest_rebuild_status=flavour_health.latest_rebuild_status,
                 latest_rebuild_job_id=flavour_health.latest_rebuild_job_id,
             ) if flavour_health is not None else None,
-            "allowed_actions": get_allowed_actions(workspace),
+            "allowed_actions": allowed_actions,
             "visibility": (
                 WorkspaceVisibility.project
                 if project_summary is not None
@@ -794,16 +883,28 @@ async def to_workspace_public(
 async def get_terminal_url(
     db: AsyncSession,
     ws_id: uuid.UUID,
-    owner_id: uuid.UUID,
+    user: User,
 ) -> str:
     """
-    Return the terminal websocket URL for a ready workspace owned by the user.
+    Return the terminal websocket URL for a visible workspace the user may use.
     """
-    workspace = await db.get(Workspace, ws_id)
-    if workspace is None or workspace.owner_id != owner_id:
+    workspace = await get_workspace_for_user(
+        db,
+        workspace_id=ws_id,
+        user=user,
+    )
+    if workspace is None:
         raise ValueError("Workspace not found")
-    if WorkspaceAction.request_terminal not in get_allowed_actions(workspace):
+    lifecycle_actions = get_lifecycle_allowed_actions(workspace)
+    if WorkspaceAction.request_terminal not in lifecycle_actions:
         raise ValueError(f"Workspace not ready: {workspace.status}")
+    allowed_actions = await get_allowed_actions_for_user(
+        db,
+        workspace=workspace,
+        user=user,
+    )
+    if WorkspaceAction.request_terminal not in allowed_actions:
+        raise PermissionError("Workspace terminal is not allowed")
     if not workspace.kennel_name:
         raise ValueError("Workspace terminal is not available")
 
