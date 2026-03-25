@@ -26,6 +26,7 @@ import {
   SoloStoryPlayerPanel,
   StoryEditorPanel,
   StoryPanel,
+  WorkspaceConnectionsPanel,
 } from "@/components/Room"
 import { PanelContainer } from "@/components/Room/primitives"
 import RoomDebugPanel from "@/components/Room/panels/RoomDebugPanel"
@@ -786,6 +787,14 @@ function RoomView() {
       },
     )
   }
+
+  panels.push({
+    id: "workspace-links",
+    kind: "workspaceConnections",
+    prominence: "auxiliary",
+    title: "Workspace Links",
+    render: () => <WorkspaceConnectionsPanel roomId={roomId} />,
+  })
 
   return (
     <div className="h-[calc(100vh-8rem)] flex">

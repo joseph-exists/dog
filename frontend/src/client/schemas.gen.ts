@@ -12031,6 +12031,160 @@ export const RoomUpdateSchema = {
     description: 'Properties that can be updated via API.'
 } as const;
 
+export const RoomWorkspaceConnectionCapabilitySchema = {
+    type: 'string',
+    enum: ['terminal_view', 'service_connect', 'agent_runtime_connect'],
+    title: 'RoomWorkspaceConnectionCapability',
+    description: 'Capability scopes that may be granted on a room/workspace connection.'
+} as const;
+
+export const RoomWorkspaceConnectionDescriptorSchema = {
+    properties: {
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        purpose: {
+            '$ref': '#/components/schemas/RoomWorkspaceConnectionPurpose'
+        },
+        status: {
+            '$ref': '#/components/schemas/RoomWorkspaceConnectionStatus'
+        },
+        reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        capabilities: {
+            items: {
+                '$ref': '#/components/schemas/RoomWorkspaceConnectionCapability'
+            },
+            type: 'array',
+            title: 'Capabilities'
+        },
+        endpoints: {
+            items: {
+                '$ref': '#/components/schemas/RoomWorkspaceEndpointDescriptor'
+            },
+            type: 'array',
+            title: 'Endpoints'
+        }
+    },
+    type: 'object',
+    required: ['room_id', 'workspace_id', 'purpose', 'status'],
+    title: 'RoomWorkspaceConnectionDescriptor',
+    description: 'Backend-issued room/workspace connectivity descriptor.'
+} as const;
+
+export const RoomWorkspaceConnectionPurposeSchema = {
+    type: 'string',
+    enum: ['service_connect', 'agent_runtime_connect'],
+    title: 'RoomWorkspaceConnectionPurpose',
+    description: 'Requested purpose for a room/workspace connection descriptor.'
+} as const;
+
+export const RoomWorkspaceConnectionRequestSchema = {
+    properties: {
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        purpose: {
+            '$ref': '#/components/schemas/RoomWorkspaceConnectionPurpose',
+            default: 'service_connect'
+        }
+    },
+    type: 'object',
+    required: ['workspace_id'],
+    title: 'RoomWorkspaceConnectionRequest',
+    description: 'Request model for a room/workspace connectivity descriptor.'
+} as const;
+
+export const RoomWorkspaceConnectionStatusSchema = {
+    type: 'string',
+    enum: ['available', 'pending', 'denied'],
+    title: 'RoomWorkspaceConnectionStatus',
+    description: 'Availability state for a room/workspace connection descriptor.'
+} as const;
+
+export const RoomWorkspaceEndpointAuthModeSchema = {
+    type: 'string',
+    enum: ['token', 'session', 'none'],
+    title: 'RoomWorkspaceEndpointAuthMode',
+    description: 'Authentication mode expected by a connection endpoint.'
+} as const;
+
+export const RoomWorkspaceEndpointDescriptorSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        kind: {
+            '$ref': '#/components/schemas/RoomWorkspaceEndpointKind'
+        },
+        label: {
+            type: 'string',
+            title: 'Label'
+        },
+        protocol: {
+            type: 'string',
+            title: 'Protocol'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        auth_mode: {
+            '$ref': '#/components/schemas/RoomWorkspaceEndpointAuthMode',
+            default: 'none'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'kind', 'label', 'protocol'],
+    title: 'RoomWorkspaceEndpointDescriptor',
+    description: 'Endpoint descriptor issued for room/workspace connectivity.'
+} as const;
+
+export const RoomWorkspaceEndpointKindSchema = {
+    type: 'string',
+    enum: ['service', 'terminal', 'agent-runtime'],
+    title: 'RoomWorkspaceEndpointKind',
+    description: 'Kinds of endpoints carried by a room/workspace descriptor.'
+} as const;
+
 export const RoomsPublicSchema = {
     properties: {
         data: {
@@ -20697,6 +20851,259 @@ export const WorkspaceActionSchema = {
     description: 'Backend-authoritative actions currently allowed for a workspace.'
 } as const;
 
+export const WorkspaceBootstrapIntentSchema = {
+    properties: {
+        repo_source: {
+            anyOf: [
+                {
+                    oneOf: [
+                        {
+                            '$ref': '#/components/schemas/WorkspaceExternalUrlRepoSource'
+                        },
+                        {
+                            '$ref': '#/components/schemas/WorkspaceUserRepoSource'
+                        },
+                        {
+                            '$ref': '#/components/schemas/WorkspaceShadowRepoSource'
+                        }
+                    ],
+                    discriminator: {
+                        propertyName: 'type',
+                        mapping: {
+                            external_url: '#/components/schemas/WorkspaceExternalUrlRepoSource',
+                            shadow_repo: '#/components/schemas/WorkspaceShadowRepoSource',
+                            user_repo: '#/components/schemas/WorkspaceUserRepoSource'
+                        }
+                    }
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Repo Source'
+        },
+        workspace_path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Workspace Path'
+        },
+        install_intent: {
+            anyOf: [
+                {
+                    oneOf: [
+                        {
+                            '$ref': '#/components/schemas/WorkspaceInstallIntentNone'
+                        },
+                        {
+                            '$ref': '#/components/schemas/WorkspaceInstallIntentAuto'
+                        },
+                        {
+                            '$ref': '#/components/schemas/WorkspaceInstallIntentProfile'
+                        }
+                    ],
+                    discriminator: {
+                        propertyName: 'mode',
+                        mapping: {
+                            auto: '#/components/schemas/WorkspaceInstallIntentAuto',
+                            none: '#/components/schemas/WorkspaceInstallIntentNone',
+                            profile: '#/components/schemas/WorkspaceInstallIntentProfile'
+                        }
+                    }
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Install Intent'
+        },
+        startup_intent: {
+            anyOf: [
+                {
+                    oneOf: [
+                        {
+                            '$ref': '#/components/schemas/WorkspaceStartupIntentTerminalOnly'
+                        },
+                        {
+                            '$ref': '#/components/schemas/WorkspaceStartupIntentProfile'
+                        },
+                        {
+                            '$ref': '#/components/schemas/WorkspaceStartupIntentAgentService'
+                        }
+                    ],
+                    discriminator: {
+                        propertyName: 'mode',
+                        mapping: {
+                            agent_service: '#/components/schemas/WorkspaceStartupIntentAgentService',
+                            profile: '#/components/schemas/WorkspaceStartupIntentProfile',
+                            terminal_only: '#/components/schemas/WorkspaceStartupIntentTerminalOnly'
+                        }
+                    }
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Startup Intent'
+        },
+        env_vars: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Env Vars'
+        },
+        ssh_pubkey: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ssh Pubkey'
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceBootstrapIntent',
+    description: 'User-declared bootstrap intent submitted at workspace creation time.'
+} as const;
+
+export const WorkspaceBootstrapPhaseSchema = {
+    type: 'string',
+    enum: ['pending', 'resolving_source', 'materializing_repo', 'installing_dependencies', 'starting_services', 'running_readiness_checks', 'complete', 'failed'],
+    title: 'WorkspaceBootstrapPhase',
+    description: 'Coarse-grained bootstrap progress phases.'
+} as const;
+
+export const WorkspaceBootstrapProgressSchema = {
+    properties: {
+        phase: {
+            '$ref': '#/components/schemas/WorkspaceBootstrapPhase',
+            default: 'pending'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        step_count: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Step Count'
+        },
+        completed_steps: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Completed Steps'
+        },
+        failure_message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Failure Message'
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceBootstrapProgress',
+    description: 'Backend-owned projection of current bootstrap progress.'
+} as const;
+
+export const WorkspaceBootstrapStateSchema = {
+    properties: {
+        intent: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceBootstrapIntent'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        progress: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceBootstrapProgress'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceBootstrapState',
+    description: 'Combined bootstrap intent and progress for workspace responses.'
+} as const;
+
+export const WorkspaceConnectivitySummarySchema = {
+    properties: {
+        terminal_ready: {
+            type: 'boolean',
+            title: 'Terminal Ready',
+            default: false
+        },
+        bootstrap_complete: {
+            type: 'boolean',
+            title: 'Bootstrap Complete',
+            default: false
+        },
+        services_ready: {
+            type: 'boolean',
+            title: 'Services Ready',
+            default: false
+        },
+        service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Service Count',
+            default: 0
+        },
+        ready_service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Ready Service Count',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceConnectivitySummary',
+    description: 'Purpose-oriented workspace connectivity summary for runtime consumers.'
+} as const;
+
 export const WorkspaceCreateSchema = {
     properties: {
         name: {
@@ -20715,6 +21122,16 @@ export const WorkspaceCreateSchema = {
             minLength: 1,
             title: 'Kind',
             default: 'ephemeral'
+        },
+        bootstrap: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceBootstrapIntent'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         repo_url: {
             anyOf: [
@@ -20753,11 +21170,137 @@ export const WorkspaceCreateSchema = {
     description: 'Request model for provisioning a workspace.'
 } as const;
 
+export const WorkspaceExternalUrlRepoSourceSchema = {
+    properties: {
+        type: {
+            type: 'string',
+            const: 'external_url',
+            title: 'Type',
+            default: 'external_url'
+        },
+        repo_url: {
+            type: 'string',
+            maxLength: 2000,
+            minLength: 1,
+            title: 'Repo Url'
+        },
+        ref: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ref'
+        }
+    },
+    type: 'object',
+    required: ['repo_url'],
+    title: 'WorkspaceExternalUrlRepoSource',
+    description: 'Bootstrap source pointing at an external git URL.'
+} as const;
+
 export const WorkspaceFlavourSchema = {
     type: 'string',
     enum: ['base', 'dev', 'python', 'node', 'jupyter'],
     title: 'WorkspaceFlavour',
     description: 'Requested workspace image/profile.'
+} as const;
+
+export const WorkspaceFlavourHealthSummarySchema = {
+    properties: {
+        flavour: {
+            type: 'string',
+            maxLength: 120,
+            minLength: 1,
+            title: 'Flavour'
+        },
+        snapshot_ready: {
+            type: 'boolean',
+            title: 'Snapshot Ready',
+            default: false
+        },
+        latest_rebuild_status: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 50
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Rebuild Status'
+        },
+        latest_rebuild_job_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Rebuild Job Id'
+        }
+    },
+    type: 'object',
+    required: ['flavour'],
+    title: 'WorkspaceFlavourHealthSummary',
+    description: 'Operator-oriented flavour health projection for workspace detail views.'
+} as const;
+
+export const WorkspaceInstallIntentAutoSchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            const: 'auto',
+            title: 'Mode',
+            default: 'auto'
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceInstallIntentAuto',
+    description: 'Bootstrap intent meaning backend-controlled auto install behavior.'
+} as const;
+
+export const WorkspaceInstallIntentNoneSchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            const: 'none',
+            title: 'Mode',
+            default: 'none'
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceInstallIntentNone',
+    description: 'Bootstrap intent meaning no install step should run.'
+} as const;
+
+export const WorkspaceInstallIntentProfileSchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            const: 'profile',
+            title: 'Mode',
+            default: 'profile'
+        },
+        profile: {
+            type: 'string',
+            maxLength: 120,
+            minLength: 1,
+            title: 'Profile'
+        }
+    },
+    type: 'object',
+    required: ['profile'],
+    title: 'WorkspaceInstallIntentProfile',
+    description: 'Bootstrap intent meaning a named backend-defined install profile.'
 } as const;
 
 export const WorkspaceProjectSummarySchema = {
@@ -20935,6 +21478,53 @@ export const WorkspacePublicSchema = {
             format: 'uuid',
             title: 'Owner Id'
         },
+        bootstrap: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceBootstrapState'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        readiness_summary: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceReadinessSummary'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        connectivity_summary: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceConnectivitySummary'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        services: {
+            items: {
+                '$ref': '#/components/schemas/WorkspaceServiceSummary'
+            },
+            type: 'array',
+            title: 'Services'
+        },
+        flavour_health: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceFlavourHealthSummary'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         allowed_actions: {
             items: {
                 '$ref': '#/components/schemas/WorkspaceAction'
@@ -21000,6 +21590,260 @@ export const WorkspacePublicSchema = {
     description: 'Public API response model for a workspace.'
 } as const;
 
+export const WorkspaceReadinessSummarySchema = {
+    properties: {
+        terminal_ready: {
+            type: 'boolean',
+            title: 'Terminal Ready',
+            default: false
+        },
+        bootstrap_complete: {
+            type: 'boolean',
+            title: 'Bootstrap Complete',
+            default: false
+        },
+        services_ready: {
+            type: 'boolean',
+            title: 'Services Ready',
+            default: false
+        },
+        service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Service Count',
+            default: 0
+        },
+        ready_service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Ready Service Count',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceReadinessSummary',
+    description: 'High-level readiness signals for clients that need more than status.'
+} as const;
+
+export const WorkspaceServiceKindSchema = {
+    type: 'string',
+    enum: ['web_app', 'agent_runtime', 'jupyter', 'custom'],
+    title: 'WorkspaceServiceKind',
+    description: 'Canonical kinds of discoverable workspace services.'
+} as const;
+
+export const WorkspaceServiceProtocolSchema = {
+    type: 'string',
+    enum: ['http', 'https', 'ws', 'wss'],
+    title: 'WorkspaceServiceProtocol',
+    description: 'Transport protocol for a discovered workspace service endpoint.'
+} as const;
+
+export const WorkspaceServiceSourceSchema = {
+    type: 'string',
+    enum: ['bootstrap_profile', 'runtime_probe', 'operator_declared'],
+    title: 'WorkspaceServiceSource',
+    description: 'Source of truth for a discovered workspace service descriptor.'
+} as const;
+
+export const WorkspaceServiceStatusSchema = {
+    type: 'string',
+    enum: ['pending', 'ready', 'failed', 'unknown'],
+    title: 'WorkspaceServiceStatus',
+    description: 'Backend-issued readiness state for a discovered workspace service.'
+} as const;
+
+export const WorkspaceServiceSummarySchema = {
+    properties: {
+        id: {
+            type: 'string',
+            maxLength: 120,
+            minLength: 1,
+            title: 'Id'
+        },
+        kind: {
+            '$ref': '#/components/schemas/WorkspaceServiceKind'
+        },
+        label: {
+            type: 'string',
+            maxLength: 200,
+            minLength: 1,
+            title: 'Label'
+        },
+        status: {
+            '$ref': '#/components/schemas/WorkspaceServiceStatus',
+            default: 'unknown'
+        },
+        protocol: {
+            '$ref': '#/components/schemas/WorkspaceServiceProtocol',
+            default: 'http'
+        },
+        host: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Host'
+        },
+        port: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 65535,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Port'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        source: {
+            '$ref': '#/components/schemas/WorkspaceServiceSource',
+            default: 'bootstrap_profile'
+        },
+        readiness_message: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Readiness Message'
+        }
+    },
+    type: 'object',
+    required: ['id', 'kind', 'label'],
+    title: 'WorkspaceServiceSummary',
+    description: 'Discovered service descriptor projected on a workspace response.'
+} as const;
+
+export const WorkspaceShadowRepoSourceSchema = {
+    properties: {
+        type: {
+            type: 'string',
+            const: 'shadow_repo',
+            title: 'Type',
+            default: 'shadow_repo'
+        },
+        entity_type: {
+            type: 'string',
+            maxLength: 50,
+            minLength: 1,
+            title: 'Entity Type'
+        },
+        entity_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Entity Id'
+        },
+        ref: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ref'
+        }
+    },
+    type: 'object',
+    required: ['entity_type', 'entity_id'],
+    title: 'WorkspaceShadowRepoSource',
+    description: 'Bootstrap source pointing at a shadow repo attached to another entity.'
+} as const;
+
+export const WorkspaceStartupIntentAgentServiceSchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            const: 'agent_service',
+            title: 'Mode',
+            default: 'agent_service'
+        },
+        agent_profile: {
+            type: 'string',
+            maxLength: 120,
+            minLength: 1,
+            title: 'Agent Profile'
+        }
+    },
+    type: 'object',
+    required: ['agent_profile'],
+    title: 'WorkspaceStartupIntentAgentService',
+    description: 'Startup intent meaning an agent-oriented runtime should be started.'
+} as const;
+
+export const WorkspaceStartupIntentProfileSchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            const: 'profile',
+            title: 'Mode',
+            default: 'profile'
+        },
+        profile: {
+            type: 'string',
+            maxLength: 120,
+            minLength: 1,
+            title: 'Profile'
+        }
+    },
+    type: 'object',
+    required: ['profile'],
+    title: 'WorkspaceStartupIntentProfile',
+    description: 'Startup intent meaning a named backend-defined startup profile.'
+} as const;
+
+export const WorkspaceStartupIntentTerminalOnlySchema = {
+    properties: {
+        mode: {
+            type: 'string',
+            const: 'terminal_only',
+            title: 'Mode',
+            default: 'terminal_only'
+        }
+    },
+    type: 'object',
+    title: 'WorkspaceStartupIntentTerminalOnly',
+    description: 'Startup intent meaning no long-running service should be started.'
+} as const;
+
 export const WorkspaceStatusSchema = {
     type: 'string',
     enum: ['requested', 'provisioning', 'starting', 'ready', 'stopping', 'stopped', 'failed', 'destroying', 'destroyed'],
@@ -21012,6 +21856,38 @@ export const WorkspaceTerminalStatusSchema = {
     enum: ['unavailable', 'available', 'expired'],
     title: 'WorkspaceTerminalStatus',
     description: 'Projected terminal availability state for a workspace.'
+} as const;
+
+export const WorkspaceUserRepoSourceSchema = {
+    properties: {
+        type: {
+            type: 'string',
+            const: 'user_repo',
+            title: 'Type',
+            default: 'user_repo'
+        },
+        repo_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Repo Id'
+        },
+        ref: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ref'
+        }
+    },
+    type: 'object',
+    required: ['repo_id'],
+    title: 'WorkspaceUserRepoSource',
+    description: 'Bootstrap source pointing at a platform-managed user repo.'
 } as const;
 
 export const WorkspaceVisibilitySchema = {

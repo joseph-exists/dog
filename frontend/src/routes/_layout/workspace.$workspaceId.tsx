@@ -1,16 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 
 import {
   WorkspacesShell,
   type PanelConfig,
   WorkspaceControlsPanel,
   WorkspaceDetailsPanel,
+  WorkspaceProjectPanel,
   WorkspaceTerminalPanel,
 } from "@/components/Workspaces"
+import { useAttachProjectResource, useDetachProjectResource, useProjectsList } from "@/hooks/useProjects"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useWorkspace } from "@/hooks/useWorkspace"
 import { useWorkspaceTerminal } from "@/hooks/useWorkspaceTerminal"
-import { useDestroyWorkspace, useStartWorkspace, useStopWorkspace } from "@/hooks/useWorkspaces"
+import { useDestroyWorkspace, useStartWorkspace, useStopWorkspace, workspaceKeys } from "@/hooks/useWorkspaces"
 import { usePageThemes } from "@/hooks/useThemeBinding"
 import { useAvailableThemes, useUserThemeBindings } from "@/hooks/useThemeRegistry"
 
@@ -23,11 +26,15 @@ export const Route = createFileRoute("/_layout/workspace/$workspaceId")({
 
 function WorkspaceDetailPage() {
   const { workspaceId } = Route.useParams()
+  const queryClient = useQueryClient()
   const workspaceQuery = useWorkspace(workspaceId)
   const terminalQuery = useWorkspaceTerminal(workspaceId, { enabled: false })
+  const projectsQuery = useProjectsList()
   const startWorkspace = useStartWorkspace()
   const stopWorkspace = useStopWorkspace()
   const destroyWorkspace = useDestroyWorkspace()
+  const attachProjectResource = useAttachProjectResource()
+  const detachProjectResource = useDetachProjectResource()
 
   const contextPath = ["page:workspace"]
   const { themes } = usePageThemes(contextPath)
@@ -85,6 +92,41 @@ function WorkspaceDetailPage() {
       prominence: "auxiliary",
       title: "Details",
       render: () => <WorkspaceDetailsPanel workspace={workspace} />,
+    },
+    {
+      id: "workspace-project",
+      kind: "workspace-project",
+      prominence: "auxiliary",
+      title: "Project Assignment",
+      render: () => (
+        <WorkspaceProjectPanel
+          workspace={workspace}
+          projects={projectsQuery.data ?? []}
+          isAssigning={attachProjectResource.isPending}
+          isDetaching={detachProjectResource.isPending}
+          onAssign={async (projectId) => {
+            await attachProjectResource.mutateAsync({
+              projectId,
+              input: {
+                resource_type: "workspace",
+                resource_id: workspace.id,
+              },
+            })
+            await queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+          }}
+          onDetach={async () => {
+            if (!workspace.projectId) return
+            await detachProjectResource.mutateAsync({
+              projectId: workspace.projectId,
+              input: {
+                resource_type: "workspace",
+                resource_id: workspace.id,
+              },
+            })
+            await queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+          }}
+        />
+      ),
     },
     {
       id: "workspace-controls",

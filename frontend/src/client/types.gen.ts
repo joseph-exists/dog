@@ -3164,6 +3164,65 @@ export type RoomUpdate = {
     title?: (string | null);
 };
 
+/**
+ * Capability scopes that may be granted on a room/workspace connection.
+ */
+export type RoomWorkspaceConnectionCapability = 'terminal_view' | 'service_connect' | 'agent_runtime_connect';
+
+/**
+ * Backend-issued room/workspace connectivity descriptor.
+ */
+export type RoomWorkspaceConnectionDescriptor = {
+    room_id: string;
+    workspace_id: string;
+    purpose: RoomWorkspaceConnectionPurpose;
+    status: RoomWorkspaceConnectionStatus;
+    reason?: (string | null);
+    capabilities?: Array<RoomWorkspaceConnectionCapability>;
+    endpoints?: Array<RoomWorkspaceEndpointDescriptor>;
+};
+
+/**
+ * Requested purpose for a room/workspace connection descriptor.
+ */
+export type RoomWorkspaceConnectionPurpose = 'service_connect' | 'agent_runtime_connect';
+
+/**
+ * Request model for a room/workspace connectivity descriptor.
+ */
+export type RoomWorkspaceConnectionRequest = {
+    workspace_id: string;
+    purpose?: RoomWorkspaceConnectionPurpose;
+};
+
+/**
+ * Availability state for a room/workspace connection descriptor.
+ */
+export type RoomWorkspaceConnectionStatus = 'available' | 'pending' | 'denied';
+
+/**
+ * Authentication mode expected by a connection endpoint.
+ */
+export type RoomWorkspaceEndpointAuthMode = 'token' | 'session' | 'none';
+
+/**
+ * Endpoint descriptor issued for room/workspace connectivity.
+ */
+export type RoomWorkspaceEndpointDescriptor = {
+    id: string;
+    kind: RoomWorkspaceEndpointKind;
+    label: string;
+    protocol: string;
+    url?: (string | null);
+    auth_mode?: RoomWorkspaceEndpointAuthMode;
+    expires_at?: (string | null);
+};
+
+/**
+ * Kinds of endpoints carried by a room/workspace descriptor.
+ */
+export type RoomWorkspaceEndpointKind = 'service' | 'terminal' | 'agent-runtime';
+
 export type ShadowRepoCommitSummary = {
     sha: string;
     short_sha: string;
@@ -5529,12 +5588,62 @@ export type ValidationError = {
 export type WorkspaceAction = 'destroy' | 'stop' | 'start' | 'request_terminal' | 'discover_services';
 
 /**
+ * User-declared bootstrap intent submitted at workspace creation time.
+ */
+export type WorkspaceBootstrapIntent = {
+    repo_source?: ((WorkspaceExternalUrlRepoSource | WorkspaceUserRepoSource | WorkspaceShadowRepoSource) | null);
+    workspace_path?: (string | null);
+    install_intent?: ((WorkspaceInstallIntentNone | WorkspaceInstallIntentAuto | WorkspaceInstallIntentProfile) | null);
+    startup_intent?: ((WorkspaceStartupIntentTerminalOnly | WorkspaceStartupIntentProfile | WorkspaceStartupIntentAgentService) | null);
+    env_vars?: {
+        [key: string]: (string);
+    };
+    ssh_pubkey?: (string | null);
+};
+
+/**
+ * Coarse-grained bootstrap progress phases.
+ */
+export type WorkspaceBootstrapPhase = 'pending' | 'resolving_source' | 'materializing_repo' | 'installing_dependencies' | 'starting_services' | 'running_readiness_checks' | 'complete' | 'failed';
+
+/**
+ * Backend-owned projection of current bootstrap progress.
+ */
+export type WorkspaceBootstrapProgress = {
+    phase?: WorkspaceBootstrapPhase;
+    message?: (string | null);
+    step_count?: (number | null);
+    completed_steps?: (number | null);
+    failure_message?: (string | null);
+};
+
+/**
+ * Combined bootstrap intent and progress for workspace responses.
+ */
+export type WorkspaceBootstrapState = {
+    intent?: (WorkspaceBootstrapIntent | null);
+    progress?: (WorkspaceBootstrapProgress | null);
+};
+
+/**
+ * Purpose-oriented workspace connectivity summary for runtime consumers.
+ */
+export type WorkspaceConnectivitySummary = {
+    terminal_ready?: boolean;
+    bootstrap_complete?: boolean;
+    services_ready?: boolean;
+    service_count?: number;
+    ready_service_count?: number;
+};
+
+/**
  * Request model for provisioning a workspace.
  */
 export type WorkspaceCreate = {
     name: string;
     flavour?: WorkspaceFlavour;
     kind?: string;
+    bootstrap?: (WorkspaceBootstrapIntent | null);
     repo_url?: (string | null);
     ssh_pubkey?: (string | null);
     env_vars?: {
@@ -5543,9 +5652,50 @@ export type WorkspaceCreate = {
 };
 
 /**
+ * Bootstrap source pointing at an external git URL.
+ */
+export type WorkspaceExternalUrlRepoSource = {
+    type?: "external_url";
+    repo_url: string;
+    ref?: (string | null);
+};
+
+/**
  * Requested workspace image/profile.
  */
 export type WorkspaceFlavour = 'base' | 'dev' | 'python' | 'node' | 'jupyter';
+
+/**
+ * Operator-oriented flavour health projection for workspace detail views.
+ */
+export type WorkspaceFlavourHealthSummary = {
+    flavour: string;
+    snapshot_ready?: boolean;
+    latest_rebuild_status?: (string | null);
+    latest_rebuild_job_id?: (string | null);
+};
+
+/**
+ * Bootstrap intent meaning backend-controlled auto install behavior.
+ */
+export type WorkspaceInstallIntentAuto = {
+    mode?: "auto";
+};
+
+/**
+ * Bootstrap intent meaning no install step should run.
+ */
+export type WorkspaceInstallIntentNone = {
+    mode?: "none";
+};
+
+/**
+ * Bootstrap intent meaning a named backend-defined install profile.
+ */
+export type WorkspaceInstallIntentProfile = {
+    mode?: "profile";
+    profile: string;
+};
 
 /**
  * Lightweight project projection for workspace responses.
@@ -5578,6 +5728,11 @@ export type WorkspacePublic = {
 } | null);
     id: string;
     owner_id: string;
+    bootstrap?: (WorkspaceBootstrapState | null);
+    readiness_summary?: (WorkspaceReadinessSummary | null);
+    connectivity_summary?: (WorkspaceConnectivitySummary | null);
+    services?: Array<WorkspaceServiceSummary>;
+    flavour_health?: (WorkspaceFlavourHealthSummary | null);
     allowed_actions?: Array<WorkspaceAction>;
     visibility?: WorkspaceVisibility;
     project_id?: (string | null);
@@ -5589,11 +5744,92 @@ export type WorkspacePublic = {
 };
 
 /**
+ * High-level readiness signals for clients that need more than status.
+ */
+export type WorkspaceReadinessSummary = {
+    terminal_ready?: boolean;
+    bootstrap_complete?: boolean;
+    services_ready?: boolean;
+    service_count?: number;
+    ready_service_count?: number;
+};
+
+/**
+ * Canonical kinds of discoverable workspace services.
+ */
+export type WorkspaceServiceKind = 'web_app' | 'agent_runtime' | 'jupyter' | 'custom';
+
+/**
+ * Transport protocol for a discovered workspace service endpoint.
+ */
+export type WorkspaceServiceProtocol = 'http' | 'https' | 'ws' | 'wss';
+
+/**
+ * Source of truth for a discovered workspace service descriptor.
+ */
+export type WorkspaceServiceSource = 'bootstrap_profile' | 'runtime_probe' | 'operator_declared';
+
+/**
+ * Backend-issued readiness state for a discovered workspace service.
+ */
+export type WorkspaceServiceStatus = 'pending' | 'ready' | 'failed' | 'unknown';
+
+/**
+ * Discovered service descriptor projected on a workspace response.
+ */
+export type WorkspaceServiceSummary = {
+    id: string;
+    kind: WorkspaceServiceKind;
+    label: string;
+    status?: WorkspaceServiceStatus;
+    protocol?: WorkspaceServiceProtocol;
+    host?: (string | null);
+    port?: (number | null);
+    path?: (string | null);
+    url?: (string | null);
+    source?: WorkspaceServiceSource;
+    readiness_message?: (string | null);
+};
+
+/**
+ * Bootstrap source pointing at a shadow repo attached to another entity.
+ */
+export type WorkspaceShadowRepoSource = {
+    type?: "shadow_repo";
+    entity_type: string;
+    entity_id: string;
+    ref?: (string | null);
+};
+
+/**
  * Collection response model for workspaces.
  */
 export type WorkspacesPublic = {
     data: Array<WorkspacePublic>;
     count: number;
+};
+
+/**
+ * Startup intent meaning an agent-oriented runtime should be started.
+ */
+export type WorkspaceStartupIntentAgentService = {
+    mode?: "agent_service";
+    agent_profile: string;
+};
+
+/**
+ * Startup intent meaning a named backend-defined startup profile.
+ */
+export type WorkspaceStartupIntentProfile = {
+    mode?: "profile";
+    profile: string;
+};
+
+/**
+ * Startup intent meaning no long-running service should be started.
+ */
+export type WorkspaceStartupIntentTerminalOnly = {
+    mode?: "terminal_only";
 };
 
 /**
@@ -5605,6 +5841,15 @@ export type WorkspaceStatus = 'requested' | 'provisioning' | 'starting' | 'ready
  * Projected terminal availability state for a workspace.
  */
 export type WorkspaceTerminalStatus = 'unavailable' | 'available' | 'expired';
+
+/**
+ * Bootstrap source pointing at a platform-managed user repo.
+ */
+export type WorkspaceUserRepoSource = {
+    type?: "user_repo";
+    repo_id: string;
+    ref?: (string | null);
+};
 
 /**
  * Projected visibility state for a workspace.
@@ -6828,6 +7073,13 @@ export type RoomsDeleteRoomData = {
 };
 
 export type RoomsDeleteRoomResponse = (MessageResponse);
+
+export type RoomsCreateRoomWorkspaceConnectionData = {
+    requestBody: RoomWorkspaceConnectionRequest;
+    roomId: string;
+};
+
+export type RoomsCreateRoomWorkspaceConnectionResponse = (RoomWorkspaceConnectionDescriptor);
 
 export type RoomsAddRoomParticipantData = {
     requestBody: ParticipantAddRequest;

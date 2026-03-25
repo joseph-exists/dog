@@ -1,17 +1,19 @@
 import asyncio
 import json
 import logging
+import shlex
 import subprocess
 import uuid
 import threading
 from contextlib import asynccontextmanager
 from enum import Enum
 import time
+from typing import Annotated, Literal
 
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 from tokens import token_store
@@ -109,6 +111,164 @@ class InjectRequest(BaseModel):
     git_email:  str | None      = None
     # TTL for the issued terminal token (seconds)
     token_ttl:  int             = 3600
+    bootstrap_plan: "BootstrapExecutionPlan | None" = None
+
+
+class BootstrapSshKeyStep(BaseModel):
+    type: Literal["add_ssh_key"] = "add_ssh_key"
+    phase: str
+    label: str
+    ssh_pubkey: str
+
+
+class BootstrapEnvVarsStep(BaseModel):
+    type: Literal["write_env_vars"] = "write_env_vars"
+    phase: str
+    label: str
+    env_vars: dict[str, str] = Field(default_factory=dict)
+
+
+class BootstrapCloneRepoStep(BaseModel):
+    type: Literal["clone_repo"] = "clone_repo"
+    phase: str
+    label: str
+    repo_url: str
+    target_path: str
+    ref: str | None = None
+
+
+class BootstrapRunCommandStep(BaseModel):
+    type: Literal["run_command"] = "run_command"
+    phase: str
+    label: str
+    command: str
+    cwd: str | None = None
+    background: bool = False
+    service_name: str | None = None
+
+
+BootstrapPlanStep = Annotated[
+    BootstrapSshKeyStep
+    | BootstrapEnvVarsStep
+    | BootstrapCloneRepoStep
+    | BootstrapRunCommandStep,
+    Field(discriminator="type"),
+]
+
+
+class BootstrapExecutionPlan(BaseModel):
+    workspace_path: str = "/home/dev/workspace"
+    steps: list[BootstrapPlanStep] = Field(default_factory=list)
+
+
+class BootstrapStepResult(BaseModel):
+    index: int
+    type: str
+    phase: str
+    label: str
+    status: Literal["completed", "failed"]
+    error: str | None = None
+    service_name: str | None = None
+
+
+class DeclaredWorkspaceService(BaseModel):
+    id: str
+    service_name: str
+    label: str
+    kind: Literal["web_app", "agent_runtime", "jupyter", "custom"] = "custom"
+    protocol: Literal["http", "https", "ws", "wss"] = "http"
+    port: int | None = None
+    path: str | None = None
+    source: Literal["bootstrap_profile", "runtime_probe", "operator_declared"] = "bootstrap_profile"
+    workspace_path: str | None = None
+    pid_path: str | None = None
+    log_path: str | None = None
+    service_name_hint: str | None = None
+
+
+class DiscoveredWorkspaceService(BaseModel):
+    id: str
+    service_name: str
+    label: str
+    kind: Literal["web_app", "agent_runtime", "jupyter", "custom"] = "custom"
+    status: Literal["pending", "ready", "failed", "unknown"] = "unknown"
+    protocol: Literal["http", "https", "ws", "wss"] = "http"
+    host: str | None = None
+    port: int | None = None
+    path: str | None = None
+    url: str | None = None
+    source: Literal["bootstrap_profile", "runtime_probe", "operator_declared"] = "bootstrap_profile"
+    readiness_message: str | None = None
+    pid_running: bool = False
+    port_listening: bool = False
+
+
+SERVICE_MANIFEST_PATH = "/tmp/kennel-services.json"
+SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
+    "vite": DeclaredWorkspaceService(
+        id="vite",
+        service_name="vite",
+        label="Vite Dev Server",
+        kind="web_app",
+        protocol="http",
+        port=5173,
+        path="/",
+        service_name_hint="vite",
+    ),
+    "nextjs": DeclaredWorkspaceService(
+        id="nextjs",
+        service_name="nextjs",
+        label="Next.js Dev Server",
+        kind="web_app",
+        protocol="http",
+        port=3000,
+        path="/",
+        service_name_hint="nextjs",
+    ),
+    "fastapi": DeclaredWorkspaceService(
+        id="fastapi",
+        service_name="fastapi",
+        label="FastAPI Runtime",
+        kind="web_app",
+        protocol="http",
+        port=8000,
+        path="/docs",
+        service_name_hint="uvicorn",
+    ),
+    "codex": DeclaredWorkspaceService(
+        id="codex",
+        service_name="codex",
+        label="Codex Runtime",
+        kind="agent_runtime",
+        protocol="http",
+        port=4317,
+        path="/",
+        source="bootstrap_profile",
+        service_name_hint="codex",
+    ),
+    "claude_code": DeclaredWorkspaceService(
+        id="claude_code",
+        service_name="claude_code",
+        label="Claude Code Runtime",
+        kind="agent_runtime",
+        protocol="http",
+        port=4318,
+        path="/",
+        source="bootstrap_profile",
+        service_name_hint="claude",
+    ),
+    "hermes": DeclaredWorkspaceService(
+        id="hermes",
+        service_name="hermes",
+        label="Hermes Runtime",
+        kind="agent_runtime",
+        protocol="http",
+        port=4319,
+        path="/",
+        source="bootstrap_profile",
+        service_name_hint="hermes",
+    ),
+}
 
 
 class IssueTerminalTokenRequest(BaseModel):
@@ -146,6 +306,408 @@ def _attach_exec(env_name: str, cmd: str, timeout: int = 30) -> subprocess.Compl
     return subprocess.run(
         ["lxc-attach", "-n", env_name, "--", "bash", "-c", cmd],
         capture_output=True, text=True, timeout=timeout
+    )
+
+
+def _shell_single_quote(value: str) -> str:
+    return shlex.quote(value)
+
+
+def _run_as_user(
+    env_name: str,
+    *,
+    user: str,
+    command: str,
+    timeout: int = 120,
+) -> subprocess.CompletedProcess:
+    quoted_command = _shell_single_quote(command)
+    return _attach_exec(
+        env_name,
+        f"su - {user} -c {quoted_command}",
+        timeout=timeout,
+    )
+
+
+def _ensure_parent_dir(env_name: str, path: str, *, user: str) -> subprocess.CompletedProcess:
+    parent_dir = shlex.quote(path.rsplit("/", 1)[0] or "/")
+    return _attach_exec(
+        env_name,
+        (
+            f"mkdir -p {parent_dir} && "
+            f"chown -R {user}:{user} {parent_dir}"
+        ),
+        timeout=30,
+    )
+
+
+def _legacy_bootstrap_plan(req: InjectRequest) -> BootstrapExecutionPlan:
+    steps: list[BootstrapPlanStep] = []
+    workspace_path = f"/home/{req.user}/workspace"
+
+    if req.ssh_pubkey:
+        steps.append(
+            BootstrapSshKeyStep(
+                phase="resolving_source",
+                label="Authorize SSH key",
+                ssh_pubkey=req.ssh_pubkey,
+            )
+        )
+    if req.env_vars:
+        steps.append(
+            BootstrapEnvVarsStep(
+                phase="resolving_source",
+                label="Write workspace environment",
+                env_vars=req.env_vars,
+            )
+        )
+    if req.repo_url:
+        steps.append(
+            BootstrapCloneRepoStep(
+                phase="materializing_repo",
+                label="Clone repository",
+                repo_url=req.repo_url,
+                target_path=workspace_path,
+            )
+        )
+
+    return BootstrapExecutionPlan(workspace_path=workspace_path, steps=steps)
+
+
+def _service_manifest_for_plan(plan: BootstrapExecutionPlan) -> list[DeclaredWorkspaceService]:
+    services: list[DeclaredWorkspaceService] = []
+
+    for step in plan.steps:
+        if not isinstance(step, BootstrapRunCommandStep) or not step.background or not step.service_name:
+            continue
+
+        profile = SERVICE_PROFILE_DEFAULTS.get(step.service_name)
+        if profile is None:
+            services.append(
+                DeclaredWorkspaceService(
+                    id=step.service_name,
+                    service_name=step.service_name,
+                    label=step.label,
+                    kind="custom",
+                    protocol="http",
+                    source="bootstrap_profile",
+                    workspace_path=step.cwd,
+                    pid_path=f"/tmp/{step.service_name}.pid",
+                    log_path=f"/tmp/{step.service_name}.log",
+                    service_name_hint=step.service_name,
+                )
+            )
+            continue
+
+        services.append(
+            profile.model_copy(
+                update={
+                    "workspace_path": step.cwd,
+                    "pid_path": f"/tmp/{step.service_name}.pid",
+                    "log_path": f"/tmp/{step.service_name}.log",
+                }
+            )
+        )
+
+    return services
+
+
+def _write_service_manifest(
+    env_name: str,
+    *,
+    manifest: list[DeclaredWorkspaceService],
+) -> subprocess.CompletedProcess:
+    payload = json.dumps([service.model_dump(mode="json") for service in manifest])
+    return _attach_exec(
+        env_name,
+        f"cat > {shlex.quote(SERVICE_MANIFEST_PATH)} <<'JSON'\n{payload}\nJSON\nchmod 644 {shlex.quote(SERVICE_MANIFEST_PATH)}",
+        timeout=30,
+    )
+
+
+def _read_service_manifest(env_name: str) -> list[DeclaredWorkspaceService]:
+    result = _attach_exec(
+        env_name,
+        f"if [ -f {shlex.quote(SERVICE_MANIFEST_PATH)} ]; then cat {shlex.quote(SERVICE_MANIFEST_PATH)}; fi",
+        timeout=30,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return []
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    services: list[DeclaredWorkspaceService] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        try:
+            services.append(DeclaredWorkspaceService.model_validate(item))
+        except Exception:
+            continue
+    return services
+
+
+def _is_pid_running(env_name: str, pid_path: str) -> bool:
+    result = _attach_exec(
+        env_name,
+        (
+            f"if [ -f {shlex.quote(pid_path)} ]; then "
+            f"PID=$(cat {shlex.quote(pid_path)}); "
+            "kill -0 \"$PID\" >/dev/null 2>&1; "
+            "else exit 1; fi"
+        ),
+        timeout=15,
+    )
+    return result.returncode == 0
+
+
+def _is_port_listening(env_name: str, port: int) -> bool:
+    result = _attach_exec(
+        env_name,
+        (
+            "if command -v ss >/dev/null 2>&1; then "
+            f"ss -ltn '( sport = :{port} )' | tail -n +2 | grep -q LISTEN; "
+            "else exit 1; fi"
+        ),
+        timeout=15,
+    )
+    return result.returncode == 0
+
+
+def _get_env_ipv4(env_name: str) -> str | None:
+    result = lxc("lxc-info", "-n", env_name, "-iH")
+    if result.returncode != 0:
+        return None
+    for line in result.stdout.splitlines():
+        candidate = line.strip()
+        if candidate and candidate.lower() != "n/a":
+            return candidate
+    return None
+
+
+def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> DiscoveredWorkspaceService:
+    pid_running = _is_pid_running(env_name, declared.pid_path) if declared.pid_path else False
+    port_listening = _is_port_listening(env_name, declared.port) if declared.port else False
+    env_host = _get_env_ipv4(env_name)
+
+    status: Literal["pending", "ready", "failed", "unknown"]
+    readiness_message: str | None
+
+    if declared.port is not None and port_listening:
+        status = "ready"
+        readiness_message = f"Port {declared.port} is listening."
+    elif pid_running and declared.port is None:
+        status = "ready"
+        readiness_message = "Runtime process is running."
+    elif pid_running:
+        status = "pending"
+        readiness_message = "Process is running, but the expected port is not listening yet."
+    elif declared.pid_path:
+        status = "failed"
+        readiness_message = "Expected service process is not running."
+    else:
+        status = "unknown"
+        readiness_message = "No runtime process metadata is available for this service."
+
+    url = None
+    if declared.port is not None:
+        path = declared.path or "/"
+        url = f"{declared.protocol}://{env_host or '127.0.0.1'}:{declared.port}{path}"
+
+    return DiscoveredWorkspaceService(
+        id=declared.id,
+        service_name=declared.service_name,
+        label=declared.label,
+        kind=declared.kind,
+        status=status,
+        protocol=declared.protocol,
+        host=env_host or ("127.0.0.1" if declared.port is not None else None),
+        port=declared.port,
+        path=declared.path,
+        url=url,
+        source=declared.source,
+        readiness_message=readiness_message,
+        pid_running=pid_running,
+        port_listening=port_listening,
+    )
+
+
+def _execute_bootstrap_step(
+    env_name: str,
+    *,
+    user: str,
+    step: BootstrapPlanStep,
+) -> tuple[BootstrapStepResult, str | None]:
+    if isinstance(step, BootstrapSshKeyStep):
+        r = _attach_exec(env_name, f"""
+            mkdir -p /home/{user}/.ssh
+            chmod 700 /home/{user}/.ssh
+            echo {_shell_single_quote(step.ssh_pubkey)} >> /home/{user}/.ssh/authorized_keys
+            chmod 600 /home/{user}/.ssh/authorized_keys
+            chown -R {user}:{user} /home/{user}/.ssh
+        """)
+        if r.returncode != 0:
+            return (
+                BootstrapStepResult(
+                    index=0,
+                    type=step.type,
+                    phase=step.phase,
+                    label=step.label,
+                    status="failed",
+                    error=r.stderr.strip(),
+                ),
+                r.stderr.strip(),
+            )
+        return (
+            BootstrapStepResult(
+                index=0,
+                type=step.type,
+                phase=step.phase,
+                label=step.label,
+                status="completed",
+            ),
+            None,
+        )
+
+    if isinstance(step, BootstrapEnvVarsStep):
+        env_lines = []
+        for key, value in step.env_vars.items():
+            env_lines.append(f"export {key}={shlex.quote(value)}")
+        env_block = "\n".join(env_lines)
+        r = _attach_exec(env_name, f"""
+            cat >> /home/{user}/.bashrc << 'ENVEOF'
+# kennel workspace env
+{env_block}
+ENVEOF
+            cat >> /home/{user}/.profile << 'ENVEOF'
+# kennel workspace env
+{env_block}
+ENVEOF
+            chown {user}:{user} /home/{user}/.bashrc /home/{user}/.profile
+        """)
+        if r.returncode != 0:
+            return (
+                BootstrapStepResult(
+                    index=0,
+                    type=step.type,
+                    phase=step.phase,
+                    label=step.label,
+                    status="failed",
+                    error=r.stderr.strip(),
+                ),
+                r.stderr.strip(),
+            )
+        return (
+            BootstrapStepResult(
+                index=0,
+                type=step.type,
+                phase=step.phase,
+                label=step.label,
+                status="completed",
+            ),
+            None,
+        )
+
+    if isinstance(step, BootstrapCloneRepoStep):
+        parent_result = _ensure_parent_dir(env_name, step.target_path, user=user)
+        if parent_result.returncode != 0:
+            return (
+                BootstrapStepResult(
+                    index=0,
+                    type=step.type,
+                    phase=step.phase,
+                    label=step.label,
+                    status="failed",
+                    error=parent_result.stderr.strip(),
+                ),
+                parent_result.stderr.strip(),
+            )
+        clone_command = (
+            f"if [ -e {shlex.quote(step.target_path)} ]; then "
+            f"echo 'Target path already exists: {step.target_path}' >&2; exit 1; "
+            "fi && "
+            f"git clone {shlex.quote(step.repo_url)} {shlex.quote(step.target_path)}"
+        )
+        if step.ref:
+            clone_command += (
+                f" && cd {shlex.quote(step.target_path)} "
+                f"&& git checkout {shlex.quote(step.ref)}"
+            )
+        r = _run_as_user(env_name, user=user, command=clone_command, timeout=180)
+        if r.returncode != 0:
+            return (
+                BootstrapStepResult(
+                    index=0,
+                    type=step.type,
+                    phase=step.phase,
+                    label=step.label,
+                    status="failed",
+                    error=r.stderr.strip(),
+                ),
+                r.stderr.strip(),
+            )
+        return (
+            BootstrapStepResult(
+                index=0,
+                type=step.type,
+                phase=step.phase,
+                label=step.label,
+                status="completed",
+            ),
+            None,
+        )
+
+    if isinstance(step, BootstrapRunCommandStep):
+        cwd_prefix = f"cd {shlex.quote(step.cwd)} && " if step.cwd else ""
+        if step.background:
+            service_name = step.service_name or "workspace-service"
+            log_path = f"/tmp/{service_name}.log"
+            pid_path = f"/tmp/{service_name}.pid"
+            command = (
+                f"{cwd_prefix}nohup bash -lc {shlex.quote(step.command)} "
+                f"> {shlex.quote(log_path)} 2>&1 < /dev/null & echo $! > {shlex.quote(pid_path)} "
+                f"&& sleep 1 && kill -0 $(cat {shlex.quote(pid_path)})"
+            )
+        else:
+            command = f"{cwd_prefix}{step.command}"
+        r = _run_as_user(env_name, user=user, command=command, timeout=300)
+        if r.returncode != 0:
+            return (
+                BootstrapStepResult(
+                    index=0,
+                    type=step.type,
+                    phase=step.phase,
+                    label=step.label,
+                    status="failed",
+                    error=r.stderr.strip(),
+                    service_name=step.service_name,
+                ),
+                r.stderr.strip(),
+            )
+        return (
+            BootstrapStepResult(
+                index=0,
+                type=step.type,
+                phase=step.phase,
+                label=step.label,
+                status="completed",
+                service_name=step.service_name,
+            ),
+            step.service_name,
+        )
+
+    return (
+        BootstrapStepResult(
+            index=0,
+            type="unknown",
+            phase="failed",
+            label="Unknown bootstrap step",
+            status="failed",
+            error="Unknown bootstrap step",
+        ),
+        "Unknown bootstrap step",
     )
 
 
@@ -229,6 +791,25 @@ def health():
 def list_envs(_=Depends(require_management_secret)):
     result = lxc("lxc-ls", "--fancy", "--fancy-format", "name,state,ipv4,pid")
     return {"envs": result.stdout.strip().splitlines()}
+
+
+@app.get("/envs/{name}/services")
+def get_env_services(name: str, _=Depends(require_management_secret)):
+    info = lxc("lxc-info", "-n", name)
+    if info.returncode != 0:
+        raise HTTPException(404, detail=f"Environment not found: {name}")
+
+    declared_services = _read_service_manifest(name)
+    services = [_discover_service(name, declared) for declared in declared_services]
+    ready_service_count = sum(1 for service in services if service.status == "ready")
+
+    return {
+        "env": name,
+        "services": [service.model_dump(mode="json") for service in services],
+        "service_count": len(services),
+        "ready_service_count": ready_service_count,
+    }
+
 
 @app.get("/flavours")
 def list_flavours(_=Depends(require_management_secret)):
@@ -433,20 +1014,14 @@ async def inject_workspace(
     Never called by browser clients.
     """
     errors = []
+    plan = req.bootstrap_plan or _legacy_bootstrap_plan(req)
+    service_manifest = _service_manifest_for_plan(plan)
+    step_results: list[dict] = []
+    started_services: list[str] = []
+    fatal_error: str | None = None
 
-    # 1. SSH public key
-    if req.ssh_pubkey:
-        r = _attach_exec(name, f"""
-            mkdir -p /home/{req.user}/.ssh
-            chmod 700 /home/{req.user}/.ssh
-            echo '{req.ssh_pubkey}' >> /home/{req.user}/.ssh/authorized_keys
-            chmod 600 /home/{req.user}/.ssh/authorized_keys
-            chown -R {req.user}:{req.user} /home/{req.user}/.ssh
-        """)
-        if r.returncode != 0:
-            errors.append(f"ssh_pubkey: {r.stderr.strip()}")
-
-    # 2. Git identity
+    # Git identity remains outside the bootstrap plan for now because it is
+    # workspace-scoped personalization rather than repo/runtime orchestration.
     if req.git_name or req.git_email:
         git_cmds = []
         if req.git_name:
@@ -457,41 +1032,50 @@ async def inject_workspace(
         if r.returncode != 0:
             errors.append(f"git_config: {r.stderr.strip()}")
 
-    # 3. Environment variables → .bashrc and .profile
-    if req.env_vars:
-        env_block = "\n".join(
-            f"export {k}={v}" for k, v in req.env_vars.items()
-        )
-        r = _attach_exec(name, f"""
-            cat >> /home/{req.user}/.bashrc << 'ENVEOF'
-# kennel workspace env
-{env_block}
-ENVEOF
-        """)
-        if r.returncode != 0:
-            errors.append(f"env_vars: {r.stderr.strip()}")
-
-    # 4. Repo clone
-    if req.repo_url:
-        r = _attach_exec(
+    for index, step in enumerate(plan.steps):
+        result, service_or_error = _execute_bootstrap_step(
             name,
-            f"su - {req.user} -c "
-            f"'git clone {req.repo_url} /home/{req.user}/workspace'",
-            timeout=120,
+            user=req.user,
+            step=step,
         )
-        if r.returncode != 0:
-            errors.append(f"repo_clone: {r.stderr.strip()}")
+        result = result.model_copy(update={"index": index})
+        step_results.append(result.model_dump(mode="json"))
+        if result.status == "failed":
+            fatal_error = service_or_error
+            errors.append(f"{step.type}: {service_or_error}")
+            break
+        if result.service_name and service_or_error:
+            started_services.append(service_or_error)
 
-    # 5. Issue terminal token — always issued even if some inject steps soft-failed
+    # Issue terminal token even when bootstrap fails so the backend can choose
+    # how to expose or suppress recovery/debug flows.
+    manifest_result = _write_service_manifest(name, manifest=service_manifest)
+    if manifest_result.returncode != 0:
+        errors.append(f"service_manifest: {manifest_result.stderr.strip()}")
+
     ws_token = token_store.issue(name, ttl=req.token_ttl)
 
-    await publish_event(name, "injected", {"errors": errors})
+    await publish_event(
+        name,
+        "injected",
+        {
+            "errors": errors,
+            "bootstrap_success": fatal_error is None,
+            "step_results": step_results,
+        },
+    )
 
     return {
-        "env":      name,
-        "token":    ws_token,
-        "errors":   errors,          # soft failures — non-fatal, logged by backend
-        "terminal": f"/envs/{name}/ws",
+        "env":               name,
+        "token":             ws_token,
+        "errors":            errors,
+        "terminal":          f"/envs/{name}/ws",
+        "bootstrap_success": fatal_error is None,
+        "fatal_error":       fatal_error,
+        "step_results":      step_results,
+        "started_services":  started_services,
+        "workspace_path":    plan.workspace_path,
+        "declared_services": [service.model_dump(mode="json") for service in service_manifest],
     }
 
 

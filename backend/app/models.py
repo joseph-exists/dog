@@ -3689,6 +3689,76 @@ class RoomsPublic(SQLModel):
     count: int
 
 
+class RoomWorkspaceConnectionPurpose(str, PyEnum):
+    """Requested purpose for a room/workspace connection descriptor."""
+
+    service_connect = "service_connect"
+    agent_runtime_connect = "agent_runtime_connect"
+
+
+class RoomWorkspaceConnectionStatus(str, PyEnum):
+    """Availability state for a room/workspace connection descriptor."""
+
+    available = "available"
+    pending = "pending"
+    denied = "denied"
+
+
+class RoomWorkspaceConnectionCapability(str, PyEnum):
+    """Capability scopes that may be granted on a room/workspace connection."""
+
+    terminal_view = "terminal_view"
+    service_connect = "service_connect"
+    agent_runtime_connect = "agent_runtime_connect"
+
+
+class RoomWorkspaceEndpointKind(str, PyEnum):
+    """Kinds of endpoints carried by a room/workspace descriptor."""
+
+    service = "service"
+    terminal = "terminal"
+    agent_runtime = "agent-runtime"
+
+
+class RoomWorkspaceEndpointAuthMode(str, PyEnum):
+    """Authentication mode expected by a connection endpoint."""
+
+    token = "token"
+    session = "session"
+    none = "none"
+
+
+class RoomWorkspaceConnectionRequest(SQLModel):
+    """Request model for a room/workspace connectivity descriptor."""
+
+    workspace_id: uuid.UUID
+    purpose: RoomWorkspaceConnectionPurpose = RoomWorkspaceConnectionPurpose.service_connect
+
+
+class RoomWorkspaceEndpointDescriptor(SQLModel):
+    """Endpoint descriptor issued for room/workspace connectivity."""
+
+    id: str
+    kind: RoomWorkspaceEndpointKind
+    label: str
+    protocol: str
+    url: str | None = None
+    auth_mode: RoomWorkspaceEndpointAuthMode = RoomWorkspaceEndpointAuthMode.none
+    expires_at: datetime | None = None
+
+
+class RoomWorkspaceConnectionDescriptor(SQLModel):
+    """Backend-issued room/workspace connectivity descriptor."""
+
+    room_id: uuid.UUID
+    workspace_id: uuid.UUID
+    purpose: RoomWorkspaceConnectionPurpose
+    status: RoomWorkspaceConnectionStatus
+    reason: str | None = None
+    capabilities: list[RoomWorkspaceConnectionCapability] = Field(default_factory=list)
+    endpoints: list[RoomWorkspaceEndpointDescriptor] = Field(default_factory=list)
+
+
 # ============================================================================
 # RoomParticipant Models (Projection)
 # ============================================================================
@@ -7318,6 +7388,215 @@ class WorkspaceProjectSummary(SQLModel):
     name: str
 
 
+class WorkspaceBootstrapPhase(str, PyEnum):
+    """Coarse-grained bootstrap progress phases."""
+
+    pending = "pending"
+    resolving_source = "resolving_source"
+    materializing_repo = "materializing_repo"
+    installing_dependencies = "installing_dependencies"
+    starting_services = "starting_services"
+    running_readiness_checks = "running_readiness_checks"
+    complete = "complete"
+    failed = "failed"
+
+
+class WorkspaceExternalUrlRepoSource(SQLModel):
+    """Bootstrap source pointing at an external git URL."""
+
+    type: Literal["external_url"] = "external_url"
+    repo_url: str = Field(min_length=1, max_length=2000)
+    ref: str | None = Field(default=None, max_length=255)
+
+
+class WorkspaceUserRepoSource(SQLModel):
+    """Bootstrap source pointing at a platform-managed user repo."""
+
+    type: Literal["user_repo"] = "user_repo"
+    repo_id: uuid.UUID
+    ref: str | None = Field(default=None, max_length=255)
+
+
+class WorkspaceShadowRepoSource(SQLModel):
+    """Bootstrap source pointing at a shadow repo attached to another entity."""
+
+    type: Literal["shadow_repo"] = "shadow_repo"
+    entity_type: str = Field(min_length=1, max_length=50)
+    entity_id: uuid.UUID
+    ref: str | None = Field(default=None, max_length=255)
+
+
+WorkspaceRepoSource = Annotated[
+    WorkspaceExternalUrlRepoSource
+    | WorkspaceUserRepoSource
+    | WorkspaceShadowRepoSource,
+    Field(discriminator="type"),
+]
+
+
+class WorkspaceInstallIntentNone(SQLModel):
+    """Bootstrap intent meaning no install step should run."""
+
+    mode: Literal["none"] = "none"
+
+
+class WorkspaceInstallIntentAuto(SQLModel):
+    """Bootstrap intent meaning backend-controlled auto install behavior."""
+
+    mode: Literal["auto"] = "auto"
+
+
+class WorkspaceInstallIntentProfile(SQLModel):
+    """Bootstrap intent meaning a named backend-defined install profile."""
+
+    mode: Literal["profile"] = "profile"
+    profile: str = Field(min_length=1, max_length=120)
+
+
+WorkspaceInstallIntent = Annotated[
+    WorkspaceInstallIntentNone
+    | WorkspaceInstallIntentAuto
+    | WorkspaceInstallIntentProfile,
+    Field(discriminator="mode"),
+]
+
+
+class WorkspaceStartupIntentTerminalOnly(SQLModel):
+    """Startup intent meaning no long-running service should be started."""
+
+    mode: Literal["terminal_only"] = "terminal_only"
+
+
+class WorkspaceStartupIntentProfile(SQLModel):
+    """Startup intent meaning a named backend-defined startup profile."""
+
+    mode: Literal["profile"] = "profile"
+    profile: str = Field(min_length=1, max_length=120)
+
+
+class WorkspaceStartupIntentAgentService(SQLModel):
+    """Startup intent meaning an agent-oriented runtime should be started."""
+
+    mode: Literal["agent_service"] = "agent_service"
+    agent_profile: str = Field(min_length=1, max_length=120)
+
+
+WorkspaceStartupIntent = Annotated[
+    WorkspaceStartupIntentTerminalOnly
+    | WorkspaceStartupIntentProfile
+    | WorkspaceStartupIntentAgentService,
+    Field(discriminator="mode"),
+]
+
+
+class WorkspaceBootstrapIntent(SQLModel):
+    """User-declared bootstrap intent submitted at workspace creation time."""
+
+    repo_source: WorkspaceRepoSource | None = None
+    workspace_path: str | None = Field(default=None, max_length=512)
+    install_intent: WorkspaceInstallIntent | None = None
+    startup_intent: WorkspaceStartupIntent | None = None
+    env_vars: dict[str, str] = Field(default_factory=dict)
+    ssh_pubkey: str | None = None
+
+
+class WorkspaceBootstrapProgress(SQLModel):
+    """Backend-owned projection of current bootstrap progress."""
+
+    phase: WorkspaceBootstrapPhase = WorkspaceBootstrapPhase.pending
+    message: str | None = None
+    step_count: int | None = Field(default=None, ge=0)
+    completed_steps: int | None = Field(default=None, ge=0)
+    failure_message: str | None = None
+
+
+class WorkspaceBootstrapState(SQLModel):
+    """Combined bootstrap intent and progress for workspace responses."""
+
+    intent: WorkspaceBootstrapIntent | None = None
+    progress: WorkspaceBootstrapProgress | None = None
+
+
+class WorkspaceServiceKind(str, PyEnum):
+    """Canonical kinds of discoverable workspace services."""
+
+    web_app = "web_app"
+    agent_runtime = "agent_runtime"
+    jupyter = "jupyter"
+    custom = "custom"
+
+
+class WorkspaceServiceStatus(str, PyEnum):
+    """Backend-issued readiness state for a discovered workspace service."""
+
+    pending = "pending"
+    ready = "ready"
+    failed = "failed"
+    unknown = "unknown"
+
+
+class WorkspaceServiceProtocol(str, PyEnum):
+    """Transport protocol for a discovered workspace service endpoint."""
+
+    http = "http"
+    https = "https"
+    ws = "ws"
+    wss = "wss"
+
+
+class WorkspaceServiceSource(str, PyEnum):
+    """Source of truth for a discovered workspace service descriptor."""
+
+    bootstrap_profile = "bootstrap_profile"
+    runtime_probe = "runtime_probe"
+    operator_declared = "operator_declared"
+
+
+class WorkspaceServiceSummary(SQLModel):
+    """Discovered service descriptor projected on a workspace response."""
+
+    id: str = Field(min_length=1, max_length=120)
+    kind: WorkspaceServiceKind
+    label: str = Field(min_length=1, max_length=200)
+    status: WorkspaceServiceStatus = Field(default=WorkspaceServiceStatus.unknown)
+    protocol: WorkspaceServiceProtocol = Field(default=WorkspaceServiceProtocol.http)
+    host: str | None = Field(default=None, max_length=255)
+    port: int | None = Field(default=None, ge=1, le=65535)
+    path: str | None = Field(default=None, max_length=1000)
+    url: str | None = Field(default=None, max_length=2000)
+    source: WorkspaceServiceSource = Field(default=WorkspaceServiceSource.bootstrap_profile)
+    readiness_message: str | None = Field(default=None, max_length=1000)
+
+
+class WorkspaceConnectivitySummary(SQLModel):
+    """Purpose-oriented workspace connectivity summary for runtime consumers."""
+
+    terminal_ready: bool = False
+    bootstrap_complete: bool = False
+    services_ready: bool = False
+    service_count: int = Field(default=0, ge=0)
+    ready_service_count: int = Field(default=0, ge=0)
+
+
+class WorkspaceReadinessSummary(SQLModel):
+    """High-level readiness signals for clients that need more than status."""
+
+    terminal_ready: bool = False
+    bootstrap_complete: bool = False
+    services_ready: bool = False
+    service_count: int = Field(default=0, ge=0)
+    ready_service_count: int = Field(default=0, ge=0)
+
+
+class WorkspaceFlavourHealthSummary(SQLModel):
+    """Operator-oriented flavour health projection for workspace detail views."""
+
+    flavour: str = Field(min_length=1, max_length=120)
+    snapshot_ready: bool = False
+    latest_rebuild_status: str | None = Field(default=None, max_length=50)
+    latest_rebuild_job_id: str | None = Field(default=None, max_length=120)
+
+
 class WorkspaceBase(SQLModel):
     """Shared workspace fields for persistence and API models."""
 
@@ -7344,6 +7623,7 @@ class WorkspaceCreate(SQLModel):
     name: str = Field(min_length=1, max_length=120)
     flavour: WorkspaceFlavour = WorkspaceFlavour.dev
     kind: str = Field(default="ephemeral", min_length=1, max_length=32)
+    bootstrap: WorkspaceBootstrapIntent | None = None
     repo_url: str | None = Field(default=None, max_length=2000)
     ssh_pubkey: str | None = None
     env_vars: dict[str, str] = Field(default_factory=dict)
@@ -7373,6 +7653,11 @@ class WorkspacePublic(WorkspaceBase):
 
     id: uuid.UUID
     owner_id: uuid.UUID
+    bootstrap: WorkspaceBootstrapState | None = None
+    readiness_summary: WorkspaceReadinessSummary | None = None
+    connectivity_summary: WorkspaceConnectivitySummary | None = None
+    services: list[WorkspaceServiceSummary] = Field(default_factory=list)
+    flavour_health: WorkspaceFlavourHealthSummary | None = None
     allowed_actions: list[WorkspaceAction] = Field(default_factory=list)
     visibility: WorkspaceVisibility = Field(default=WorkspaceVisibility.private)
     project_id: uuid.UUID | None = None

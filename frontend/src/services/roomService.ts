@@ -22,6 +22,9 @@
 import {
   OpenAPI,
   type ParticipantAddRequest,
+  type RoomWorkspaceConnectionDescriptor,
+  type RoomWorkspaceConnectionPurpose,
+  type RoomWorkspaceConnectionRequest,
   type RoomContextItemCreate,
   type RoomContextItemPublic,
   type RoomContextItemsPublic,
@@ -183,6 +186,26 @@ export interface RoomContextItemViewModel {
   expires_at: string | null
 }
 
+export interface RoomWorkspaceEndpointViewModel {
+  id: string
+  kind: string
+  label: string
+  protocol: string
+  url: string | null
+  auth_mode: string | null
+  expires_at: Date | null
+}
+
+export interface RoomWorkspaceConnectionViewModel {
+  room_id: string
+  workspace_id: string
+  purpose: RoomWorkspaceConnectionPurpose
+  status: "available" | "pending" | "denied"
+  reason: string | null
+  capabilities: string[]
+  endpoints: RoomWorkspaceEndpointViewModel[]
+}
+
 // ============================================================================
 // Transformation Functions
 // ============================================================================
@@ -302,6 +325,28 @@ function transformRoomContextItem(
     source: item.source,
     created_at: item.created_at,
     expires_at: item.expires_at ?? null,
+  }
+}
+
+function transformRoomWorkspaceConnection(
+  descriptor: RoomWorkspaceConnectionDescriptor,
+): RoomWorkspaceConnectionViewModel {
+  return {
+    room_id: descriptor.room_id,
+    workspace_id: descriptor.workspace_id,
+    purpose: descriptor.purpose,
+    status: descriptor.status,
+    reason: descriptor.reason ?? null,
+    capabilities: descriptor.capabilities ?? [],
+    endpoints: (descriptor.endpoints ?? []).map((endpoint) => ({
+      id: endpoint.id,
+      kind: endpoint.kind,
+      label: endpoint.label,
+      protocol: endpoint.protocol,
+      url: endpoint.url ?? null,
+      auth_mode: endpoint.auth_mode ?? null,
+      expires_at: endpoint.expires_at ? new Date(endpoint.expires_at) : null,
+    })),
   }
 }
 
@@ -719,6 +764,25 @@ export const RoomService = {
       roomId,
       contextId,
     })
+  },
+
+  /**
+   * Create a backend-evaluated room/workspace connectivity descriptor.
+   *
+   * The backend treats this as a read-like operation even though it uses POST,
+   * because the request includes a purpose/body and the returned descriptor is
+   * ephemeral authorization and readiness state.
+   */
+  async createWorkspaceConnection(
+    roomId: string,
+    request: RoomWorkspaceConnectionRequest,
+  ): Promise<RoomWorkspaceConnectionViewModel> {
+    const descriptor = await RoomsService.createRoomWorkspaceConnection({
+      roomId,
+      requestBody: request,
+    })
+
+    return transformRoomWorkspaceConnection(descriptor)
   },
 
   // ==========================================================================

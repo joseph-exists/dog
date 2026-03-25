@@ -18,11 +18,20 @@ async def create_workspace(
     current_user: CurrentUser,
     workspace_in: WorkspaceCreate,
 ) -> Any:
-    workspace = await workspace_service.spawn_workspace(
-        session,
-        current_user.id,
-        workspace_in,
-    )
+    try:
+        workspace = await workspace_service.spawn_workspace(
+            session,
+            current_user.id,
+            workspace_in,
+        )
+    except workspace_service.WorkspaceBootstrapValidationError as exc:
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={
+                "message": str(exc),
+                "error_code": exc.error_code,
+            },
+        ) from exc
     return await workspace_service.to_workspace_public(session, workspace)
 
 

@@ -33,6 +33,12 @@ On the frontend, that same attachment model is already reflected in [projectsSer
 
 By contrast, `Workspace` is currently owner-only and has no project relationship in its model or routes.
 
+Implementation update for the current slice:
+
+- workspace list/detail responses now project `project_id`, `project_summary`, and `visibility`
+- the backend now enforces the near-term zero-or-one project rule for `resource_type="workspace"` attachments
+- the workspace detail UI now exposes attach/detach through the canonical project-resource mutation path
+
 ## Decision
 
 The canonical project relationship for `Workspace` should be:

@@ -52,6 +52,18 @@ async def issue_terminal_token(kennel_name: str, ttl: int = 3600) -> dict:
     return response.json()
 
 
+async def get_env_services(kennel_name: str) -> dict:
+    response = await get_client().get(f"/envs/{kennel_name}/services")
+    response.raise_for_status()
+    return response.json()
+
+
+async def list_flavours() -> dict:
+    response = await get_client().get("/flavours")
+    response.raise_for_status()
+    return response.json()
+
+
 async def destroy_env(kennel_name: str) -> dict:
     response = await get_client().delete(f"/envs/{kennel_name}")
     response.raise_for_status()

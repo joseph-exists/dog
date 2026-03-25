@@ -41,6 +41,7 @@ const resourceTypeLabels: Record<AttachableResourceType, string> = {
   story: "Story",
   demo_session: "Demo",
   room: "Room",
+  workspace: "Workspace",
   user_repo: "Repo",
 }
 

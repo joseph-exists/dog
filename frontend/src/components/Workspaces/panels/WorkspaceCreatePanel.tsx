@@ -2,6 +2,11 @@ import { useState } from "react"
 
 import type { WorkspaceFlavour } from "@/client"
 import type { CreateWorkspaceFormInput } from "@/hooks/useWorkspaces"
+import type {
+  BootstrapInstallMode,
+  BootstrapRepoSourceType,
+  BootstrapStartupMode,
+} from "@/services/workspaceService"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,6 +26,9 @@ export interface WorkspaceCreatePanelProps {
 }
 
 const FLAVOURS: WorkspaceFlavour[] = ["base", "dev", "python", "node", "jupyter"]
+const INSTALL_PROFILES = ["npm", "pnpm", "yarn", "uv", "pip"] as const
+const STARTUP_PROFILES = ["vite", "nextjs", "fastapi"] as const
+const AGENT_PROFILES = ["codex", "claude_code", "hermes"] as const
 
 export function WorkspaceCreatePanel({
   isSubmitting,
@@ -29,7 +37,16 @@ export function WorkspaceCreatePanel({
   const [name, setName] = useState("")
   const [flavour, setFlavour] = useState<WorkspaceFlavour>("dev")
   const [kind, setKind] = useState("ephemeral")
+  const [repoSourceType, setRepoSourceType] = useState<BootstrapRepoSourceType>("none")
   const [repoUrl, setRepoUrl] = useState("")
+  const [userRepoId, setUserRepoId] = useState("")
+  const [repoRef, setRepoRef] = useState("")
+  const [workspacePath, setWorkspacePath] = useState("")
+  const [installMode, setInstallMode] = useState<BootstrapInstallMode>("none")
+  const [installProfile, setInstallProfile] = useState<(typeof INSTALL_PROFILES)[number]>("npm")
+  const [startupMode, setStartupMode] = useState<BootstrapStartupMode>("terminal_only")
+  const [startupProfile, setStartupProfile] = useState<(typeof STARTUP_PROFILES)[number]>("vite")
+  const [agentProfile, setAgentProfile] = useState<(typeof AGENT_PROFILES)[number]>("codex")
   const [sshPubkey, setSshPubkey] = useState("")
   const [envVarsText, setEnvVarsText] = useState("")
 
@@ -39,12 +56,30 @@ export function WorkspaceCreatePanel({
       name,
       flavour,
       kind,
+      repoSourceType,
       repoUrl,
+      userRepoId,
+      repoRef,
+      workspacePath,
+      installMode,
+      installProfile: installMode === "profile" ? installProfile : undefined,
+      startupMode,
+      startupProfile: startupMode === "profile" ? startupProfile : undefined,
+      agentProfile: startupMode === "agent_service" ? agentProfile : undefined,
       sshPubkey,
       envVarsText,
     })
     setName("")
+    setRepoSourceType("none")
     setRepoUrl("")
+    setUserRepoId("")
+    setRepoRef("")
+    setWorkspacePath("")
+    setInstallMode("none")
+    setInstallProfile("npm")
+    setStartupMode("terminal_only")
+    setStartupProfile("vite")
+    setAgentProfile("codex")
     setSshPubkey("")
     setEnvVarsText("")
     setFlavour("dev")
@@ -56,7 +91,7 @@ export function WorkspaceCreatePanel({
       <CardHeader>
         <CardTitle>Provision a Workspace</CardTitle>
         <CardDescription>
-          Create a new kennel-backed environment for local validation and frontend wiring.
+          Create a kennel-backed environment, declare bootstrap intent, and let the backend own the execution plan.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -101,14 +136,191 @@ export function WorkspaceCreatePanel({
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="workspace-repo">Repository URL</Label>
-          <Input
-            id="workspace-repo"
-            value={repoUrl}
-            onChange={(event) => setRepoUrl(event.target.value)}
-            placeholder="https://github.com/example/repo.git"
-          />
+        <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Bootstrap Intent</div>
+            <p className="text-xs text-muted-foreground">
+              Start simple, then opt into repo materialization and runtime setup as needed.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Repository Source</Label>
+            <Select
+              value={repoSourceType}
+              onValueChange={(value) => setRepoSourceType(value as BootstrapRepoSourceType)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="external_url">External URL</SelectItem>
+                <SelectItem value="user_repo">User Repo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {repoSourceType === "external_url" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="workspace-repo">Repository URL</Label>
+              <Input
+                id="workspace-repo"
+                value={repoUrl}
+                onChange={(event) => setRepoUrl(event.target.value)}
+                placeholder="https://github.com/example/repo.git"
+              />
+            </div>
+          ) : null}
+
+          {repoSourceType === "user_repo" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="workspace-user-repo-id">User Repo Id</Label>
+              <Input
+                id="workspace-user-repo-id"
+                value={userRepoId}
+                onChange={(event) => setUserRepoId(event.target.value)}
+                placeholder="4a8f8a1e-..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Current slice supports backend-validated user repo ids directly.
+              </p>
+            </div>
+          ) : null}
+
+          {repoSourceType !== "none" ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="workspace-repo-ref">Branch or Ref</Label>
+                <Input
+                  id="workspace-repo-ref"
+                  value={repoRef}
+                  onChange={(event) => setRepoRef(event.target.value)}
+                  placeholder="main"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="workspace-path">Workspace Path</Label>
+                <Input
+                  id="workspace-path"
+                  value={workspacePath}
+                  onChange={(event) => setWorkspacePath(event.target.value)}
+                  placeholder="/home/dev/workspace"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Install Intent</Label>
+              <Select
+                value={installMode}
+                onValueChange={(value) => setInstallMode(value as BootstrapInstallMode)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="auto">Auto</SelectItem>
+                  <SelectItem value="profile">Profile</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Startup Intent</Label>
+              <Select
+                value={startupMode}
+                onValueChange={(value) => setStartupMode(value as BootstrapStartupMode)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="terminal_only">Terminal Only</SelectItem>
+                  <SelectItem value="profile">Profile</SelectItem>
+                  <SelectItem value="agent_service">Agent Runtime</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {(installMode === "profile" || startupMode === "profile" || startupMode === "agent_service") ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {installMode === "profile" ? (
+                <div className="space-y-1.5">
+                  <Label>Install Profile</Label>
+                  <Select value={installProfile} onValueChange={(value) => setInstallProfile(value as (typeof INSTALL_PROFILES)[number])}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INSTALL_PROFILES.map((profile) => (
+                        <SelectItem key={profile} value={profile}>
+                          {profile}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+
+              {startupMode === "profile" ? (
+                <div className="space-y-1.5">
+                  <Label>Startup Profile</Label>
+                  <Select value={startupProfile} onValueChange={(value) => setStartupProfile(value as (typeof STARTUP_PROFILES)[number])}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STARTUP_PROFILES.map((profile) => (
+                        <SelectItem key={profile} value={profile}>
+                          {profile}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+
+              {startupMode === "agent_service" ? (
+                <div className="space-y-1.5">
+                  <Label>Agent Runtime Profile</Label>
+                  <Select value={agentProfile} onValueChange={(value) => setAgentProfile(value as (typeof AGENT_PROFILES)[number])}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AGENT_PROFILES.map((profile) => (
+                        <SelectItem key={profile} value={profile}>
+                          {profile}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Agent runtimes are long-running workspace processes. They may not publish a browser URL, but they still appear as discovered runtime surfaces.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="rounded-lg border border-dashed bg-background/80 p-3 text-xs text-muted-foreground">
+            {repoSourceType === "none"
+              ? startupMode === "agent_service"
+                ? "This workspace will come up as a clean environment and start the selected agent runtime as a first-class service."
+                : "This workspace will come up as a clean environment with terminal access only."
+              : repoSourceType === "external_url"
+                ? startupMode === "agent_service"
+                  ? "Backend will validate the external repository, materialize it into the workspace, and start the selected agent runtime."
+                  : "Backend will validate the external repository, generate a bootstrap plan, and materialize it inside the workspace."
+                : startupMode === "agent_service"
+                  ? "Backend will validate repo ownership/readiness, materialize the repo, and start the selected agent runtime."
+                  : "Backend will validate repo ownership and readiness before generating the bootstrap plan."}
+          </div>
         </div>
 
         <div className="space-y-1.5">

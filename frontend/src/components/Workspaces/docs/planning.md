@@ -501,6 +501,8 @@ Current artifact:
 - [domain-contract-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/domain-contract-implementation-roadmap.md)
 - [repo-bootstrap-contract.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-contract.md)
 - [repo-bootstrap-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-implementation-roadmap.md)
+- [agent-service-runtime-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/agent-service-runtime-roadmap.md)
+- [service-readiness-discovery-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/service-readiness-discovery-roadmap.md)
 - [project-workspace-relationship.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-workspace-relationship.md)
 - [room-workspace-connectivity.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-connectivity.md)
 
@@ -518,8 +520,99 @@ Sequencing review:
 - Track 1 did what it needed to do: it made workspace lifecycle, actions, and projected project context explicit enough that subsequent work has a stable operational base
 - the main remaining ambiguity is no longer lifecycle truth; it is repo/bootstrap intent and readiness
 
+Track 2 status:
+
+- typed bootstrap intent, backend plan generation, kennel execution, and frontend bootstrap visibility are now in place
+- service-readiness discovery is also now implemented through a coherent first pass:
+  - kennel exposes per-workspace service discovery
+  - backend projects discovered services, connectivity summary, and flavour health
+  - frontend list, detail, and terminal surfaces show runtime readiness distinctly from bootstrap progress
+- that means the system is now much clearer about a second important question:
+  - not just what a workspace is
+  - but what it appears to be running, and whether those services are becoming reachable
+
+Current sequencing read:
+
+- the broader ordering still holds
+- Track 2 is now strong enough that the next decision can be made from a better foundation
+- the likely next branch point is:
+  - deepen Track 2 for additional runtime/service kinds such as `agent_service` or later `shadow_repo`, or
+  - move into Track 3 and Track 4 work now that readiness, discovery, and projected project context are explicit enough to support relationship and trust decisions
+
 Recommended next move:
 
 - proceed to Track 2
 - keep Track 1 open only for targeted cleanup discovered while implementing repo/bootstrap semantics
 - begin Track 2 from the backend contract expansion and repo-source validation slice described in [repo-bootstrap-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-implementation-roadmap.md)
+
+Track 2 status:
+
+- Step 1 completed: backend workspace create/detail contract now has typed bootstrap intent and progress
+- Step 2 completed for the first slice: backend now validates and normalizes `external_url` and `user_repo`
+- Step 3 completed for the current slice: backend now generates a structured bootstrap plan from typed intent
+- Step 4 completed for the current slice: kennel inject now executes that structured plan and returns step-level results
+- Step 5 partially completed: workspace provisioning now records generated plans and execution results in lifecycle metadata
+- Step 6 completed for the current frontend slice: create, list, detail, and terminal surfaces now expose bootstrap intent and progress
+- `user_repo` currently uses a documented bridge through `source_repo_url`, which preserves delivery velocity while keeping the design open for platform-native materialization later
+- `shadow_repo` is recognized in the typed contract but intentionally deferred at execution time for now
+- current install-profile support is intentionally small and backend-owned: `npm`, `pnpm`, `yarn`, `uv`, `pip`
+- current startup-profile support is intentionally small and backend-owned: `vite`, `nextjs`, `fastapi`
+- `agent_service` is now part of the active execution slice through a first backend-owned profile set:
+  - `codex`
+  - `claude_code`
+  - `hermes`
+- the current launcher commands remain intentionally overrideable while kennel manifest/discovery semantics are being shaped
+- kennel manifest and discovery support for `agent_runtime` is now in place for that first profile set
+- agent runtimes now project through readiness/discovery semantics that account for non-browser workloads instead of assuming every healthy service must look like a web app
+- backend workspace projection and readiness semantics are now aligned for `agent_runtime` as well
+- when live discovery is unavailable, declared agent runtimes now fall back to `unknown` rather than being misread as port-based pending services
+- frontend affordances are now aligned too:
+  - workspace create supports `agent_service` startup selection
+  - list, detail, and terminal surfaces distinguish agent runtimes from ordinary web endpoints
+  - the UI now explains that some runtime surfaces are process-backed rather than browser-backed
+- frontend client/schema alignment is now caught up with the richer workspace bootstrap and readiness contract
+- operator-facing kennel rebuild jobs are now relevant as flavour-health diagnostics, but they should remain secondary to explicit per-workspace runtime discovery
+- service-readiness Step 1 is complete: backend models now express service summaries, connectivity summary, and flavour-health projection
+- service-readiness Step 2 is complete for the first slice: kennel now exposes runtime service discovery for known startup profiles
+- service-readiness Step 3 is complete for the current slice: backend workspace projection now exposes services, connectivity summary, richer readiness, and flavour-health context
+- service-readiness Step 4 is complete for the current slice: frontend detail, list, and terminal surfaces now expose discovered services and connectivity state
+- `agent_runtime` frontend visibility and affordances are now complete for the current slice, as scoped in [agent-service-runtime-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/agent-service-runtime-roadmap.md)
+
+Sequencing review:
+
+- the next most important work after the agent-runtime slice is Track 3, not Track 4
+- the reason is straightforward: room/workspace trust wants shared project attachment to be real, not just projected
+- that makes project/workspace relationship work the tighter dependency before broader room connectivity issuance
+
+Track 3 status:
+
+- first implementation slice is now in place
+- canonical relationship remains `ProjectResource(resource_type="workspace", resource_id=<workspace_id>)`
+- backend now enforces the near-term zero-or-one project rule for workspace attachment
+- workspace detail now exposes attach/detach through the canonical project-resource path rather than inventing a second mechanism
+- project/workspace relationship is therefore no longer only architectural intent; it is now becoming a real product affordance
+
+Current next pending step:
+
+- continue Track 3 by tightening project-aware workspace access and management semantics, or
+- deepen the first Track 4 descriptor slice now that the preferred shared-project authorization path is materially real
+
+Track 4 status:
+
+- the first backend descriptor slice is now in place
+- `POST /api/v1/rooms/{room_id}/workspace-connections` now issues a backend-evaluated room/workspace descriptor
+- the frontend client and shared room service layer now expose that descriptor route directly
+- the room route now includes a lightweight `Workspace Links` inspector surface for live descriptor evaluation
+- the current route evaluates:
+  - caller room membership
+  - shared-project or owner-private authorization
+  - workspace lifecycle/connectability
+  - purpose-specific discovered services
+- current first-slice behavior is intentionally honest:
+  - web-service purposes can return backend-issued descriptors derived from discovered container-routable URLs
+  - `agent_runtime_connect` can now move to `available` when the runtime binds its canonical port and discovery sees a real container IP endpoint
+  - process-healthy agent runtimes that have not yet published a network endpoint still remain explicitly `pending`
+- the current frontend surface is intentionally small:
+  - choose a workspace
+  - choose `service_connect` or `agent_runtime_connect`
+  - inspect live `available | pending | denied` status, capabilities, and endpoints

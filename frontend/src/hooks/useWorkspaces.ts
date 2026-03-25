@@ -4,6 +4,9 @@ import type { ApiError, WorkspaceFlavour } from "@/client"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import {
+  type BootstrapInstallMode,
+  type BootstrapRepoSourceType,
+  type BootstrapStartupMode,
   type CreateWorkspaceInput,
   WorkspaceService,
 } from "@/services/workspaceService"
@@ -19,7 +22,18 @@ export interface CreateWorkspaceFormInput {
   name: string
   flavour?: WorkspaceFlavour
   kind?: string
+  repoSourceType?: BootstrapRepoSourceType
   repoUrl?: string
+  userRepoId?: string
+  shadowRepoEntityType?: string
+  shadowRepoEntityId?: string
+  repoRef?: string
+  workspacePath?: string
+  installMode?: BootstrapInstallMode
+  installProfile?: string
+  startupMode?: BootstrapStartupMode
+  startupProfile?: string
+  agentProfile?: string
   sshPubkey?: string
   envVarsText?: string
 }
@@ -44,7 +58,18 @@ function toCreateWorkspaceInput(input: CreateWorkspaceFormInput): CreateWorkspac
     name: input.name.trim(),
     flavour: input.flavour ?? "dev",
     kind: input.kind ?? "ephemeral",
+    repoSourceType: input.repoSourceType ?? "none",
     repoUrl: input.repoUrl?.trim() || null,
+    userRepoId: input.userRepoId?.trim() || null,
+    shadowRepoEntityType: input.shadowRepoEntityType?.trim() || null,
+    shadowRepoEntityId: input.shadowRepoEntityId?.trim() || null,
+    repoRef: input.repoRef?.trim() || null,
+    workspacePath: input.workspacePath?.trim() || null,
+    installMode: input.installMode ?? "none",
+    installProfile: input.installProfile?.trim() || null,
+    startupMode: input.startupMode ?? "terminal_only",
+    startupProfile: input.startupProfile?.trim() || null,
+    agentProfile: input.agentProfile?.trim() || null,
     sshPubkey: input.sshPubkey?.trim() || null,
     envVars: parseEnvVars(input.envVarsText),
   }

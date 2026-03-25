@@ -220,6 +220,50 @@ export function useRemoveProjectResource(projectId: string) {
   })
 }
 
+export function useAttachProjectResource() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      input,
+    }: {
+      projectId: string
+      input: ProjectResourceCreate
+    }) => ProjectsAppService.addProjectResource(projectId, input),
+    onSuccess: (_result, variables) => {
+      showSuccessToast("Resource attached")
+      queryClient.invalidateQueries({
+        queryKey: projectsQueryKeys.resources(variables.projectId),
+      })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err as ApiError)
+    },
+  })
+}
+
+export function useDetachProjectResource() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      input,
+    }: {
+      projectId: string
+      input: ProjectResourceCreate
+    }) => ProjectsAppService.removeProjectResource(projectId, input),
+    onSuccess: (_result, variables) => {
+      showSuccessToast("Resource detached")
+      queryClient.invalidateQueries({
+        queryKey: projectsQueryKeys.resources(variables.projectId),
+      })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err as ApiError)
+    },
+  })
+}
+
 export function useUpsertProjectGrant(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({

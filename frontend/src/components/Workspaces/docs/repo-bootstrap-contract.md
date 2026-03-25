@@ -38,6 +38,57 @@ Current problems:
 - clone/install/start concerns are mixed together
 - workspace readiness currently means roughly “kennel is up and injection finished,” which is not strong enough for agent/service workflows
 
+## Current Implementation Snapshot
+
+The first Track 2 implementation slices have now made the contract partially real:
+
+- backend workspace create/detail models now include typed bootstrap intent and progress
+- backend normalization now accepts:
+  - legacy `repo_url`
+  - typed `external_url`
+  - typed `user_repo`
+- backend validation currently:
+  - validates external repo references conservatively
+  - validates `user_repo` existence, ownership, and ready/imported state
+  - returns structured API errors for invalid bootstrap input
+
+Important current bridge:
+
+- `user_repo` bootstrap currently materializes through `UserRepo.source_repo_url`
+
+This is a practical bridge, not the final design. It keeps the slice moving while preserving a clean place to swap in platform-native repo materialization later.
+
+Still intentionally deferred:
+
+- executable `shadow_repo` bootstrap
+- a richer runtime/service readiness model tied to declared endpoints
+
+The next implementation slice has now pushed the contract one step further:
+
+- backend now generates a structured bootstrap plan before kennel injection
+- that generated plan is persisted in workspace metadata for inspection and later extension
+- kennel now executes explicit plan steps and returns structured step results
+
+Current plan support is intentionally compact:
+
+- step types:
+  - `add_ssh_key`
+  - `write_env_vars`
+  - `clone_repo`
+  - `run_command`
+- install profiles:
+  - `npm`
+  - `pnpm`
+  - `yarn`
+  - `uv`
+  - `pip`
+- startup profiles:
+  - `vite`
+  - `nextjs`
+  - `fastapi`
+
+These registries should be read as extension points, not closed sets. The point of this slice is to make backend intent explicit and kennel execution legible without pretending the runtime vocabulary is final.
+
 ## Core Decision
 
 The backend should own bootstrap orchestration.
@@ -198,6 +249,11 @@ Near term:
 - support backend-defined `profile`
 - defer arbitrary `command` until access and audit semantics are clearer
 
+Current implementation note:
+
+- `profile` is now real in the first slice through a small backend-owned registry
+- additional profiles should be added by extending the backend plan generator rather than widening the frontend contract
+
 This keeps the system flexible without turning workspace creation into remote shell-as-API.
 
 ## Startup Intent
@@ -238,6 +294,16 @@ Near term:
 - support backend-defined `profile`
 - support `agent_service` if mapped to backend-controlled profiles
 - defer arbitrary `command`
+
+Current implementation note:
+
+- `terminal_only` is supported
+- `profile` is supported for a small initial registry: `vite`, `nextjs`, `fastapi`
+- `agent_service` is now supported through a backend-owned first profile set:
+  - `codex`
+  - `claude_code`
+  - `hermes`
+- the current launcher commands are intentionally compact and overrideable while the runtime/discovery semantics are clarified in the next slice
 
 ## Ownership Boundaries
 
@@ -292,6 +358,12 @@ interface ResolvedWorkspaceBootstrapPlan {
 ```
 
 This plan should be backend-generated, not frontend-provided.
+
+Current implementation note:
+
+- the current plan is linear rather than graph-shaped
+- kennel executes the plan in-order and returns structured `step_results`
+- this keeps the slice easy to understand and revise while future runtime/service work is still taking shape
 
 ## How `user_repos` Should Fit
 
@@ -523,6 +595,12 @@ Near-term compatible approach:
 - injected payload becomes more structured
 - kennel executes explicit steps in order
 - each step reports success/failure and an optional message
+
+Current implementation note:
+
+- this is now true for the current first slice
+- legacy inject fields are still accepted so the transition remains gentle
+- backend now records `bootstrap_plan`, `bootstrap_step_results`, `bootstrap_started_services`, and `bootstrap_workspace_path` in workspace metadata
 
 This fits naturally with the existing base/provision split in:
 

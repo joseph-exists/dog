@@ -45,6 +45,56 @@ This pass should not yet implement:
 - generalized writeback semantics for shadow repos
 - full tags/capabilities management
 
+## Current Implementation Status
+
+Completed so far:
+
+- Step 1: backend workspace create/detail contract expanded with typed bootstrap intent and progress
+- Step 2: backend validation and normalization for `external_url` and `user_repo`
+- Step 3: backend-generated bootstrap plan now exists for the current repo/install/start slice
+- Step 4: kennel inject now consumes a structured bootstrap plan and returns structured step results
+- Step 5: workspace provisioning now persists the generated plan and records kennel execution results
+
+What is now true:
+
+- `WorkspaceCreate` can express a typed `bootstrap` payload
+- `WorkspacePublic` can express typed `bootstrap` and `readiness_summary` projections
+- repo source, install intent, startup intent, and bootstrap progress now have explicit backend model types
+- legacy create fields remain available for compatibility during the transition
+- backend normalization now:
+  - converts legacy `repo_url` input into typed `external_url` bootstrap intent
+  - validates `external_url` references conservatively
+  - validates `user_repo` ownership/readiness
+  - materializes `user_repo` through its current `source_repo_url` as a temporary bridge
+  - recognizes `shadow_repo` in the contract but rejects execution in this slice with an explicit validation error
+- create-route validation errors now return structured API errors instead of falling through as generic failures
+- bootstrap execution is now backend-owned and plan-driven rather than inferred from a thin kennel payload
+- the generated plan is stored in workspace metadata so later engineers can inspect the backend's operational intent
+- kennel inject now executes a small set of explicit step types:
+  - `add_ssh_key`
+  - `write_env_vars`
+  - `clone_repo`
+  - `run_command`
+- kennel now returns structured `step_results`, `started_services`, `workspace_path`, and a `bootstrap_success` signal
+- install intent support in this slice is:
+  - `none`
+  - `auto`
+  - named profiles: `npm`, `pnpm`, `yarn`, `uv`, `pip`
+- startup intent support in this slice is:
+  - `terminal_only`
+  - named profiles: `vite`, `nextjs`, `fastapi`
+- `agent_service` startup is now enabled through a backend-owned first profile set:
+  - `codex`
+  - `claude_code`
+  - `hermes`
+- the current launcher commands are intentionally overrideable by environment variable while the runtime semantics and kennel discovery path continue to mature
+
+What is still pending:
+
+- deeper repo-source support beyond the first slice, especially platform-native `user_repo` materialization and `shadow_repo` execution
+- deeper `agent_service` execution and discovery semantics
+- richer runtime/service readiness checks and service discovery
+
 ## Design Intent
 
 The key principle of Track 2 is:
@@ -194,6 +244,12 @@ Important constraint:
 
 - do not expose arbitrary `command` execution in this first pass
 
+Status:
+
+- implemented
+- typed bootstrap intent and progress now exist on the backend workspace create/detail contract
+- persistence and execution behavior remain for later steps
+
 ### Step 2: Repo Source Validation And Resolution
 
 Introduce backend helpers that validate and resolve repo sources before kennel bootstrap begins.
@@ -222,6 +278,13 @@ Important constraint:
 
 - repo source authorization should stay backend-owned
 - frontend should never turn a repo id into a clone path or forge URL
+
+Status:
+
+- implemented for the first slice
+- `external_url` and `user_repo` now validate and normalize in the backend service layer
+- `user_repo` currently bridges through `source_repo_url` so we can keep delivery moving while preserving a clear extension point for platform-native materialization
+- `shadow_repo` is intentionally deferred at execution time even though the typed contract already recognizes it
 
 ### Step 3: Bootstrap Plan Generation
 
@@ -254,6 +317,12 @@ Important constraint:
 - the plan should be backend-generated
 - the frontend should only submit intent, not executable step arrays
 
+Status:
+
+- implemented for the current first slice
+- the plan is intentionally linear and compact so it remains easy to evolve
+- install/start profile registries are small by design and should be treated as extension points, not final ceilings
+
 ### Step 4: Kennel Execution Contract
 
 Adjust kennel-side execution to consume a structured plan rather than only loose injected values.
@@ -274,6 +343,11 @@ Important constraint:
 
 - do not try to build a full remote workflow engine here
 - keep the first pass linear and operationally understandable
+
+Status:
+
+- implemented for the first slice
+- kennel inject now supports explicit plan execution with structured results while keeping legacy fields for compatibility
 
 ### Step 5: Workspace Service Integration
 
@@ -300,6 +374,18 @@ Important constraint:
 - Track 1 lifecycle semantics should remain authoritative
 - bootstrap progress should refine readiness, not replace lifecycle state
 
+Status:
+
+- implemented for the current slice
+- workspace metadata now records:
+  - `bootstrap_intent`
+  - `bootstrap_plan`
+  - `bootstrap_progress`
+  - `bootstrap_step_results`
+  - `bootstrap_started_services`
+  - `bootstrap_workspace_path`
+- lifecycle state still owns the top-level truth; bootstrap plan execution now gives that lifecycle more meaningful internals
+
 ### Step 6: Frontend Service And Create Surface Alignment
 
 Update frontend service and create/detail surfaces to work with bootstrap intent and progress.
@@ -323,6 +409,23 @@ Important constraint:
 
 - start simple
 - avoid building a large multi-mode create wizard until the backend contract is stable
+
+Status:
+
+- implemented for the current frontend slice
+- the create surface now supports:
+  - repo source selection for `none`, `external_url`, and `user_repo`
+  - optional repo ref and workspace path
+  - install intent `none | auto | profile`
+  - startup intent `terminal_only | profile`
+- the list/detail/terminal surfaces now project:
+  - bootstrap intent
+  - bootstrap progress
+  - started services
+  - workspace bootstrap path
+- the generated client now includes the richer workspace bootstrap and readiness schema
+- frontend service alignment now reads bootstrap/readiness from generated contract fields directly
+- structured metadata remains in use only for execution details that are still intentionally metadata-backed, such as step results and started services
 
 ### Step 7: Verification And Documentation
 

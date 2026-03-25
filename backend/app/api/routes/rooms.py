@@ -59,6 +59,8 @@ from app.models import (
     RoomParticipantPublic,
     RoomParticipantsPublic,
     RoomPublic,
+    RoomWorkspaceConnectionDescriptor,
+    RoomWorkspaceConnectionRequest,
     RoomsPublic,
     RoomUpdate,
     RepoRoomEventRequest,
@@ -66,6 +68,9 @@ from app.models import (
 )
 from app.services.agent_runner import invoke_agent_manually, run_agents_for_message
 from app.services.event_emitter import emit_event
+from app.services.room_workspace_connection_service import (
+    build_room_workspace_connection_descriptor,
+)
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 logger = logging.getLogger(__name__)
@@ -144,6 +149,30 @@ async def get_room(
         session=session,
     )
     return room
+
+
+@router.post("/{room_id}/workspace-connections", response_model=RoomWorkspaceConnectionDescriptor)
+async def create_room_workspace_connection(
+    *,
+    room_id: UUID,
+    session: AsyncSessionDep,
+    current_user: CurrentUser,
+    request: RoomWorkspaceConnectionRequest,
+) -> Any:
+    """
+    Issue a backend-evaluated room/workspace connectivity descriptor.
+
+    This first slice makes authorization and readiness explicit. It returns
+    shared-project or owner-private availability and the currently discovered
+    runtime surfaces for the requested purpose.
+    """
+
+    return await build_room_workspace_connection_descriptor(
+        session,
+        current_user=current_user,
+        room_id=room_id,
+        request=request,
+    )
 
 
 @router.patch("/{room_id}", response_model=RoomPublic)

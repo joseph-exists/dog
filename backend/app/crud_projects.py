@@ -218,6 +218,19 @@ async def attach_project_resource(
     if existing:
         return existing
 
+    if resource_in.resource_type == "workspace":
+        conflicting_stmt = select(ProjectResource).where(
+            ProjectResource.resource_type == resource_in.resource_type,
+            ProjectResource.resource_id == resource_in.resource_id,
+            ProjectResource.project_id != project_id,
+        )
+        conflicting = (await session.exec(conflicting_stmt)).one_or_none()
+        if conflicting is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Workspace is already attached to another project",
+            )
+
     row = ProjectResource(
         project_id=project_id,
         resource_type=resource_in.resource_type,

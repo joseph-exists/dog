@@ -246,6 +246,25 @@ Response:
 
 - `RoomWorkspaceConnectionDescriptor`
 
+Implementation update for the current slice:
+
+- this first descriptor route is now implemented on the backend
+- it evaluates:
+  - caller room membership
+  - shared-project or owner-private authorization path
+  - workspace lifecycle/connectability
+  - purpose-specific discovered services
+- the current descriptor behavior is intentionally first-pass:
+  - web-service purposes can return backend-issued descriptors based on discovered container-routable URLs
+  - `agent_runtime_connect` can now move from `pending` to `available` when the runtime binds its canonical port and kennel discovery sees a real container IP endpoint
+  - agent runtimes that are process-healthy but have not published a network endpoint still remain explicitly `pending`
+- the frontend now exposes this route through the generated client and shared room service layer
+- the room view now includes a small `Workspace Links` inspector panel that can:
+  - select an accessible workspace
+  - request a descriptor for `service_connect` or `agent_runtime_connect`
+  - poll while the descriptor remains `pending`
+  - surface granted capabilities, issued endpoints, and backend reasons directly
+
 Why `POST`:
 
 - descriptor issuance is an authorization decision with token generation semantics
@@ -409,6 +428,11 @@ Near-term frontend surfaces likely need:
   - select or confirm an eligible workspace
   - request connection
   - surface denied reasons clearly
+
+Current implementation note:
+
+- the room-side portion of that UI now exists as a lightweight live inspector in [WorkspaceConnectionsPanel.tsx](/home/josep/dog/frontend/src/components/Room/panels/WorkspaceConnectionsPanel.tsx)
+- it is intended as both a practical affordance and a trust/debug surface while the broader room/workspace product flow continues to evolve
 
 ## First-Phase Recommendation
 

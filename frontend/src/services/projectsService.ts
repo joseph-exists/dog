@@ -36,6 +36,7 @@ export type AttachableResourceType =
   | "story"
   | "demo_session"
   | "room"
+  | "workspace"
   | "user_repo"
 
 export type AttachableResourceScope = "owned" | "available"
