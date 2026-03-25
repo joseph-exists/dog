@@ -51,6 +51,27 @@ The answer should be:
 4. room hydrates from that backend record
 5. endpoint descriptors carry explicit scope and expiry semantics
 
+## Boundary Clarification
+
+This roadmap is intentionally about a convenience layer, not a canonical
+room/workspace relationship model.
+
+The current-connection record should be treated as:
+
+- a backend-recognized room default
+- a stable hydration point for room UX
+- a useful default for later handler/tool consumption
+
+It should not be treated as proof that the long-term platform model is:
+
+- one workspace per room
+- one connection per workspace
+- one purpose per room at a time
+
+Those broader many-to-many and per-handler cases remain open by design. The
+descriptor contract is still the canonical trust primitive; the current
+connection record is a narrow convenience projection layered on top of it.
+
 ## Proposed Implementation Sequence
 
 ### Step 1: Backend Current Connection Projection
@@ -82,6 +103,9 @@ Status:
 - implemented
 - the backend now persists current room/workspace connection intent via a room
   context item and re-projects live descriptor state on read
+- this persistence choice is intentionally lightweight so future expansion to
+  multiple concurrent room/workspace relationships does not require unpicking a
+  prematurely hardened table model
 
 ### Step 2: Descriptor Scope Tightening
 
@@ -107,6 +131,8 @@ Status:
   - `workspace_id`
   - `purpose`
   - `endpoint_id`
+- this keeps descriptor issuance usable even if the room later holds multiple
+  defaults or handler-specific workspace selections
 
 ### Step 3: Frontend Hydration And Mutation Alignment
 
@@ -124,6 +150,8 @@ Status:
 - room connection hooks now hydrate current connection state from backend truth
 - room-side UX writes current connection through backend routes instead of
   frontend-only cache updates
+- the frontend still treats this as a default current connection, not as the
+  only possible room/workspace association
 
 ### Step 4: UX And Trust Review
 

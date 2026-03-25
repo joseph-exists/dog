@@ -286,6 +286,12 @@ That current-connection slice is now in progress through:
 - backend-scoped descriptor endpoint metadata
 - frontend hydration of current room connection state from backend truth
 
+Important boundary:
+
+- backend-issued descriptors remain the canonical room/workspace trust primitive
+- the singular current-connection surface is a narrow MVP convenience layer, not
+  the final relationship model for rooms and workspaces
+
 1. make the workspace domain explicit
 2. make project/repo/room relationships real
 3. make websocket trust and service discovery understandable

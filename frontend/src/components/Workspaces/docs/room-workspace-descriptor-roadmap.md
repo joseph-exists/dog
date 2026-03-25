@@ -73,6 +73,28 @@ The answer should be:
 
 That is a stronger and more usable milestone than simply adding more descriptor fields.
 
+## Boundary Clarification
+
+The canonical trust primitive for room/workspace connectivity remains:
+
+- backend-issued descriptors scoped by room, workspace, purpose, and endpoint
+
+The current room/workspace connection should be treated as:
+
+- a narrow room-side convenience projection
+- useful for hydration, UX continuity, and handler defaults
+- not the canonical long-term relationship model between rooms and workspaces
+
+That distinction matters because the current implementation intentionally keeps
+future directions open:
+
+- multiple workspaces in a single room
+- direct chat or handler-driven workspace use
+- concurrent many-to-many room/workspace connectivity
+
+The singular `current` connection surface is therefore a convenience for the MVP
+workflow, not a statement that rooms may only ever use one workspace.
+
 ## Proposed Next Implementation Sequence
 
 ### Step 1: Room-Aware Workspace Candidate Surface
@@ -108,6 +130,8 @@ Status:
   - current service/runtime support
   - current use/manage posture
 - the room-side workspace panel now uses these candidates instead of the generic visible workspace list
+- candidate discovery remains plural and descriptor-driven; nothing in this step
+  makes a singular room/workspace attachment canonical
 
 ### Step 2: Room-Side Connection State
 
@@ -141,6 +165,8 @@ Status:
   - shows the current descriptor-backed connection
   - lets the user set or clear the current connection
   - keeps the current connection refreshed while the selected descriptor remains in view
+- this state should be understood as a room convenience default, not a limit on
+  future per-purpose, per-handler, or multi-workspace connection models
 
 ### Step 3: Descriptor-Backed Runtime Consumption
 
@@ -160,6 +186,8 @@ Status:
 - the room runtime panel now consumes the current room-scoped descriptor-backed connection
 - runtime/service launch affordances are now sourced from the current descriptor endpoints rather than inferred workspace URLs
 - pending or unavailable connections are surfaced in the runtime UX as explicit state instead of being silently ignored
+- the next follow-on should prefer backend consumer helpers for chat/handler
+  integration rather than coupling room orchestration directly to frontend state
 
 ### Step 4: Optional Backend Convenience For Current Room Connection
 
@@ -185,6 +213,8 @@ Status:
   rather than a new room/workspace attachment table
 - frontend room connection state now hydrates from backend truth instead of only
   local query cache
+- this backend record should remain intentionally narrow unless real usage proves
+  that multi-connection orchestration needs a broader model
 
 ### Step 5: UX And Trust Review
 
@@ -203,6 +233,8 @@ For the next Track 4 pass, backend work should focus on:
 - keeping descriptor issuance explicit and purpose-scoped
 - making room/workspace candidate selection cleaner
 - supporting current-room consumption of descriptors
+- adding handler-friendly consumption seams without turning the current
+  convenience record into the canonical relationship layer
 
 Not on:
 
