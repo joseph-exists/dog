@@ -259,6 +259,33 @@ The frontend should stay thin and legible. That does not mean “dumb”; it mea
 
 The collective next milestone should be framed as:
 
+## Track 4 Status
+
+Track 4 now has the first two descriptor-consumption steps in place:
+
+- room-aware workspace candidate selection
+- room-side current descriptor-backed connection state
+- descriptor-backed runtime consumption in room UX
+
+That means room/workspace connectivity is no longer only an inspection path. The
+room can now choose a relevant workspace, request a purpose-scoped descriptor,
+hold that descriptor as the current session connection, and consume issued
+endpoints from room runtime UX.
+
+The next Track 4 pressure point is no longer “can we evaluate a descriptor?” It
+is “what deeper trust, token, or transport hardening should sit behind the
+descriptor-backed workflows that now exist?”
+
+The next focused artifact for that work is:
+
+- [room-workspace-current-connection-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-current-connection-roadmap.md)
+
+That current-connection slice is now in progress through:
+
+- backend current room/workspace connection routes
+- backend-scoped descriptor endpoint metadata
+- frontend hydration of current room connection state from backend truth
+
 1. make the workspace domain explicit
 2. make project/repo/room relationships real
 3. make websocket trust and service discovery understandable
@@ -506,6 +533,7 @@ Current artifact:
 - [project-workspace-relationship.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-workspace-relationship.md)
 - [project-management-access-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-management-access-roadmap.md)
 - [room-workspace-connectivity.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-connectivity.md)
+- [room-workspace-descriptor-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-descriptor-roadmap.md)
 
 Track 1 status:
 
@@ -599,12 +627,19 @@ Track 3 status:
   - backend `allowed_actions` is now actor-aware
   - project-derived viewers can receive use-oriented actions such as terminal and service discovery
   - destructive runtime operations remain owner-anchored in this slice
+- Track 3 Step 3 is now complete:
+  - frontend workspace view models now distinguish use-versus-manage semantics
+  - workspace list/detail surfaces no longer assume that every visible workspace is owner-operated
+  - owner-only affordances are now suppressed or disabled where the current slice still keeps management authority narrow
+- Track 3 Step 4 is now complete for the main workspace surfaces:
+  - shell copy, terminal, controls, project assignment, list, and detail panels now reflect the shared-workspace policy more consistently
+  - the main remaining question is sequencing rather than semantic cleanup
 
 Current next pending step:
 
-- continue Track 3 through Step 3 in [project-management-access-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/project-management-access-roadmap.md):
-  - frontend service alignment for shared-workspace access semantics
-- after that pass, reassess whether the next best move is remaining Track 3 management work or a return to richer Track 4 descriptor behavior
+- pause for sequencing review:
+  - decide whether the next most valuable work is additional Track 3 management breadth
+  - or a return to richer Track 4 descriptor behavior now that shared-workspace access semantics are explicit across backend and frontend
 
 Track 4 status:
 
@@ -625,3 +660,15 @@ Track 4 status:
   - choose a workspace
   - choose `service_connect` or `agent_runtime_connect`
   - inspect live `available | pending | denied` status, capabilities, and endpoints
+
+Concrete recommendation:
+
+- the next Track 4 slice should move from descriptor inspection to descriptor consumption
+- that recommendation is now captured in [room-workspace-descriptor-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-descriptor-roadmap.md)
+- the key next implementation sequence should be:
+  - room-aware workspace candidate selection
+  - room-side current connection state
+  - descriptor-backed runtime/service consumption in room UX
+- Track 4 Step 1 is now complete:
+  - backend now exposes `GET /api/v1/rooms/{room_id}/workspace-candidates`
+  - the room workspace panel now uses ranked room-aware candidates instead of a generic visible workspace list

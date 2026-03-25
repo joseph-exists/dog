@@ -22,6 +22,12 @@ function serviceStatusClass(status: string): string {
   return "border-border bg-muted/40 text-muted-foreground"
 }
 
+function accessLevelLabel(value: WorkspaceDetailViewModel["accessLevel"]): string {
+  if (value === "manage") return "Manage"
+  if (value === "use") return "Use"
+  return "View"
+}
+
 export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetailViewModel }) {
   const agentRuntimeServices = workspace.services.filter((service) => service.kind === "agent_runtime")
   const webServices = workspace.services.filter((service) => service.kind !== "agent_runtime")
@@ -45,6 +51,10 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
           </div>
         ) : null}
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground">Access Level</dt>
+            <dd>{accessLevelLabel(workspace.accessLevel)}</dd>
+          </div>
           <div>
             <dt className="text-muted-foreground">Visibility</dt>
             <dd>{workspace.visibility}</dd>
@@ -86,6 +96,18 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
             <dd>{workspace.terminalStatus}</dd>
           </div>
           <div>
+            <dt className="text-muted-foreground">Capabilities</dt>
+            <dd>
+              {[
+                workspace.canOpenTerminal ? "terminal" : null,
+                workspace.canDiscoverServices ? "service discovery" : null,
+                workspace.canManageRuntime ? "runtime management" : null,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "view only"}
+            </dd>
+          </div>
+          <div>
             <dt className="text-muted-foreground">Bootstrap Path</dt>
             <dd>{workspace.bootstrapWorkspacePath ?? "Default workspace path"}</dd>
           </div>
@@ -122,6 +144,11 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
             </dd>
           </div>
         </dl>
+        {workspace.isProjectWorkspace && workspace.accessLevel !== "manage" ? (
+          <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+            This workspace is available through project membership. You can use the capabilities exposed by the backend, while runtime-destructive actions remain owner-scoped in the current policy pass.
+          </div>
+        ) : null}
         {workspace.bootstrapIntent || workspace.bootstrapProgress ? (
           <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3">

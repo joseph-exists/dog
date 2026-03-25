@@ -18,6 +18,7 @@ export interface WorkspaceProjectPanelProps {
   projects: ProjectPublic[]
   isAssigning: boolean
   isDetaching: boolean
+  canManageAssignment: boolean
   onAssign: (projectId: string) => Promise<unknown>
   onDetach: () => Promise<unknown>
 }
@@ -27,6 +28,7 @@ export function WorkspaceProjectPanel({
   projects,
   isAssigning,
   isDetaching,
+  canManageAssignment,
   onAssign,
   onDetach,
 }: WorkspaceProjectPanelProps) {
@@ -35,16 +37,18 @@ export function WorkspaceProjectPanel({
   const assignDisabled =
     !selectedProjectId ||
     selectedProjectId === workspace.projectId ||
+    !canManageAssignment ||
     isAssigning ||
     isDetaching
+  const description = canManageAssignment
+    ? "Attach this workspace to a project through the canonical project-resource relationship."
+    : "This workspace's current project relationship is visible here. Assignment changes remain owner-scoped in the current policy pass."
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Project Assignment</CardTitle>
-        <CardDescription>
-          Attach this workspace to a project through the canonical project-resource relationship.
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-lg border bg-muted/20 p-4 text-sm">
@@ -58,7 +62,11 @@ export function WorkspaceProjectPanel({
 
         <div className="space-y-1.5">
           <Label>Assign to Project</Label>
-          <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+          <Select
+            value={selectedProjectId}
+            onValueChange={setSelectedProjectId}
+            disabled={!canManageAssignment}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select a project" />
             </SelectTrigger>
@@ -73,6 +81,11 @@ export function WorkspaceProjectPanel({
           <p className="text-xs text-muted-foreground">
             Near-term rule: a workspace can belong to zero or one project.
           </p>
+          {!canManageAssignment ? (
+            <p className="text-xs text-muted-foreground">
+              Project assignment remains owner-scoped in the current policy pass.
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -86,7 +99,7 @@ export function WorkspaceProjectPanel({
           <Button
             variant="outline"
             className="flex-1"
-            disabled={!workspace.projectId || isAssigning || isDetaching}
+            disabled={!workspace.projectId || !canManageAssignment || isAssigning || isDetaching}
             onClick={() => onDetach()}
           >
             {isDetaching ? "Removing..." : "Remove from Project"}

@@ -3745,6 +3745,7 @@ class RoomWorkspaceEndpointDescriptor(SQLModel):
     url: str | None = None
     auth_mode: RoomWorkspaceEndpointAuthMode = RoomWorkspaceEndpointAuthMode.none
     expires_at: datetime | None = None
+    scope: dict[str, str] = Field(default_factory=dict)
 
 
 class RoomWorkspaceConnectionDescriptor(SQLModel):
@@ -3757,6 +3758,70 @@ class RoomWorkspaceConnectionDescriptor(SQLModel):
     reason: str | None = None
     capabilities: list[RoomWorkspaceConnectionCapability] = Field(default_factory=list)
     endpoints: list[RoomWorkspaceEndpointDescriptor] = Field(default_factory=list)
+
+
+class RoomWorkspaceCandidateRelationship(str, PyEnum):
+    """Why a workspace is being surfaced as a candidate for a room."""
+
+    shared_project = "shared_project"
+    owner_private = "owner_private"
+
+
+class RoomWorkspaceCandidateAccessLevel(str, PyEnum):
+    """Room-facing access posture for a workspace candidate."""
+
+    view = "view"
+    use = "use"
+    manage = "manage"
+
+
+class RoomWorkspaceCandidate(SQLModel):
+    """Room-aware workspace candidate projection."""
+
+    room_id: uuid.UUID
+    workspace_id: uuid.UUID
+    workspace_name: str
+    workspace_status: WorkspaceStatus
+    visibility: WorkspaceVisibility
+    project_id: uuid.UUID | None = None
+    project_summary: WorkspaceProjectSummary | None = None
+    relationship: RoomWorkspaceCandidateRelationship
+    access_level: RoomWorkspaceCandidateAccessLevel
+    match_reason: str
+    candidate_rank: int = Field(default=0, ge=0)
+    service_count: int = Field(default=0, ge=0)
+    ready_service_count: int = Field(default=0, ge=0)
+    supports_service_connect: bool = False
+    supports_agent_runtime_connect: bool = False
+
+
+class RoomWorkspaceCandidatesPublic(SQLModel):
+    """Collection response model for room-aware workspace candidates."""
+
+    data: list[RoomWorkspaceCandidate]
+    count: int
+
+
+class RoomWorkspaceCurrentConnectionUpdate(SQLModel):
+    """Request model for setting the current room/workspace connection."""
+
+    workspace_id: uuid.UUID
+    purpose: RoomWorkspaceConnectionPurpose = RoomWorkspaceConnectionPurpose.service_connect
+
+
+class RoomWorkspaceCurrentConnection(SQLModel):
+    """Backend-projected current room/workspace connection."""
+
+    room_id: uuid.UUID
+    workspace_id: uuid.UUID
+    workspace_name: str
+    purpose: RoomWorkspaceConnectionPurpose
+    relationship: RoomWorkspaceCandidateRelationship
+    access_level: RoomWorkspaceCandidateAccessLevel
+    selected_at: datetime
+    service_count: int = Field(default=0, ge=0)
+    ready_service_count: int = Field(default=0, ge=0)
+    descriptor: RoomWorkspaceConnectionDescriptor
 
 
 # ============================================================================

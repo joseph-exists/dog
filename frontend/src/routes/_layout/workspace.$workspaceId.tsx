@@ -16,6 +16,7 @@ import { useWorkspaceTerminal } from "@/hooks/useWorkspaceTerminal"
 import { useDestroyWorkspace, useStartWorkspace, useStopWorkspace, workspaceKeys } from "@/hooks/useWorkspaces"
 import { usePageThemes } from "@/hooks/useThemeBinding"
 import { useAvailableThemes, useUserThemeBindings } from "@/hooks/useThemeRegistry"
+import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/workspace/$workspaceId")({
   component: WorkspaceDetailPage,
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/_layout/workspace/$workspaceId")({
 function WorkspaceDetailPage() {
   const { workspaceId } = Route.useParams()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const workspaceQuery = useWorkspace(workspaceId)
   const terminalQuery = useWorkspaceTerminal(workspaceId, { enabled: false })
   const projectsQuery = useProjectsList()
@@ -69,6 +71,7 @@ function WorkspaceDetailPage() {
   }
 
   const workspace = workspaceQuery.data
+  const canManageProjectAssignment = user?.id === workspace.ownerId
 
   const panels: PanelConfig[] = [
     {
@@ -104,6 +107,7 @@ function WorkspaceDetailPage() {
           projects={projectsQuery.data ?? []}
           isAssigning={attachProjectResource.isPending}
           isDetaching={detachProjectResource.isPending}
+          canManageAssignment={canManageProjectAssignment}
           onAssign={async (projectId) => {
             await attachProjectResource.mutateAsync({
               projectId,
@@ -150,7 +154,13 @@ function WorkspaceDetailPage() {
   return (
     <WorkspacesShell
       title={workspace.name}
-      description="Operate a single kennel-backed environment and request its direct terminal endpoint."
+      description={
+        workspace.accessLevel === "manage"
+          ? "Operate a single kennel-backed environment and manage its runtime directly."
+          : workspace.accessLevel === "use"
+            ? "Use a project-shared kennel-backed environment through the capabilities exposed to your account."
+            : "Inspect a project-visible kennel-backed environment and its current operational state."
+      }
       panels={panels}
       pageTheme={themes.page?.theme ?? null}
       cardsTheme={themes.cards?.theme ?? null}

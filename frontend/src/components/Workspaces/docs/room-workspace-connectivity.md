@@ -258,12 +258,23 @@ Implementation update for the current slice:
   - web-service purposes can return backend-issued descriptors based on discovered container-routable URLs
   - `agent_runtime_connect` can now move from `pending` to `available` when the runtime binds its canonical port and kennel discovery sees a real container IP endpoint
   - agent runtimes that are process-healthy but have not published a network endpoint still remain explicitly `pending`
+- the room-side frontend now carries a lightweight current connection state built on top of issued descriptors rather than only showing the latest inspection result
 - the frontend now exposes this route through the generated client and shared room service layer
 - the room view now includes a small `Workspace Links` inspector panel that can:
-  - select an accessible workspace
+  - choose from room-aware workspace candidates rather than a generic visible workspace list
   - request a descriptor for `service_connect` or `agent_runtime_connect`
   - poll while the descriptor remains `pending`
   - surface granted capabilities, issued endpoints, and backend reasons directly
+- the room runtime surface now consumes the room's current descriptor-backed connection and only offers launch affordances from issued descriptor endpoints
+- backend candidate selection now has an explicit surface too:
+  - `GET /api/v1/rooms/{room_id}/workspace-candidates`
+  - candidates are ranked by shared-project match first, then owner-private fallback
+- the backend now also exposes a narrow current-connection convenience surface:
+  - `GET /api/v1/rooms/{room_id}/workspace-connections/current`
+  - `PUT /api/v1/rooms/{room_id}/workspace-connections/current`
+  - `DELETE /api/v1/rooms/{room_id}/workspace-connections/current`
+- endpoint descriptors now carry explicit scope metadata for room, workspace,
+  purpose, and endpoint id
 
 Why `POST`:
 

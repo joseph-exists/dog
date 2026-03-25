@@ -55,7 +55,8 @@ What is still missing:
 - owner and project-derived visibility now flow through the same `resource_type="workspace"` access evaluation
 - project membership is now the basis for use-oriented workspace actions in the current slice
 - allowed actions are not yet role-aware beyond owner lifecycle state
-- frontend workspace surfaces do not yet distinguish “can use” from “can manage”
+- frontend workspace service and main detail/list surfaces now distinguish “can use” from “can manage”
+- the remaining gap is broader UI follow-through rather than service-model ambiguity
 
 ## Design Intent
 
@@ -258,6 +259,18 @@ Changes:
 - expose any new projected access semantics if added
 - avoid frontend guesses about use/manage authority
 
+Status:
+
+- implemented
+- frontend workspace view models now derive:
+  - `accessLevel`
+  - `canUseWorkspace`
+  - `canManageRuntime`
+  - `canDiscoverServices`
+  - `isProjectWorkspace`
+- workspace list and detail surfaces now explain shared project access more clearly
+- owner-only affordances are now suppressed or disabled where the current slice still keeps management authority narrow, such as project assignment and destructive runtime controls
+
 ### Step 4: Frontend Management Surface Alignment
 
 Reflect the policy clearly in workspace list/detail UI.
@@ -277,6 +290,13 @@ Changes:
   - workspace you can use but not manage
 - suppress or disable controls based on backend action truth
 - keep the language operator-friendly and concrete
+
+Status:
+
+- implemented for the main Track 3 surfaces
+- workspace shell copy, controls, terminal, project assignment, list, and detail panels now reflect shared-workspace semantics more cleanly
+- owner-only operations are no longer presented with owner-toned copy when the current user only has project-derived use access
+- the remaining Track 3 work is now less about core semantic alignment and more about whether we want additional management breadth before returning to Track 4
 
 ### Step 5: Documentation And Sequencing Review
 

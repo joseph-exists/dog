@@ -30,15 +30,22 @@ export function WorkspaceControlsPanel({
     navigate({ to: "/workspaces" })
   }
 
+  const description = workspace.canManageRuntime
+    ? "Use the current backend control surface to manage this environment."
+    : "This workspace is visible in your current access scope, but runtime management remains unavailable from this account."
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Controls</CardTitle>
-        <CardDescription>
-          Use the current backend control surface to manage this environment.
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {!workspace.canManageRuntime ? (
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+            This workspace is visible in your current access scope, but runtime management is not available from this account.
+          </div>
+        ) : null}
         <Button
           variant="outline"
           className="w-full"

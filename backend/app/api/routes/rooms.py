@@ -60,7 +60,10 @@ from app.models import (
     RoomParticipantsPublic,
     RoomPublic,
     RoomWorkspaceConnectionDescriptor,
+    RoomWorkspaceCurrentConnection,
+    RoomWorkspaceCurrentConnectionUpdate,
     RoomWorkspaceConnectionRequest,
+    RoomWorkspaceCandidatesPublic,
     RoomsPublic,
     RoomUpdate,
     RepoRoomEventRequest,
@@ -70,6 +73,10 @@ from app.services.agent_runner import invoke_agent_manually, run_agents_for_mess
 from app.services.event_emitter import emit_event
 from app.services.room_workspace_connection_service import (
     build_room_workspace_connection_descriptor,
+    clear_current_room_workspace_connection,
+    get_current_room_workspace_connection,
+    list_room_workspace_candidates,
+    set_current_room_workspace_connection,
 )
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
@@ -173,6 +180,70 @@ async def create_room_workspace_connection(
         room_id=room_id,
         request=request,
     )
+
+
+@router.get("/{room_id}/workspace-candidates", response_model=RoomWorkspaceCandidatesPublic)
+async def list_room_workspace_candidates_route(
+    room_id: UUID,
+    session: AsyncSessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    candidates = await list_room_workspace_candidates(
+        session,
+        current_user=current_user,
+        room_id=room_id,
+    )
+    return RoomWorkspaceCandidatesPublic(data=candidates, count=len(candidates))
+
+
+@router.get(
+    "/{room_id}/workspace-connections/current",
+    response_model=RoomWorkspaceCurrentConnection | None,
+)
+async def get_current_room_workspace_connection_route(
+    room_id: UUID,
+    session: AsyncSessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    return await get_current_room_workspace_connection(
+        session,
+        current_user=current_user,
+        room_id=room_id,
+    )
+
+
+@router.put(
+    "/{room_id}/workspace-connections/current",
+    response_model=RoomWorkspaceCurrentConnection,
+)
+async def set_current_room_workspace_connection_route(
+    *,
+    room_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+    request: RoomWorkspaceCurrentConnectionUpdate,
+) -> Any:
+    return await set_current_room_workspace_connection(
+        session,
+        current_user=current_user,
+        room_id=room_id,
+        request=request,
+    )
+
+
+@router.delete("/{room_id}/workspace-connections/current")
+async def clear_current_room_workspace_connection_route(
+    *,
+    room_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+) -> Any:
+    await clear_current_room_workspace_connection(
+        session,
+        current_user=current_user,
+        room_id=room_id,
+    )
+    return {"status": "ok"}
 
 
 @router.patch("/{room_id}", response_model=RoomPublic)

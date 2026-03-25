@@ -33,6 +33,12 @@ function serviceStatusClass(status: string): string {
   return "border-border bg-muted/40 text-muted-foreground"
 }
 
+function accessLevelLabel(value: WorkspaceListItemViewModel["accessLevel"]): string {
+  if (value === "manage") return "Manage"
+  if (value === "use") return "Use"
+  return "View"
+}
+
 export function WorkspaceListPanel({
   workspaces,
   isLoading,
@@ -92,6 +98,9 @@ export function WorkspaceListPanel({
                         Project: {workspace.projectSummary.name}
                       </span>
                     ) : null}
+                    <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">
+                      Access: {accessLevelLabel(workspace.accessLevel)}
+                    </span>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {workspace.flavour} · {workspace.kind} · updated{" "}
@@ -100,6 +109,11 @@ export function WorkspaceListPanel({
                   <div className="text-sm text-muted-foreground">
                     Visibility: {workspace.visibility} · Terminal: {workspace.terminalStatus}
                   </div>
+                  {workspace.isProjectWorkspace && workspace.accessLevel !== "manage" ? (
+                    <div className="text-sm text-muted-foreground">
+                      This workspace is shared through project access. Runtime management remains owner-scoped in the current slice.
+                    </div>
+                  ) : null}
                   {agentRuntime ? (
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span className="rounded-full border bg-background px-2 py-0.5 text-muted-foreground">

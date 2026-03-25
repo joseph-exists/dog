@@ -103,6 +103,8 @@ export interface WorkspaceFlavourHealthSummaryViewModel {
   latestRebuildJobId: string | null
 }
 
+export type WorkspaceAccessLevel = "view" | "use" | "manage"
+
 export interface WorkspaceListItemViewModel {
   id: string
   name: string
@@ -117,6 +119,11 @@ export interface WorkspaceListItemViewModel {
   failureMessage: string | null
   terminalStatus: WorkspaceTerminalStatus
   allowedActions: WorkspaceAction[]
+  accessLevel: WorkspaceAccessLevel
+  canUseWorkspace: boolean
+  canManageRuntime: boolean
+  canDiscoverServices: boolean
+  isProjectWorkspace: boolean
   hasTerminal: boolean
   bootstrapIntent: BootstrapIntentViewModel | null
   bootstrapProgress: BootstrapProgressViewModel | null
@@ -356,6 +363,18 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
   const startedServices = Array.isArray(meta.bootstrap_started_services)
     ? meta.bootstrap_started_services.filter((value): value is string => typeof value === "string")
     : []
+  const canOpenTerminal = allowedActions.includes("request_terminal")
+  const canDiscoverServices = allowedActions.includes("discover_services")
+  const canStart = allowedActions.includes("start")
+  const canStop = allowedActions.includes("stop")
+  const canDestroy = allowedActions.includes("destroy")
+  const canManageRuntime = canStart || canStop || canDestroy
+  const canUseWorkspace = canOpenTerminal || canDiscoverServices || canManageRuntime
+  const accessLevel: WorkspaceAccessLevel = canManageRuntime
+    ? "manage"
+    : canUseWorkspace
+      ? "use"
+      : "view"
 
   return {
     id: workspace.id,
@@ -380,18 +399,25 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
     projectSummary: workspace.project_summary ?? null,
     terminalStatus,
     allowedActions,
+    accessLevel,
+    canUseWorkspace,
+    canManageRuntime,
+    canDiscoverServices,
+    isProjectWorkspace: (workspace.visibility ?? "private") === "project",
     createdAt: new Date(workspace.created_at),
     updatedAt: new Date(workspace.updated_at),
     terminalUrl,
-    hasTerminal: terminalStatus === "available" || terminalStatus === "expired",
+    hasTerminal:
+      (terminalStatus === "available" || terminalStatus === "expired") &&
+      canOpenTerminal,
     isProvisioning: status === "requested" || status === "provisioning",
     isStarting: status === "starting",
     isReady: status === "ready",
     isFailed: status === "failed",
-    canOpenTerminal: allowedActions.includes("request_terminal"),
-    canStop: allowedActions.includes("stop"),
-    canStart: allowedActions.includes("start"),
-    canDestroy: allowedActions.includes("destroy"),
+    canOpenTerminal,
+    canStop,
+    canStart,
+    canDestroy,
     bootstrapIntent,
     bootstrapProgress,
     readinessSummary,
@@ -426,6 +452,11 @@ function toWorkspaceListItemViewModel(workspace: WorkspacePublic): WorkspaceList
     failureMessage: detail.failureMessage,
     terminalStatus: detail.terminalStatus,
     allowedActions: detail.allowedActions,
+    accessLevel: detail.accessLevel,
+    canUseWorkspace: detail.canUseWorkspace,
+    canManageRuntime: detail.canManageRuntime,
+    canDiscoverServices: detail.canDiscoverServices,
+    isProjectWorkspace: detail.isProjectWorkspace,
     hasTerminal: detail.hasTerminal,
     bootstrapIntent: detail.bootstrapIntent,
     bootstrapProgress: detail.bootstrapProgress,

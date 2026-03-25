@@ -14,3 +14,7 @@ SVG Library: Tesser Studio: need to add guided controls, knobs, and extended scr
 SVG Library: Tesser Studio: Gentle Mode.  We are going to add a third button option to Guided and JSON - Gentle Mode. There are a few functional affordances we'll need to add for this to work effectively. This will be built iteratively and so we'll keep in mind that the goal here is not to be exhaustive or correct: the goal is to learn through doing and experimentation what works for our users, and how we can enable them to find value in what we've built. We may need to add modal tooltips or other expressive callouts - we'll need to think through how we can be kind without making assumptions or putting too many conceptual roadblocks in their way.
 
 Operations: Need to dramatically extend the functionality here with the affordances that tesser provides.  We can start by adding the currently exposed svgs functionality for the new svg.compose functions.  We should inline document this work as well. We'll need to extend/reuse our thinking as we move forward with better batch seed integration.
+
+SVG dialogs:  Batch seed needs extended - not usable in current form.  see backend/app/test_scripts/render_things for examples
+
+SVG dialogs: text in svgs is not represented here

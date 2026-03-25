@@ -1,0 +1,29 @@
+{
+  "test_name": "QA Content Block - code",
+  "start_time": "2026-03-25T12:00:06.517593",
+  "format": "code",
+  "demo_slug": "qa-content-code-0325-1200-4pt9",
+  "steps": [
+    {
+      "step": "Create DemoConfig",
+      "success": true,
+      "details": "id=42b52183-3b26-407b-820d-ca0c1373bd91",
+      "timestamp": "2026-03-25T12:00:06.526861"
+    },
+    {
+      "step": "Set Composition",
+      "success": true,
+      "details": "format=code",
+      "timestamp": "2026-03-25T12:00:06.537659"
+    },
+    {
+      "step": "Create Session",
+      "success": true,
+      "details": "session=N/A...",
+      "timestamp": "2026-03-25T12:00:06.567077"
+    }
+  ],
+  "success": true,
+  "errors": [],
+  "end_time": "2026-03-25T12:00:06.567148"
+}

@@ -32,6 +32,12 @@ export function WorkspaceTerminalPanel({
   onRequestTerminal,
 }: WorkspaceTerminalPanelProps) {
   const agentRuntimeServices = workspace.services.filter((service) => service.kind === "agent_runtime")
+  const accessSummary =
+    workspace.accessLevel === "manage"
+      ? "You can request terminal access and manage this workspace from the current account."
+      : workspace.canOpenTerminal
+        ? "This workspace is available through your current project access, and terminal use is allowed."
+        : "This workspace is visible in your current access scope, but terminal access is not available from this account."
 
   return (
     <TerminalPanel
@@ -47,6 +53,8 @@ export function WorkspaceTerminalPanel({
             Workspace status: <span className="font-medium">{workspace.status}</span>
             <span className="mx-2 text-muted-foreground">·</span>
             Terminal status: <span className="font-medium">{workspace.terminalStatus}</span>
+            <span className="mx-2 text-muted-foreground">·</span>
+            Access: <span className="font-medium">{workspace.accessLevel}</span>
             {workspace.connectivitySummary ? (
               <>
                 <span className="mx-2 text-muted-foreground">·</span>
@@ -62,6 +70,10 @@ export function WorkspaceTerminalPanel({
                 Bootstrap phase: <span className="font-medium">{workspace.bootstrapProgress.phase}</span>
               </>
             ) : null}
+          </div>
+
+          <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+            {accessSummary}
           </div>
 
           {workspace.failureMessage ? (

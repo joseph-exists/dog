@@ -194,6 +194,7 @@ export interface RoomWorkspaceEndpointViewModel {
   url: string | null
   auth_mode: string | null
   expires_at: Date | null
+  scope?: Record<string, string> | null
 }
 
 export interface RoomWorkspaceConnectionViewModel {
@@ -204,6 +205,37 @@ export interface RoomWorkspaceConnectionViewModel {
   reason: string | null
   capabilities: string[]
   endpoints: RoomWorkspaceEndpointViewModel[]
+}
+
+export interface RoomWorkspaceCurrentConnectionViewModel {
+  room_id: string
+  workspace_id: string
+  workspace_name: string
+  purpose: RoomWorkspaceConnectionPurpose
+  relationship: "shared_project" | "owner_private"
+  access_level: "view" | "use" | "manage"
+  selected_at: Date
+  service_count: number
+  ready_service_count: number
+  descriptor: RoomWorkspaceConnectionViewModel
+}
+
+export interface RoomWorkspaceCandidateViewModel {
+  room_id: string
+  workspace_id: string
+  workspace_name: string
+  workspace_status: string
+  visibility: string
+  project_id: string | null
+  project_summary: { id: string; name: string } | null
+  relationship: "shared_project" | "owner_private"
+  access_level: "view" | "use" | "manage"
+  match_reason: string
+  candidate_rank: number
+  service_count: number
+  ready_service_count: number
+  supports_service_connect: boolean
+  supports_agent_runtime_connect: boolean
 }
 
 // ============================================================================
@@ -346,7 +378,124 @@ function transformRoomWorkspaceConnection(
       url: endpoint.url ?? null,
       auth_mode: endpoint.auth_mode ?? null,
       expires_at: endpoint.expires_at ? new Date(endpoint.expires_at) : null,
+      scope: ((endpoint as unknown as { scope?: Record<string, string> }).scope ?? null) as
+        | Record<string, string>
+        | null,
     })),
+  }
+}
+
+function transformRoomWorkspaceCurrentConnection(
+  current: Record<string, unknown>,
+): RoomWorkspaceCurrentConnectionViewModel | null {
+  const room_id = typeof current.room_id === "string" ? current.room_id : null
+  const workspace_id =
+    typeof current.workspace_id === "string" ? current.workspace_id : null
+  const workspace_name =
+    typeof current.workspace_name === "string" ? current.workspace_name : null
+  const selected_at =
+    typeof current.selected_at === "string"
+      ? new Date(current.selected_at)
+      : null
+  const descriptorValue = current.descriptor
+  if (
+    !room_id ||
+    !workspace_id ||
+    !workspace_name ||
+    !selected_at ||
+    Number.isNaN(selected_at.getTime()) ||
+    !descriptorValue ||
+    typeof descriptorValue !== "object"
+  ) {
+    return null
+  }
+
+  return {
+    room_id,
+    workspace_id,
+    workspace_name,
+    purpose:
+      current.purpose === "agent_runtime_connect"
+        ? "agent_runtime_connect"
+        : "service_connect",
+    relationship:
+      current.relationship === "owner_private"
+        ? "owner_private"
+        : "shared_project",
+    access_level:
+      current.access_level === "manage"
+        ? "manage"
+        : current.access_level === "use"
+          ? "use"
+          : "view",
+    selected_at,
+    service_count:
+      typeof current.service_count === "number" ? current.service_count : 0,
+    ready_service_count:
+      typeof current.ready_service_count === "number"
+        ? current.ready_service_count
+        : 0,
+    descriptor: transformRoomWorkspaceConnection(
+      descriptorValue as RoomWorkspaceConnectionDescriptor,
+    ),
+  }
+}
+
+function transformRoomWorkspaceCandidate(
+  candidate: Record<string, unknown>,
+): RoomWorkspaceCandidateViewModel | null {
+  const room_id = typeof candidate.room_id === "string" ? candidate.room_id : null
+  const workspace_id =
+    typeof candidate.workspace_id === "string" ? candidate.workspace_id : null
+  const workspace_name =
+    typeof candidate.workspace_name === "string" ? candidate.workspace_name : null
+  if (!room_id || !workspace_id || !workspace_name) return null
+
+  const projectSummaryValue = candidate.project_summary
+  const project_summary =
+    projectSummaryValue &&
+    typeof projectSummaryValue === "object" &&
+    typeof (projectSummaryValue as Record<string, unknown>).id === "string" &&
+    typeof (projectSummaryValue as Record<string, unknown>).name === "string"
+      ? {
+          id: (projectSummaryValue as Record<string, unknown>).id as string,
+          name: (projectSummaryValue as Record<string, unknown>).name as string,
+        }
+      : null
+
+  return {
+    room_id,
+    workspace_id,
+    workspace_name,
+    workspace_status:
+      typeof candidate.workspace_status === "string"
+        ? candidate.workspace_status
+        : "requested",
+    visibility:
+      typeof candidate.visibility === "string" ? candidate.visibility : "private",
+    project_id: typeof candidate.project_id === "string" ? candidate.project_id : null,
+    project_summary,
+    relationship:
+      candidate.relationship === "owner_private" ? "owner_private" : "shared_project",
+    access_level:
+      candidate.access_level === "manage"
+        ? "manage"
+        : candidate.access_level === "use"
+          ? "use"
+          : "view",
+    match_reason:
+      typeof candidate.match_reason === "string" ? candidate.match_reason : "",
+    candidate_rank:
+      typeof candidate.candidate_rank === "number" ? candidate.candidate_rank : 0,
+    service_count:
+      typeof candidate.service_count === "number" ? candidate.service_count : 0,
+    ready_service_count:
+      typeof candidate.ready_service_count === "number"
+        ? candidate.ready_service_count
+        : 0,
+    supports_service_connect: candidate.supports_service_connect === true,
+    supports_agent_runtime_connect:
+      candidate.supports_agent_runtime_connect === true,
   }
 }
 
@@ -783,6 +932,67 @@ export const RoomService = {
     })
 
     return transformRoomWorkspaceConnection(descriptor)
+  },
+
+  async getCurrentWorkspaceConnection(
+    roomId: string,
+  ): Promise<RoomWorkspaceCurrentConnectionViewModel | null> {
+    const requestOptions: ApiRequestOptions = {
+      method: "GET",
+      url: `/api/v1/rooms/${roomId}/workspace-connections/current`,
+    }
+    const response = (await __request(OpenAPI, requestOptions)) as
+      | Record<string, unknown>
+      | null
+    if (!response) return null
+    return transformRoomWorkspaceCurrentConnection(response)
+  },
+
+  async setCurrentWorkspaceConnection(
+    roomId: string,
+    request: {
+      workspace_id: string
+      purpose: RoomWorkspaceConnectionPurpose
+    },
+  ): Promise<RoomWorkspaceCurrentConnectionViewModel> {
+    const requestOptions: ApiRequestOptions = {
+      method: "PUT",
+      url: `/api/v1/rooms/${roomId}/workspace-connections/current`,
+      body: request,
+      mediaType: "application/json",
+    }
+    const response = (await __request(OpenAPI, requestOptions)) as Record<
+      string,
+      unknown
+    >
+    const transformed = transformRoomWorkspaceCurrentConnection(response)
+    if (!transformed) {
+      throw new Error("Invalid current workspace connection response")
+    }
+    return transformed
+  },
+
+  async clearCurrentWorkspaceConnection(roomId: string): Promise<void> {
+    const requestOptions: ApiRequestOptions = {
+      method: "DELETE",
+      url: `/api/v1/rooms/${roomId}/workspace-connections/current`,
+    }
+    await __request(OpenAPI, requestOptions)
+  },
+
+  async listWorkspaceCandidates(
+    roomId: string,
+  ): Promise<RoomWorkspaceCandidateViewModel[]> {
+    const requestOptions: ApiRequestOptions = {
+      method: "GET",
+      url: `/api/v1/rooms/${roomId}/workspace-candidates`,
+    }
+    const response = (await __request(OpenAPI, requestOptions)) as {
+      data?: Array<Record<string, unknown>>
+    }
+    return (response.data ?? [])
+      .map(transformRoomWorkspaceCandidate)
+      .filter((candidate): candidate is RoomWorkspaceCandidateViewModel => candidate !== null)
   },
 
   // ==========================================================================
