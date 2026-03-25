@@ -3781,10 +3781,10 @@ class RoomWorkspaceCandidate(SQLModel):
     room_id: uuid.UUID
     workspace_id: uuid.UUID
     workspace_name: str
-    workspace_status: WorkspaceStatus
-    visibility: WorkspaceVisibility
+    workspace_status: "WorkspaceStatus"
+    visibility: "WorkspaceVisibility"
     project_id: uuid.UUID | None = None
-    project_summary: WorkspaceProjectSummary | None = None
+    project_summary: "WorkspaceProjectSummary | None" = None
     relationship: RoomWorkspaceCandidateRelationship
     access_level: RoomWorkspaceCandidateAccessLevel
     match_reason: str
