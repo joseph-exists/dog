@@ -226,6 +226,39 @@ Definition of done:
 
 - an operator can request an agent runtime and understand whether it started successfully from the normal workspace UI
 
+### Step 5: Runtime Consumption Alignment
+
+Files:
+
+- `/home/josep/dog/backend/app/services/workspace_bootstrap_service.py`
+- `/home/josep/dog/backend/app/services/workspace_platform_service_access.py`
+- `/home/josep/dog/backend/app/services/workspace_service.py`
+
+Changes:
+
+- materialize projected platform-service access into agent-runtime launch context
+- export stable agent-facing aliases for the projected platform-service variables
+- write a runtime-local services JSON file for active process consumption and
+  operator inspection
+
+Status:
+
+- implemented for the first alignment slice
+- current agent runtime profiles now actively consume projected
+  `DOG_AGENT_PLATFORM_*` variables during launch
+- launchers now export stable runtime-facing aliases such as:
+  - `DOG_WORKSPACE_AGENT_PLATFORM_SERVICES_JSON`
+  - `DOG_WORKSPACE_AGENT_PLATFORM_SERVICES_PATH`
+  - `DOG_WORKSPACE_AGENT_AFFORDANCE_URL`
+  - `DOG_WORKSPACE_AGENT_STORY_URL`
+- launchers now materialize a runtime-local services file at:
+  - `~/.dog/agent-runtime/platform-services.json`
+
+Definition of done:
+
+- the first agent runtime profiles receive projected platform-service access in a
+  runtime-facing form without additional operator wiring
+
 ## Sequencing Read
 
 This slice still belongs in Track 2, and it is a good precursor to Tracks 3 and 4.

@@ -14,6 +14,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.services.logfire_client import ServiceLogfire
+from app.services.room_workspace_connection_service import (
+    consume_current_room_workspace_connection,
+)
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -467,6 +470,57 @@ async def build_room_context(
             ]
             extra_contexts.extend(store_contexts)
         # Prefer newer/later entries for same context_type so panel contexts stay deterministic.
+        current_workspace_connection = await consume_current_room_workspace_connection(
+            session,
+            room_id=room_id,
+            context_store=context_store,
+        )
+        if current_workspace_connection is not None:
+            extra_contexts.append(
+                {
+                    "context_type": "system.room.workspace_connection.current",
+                    "payload": {
+                        "connection_id": current_workspace_connection.connection_id,
+                        "workspace_id": str(current_workspace_connection.workspace_id),
+                        "workspace_name": current_workspace_connection.workspace_name,
+                        "purpose": current_workspace_connection.purpose.value,
+                        "state": current_workspace_connection.state.value,
+                        "state_reason": current_workspace_connection.state_reason,
+                        "descriptor_id": current_workspace_connection.descriptor.descriptor_id,
+                        "status": current_workspace_connection.descriptor.status.value,
+                        "issued_at": current_workspace_connection.descriptor.issued_at.isoformat(),
+                        "expires_at": (
+                            current_workspace_connection.descriptor.expires_at.isoformat()
+                            if current_workspace_connection.descriptor.expires_at
+                            else None
+                        ),
+                        "reason": current_workspace_connection.descriptor.reason,
+                        "capabilities": [
+                            capability.value
+                            for capability in current_workspace_connection.descriptor.capabilities
+                        ],
+                        "endpoints": [
+                            {
+                                "id": endpoint.id,
+                                "kind": endpoint.kind.value,
+                                "label": endpoint.label,
+                                "protocol": endpoint.protocol,
+                                "url": endpoint.url,
+                                "auth_mode": endpoint.auth_mode.value,
+                                "expires_at": (
+                                    endpoint.expires_at.isoformat()
+                                    if endpoint.expires_at
+                                    else None
+                                ),
+                                "scope": endpoint.scope,
+                            }
+                            for endpoint in current_workspace_connection.descriptor.endpoints
+                        ],
+                    },
+                    "source": "system",
+                }
+            )
+
         deduped_contexts: dict[str, dict[str, Any]] = {}
         for item in extra_contexts:
             context_type = str(item.get("context_type") or "")

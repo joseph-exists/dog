@@ -1,6 +1,15 @@
+import { useState } from "react"
+
 import { cn } from "@/lib/utils"
 import type { WorkspaceDetailViewModel } from "@/services/workspaceService"
+import {
+  useRefreshWorkspacePlatformRuntimeProjection,
+  useIssueWorkspacePlatformServiceAccess,
+  useWorkspacePlatformRuntimeConfig,
+} from "@/hooks/useWorkspaces"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
 
 function formatBootstrapPhase(phase: string): string {
@@ -28,9 +37,31 @@ function accessLevelLabel(value: WorkspaceDetailViewModel["accessLevel"]): strin
   return "View"
 }
 
+function freshnessLabel(expiresAt: Date | null): string {
+  if (!expiresAt) return "No expiry recorded"
+  const remaining = expiresAt.getTime() - Date.now()
+  if (remaining <= 0) return "Expired"
+  if (remaining <= 2 * 60 * 1000) return "Expiring soon"
+  return "Active"
+}
+
+function freshnessClass(expiresAt: Date | null): string {
+  if (!expiresAt) return "border-border bg-muted/40 text-muted-foreground"
+  const remaining = expiresAt.getTime() - Date.now()
+  if (remaining <= 0) return "border-rose-500/30 bg-rose-500/10 text-rose-700"
+  if (remaining <= 2 * 60 * 1000) return "border-amber-500/30 bg-amber-500/10 text-amber-700"
+  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+}
+
 export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetailViewModel }) {
+  const [platformConsumerKind, setPlatformConsumerKind] = useState<"workspace_runtime" | "agent_runtime">("workspace_runtime")
+  const issuePlatformAccess = useIssueWorkspacePlatformServiceAccess(workspace.id)
+  const runtimeConfig = useWorkspacePlatformRuntimeConfig(workspace.id)
+  const refreshRuntimeProjection = useRefreshWorkspacePlatformRuntimeProjection(workspace.id)
   const agentRuntimeServices = workspace.services.filter((service) => service.kind === "agent_runtime")
   const webServices = workspace.services.filter((service) => service.kind !== "agent_runtime")
+  const workspaceUnavailableForRuntimeAccess =
+    workspace.status === "failed" || workspace.status === "destroying" || workspace.status === "destroyed"
 
   return (
     <Card>
@@ -326,6 +357,331 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
             ) : null}
           </div>
         ) : null}
+        <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-sm font-medium">Platform Service Access</div>
+              <div className="text-xs text-muted-foreground">
+                Inspect projected runtime access alongside the current backend-issued runtime config and grant surface.
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-64">
+              <Select
+                value={platformConsumerKind}
+                onValueChange={(value) => setPlatformConsumerKind(value as "workspace_runtime" | "agent_runtime")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="workspace_runtime">Workspace Runtime</SelectItem>
+                  <SelectItem value="agent_runtime">Agent Runtime</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!workspace.canDiscoverServices || issuePlatformAccess.isPending}
+                onClick={() =>
+                  issuePlatformAccess.mutate({
+                    consumerKind: platformConsumerKind,
+                    serviceIds: [],
+                  })
+                }
+              >
+                {issuePlatformAccess.isPending ? "Issuing Grant..." : "Issue Access For Enabled Services"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!workspace.canDiscoverServices || runtimeConfig.isPending}
+                onClick={() =>
+                  runtimeConfig.mutate({
+                    consumerKind: platformConsumerKind,
+                    serviceIds: [],
+                  })
+                }
+              >
+                {runtimeConfig.isPending ? "Resolving Runtime Config..." : "Inspect Current Runtime Config"}
+              </Button>
+            </div>
+          </div>
+          {!workspace.canDiscoverServices ? (
+            <div className="rounded-lg border bg-background/70 p-3 text-sm text-muted-foreground">
+              Platform-service grants become available when this workspace is in a service-discoverable state and your current access level includes discovery.
+            </div>
+          ) : null}
+          {workspaceUnavailableForRuntimeAccess ? (
+            <div className="rounded-lg border bg-background/70 p-3 text-sm text-muted-foreground">
+              This workspace is no longer in a runtime-access state. Existing projected access should be treated as historical context, and fresh runtime access should be requested only after the workspace returns to a ready state or a replacement workspace is available.
+            </div>
+          ) : null}
+          {workspace.platformServiceProjection.length > 0 ? (
+            <div className="space-y-3">
+              <div className="text-sm font-medium">Projected Runtime Access</div>
+              <div className="space-y-3">
+                {workspace.platformServiceProjection.map((projection) => (
+                  <div
+                    key={`${projection.consumerKind}-${projection.issuedAt?.toISOString() ?? "projection"}`}
+                    className="rounded-lg border bg-background/70 p-3"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1">
+                        <div className="font-medium">{projection.consumerKind.replaceAll("_", " ")}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {projection.issuedAt ? `Projected ${projection.issuedAt.toLocaleString()}` : "Projection timestamp unavailable"}
+                          {projection.expiresAt ? ` · Expires ${projection.expiresAt.toLocaleString()}` : ""}
+                        </div>
+                        {projection.refreshedAt ? (
+                          <div className="text-[11px] text-muted-foreground">
+                            Last refreshed {projection.refreshedAt.toLocaleString()}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-xs",
+                            freshnessClass(projection.expiresAt),
+                          )}
+                        >
+                          {freshnessLabel(projection.expiresAt)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            !workspace.canDiscoverServices ||
+                            workspaceUnavailableForRuntimeAccess ||
+                            refreshRuntimeProjection.isPending
+                          }
+                          onClick={() =>
+                            refreshRuntimeProjection.mutate({
+                              consumerKind: projection.consumerKind,
+                              serviceIds: projection.serviceIds,
+                            })
+                          }
+                        >
+                          {refreshRuntimeProjection.isPending ? "Refreshing..." : "Refresh"}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {projection.serviceIds.length > 0 ? (
+                        projection.serviceIds.map((serviceId) => (
+                          <span
+                            key={`${projection.consumerKind}-${serviceId}`}
+                            className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
+                          >
+                            {serviceId}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No projected services recorded.</span>
+                      )}
+                    </div>
+                    {projection.runtimeFilePaths.length > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Runtime Files
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {projection.runtimeFilePaths.map((path) => (
+                            <span
+                              key={`${projection.consumerKind}-${path}`}
+                              className="rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground"
+                            >
+                              {path}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {projection.injectErrors.length > 0 ? (
+                      <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800">
+                        <div className="font-medium">Projection notes</div>
+                        <ul className="mt-2 list-disc space-y-1 pl-4">
+                          {projection.injectErrors.map((error) => (
+                            <li key={`${projection.consumerKind}-${error}`}>{error}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                !workspace.canDiscoverServices ||
+                workspaceUnavailableForRuntimeAccess ||
+                refreshRuntimeProjection.isPending
+              }
+              onClick={() =>
+                refreshRuntimeProjection.mutate({
+                  consumerKind: platformConsumerKind,
+                  serviceIds: [],
+                })
+              }
+            >
+              {refreshRuntimeProjection.isPending ? "Refreshing Projection..." : "Refresh Runtime Projection"}
+            </Button>
+          </div>
+          {runtimeConfig.data ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border bg-background/70 p-3 text-sm">
+                <div className="font-medium">
+                  Current runtime config for {runtimeConfig.data.consumerKind.replaceAll("_", " ")}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Issued {runtimeConfig.data.issuedAt.toLocaleString()}
+                  {runtimeConfig.data.expiresAt ? ` · Expires ${runtimeConfig.data.expiresAt.toLocaleString()}` : ""}
+                </div>
+              </div>
+              {runtimeConfig.data.services.length > 0 ? (
+                <div className="space-y-3">
+                  {runtimeConfig.data.services.map((service) => (
+                    <div key={`runtime-${service.grantId}`} className="rounded-lg border bg-background/70 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-sm font-medium">{service.serviceId}</div>
+                        <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                          {service.transport}
+                        </span>
+                        <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                          auth {service.authMode}
+                        </span>
+                      </div>
+                      {service.description ? (
+                        <div className="mt-2 text-sm text-muted-foreground">{service.description}</div>
+                      ) : null}
+                      <div className="mt-2 text-sm">
+                        <a
+                          href={service.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-foreground underline underline-offset-4"
+                        >
+                          {service.url}
+                        </a>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {service.tags.map((tag) => (
+                          <span
+                            key={`runtime-${service.grantId}-${tag}`}
+                            className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {service.scopes.map((scope) => (
+                          <span
+                            key={`runtime-${service.grantId}-scope-${scope}`}
+                            className="rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground"
+                          >
+                            {scope}
+                          </span>
+                        ))}
+                      </div>
+                      {Object.keys(service.scope).length > 0 ? (
+                        <pre className="mt-2 overflow-x-auto rounded-lg border bg-muted/40 p-3 text-xs">
+                          {JSON.stringify(service.scope, null, 2)}
+                        </pre>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border bg-background/70 p-3 text-sm text-muted-foreground">
+                  No services are currently present in the runtime config.
+                </div>
+              )}
+            </div>
+          ) : null}
+          {issuePlatformAccess.data ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border bg-background/70 p-3 text-sm">
+                <div className="font-medium">
+                  Current grant for {issuePlatformAccess.data.consumerKind.replaceAll("_", " ")}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Issued {issuePlatformAccess.data.issuedAt.toLocaleString()}
+                  {issuePlatformAccess.data.expiresAt
+                    ? ` · Expires ${issuePlatformAccess.data.expiresAt.toLocaleString()}`
+                    : ""}
+                </div>
+              </div>
+              {issuePlatformAccess.data.services.length > 0 ? (
+                <div className="space-y-3">
+                  {issuePlatformAccess.data.services.map((service) => (
+                    <div key={service.grantId} className="rounded-lg border bg-background/70 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-sm font-medium">{service.serviceId}</div>
+                        <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                          {service.transport}
+                        </span>
+                        <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                          auth {service.authMode}
+                        </span>
+                        <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                          approval {service.requireApproval}
+                        </span>
+                      </div>
+                      {service.description ? (
+                        <div className="mt-2 text-sm text-muted-foreground">{service.description}</div>
+                      ) : null}
+                      <div className="mt-2 text-sm">
+                        <a
+                          href={service.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-foreground underline underline-offset-4"
+                        >
+                          {service.url}
+                        </a>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {service.tags.map((tag) => (
+                          <span
+                            key={`${service.grantId}-${tag}`}
+                            className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {service.scopes.map((scope) => (
+                          <span
+                            key={`${service.grantId}-scope-${scope}`}
+                            className="rounded-full border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground"
+                          >
+                            {scope}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Grant {service.grantId}
+                        {service.expiresAt ? ` · Expires ${service.expiresAt.toLocaleString()}` : ""}
+                      </div>
+                      {Object.keys(service.scope).length > 0 ? (
+                        <pre className="mt-2 overflow-x-auto rounded-lg border bg-muted/40 p-3 text-xs">
+                          {JSON.stringify(service.scope, null, 2)}
+                        </pre>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border bg-background/70 p-3 text-sm text-muted-foreground">
+                  No enabled platform services were returned for this grant.
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
         {workspace.flavourHealth ? (
           <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
             <div>

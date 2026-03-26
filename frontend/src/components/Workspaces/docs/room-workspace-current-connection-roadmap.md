@@ -106,6 +106,12 @@ Status:
 - this persistence choice is intentionally lightweight so future expansion to
   multiple concurrent room/workspace relationships does not require unpicking a
   prematurely hardened table model
+- current room/workspace connection projections now carry explicit connection
+  state:
+  - `active`
+  - `unavailable`
+- that state is now surfaced in both backend room context and room-side UI so
+  outlived workspace connections remain legible and easy to recover from
 
 ### Step 2: Descriptor Scope Tightening
 
@@ -131,6 +137,12 @@ Status:
   - `workspace_id`
   - `purpose`
   - `endpoint_id`
+- descriptor responses now also carry:
+  - `descriptor_id`
+  - `issued_at`
+  - `expires_at`
+- current connection records now rotate a `connection_id` so backend consumers
+  have a revocation-friendly default identity to anchor against
 - this keeps descriptor issuance usable even if the room later holds multiple
   defaults or handler-specific workspace selections
 
@@ -152,6 +164,10 @@ Status:
   frontend-only cache updates
 - the frontend still treats this as a default current connection, not as the
   only possible room/workspace association
+- room-side hooks now refresh current connection state more intentionally when
+  descriptors are pending, nearing expiry, or already unavailable
+- room runtime and workspace-link surfaces now present expired or historical
+  connections as recoverable session context instead of silent failure
 
 ### Step 4: UX And Trust Review
 

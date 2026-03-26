@@ -3751,10 +3751,13 @@ class RoomWorkspaceEndpointDescriptor(SQLModel):
 class RoomWorkspaceConnectionDescriptor(SQLModel):
     """Backend-issued room/workspace connectivity descriptor."""
 
+    descriptor_id: str
     room_id: uuid.UUID
     workspace_id: uuid.UUID
     purpose: RoomWorkspaceConnectionPurpose
     status: RoomWorkspaceConnectionStatus
+    issued_at: datetime
+    expires_at: datetime | None = None
     reason: str | None = None
     capabilities: list[RoomWorkspaceConnectionCapability] = Field(default_factory=list)
     endpoints: list[RoomWorkspaceEndpointDescriptor] = Field(default_factory=list)
@@ -3809,9 +3812,17 @@ class RoomWorkspaceCurrentConnectionUpdate(SQLModel):
     purpose: RoomWorkspaceConnectionPurpose = RoomWorkspaceConnectionPurpose.service_connect
 
 
+class RoomWorkspaceCurrentConnectionState(str, PyEnum):
+    """Current room/workspace connection posture."""
+
+    active = "active"
+    unavailable = "unavailable"
+
+
 class RoomWorkspaceCurrentConnection(SQLModel):
     """Backend-projected current room/workspace connection."""
 
+    connection_id: str
     room_id: uuid.UUID
     workspace_id: uuid.UUID
     workspace_name: str
@@ -3821,6 +3832,8 @@ class RoomWorkspaceCurrentConnection(SQLModel):
     selected_at: datetime
     service_count: int = Field(default=0, ge=0)
     ready_service_count: int = Field(default=0, ge=0)
+    state: RoomWorkspaceCurrentConnectionState = RoomWorkspaceCurrentConnectionState.active
+    state_reason: str | None = None
     descriptor: RoomWorkspaceConnectionDescriptor
 
 
@@ -7660,6 +7673,59 @@ class WorkspaceFlavourHealthSummary(SQLModel):
     snapshot_ready: bool = False
     latest_rebuild_status: str | None = Field(default=None, max_length=50)
     latest_rebuild_job_id: str | None = Field(default=None, max_length=120)
+
+
+class WorkspacePlatformServiceConsumerKind(str, PyEnum):
+    """Kinds of workspace-side consumers that may request platform service access."""
+
+    workspace_runtime = "workspace_runtime"
+    agent_runtime = "agent_runtime"
+
+
+class WorkspacePlatformServiceGrantRequest(SQLModel):
+    """Request model for backend-issued workspace platform service grants."""
+
+    consumer_kind: WorkspacePlatformServiceConsumerKind = (
+        WorkspacePlatformServiceConsumerKind.workspace_runtime
+    )
+    service_ids: list[str] = Field(default_factory=list)
+
+
+class WorkspacePlatformServiceGrant(SQLModel):
+    """Descriptor for a platform service granted to a workspace consumer."""
+
+    grant_id: str
+    service_id: str
+    transport: str
+    url: str
+    auth_mode: str = "none"
+    require_approval: str = "never"
+    description: str | None = None
+    scopes: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    scope: dict[str, str] = Field(default_factory=dict)
+    issued_at: datetime
+    expires_at: datetime | None = None
+
+
+class WorkspacePlatformServiceAccessGrant(SQLModel):
+    """Workspace-scoped collection of granted platform service descriptors."""
+
+    workspace_id: uuid.UUID
+    consumer_kind: WorkspacePlatformServiceConsumerKind
+    issued_at: datetime
+    expires_at: datetime | None = None
+    services: list[WorkspacePlatformServiceGrant] = Field(default_factory=list)
+
+
+class WorkspaceRuntimePlatformConfig(SQLModel):
+    """Canonical runtime-facing platform service config for a workspace consumer."""
+
+    workspace_id: uuid.UUID
+    consumer_kind: WorkspacePlatformServiceConsumerKind
+    issued_at: datetime
+    expires_at: datetime | None = None
+    services: list[WorkspacePlatformServiceGrant] = Field(default_factory=list)
 
 
 class WorkspaceBase(SQLModel):

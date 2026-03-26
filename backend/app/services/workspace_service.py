@@ -43,6 +43,7 @@ from app.models import (
     WorkspaceTerminalStatus,
     WorkspaceUserRepoSource,
     WorkspaceVisibility,
+    WorkspacePlatformServiceConsumerKind,
 )
 from app.services import kennel_client
 from app.services.access_control import get_effective_role, has_access
@@ -50,6 +51,9 @@ from app.services.workspace_bootstrap_service import (
     WorkspaceBootstrapPlan,
     WorkspaceBootstrapValidationError,
     generate_bootstrap_plan,
+)
+from app.services.workspace_platform_service_access import (
+    build_workspace_platform_env_projection_for_workspace,
 )
 
 log = logging.getLogger(__name__)
@@ -225,13 +229,62 @@ async def _provision_workspace(
             ),
         )
 
+        projected_env_vars = dict(bootstrap_intent.env_vars or {})
+        platform_service_projection_summary: list[dict[str, object]] = []
+        async with async_session_maker() as projection_session:
+            projection_workspace = await projection_session.get(Workspace, ws_id)
+            if projection_workspace is None:
+                raise RuntimeError("Workspace disappeared before platform projection.")
+
+            workspace_runtime_projection = build_workspace_platform_env_projection_for_workspace(
+                workspace=projection_workspace,
+                consumer_kind=WorkspacePlatformServiceConsumerKind.workspace_runtime,
+            )
+            projected_env_vars.update(workspace_runtime_projection.env_vars)
+            platform_service_projection_summary.append(
+                {
+                    "consumer_kind": workspace_runtime_projection.consumer_kind.value,
+                    "service_ids": [
+                        service.service_id for service in workspace_runtime_projection.config.services
+                    ],
+                    "issued_at": workspace_runtime_projection.config.issued_at.isoformat(),
+                    "expires_at": (
+                        workspace_runtime_projection.config.expires_at.isoformat()
+                        if workspace_runtime_projection.config.expires_at
+                        else None
+                    ),
+                }
+            )
+
+            startup_intent = bootstrap_intent.startup_intent
+            if getattr(startup_intent, "mode", None) == "agent_service":
+                agent_runtime_projection = build_workspace_platform_env_projection_for_workspace(
+                    workspace=projection_workspace,
+                    consumer_kind=WorkspacePlatformServiceConsumerKind.agent_runtime,
+                )
+                projected_env_vars.update(agent_runtime_projection.env_vars)
+                platform_service_projection_summary.append(
+                    {
+                        "consumer_kind": agent_runtime_projection.consumer_kind.value,
+                        "service_ids": [
+                            service.service_id for service in agent_runtime_projection.config.services
+                        ],
+                        "issued_at": agent_runtime_projection.config.issued_at.isoformat(),
+                        "expires_at": (
+                            agent_runtime_projection.config.expires_at.isoformat()
+                            if agent_runtime_projection.config.expires_at
+                            else None
+                        ),
+                    }
+                )
+
         inject_result = await kennel_client.inject_workspace(
             kennel_name,
             {
                 "user": "dev",
                 "ssh_pubkey": bootstrap_intent.ssh_pubkey,
                 "repo_url": resolved_repo_url,
-                "env_vars": bootstrap_intent.env_vars,
+                "env_vars": projected_env_vars,
                 "bootstrap_plan": bootstrap_plan.model_dump(mode="json"),
             },
         )
@@ -251,6 +304,7 @@ async def _provision_workspace(
             "bootstrap_step_results": inject_result.get("step_results", []),
             "bootstrap_started_services": inject_result.get("started_services", []),
             "bootstrap_workspace_path": inject_result.get("workspace_path"),
+            "platform_service_projection": platform_service_projection_summary,
         }
 
         if not bootstrap_success:

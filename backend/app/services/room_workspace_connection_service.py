@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from sqlmodel import select
@@ -15,12 +15,14 @@ from app.crud import (
 )
 from app.models import (
     ProjectResource,
+    Room,
     RoomWorkspaceCandidate,
     RoomWorkspaceCandidateAccessLevel,
     RoomWorkspaceCandidateRelationship,
     RoomWorkspaceConnectionCapability,
     RoomWorkspaceConnectionDescriptor,
     RoomWorkspaceCurrentConnection,
+    RoomWorkspaceCurrentConnectionState,
     RoomWorkspaceCurrentConnectionUpdate,
     RoomWorkspaceConnectionPurpose,
     RoomWorkspaceConnectionRequest,
@@ -37,6 +39,7 @@ from app.models import (
     WorkspaceStatus,
     WorkspaceVisibility,
 )
+from app.services.context_store import ContextItemStore, RedisContextStore
 from app.services.workspace_service import (
     get_allowed_actions_for_user,
     get_lifecycle_allowed_actions,
@@ -49,6 +52,7 @@ CURRENT_CONNECTION_CONTEXT_ID = "room-workspace-current-connection"
 CURRENT_CONNECTION_CONTEXT_TYPE = "system.room.workspace.current_connection"
 CURRENT_CONNECTION_CONTEXT_SOURCE = "room_workspace_connection"
 CURRENT_CONNECTION_TTL = timedelta(minutes=10)
+DESCRIPTOR_TTL = timedelta(minutes=5)
 
 
 async def _get_project_ids_for_resource(
@@ -98,13 +102,20 @@ def _build_endpoint_scope(
     workspace_id: UUID,
     purpose: RoomWorkspaceConnectionPurpose,
     endpoint_id: str,
+    connection_id: str | None = None,
+    descriptor_id: str | None = None,
 ) -> dict[str, str]:
-    return {
+    scope = {
         "room_id": str(room_id),
         "workspace_id": str(workspace_id),
         "purpose": purpose.value,
         "endpoint_id": endpoint_id,
     }
+    if connection_id:
+        scope["connection_id"] = connection_id
+    if descriptor_id:
+        scope["descriptor_id"] = descriptor_id
+    return scope
 
 
 def _coerce_relationship(value: object) -> RoomWorkspaceCandidateRelationship:
@@ -130,13 +141,26 @@ def _coerce_selected_at(value: object) -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _current_connection_state_from_descriptor(
+    descriptor: RoomWorkspaceConnectionDescriptor,
+) -> tuple[RoomWorkspaceCurrentConnectionState, str | None]:
+    if descriptor.status == RoomWorkspaceConnectionStatus.denied:
+        return (
+            RoomWorkspaceCurrentConnectionState.unavailable,
+            descriptor.reason or "Workspace connection is no longer available.",
+        )
+    return (RoomWorkspaceCurrentConnectionState.active, None)
+
+
 def _current_connection_payload(
     *,
     candidate: RoomWorkspaceCandidate,
     purpose: RoomWorkspaceConnectionPurpose,
     selected_at: datetime,
+    connection_id: str,
 ) -> dict[str, object]:
     return {
+        "connection_id": connection_id,
         "workspace_id": str(candidate.workspace_id),
         "workspace_name": candidate.workspace_name,
         "purpose": purpose.value,
@@ -163,6 +187,32 @@ async def _find_current_connection_context(
         if item.context_type == CURRENT_CONNECTION_CONTEXT_TYPE:
             return item
     return None
+
+
+async def _find_current_connection_context_internal(
+    *,
+    room_id: UUID,
+    context_store: ContextItemStore | None = None,
+):
+    store = context_store or RedisContextStore()
+    items = await store.list(room_id=room_id, agent_slug=None)
+    for item in items:
+        if item.context_type == CURRENT_CONNECTION_CONTEXT_TYPE:
+            return item
+    return None
+
+
+def _descriptor_meta(
+    payload: dict[str, object],
+) -> tuple[str | None, str, datetime, datetime]:
+    connection_id = (
+        str(payload.get("connection_id"))
+        if isinstance(payload.get("connection_id"), str)
+        else None
+    )
+    issued_at = datetime.now(timezone.utc)
+    expires_at = issued_at + DESCRIPTOR_TTL
+    return connection_id, str(uuid4()), issued_at, expires_at
 
 
 async def list_room_workspace_candidates(
@@ -263,13 +313,35 @@ async def build_room_workspace_connection_descriptor(
     request: RoomWorkspaceConnectionRequest,
 ) -> RoomWorkspaceConnectionDescriptor:
     room = await get_room_for_user(room_id=room_id, user_id=current_user.id, session=session)
+    return await _build_room_workspace_connection_descriptor_for_room(
+        session,
+        room=room,
+        request=request,
+        allow_superuser=current_user.is_superuser,
+    )
+
+
+async def _build_room_workspace_connection_descriptor_for_room(
+    session: AsyncSession,
+    *,
+    room: Room,
+    request: RoomWorkspaceConnectionRequest,
+    allow_superuser: bool = False,
+    current_connection_payload: dict[str, object] | None = None,
+) -> RoomWorkspaceConnectionDescriptor:
+    descriptor_connection_id, descriptor_id, issued_at, expires_at = _descriptor_meta(
+        current_connection_payload or {}
+    )
     workspace = await session.get(Workspace, request.workspace_id)
     if workspace is None:
         return RoomWorkspaceConnectionDescriptor(
-            room_id=room_id,
+            descriptor_id=descriptor_id,
+            room_id=room.room_id,
             workspace_id=request.workspace_id,
             purpose=request.purpose,
             status=RoomWorkspaceConnectionStatus.denied,
+            issued_at=issued_at,
+            expires_at=expires_at,
             reason="Workspace not found.",
         )
 
@@ -287,31 +359,40 @@ async def build_room_workspace_connection_descriptor(
     shared_project_ids = room_project_ids & workspace_project_ids
     owner_private_allowed = room.creator_id == current_user.id and workspace.owner_id == current_user.id
 
-    if not (current_user.is_superuser or shared_project_ids or owner_private_allowed):
+    if not (allow_superuser or shared_project_ids or owner_private_allowed):
         return RoomWorkspaceConnectionDescriptor(
+            descriptor_id=descriptor_id,
             room_id=room.room_id,
             workspace_id=workspace.id,
             purpose=request.purpose,
             status=RoomWorkspaceConnectionStatus.denied,
+            issued_at=issued_at,
+            expires_at=expires_at,
             reason="Room does not have an authorized path to this workspace.",
         )
 
     if workspace.status in {WorkspaceStatus.destroying, WorkspaceStatus.destroyed, WorkspaceStatus.failed}:
         return RoomWorkspaceConnectionDescriptor(
+            descriptor_id=descriptor_id,
             room_id=room.room_id,
             workspace_id=workspace.id,
             purpose=request.purpose,
             status=RoomWorkspaceConnectionStatus.denied,
+            issued_at=issued_at,
+            expires_at=expires_at,
             reason=f"Workspace is not connectable in state '{workspace.status.value}'.",
         )
 
     allowed_actions = get_lifecycle_allowed_actions(workspace)
     if WorkspaceAction.discover_services not in allowed_actions:
         return RoomWorkspaceConnectionDescriptor(
+            descriptor_id=descriptor_id,
             room_id=room.room_id,
             workspace_id=workspace.id,
             purpose=request.purpose,
             status=RoomWorkspaceConnectionStatus.pending,
+            issued_at=issued_at,
+            expires_at=expires_at,
             reason="Workspace is not yet exposing discoverable runtime services.",
         )
 
@@ -335,10 +416,13 @@ async def build_room_workspace_connection_descriptor(
 
     if not matching_services:
         return RoomWorkspaceConnectionDescriptor(
+            descriptor_id=descriptor_id,
             room_id=room.room_id,
             workspace_id=workspace.id,
             purpose=request.purpose,
             status=RoomWorkspaceConnectionStatus.denied,
+            issued_at=issued_at,
+            expires_at=expires_at,
             reason="No discovered runtime surfaces match the requested connection purpose.",
             capabilities=capabilities,
         )
@@ -361,10 +445,13 @@ async def build_room_workspace_connection_descriptor(
 
     if ready_routable_services:
         return RoomWorkspaceConnectionDescriptor(
+            descriptor_id=descriptor_id,
             room_id=room.room_id,
             workspace_id=workspace.id,
             purpose=request.purpose,
             status=RoomWorkspaceConnectionStatus.available,
+            issued_at=issued_at,
+            expires_at=expires_at,
             reason=None,
             capabilities=capabilities,
             endpoints=[
@@ -381,6 +468,8 @@ async def build_room_workspace_connection_descriptor(
                         workspace_id=workspace.id,
                         purpose=request.purpose,
                         endpoint_id=service.id,
+                        connection_id=descriptor_connection_id,
+                        descriptor_id=descriptor_id,
                     ),
                 )
                 for service in ready_routable_services
@@ -389,10 +478,13 @@ async def build_room_workspace_connection_descriptor(
 
     if ready_unroutable_services or pending_services:
         return RoomWorkspaceConnectionDescriptor(
+            descriptor_id=descriptor_id,
             room_id=room.room_id,
             workspace_id=workspace.id,
             purpose=request.purpose,
             status=RoomWorkspaceConnectionStatus.pending,
+            issued_at=issued_at,
+            expires_at=expires_at,
             reason=(
                 "Matching runtime is healthy, but no routed connection endpoint has been issued yet."
                 if ready_unroutable_services
@@ -413,6 +505,8 @@ async def build_room_workspace_connection_descriptor(
                         workspace_id=workspace.id,
                         purpose=request.purpose,
                         endpoint_id=service.id,
+                        connection_id=descriptor_connection_id,
+                        descriptor_id=descriptor_id,
                     ),
                 )
                 for service in matching_services
@@ -421,10 +515,13 @@ async def build_room_workspace_connection_descriptor(
         )
 
     return RoomWorkspaceConnectionDescriptor(
+        descriptor_id=descriptor_id,
         room_id=room.room_id,
         workspace_id=workspace.id,
         purpose=request.purpose,
         status=RoomWorkspaceConnectionStatus.denied,
+        issued_at=issued_at,
+        expires_at=expires_at,
         reason="No matching runtime surfaces are currently available for this connection purpose.",
         capabilities=capabilities,
     )
@@ -456,14 +553,16 @@ async def get_current_room_workspace_connection(
     except (ValueError, TypeError):
         return None
 
-    descriptor = await build_room_workspace_connection_descriptor(
+    room = await get_room_for_user(room_id=room_id, user_id=current_user.id, session=session)
+    descriptor = await _build_room_workspace_connection_descriptor_for_room(
         session,
-        current_user=current_user,
-        room_id=room_id,
+        room=room,
         request=RoomWorkspaceConnectionRequest(
             workspace_id=workspace_id,
             purpose=purpose,
         ),
+        allow_superuser=current_user.is_superuser,
+        current_connection_payload=payload,
     )
 
     workspace = await session.get(Workspace, workspace_id)
@@ -474,6 +573,11 @@ async def get_current_room_workspace_connection(
     )
 
     return RoomWorkspaceCurrentConnection(
+        connection_id=(
+            str(payload.get("connection_id"))
+            if isinstance(payload.get("connection_id"), str)
+            else str(uuid4())
+        ),
         room_id=room_id,
         workspace_id=workspace_id,
         workspace_name=workspace_name,
@@ -491,6 +595,85 @@ async def get_current_room_workspace_connection(
             if isinstance(payload.get("ready_service_count"), int)
             else 0
         ),
+        state=_current_connection_state_from_descriptor(descriptor)[0],
+        state_reason=_current_connection_state_from_descriptor(descriptor)[1],
+        descriptor=descriptor,
+    )
+
+
+async def consume_current_room_workspace_connection(
+    session: AsyncSession,
+    *,
+    room_id: UUID,
+    purpose: RoomWorkspaceConnectionPurpose | None = None,
+    context_store: ContextItemStore | None = None,
+) -> RoomWorkspaceCurrentConnection | None:
+    room = await session.get(Room, room_id)
+    if room is None or room.deleted_at is not None:
+        return None
+
+    context_item = await _find_current_connection_context_internal(
+        room_id=room_id,
+        context_store=context_store,
+    )
+    if context_item is None:
+        return None
+
+    payload = context_item.payload if isinstance(context_item.payload, dict) else {}
+    workspace_id_raw = payload.get("workspace_id")
+    purpose_raw = payload.get("purpose")
+    if not isinstance(workspace_id_raw, str) or not isinstance(purpose_raw, str):
+        return None
+
+    try:
+        workspace_id = UUID(workspace_id_raw)
+        stored_purpose = RoomWorkspaceConnectionPurpose(purpose_raw)
+    except (ValueError, TypeError):
+        return None
+
+    effective_purpose = purpose or stored_purpose
+    descriptor = await _build_room_workspace_connection_descriptor_for_room(
+        session,
+        room=room,
+        request=RoomWorkspaceConnectionRequest(
+            workspace_id=workspace_id,
+            purpose=effective_purpose,
+        ),
+        current_connection_payload=payload,
+    )
+
+    workspace = await session.get(Workspace, workspace_id)
+    workspace_name = (
+        str(payload.get("workspace_name"))
+        if isinstance(payload.get("workspace_name"), str)
+        else (workspace.name if workspace is not None else "Unknown workspace")
+    )
+
+    return RoomWorkspaceCurrentConnection(
+        connection_id=(
+            str(payload.get("connection_id"))
+            if isinstance(payload.get("connection_id"), str)
+            else str(uuid4())
+        ),
+        room_id=room_id,
+        workspace_id=workspace_id,
+        workspace_name=workspace_name,
+        purpose=effective_purpose,
+        relationship=_coerce_relationship(payload.get("relationship")),
+        access_level=_coerce_access_level(payload.get("access_level")),
+        selected_at=_coerce_selected_at(payload.get("selected_at")),
+        service_count=(
+            payload.get("service_count")
+            if isinstance(payload.get("service_count"), int)
+            else 0
+        ),
+        ready_service_count=(
+            payload.get("ready_service_count")
+            if isinstance(payload.get("ready_service_count"), int)
+            else 0
+        ),
+        state=_current_connection_state_from_descriptor(descriptor)[0],
+        state_reason=_current_connection_state_from_descriptor(descriptor)[1],
         descriptor=descriptor,
     )
 
@@ -533,17 +716,31 @@ async def set_current_room_workspace_connection(
         )
 
     selected_at = datetime.now(timezone.utc)
+    connection_id = str(uuid4())
+    current_payload = _current_connection_payload(
+        candidate=candidate,
+        purpose=request.purpose,
+        selected_at=selected_at,
+        connection_id=connection_id,
+    )
+    room = await get_room_for_user(room_id=room_id, user_id=current_user.id, session=session)
+    descriptor = await _build_room_workspace_connection_descriptor_for_room(
+        session,
+        room=room,
+        request=RoomWorkspaceConnectionRequest(
+            workspace_id=request.workspace_id,
+            purpose=request.purpose,
+        ),
+        allow_superuser=current_user.is_superuser,
+        current_connection_payload=current_payload,
+    )
     context_item = await upsert_room_context_item(
         room_id=room_id,
         user_id=current_user.id,
         context_id=CURRENT_CONNECTION_CONTEXT_ID,
         context_in=RoomContextItemCreate(
             context_type=CURRENT_CONNECTION_CONTEXT_TYPE,
-            payload=_current_connection_payload(
-                candidate=candidate,
-                purpose=request.purpose,
-                selected_at=selected_at,
-            ),
+            payload=current_payload,
             source=CURRENT_CONNECTION_CONTEXT_SOURCE,
             expires_at=selected_at + CURRENT_CONNECTION_TTL,
         ),
@@ -552,6 +749,7 @@ async def set_current_room_workspace_connection(
     )
 
     return RoomWorkspaceCurrentConnection(
+        connection_id=connection_id,
         room_id=room_id,
         workspace_id=candidate.workspace_id,
         workspace_name=candidate.workspace_name,
@@ -561,6 +759,8 @@ async def set_current_room_workspace_connection(
         selected_at=context_item.created_at,
         service_count=candidate.service_count,
         ready_service_count=candidate.ready_service_count,
+        state=RoomWorkspaceCurrentConnectionState.active,
+        state_reason=None,
         descriptor=descriptor,
     )
 

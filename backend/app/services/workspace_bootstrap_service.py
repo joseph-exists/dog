@@ -162,17 +162,37 @@ def _agent_service_start_command(profile: AgentServiceProfile) -> str:
     """
     Build the shell launcher for an agent runtime profile.
 
-    The default command stays intentionally compact in this slice. Operators can
-    override the launcher per profile with an env var while the concrete runtime
-    semantics are still evolving.
+    The launcher now includes a small runtime adapter so projected platform
+    service access becomes immediately consumable inside the agent process:
+    - canonical agent-platform env vars stay available
+    - stable agent-facing aliases are exported
+    - a runtime JSON file is materialized for inspection and future adapters
+
+    Operators can still override the final launcher command per profile with an
+    env var while the concrete runtime semantics continue to evolve.
     """
 
     return (
         f'export DOG_WORKSPACE_AGENT_PROFILE="{profile.profile_id}"; '
         f'export DOG_WORKSPACE_AGENT_HOST="${{{profile.host_env_var}:-0.0.0.0}}"; '
         f'export DOG_WORKSPACE_AGENT_PORT="${{{profile.port_env_var}:-{profile.default_port}}}"; '
+        'export DOG_WORKSPACE_AGENT_PLATFORM_SERVICES_JSON="${DOG_AGENT_PLATFORM_SERVICES_JSON:-}"; '
+        'export DOG_WORKSPACE_AGENT_PLATFORM_SERVICE_ACCESS_ISSUED_AT="${DOG_AGENT_PLATFORM_SERVICE_ACCESS_ISSUED_AT:-}"; '
+        'export DOG_WORKSPACE_AGENT_PLATFORM_SERVICE_ACCESS_EXPIRES_AT="${DOG_AGENT_PLATFORM_SERVICE_ACCESS_EXPIRES_AT:-}"; '
+        'export DOG_WORKSPACE_AGENT_PLATFORM_SERVICES_PATH="${DOG_AGENT_PLATFORM_SERVICES_PATH:-$HOME/.dog/platform-services/agent-runtime.json}"; '
+        'export DOG_WORKSPACE_AGENT_AFFORDANCE_URL="${DOG_AGENT_PLATFORM_SERVICE_AFFORDANCE_URL:-}"; '
+        'export DOG_WORKSPACE_AGENT_STORY_URL="${DOG_AGENT_PLATFORM_SERVICE_STORY_URL:-}"; '
         f'AGENT_CMD="${{{profile.command_env_var}:-{profile.default_command}}}"; '
         f'echo "Starting {profile.label} using: $AGENT_CMD"; '
+        'if [ -f "${DOG_WORKSPACE_AGENT_PLATFORM_SERVICES_PATH}" ]; then '
+        'echo "Platform services file: $DOG_WORKSPACE_AGENT_PLATFORM_SERVICES_PATH"; '
+        'fi; '
+        'if [ -n "${DOG_WORKSPACE_AGENT_AFFORDANCE_URL:-}" ]; then '
+        'echo "Affordance MCP: $DOG_WORKSPACE_AGENT_AFFORDANCE_URL"; '
+        'fi; '
+        'if [ -n "${DOG_WORKSPACE_AGENT_STORY_URL:-}" ]; then '
+        'echo "Story MCP: $DOG_WORKSPACE_AGENT_STORY_URL"; '
+        'fi; '
         'exec bash -lc "$AGENT_CMD"'
     )
 

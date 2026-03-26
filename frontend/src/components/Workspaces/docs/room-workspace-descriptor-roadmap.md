@@ -188,6 +188,12 @@ Status:
 - pending or unavailable connections are surfaced in the runtime UX as explicit state instead of being silently ignored
 - the next follow-on should prefer backend consumer helpers for chat/handler
   integration rather than coupling room orchestration directly to frontend state
+- current room-held connections now also project explicit connection state:
+  - `active`
+  - `unavailable`
+- when a workspace path outlives availability, the room UI now presents that
+  connection as historical session state and offers a clean clear-and-reselect
+  recovery path
 
 ### Step 4: Optional Backend Convenience For Current Room Connection
 

@@ -292,6 +292,42 @@ Important boundary:
 - the singular current-connection surface is a narrow MVP convenience layer, not
   the final relationship model for rooms and workspaces
 
+The current recommended MVP close-out sequence is:
+
+- [mvp-closing-sequence.md](/home/josep/dog/frontend/src/components/Workspaces/docs/mvp-closing-sequence.md)
+
+Current progress on that sequence:
+
+- Step 1 consumer helper slice is now in place through backend room-context
+  projection of the current descriptor-backed workspace connection
+- Step 2 hardening slice is now in place through connection-scoped descriptor
+  identity, issuance/expiry metadata, and frontend visibility into descriptor freshness
+- Step 3 workspace-to-platform access is now in place through backend-issued
+  platform-service grants and workspace-detail inspection for
+  `workspace_runtime` and `agent_runtime` consumers
+- the next implementation direction for workspace-to-platform access is defined
+  in:
+  - [workspace-platform-service-access-decision.md](/home/josep/dog/frontend/src/components/Workspaces/docs/workspace-platform-service-access-decision.md)
+- the first canonical runtime-config route and resolver helper are now in place
+  for workspace-side consumers
+- the first environment projection adapter is now in place for workspace and
+  agent runtime consumption during provisioning
+- the current agent runtime profiles now actively consume projected
+  platform-service access through runtime-facing aliases and a materialized
+  services file
+- workspace detail now exposes projection summaries and on-demand runtime-config
+  inspection for operator visibility
+- runtime projections can now be refreshed for active workspaces, and the UI
+  now surfaces expired projections and unavailable runtime-access states
+- workspace detail now also surfaces runtime file paths and inject notes so the
+  projected runtime materialization is easier to inspect during live operations
+- room-held workspace connections now project explicit `active` /
+  `unavailable` state so rooms can treat outlived workspace links as historical
+  session context instead of silently presenting them as current
+- room connection hooks now refresh more intentionally as descriptors approach
+  expiry, and room/runtime surfaces now make expired connections easier to
+  recover from
+
 1. make the workspace domain explicit
 2. make project/repo/room relationships real
 3. make websocket trust and service discovery understandable

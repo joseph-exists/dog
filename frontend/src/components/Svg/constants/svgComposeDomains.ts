@@ -49,6 +49,17 @@ export const FAMILY_ACCENT: Record<StyleFamily, string> = {
   diagrammatic: "border-amber-500/50 bg-amber-950/20",
 }
 
+// FAMILY_QUOTAS — mirrors svg_library_tools.FAMILY_QUOTAS
+// Used by applyFamilyBias below for proportional family selection.
+export const FAMILY_QUOTAS: Record<StyleFamily, number> = {
+  organic: 0.18,
+  geometric: 0.18,
+  glitch: 0.14,
+  minimal: 0.16,
+  atmospheric: 0.18,
+  diagrammatic: 0.16,
+}
+
 // ---------------------------------------------------------------------------
 // § A. Geometry/Base Composition — svg_combinatorics_reference_card.md §2A
 // ---------------------------------------------------------------------------
@@ -152,6 +163,9 @@ export interface KnobDef {
   kind: "enum-short" | "enum-long" | "number"
   options?: readonly string[]
   defaultValue: string
+  /** For kind: "number" — rendered as Input[type=number] with hint text */
+  min?: number
+  max?: number
   description?: string
 }
 
@@ -262,4 +276,148 @@ export function buildDefaultKnobs(): KnobState {
     }
   }
   return state
+}
+
+// ---------------------------------------------------------------------------
+// Seeded random utility
+// Simple LCG — not cryptographic, purely for deterministic UI scenario generation.
+// ---------------------------------------------------------------------------
+
+export function makeSeededRandom(seed: number) {
+  let s = seed >>> 0
+  return function (): number {
+    s = (Math.imul(1664525, s) + 1013904223) >>> 0
+    return s / 0x100000000
+  }
+}
+
+function seededChoice<T>(rng: () => number, arr: readonly T[]): T {
+  return arr[Math.floor(rng() * arr.length)] as T
+}
+
+// ---------------------------------------------------------------------------
+// applyFamilyBias
+// TS port of svg_library_tools._apply_family_bias.
+// Applies mild family-specific defaults. Caller may override any field after.
+// ---------------------------------------------------------------------------
+
+export function applyFamilyBias(
+  family: StyleFamily,
+  base: KnobState,
+  rng: () => number,
+): KnobState {
+  const out: KnobState = { ...base, style_family: family }
+
+  if (family === "organic") {
+    out.shape_family = "curves"
+    out.palette_family = seededChoice(rng, ["earth", "cool"])
+    out.symmetry = seededChoice(rng, ["none", "radial"])
+  } else if (family === "geometric") {
+    out.shape_family = seededChoice(rng, ["polygons", "rings", "stripes"])
+    out.symmetry = seededChoice(rng, ["radial", "mirror-x", "mirror-y"])
+  } else if (family === "glitch") {
+    out.palette_family = "neon"
+    out.distortion_scope = "global"
+    out.displacement_scale = seededChoice(rng, ["24", "64", "120"])
+  } else if (family === "minimal") {
+    out.density = "sparse"
+    out.gaussian_blur = seededChoice(rng, ["0", "0.8"])
+    out.palette_family = "mono"
+  } else if (family === "atmospheric") {
+    out.shape_family = seededChoice(rng, ["curves", "particles"])
+    out.base_frequency = seededChoice(rng, ["0.003", "0.01"])
+    out.blend_mode_primary = seededChoice(rng, ["screen", "overlay"])
+  } else if (family === "diagrammatic") {
+    out.shape_family = seededChoice(rng, ["stripes", "rings", "polygons"])
+    out.contrast_band = "high"
+    out.blend_mode_primary = seededChoice(rng, ["normal", "multiply"])
+  }
+
+  return out
+}
+
+// ---------------------------------------------------------------------------
+// Hero and safe tier overrides — mirrors _hero_override / _safe_override
+// ---------------------------------------------------------------------------
+
+function applyHeroOverride(base: KnobState, family: StyleFamily, rng: () => number): KnobState {
+  const out = { ...base }
+  out.density = "dense"
+  out.layer_count = "6"
+  out.displacement_scale = seededChoice(rng, ["64", "120"])
+  out.gaussian_blur = seededChoice(rng, ["6", "14"])
+  out.contrast_band = "high"
+  out.saturation_band = "vivid"
+  out.palette_cardinality = "6"
+  out.opacity_stack = "mist(0.15-0.55)"
+  if (family === "minimal") {
+    out.density = "medium"
+    out.gaussian_blur = "0.8"
+    out.palette_cardinality = "2"
+  }
+  if (family === "diagrammatic") {
+    out.shape_family = "stripes"
+    out.gaussian_blur = "0"
+  }
+  return out
+}
+
+function applySafeOverride(base: KnobState, family: StyleFamily, rng: () => number): KnobState {
+  return {
+    ...base,
+    shape_family: seededChoice(rng, ["stripes", "rings", "curves"]),
+    density: "sparse",
+    layer_count: seededChoice(rng, ["1", "2"]),
+    displacement_scale: "0",
+    gaussian_blur: seededChoice(rng, ["0", "0.8"]),
+    palette_cardinality: seededChoice(rng, ["1", "2"]),
+    contrast_band: "mid",
+    opacity_stack: "flat(1.0)",
+    style_family: family,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// buildScenarios
+//
+// Simplified random sampling from PAIRWISE_DOMAINS with family bias applied.
+// NOTE: Does NOT guarantee pairwise coverage — pragmatic approximation only.
+// For exhaustive library population, use the CLI:
+//   python -m app.test_scripts.typer svgs seed --count N
+// ---------------------------------------------------------------------------
+
+export type ScenarioTier = "pairwise" | "hero" | "safe"
+
+export interface Scenario {
+  index: number
+  family: StyleFamily
+  tier: ScenarioTier
+  knobs: KnobState
+}
+
+export function buildScenarios(input: {
+  count: number
+  seed: number
+  families: StyleFamily[]
+  tier: ScenarioTier
+}): Scenario[] {
+  const { count, seed, tier } = input
+  const families = input.families.length > 0 ? input.families : [...STYLE_FAMILIES]
+  const rng = makeSeededRandom(seed)
+
+  return Array.from({ length: count }, (_, index) => {
+    const family = seededChoice(rng, families)
+
+    // Build a random base row from PAIRWISE_DOMAINS
+    const base: KnobState = {}
+    for (const [key, domain] of Object.entries(PAIRWISE_DOMAINS)) {
+      base[key] = seededChoice(rng, domain)
+    }
+
+    let knobs = applyFamilyBias(family, base, rng)
+    if (tier === "hero") knobs = applyHeroOverride(knobs, family, rng)
+    if (tier === "safe") knobs = applySafeOverride(knobs, family, rng)
+
+    return { index, family, tier, knobs }
+  })
 }

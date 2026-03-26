@@ -58,8 +58,13 @@ export function StoryPanel({
     currentConnection?.purpose === "agent_runtime_connect"
       ? "Agent Runtime"
       : "Service Link"
+  const currentConnectionIsExpired = currentConnection?.descriptorExpiresAt
+    ? new Date(currentConnection.descriptorExpiresAt).getTime() <= Date.now()
+    : false
   const currentConnectionStatusTone =
-    currentConnection?.descriptorStatus === "available"
+    currentConnection?.state === "unavailable" || currentConnectionIsExpired
+      ? "border-rose-500/40 bg-rose-500/10 text-rose-700"
+      : currentConnection?.descriptorStatus === "available"
       ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
       : currentConnection?.descriptorStatus === "pending"
         ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
@@ -75,7 +80,11 @@ export function StoryPanel({
           </div>
         </div>
         <Badge variant="outline" className={currentConnectionStatusTone}>
-          {currentConnection.descriptorStatus}
+          {currentConnection.state === "unavailable"
+            ? "unavailable"
+            : currentConnectionIsExpired
+              ? "expired"
+              : currentConnection.descriptorStatus}
         </Badge>
       </div>
 
@@ -92,8 +101,21 @@ export function StoryPanel({
       </div>
 
       <div className="text-xs text-muted-foreground">
-        {currentConnection.reason ??
-          "This room is using a descriptor-backed workspace connection for the current session."}
+        {currentConnection.state === "unavailable"
+          ? currentConnection.stateReason ??
+            currentConnection.reason ??
+            "This room-held workspace connection is being kept as historical session context."
+          : currentConnectionIsExpired
+            ? "This room-held descriptor has aged out. Refresh it from Workspace Links before relying on it for a new launch."
+            : currentConnection.reason ??
+              "This room is using a descriptor-backed workspace connection for the current session."}
+      </div>
+
+      <div className="text-[11px] text-muted-foreground">
+        Descriptor {currentConnection.descriptorId}
+        {currentConnection.descriptorExpiresAt
+          ? ` · Expires ${new Date(currentConnection.descriptorExpiresAt).toLocaleString()}`
+          : ""}
       </div>
 
       {availableEndpoints.length > 0 ? (
@@ -109,7 +131,11 @@ export function StoryPanel({
         </div>
       ) : (
         <div className="rounded-md border border-dashed px-3 py-3 text-xs text-muted-foreground">
-          {currentConnection.descriptorStatus === "pending"
+          {currentConnection.state === "unavailable"
+            ? "This room is holding onto a connection whose workspace is no longer available. Choose a new workspace link before continuing."
+            : currentConnectionIsExpired
+              ? "This descriptor has expired. Open Workspace Links to refresh the room's current connection."
+            : currentConnection.descriptorStatus === "pending"
             ? "This connection is still being prepared. Return to Workspace Links to refresh or wait for readiness."
             : "No usable endpoint has been issued for the current connection yet."}
         </div>

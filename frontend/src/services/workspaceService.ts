@@ -1,4 +1,5 @@
 import {
+  OpenAPI,
   type WorkspaceAction,
   type WorkspaceBootstrapIntent,
   type WorkspaceBootstrapProgress,
@@ -24,6 +25,8 @@ import {
   type WorkspaceVisibility,
   WorkspacesService,
 } from "@/client"
+import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
+import { request as __request } from "@/client/core/request"
 
 export type BootstrapRepoSourceType = "none" | "external_url" | "user_repo" | "shadow_repo"
 export type BootstrapInstallMode = "none" | "auto" | "profile"
@@ -158,6 +161,7 @@ export interface WorkspaceDetailViewModel extends WorkspaceListItemViewModel {
   canDestroy: boolean
   bootstrapPlanStepCount: number | null
   bootstrapStepResults: Array<Record<string, unknown>>
+  platformServiceProjection: WorkspacePlatformServiceProjectionSummaryViewModel[]
 }
 
 export interface WorkspaceTerminalDescriptor {
@@ -165,6 +169,46 @@ export interface WorkspaceTerminalDescriptor {
   protocol: string
   host: string
   isDirectConnection: boolean
+}
+
+export type WorkspacePlatformServiceConsumerKind = "workspace_runtime" | "agent_runtime"
+
+export interface WorkspacePlatformServiceGrantViewModel {
+  grantId: string
+  serviceId: string
+  transport: string
+  url: string
+  authMode: string
+  requireApproval: string
+  description: string | null
+  scopes: string[]
+  tags: string[]
+  scope: Record<string, string>
+  issuedAt: Date
+  expiresAt: Date | null
+}
+
+export interface WorkspacePlatformServiceAccessGrantViewModel {
+  workspaceId: string
+  consumerKind: WorkspacePlatformServiceConsumerKind
+  issuedAt: Date
+  expiresAt: Date | null
+  services: WorkspacePlatformServiceGrantViewModel[]
+}
+
+export interface WorkspacePlatformServiceProjectionSummaryViewModel {
+  consumerKind: WorkspacePlatformServiceConsumerKind
+  serviceIds: string[]
+  issuedAt: Date | null
+  expiresAt: Date | null
+  refreshedAt: Date | null
+  runtimeFilePaths: string[]
+  injectErrors: string[]
+}
+
+export interface IssueWorkspacePlatformServiceAccessInput {
+  consumerKind?: WorkspacePlatformServiceConsumerKind
+  serviceIds?: string[]
 }
 
 export interface CreateWorkspaceInput {
@@ -363,6 +407,11 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
   const startedServices = Array.isArray(meta.bootstrap_started_services)
     ? meta.bootstrap_started_services.filter((value): value is string => typeof value === "string")
     : []
+  const platformServiceProjection = Array.isArray(meta.platform_service_projection)
+    ? meta.platform_service_projection
+        .map(toWorkspacePlatformServiceProjectionSummaryViewModel)
+        .filter((value): value is WorkspacePlatformServiceProjectionSummaryViewModel => value !== null)
+    : []
   const canOpenTerminal = allowedActions.includes("request_terminal")
   const canDiscoverServices = allowedActions.includes("discover_services")
   const canStart = allowedActions.includes("start")
@@ -433,6 +482,7 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
       bootstrapProgress?.stepCount ??
       (bootstrapPlan && Array.isArray(bootstrapPlan.steps) ? bootstrapPlan.steps.length : null),
     bootstrapStepResults,
+    platformServiceProjection,
   }
 }
 
@@ -480,6 +530,85 @@ function toWorkspaceTerminalDescriptor(data: Record<string, string>): WorkspaceT
   }
 }
 
+function toWorkspacePlatformServiceAccessGrantViewModel(
+  value: {
+    workspace_id: string
+    consumer_kind: WorkspacePlatformServiceConsumerKind
+    issued_at: string
+    expires_at?: string | null
+    services?: Array<{
+      grant_id: string
+      service_id: string
+      transport: string
+      url: string
+      auth_mode?: string
+      require_approval?: string
+      description?: string | null
+      scopes?: string[]
+      tags?: string[]
+      scope?: Record<string, string>
+      issued_at: string
+      expires_at?: string | null
+    }>
+  },
+): WorkspacePlatformServiceAccessGrantViewModel {
+  return {
+    workspaceId: value.workspace_id,
+    consumerKind: value.consumer_kind,
+    issuedAt: new Date(value.issued_at),
+    expiresAt: value.expires_at ? new Date(value.expires_at) : null,
+    services: Array.isArray(value.services)
+      ? value.services.map((service) => ({
+          grantId: service.grant_id,
+          serviceId: service.service_id,
+          transport: service.transport,
+          url: service.url,
+          authMode: service.auth_mode ?? "none",
+          requireApproval: service.require_approval ?? "never",
+          description: service.description ?? null,
+          scopes: Array.isArray(service.scopes) ? service.scopes : [],
+          tags: Array.isArray(service.tags) ? service.tags : [],
+          scope: isRecord(service.scope) ? Object.fromEntries(Object.entries(service.scope).map(([key, entry]) => [key, String(entry)])) : {},
+          issuedAt: new Date(service.issued_at),
+          expiresAt: service.expires_at ? new Date(service.expires_at) : null,
+        }))
+      : [],
+  }
+}
+
+function toWorkspacePlatformServiceProjectionSummaryViewModel(
+  value: unknown,
+): WorkspacePlatformServiceProjectionSummaryViewModel | null {
+  if (!isRecord(value)) return null
+
+  const consumerKind =
+    value.consumer_kind === "workspace_runtime"
+      ? "workspace_runtime"
+      : value.consumer_kind === "agent_runtime"
+        ? "agent_runtime"
+        : null
+  if (!consumerKind) return null
+
+  return {
+    consumerKind,
+    serviceIds: Array.isArray(value.service_ids)
+      ? value.service_ids.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    issuedAt: typeof value.issued_at === "string" ? new Date(value.issued_at) : null,
+    expiresAt: typeof value.expires_at === "string" ? new Date(value.expires_at) : null,
+    refreshedAt:
+      typeof value.refreshed_at === "string" ? new Date(value.refreshed_at) : null,
+    runtimeFilePaths: Array.isArray(value.runtime_file_paths)
+      ? value.runtime_file_paths.filter(
+          (entry): entry is string => typeof entry === "string",
+        )
+      : [],
+    injectErrors: Array.isArray(value.inject_errors)
+      ? value.inject_errors.filter((entry): entry is string => typeof entry === "string")
+      : [],
+  }
+}
+
 export const WorkspaceService = {
   async listWorkspaces(): Promise<WorkspaceListItemViewModel[]> {
     const response = await WorkspacesService.listWorkspaces()
@@ -489,6 +618,114 @@ export const WorkspaceService = {
   async getWorkspace(workspaceId: string): Promise<WorkspaceDetailViewModel> {
     const response = await WorkspacesService.getWorkspace({ workspaceId })
     return toWorkspaceDetailViewModel(response)
+  },
+
+  async issuePlatformServiceAccess(
+    workspaceId: string,
+    input: IssueWorkspacePlatformServiceAccessInput = {},
+  ): Promise<WorkspacePlatformServiceAccessGrantViewModel> {
+    const requestOptions: ApiRequestOptions = {
+      method: "POST",
+      url: `/api/v1/workspaces/${workspaceId}/platform-service-access`,
+      body: {
+        consumer_kind: input.consumerKind ?? "workspace_runtime",
+        service_ids: input.serviceIds ?? [],
+      },
+      mediaType: "application/json",
+    }
+    const response = (await __request(OpenAPI, requestOptions)) as {
+      workspace_id: string
+      consumer_kind: WorkspacePlatformServiceConsumerKind
+      issued_at: string
+      expires_at?: string | null
+      services?: Array<{
+        grant_id: string
+        service_id: string
+        transport: string
+        url: string
+        auth_mode?: string
+        require_approval?: string
+        description?: string | null
+        scopes?: string[]
+        tags?: string[]
+        scope?: Record<string, string>
+        issued_at: string
+        expires_at?: string | null
+      }>
+    }
+    return toWorkspacePlatformServiceAccessGrantViewModel(response)
+  },
+
+  async getPlatformRuntimeConfig(
+    workspaceId: string,
+    input: IssueWorkspacePlatformServiceAccessInput = {},
+  ): Promise<WorkspacePlatformServiceAccessGrantViewModel> {
+    const requestOptions: ApiRequestOptions = {
+      method: "POST",
+      url: `/api/v1/workspaces/${workspaceId}/platform-runtime-config`,
+      body: {
+        consumer_kind: input.consumerKind ?? "workspace_runtime",
+        service_ids: input.serviceIds ?? [],
+      },
+      mediaType: "application/json",
+    }
+    const response = (await __request(OpenAPI, requestOptions)) as {
+      workspace_id: string
+      consumer_kind: WorkspacePlatformServiceConsumerKind
+      issued_at: string
+      expires_at?: string | null
+      services?: Array<{
+        grant_id: string
+        service_id: string
+        transport: string
+        url: string
+        auth_mode?: string
+        require_approval?: string
+        description?: string | null
+        scopes?: string[]
+        tags?: string[]
+        scope?: Record<string, string>
+        issued_at: string
+        expires_at?: string | null
+      }>
+    }
+    return toWorkspacePlatformServiceAccessGrantViewModel(response)
+  },
+
+  async refreshPlatformRuntimeProjection(
+    workspaceId: string,
+    input: IssueWorkspacePlatformServiceAccessInput = {},
+  ): Promise<WorkspacePlatformServiceAccessGrantViewModel> {
+    const requestOptions: ApiRequestOptions = {
+      method: "POST",
+      url: `/api/v1/workspaces/${workspaceId}/platform-runtime-projection/refresh`,
+      body: {
+        consumer_kind: input.consumerKind ?? "workspace_runtime",
+        service_ids: input.serviceIds ?? [],
+      },
+      mediaType: "application/json",
+    }
+    const response = (await __request(OpenAPI, requestOptions)) as {
+      workspace_id: string
+      consumer_kind: WorkspacePlatformServiceConsumerKind
+      issued_at: string
+      expires_at?: string | null
+      services?: Array<{
+        grant_id: string
+        service_id: string
+        transport: string
+        url: string
+        auth_mode?: string
+        require_approval?: string
+        description?: string | null
+        scopes?: string[]
+        tags?: string[]
+        scope?: Record<string, string>
+        issued_at: string
+        expires_at?: string | null
+      }>
+    }
+    return toWorkspacePlatformServiceAccessGrantViewModel(response)
   },
 
   async createWorkspace(input: CreateWorkspaceInput): Promise<WorkspaceDetailViewModel> {

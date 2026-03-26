@@ -112,6 +112,7 @@ class InjectRequest(BaseModel):
     # TTL for the issued terminal token (seconds)
     token_ttl:  int             = 3600
     bootstrap_plan: "BootstrapExecutionPlan | None" = None
+    runtime_files: dict[str, str] = {}
 
 
 class BootstrapSshKeyStep(BaseModel):
@@ -371,6 +372,28 @@ def _legacy_bootstrap_plan(req: InjectRequest) -> BootstrapExecutionPlan:
         )
 
     return BootstrapExecutionPlan(workspace_path=workspace_path, steps=steps)
+
+
+def _write_runtime_file(
+    env_name: str,
+    *,
+    path: str,
+    content: str,
+    user: str,
+) -> subprocess.CompletedProcess:
+    escaped_path = shlex.quote(path)
+    parent_dir = shlex.quote(path.rsplit("/", 1)[0] or "/")
+    payload = content
+    return _attach_exec(
+        env_name,
+        (
+            f"mkdir -p {parent_dir} && "
+            f"cat > {escaped_path} <<'RUNTIMEFILE'\n{payload}\nRUNTIMEFILE\n"
+            f"chown -R {user}:{user} {parent_dir} && "
+            f"chmod 644 {escaped_path}"
+        ),
+        timeout=30,
+    )
 
 
 def _service_manifest_for_plan(plan: BootstrapExecutionPlan) -> list[DeclaredWorkspaceService]:
@@ -1031,6 +1054,18 @@ async def inject_workspace(
         r = _attach_exec(name, f"su - {req.user} -c \"{' && '.join(git_cmds)}\"")
         if r.returncode != 0:
             errors.append(f"git_config: {r.stderr.strip()}")
+
+    for path, content in req.runtime_files.items():
+        if not path.strip():
+            continue
+        runtime_file_result = _write_runtime_file(
+            name,
+            path=path,
+            content=content,
+            user=req.user,
+        )
+        if runtime_file_result.returncode != 0:
+            errors.append(f"runtime_file:{path}: {runtime_file_result.stderr.strip()}")
 
     for index, step in enumerate(plan.steps):
         result, service_or_error = _execute_bootstrap_step(

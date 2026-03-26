@@ -8,13 +8,19 @@ import {
 } from "@/services/roomService"
 
 export interface RoomWorkspaceCurrentConnectionState {
+  connectionId: string
   roomId: string
   workspaceId: string
   workspaceName: string
   purpose: RoomWorkspaceConnectionPurpose
   relationship: RoomWorkspaceCandidateViewModel["relationship"]
   accessLevel: RoomWorkspaceCandidateViewModel["access_level"]
+  state: "active" | "unavailable"
+  stateReason: string | null
+  descriptorId: string
   descriptorStatus: RoomWorkspaceCurrentConnectionViewModel["descriptor"]["status"]
+  descriptorIssuedAt: string
+  descriptorExpiresAt: string | null
   reason: string | null
   capabilities: string[]
   endpoints: RoomWorkspaceCurrentConnectionViewModel["descriptor"]["endpoints"]
@@ -32,13 +38,21 @@ function toState(
 ): RoomWorkspaceCurrentConnectionState | null {
   if (!current) return null
   return {
+    connectionId: current.connection_id,
     roomId: current.room_id,
     workspaceId: current.workspace_id,
     workspaceName: current.workspace_name,
     purpose: current.purpose,
     relationship: current.relationship,
     accessLevel: current.access_level,
+    state: current.state,
+    stateReason: current.state_reason,
+    descriptorId: current.descriptor.descriptor_id,
     descriptorStatus: current.descriptor.status,
+    descriptorIssuedAt: current.descriptor.issued_at.toISOString(),
+    descriptorExpiresAt: current.descriptor.expires_at
+      ? current.descriptor.expires_at.toISOString()
+      : null,
     reason: current.descriptor.reason,
     capabilities: current.descriptor.capabilities,
     endpoints: current.descriptor.endpoints,
@@ -59,7 +73,15 @@ export function useRoomWorkspaceConnection(roomId: string) {
     refetchInterval: (queryState) => {
       const current = queryState.state.data
       if (!current) return false
-      return current.descriptor.status === "pending" ? 3_000 : false
+      if (current.state === "unavailable") return 15_000
+      if (current.descriptor.status === "pending") return 3_000
+      if (
+        current.descriptor.expires_at &&
+        current.descriptor.expires_at.getTime() - Date.now() <= 60_000
+      ) {
+        return 15_000
+      }
+      return false
     },
   })
 

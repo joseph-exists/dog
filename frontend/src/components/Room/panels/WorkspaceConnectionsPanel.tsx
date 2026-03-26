@@ -52,6 +52,29 @@ function getStatusBadgeClass(status: RoomWorkspaceConnectionViewModel["status"])
   return "border-rose-500/40 bg-rose-500/10 text-rose-700"
 }
 
+function getCurrentConnectionStateClass(state: "active" | "unavailable") {
+  if (state === "active") {
+    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+  }
+  return "border-rose-500/40 bg-rose-500/10 text-rose-700"
+}
+
+function getFreshnessLabel(expiresAt: Date | null) {
+  if (!expiresAt) return "No expiry recorded"
+  const remaining = expiresAt.getTime() - Date.now()
+  if (remaining <= 0) return "Expired"
+  if (remaining <= 2 * 60 * 1000) return "Expiring soon"
+  return "Fresh"
+}
+
+function getFreshnessClass(expiresAt: Date | null) {
+  if (!expiresAt) return "border-border bg-muted/40 text-muted-foreground"
+  const remaining = expiresAt.getTime() - Date.now()
+  if (remaining <= 0) return "border-rose-500/40 bg-rose-500/10 text-rose-700"
+  if (remaining <= 2 * 60 * 1000) return "border-amber-500/40 bg-amber-500/10 text-amber-700"
+  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+}
+
 function getWorkspaceOptionLabel(workspace: RoomWorkspaceCandidateViewModel) {
   const projectLabel = workspace.project_summary?.name ?? "Private"
   return `${workspace.workspace_name} · ${workspace.workspace_status} · ${projectLabel}`
@@ -76,6 +99,7 @@ export function WorkspaceConnectionsPanel({
     currentConnection,
     setCurrentConnection,
     clearCurrentConnection,
+    refetchCurrentConnection,
   } = useRoomWorkspaceConnection(roomId)
   const {
     data: workspaceOptions = [],
@@ -176,10 +200,37 @@ export function WorkspaceConnectionsPanel({
               <div className="flex items-center gap-2">
                 <Badge
                   variant="outline"
+                  className={getCurrentConnectionStateClass(currentConnection.state)}
+                >
+                  {currentConnection.state}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={getFreshnessClass(
+                    currentConnection.descriptorExpiresAt
+                      ? new Date(currentConnection.descriptorExpiresAt)
+                      : null,
+                  )}
+                >
+                  {getFreshnessLabel(
+                    currentConnection.descriptorExpiresAt
+                      ? new Date(currentConnection.descriptorExpiresAt)
+                      : null,
+                  )}
+                </Badge>
+                <Badge
+                  variant="outline"
                   className={getStatusBadgeClass(currentConnection.descriptorStatus)}
                 >
                   {currentConnection.descriptorStatus}
                 </Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void refetchCurrentConnection()}
+                >
+                  Refresh
+                </Button>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -203,7 +254,27 @@ export function WorkspaceConnectionsPanel({
             </div>
 
             <div className="text-xs text-muted-foreground">
-              {currentConnection.reason ?? "Descriptor-backed room connection is active."}
+              {currentConnection.state === "unavailable"
+                ? currentConnection.stateReason ??
+                  currentConnection.reason ??
+                  "This room-held connection now points at a workspace that is no longer available."
+                : currentConnection.descriptorExpiresAt &&
+                    new Date(currentConnection.descriptorExpiresAt).getTime() <= Date.now()
+                  ? "The held descriptor has aged out. Refresh to rebuild it from current backend state."
+                : currentConnection.reason ?? "Descriptor-backed room connection is active."}
+            </div>
+
+            {currentConnection.state === "unavailable" ? (
+              <div className="rounded-md border bg-background/70 p-3 text-xs text-muted-foreground">
+                The room is retaining this connection as historical session state. You can clear it and choose a new workspace candidate when you are ready.
+              </div>
+            ) : null}
+
+            <div className="text-[11px] text-muted-foreground">
+              Descriptor {currentConnection.descriptorId}
+              {currentConnection.descriptorExpiresAt
+                ? ` · Expires ${new Date(currentConnection.descriptorExpiresAt).toLocaleString()}`
+                : ""}
             </div>
 
             <div className="space-y-2">
@@ -396,13 +467,27 @@ export function WorkspaceConnectionsPanel({
                       {descriptorQuery.data.reason ??
                         "Descriptor issued successfully."}
                     </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Descriptor {descriptorQuery.data.descriptor_id}
+                      {descriptorQuery.data.expires_at
+                        ? ` · Expires ${descriptorQuery.data.expires_at.toLocaleString()}`
+                        : ""}
+                    </div>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={getStatusBadgeClass(descriptorQuery.data.status)}
-                  >
-                    {descriptorQuery.data.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={getFreshnessClass(descriptorQuery.data.expires_at)}
+                    >
+                      {getFreshnessLabel(descriptorQuery.data.expires_at)}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={getStatusBadgeClass(descriptorQuery.data.status)}
+                    >
+                      {descriptorQuery.data.status}
+                    </Badge>
+                  </div>
                 </div>
 
                 {selectedWorkspace ? (

@@ -8,6 +8,7 @@ import {
   type BootstrapRepoSourceType,
   type BootstrapStartupMode,
   type CreateWorkspaceInput,
+  type IssueWorkspacePlatformServiceAccessInput,
   WorkspaceService,
 } from "@/services/workspaceService"
 
@@ -137,6 +138,55 @@ export function useDestroyWorkspace() {
     onSuccess: () => {
       showSuccessToast("Workspace destroyed.")
       queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err)
+    },
+  })
+}
+
+export function useIssueWorkspacePlatformServiceAccess(workspaceId: string) {
+  return useMutation({
+    mutationFn: (input: IssueWorkspacePlatformServiceAccessInput) =>
+      WorkspaceService.issuePlatformServiceAccess(workspaceId, input),
+    onSuccess: (grant) => {
+      showSuccessToast(
+        `Issued ${grant.services.length} platform service grant${grant.services.length === 1 ? "" : "s"} for ${grant.consumerKind.replaceAll("_", " ")}.`,
+      )
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err)
+    },
+  })
+}
+
+export function useWorkspacePlatformRuntimeConfig(workspaceId: string) {
+  return useMutation({
+    mutationFn: (input: IssueWorkspacePlatformServiceAccessInput) =>
+      WorkspaceService.getPlatformRuntimeConfig(workspaceId, input),
+    onSuccess: (config) => {
+      showSuccessToast(
+        `Resolved runtime config with ${config.services.length} platform service${config.services.length === 1 ? "" : "s"} for ${config.consumerKind.replaceAll("_", " ")}.`,
+      )
+    },
+    onError: (err: ApiError) => {
+      handleError.call(showErrorToast, err)
+    },
+  })
+}
+
+export function useRefreshWorkspacePlatformRuntimeProjection(workspaceId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: IssueWorkspacePlatformServiceAccessInput) =>
+      WorkspaceService.refreshPlatformRuntimeProjection(workspaceId, input),
+    onSuccess: (config) => {
+      showSuccessToast(
+        `Refreshed runtime projection for ${config.consumerKind.replaceAll("_", " ")}.`,
+      )
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) })
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.list() })
     },
     onError: (err: ApiError) => {
       handleError.call(showErrorToast, err)

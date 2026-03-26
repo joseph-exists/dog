@@ -198,16 +198,20 @@ export interface RoomWorkspaceEndpointViewModel {
 }
 
 export interface RoomWorkspaceConnectionViewModel {
+  descriptor_id: string
   room_id: string
   workspace_id: string
   purpose: RoomWorkspaceConnectionPurpose
   status: "available" | "pending" | "denied"
+  issued_at: Date
+  expires_at: Date | null
   reason: string | null
   capabilities: string[]
   endpoints: RoomWorkspaceEndpointViewModel[]
 }
 
 export interface RoomWorkspaceCurrentConnectionViewModel {
+  connection_id: string
   room_id: string
   workspace_id: string
   workspace_name: string
@@ -217,6 +221,8 @@ export interface RoomWorkspaceCurrentConnectionViewModel {
   selected_at: Date
   service_count: number
   ready_service_count: number
+  state: "active" | "unavailable"
+  state_reason: string | null
   descriptor: RoomWorkspaceConnectionViewModel
 }
 
@@ -364,10 +370,17 @@ function transformRoomWorkspaceConnection(
   descriptor: RoomWorkspaceConnectionDescriptor,
 ): RoomWorkspaceConnectionViewModel {
   return {
+    descriptor_id: (descriptor as unknown as { descriptor_id?: string }).descriptor_id ?? "",
     room_id: descriptor.room_id,
     workspace_id: descriptor.workspace_id,
     purpose: descriptor.purpose,
     status: descriptor.status,
+    issued_at: new Date(
+      (descriptor as unknown as { issued_at?: string }).issued_at ?? new Date().toISOString(),
+    ),
+    expires_at: (descriptor as unknown as { expires_at?: string | null }).expires_at
+      ? new Date((descriptor as unknown as { expires_at?: string }).expires_at!)
+      : null,
     reason: descriptor.reason ?? null,
     capabilities: descriptor.capabilities ?? [],
     endpoints: (descriptor.endpoints ?? []).map((endpoint) => ({
@@ -411,6 +424,8 @@ function transformRoomWorkspaceCurrentConnection(
   }
 
   return {
+    connection_id:
+      typeof current.connection_id === "string" ? current.connection_id : "",
     room_id,
     workspace_id,
     workspace_name,
@@ -435,6 +450,8 @@ function transformRoomWorkspaceCurrentConnection(
       typeof current.ready_service_count === "number"
         ? current.ready_service_count
         : 0,
+    state: current.state === "unavailable" ? "unavailable" : "active",
+    state_reason: typeof current.state_reason === "string" ? current.state_reason : null,
     descriptor: transformRoomWorkspaceConnection(
       descriptorValue as RoomWorkspaceConnectionDescriptor,
     ),
