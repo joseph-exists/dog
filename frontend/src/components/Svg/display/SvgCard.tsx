@@ -16,13 +16,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
 import { usePatchSvg } from "@/hooks/useSvgs"
 
 // ---------------------------------------------------------------------------
 // deriveTags — computes display tags from metadata without writing to backend.
 // Combines user-defined tags (metadata_json.tags) with tags derived from knobs.
 // ---------------------------------------------------------------------------
-function deriveTags(asset: SvgAssetPublic): string[] {
+export function deriveTags(asset: SvgAssetPublic): string[] {
   const meta = (asset.metadata_json ?? {}) as Record<string, unknown>
   const tags: string[] = []
 
@@ -67,7 +68,7 @@ function deriveTags(asset: SvgAssetPublic): string[] {
   return [...new Set(tags)].slice(0, 8)
 }
 
-function getUserTags(asset: SvgAssetPublic): string[] {
+export function getUserTags(asset: SvgAssetPublic): string[] {
   const meta = (asset.metadata_json ?? {}) as Record<string, unknown>
   const userTags = meta.tags
   if (!Array.isArray(userTags)) return []
@@ -79,7 +80,15 @@ function getUserTags(asset: SvgAssetPublic): string[] {
 // ---------------------------------------------------------------------------
 // TagEditor — popover for adding/removing user-defined tags
 // ---------------------------------------------------------------------------
-function TagEditor({ asset }: { asset: SvgAssetPublic }) {
+export function TagEditor({
+  asset,
+  triggerClassName,
+  triggerLabel,
+}: {
+  asset: SvgAssetPublic
+  triggerClassName?: string
+  triggerLabel?: string
+}) {
   const patchMutation = usePatchSvg()
   const [input, setInput] = useState("")
   const userTags = getUserTags(asset)
@@ -116,8 +125,13 @@ function TagEditor({ asset }: { asset: SvgAssetPublic }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-5 w-5 rounded-full p-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className={triggerClassName ?? "h-5 w-5 rounded-full p-0"}
+        >
           <Plus className="size-3" />
+          {triggerLabel ? <span className="ml-1">{triggerLabel}</span> : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-2" align="start">
@@ -177,6 +191,8 @@ interface SvgCardProps {
   onDelete: (asset: SvgAssetPublic) => void
   onCreatePublicCopy: (asset: SvgAssetPublic) => void
   onTagFilter?: (tag: string) => void
+  selected?: boolean
+  onSelectedChange?: (checked: boolean) => void
 }
 
 export function SvgCard({
@@ -185,6 +201,8 @@ export function SvgCard({
   onDelete,
   onCreatePublicCopy,
   onTagFilter,
+  selected = false,
+  onSelectedChange,
 }: SvgCardProps) {
   const isPublic = asset.visibility === "public"
   const svgDataUrl = `data:image/svg+xml,${encodeURIComponent(asset.svg_markup)}`
@@ -196,6 +214,15 @@ export function SvgCard({
   return (
     <Card className="overflow-hidden">
       <div className="relative h-36 w-full bg-muted/30">
+        {onSelectedChange ? (
+          <div className="absolute left-2 top-2 z-10 rounded-md bg-background/85 p-1 shadow-sm backdrop-blur">
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(checked) => onSelectedChange(Boolean(checked))}
+              aria-label={`Select ${asset.name}`}
+            />
+          </div>
+        ) : null}
         <img
           src={svgDataUrl}
           alt={asset.name}

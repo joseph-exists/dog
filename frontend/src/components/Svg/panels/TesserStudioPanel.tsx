@@ -28,9 +28,12 @@ import {
 import {
   type TesserJobStatusResponse,
   type TesserRenderPayload,
-  TesserService,
 } from "@/services/tesserService"
 import { type LocalTesserJob, TesserJobRow } from "../display/TesserJobRow"
+import {
+  buildTesserSvgAssetPayload,
+  buildTimestampedScriptAssetName,
+} from "../utils/buildTesserSvgAssetPayload"
 
 type InputMode = "guided" | "json"
 
@@ -73,19 +76,6 @@ interface GuidedSchemaSummary {
   supported: boolean
   fields: GuidedField[]
   reason?: string
-}
-
-function slugifyScriptName(scriptName: string): string {
-  return scriptName
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase()
-}
-
-function buildSavedAssetName(scriptName: string): string {
-  const safeScriptName = slugifyScriptName(scriptName) || "tesser"
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-")
-  return `${safeScriptName}-${stamp}`
 }
 
 function titleize(value: string): string {
@@ -297,31 +287,10 @@ function buildSvgAssetPayload(input: {
   render: TesserRenderPayload
   scriptInput: Record<string, unknown>
 }): SvgAssetCreatePrivate | null {
-  const svgMarkup = TesserService.getSvgMarkupFromRender(input.render)
-  if (!svgMarkup) return null
-
-  return {
-    visibility: "private",
-    name: buildSavedAssetName(input.scriptName),
-    description: `Generated from Tesser script "${input.scriptName}"`,
-    svg_markup: svgMarkup,
-    metadata_json: {
-      source: "tesser",
-      script_name: input.scriptName,
-      script_input: input.scriptInput,
-      job_id: input.job.job_id,
-      request_id: input.job.request_id,
-      runtime_profile: input.job.runtime_profile ?? null,
-      resolved_capabilities: input.job.resolved_capabilities ?? [],
-      status: input.job.status,
-      queued_at: input.job.queued_at ?? null,
-      completed_at: input.job.completed_at ?? null,
-      created_from_surface: "svg-library",
-      render_format: input.render.format ?? null,
-      manifest_path: input.render.manifest_path ?? null,
-      saved_at: new Date().toISOString(),
-    },
-  }
+  return buildTesserSvgAssetPayload({
+    ...input,
+    name: buildTimestampedScriptAssetName(input.scriptName),
+  })
 }
 
 function ScriptsSkeleton() {

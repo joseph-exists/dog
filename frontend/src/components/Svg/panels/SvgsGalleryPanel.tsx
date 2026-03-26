@@ -1,8 +1,17 @@
-import { ChevronDown } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import {
+  CheckSquare,
+  ChevronDown,
+  Copy,
+  Expand,
+  PencilLine,
+  Trash2,
+} from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { SvgAssetPublic, SvgAssetVisibility } from "@/client"
 import { PanelContainer } from "@/components/Page/primitives"
+import { CodeHighlight } from "@/components/Page/primitives/ContentRenderer"
 import {
   PALETTE_FAMILIES,
   STYLE_FAMILIES,
@@ -24,13 +33,19 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import {
+  svgsQueryKeys,
   useCreatePublicSvgCopy,
   useDeleteSvg,
+  usePatchSvg,
   useSvgsList,
 } from "@/hooks/useSvgs"
-import { SvgCard } from "../display/SvgCard"
+import { SvgAppService } from "@/services/svgService"
+import { SvgCard, TagEditor, deriveTags } from "../display/SvgCard"
 
 const TIER_FILTERS = [
   "pairwise-core",
@@ -75,13 +90,22 @@ export function SvgsGalleryPanel() {
   const [filterBarOpen, setFilterBarOpen] = useState(false)
   const [sortBy, setSortBy] = useState<SortField>("updated")
   const [sortDir, setSortDir] = useState<SortDirection>("desc")
-  const [selected, setSelected] = useState<SvgAssetPublic | null>(null)
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [renameDraft, setRenameDraft] = useState("")
+  const [descriptionDraft, setDescriptionDraft] = useState("")
+  const [previewCodeOpen, setPreviewCodeOpen] = useState(false)
+  const [exactSizeOpen, setExactSizeOpen] = useState(false)
+
   const listQuery = useSvgsList({
     limit: 50,
     visibility: normalizeVisibilityFilter(visibility),
   })
+  const queryClient = useQueryClient()
   const deleteMutation = useDeleteSvg()
   const copyMutation = useCreatePublicSvgCopy()
+  const patchMutation = usePatchSvg()
+  const [copiedText, copyToClipboard] = useCopyToClipboard()
 
   const filteredAndSorted = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -205,12 +229,50 @@ export function SvgsGalleryPanel() {
     sortDir,
   ])
 
+  const selectedAsset = useMemo(
+    () =>
+      (listQuery.data?.data ?? []).find((asset) => asset.id === selectedAssetId) ??
+      null,
+    [listQuery.data?.data, selectedAssetId],
+  )
+
+  const selectedAssetTags = useMemo(
+    () => (selectedAsset ? deriveTags(selectedAsset) : []),
+    [selectedAsset],
+  )
+
   const activeFilterCount =
     filterFamilies.size +
     filterTiers.size +
     (filterComplexity !== "all" ? 1 : 0) +
     filterPalette.size +
     filterUserTags.size
+
+  const visibleSelectedCount = useMemo(
+    () => filteredAndSorted.filter((asset) => selectedIds.has(asset.id)).length,
+    [filteredAndSorted, selectedIds],
+  )
+
+  useEffect(() => {
+    if (!selectedAsset) return
+    setRenameDraft(selectedAsset.name)
+    setDescriptionDraft(selectedAsset.description ?? "")
+  }, [selectedAsset])
+
+  useEffect(() => {
+    if (!selectedAsset) {
+      setExactSizeOpen(false)
+      setPreviewCodeOpen(false)
+    }
+  }, [selectedAsset])
+
+  useEffect(() => {
+    const validIds = new Set((listQuery.data?.data ?? []).map((asset) => asset.id))
+    setSelectedIds((previous) => {
+      const next = new Set([...previous].filter((id) => validIds.has(id)))
+      return next
+    })
+  }, [listQuery.data?.data])
 
   const toggleSetValue = (
     value: string,
@@ -256,6 +318,15 @@ export function SvgsGalleryPanel() {
   const onDelete = (asset: SvgAssetPublic) => {
     if (!window.confirm(`Delete "${asset.name}" from your SVG library?`)) return
     deleteMutation.mutate(asset.id)
+    if (selectedAssetId === asset.id) {
+      setSelectedAssetId(null)
+      setExactSizeOpen(false)
+    }
+    setSelectedIds((previous) => {
+      const next = new Set(previous)
+      next.delete(asset.id)
+      return next
+    })
   }
 
   const onCreatePublicCopy = (asset: SvgAssetPublic) => {
@@ -266,6 +337,89 @@ export function SvgsGalleryPanel() {
       description: asset.description ?? null,
       metadata_json: asset.metadata_json ?? {},
     })
+  }
+
+  const toggleSelection = (assetId: string, checked: boolean) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous)
+      if (checked) next.add(assetId)
+      else next.delete(assetId)
+      return next
+    })
+  }
+
+  const selectVisible = () => {
+    setSelectedIds(new Set(filteredAndSorted.map((asset) => asset.id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    const rows = filteredAndSorted.filter((asset) => selectedIds.has(asset.id))
+    if (
+      !window.confirm(
+        `Delete ${rows.length} selected SVG asset${rows.length === 1 ? "" : "s"}?`,
+      )
+    ) {
+      return
+    }
+
+    let deletedCount = 0
+    for (const asset of rows) {
+      try {
+        await SvgAppService.deleteSvg(asset.id)
+        deletedCount += 1
+      } catch (error) {
+        showErrorToast(
+          error instanceof Error
+            ? `Failed to delete "${asset.name}": ${error.message}`
+            : `Failed to delete "${asset.name}"`,
+        )
+      }
+    }
+
+    if (deletedCount > 0) {
+      showSuccessToast(
+        `Deleted ${deletedCount} SVG asset${deletedCount === 1 ? "" : "s"}`,
+      )
+      await queryClient.invalidateQueries({ queryKey: svgsQueryKeys.all })
+      setSelectedIds(new Set())
+      if (selectedAssetId && rows.some((asset) => asset.id === selectedAssetId)) {
+        setSelectedAssetId(null)
+        setExactSizeOpen(false)
+      }
+    }
+  }
+
+  const handleRenameSave = async () => {
+    if (!selectedAsset) return
+    const nextName = renameDraft.trim()
+    const nextDescription = descriptionDraft.trim() || null
+    if (
+      !nextName ||
+      (nextName === selectedAsset.name &&
+        nextDescription === (selectedAsset.description ?? null))
+    ) {
+      return
+    }
+    await patchMutation.mutateAsync({
+      svgId: selectedAsset.id,
+      patch: {
+        name: nextName,
+        description: nextDescription,
+      },
+    })
+  }
+
+  const handleCopySource = async () => {
+    if (!selectedAsset) return
+    const copied = await copyToClipboard(selectedAsset.svg_markup)
+    if (!copied) {
+      showErrorToast("Failed to copy SVG source")
+    }
   }
 
   return (
@@ -307,6 +461,41 @@ export function SvgsGalleryPanel() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="name, description, metadata fields"
           />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/10 p-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={selectVisible}
+            disabled={filteredAndSorted.length === 0}
+          >
+            <CheckSquare className="mr-1 size-3.5" />
+            Select Visible
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={clearSelection}
+            disabled={selectedIds.size === 0}
+          >
+            Clear Selection
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            onClick={() => void handleBulkDelete()}
+            disabled={visibleSelectedCount === 0}
+          >
+            <Trash2 className="mr-1 size-3.5" />
+            Delete Selected
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {visibleSelectedCount} selected in current view
+          </span>
         </div>
 
         <Collapsible open={filterBarOpen} onOpenChange={setFilterBarOpen}>
@@ -453,11 +642,11 @@ export function SvgsGalleryPanel() {
               variant={sortBy === field ? "default" : "ghost"}
               className="h-7 px-2 text-xs capitalize"
               onClick={() => {
-                if (sortBy === field)
+                if (sortBy === field) {
                   setSortDir((direction) =>
                     direction === "asc" ? "desc" : "asc",
                   )
-                else {
+                } else {
                   setSortBy(field)
                   setSortDir("desc")
                 }
@@ -497,10 +686,12 @@ export function SvgsGalleryPanel() {
               <SvgCard
                 key={asset.id}
                 asset={asset}
-                onPreview={setSelected}
+                onPreview={(row) => setSelectedAssetId(row.id)}
                 onDelete={onDelete}
                 onCreatePublicCopy={onCreatePublicCopy}
                 onTagFilter={handleTagFilter}
+                selected={selectedIds.has(asset.id)}
+                onSelectedChange={(checked) => toggleSelection(asset.id, checked)}
               />
             ))}
           </div>
@@ -508,25 +699,219 @@ export function SvgsGalleryPanel() {
       </div>
 
       <Dialog
-        open={Boolean(selected)}
-        onOpenChange={(open) => !open && setSelected(null)}
+        open={Boolean(selectedAsset)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAssetId(null)
+        }}
       >
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle>{selected?.name ?? "SVG Preview"}</DialogTitle>
+            <DialogTitle>{selectedAsset?.name ?? "SVG Preview"}</DialogTitle>
           </DialogHeader>
-          {selected ? (
-            <div className="space-y-4">
-              <div className="h-72 overflow-hidden rounded-lg border bg-muted/30 p-3">
-                <img
-                  alt={selected.name}
-                  className="h-full w-full object-contain"
-                  src={`data:image/svg+xml,${encodeURIComponent(selected.svg_markup)}`}
-                />
+          {selectedAsset ? (
+            <div className="space-y-5">
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant={
+                          selectedAsset.visibility === "public"
+                            ? "secondary"
+                            : "outline"
+                        }
+                      >
+                        {selectedAsset.visibility ?? "private"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Updated{" "}
+                        {new Date(selectedAsset.updated_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleCopySource()}
+                      >
+                        <Copy className="mr-1 size-3.5" />
+                        {copiedText === selectedAsset.svg_markup
+                          ? "Copied"
+                          : "Copy SVG"}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setExactSizeOpen(true)}
+                      >
+                        <Expand className="mr-1 size-3.5" />
+                        Exact Size
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex min-h-[26rem] items-center justify-center overflow-auto rounded-xl border bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.12),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.02),rgba(15,23,42,0.06))] p-6">
+                    <div
+                      className="flex items-center justify-center [&_svg]:block [&_svg]:max-h-full [&_svg]:max-w-full"
+                      dangerouslySetInnerHTML={{ __html: selectedAsset.svg_markup }}
+                    />
+                  </div>
+
+                  <Collapsible
+                    open={previewCodeOpen}
+                    onOpenChange={setPreviewCodeOpen}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <ChevronDown
+                          className={[
+                            "size-3.5 transition-transform",
+                            previewCodeOpen ? "rotate-180" : "",
+                          ].join(" ")}
+                        />
+                        SVG Source
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mt-3 overflow-hidden rounded-xl border">
+                        <div className="[&_pre]:!m-0 [&_pre]:max-h-[28rem] [&_pre]:overflow-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:whitespace-pre-wrap [&_code]:break-words">
+                          <CodeHighlight
+                            className="language-xml"
+                            options={{
+                              language: "xml",
+                              copyable: false,
+                              forceBlock: true,
+                            }}
+                          >
+                            {selectedAsset.svg_markup}
+                          </CodeHighlight>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2 rounded-xl border bg-muted/10 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <PencilLine className="size-4" />
+                      Rename
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="svg-preview-name">Name</Label>
+                      <Input
+                        id="svg-preview-name"
+                        value={renameDraft}
+                        onChange={(event) => setRenameDraft(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="svg-preview-description">
+                        Description
+                      </Label>
+                      <Textarea
+                        id="svg-preview-description"
+                        value={descriptionDraft}
+                        onChange={(event) =>
+                          setDescriptionDraft(event.target.value)
+                        }
+                        className="min-h-24"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void handleRenameSave()}
+                      disabled={
+                        patchMutation.isPending ||
+                        !renameDraft.trim() ||
+                        (renameDraft.trim() === selectedAsset.name &&
+                          (descriptionDraft.trim() || null) ===
+                            (selectedAsset.description ?? null))
+                      }
+                    >
+                      Save Metadata
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3 rounded-xl border bg-muted/10 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-medium">Tags</div>
+                      <TagEditor
+                        asset={selectedAsset}
+                        triggerClassName="h-7 rounded-md px-2 text-xs"
+                        triggerLabel="Add Tag"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedAssetTags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="outline"
+                          className="cursor-pointer"
+                          onClick={() => handleTagFilter(tag)}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                      {selectedAssetTags.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">
+                          No tags yet.
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 rounded-xl border bg-muted/10 p-4">
+                    <div className="text-sm font-medium">Asset Notes</div>
+                    <div className="text-xs text-muted-foreground">
+                      Public/private conversion, tag edits, rename, and delete
+                      all happen from this preview without leaving the gallery.
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAsset.visibility !== "public" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onCreatePublicCopy(selectedAsset)}
+                      >
+                        Make Public
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => onDelete(selectedAsset)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <pre className="max-h-64 overflow-auto rounded-md border bg-muted/30 p-3 text-xs">
-                {selected.svg_markup}
-              </pre>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={exactSizeOpen} onOpenChange={setExactSizeOpen}>
+        <DialogContent className="h-[92vh] max-h-[92vh] overflow-hidden sm:max-w-[92vw]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedAsset?.name ?? "Exact Size Preview"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAsset ? (
+            <div className="h-full overflow-auto rounded-xl border bg-white p-8">
+              <div dangerouslySetInnerHTML={{ __html: selectedAsset.svg_markup }} />
             </div>
           ) : null}
         </DialogContent>

@@ -35,7 +35,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { showSuccessToast } from "@/hooks/useCustomToast"
+import { showErrorToast, showSuccessToast, showWarningToast } from "@/hooks/useCustomToast"
+import { useCreatePrivateSvg } from "@/hooks/useSvgs"
 import { useEnqueueTesserScript } from "@/hooks/useTesser"
 import {
   buildScenarios,
@@ -47,6 +48,8 @@ import {
   type StyleFamily,
 } from "../constants/svgComposeDomains"
 import { type LocalTesserJob, TesserJobRow } from "../display/TesserJobRow"
+import { buildTesserSvgAssetPayload } from "../utils/buildTesserSvgAssetPayload"
+import { TesserService, type TesserJobStatusResponse } from "@/services/tesserService"
 
 type Phase = "configure" | "preview" | "enqueuing" | "done"
 
@@ -181,6 +184,7 @@ function ScenarioRow({
 // ---------------------------------------------------------------------------
 export function BatchSeedSvgDialog() {
   const enqueueMutation = useEnqueueTesserScript()
+  const createSvgMutation = useCreatePrivateSvg()
 
   const [open, setOpen] = useState(false)
   const [phase, setPhase] = useState<Phase>("configure")
@@ -200,6 +204,7 @@ export function BatchSeedSvgDialog() {
   const [savedAssetIdByJobId, setSavedAssetIdByJobId] = useState<
     Record<string, string>
   >({})
+  const [saveAllPending, setSaveAllPending] = useState(false)
 
   const parsedCount = Math.min(Math.max(Number.parseInt(count, 10) || 1, 1), 24)
 
@@ -220,6 +225,115 @@ export function BatchSeedSvgDialog() {
         s.index === index ? { ...s, knobs: { ...s.knobs, [key]: value } } : s,
       ),
     )
+  }
+
+  function buildScenarioAssetName(job: LocalTesserJob, jobStatus: TesserJobStatusResponse) {
+    const family =
+      typeof job.scriptInput.style_family === "string"
+        ? job.scriptInput.style_family
+        : typeof job.scriptInput.family === "string"
+          ? job.scriptInput.family
+          : "compose"
+    const palette =
+      typeof job.scriptInput.palette_family === "string"
+        ? job.scriptInput.palette_family
+        : "mixed"
+    const stamp = (jobStatus.completed_at ?? jobStatus.queued_at ?? new Date().toISOString())
+      .replace(/[:.]/g, "-")
+    return `batch-seed-${family}-${palette}-${stamp}`
+  }
+
+  async function saveJob(job: LocalTesserJob, jobStatus?: TesserJobStatusResponse) {
+    if (savedAssetIdByJobId[job.jobId]) return null
+
+    const resolvedJob = jobStatus ?? (await TesserService.getJobStatus(job.jobId))
+    const payload = buildTesserSvgAssetPayload({
+      scriptName: job.scriptName,
+      job: resolvedJob,
+      render: resolvedJob.render ?? {},
+      scriptInput: job.scriptInput,
+      name: buildScenarioAssetName(job, resolvedJob),
+      description: "Batch Seed render from svg.compose",
+      metadataJson: {
+        source: "batch-seed",
+        generation_tier: tier,
+        family:
+          typeof job.scriptInput.style_family === "string"
+            ? job.scriptInput.style_family
+            : null,
+        knobs: job.scriptInput,
+        batch_seed: seed,
+      },
+    })
+
+    if (!payload) return null
+
+    const created = await createSvgMutation.mutateAsync(payload)
+    setSavedAssetIdByJobId((previous) => ({
+      ...previous,
+      [job.jobId]: String(created.id),
+    }))
+    return created
+  }
+
+  async function handleSaveAll() {
+    if (saveAllPending) return
+
+    setSaveAllPending(true)
+    let savedCount = 0
+    let pendingCount = 0
+    let failedCount = 0
+
+    try {
+      for (const job of jobs) {
+        if (savedAssetIdByJobId[job.jobId]) continue
+        try {
+          const jobStatus = await TesserService.getJobStatus(job.jobId)
+          const hasSvg = Boolean(
+            buildTesserSvgAssetPayload({
+              scriptName: job.scriptName,
+              job: jobStatus,
+              render: jobStatus.render ?? {},
+              scriptInput: job.scriptInput,
+              metadataJson: {},
+            }),
+          )
+
+          if (!hasSvg) {
+            if (jobStatus.status === "error" || jobStatus.status === "failed") {
+              failedCount += 1
+            } else {
+              pendingCount += 1
+            }
+            continue
+          }
+
+          const created = await saveJob(job, jobStatus)
+          if (created) savedCount += 1
+        } catch {
+          failedCount += 1
+        }
+      }
+
+      if (savedCount > 0) {
+        showSuccessToast(`Saved ${savedCount} SVG${savedCount === 1 ? "" : "s"} to the library`)
+      }
+      if (pendingCount > 0 || failedCount > 0) {
+        showWarningToast(
+          [
+            pendingCount > 0 ? `${pendingCount} still pending` : null,
+            failedCount > 0 ? `${failedCount} failed or unavailable` : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        )
+      }
+      if (savedCount === 0 && pendingCount === 0 && failedCount === 0) {
+        showWarningToast("All batch-seed renders already saved")
+      }
+    } finally {
+      setSaveAllPending(false)
+    }
   }
 
   async function handleEnqueueAll() {
@@ -258,6 +372,7 @@ export function BatchSeedSvgDialog() {
     setJobs([])
     setProgress({ done: 0, total: 0 })
     setSavedAssetIdByJobId({})
+    setSaveAllPending(false)
   }
 
   function handleClose(isOpen: boolean) {
@@ -444,21 +559,44 @@ export function BatchSeedSvgDialog() {
               <div className="text-sm font-medium">
                 {jobs.length} jobs queued
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleReset}
-              >
-                Seed Again
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleSaveAll()}
+                  disabled={saveAllPending || jobs.length === 0}
+                >
+                  {saveAllPending ? "Saving All..." : "Save All Ready"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                >
+                  Seed Again
+                </Button>
+              </div>
             </div>
             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
               {jobs.map((job) => (
                 <TesserJobRow
                   key={job.jobId}
                   job={job}
-                  onSave={async () => {}}
+                  onSave={async (input) => {
+                    try {
+                      const created = await saveJob(job, input.job)
+                      if (!created) {
+                        showErrorToast("This job does not have SVG output ready yet")
+                      }
+                    } catch (error) {
+                      showErrorToast(
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to save SVG asset",
+                      )
+                    }
+                  }}
                   savedAssetId={savedAssetIdByJobId[job.jobId] ?? null}
                 />
               ))}

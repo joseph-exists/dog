@@ -37,10 +37,7 @@ import {
 import { showSuccessToast } from "@/hooks/useCustomToast"
 import { useCreatePrivateSvg } from "@/hooks/useSvgs"
 import { useEnqueueTesserScript } from "@/hooks/useTesser"
-import {
-  type TesserJobStatusResponse,
-  TesserService,
-} from "@/services/tesserService"
+import { type TesserJobStatusResponse } from "@/services/tesserService"
 import {
   applyFamilyBias,
   buildDefaultKnobs,
@@ -53,6 +50,7 @@ import {
   type StyleFamily,
 } from "../constants/svgComposeDomains"
 import { type LocalTesserJob, TesserJobRow } from "../display/TesserJobRow"
+import { buildTesserSvgAssetPayload } from "../utils/buildTesserSvgAssetPayload"
 
 // ---------------------------------------------------------------------------
 // Text layer state — forwarded to svg.compose script_input as text_layer.
@@ -468,21 +466,24 @@ export function ComposeStudioTab() {
     scriptInput: Record<string, unknown>
   }) {
     if (savedAssetIdByJobId[input.job.job_id]) return
-    const svgMarkup = TesserService.getSvgMarkupFromRender(input.job.render)
-    if (!svgMarkup) return
-    const created = await createSvgMutation.mutateAsync({
+    const payload = buildTesserSvgAssetPayload({
+      scriptName: input.scriptName,
+      job: input.job,
+      render: input.job.render ?? {},
+      scriptInput: input.scriptInput,
       name: buildSavedAssetName(knobs),
       description: `Compose Studio render — family: ${knobs.style_family ?? "—"}, palette: ${knobs.palette_family ?? "—"}`,
-      svg_markup: svgMarkup,
-      metadata_json: {
+      metadataJson: {
         source: "compose-studio",
         script_name: input.scriptName,
         script_input: input.scriptInput,
-        job_id: input.job.job_id,
         family: knobs.style_family ?? null,
         knobs,
       },
     })
+    if (!payload) return
+
+    const created = await createSvgMutation.mutateAsync(payload)
     setSavedAssetIdByJobId((prev) => ({
       ...prev,
       [input.job.job_id]: String(created.id),
