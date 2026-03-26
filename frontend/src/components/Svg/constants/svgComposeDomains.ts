@@ -50,8 +50,10 @@ export const FAMILY_ACCENT: Record<StyleFamily, string> = {
 }
 
 // FAMILY_QUOTAS — mirrors svg_library_tools.FAMILY_QUOTAS
-// Used by applyFamilyBias below for proportional family selection.
-export const FAMILY_QUOTAS: Record<StyleFamily, number> = {
+// Reserved for future weighted family sampling. Currently buildScenarios uses
+// uniform random selection; weighted allocation is a planned enhancement.
+// @ts-expect-error TS6133 — intentionally unused reference constant
+const FAMILY_QUOTAS: Record<StyleFamily, number> = {
   organic: 0.18,
   geometric: 0.18,
   glitch: 0.14,
@@ -291,6 +293,9 @@ export function makeSeededRandom(seed: number) {
   }
 }
 
+// NOTE: arr is typed as readonly T[] rather than readonly [T, ...T[]] because
+// PAIRWISE_DOMAINS values are readonly string[] (no non-empty tuple guarantee).
+// The as T cast is safe here — all call sites pass non-empty arrays.
 function seededChoice<T>(rng: () => number, arr: readonly T[]): T {
   return arr[Math.floor(rng() * arr.length)] as T
 }
@@ -402,7 +407,18 @@ export function buildScenarios(input: {
   tier: ScenarioTier
 }): Scenario[] {
   const { count, seed, tier } = input
-  const families = input.families.length > 0 ? input.families : [...STYLE_FAMILIES]
+
+  // Mirrors Python build_generation_plan: safe tier restricts to conservative families only.
+  const SAFE_FAMILIES: StyleFamily[] = ["minimal", "diagrammatic", "geometric"]
+  const families =
+    tier === "safe"
+      ? input.families.filter((f) => SAFE_FAMILIES.includes(f)).length > 0
+        ? input.families.filter((f) => SAFE_FAMILIES.includes(f))
+        : SAFE_FAMILIES
+      : input.families.length > 0
+        ? input.families
+        : [...STYLE_FAMILIES]
+
   const rng = makeSeededRandom(seed)
 
   return Array.from({ length: count }, (_, index) => {
