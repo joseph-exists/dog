@@ -1,5 +1,8 @@
-import type { WorkspaceDetailViewModel, WorkspaceTerminalDescriptor } from "@/services/workspaceService"
 import { TerminalPanel } from "@/components/Terminal"
+import type {
+  WorkspaceDetailViewModel,
+  WorkspaceTerminalDescriptor,
+} from "@/services/workspaceService"
 
 function formatServiceLabel(value: string): string {
   return value.replaceAll("_", " ")
@@ -10,9 +13,12 @@ function serviceKindLabel(kind: string): string {
 }
 
 function serviceStatusClass(status: string): string {
-  if (status === "ready") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
-  if (status === "pending") return "border-amber-500/30 bg-amber-500/10 text-amber-700"
-  if (status === "failed") return "border-destructive/30 bg-destructive/10 text-destructive"
+  if (status === "ready")
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+  if (status === "pending")
+    return "border-amber-500/30 bg-amber-500/10 text-amber-700"
+  if (status === "failed")
+    return "border-destructive/30 bg-destructive/10 text-destructive"
   return "border-border bg-muted/40 text-muted-foreground"
 }
 
@@ -31,7 +37,9 @@ export function WorkspaceTerminalPanel({
   terminalError,
   onRequestTerminal,
 }: WorkspaceTerminalPanelProps) {
-  const agentRuntimeServices = workspace.services.filter((service) => service.kind === "agent_runtime")
+  const agentRuntimeServices = workspace.services.filter(
+    (service) => service.kind === "agent_runtime",
+  )
   const accessSummary =
     workspace.accessLevel === "manage"
       ? "You can request terminal access and manage this workspace from the current account."
@@ -50,9 +58,11 @@ export function WorkspaceTerminalPanel({
       metadata={
         <div className="space-y-3">
           <div className="rounded-xl border bg-muted/30 p-4 text-sm">
-            Workspace status: <span className="font-medium">{workspace.status}</span>
+            Workspace status:{" "}
+            <span className="font-medium">{workspace.status}</span>
             <span className="mx-2 text-muted-foreground">·</span>
-            Terminal status: <span className="font-medium">{workspace.terminalStatus}</span>
+            Terminal status:{" "}
+            <span className="font-medium">{workspace.terminalStatus}</span>
             <span className="mx-2 text-muted-foreground">·</span>
             Access: <span className="font-medium">{workspace.accessLevel}</span>
             {workspace.connectivitySummary ? (
@@ -60,14 +70,18 @@ export function WorkspaceTerminalPanel({
                 <span className="mx-2 text-muted-foreground">·</span>
                 Services:{" "}
                 <span className="font-medium">
-                  {workspace.connectivitySummary.readyServiceCount ?? 0}/{workspace.connectivitySummary.serviceCount ?? 0} ready
+                  {workspace.connectivitySummary.readyServiceCount ?? 0}/
+                  {workspace.connectivitySummary.serviceCount ?? 0} ready
                 </span>
               </>
             ) : null}
             {workspace.bootstrapProgress ? (
               <>
                 <span className="mx-2 text-muted-foreground">·</span>
-                Bootstrap phase: <span className="font-medium">{workspace.bootstrapProgress.phase}</span>
+                Bootstrap phase:{" "}
+                <span className="font-medium">
+                  {workspace.bootstrapProgress.phase}
+                </span>
               </>
             ) : null}
           </div>
@@ -109,10 +123,15 @@ export function WorkspaceTerminalPanel({
               <div className="mb-2 font-medium">Agent Runtime Status</div>
               <div className="space-y-2">
                 {agentRuntimeServices.map((service) => (
-                  <div key={service.id} className="rounded-lg border bg-background/80 p-3">
+                  <div
+                    key={service.id}
+                    className="rounded-lg border bg-background/80 p-3"
+                  >
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{service.label}</span>
-                      <span className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}>
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}
+                      >
                         {service.status}
                       </span>
                       <span className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
@@ -141,7 +160,9 @@ export function WorkspaceTerminalPanel({
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{service.label}</span>
-                        <span className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}>
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}
+                        >
                           {service.status}
                         </span>
                         <span className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
@@ -166,7 +187,9 @@ export function WorkspaceTerminalPanel({
                       </a>
                     ) : service.kind === "agent_runtime" ? (
                       <div className="text-xs text-muted-foreground">
-                        No browser endpoint published. Use terminal access and later room connectivity surfaces to interact with this runtime.
+                        No browser endpoint published. Use terminal access and
+                        later room connectivity surfaces to interact with this
+                        runtime.
                       </div>
                     ) : (
                       <div className="text-xs text-muted-foreground">

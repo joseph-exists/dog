@@ -93,11 +93,10 @@ export default function UserQuickAdd({
           </div>
 
           <DialogFooter>
-            <Button
-              type="submit"
-              disabled={!isValid || isAdding}
-            >
-              {isAdding ? <Loader2Icon className="size-4 animate-spin" /> : null}
+            <Button type="submit" disabled={!isValid || isAdding}>
+              {isAdding ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : null}
               Add User
             </Button>
           </DialogFooter>

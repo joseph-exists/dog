@@ -1,7 +1,5 @@
 export { AudiencePresentationSheet } from "./AudiencePresentationSheet"
 export { PersonaRelationSheet } from "./PersonaRelationSheet"
-export { UserPersonaEditorSheet } from "./UserPersonaEditorSheet"
-export { UserWorkAssociationSheet } from "./UserWorkAssociationSheet"
 export type {
   AudiencePresentationSummary,
   AudienceScope,
@@ -16,3 +14,5 @@ export type {
   WeightedTag,
   WorkFeedBlockContent,
 } from "./types"
+export { UserPersonaEditorSheet } from "./UserPersonaEditorSheet"
+export { UserWorkAssociationSheet } from "./UserWorkAssociationSheet"

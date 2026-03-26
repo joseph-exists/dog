@@ -5,8 +5,11 @@ import type {
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 import { createDefaultGitViewConfig } from "@/components/Demo/gitViewConfig"
 
-export function buildCompositionGUXStyleMatrixTemplate(context: TemplateBuilderContext): EditableComposition {
-  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } = context
+export function buildCompositionGUXStyleMatrixTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
+  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } =
+    context
   const composition = createEmptyComposition()
   composition.layout_mode = "tabs"
   composition.runtime_policy = "auto"

@@ -22,8 +22,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
-import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
 import { parseRepoExplorerPanelConfig } from "./config"
+import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
 
 function TreeEntryRow({
   entry,
@@ -102,7 +102,11 @@ export function RepoExplorerPanel({
     )
   }
 
-  const parentPath = currentPath.split("/").filter(Boolean).slice(0, -1).join("/")
+  const parentPath = currentPath
+    .split("/")
+    .filter(Boolean)
+    .slice(0, -1)
+    .join("/")
   const explicitRef = resolvedConfig.ref?.trim() || null
   const commitLimit = resolvedConfig.show_commit_badge ? 1 : 0
 
@@ -152,7 +156,8 @@ export function RepoExplorerPanel({
     onSuccess: async (_response, payload) => {
       const upsertedPath = payload.mutations.find(
         (mutation) =>
-          mutation.operation === "upsert" && !mutation.path.endsWith("/.gitkeep"),
+          mutation.operation === "upsert" &&
+          !mutation.path.endsWith("/.gitkeep"),
       )?.path
       if (upsertedPath) onSelectPath(upsertedPath)
       setCreateMode(null)
@@ -332,7 +337,8 @@ export function RepoExplorerPanel({
                             ? `${targetPath}/.gitkeep`
                             : targetPath,
                         operation: "upsert",
-                        content: createMode === "folder" ? "" : draftCreateContent,
+                        content:
+                          createMode === "folder" ? "" : draftCreateContent,
                         encoding: "utf-8",
                       },
                     ],
@@ -354,14 +360,19 @@ export function RepoExplorerPanel({
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="gap-1">
               <GitCommitHorizontal className="h-3 w-3" />
-              {viewQuery.data?.summary.latest_commit_sha?.slice(0, 8) || "No commit"}
+              {viewQuery.data?.summary.latest_commit_sha?.slice(0, 8) ||
+                "No commit"}
             </Badge>
-            <Badge variant="outline">{viewQuery.data?.ref || "default branch"}</Badge>
+            <Badge variant="outline">
+              {viewQuery.data?.ref || "default branch"}
+            </Badge>
           </div>
         )}
 
         {viewQuery.isLoading ? (
-          <div className="text-sm text-muted-foreground">Loading repository tree...</div>
+          <div className="text-sm text-muted-foreground">
+            Loading repository tree...
+          </div>
         ) : viewQuery.isError ? (
           <div className="text-sm text-muted-foreground">
             Could not load the repository tree for this panel instance.

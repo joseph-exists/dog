@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react"
 
 import { PersonaPicker } from "@/components/Persona"
-import type { AudienceScope, PersonaRelationSummary } from "@/components/UserPage/types"
+import type {
+  AudienceScope,
+  PersonaRelationSummary,
+} from "@/components/UserPage/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 
 export interface PersonaRelationDraft {
@@ -43,12 +51,15 @@ export function PersonaRelationSheet({
 }: PersonaRelationSheetProps) {
   const [sourcePersonaId, setSourcePersonaId] = useState("")
   const [targetLabel, setTargetLabel] = useState("")
-  const [targetType, setTargetType] = useState<"persona" | "external">("external")
+  const [targetType, setTargetType] = useState<"persona" | "external">(
+    "external",
+  )
   const [relationKind, setRelationKind] =
     useState<PersonaRelationSummary["relationKind"]>("collaborator")
   const [audienceScope, setAudienceScope] = useState<AudienceScope>("public")
   const [note, setNote] = useState("")
-  const [status, setStatus] = useState<PersonaRelationSummary["status"]>("active")
+  const [status, setStatus] =
+    useState<PersonaRelationSummary["status"]>("active")
 
   useEffect(() => {
     if (!open) return
@@ -95,7 +106,9 @@ export function PersonaRelationSheet({
                 layout="list"
                 selected={sourcePersonaId || null}
                 onSelect={(selected) =>
-                  setSourcePersonaId(typeof selected === "string" ? selected : "")
+                  setSourcePersonaId(
+                    typeof selected === "string" ? selected : "",
+                  )
                 }
               />
             </div>
@@ -125,7 +138,9 @@ export function PersonaRelationSheet({
               <Select
                 value={relationKind}
                 onValueChange={(value) =>
-                  setRelationKind(value as PersonaRelationSummary["relationKind"])
+                  setRelationKind(
+                    value as PersonaRelationSummary["relationKind"],
+                  )
                 }
               >
                 <SelectTrigger>
@@ -156,7 +171,9 @@ export function PersonaRelationSheet({
               <Label>Audience Scope</Label>
               <Select
                 value={audienceScope}
-                onValueChange={(value) => setAudienceScope(value as AudienceScope)}
+                onValueChange={(value) =>
+                  setAudienceScope(value as AudienceScope)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />

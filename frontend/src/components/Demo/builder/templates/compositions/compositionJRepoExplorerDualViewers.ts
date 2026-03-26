@@ -88,7 +88,8 @@ export function buildCompositionJRepoExplorerDualViewersTemplate(
         title: "Repo README",
         show_path_badge: true,
         show_copy_control: true,
-        empty_label: "README content will appear here when the repo exposes one.",
+        empty_label:
+          "README content will appear here when the repo exposes one.",
       },
     } as EditablePanel,
     {

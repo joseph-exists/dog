@@ -1,11 +1,15 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { FolderGit2Icon } from "lucide-react"
 import { Suspense } from "react"
 import type { ApiError } from "@/client/core/ApiError"
-import type { UserRepoPublic } from "@/client/types.gen"
-import { repoQueryKeys } from "@/components/Repo/hooks"
 import { UserReposService } from "@/client/sdk.gen"
+import type { UserRepoPublic } from "@/client/types.gen"
 import { PanelContainer } from "@/components/Page/primitives"
+import { repoQueryKeys } from "@/components/Repo/hooks"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
@@ -110,7 +114,9 @@ function ReposGridContent() {
       showSuccessToast(`Import canceled for ${repo.display_name}.`)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: repoQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: repoQueryKeys.detail(repo.id) }),
+        queryClient.invalidateQueries({
+          queryKey: repoQueryKeys.detail(repo.id),
+        }),
       ])
     },
     onError: (error: ApiError) => {
@@ -124,7 +130,9 @@ function ReposGridContent() {
       showSuccessToast(`Deleted ${repo.display_name}.`)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: repoQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: repoQueryKeys.detail(repo.id) }),
+        queryClient.invalidateQueries({
+          queryKey: repoQueryKeys.detail(repo.id),
+        }),
       ])
     },
     onError: (error: ApiError) => {
@@ -182,7 +190,8 @@ function ReposGridContent() {
         </div>
         <h3 className="text-lg font-semibold">No repositories yet</h3>
         <p className="mb-5 max-w-xl text-muted-foreground">
-          Import repositories you want the platform to manage. Status updates and failure details will stay visible here.
+          Import repositories you want the platform to manage. Status updates
+          and failure details will stay visible here.
         </p>
         <ImportRepoDialog />
       </div>

@@ -86,15 +86,19 @@ function isTypedConstructBlockType(
   )
 }
 
-function getDefaultBlockConfig(type: TemplateBlock["type"]): Record<string, unknown> {
+function getDefaultBlockConfig(
+  type: TemplateBlock["type"],
+): Record<string, unknown> {
   return cloneValue(
-    ((getBlockType(type)?.defaultConfig ?? {}) as Record<string, unknown>),
+    (getBlockType(type)?.defaultConfig ?? {}) as Record<string, unknown>,
   )
 }
 
-function getDefaultBlockContent(type: TemplateBlock["type"]): Record<string, unknown> {
+function getDefaultBlockContent(
+  type: TemplateBlock["type"],
+): Record<string, unknown> {
   return cloneValue(
-    ((getBlockType(type)?.defaultContent ?? {}) as Record<string, unknown>),
+    (getBlockType(type)?.defaultContent ?? {}) as Record<string, unknown>,
   )
 }
 
@@ -114,10 +118,9 @@ function getDefaultTypedConstructContent(
     case "primaryPersona":
       return {
         primaryPersonaId: null,
-        explanation:
-          getDefaultBlockContent("primaryPersona").explanation as
-            | string
-            | undefined,
+        explanation: getDefaultBlockContent("primaryPersona").explanation as
+          | string
+          | undefined,
       } as UserPageBuilderDraft[UserPageTypedConstructBlockType]
     case "workFeed":
       return {

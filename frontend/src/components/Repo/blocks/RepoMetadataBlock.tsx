@@ -1,7 +1,7 @@
 import type { UserRepoPublic } from "@/client/types.gen"
 import { BlockContainer } from "@/components/Page/primitives/BlockContainer"
-import { Badge } from "@/components/ui/badge"
 import { formatRepoDate } from "@/components/Repo/utils"
+import { Badge } from "@/components/ui/badge"
 
 export function RepoMetadataBlock({ repo }: { repo: UserRepoPublic }) {
   return (
@@ -10,7 +10,9 @@ export function RepoMetadataBlock({ repo }: { repo: UserRepoPublic }) {
       subtitle="Platform-owned repository identity and managed forge mapping."
       metadata={
         <>
-          <Badge variant="secondary">{repo.is_private ? "Private" : "Public"}</Badge>
+          <Badge variant="secondary">
+            {repo.is_private ? "Private" : "Public"}
+          </Badge>
           <Badge variant="outline">{repo.source_branch || "main"}</Badge>
         </>
       }
@@ -40,7 +42,9 @@ export function RepoMetadataBlock({ repo }: { repo: UserRepoPublic }) {
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Managed Repo ID
           </div>
-          <div className="font-mono text-sm">{repo.gogs_repo_id ?? "Not available"}</div>
+          <div className="font-mono text-sm">
+            {repo.gogs_repo_id ?? "Not available"}
+          </div>
         </div>
         <div className="space-y-1">
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">

@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import { useMemo, useState } from "react"
 
-import { DemosService, type DemoConfigPublic } from "@/client"
+import { type DemoConfigPublic, DemosService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import {
   AlertDialog,
@@ -216,7 +216,9 @@ function DemoCard({
         <p
           className={cn(
             "text-sm text-muted-foreground",
-            variant === "grid" ? "line-clamp-3 min-h-[3.75rem]" : "whitespace-pre-wrap",
+            variant === "grid"
+              ? "line-clamp-3 min-h-[3.75rem]"
+              : "whitespace-pre-wrap",
           )}
         >
           {demo.description?.trim() || "No description provided."}
@@ -374,7 +376,10 @@ function DemoDetailDialog({
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
                 {isOwner && (
                   <Button variant="outline" size="sm" asChild>
-                    <Link to="/demo-builder" onClick={() => onOpenChange(false)}>
+                    <Link
+                      to="/demo-builder"
+                      onClick={() => onOpenChange(false)}
+                    >
                       <PencilIcon className="size-4" />
                       Edit In Builder
                     </Link>
@@ -389,7 +394,11 @@ function DemoDetailDialog({
               </div>
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onOpenChange(false)}
+                >
                   Close
                 </Button>
                 <Button size="sm" asChild>
@@ -416,8 +425,7 @@ export function DemoLibraryPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
-  const [ownershipFilter, setOwnershipFilter] =
-    useState<OwnershipFilter>("all")
+  const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>("all")
   const [selectedDemoId, setSelectedDemoId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery(getDemoLibraryQueryOptions())
@@ -455,7 +463,8 @@ export function DemoLibraryPage() {
       })
       .sort(
         (left, right) =>
-          new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime(),
+          new Date(right.updated_at).getTime() -
+          new Date(left.updated_at).getTime(),
       )
   }, [demos, ownershipFilter, scopeFilter, searchQuery, statusFilter, user?.id])
 
@@ -549,7 +558,10 @@ export function DemoLibraryPage() {
         <span>
           {filteredDemos.length} {filteredDemos.length === 1 ? "demo" : "demos"}
         </span>
-        {(searchQuery || scopeFilter !== "all" || statusFilter !== "all" || ownershipFilter !== "all") && (
+        {(searchQuery ||
+          scopeFilter !== "all" ||
+          statusFilter !== "all" ||
+          ownershipFilter !== "all") && (
           <Button
             variant="ghost"
             size="sm"
@@ -582,7 +594,9 @@ export function DemoLibraryPage() {
           <div className="mb-4 rounded-full bg-muted p-4">
             <SearchIcon className="size-8 text-muted-foreground" />
           </div>
-          <h2 className="text-lg font-semibold">No demos match these filters</h2>
+          <h2 className="text-lg font-semibold">
+            No demos match these filters
+          </h2>
           <p className="mt-2 max-w-md text-sm text-muted-foreground">
             Adjust the search or filter controls to broaden the results.
           </p>

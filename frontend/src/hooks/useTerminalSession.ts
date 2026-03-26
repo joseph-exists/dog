@@ -6,8 +6,8 @@ import {
   createTerminalSession,
   decodeTerminalEventData,
   setTerminalConnectionStatus,
-  updateTerminalViewport,
   type TerminalSessionState,
+  updateTerminalViewport,
 } from "@/services/terminalSessionService"
 
 export interface UseTerminalSessionOptions {
@@ -27,7 +27,7 @@ export function useTerminalSession({
     createTerminalSession(url),
   )
   const [error, setError] = useState<Error | null>(null)
-  const [connectionNonce, setConnectionNonce] = useState(0)
+  const [_connectionNonce, setConnectionNonce] = useState(0)
 
   const wsRef = useRef<WebSocket | null>(null)
   const manualDisconnectRef = useRef(false)
@@ -58,10 +58,14 @@ export function useTerminalSession({
       void decodeTerminalEventData(event.data)
         .then((decoded) => {
           setSession((current) =>
-            appendTerminalFrame(current, createTerminalFrame("output", decoded), {
-              maxFrames,
-              maxChars,
-            }),
+            appendTerminalFrame(
+              current,
+              createTerminalFrame("output", decoded),
+              {
+                maxFrames,
+                maxChars,
+              },
+            ),
           )
         })
         .catch((messageError) => {
@@ -85,7 +89,11 @@ export function useTerminalSession({
       setSession((current) =>
         setTerminalConnectionStatus(
           current,
-          manualDisconnectRef.current ? "closed" : current.status === "error" ? "error" : "closed",
+          manualDisconnectRef.current
+            ? "closed"
+            : current.status === "error"
+              ? "error"
+              : "closed",
         ),
       )
     }
@@ -95,7 +103,7 @@ export function useTerminalSession({
       ws.close()
       wsRef.current = null
     }
-  }, [url, enabled, connectionNonce, maxFrames, maxChars])
+  }, [url, enabled, maxFrames, maxChars])
 
   const connect = useCallback(() => {
     if (!url) return
@@ -113,7 +121,11 @@ export function useTerminalSession({
 
   const sendInput = useCallback(
     (data: string) => {
-      if (!data || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      if (
+        !data ||
+        !wsRef.current ||
+        wsRef.current.readyState !== WebSocket.OPEN
+      ) {
         return false
       }
 
@@ -129,9 +141,12 @@ export function useTerminalSession({
     [maxFrames, maxChars],
   )
 
-  const setViewport = useCallback((cols: number | null, rows: number | null) => {
-    setSession((current) => updateTerminalViewport(current, { cols, rows }))
-  }, [])
+  const setViewport = useCallback(
+    (cols: number | null, rows: number | null) => {
+      setSession((current) => updateTerminalViewport(current, { cols, rows }))
+    },
+    [],
+  )
 
   return {
     session,

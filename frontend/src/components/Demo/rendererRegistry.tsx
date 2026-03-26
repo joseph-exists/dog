@@ -16,8 +16,10 @@ import {
   SoloStoryPlayerPanel,
   StoryEditorPanel,
 } from "@/components/Room"
-import type { TesserScript } from "@/services/demoService"
-import type { ResolvedDemoSessionViewModel } from "@/services/demoService"
+import type {
+  ResolvedDemoSessionViewModel,
+  TesserScript,
+} from "@/services/demoService"
 import type {
   MessageViewModel,
   ParticipantViewModel,
@@ -134,14 +136,14 @@ export interface DemoPanelRendererContext {
   ) => Promise<void>
   canvasRenderStateByPanelId: Record<
     string,
-      {
-        isRendering: boolean
-        status: string | null
-        error: string | null
-        lastJobId: string | null
-        lastRequestId: string | null
-        lastCommitSha: string | null
-        lastScriptName: string | null
+    {
+      isRendering: boolean
+      status: string | null
+      error: string | null
+      lastJobId: string | null
+      lastRequestId: string | null
+      lastCommitSha: string | null
+      lastScriptName: string | null
     }
   >
   canvasSvgOverrideByPanelId: Record<string, string>
@@ -426,7 +428,9 @@ function DemoRepoGitViewSurface({
       <RepoCapabilityPlaceholderPanel
         title={title ?? "Git View"}
         description="Git view needs a resolvable user repo."
-        unmetRequirements={['metadata_json.repo_id or explicit config for entity_type "user_repo"']}
+        unmetRequirements={[
+          'metadata_json.repo_id or explicit config for entity_type "user_repo"',
+        ]}
       />
     )
   }
@@ -456,7 +460,9 @@ function DemoRepoGitViewSurface({
     resolvedConfig.display_mode ??
     (resolvedConfig.show_file_content ? "split" : "explorer")
   const viewerPathMode =
-    displayMode === "viewer" ? resolvedConfig.path_mode ?? "selection" : "selection"
+    displayMode === "viewer"
+      ? (resolvedConfig.path_mode ?? "selection")
+      : "selection"
   const selectionKey =
     viewerPathMode === "readme"
       ? null
@@ -482,7 +488,7 @@ function DemoRepoGitViewSurface({
         }}
         enabled={capabilities.hasFileTree}
         selectedPath={
-          selectionKey ? repoSelections[selectionKey] ?? null : null
+          selectionKey ? (repoSelections[selectionKey] ?? null) : null
         }
         onSelectPath={(path) =>
           setRepoSelection(selectionKey ?? `${surfaceId}.selection`, path)
@@ -511,7 +517,9 @@ function DemoRepoGitViewSurface({
           empty_label: resolvedConfig.empty_label,
         }}
         enabled={capabilities.hasBlobContent}
-        selectedPath={selectionKey ? repoSelections[selectionKey] ?? null : null}
+        selectedPath={
+          selectionKey ? (repoSelections[selectionKey] ?? null) : null
+        }
         getRoomContextState={getRoomContextState}
         onToggleRoomContext={onToggleRoomContext}
       />
@@ -673,7 +681,9 @@ function DemoRepoFileViewerSurface({
       <RepoCapabilityPlaceholderPanel
         title={title ?? "File Viewer"}
         description="File viewer needs a resolvable user repo."
-        unmetRequirements={['metadata_json.repo_id or explicit config for entity_type "user_repo"']}
+        unmetRequirements={[
+          'metadata_json.repo_id or explicit config for entity_type "user_repo"',
+        ]}
       />
     )
   }
@@ -724,7 +734,9 @@ function DemoRepoFileViewerSurface({
         empty_label: resolvedConfig.empty_label,
       }}
       enabled={capabilities.hasBlobContent}
-      selectedPath={selectionKey ? repoSelections[selectionKey] ?? null : null}
+      selectedPath={
+        selectionKey ? (repoSelections[selectionKey] ?? null) : null
+      }
       getRoomContextState={getRoomContextState}
       onToggleRoomContext={onToggleRoomContext}
     />

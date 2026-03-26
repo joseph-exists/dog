@@ -56,8 +56,8 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 import useAuth from "@/hooks/useAuth"
+import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 import { cn } from "@/lib/utils"
 import { ProviderModelSelector } from "./FormSelectors/ProviderModelSelector"
 
@@ -251,8 +251,7 @@ function readRepoToolFlags(toolConfigRaw: string | null): {
     : []
 
   const readRepoFile =
-    parsed.read_repo_file === true ||
-    enabledTools.includes("read_repo_file")
+    parsed.read_repo_file === true || enabledTools.includes("read_repo_file")
   const writeRepoFiles =
     parsed.write_repo_files === true ||
     enabledTools.includes("write_repo_files")

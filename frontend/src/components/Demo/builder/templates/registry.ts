@@ -13,14 +13,14 @@ import { buildCompositionIIntensityTemplate } from "@/components/Demo/builder/te
 import { buildCompositionJRepoExplorerDualViewersTemplate } from "@/components/Demo/builder/templates/compositions/compositionJRepoExplorerDualViewers"
 import { buildCompositionKParallelRepoClustersTemplate } from "@/components/Demo/builder/templates/compositions/compositionKParallelRepoClusters"
 import type {
+  TemplateBuilder,
+  TemplateBuilderContext,
+} from "@/components/Demo/builder/templates/templateBuilderContext"
+import type {
   BuilderCompositionTemplateOption,
   BuilderCompositionTemplateSchema,
   BuilderTemplateId,
 } from "@/components/Demo/builder/templates/types"
-import type {
-  TemplateBuilder,
-  TemplateBuilderContext,
-} from "@/components/Demo/builder/templates/templateBuilderContext"
 
 export const BUILDER_COMPOSITION_TEMPLATE_SCHEMAS: Record<
   BuilderTemplateId,
@@ -423,7 +423,8 @@ const BUILDER_COMPOSITION_TEMPLATE_BUILDERS: Record<
 > = {
   composition_a_baseline: buildCompositionABaselineTemplate,
   composition_b_runtime_coupled: buildCompositionBRuntimeCoupledTemplate,
-  composition_c_visibility_semantics: buildCompositionCVisibilitySemanticsTemplate,
+  composition_c_visibility_semantics:
+    buildCompositionCVisibilitySemanticsTemplate,
   composition_d_stylized_agent_ops: buildCompositionDStylizedAgentOpsTemplate,
   composition_d1_enhanced_normal: buildCompositionD1EnhancedNormalTemplate,
   composition_d2_enhanced_bonkers: buildCompositionD2EnhancedBonkersTemplate,
@@ -431,7 +432,8 @@ const BUILDER_COMPOSITION_TEMPLATE_BUILDERS: Record<
   composition_f_presentation_passthrough_audit:
     buildCompositionFPresentationPassthroughAuditTemplate,
   composition_g_ux_style_matrix: buildCompositionGUXStyleMatrixTemplate,
-  composition_h_chaotic_combinatorics: buildCompositionHChaoticCombinatoricsTemplate,
+  composition_h_chaotic_combinatorics:
+    buildCompositionHChaoticCombinatoricsTemplate,
   composition_i_intensity: buildCompositionIIntensityTemplate,
   composition_j_repo_explorer_dual_viewers:
     buildCompositionJRepoExplorerDualViewersTemplate,

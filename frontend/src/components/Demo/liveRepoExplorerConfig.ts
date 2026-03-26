@@ -32,7 +32,9 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeOptionalString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null
 }
 
 export function createDefaultLiveRepoExplorerConfig(
@@ -89,7 +91,9 @@ export function parseLiveRepoExplorerConfig(
     entity_type:
       normalizeOptionalString(record.entity_type) ?? defaults.entity_type,
     entity_id_mode:
-      record.entity_id_mode === "explicit" ? "explicit" : defaults.entity_id_mode,
+      record.entity_id_mode === "explicit"
+        ? "explicit"
+        : defaults.entity_id_mode,
     entity_id: normalizeOptionalString(record.entity_id) ?? undefined,
     entity_id_metadata_key:
       normalizeOptionalString(record.entity_id_metadata_key) ??
@@ -116,7 +120,7 @@ export function resolveLiveRepoExplorerConfig(
 
   const entityId =
     parsed.entity_id_mode === "explicit"
-      ? parsed.entity_id?.trim() ?? ""
+      ? (parsed.entity_id?.trim() ?? "")
       : (() => {
           if (!isObjectRecord(metadataJson)) return ""
           const candidate = metadataJson[parsed.entity_id_metadata_key ?? ""]

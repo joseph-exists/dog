@@ -42,15 +42,16 @@ export const UserPersonaDiscoveryService = {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length < 2) return []
 
-    const requestOptions: ApiRequestOptions<DiscoverableUserPersonasResponse> = {
-      method: "GET",
-      url: "/api/v1/user-personas/discoverable",
-      query: {
-        q: trimmedQuery,
-        limit: options?.limit ?? 12,
-        exclude_current_user: options?.excludeCurrentUser ?? true,
-      },
-    }
+    const requestOptions: ApiRequestOptions<DiscoverableUserPersonasResponse> =
+      {
+        method: "GET",
+        url: "/api/v1/user-personas/discoverable",
+        query: {
+          q: trimmedQuery,
+          limit: options?.limit ?? 12,
+          exclude_current_user: options?.excludeCurrentUser ?? true,
+        },
+      }
 
     const response = await __request<DiscoverableUserPersonasResponse>(
       OpenAPI,

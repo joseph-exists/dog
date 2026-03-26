@@ -11,11 +11,15 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import {
-  UserPersonaDiscoveryService,
   type DiscoverableUserPersona,
+  UserPersonaDiscoveryService,
 } from "@/services/userPersonaDiscoveryService"
 
 interface DiscoverUserPersonaComboboxProps {
@@ -44,7 +48,12 @@ export function DiscoverUserPersonaCombobox({
   const deferredQuery = useDeferredValue(searchQuery)
 
   const resultsQuery = useQuery({
-    queryKey: ["user-personas", "discoverable", deferredQuery, excludeCurrentUser],
+    queryKey: [
+      "user-personas",
+      "discoverable",
+      deferredQuery,
+      excludeCurrentUser,
+    ],
     queryFn: () =>
       UserPersonaDiscoveryService.search(deferredQuery, {
         limit: 12,
@@ -54,7 +63,8 @@ export function DiscoverUserPersonaCombobox({
   })
 
   const options = resultsQuery.data ?? []
-  const selectedPersona = options.find((persona) => persona.id === value) ?? null
+  const selectedPersona =
+    options.find((persona) => persona.id === value) ?? null
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -92,7 +102,9 @@ export function DiscoverUserPersonaCombobox({
             ) : deferredQuery.trim().length < 2 ? (
               <CommandEmpty>Type at least 2 characters to search.</CommandEmpty>
             ) : options.length === 0 ? (
-              <CommandEmpty>No published personas matched this search.</CommandEmpty>
+              <CommandEmpty>
+                No published personas matched this search.
+              </CommandEmpty>
             ) : (
               options.map((persona) => (
                 <CommandItem

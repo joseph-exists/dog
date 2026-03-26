@@ -1,4 +1,3 @@
-import { SvgsService } from "@/client"
 import type {
   SvgAssetCreatePrivate,
   SvgAssetCreatePublicFromPrivate,
@@ -6,6 +5,7 @@ import type {
   SvgAssetUpdate,
   SvgAssetVisibility,
 } from "@/client"
+import { SvgsService } from "@/client"
 
 export interface ListSvgsInput {
   skip?: number
@@ -33,7 +33,9 @@ export const SvgAppService = {
     return SvgsService.getSvg({ svgId })
   },
 
-  async createPrivateSvg(input: SvgAssetCreatePrivate): Promise<SvgAssetPublic> {
+  async createPrivateSvg(
+    input: SvgAssetCreatePrivate,
+  ): Promise<SvgAssetPublic> {
     return SvgsService.createSvg({ requestBody: input })
   },
 
@@ -43,7 +45,10 @@ export const SvgAppService = {
     return SvgsService.createSvg({ requestBody: input })
   },
 
-  async patchSvg(svgId: string, input: SvgAssetUpdate): Promise<SvgAssetPublic> {
+  async patchSvg(
+    svgId: string,
+    input: SvgAssetUpdate,
+  ): Promise<SvgAssetPublic> {
     return SvgsService.patchSvg({ svgId, requestBody: input })
   },
 
@@ -51,4 +56,3 @@ export const SvgAppService = {
     await SvgsService.deleteSvg({ svgId })
   },
 }
-

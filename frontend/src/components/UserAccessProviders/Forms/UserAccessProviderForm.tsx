@@ -26,8 +26,8 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { ProviderConfigFields } from "./ProviderConfigFields"
 import { AdapterConfigSection } from "./AdapterConfigSection"
+import { ProviderConfigFields } from "./ProviderConfigFields"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -80,8 +80,11 @@ function buildDefaultName(providerType: LLMProviderTypePublic | null) {
   return `${providerType.display_name || providerType.name} workspace`
 }
 
-function providerTypeRequiresApiKey(providerType: LLMProviderTypePublic | null) {
-  const normalizedName = `${providerType?.display_name || providerType?.name || ""}`.toLowerCase()
+function providerTypeRequiresApiKey(
+  providerType: LLMProviderTypePublic | null,
+) {
+  const normalizedName =
+    `${providerType?.display_name || providerType?.name || ""}`.toLowerCase()
   return ["openai", "anthropic", "google", "gemini"].some((token) =>
     normalizedName.includes(token),
   )
@@ -113,7 +116,11 @@ export function UserAccessProviderForm({
       max_retries: provider?.max_retries ?? 3,
       retry_delay_ms: provider?.retry_delay_ms ?? 1000,
       proxy_url: provider?.proxy_url || "",
-      custom_headers_json: JSON.stringify(provider?.custom_headers ?? {}, null, 2),
+      custom_headers_json: JSON.stringify(
+        provider?.custom_headers ?? {},
+        null,
+        2,
+      ),
     },
   })
 
@@ -129,9 +136,15 @@ export function UserAccessProviderForm({
       max_retries: provider?.max_retries ?? 3,
       retry_delay_ms: provider?.retry_delay_ms ?? 1000,
       proxy_url: provider?.proxy_url || "",
-      custom_headers_json: JSON.stringify(provider?.custom_headers ?? {}, null, 2),
+      custom_headers_json: JSON.stringify(
+        provider?.custom_headers ?? {},
+        null,
+        2,
+      ),
     })
-    setProviderConfig((provider?.provider_config as Record<string, unknown>) ?? {})
+    setProviderConfig(
+      (provider?.provider_config as Record<string, unknown>) ?? {},
+    )
     setJsonError(null)
   }, [form, provider, providerType])
 
@@ -239,12 +252,16 @@ export function UserAccessProviderForm({
                   <FormLabel>Base URL</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={providerType?.default_base_url || "https://api.openai.com/v1"}
+                      placeholder={
+                        providerType?.default_base_url ||
+                        "https://api.openai.com/v1"
+                      }
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    Leave the template default unless your account uses a custom endpoint.
+                    Leave the template default unless your account uses a custom
+                    endpoint.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -257,7 +274,9 @@ export function UserAccessProviderForm({
             name="api_key"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{provider ? "Replace API key" : "API key"}</FormLabel>
+                <FormLabel>
+                  {provider ? "Replace API key" : "API key"}
+                </FormLabel>
                 <FormControl>
                   <PasswordInput
                     placeholder="sk-..."

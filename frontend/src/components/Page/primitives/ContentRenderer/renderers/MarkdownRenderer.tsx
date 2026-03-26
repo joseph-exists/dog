@@ -46,7 +46,7 @@ export function MarkdownRenderer({
                   <code className={codeClassName}>
                     {typeof children === "string"
                       ? children
-                      : children?.toString?.() ?? ""}
+                      : (children?.toString?.() ?? "")}
                   </code>
                 }
               >

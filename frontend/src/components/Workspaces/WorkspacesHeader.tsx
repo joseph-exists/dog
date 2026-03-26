@@ -1,13 +1,14 @@
-import {
-  ArrowLeft,
-  Cpu,
-  LayoutPanelLeft,
-} from "lucide-react"
 import { Link } from "@tanstack/react-router"
-
-import type { ThemeViewModel } from "@/services/themeService"
+import { ArrowLeft, Cpu, LayoutPanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { ThemeViewModel } from "@/services/themeService"
 
 export interface WorkspacesHeaderProps {
   title: string

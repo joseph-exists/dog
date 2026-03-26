@@ -109,7 +109,10 @@ export function parseClickPromptDispatchConfig(
 
   const rawEnabled = interaction.enabled
   const enabled = typeof rawEnabled === "boolean" ? rawEnabled : true
-  const rawTriggerSelector = getNestedString(interaction, ["trigger", "selector"])
+  const rawTriggerSelector = getNestedString(interaction, [
+    "trigger",
+    "selector",
+  ])
   const triggerSelector =
     rawTriggerSelector === LEGACY_CLICK_SOURCE_SELECTOR
       ? DEFAULT_CLICK_SOURCE_SELECTOR

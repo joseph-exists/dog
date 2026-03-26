@@ -4,7 +4,9 @@ import type {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionDStylizedAgentOpsTemplate(context: TemplateBuilderContext): EditableComposition {
+export function buildCompositionDStylizedAgentOpsTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
   const { createPanelTemplate, createBlockTemplate, createTemplate } = context
   const composition = createTemplate("composition_b_runtime_coupled")
   composition.layout_mode = "panels"
@@ -108,8 +110,7 @@ export function buildCompositionDStylizedAgentOpsTemplate(context: TemplateBuild
       visibility: "visible",
       content_json: {
         format: "markdown",
-        value:
-          "### Beep Beep",
+        value: "### Beep Beep",
         metadata: {
           variant: "callout",
         },
@@ -189,4 +190,3 @@ export function buildCompositionDStylizedAgentOpsTemplate(context: TemplateBuild
 // looks like when using the full range of presentation capabilities.
 //
 // =============================================================================
-

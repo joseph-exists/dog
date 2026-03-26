@@ -1,8 +1,13 @@
 import { useNavigate } from "@tanstack/react-router"
-
-import type { WorkspaceDetailViewModel } from "@/services/workspaceService"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import type { WorkspaceDetailViewModel } from "@/services/workspaceService"
 
 export interface WorkspaceControlsPanelProps {
   workspace: WorkspaceDetailViewModel
@@ -43,7 +48,8 @@ export function WorkspaceControlsPanel({
       <CardContent className="space-y-3">
         {!workspace.canManageRuntime ? (
           <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
-            This workspace is visible in your current access scope, but runtime management is not available from this account.
+            This workspace is visible in your current access scope, but runtime
+            management is not available from this account.
           </div>
         ) : null}
         <Button

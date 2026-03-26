@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
-
-import type { LibraryPersona, PersonaLibraryOwner } from "@/components/Persona"
 import type { TemplateBlock } from "@/components/Page/registry"
+import type { LibraryPersona, PersonaLibraryOwner } from "@/components/Persona"
 import type {
   AudiencePresentationSummary,
   AudienceScope,
@@ -13,8 +12,8 @@ import type {
   UserWorkFeedItem,
   WeightedTag,
 } from "@/components/UserPage/types"
-import { PersonaLibraryService } from "@/services/personaLibraryService"
 import { PageService } from "@/services/pageService"
+import { PersonaLibraryService } from "@/services/personaLibraryService"
 import { UserPersonaService } from "@/services/userPersonaService"
 import useAuth from "./useAuth"
 import { usePageEditor } from "./usePageEditor"
@@ -130,7 +129,8 @@ function normalizeWorkItem(input: unknown): UserWorkFeedItem | null {
       typeof input.timestampLabel === "string" && input.timestampLabel.trim()
         ? input.timestampLabel.trim()
         : "Recently",
-    href: typeof input.href === "string" && input.href.trim() ? input.href : null,
+    href:
+      typeof input.href === "string" && input.href.trim() ? input.href : null,
     isRepresentative: input.isRepresentative !== false,
   }
 }
@@ -168,13 +168,15 @@ function normalizeAudiencePresentation(
         ? input.id.trim()
         : crypto.randomUUID(),
     userPersonaId:
-      typeof input.userPersonaId === "string" && input.userPersonaId.trim().length > 0
+      typeof input.userPersonaId === "string" &&
+      input.userPersonaId.trim().length > 0
         ? input.userPersonaId.trim()
         : null,
     personaId: input.personaId.trim(),
     audienceScope,
     audienceKey:
-      typeof input.audienceKey === "string" && input.audienceKey.trim().length > 0
+      typeof input.audienceKey === "string" &&
+      input.audienceKey.trim().length > 0
         ? input.audienceKey.trim()
         : typeof input.audience_key === "string" &&
             input.audience_key.trim().length > 0
@@ -185,11 +187,15 @@ function normalizeAudiencePresentation(
         ? input.audienceLabel.trim()
         : slugToDisplayLabel(audienceScope),
     headline: input.headline.trim(),
-    framingText: typeof input.framingText === "string" ? input.framingText : null,
+    framingText:
+      typeof input.framingText === "string" ? input.framingText : null,
     visibleWorkIds: Array.isArray(input.visibleWorkIds)
-      ? input.visibleWorkIds.filter((id): id is string => typeof id === "string")
+      ? input.visibleWorkIds.filter(
+          (id): id is string => typeof id === "string",
+        )
       : [],
-    publicationState: input.publicationState === "published" ? "published" : "draft",
+    publicationState:
+      input.publicationState === "published" ? "published" : "draft",
     relationCallToAction,
   }
 }
@@ -233,7 +239,8 @@ function normalizeRelation(input: unknown): PersonaRelationSummary | null {
 function normalizeStoredPersona(input: unknown): UserPersonaSummary | null {
   if (!isObjectRecord(input)) return null
   if (typeof input.id !== "string" || input.id.trim().length === 0) return null
-  if (typeof input.name !== "string" || input.name.trim().length === 0) return null
+  if (typeof input.name !== "string" || input.name.trim().length === 0)
+    return null
 
   const publicationState =
     input.publicationState === "published" ? "published" : "draft"
@@ -246,7 +253,8 @@ function normalizeStoredPersona(input: unknown): UserPersonaSummary | null {
         ? input.userPersonaId.trim()
         : null,
     personaVisibility:
-      input.personaVisibility === "private" || input.personaVisibility === "system"
+      input.personaVisibility === "private" ||
+      input.personaVisibility === "system"
         ? input.personaVisibility
         : null,
     name: input.name.trim(),
@@ -294,7 +302,10 @@ function buildPersonaFromLibrary(persona: LibraryPersona): UserPersonaSummary {
   }
 }
 
-function personaMatchesId(persona: UserPersonaSummary, candidateId: string): boolean {
+function personaMatchesId(
+  persona: UserPersonaSummary,
+  candidateId: string,
+): boolean {
   return candidateId === persona.id || candidateId === persona.userPersonaId
 }
 
@@ -305,7 +316,9 @@ function resolvePersonaReference(
   if (!candidateId) return null
   const trimmedId = candidateId.trim()
   if (!trimmedId) return null
-  return personas.find((persona) => personaMatchesId(persona, trimmedId))?.id ?? null
+  return (
+    personas.find((persona) => personaMatchesId(persona, trimmedId))?.id ?? null
+  )
 }
 
 export function resolvePrimaryPersonaId(
@@ -355,7 +368,9 @@ function getPreferredAudienceScope(
   }
 
   for (const scope of AUDIENCE_SCOPE_PRIORITY) {
-    if (presentations.some((presentation) => presentation.audienceScope === scope)) {
+    if (
+      presentations.some((presentation) => presentation.audienceScope === scope)
+    ) {
       return scope
     }
   }
@@ -410,10 +425,9 @@ export function buildUserPageViewModel(input: {
     resolvedAudienceKeys = [],
   } = input
 
-  const primaryContent = getBlockContent(
-    blocks,
-    "primaryPersona",
-  ) as PrimaryPersonaBlockContent | undefined
+  const primaryContent = getBlockContent(blocks, "primaryPersona") as
+    | PrimaryPersonaBlockContent
+    | undefined
   const workFeedContent = getBlockContent(blocks, "workFeed")
   const personaManagerContent = getBlockContent(blocks, "personaManager")
   const audiencePresentationContent = getBlockContent(
@@ -430,36 +444,44 @@ export function buildUserPageViewModel(input: {
   const rawStoredPersonas = Array.isArray(personaManagerContent?.personas)
     ? (personaManagerContent.personas as unknown[])
     : []
-  const rawPresentations = Array.isArray(audiencePresentationContent?.presentations)
+  const rawPresentations = Array.isArray(
+    audiencePresentationContent?.presentations,
+  )
     ? (audiencePresentationContent.presentations as unknown[])
     : []
   const rawRelations = Array.isArray(relationshipManagerContent?.relations)
     ? (relationshipManagerContent.relations as unknown[])
     : []
 
-  const workItems = rawWorkItems.length > 0
-    ? rawWorkItems
-        .map((item) => normalizeWorkItem(item))
-        .filter((item): item is UserWorkFeedItem => item !== null)
-    : []
-  const storedPersonas = rawStoredPersonas.length > 0
-    ? rawStoredPersonas
-        .map((persona) => normalizeStoredPersona(persona))
-        .filter((persona): persona is UserPersonaSummary => persona !== null)
-    : []
-  const storedPresentations = rawPresentations.length > 0
-    ? rawPresentations
-        .map((presentation) => normalizeAudiencePresentation(presentation))
-        .filter(
-          (presentation): presentation is AudiencePresentationSummary =>
-            presentation !== null,
-        )
-    : []
-  const relations = rawRelations.length > 0
-    ? rawRelations
-        .map((relation) => normalizeRelation(relation))
-        .filter((relation): relation is PersonaRelationSummary => relation !== null)
-    : []
+  const workItems =
+    rawWorkItems.length > 0
+      ? rawWorkItems
+          .map((item) => normalizeWorkItem(item))
+          .filter((item): item is UserWorkFeedItem => item !== null)
+      : []
+  const storedPersonas =
+    rawStoredPersonas.length > 0
+      ? rawStoredPersonas
+          .map((persona) => normalizeStoredPersona(persona))
+          .filter((persona): persona is UserPersonaSummary => persona !== null)
+      : []
+  const storedPresentations =
+    rawPresentations.length > 0
+      ? rawPresentations
+          .map((presentation) => normalizeAudiencePresentation(presentation))
+          .filter(
+            (presentation): presentation is AudiencePresentationSummary =>
+              presentation !== null,
+          )
+      : []
+  const relations =
+    rawRelations.length > 0
+      ? rawRelations
+          .map((relation) => normalizeRelation(relation))
+          .filter(
+            (relation): relation is PersonaRelationSummary => relation !== null,
+          )
+      : []
 
   const personaMap = new Map<string, UserPersonaSummary>()
   const authoritativePersonas =
@@ -501,8 +523,14 @@ export function buildUserPageViewModel(input: {
 
   const personaIds = personas.map((persona) => persona.id)
   const primaryPersonaId =
-    resolvePersonaReference(primaryContent?.primaryPersonaId ?? null, personas) ??
-    resolvePrimaryPersonaId(primaryContent?.primaryPersonaId ?? null, personaIds)
+    resolvePersonaReference(
+      primaryContent?.primaryPersonaId ?? null,
+      personas,
+    ) ??
+    resolvePrimaryPersonaId(
+      primaryContent?.primaryPersonaId ?? null,
+      personaIds,
+    )
   const normalizedResolvedAudienceKeys = resolvedAudienceKeys
     .map((audienceKey) => audienceKey.trim())
     .filter((audienceKey) => audienceKey.length > 0)
@@ -513,11 +541,13 @@ export function buildUserPageViewModel(input: {
         primaryPersonaId,
         isOwner,
       )
-    : resolvedAudienceScope ?? DEFAULT_AUDIENCE_SCOPE
+    : (resolvedAudienceScope ?? DEFAULT_AUDIENCE_SCOPE)
 
   const resolvedPersonas = personas.map((persona) => {
     const associatedWorkCount = workItems.filter((item) =>
-      item.associatedPersonaIds.some((personaId) => personaMatchesId(persona, personaId)),
+      item.associatedPersonaIds.some((personaId) =>
+        personaMatchesId(persona, personaId),
+      ),
     ).length
     const isVisibleInCurrentAudience = presentations.some(
       (presentation) =>
@@ -525,7 +555,9 @@ export function buildUserPageViewModel(input: {
         (selectedAudienceScope !== "custom" ||
           (presentation.audienceKey !== null &&
             presentation.audienceKey !== undefined &&
-            normalizedResolvedAudienceKeys.includes(presentation.audienceKey))) &&
+            normalizedResolvedAudienceKeys.includes(
+              presentation.audienceKey,
+            ))) &&
         personaMatchesId(persona, presentation.personaId),
     )
 
@@ -543,7 +575,8 @@ export function buildUserPageViewModel(input: {
     normalizedResolvedAudienceKeys,
   )
   const selectedAudienceLabel =
-    activePresentation?.audienceLabel ?? slugToDisplayLabel(selectedAudienceScope)
+    activePresentation?.audienceLabel ??
+    slugToDisplayLabel(selectedAudienceScope)
   const selectedPersonaId =
     resolvePersonaReference(activePresentation?.personaId, resolvedPersonas) ??
     (primaryPersonaId &&
@@ -554,8 +587,9 @@ export function buildUserPageViewModel(input: {
     )
       ? primaryPersonaId
       : null) ??
-    resolvedPersonas.find((persona) => isOwner || persona.isVisibleInCurrentAudience)
-      ?.id ??
+    resolvedPersonas.find(
+      (persona) => isOwner || persona.isVisibleInCurrentAudience,
+    )?.id ??
     resolvedPersonas[0]?.id ??
     null
 
@@ -563,11 +597,12 @@ export function buildUserPageViewModel(input: {
     userId,
     slug,
     isOwner,
-    mode: !pageExists && isOwner
-      ? "owner-empty"
-      : isOwner
-        ? "owner-manage"
-        : "visitor-view",
+    mode:
+      !pageExists && isOwner
+        ? "owner-empty"
+        : isOwner
+          ? "owner-manage"
+          : "visitor-view",
     primaryPersonaId,
     selectedPersonaId,
     selectedAudienceScope,
@@ -622,7 +657,8 @@ export function useUserPageViewModel(slug: string) {
         ownerPersonas: ownerPersonaQuery.data?.personas ?? [],
         ownerPresentations: ownerPersonaQuery.data?.presentations ?? [],
         resolvedAudienceScope: resolvedAudienceQuery.data?.scope,
-        resolvedAudienceKeys: resolvedAudienceQuery.data?.matchedAudienceKeys ?? [],
+        resolvedAudienceKeys:
+          resolvedAudienceQuery.data?.matchedAudienceKeys ?? [],
       }),
     [
       slug,

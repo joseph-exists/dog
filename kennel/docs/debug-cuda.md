@@ -48,10 +48,13 @@ print(f\"matmul 8192x8192 avg: {ms:.1f}ms\")
 '"
 
 # Build in order — each layer depends on the previous
-curl -X POST "http://localhost:8090/flavours/base/rebuild" -H "x-kennel-secret: your-secret"
+curl -X POST "http://localhost:8090/flavours/base/rebuild" -H "x-kennel-secret: woohoo"
 
 # Wait for done, then:
-curl -X POST "http://localhost:8090/flavours/dev/rebuild"  -H "x-kennel-secret: your-secret"
+curl -X POST "http://localhost:8090/flavours/dev/rebuild"  -H "x-kennel-secret: woohoo"
+
+
+
 
 # Wait for done, then:
 curl -X POST "http://localhost:8090/flavours/cuda/rebuild" -H "x-kennel-secret: your-secret"

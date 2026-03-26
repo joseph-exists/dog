@@ -138,7 +138,9 @@ test.describe("demoPanelLayoutCustomization helpers", () => {
         }),
     }
 
-    expect(readDemoPanelLayoutItems(validStorage, "demo-panel-layout:demo")).toEqual([
+    expect(
+      readDemoPanelLayoutItems(validStorage, "demo-panel-layout:demo"),
+    ).toEqual([
       {
         id: "chat",
         kind: "chat",
@@ -147,7 +149,9 @@ test.describe("demoPanelLayoutCustomization helpers", () => {
         hidden: false,
       },
     ])
-    expect(readDemoPanelLayoutItems(invalidStorage, "demo-panel-layout:demo")).toBeNull()
+    expect(
+      readDemoPanelLayoutItems(invalidStorage, "demo-panel-layout:demo"),
+    ).toBeNull()
   })
 
   test("compares layout arrays structurally", async () => {

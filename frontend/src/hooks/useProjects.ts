@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
-  ApiError,
   AccessGrantRevokeRequest,
   AccessGrantUpsertRequest,
+  ApiError,
   PersonaGroupCreate,
   PersonaGroupMembershipCreate,
   ProjectCreate,
@@ -112,10 +112,13 @@ export function useAttachableResources(enabled = true) {
 export function useCreatePersonaGroup() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: PersonaGroupCreate) => ProjectsAppService.createPersonaGroup(input),
+    mutationFn: (input: PersonaGroupCreate) =>
+      ProjectsAppService.createPersonaGroup(input),
     onSuccess: () => {
       showSuccessToast("Persona group created")
-      queryClient.invalidateQueries({ queryKey: projectsQueryKeys.personaGroups() })
+      queryClient.invalidateQueries({
+        queryKey: projectsQueryKeys.personaGroups(),
+      })
     },
     onError: (err: ApiError) => {
       handleError.call(showErrorToast, err as ApiError)
@@ -143,7 +146,8 @@ export function useAddPersonaGroupMember(groupId: string) {
 export function useCreateProject() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: ProjectCreate) => ProjectsAppService.createProject(input),
+    mutationFn: (input: ProjectCreate) =>
+      ProjectsAppService.createProject(input),
     onSuccess: () => {
       showSuccessToast("Project created")
       queryClient.invalidateQueries({ queryKey: projectsQueryKeys.all })
@@ -175,7 +179,8 @@ export function useUpdateProject(projectId: string) {
 export function useDeleteProject() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (projectId: string) => ProjectsAppService.deleteProject(projectId),
+    mutationFn: (projectId: string) =>
+      ProjectsAppService.deleteProject(projectId),
     onSuccess: () => {
       showSuccessToast("Project deleted")
       queryClient.invalidateQueries({ queryKey: projectsQueryKeys.all })
@@ -271,7 +276,9 @@ export function useUpsertProjectGrant(projectId: string) {
       ProjectsAppService.upsertProjectAccessGrant(projectId, input),
     onSuccess: () => {
       showSuccessToast("Access updated")
-      queryClient.invalidateQueries({ queryKey: projectsQueryKeys.grants(projectId) })
+      queryClient.invalidateQueries({
+        queryKey: projectsQueryKeys.grants(projectId),
+      })
     },
     onError: (err: ApiError) => {
       handleError.call(showErrorToast, err as ApiError)
@@ -286,7 +293,9 @@ export function useRevokeProjectGrant(projectId: string) {
       ProjectsAppService.revokeProjectAccessGrant(projectId, input),
     onSuccess: () => {
       showSuccessToast("Access revoked")
-      queryClient.invalidateQueries({ queryKey: projectsQueryKeys.grants(projectId) })
+      queryClient.invalidateQueries({
+        queryKey: projectsQueryKeys.grants(projectId),
+      })
     },
     onError: (err: ApiError) => {
       handleError.call(showErrorToast, err as ApiError)

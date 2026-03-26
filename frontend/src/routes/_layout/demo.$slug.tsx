@@ -16,13 +16,20 @@ import {
   DemoInteractiveBlock,
   type DemoInteractiveDispatchRequest,
 } from "@/components/Demo/DemoInteractiveBlock"
-import { DemoPanelLayoutDialog } from "@/components/Demo/DemoPanelLayoutDialog"
 import type { PanelConfig as DemoLayoutPanelConfig } from "@/components/Demo/DemoLayout"
+import { DemoPanelLayoutDialog } from "@/components/Demo/DemoPanelLayoutDialog"
+import { DemoPresentationFrame } from "@/components/Demo/DemoPresentationFrame"
+import {
+  DemoShell,
+  type DemoShellBlockRenderItem,
+} from "@/components/Demo/DemoShell"
+import { resolveInteractionReceiverRegistration } from "@/components/Demo/demoInteractionHandlers"
 import {
   applyDemoPanelLayoutItems,
   buildDemoCollapseStorageKey,
   buildDemoPanelLayoutStorageKey,
   createDemoPanelLayoutItems,
+  type DemoPanelLayoutItem,
   demoPanelLayoutItemsEqual,
   readDemoCollapsedIds,
   readDemoPanelLayoutItems,
@@ -30,14 +37,7 @@ import {
   reconcileDemoPanelLayoutItems,
   writeDemoCollapsedIds,
   writeDemoPanelLayoutItems,
-  type DemoPanelLayoutItem,
 } from "@/components/Demo/demoPanelLayoutCustomization"
-import { DemoPresentationFrame } from "@/components/Demo/DemoPresentationFrame"
-import {
-  DemoShell,
-  type DemoShellBlockRenderItem,
-} from "@/components/Demo/DemoShell"
-import { resolveInteractionReceiverRegistration } from "@/components/Demo/demoInteractionHandlers"
 import {
   buildDemoThemeIndex,
   resolveDemoPresentationFrame,
@@ -53,8 +53,8 @@ import {
 import useAuth from "@/hooks/useAuth"
 import { useCanvasRenderJobEvents } from "@/hooks/useCanvasRenderJobEvents"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
-import { useRoomRepoContext } from "@/hooks/useRoomRepoContext"
 import { useRoomMessages } from "@/hooks/useRoomMessages"
+import { useRoomRepoContext } from "@/hooks/useRoomRepoContext"
 import { useRoomStream } from "@/hooks/useRoomStream"
 import { usePageThemes } from "@/hooks/useThemeBinding"
 import {
@@ -140,8 +140,14 @@ function ResolvedDemoRoute({
   slug: string
   resolved: ResolvedDemoSessionViewModel
 }) {
-  const getPanelCollapseId = useCallback((panelId: string) => `panel:${panelId}`, [])
-  const getBlockCollapseId = useCallback((blockId: string) => `block:${blockId}`, [])
+  const getPanelCollapseId = useCallback(
+    (panelId: string) => `panel:${panelId}`,
+    [],
+  )
+  const getBlockCollapseId = useCallback(
+    (blockId: string) => `block:${blockId}`,
+    [],
+  )
   const queryClient = useQueryClient()
   const roomId = resolved.room.room_id
   const roomTitle = resolved.room.title ?? "Demo Room"
@@ -170,25 +176,21 @@ function ResolvedDemoRoute({
   const panelLayoutStorageKey = useMemo(
     () =>
       buildDemoPanelLayoutStorageKey(
-        resolved.demo_config_id?.trim().length
-          ? resolved.demo_config_id
-          : slug,
+        resolved.demo_config_id?.trim().length ? resolved.demo_config_id : slug,
       ),
     [resolved.demo_config_id, slug],
   )
   const collapseStorageKey = useMemo(
     () =>
       buildDemoCollapseStorageKey(
-        resolved.demo_config_id?.trim().length
-          ? resolved.demo_config_id
-          : slug,
+        resolved.demo_config_id?.trim().length ? resolved.demo_config_id : slug,
       ),
     [resolved.demo_config_id, slug],
   )
   const [layoutDialogOpen, setLayoutDialogOpen] = useState(false)
-  const [panelLayoutItems, setPanelLayoutItems] = useState<DemoPanelLayoutItem[]>(
-    authoredPanelLayoutItems,
-  )
+  const [panelLayoutItems, setPanelLayoutItems] = useState<
+    DemoPanelLayoutItem[]
+  >(authoredPanelLayoutItems)
   const [collapsedContentIds, setCollapsedContentIds] = useState<string[]>([])
   const [canvasSvgOverrideByPanelId, setCanvasSvgOverrideByPanelId] = useState<
     Record<string, string>
@@ -486,20 +488,21 @@ function ResolvedDemoRoute({
         const enqueueResponse = await DemoService.enqueueCanvasPanelRender(
           resolved.demo_config_id,
           {
-          panel_id: panelId,
-          script_name: nextScriptName,
-          script_input: payload?.scriptInput ?? {},
-          title: payload?.title ?? "Tesser Render",
-          subtitle: payload?.subtitle ?? null,
-          persist_to_composition: true,
-          commit_to_shadow_repo: true,
+            panel_id: panelId,
+            script_name: nextScriptName,
+            script_input: payload?.scriptInput ?? {},
+            title: payload?.title ?? "Tesser Render",
+            subtitle: payload?.subtitle ?? null,
+            persist_to_composition: true,
+            commit_to_shadow_repo: true,
           },
         )
         const enqueueStatus = enqueueResponse.status ?? "queued"
         setCanvasRenderStateByPanelId((previous) => ({
           ...previous,
           [panelId]: {
-            isRendering: enqueueStatus === "queued" || enqueueStatus === "running",
+            isRendering:
+              enqueueStatus === "queued" || enqueueStatus === "running",
             status:
               enqueueStatus === "queued"
                 ? "Render queued..."
@@ -507,11 +510,16 @@ function ResolvedDemoRoute({
                   ? "Rendering in worker..."
                   : null,
             error: null,
-            lastJobId: enqueueResponse.job_id ?? previous[panelId]?.lastJobId ?? null,
+            lastJobId:
+              enqueueResponse.job_id ?? previous[panelId]?.lastJobId ?? null,
             lastRequestId:
-              enqueueResponse.request_id ?? previous[panelId]?.lastRequestId ?? null,
+              enqueueResponse.request_id ??
+              previous[panelId]?.lastRequestId ??
+              null,
             lastCommitSha:
-              enqueueResponse.shadow_commit_sha ?? previous[panelId]?.lastCommitSha ?? null,
+              enqueueResponse.shadow_commit_sha ??
+              previous[panelId]?.lastCommitSha ??
+              null,
             lastScriptName: nextScriptName,
           },
         }))
@@ -571,21 +579,25 @@ function ResolvedDemoRoute({
     null,
   )
 
-  const availableTesserScripts: TesserScript[] = tesserScriptsPayload?.data ?? []
+  const availableTesserScripts: TesserScript[] =
+    tesserScriptsPayload?.data ?? []
 
-  const handleRequestTesserScriptHelp = useCallback(async (scriptName: string) => {
-    const cached = tesserHelpByScriptName[scriptName]
-    if (cached) return cached
-    const response = await DemoService.getTesserScriptHelp(scriptName)
-    const help = response.help_text ?? ""
-    if (help) {
-      setTesserHelpByScriptName((previous) => ({
-        ...previous,
-        [scriptName]: help,
-      }))
-    }
-    return help || null
-  }, [tesserHelpByScriptName])
+  const handleRequestTesserScriptHelp = useCallback(
+    async (scriptName: string) => {
+      const cached = tesserHelpByScriptName[scriptName]
+      if (cached) return cached
+      const response = await DemoService.getTesserScriptHelp(scriptName)
+      const help = response.help_text ?? ""
+      if (help) {
+        setTesserHelpByScriptName((previous) => ({
+          ...previous,
+          [scriptName]: help,
+        }))
+      }
+      return help || null
+    },
+    [tesserHelpByScriptName],
+  )
 
   const handleRequestTesserExamplesIndex = useCallback(async () => {
     if (tesserExamplesIndex) return tesserExamplesIndex
@@ -652,10 +664,17 @@ function ResolvedDemoRoute({
   )
   const validCollapsedIds = useMemo(
     () => [
-      ...effectiveCompositionPanels.map((panel) => getPanelCollapseId(panel.id)),
+      ...effectiveCompositionPanels.map((panel) =>
+        getPanelCollapseId(panel.id),
+      ),
       ...renderableBlocks.map(({ block }) => getBlockCollapseId(block.id)),
     ],
-    [effectiveCompositionPanels, getBlockCollapseId, getPanelCollapseId, renderableBlocks],
+    [
+      effectiveCompositionPanels,
+      getBlockCollapseId,
+      getPanelCollapseId,
+      renderableBlocks,
+    ],
   )
 
   const hasCustomizedPanelLayout = useMemo(
@@ -673,7 +692,9 @@ function ResolvedDemoRoute({
       window.localStorage,
       collapseStorageKey,
     )
-    setCollapsedContentIds(reconcileDemoCollapsedIds(storedIds, validCollapsedIds))
+    setCollapsedContentIds(
+      reconcileDemoCollapsedIds(storedIds, validCollapsedIds),
+    )
   }, [collapseStorageKey, validCollapsedIds])
 
   useEffect(() => {
@@ -776,7 +797,9 @@ function ResolvedDemoRoute({
                 isCollapsed={collapsedContentIds.includes(
                   getPanelCollapseId(panel.id),
                 )}
-                onToggle={() => toggleCollapsedContent(getPanelCollapseId(panel.id))}
+                onToggle={() =>
+                  toggleCollapsedContent(getPanelCollapseId(panel.id))
+                }
                 className="h-full min-h-0"
                 contentClassName="h-full min-h-0"
               >
@@ -831,15 +854,18 @@ function ResolvedDemoRoute({
                   onRenderCanvas: handleRenderCanvas,
                   canvasRenderStateByPanelId,
                   canvasSvgOverrideByPanelId,
-                  availableTesserScripts: availableTesserScripts.map((script) => ({
-                    ...script,
-                    help_text:
-                      tesserHelpByScriptName[script.name] ??
-                      script.help_text ??
-                      null,
-                  })),
+                  availableTesserScripts: availableTesserScripts.map(
+                    (script) => ({
+                      ...script,
+                      help_text:
+                        tesserHelpByScriptName[script.name] ??
+                        script.help_text ??
+                        null,
+                    }),
+                  ),
                   onRequestTesserScriptHelp: handleRequestTesserScriptHelp,
-                  onRequestTesserExamplesIndex: handleRequestTesserExamplesIndex,
+                  onRequestTesserExamplesIndex:
+                    handleRequestTesserExamplesIndex,
                 })}
               </DemoCollapsibleSurface>
             </DemoPresentationFrame>
@@ -891,6 +917,8 @@ function ResolvedDemoRoute({
       showInternalMessages,
       streamingMessage,
       allRoomAgents,
+      resolved.composition.metadata_json,
+      resolved.demo_config_id,
     ],
   )
 
@@ -1038,7 +1066,9 @@ function ResolvedDemoRoute({
               isCollapsed={collapsedContentIds.includes(
                 getBlockCollapseId(block.id),
               )}
-              onToggle={() => toggleCollapsedContent(getBlockCollapseId(block.id))}
+              onToggle={() =>
+                toggleCollapsedContent(getBlockCollapseId(block.id))
+              }
             >
               <DemoInteractiveBlock
                 block={block}
@@ -1127,7 +1157,7 @@ function ResolvedDemoRoute({
           className="h-full min-h-0"
           contentClassName="h-full min-h-0"
         >
-      <DemoShell
+          <DemoShell
             demoConfig={{
               id: resolved.demo_config_id,
               slug: resolved.demo_config_id,
@@ -1158,23 +1188,27 @@ function ResolvedDemoRoute({
             pageTheme={themes.page?.theme ?? null}
             cardsTheme={themes.cards?.theme ?? null}
             availablePageThemes={availablePageThemes}
-        availableCardThemes={availableCardThemes}
-        onPageThemeChange={handlePageThemeChange}
-        onCardsThemeChange={handleCardsThemeChange}
-        onCustomizeLayout={() => setLayoutDialogOpen(true)}
-        canResetLayout={hasCustomizedPanelLayout}
-        onResetLayout={handleResetPanelLayout}
-        onCollapseAll={hasExpandableContent ? handleCollapseAllContent : undefined}
-        onExpandAll={hasCollapsedContent ? handleExpandAllContent : undefined}
-      />
-      <DemoPanelLayoutDialog
-        open={layoutDialogOpen}
-        onOpenChange={setLayoutDialogOpen}
-        items={panelLayoutItems}
-        onApply={handleApplyPanelLayout}
-        onReset={handleResetPanelLayout}
-        canReset={hasCustomizedPanelLayout}
-      />
+            availableCardThemes={availableCardThemes}
+            onPageThemeChange={handlePageThemeChange}
+            onCardsThemeChange={handleCardsThemeChange}
+            onCustomizeLayout={() => setLayoutDialogOpen(true)}
+            canResetLayout={hasCustomizedPanelLayout}
+            onResetLayout={handleResetPanelLayout}
+            onCollapseAll={
+              hasExpandableContent ? handleCollapseAllContent : undefined
+            }
+            onExpandAll={
+              hasCollapsedContent ? handleExpandAllContent : undefined
+            }
+          />
+          <DemoPanelLayoutDialog
+            open={layoutDialogOpen}
+            onOpenChange={setLayoutDialogOpen}
+            items={panelLayoutItems}
+            onApply={handleApplyPanelLayout}
+            onReset={handleResetPanelLayout}
+            canReset={hasCustomizedPanelLayout}
+          />
         </DemoPresentationFrame>
       </div>
     </div>

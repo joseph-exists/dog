@@ -1,8 +1,14 @@
-import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { FolderKanban, Plus, Sparkles } from "lucide-react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -115,9 +121,7 @@ function ProjectsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Failed to load projects</CardTitle>
-            <CardDescription>
-              {error.message}
-            </CardDescription>
+            <CardDescription>{error.message}</CardDescription>
           </CardHeader>
         </Card>
       ) : null}
@@ -130,7 +134,8 @@ function ProjectsPage() {
             </div>
             <CardTitle>No projects yet</CardTitle>
             <CardDescription>
-              Create your first project to start managing associations across stories, demos, rooms, and repos.
+              Create your first project to start managing associations across
+              stories, demos, rooms, and repos.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -167,4 +172,3 @@ function ProjectsPage() {
     </div>
   )
 }
-

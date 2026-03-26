@@ -16,19 +16,23 @@ import {
   type WorkspaceReadinessSummary,
   type WorkspaceServiceSummary,
   type WorkspaceShadowRepoSource,
-  type WorkspaceStatus,
   type WorkspaceStartupIntentAgentService,
   type WorkspaceStartupIntentProfile,
   type WorkspaceStartupIntentTerminalOnly,
+  type WorkspaceStatus,
+  WorkspacesService,
   type WorkspaceTerminalStatus,
   type WorkspaceUserRepoSource,
   type WorkspaceVisibility,
-  WorkspacesService,
 } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
 
-export type BootstrapRepoSourceType = "none" | "external_url" | "user_repo" | "shadow_repo"
+export type BootstrapRepoSourceType =
+  | "none"
+  | "external_url"
+  | "user_repo"
+  | "shadow_repo"
 export type BootstrapInstallMode = "none" | "auto" | "profile"
 export type BootstrapStartupMode = "terminal_only" | "profile" | "agent_service"
 export type BootstrapPhase =
@@ -171,7 +175,9 @@ export interface WorkspaceTerminalDescriptor {
   isDirectConnection: boolean
 }
 
-export type WorkspacePlatformServiceConsumerKind = "workspace_runtime" | "agent_runtime"
+export type WorkspacePlatformServiceConsumerKind =
+  | "workspace_runtime"
+  | "agent_runtime"
 
 export interface WorkspacePlatformServiceGrantViewModel {
   grantId: string
@@ -275,7 +281,9 @@ function toBootstrapRepoSourceViewModel(
   return null
 }
 
-function toBootstrapIntentViewModel(value: WorkspaceBootstrapIntent | null | undefined): BootstrapIntentViewModel | null {
+function toBootstrapIntentViewModel(
+  value: WorkspaceBootstrapIntent | null | undefined,
+): BootstrapIntentViewModel | null {
   if (!value) return null
 
   const installIntent = value.install_intent
@@ -290,9 +298,7 @@ function toBootstrapIntentViewModel(value: WorkspaceBootstrapIntent | null | und
         ? installIntent.mode
         : "none",
     installProfile:
-      installIntent?.mode === "profile"
-        ? installIntent.profile
-        : null,
+      installIntent?.mode === "profile" ? installIntent.profile : null,
     startupMode:
       startupIntent?.mode === "profile" ||
       startupIntent?.mode === "agent_service" ||
@@ -300,9 +306,7 @@ function toBootstrapIntentViewModel(value: WorkspaceBootstrapIntent | null | und
         ? startupIntent.mode
         : "terminal_only",
     startupProfile:
-      startupIntent?.mode === "profile"
-        ? startupIntent.profile
-        : null,
+      startupIntent?.mode === "profile" ? startupIntent.profile : null,
     agentProfile:
       startupIntent?.mode === "agent_service"
         ? startupIntent.agent_profile
@@ -312,11 +316,15 @@ function toBootstrapIntentViewModel(value: WorkspaceBootstrapIntent | null | und
   }
 }
 
-function toBootstrapProgressViewModel(value: WorkspaceBootstrapProgress | null | undefined): BootstrapProgressViewModel | null {
+function toBootstrapProgressViewModel(
+  value: WorkspaceBootstrapProgress | null | undefined,
+): BootstrapProgressViewModel | null {
   if (!value?.phase) return null
 
-  const completedSteps = typeof value.completed_steps === "number" ? value.completed_steps : null
-  const stepCount = typeof value.step_count === "number" ? value.step_count : null
+  const completedSteps =
+    typeof value.completed_steps === "number" ? value.completed_steps : null
+  const stepCount =
+    typeof value.step_count === "number" ? value.step_count : null
   const completionRatio =
     completedSteps !== null && stepCount !== null && stepCount > 0
       ? Math.max(0, Math.min(1, completedSteps / stepCount))
@@ -340,8 +348,12 @@ function toReadinessSummaryViewModel(
     terminalReady: value.terminal_ready === true,
     bootstrapComplete: value.bootstrap_complete === true,
     servicesReady: value.services_ready === true,
-    serviceCount: typeof value.service_count === "number" ? value.service_count : null,
-    readyServiceCount: typeof value.ready_service_count === "number" ? value.ready_service_count : null,
+    serviceCount:
+      typeof value.service_count === "number" ? value.service_count : null,
+    readyServiceCount:
+      typeof value.ready_service_count === "number"
+        ? value.ready_service_count
+        : null,
   }
 }
 
@@ -353,12 +365,18 @@ function toConnectivitySummaryViewModel(
     terminalReady: value.terminal_ready === true,
     bootstrapComplete: value.bootstrap_complete === true,
     servicesReady: value.services_ready === true,
-    serviceCount: typeof value.service_count === "number" ? value.service_count : null,
-    readyServiceCount: typeof value.ready_service_count === "number" ? value.ready_service_count : null,
+    serviceCount:
+      typeof value.service_count === "number" ? value.service_count : null,
+    readyServiceCount:
+      typeof value.ready_service_count === "number"
+        ? value.ready_service_count
+        : null,
   }
 }
 
-function toWorkspaceDiscoveredServiceViewModel(value: WorkspaceServiceSummary): WorkspaceDiscoveredServiceViewModel {
+function toWorkspaceDiscoveredServiceViewModel(
+  value: WorkspaceServiceSummary,
+): WorkspaceDiscoveredServiceViewModel {
   return {
     id: value.id,
     kind: value.kind,
@@ -386,31 +404,54 @@ function toWorkspaceFlavourHealthViewModel(
   }
 }
 
-function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetailViewModel {
+function toWorkspaceDetailViewModel(
+  workspace: WorkspacePublic,
+): WorkspaceDetailViewModel {
   const status = workspace.status ?? "requested"
   const terminalUrl = workspace.terminal_url ?? null
   const allowedActions = workspace.allowed_actions ?? []
   const terminalStatus = workspace.terminal_status ?? "unavailable"
   const meta = isRecord(workspace.meta) ? workspace.meta : {}
-  const bootstrapIntent = toBootstrapIntentViewModel(workspace.bootstrap?.intent)
-  const bootstrapProgress = toBootstrapProgressViewModel(workspace.bootstrap?.progress)
-  const readinessSummary = toReadinessSummaryViewModel(workspace.readiness_summary)
-  const connectivitySummary = toConnectivitySummaryViewModel(workspace.connectivity_summary)
+  const bootstrapIntent = toBootstrapIntentViewModel(
+    workspace.bootstrap?.intent,
+  )
+  const bootstrapProgress = toBootstrapProgressViewModel(
+    workspace.bootstrap?.progress,
+  )
+  const readinessSummary = toReadinessSummaryViewModel(
+    workspace.readiness_summary,
+  )
+  const connectivitySummary = toConnectivitySummaryViewModel(
+    workspace.connectivity_summary,
+  )
   const services = Array.isArray(workspace.services)
     ? workspace.services.map(toWorkspaceDiscoveredServiceViewModel)
     : []
-  const flavourHealth = toWorkspaceFlavourHealthViewModel(workspace.flavour_health)
+  const flavourHealth = toWorkspaceFlavourHealthViewModel(
+    workspace.flavour_health,
+  )
   const bootstrapStepResults = Array.isArray(meta.bootstrap_step_results)
     ? meta.bootstrap_step_results.filter(isRecord)
     : []
-  const bootstrapPlan = isRecord(meta.bootstrap_plan) ? meta.bootstrap_plan : null
+  const bootstrapPlan = isRecord(meta.bootstrap_plan)
+    ? meta.bootstrap_plan
+    : null
   const startedServices = Array.isArray(meta.bootstrap_started_services)
-    ? meta.bootstrap_started_services.filter((value): value is string => typeof value === "string")
+    ? meta.bootstrap_started_services.filter(
+        (value): value is string => typeof value === "string",
+      )
     : []
-  const platformServiceProjection = Array.isArray(meta.platform_service_projection)
+  const platformServiceProjection = Array.isArray(
+    meta.platform_service_projection,
+  )
     ? meta.platform_service_projection
         .map(toWorkspacePlatformServiceProjectionSummaryViewModel)
-        .filter((value): value is WorkspacePlatformServiceProjectionSummaryViewModel => value !== null)
+        .filter(
+          (
+            value,
+          ): value is WorkspacePlatformServiceProjectionSummaryViewModel =>
+            value !== null,
+        )
     : []
   const canOpenTerminal = allowedActions.includes("request_terminal")
   const canDiscoverServices = allowedActions.includes("discover_services")
@@ -418,7 +459,8 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
   const canStop = allowedActions.includes("stop")
   const canDestroy = allowedActions.includes("destroy")
   const canManageRuntime = canStart || canStop || canDestroy
-  const canUseWorkspace = canOpenTerminal || canDiscoverServices || canManageRuntime
+  const canUseWorkspace =
+    canOpenTerminal || canDiscoverServices || canManageRuntime
   const accessLevel: WorkspaceAccessLevel = canManageRuntime
     ? "manage"
     : canUseWorkspace
@@ -436,12 +478,18 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
     kennelJob: workspace.kennel_job ?? null,
     wsToken: workspace.ws_token ?? null,
     failureMessage: workspace.failure_message ?? null,
-    lastTransitionAt: workspace.last_transition_at ? new Date(workspace.last_transition_at) : null,
-    requestedAt: workspace.requested_at ? new Date(workspace.requested_at) : null,
+    lastTransitionAt: workspace.last_transition_at
+      ? new Date(workspace.last_transition_at)
+      : null,
+    requestedAt: workspace.requested_at
+      ? new Date(workspace.requested_at)
+      : null,
     startedAt: workspace.started_at ? new Date(workspace.started_at) : null,
     readyAt: workspace.ready_at ? new Date(workspace.ready_at) : null,
     stoppedAt: workspace.stopped_at ? new Date(workspace.stopped_at) : null,
-    destroyedAt: workspace.destroyed_at ? new Date(workspace.destroyed_at) : null,
+    destroyedAt: workspace.destroyed_at
+      ? new Date(workspace.destroyed_at)
+      : null,
     meta,
     visibility: workspace.visibility ?? "private",
     projectId: workspace.project_id ?? null,
@@ -476,17 +524,21 @@ function toWorkspaceDetailViewModel(workspace: WorkspacePublic): WorkspaceDetail
     bootstrapWorkspacePath:
       typeof meta.bootstrap_workspace_path === "string"
         ? meta.bootstrap_workspace_path
-        : bootstrapIntent?.workspacePath ?? null,
+        : (bootstrapIntent?.workspacePath ?? null),
     startedServices,
     bootstrapPlanStepCount:
       bootstrapProgress?.stepCount ??
-      (bootstrapPlan && Array.isArray(bootstrapPlan.steps) ? bootstrapPlan.steps.length : null),
+      (bootstrapPlan && Array.isArray(bootstrapPlan.steps)
+        ? bootstrapPlan.steps.length
+        : null),
     bootstrapStepResults,
     platformServiceProjection,
   }
 }
 
-function toWorkspaceListItemViewModel(workspace: WorkspacePublic): WorkspaceListItemViewModel {
+function toWorkspaceListItemViewModel(
+  workspace: WorkspacePublic,
+): WorkspaceListItemViewModel {
   const detail = toWorkspaceDetailViewModel(workspace)
   return {
     id: detail.id,
@@ -519,7 +571,9 @@ function toWorkspaceListItemViewModel(workspace: WorkspacePublic): WorkspaceList
   }
 }
 
-function toWorkspaceTerminalDescriptor(data: Record<string, string>): WorkspaceTerminalDescriptor {
+function toWorkspaceTerminalDescriptor(
+  data: Record<string, string>,
+): WorkspaceTerminalDescriptor {
   const terminalUrl = data.terminal_url
   const parsed = new URL(terminalUrl)
   return {
@@ -530,28 +584,26 @@ function toWorkspaceTerminalDescriptor(data: Record<string, string>): WorkspaceT
   }
 }
 
-function toWorkspacePlatformServiceAccessGrantViewModel(
-  value: {
-    workspace_id: string
-    consumer_kind: WorkspacePlatformServiceConsumerKind
+function toWorkspacePlatformServiceAccessGrantViewModel(value: {
+  workspace_id: string
+  consumer_kind: WorkspacePlatformServiceConsumerKind
+  issued_at: string
+  expires_at?: string | null
+  services?: Array<{
+    grant_id: string
+    service_id: string
+    transport: string
+    url: string
+    auth_mode?: string
+    require_approval?: string
+    description?: string | null
+    scopes?: string[]
+    tags?: string[]
+    scope?: Record<string, string>
     issued_at: string
     expires_at?: string | null
-    services?: Array<{
-      grant_id: string
-      service_id: string
-      transport: string
-      url: string
-      auth_mode?: string
-      require_approval?: string
-      description?: string | null
-      scopes?: string[]
-      tags?: string[]
-      scope?: Record<string, string>
-      issued_at: string
-      expires_at?: string | null
-    }>
-  },
-): WorkspacePlatformServiceAccessGrantViewModel {
+  }>
+}): WorkspacePlatformServiceAccessGrantViewModel {
   return {
     workspaceId: value.workspace_id,
     consumerKind: value.consumer_kind,
@@ -568,7 +620,14 @@ function toWorkspacePlatformServiceAccessGrantViewModel(
           description: service.description ?? null,
           scopes: Array.isArray(service.scopes) ? service.scopes : [],
           tags: Array.isArray(service.tags) ? service.tags : [],
-          scope: isRecord(service.scope) ? Object.fromEntries(Object.entries(service.scope).map(([key, entry]) => [key, String(entry)])) : {},
+          scope: isRecord(service.scope)
+            ? Object.fromEntries(
+                Object.entries(service.scope).map(([key, entry]) => [
+                  key,
+                  String(entry),
+                ]),
+              )
+            : {},
           issuedAt: new Date(service.issued_at),
           expiresAt: service.expires_at ? new Date(service.expires_at) : null,
         }))
@@ -592,19 +651,27 @@ function toWorkspacePlatformServiceProjectionSummaryViewModel(
   return {
     consumerKind,
     serviceIds: Array.isArray(value.service_ids)
-      ? value.service_ids.filter((entry): entry is string => typeof entry === "string")
+      ? value.service_ids.filter(
+          (entry): entry is string => typeof entry === "string",
+        )
       : [],
-    issuedAt: typeof value.issued_at === "string" ? new Date(value.issued_at) : null,
-    expiresAt: typeof value.expires_at === "string" ? new Date(value.expires_at) : null,
+    issuedAt:
+      typeof value.issued_at === "string" ? new Date(value.issued_at) : null,
+    expiresAt:
+      typeof value.expires_at === "string" ? new Date(value.expires_at) : null,
     refreshedAt:
-      typeof value.refreshed_at === "string" ? new Date(value.refreshed_at) : null,
+      typeof value.refreshed_at === "string"
+        ? new Date(value.refreshed_at)
+        : null,
     runtimeFilePaths: Array.isArray(value.runtime_file_paths)
       ? value.runtime_file_paths.filter(
           (entry): entry is string => typeof entry === "string",
         )
       : [],
     injectErrors: Array.isArray(value.inject_errors)
-      ? value.inject_errors.filter((entry): entry is string => typeof entry === "string")
+      ? value.inject_errors.filter(
+          (entry): entry is string => typeof entry === "string",
+        )
       : [],
   }
 }
@@ -728,7 +795,9 @@ export const WorkspaceService = {
     return toWorkspacePlatformServiceAccessGrantViewModel(response)
   },
 
-  async createWorkspace(input: CreateWorkspaceInput): Promise<WorkspaceDetailViewModel> {
+  async createWorkspace(
+    input: CreateWorkspaceInput,
+  ): Promise<WorkspaceDetailViewModel> {
     const repoSource =
       input.repoSourceType === "external_url" && input.repoUrl
         ? ({
@@ -765,16 +834,31 @@ export const WorkspaceService = {
             workspace_path: input.workspacePath ?? undefined,
             install_intent:
               input.installMode === "auto"
-                ? ({ mode: "auto" as const } satisfies WorkspaceInstallIntentAuto)
+                ? ({
+                    mode: "auto" as const,
+                  } satisfies WorkspaceInstallIntentAuto)
                 : input.installMode === "profile" && input.installProfile
-                  ? ({ mode: "profile" as const, profile: input.installProfile } satisfies WorkspaceInstallIntentProfile)
-                  : ({ mode: "none" as const } satisfies WorkspaceInstallIntentNone),
+                  ? ({
+                      mode: "profile" as const,
+                      profile: input.installProfile,
+                    } satisfies WorkspaceInstallIntentProfile)
+                  : ({
+                      mode: "none" as const,
+                    } satisfies WorkspaceInstallIntentNone),
             startup_intent:
               input.startupMode === "profile" && input.startupProfile
-                ? ({ mode: "profile" as const, profile: input.startupProfile } satisfies WorkspaceStartupIntentProfile)
+                ? ({
+                    mode: "profile" as const,
+                    profile: input.startupProfile,
+                  } satisfies WorkspaceStartupIntentProfile)
                 : input.startupMode === "agent_service" && input.agentProfile
-                  ? ({ mode: "agent_service" as const, agent_profile: input.agentProfile } satisfies WorkspaceStartupIntentAgentService)
-                  : ({ mode: "terminal_only" as const } satisfies WorkspaceStartupIntentTerminalOnly),
+                  ? ({
+                      mode: "agent_service" as const,
+                      agent_profile: input.agentProfile,
+                    } satisfies WorkspaceStartupIntentAgentService)
+                  : ({
+                      mode: "terminal_only" as const,
+                    } satisfies WorkspaceStartupIntentTerminalOnly),
             ssh_pubkey: input.sshPubkey ?? undefined,
             env_vars: input.envVars ?? {},
           } satisfies WorkspaceBootstrapIntent)
@@ -784,7 +868,8 @@ export const WorkspaceService = {
       name: input.name,
       flavour: input.flavour,
       kind: input.kind,
-      repo_url: input.repoSourceType === "external_url" ? input.repoUrl : undefined,
+      repo_url:
+        input.repoSourceType === "external_url" ? input.repoUrl : undefined,
       ssh_pubkey: input.sshPubkey,
       env_vars: input.envVars,
       bootstrap,
@@ -805,8 +890,12 @@ export const WorkspaceService = {
     await WorkspacesService.destroyWorkspace({ workspaceId })
   },
 
-  async getTerminalDescriptor(workspaceId: string): Promise<WorkspaceTerminalDescriptor> {
-    const response = await WorkspacesService.getWorkspaceTerminal({ workspaceId })
+  async getTerminalDescriptor(
+    workspaceId: string,
+  ): Promise<WorkspaceTerminalDescriptor> {
+    const response = await WorkspacesService.getWorkspaceTerminal({
+      workspaceId,
+    })
     return toWorkspaceTerminalDescriptor(response as Record<string, string>)
   },
 }

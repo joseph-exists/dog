@@ -47,7 +47,9 @@ const ANSI_PATTERN =
   // This keeps the raw chunks separately for future richer terminal rendering.
   /\u001b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g
 
-export function createTerminalSession(url: string | null): TerminalSessionState {
+export function createTerminalSession(
+  url: string | null,
+): TerminalSessionState {
   return {
     id: `terminal-${crypto.randomUUID()}`,
     url,
@@ -110,7 +112,9 @@ export function appendTerminalFrame(
   const maxChars = options.maxChars ?? DEFAULT_MAX_CHARS
 
   const nextFrames = [...session.frames, frame].slice(-maxFrames)
-  const nextAnsiChunks = [...session.ansiChunks, frame.ansiText].slice(-maxFrames)
+  const nextAnsiChunks = [...session.ansiChunks, frame.ansiText].slice(
+    -maxFrames,
+  )
 
   const nextPlainText = trimToMaxChars(
     nextFrames.map((item) => item.text).join(""),

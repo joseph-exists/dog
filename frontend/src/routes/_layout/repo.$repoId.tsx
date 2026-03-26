@@ -13,26 +13,23 @@ import {
   Trash2Icon,
   UnlockIcon,
 } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import type { ApiError } from "@/client/core/ApiError"
 import {
   buildRepoUserLayoutPresetId,
   createUserRepoLayoutPreset,
   getSystemRepoLayoutPresets,
-  repoQueryKeys,
   getUserRepoQueryOptions,
-  renderRepoPanel,
   RepoLayout,
-  RepoPanelLayoutDialog,
-  SaveRepoLayoutPresetDialog,
-  type RepoPanelConfig,
   type RepoLayoutPreset,
+  type RepoPanelConfig,
+  RepoPanelLayoutDialog,
+  renderRepoPanel,
+  repoQueryKeys,
+  SaveRepoLayoutPresetDialog,
 } from "@/components/Repo"
 import { RepoLayoutEditorDialog } from "@/components/Repo/Dialogs/RepoLayoutEditorDialog"
 import { RepoStatusBadge } from "@/components/Repo/Display/RepoStatusBadge"
-import {
-  applyRepoPanelLayoutItems,
-  repoPanelLayoutItemsEqual,
-  type RepoPanelLayoutItem,
-} from "@/components/Repo/panels/repoPanelLayoutCustomization"
 import {
   readRepoLayoutWorkspaceState,
   readUserRepoLayoutPresets,
@@ -40,10 +37,12 @@ import {
   writeRepoLayoutWorkspaceState,
   writeUserRepoLayoutPresets,
 } from "@/components/Repo/panels/repoLayoutPresets"
+import {
+  applyRepoPanelLayoutItems,
+  type RepoPanelLayoutItem,
+  repoPanelLayoutItemsEqual,
+} from "@/components/Repo/panels/repoPanelLayoutCustomization"
 import { formatRepoDate } from "@/components/Repo/utils"
-import type { ApiError } from "@/client/core/ApiError"
-import useAuth from "@/hooks/useAuth"
-import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -53,7 +52,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,9 +73,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import useAuth from "@/hooks/useAuth"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { UserRepoAppService } from "@/services/userRepoService"
 import { handleError } from "@/utils"
-import { useEffect, useMemo, useState } from "react"
 
 export const Route = createFileRoute("/_layout/repo/$repoId")({
   component: RepoDetailPage,
@@ -108,13 +113,17 @@ function RepoDetailPage() {
   const [isQuickLayoutDialogOpen, setIsQuickLayoutDialogOpen] = useState(false)
   const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false)
   const [isSavePresetOpen, setIsSavePresetOpen] = useState(false)
-  const [panelSelections, setPanelSelections] = useState<Record<string, string | null>>({})
+  const [panelSelections, setPanelSelections] = useState<
+    Record<string, string | null>
+  >({})
   const systemPresets = useMemo(() => getSystemRepoLayoutPresets(), [])
   const [userPresets, setUserPresets] = useState<RepoLayoutPreset[]>([])
-  const [activePresetId, setActivePresetId] = useState<string>(systemPresets[0]?.id ?? "system-default")
-  const [panelLayoutItems, setPanelLayoutItems] = useState<RepoPanelLayoutItem[]>(
-    systemPresets[0]?.items ?? [],
+  const [activePresetId, setActivePresetId] = useState<string>(
+    systemPresets[0]?.id ?? "system-default",
   )
+  const [panelLayoutItems, setPanelLayoutItems] = useState<
+    RepoPanelLayoutItem[]
+  >(systemPresets[0]?.items ?? [])
   const {
     data: repo,
     isLoading,
@@ -159,7 +168,10 @@ function RepoDetailPage() {
     if (!repo || typeof window === "undefined") return
     const storedUserPresets = readUserRepoLayoutPresets(window.localStorage)
     const allPresets = [...systemPresets, ...storedUserPresets]
-    const workspaceState = readRepoLayoutWorkspaceState(window.localStorage, repo.id)
+    const workspaceState = readRepoLayoutWorkspaceState(
+      window.localStorage,
+      repo.id,
+    )
     const nextActivePreset = resolveRepoLayoutPreset(
       allPresets,
       workspaceState?.activePresetId ?? systemPresets[0]?.id,
@@ -169,7 +181,10 @@ function RepoDetailPage() {
     setActivePresetId(nextActivePreset.id)
     setPanelLayoutItems(
       workspaceState?.items && workspaceState.items.length > 0
-        ? applyRepoPanelLayoutItems(nextActivePreset.items, workspaceState.items)
+        ? applyRepoPanelLayoutItems(
+            nextActivePreset.items,
+            workspaceState.items,
+          )
         : nextActivePreset.items,
     )
   }, [repo, systemPresets])
@@ -227,10 +242,14 @@ function RepoDetailPage() {
   const cancelImportMutation = useMutation({
     mutationFn: async () => UserRepoAppService.cancelUserRepoImport(repoId),
     onSuccess: async () => {
-      showSuccessToast(`Import canceled for ${repo?.display_name ?? "repository"}.`)
+      showSuccessToast(
+        `Import canceled for ${repo?.display_name ?? "repository"}.`,
+      )
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: repoQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: repoQueryKeys.detail(repoId) }),
+        queryClient.invalidateQueries({
+          queryKey: repoQueryKeys.detail(repoId),
+        }),
       ])
     },
     onError: (error: ApiError) => {
@@ -339,7 +358,8 @@ function RepoDetailPage() {
 
     const nextActivePreset =
       activePreset.source === "user"
-        ? nextUserPresets.find((preset) => preset.id === activePreset.id) ?? nextUserPresets[0]
+        ? (nextUserPresets.find((preset) => preset.id === activePreset.id) ??
+          nextUserPresets[0])
         : nextUserPresets[nextUserPresets.length - 1]
 
     if (nextActivePreset) {
@@ -355,9 +375,16 @@ function RepoDetailPage() {
   }
 
   const handleDeleteActivePreset = () => {
-    if (!repo || typeof window === "undefined" || activePreset.source !== "user") return
+    if (
+      !repo ||
+      typeof window === "undefined" ||
+      activePreset.source !== "user"
+    )
+      return
 
-    const nextUserPresets = userPresets.filter((preset) => preset.id !== activePreset.id)
+    const nextUserPresets = userPresets.filter(
+      (preset) => preset.id !== activePreset.id,
+    )
     const fallbackPreset = resolveRepoLayoutPreset(
       [...systemPresets, ...nextUserPresets],
       systemPresets[0]?.id,
@@ -417,10 +444,14 @@ function RepoDetailPage() {
       <div className="flex flex-col gap-4 rounded-3xl border bg-gradient-to-br from-background via-background to-muted/30 p-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-semibold tracking-tight">{repo.display_name}</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {repo.display_name}
+            </h1>
             <RepoStatusBadge repo={repo} className="text-sm" />
           </div>
-          <div className="font-mono text-sm text-muted-foreground">{repo.slug}</div>
+          <div className="font-mono text-sm text-muted-foreground">
+            {repo.slug}
+          </div>
           <p className="max-w-3xl text-sm text-muted-foreground">
             {repo.description || "Managed repository import record."}
           </p>
@@ -460,7 +491,9 @@ function RepoDetailPage() {
             <Button
               variant="ghost"
               size="sm"
-              className={layoutMode === "panels" ? "bg-background shadow-sm" : ""}
+              className={
+                layoutMode === "panels" ? "bg-background shadow-sm" : ""
+              }
               onClick={() => setLayoutMode("panels")}
             >
               Panels
@@ -475,30 +508,44 @@ function RepoDetailPage() {
             </Button>
           </div>
           <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCwIcon className={isFetching ? "size-4 animate-spin" : "size-4"} />
+            <RefreshCwIcon
+              className={isFetching ? "size-4 animate-spin" : "size-4"}
+            />
             Refresh
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Repository layout actions">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Repository layout actions"
+              >
                 <MoreVerticalIcon className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsQuickLayoutDialogOpen(true)}>
+              <DropdownMenuItem
+                onClick={() => setIsQuickLayoutDialogOpen(true)}
+              >
                 <PanelsTopLeftIcon className="mr-2 size-4" />
                 Panel Layout
-                <span className="ml-auto text-xs text-muted-foreground">Ctrl+Shift+L</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  Ctrl+Shift+L
+                </span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsLayoutEditorOpen(true)}>
                 <PanelsTopLeftIcon className="mr-2 size-4" />
                 Advanced Layout Editor
-                <span className="ml-auto text-xs text-muted-foreground">Ctrl+Alt+L</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  Ctrl+Alt+L
+                </span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsSavePresetOpen(true)}>
                 <SaveIcon className="mr-2 size-4" />
-                {activePreset.source === "user" ? "Update Preset" : "Save Preset"}
+                {activePreset.source === "user"
+                  ? "Update Preset"
+                  : "Save Preset"}
               </DropdownMenuItem>
               {canDeleteActivePreset ? (
                 <DropdownMenuItem onClick={handleDeleteActivePreset}>
@@ -515,7 +562,10 @@ function RepoDetailPage() {
               {canManageRepo ? <DropdownMenuSeparator /> : null}
               {canManageRepo && canCancelImport ? (
                 <DropdownMenuItem
-                  disabled={cancelImportMutation.isPending || deleteRepoMutation.isPending}
+                  disabled={
+                    cancelImportMutation.isPending ||
+                    deleteRepoMutation.isPending
+                  }
                   onClick={() => {
                     if (
                       !window.confirm(
@@ -535,7 +585,10 @@ function RepoDetailPage() {
               ) : null}
               {canManageRepo ? (
                 <DropdownMenuItem
-                  disabled={deleteRepoMutation.isPending || cancelImportMutation.isPending}
+                  disabled={
+                    deleteRepoMutation.isPending ||
+                    cancelImportMutation.isPending
+                  }
                   className="text-destructive focus:text-destructive"
                   onClick={() => {
                     if (
@@ -549,7 +602,9 @@ function RepoDetailPage() {
                   }}
                 >
                   <Trash2Icon className="mr-2 size-4" />
-                  {deleteRepoMutation.isPending ? "Deleting..." : "Delete Repository"}
+                  {deleteRepoMutation.isPending
+                    ? "Deleting..."
+                    : "Delete Repository"}
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
@@ -572,7 +627,9 @@ function RepoDetailPage() {
       </div>
 
       <div className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{activePreset.label}</span>
+        <span className="font-medium text-foreground">
+          {activePreset.label}
+        </span>
         {` · ${activePreset.description || "Custom repository workspace preset."}`}
         {hasCustomizedPanelLayout ? " · Modified for this repository." : ""}
       </div>
@@ -581,13 +638,17 @@ function RepoDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Created</CardDescription>
-            <CardTitle className="text-base">{formatRepoDate(repo.created_at)}</CardTitle>
+            <CardTitle className="text-base">
+              {formatRepoDate(repo.created_at)}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Updated</CardDescription>
-            <CardTitle className="text-base">{formatRepoDate(repo.updated_at)}</CardTitle>
+            <CardTitle className="text-base">
+              {formatRepoDate(repo.updated_at)}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -607,13 +668,17 @@ function RepoDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Imported</CardDescription>
-            <CardTitle className="text-base">{formatRepoDate(repo.imported_at)}</CardTitle>
+            <CardTitle className="text-base">
+              {formatRepoDate(repo.imported_at)}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Owner User ID</CardDescription>
-            <CardTitle className="truncate font-mono text-sm">{repo.owner_user_id}</CardTitle>
+            <CardTitle className="truncate font-mono text-sm">
+              {repo.owner_user_id}
+            </CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -647,11 +712,19 @@ function RepoDetailPage() {
       <SaveRepoLayoutPresetDialog
         open={isSavePresetOpen}
         onOpenChange={setIsSavePresetOpen}
-        title={activePreset.source === "user" ? "Update Layout Preset" : "Save Layout Preset"}
+        title={
+          activePreset.source === "user"
+            ? "Update Layout Preset"
+            : "Save Layout Preset"
+        }
         description="Store this panel arrangement as a selectable repository workspace preset."
         initialLabel={activePreset.source === "user" ? activePreset.label : ""}
-        initialDescription={activePreset.source === "user" ? activePreset.description : ""}
-        confirmLabel={activePreset.source === "user" ? "Update Preset" : "Save Preset"}
+        initialDescription={
+          activePreset.source === "user" ? activePreset.description : ""
+        }
+        confirmLabel={
+          activePreset.source === "user" ? "Update Preset" : "Save Preset"
+        }
         onConfirm={handleSavePreset}
       />
     </div>

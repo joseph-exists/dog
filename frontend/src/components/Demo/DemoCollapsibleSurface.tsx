@@ -30,7 +30,8 @@ export function DemoCollapsibleSurface({
       >
         <div className="flex h-12 items-center justify-between border-b border-border px-4">
           <span className="truncate text-sm font-medium text-foreground">
-            {title} <span className="text-xs text-muted-foreground">(collapsed)</span>
+            {title}{" "}
+            <span className="text-xs text-muted-foreground">(collapsed)</span>
           </span>
           <Button
             type="button"

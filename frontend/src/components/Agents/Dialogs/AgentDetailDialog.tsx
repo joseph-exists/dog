@@ -26,8 +26,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import useAuth from "@/hooks/useAuth"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 
 import AgentAvatar from "../Display/AgentAvatar"
 import {
@@ -57,7 +57,9 @@ function AgentViewContent({ agent }: { agent: UserAgentConfigPublic }) {
         {scope && <AgentScopeBadge scope={scope} />}
         {mode && <AgentModeBadge mode={mode} />}
         {agent.is_coordinator && <AgentCoordinatorBadge />}
-        {agent.provider_type && <AgentProviderBadge providerType={agent.provider_type} />}
+        {agent.provider_type && (
+          <AgentProviderBadge providerType={agent.provider_type} />
+        )}
       </div>
 
       {/* Description */}

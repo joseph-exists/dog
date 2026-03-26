@@ -11,10 +11,6 @@ import {
 import type { TemplateBlock } from "@/components/Page/registry"
 import { getBlockType } from "@/components/Page/registry"
 import type { UserPageViewModel } from "@/components/UserPage/types"
-import {
-  getSurfaceForBlockType,
-  type UserPageBuilderSurface,
-} from "./userPageBuilderSchema"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -23,20 +19,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  getSurfaceForBlockType,
+  type UserPageBuilderSurface,
+} from "./userPageBuilderSchema"
 
 const SURFACE_DESCRIPTIONS: Record<UserPageBuilderSurface, string> = {
   overview:
     "A high-level inventory of the current user-page composition and its references.",
   layout:
     "Structural blocks that shape the page shell and general presentation.",
-  work:
-    "Work flow blocks and the representative artifacts they surface.",
+  work: "Work flow blocks and the representative artifacts they surface.",
   personas:
     "Persona constructs, including primary persona framing and persona management.",
-  audiences:
-    "Audience-specific views and the work those views expose.",
-  relations:
-    "Persona-mediated relations and their audience-specific framing.",
+  audiences: "Audience-specific views and the work those views expose.",
+  relations: "Persona-mediated relations and their audience-specific framing.",
 }
 
 interface UserPageBuilderSurfaceEditorProps {
@@ -60,43 +57,99 @@ function getSurfaceMetrics(
     return [
       { label: "Work Items", value: viewModel.workFeed.length },
       { label: "Personas", value: viewModel.personas.length },
-      { label: "Audience Views", value: viewModel.audiencePresentations.length },
+      {
+        label: "Audience Views",
+        value: viewModel.audiencePresentations.length,
+      },
       { label: "Relations", value: viewModel.relations.length },
     ]
   }
   if (surface === "work") {
     return [
-      { label: "Representative", value: viewModel.workFeed.filter((item) => item.isRepresentative).length },
-      { label: "Associated Personas", value: new Set(viewModel.workFeed.flatMap((item) => item.associatedPersonaIds)).size },
+      {
+        label: "Representative",
+        value: viewModel.workFeed.filter((item) => item.isRepresentative)
+          .length,
+      },
+      {
+        label: "Associated Personas",
+        value: new Set(
+          viewModel.workFeed.flatMap((item) => item.associatedPersonaIds),
+        ).size,
+      },
     ]
   }
   if (surface === "personas") {
     return [
       { label: "Primary Persona", value: viewModel.primaryPersonaId ? 1 : 0 },
-      { label: "Published", value: viewModel.personas.filter((persona) => persona.publicationState === "published").length },
-      { label: "Draft Only", value: viewModel.personas.filter((persona) => persona.publicationState !== "published").length },
+      {
+        label: "Published",
+        value: viewModel.personas.filter(
+          (persona) => persona.publicationState === "published",
+        ).length,
+      },
+      {
+        label: "Draft Only",
+        value: viewModel.personas.filter(
+          (persona) => persona.publicationState !== "published",
+        ).length,
+      },
     ]
   }
   if (surface === "audiences") {
     return [
-      { label: "Audience Views", value: viewModel.audiencePresentations.length },
-      { label: "Visible Work Links", value: viewModel.audiencePresentations.reduce((count, item) => count + item.visibleWorkIds.length, 0) },
-      { label: "Published Views", value: viewModel.audiencePresentations.filter((item) => item.publicationState === "published").length },
-      { label: "Draft Only", value: viewModel.audiencePresentations.filter((item) => item.publicationState !== "published").length },
+      {
+        label: "Audience Views",
+        value: viewModel.audiencePresentations.length,
+      },
+      {
+        label: "Visible Work Links",
+        value: viewModel.audiencePresentations.reduce(
+          (count, item) => count + item.visibleWorkIds.length,
+          0,
+        ),
+      },
+      {
+        label: "Published Views",
+        value: viewModel.audiencePresentations.filter(
+          (item) => item.publicationState === "published",
+        ).length,
+      },
+      {
+        label: "Draft Only",
+        value: viewModel.audiencePresentations.filter(
+          (item) => item.publicationState !== "published",
+        ).length,
+      },
     ]
   }
   if (surface === "relations") {
     return [
-      { label: "Active Relations", value: viewModel.relations.filter((relation) => relation.status === "active").length },
-      { label: "Pending Relations", value: viewModel.relations.filter((relation) => relation.status === "pending").length },
+      {
+        label: "Active Relations",
+        value: viewModel.relations.filter(
+          (relation) => relation.status === "active",
+        ).length,
+      },
+      {
+        label: "Pending Relations",
+        value: viewModel.relations.filter(
+          (relation) => relation.status === "pending",
+        ).length,
+      },
     ]
   }
   return [{ label: "Blocks", value: blocksForSurface(surface, blocks) }]
 }
 
-function blocksForSurface(surface: UserPageBuilderSurface, blocks: TemplateBlock[]) {
+function blocksForSurface(
+  surface: UserPageBuilderSurface,
+  blocks: TemplateBlock[],
+) {
   if (surface === "overview") return blocks.length
-  return blocks.filter((block) => getSurfaceForBlockType(block.type) === surface).length
+  return blocks.filter(
+    (block) => getSurfaceForBlockType(block.type) === surface,
+  ).length
 }
 
 export function UserPageBuilderSurfaceEditor({
@@ -128,12 +181,16 @@ export function UserPageBuilderSurfaceEditor({
               ? "Composition Overview"
               : `${selectedSurface[0]?.toUpperCase()}${selectedSurface.slice(1)} Surface`}
           </CardTitle>
-          <CardDescription>{SURFACE_DESCRIPTIONS[selectedSurface]}</CardDescription>
+          <CardDescription>
+            {SURFACE_DESCRIPTIONS[selectedSurface]}
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
           {metrics.map((metric) => (
             <div key={metric.label} className="rounded border px-3 py-2">
-              <div className="text-xs text-muted-foreground">{metric.label}</div>
+              <div className="text-xs text-muted-foreground">
+                {metric.label}
+              </div>
               <div className="text-lg font-semibold">{metric.value}</div>
             </div>
           ))}

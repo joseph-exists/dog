@@ -1,6 +1,9 @@
 import { ChevronDown } from "lucide-react"
 import { useState } from "react"
-import type { LLMProviderTypePublic, UserAccessProviderPublic } from "@/client/types.gen"
+import type {
+  LLMProviderTypePublic,
+  UserAccessProviderPublic,
+} from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ProviderTemplateCard } from "./ProviderTemplateCard"
@@ -59,7 +62,8 @@ export function ProviderCategoryAccordion({
               key={providerType.id}
               providerType={providerType}
               isConfigured={configuredProviders.some(
-                (provider) => provider.alpha_provider_type_id === providerType.id,
+                (provider) =>
+                  provider.alpha_provider_type_id === providerType.id,
               )}
               isSelected={selectedProviderTypeId === providerType.id}
               onSelect={onSelect}

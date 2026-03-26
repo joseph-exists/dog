@@ -1,7 +1,10 @@
-import { Badge } from "@/components/ui/badge"
 import type { WorkspaceStatus } from "@/client"
+import { Badge } from "@/components/ui/badge"
 
-const variantByStatus: Record<WorkspaceStatus, "default" | "secondary" | "destructive" | "outline"> = {
+const variantByStatus: Record<
+  WorkspaceStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
   requested: "secondary",
   provisioning: "secondary",
   starting: "secondary",

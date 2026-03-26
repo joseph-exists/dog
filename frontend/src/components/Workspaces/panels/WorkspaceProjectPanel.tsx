@@ -1,9 +1,14 @@
 import { useState } from "react"
 
 import type { ProjectPublic } from "@/client"
-import type { WorkspaceDetailViewModel } from "@/services/workspaceService"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -12,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { WorkspaceDetailViewModel } from "@/services/workspaceService"
 
 export interface WorkspaceProjectPanelProps {
   workspace: WorkspaceDetailViewModel
@@ -32,7 +38,9 @@ export function WorkspaceProjectPanel({
   onAssign,
   onDetach,
 }: WorkspaceProjectPanelProps) {
-  const [selectedProjectId, setSelectedProjectId] = useState(workspace.projectId ?? "")
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    workspace.projectId ?? "",
+  )
 
   const assignDisabled =
     !selectedProjectId ||
@@ -83,7 +91,8 @@ export function WorkspaceProjectPanel({
           </p>
           {!canManageAssignment ? (
             <p className="text-xs text-muted-foreground">
-              Project assignment remains owner-scoped in the current policy pass.
+              Project assignment remains owner-scoped in the current policy
+              pass.
             </p>
           ) : null}
         </div>
@@ -99,7 +108,12 @@ export function WorkspaceProjectPanel({
           <Button
             variant="outline"
             className="flex-1"
-            disabled={!workspace.projectId || !canManageAssignment || isAssigning || isDetaching}
+            disabled={
+              !workspace.projectId ||
+              !canManageAssignment ||
+              isAssigning ||
+              isDetaching
+            }
             onClick={() => onDetach()}
           >
             {isDetaching ? "Removing..." : "Remove from Project"}

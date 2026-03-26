@@ -1,24 +1,24 @@
 import {
-  GIT_VIEW_METADATA_KEY_PRESETS,
   createDefaultGitViewConfig,
+  GIT_VIEW_METADATA_KEY_PRESETS,
   type GitViewDisplayMode,
-  parseGitViewConfig,
-  type GitViewPathMode,
   type GitViewEntityIdMode,
+  type GitViewPathMode,
   type GitViewSource,
+  parseGitViewConfig,
 } from "@/components/Demo/gitViewConfig"
 import {
-  LIVE_REPO_EXPLORER_METADATA_KEY_PRESETS,
   createDefaultLiveRepoExplorerConfig,
-  parseLiveRepoExplorerConfig,
+  LIVE_REPO_EXPLORER_METADATA_KEY_PRESETS,
   type LiveRepoExplorerSource,
+  parseLiveRepoExplorerConfig,
 } from "@/components/Demo/liveRepoExplorerConfig"
 import {
-  LIVE_REPO_FILE_VIEWER_METADATA_KEY_PRESETS,
   createDefaultLiveRepoFileViewerConfig,
-  parseLiveRepoFileViewerConfig,
+  LIVE_REPO_FILE_VIEWER_METADATA_KEY_PRESETS,
   type LiveRepoFileViewerPathMode,
   type LiveRepoFileViewerSource,
+  parseLiveRepoFileViewerConfig,
 } from "@/components/Demo/liveRepoFileViewerConfig"
 import { Input } from "@/components/ui/input"
 import {
@@ -35,7 +35,9 @@ function normalizeOptionalInput(value: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-function normalizeOptionalDisplayValue(value: string | null | undefined): string {
+function normalizeOptionalDisplayValue(
+  value: string | null | undefined,
+): string {
   return value ?? ""
 }
 
@@ -69,7 +71,8 @@ export function DemoGitViewConfigFields({
       <div className="rounded border border-dashed bg-muted/20 p-2 text-[11px] text-muted-foreground">
         Use a shared <code>selection_key</code> when one explorer should drive
         multiple file viewers or git views in the same room. New demos should
-        target <code>user_repo</code>; legacy story/shadow configs still resolve.
+        target <code>user_repo</code>; legacy story/shadow configs still
+        resolve.
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1">
@@ -108,7 +111,9 @@ export function DemoGitViewConfigFields({
           </p>
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Entity ID Source</label>
+          <label className="text-xs text-muted-foreground">
+            Entity ID Source
+          </label>
           <Select
             value={config.entity_id_mode}
             onValueChange={(nextValue) => {
@@ -116,10 +121,12 @@ export function DemoGitViewConfigFields({
               updateConfig({
                 entity_id_mode: entityIdMode,
                 entity_id:
-                  entityIdMode === "explicit" ? config.entity_id ?? "" : undefined,
+                  entityIdMode === "explicit"
+                    ? (config.entity_id ?? "")
+                    : undefined,
                 entity_id_metadata_key:
                   entityIdMode === "metadata"
-                    ? config.entity_id_metadata_key ?? "repo_id"
+                    ? (config.entity_id_metadata_key ?? "repo_id")
                     : undefined,
               })
             }}
@@ -175,7 +182,9 @@ export function DemoGitViewConfigFields({
               </Select>
             </div>
             <Input
-              value={normalizeOptionalDisplayValue(config.entity_id_metadata_key)}
+              value={normalizeOptionalDisplayValue(
+                config.entity_id_metadata_key,
+              )}
               placeholder="repo_id"
               onChange={(event) =>
                 updateConfig({
@@ -201,8 +210,8 @@ export function DemoGitViewConfigFields({
             }
           />
           <p className="text-[11px] text-muted-foreground">
-            Match this key across related repo surfaces when one selection should
-            drive several panels.
+            Match this key across related repo surfaces when one selection
+            should drive several panels.
           </p>
         </div>
         <div className="space-y-1">
@@ -226,7 +235,7 @@ export function DemoGitViewConfigFields({
                 display_mode: nextValue as GitViewDisplayMode,
                 path_mode:
                   nextValue === "viewer"
-                    ? config.path_mode ?? "selection"
+                    ? (config.path_mode ?? "selection")
                     : "selection",
               })
             }
@@ -263,11 +272,12 @@ export function DemoGitViewConfigFields({
                   const pathMode = nextValue as GitViewPathMode
                   updateConfig({
                     path_mode: pathMode,
-                    fixed_path: pathMode === "fixed" ? config.fixed_path ?? "" : "",
+                    fixed_path:
+                      pathMode === "fixed" ? (config.fixed_path ?? "") : "",
                     selection_key:
                       pathMode === "readme"
                         ? undefined
-                        : config.selection_key ?? fallbackSelectionKey,
+                        : (config.selection_key ?? fallbackSelectionKey),
                   })
                 }}
               >
@@ -283,7 +293,9 @@ export function DemoGitViewConfigFields({
             </div>
             {config.path_mode === "fixed" ? (
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Fixed Path</label>
+                <label className="text-xs text-muted-foreground">
+                  Fixed Path
+                </label>
                 <Input
                   value={config.fixed_path ?? ""}
                   placeholder="src/main.tsx"
@@ -308,13 +320,16 @@ export function DemoGitViewConfigFields({
               />
             </div>
             <div className="space-y-1 md:col-span-2">
-              <label className="text-xs text-muted-foreground">Empty Label</label>
+              <label className="text-xs text-muted-foreground">
+                Empty Label
+              </label>
               <Input
                 value={normalizeOptionalDisplayValue(config.empty_label)}
                 placeholder="Select a file from the repo explorer"
                 onChange={(event) =>
                   updateConfig({
-                    empty_label: normalizeOptionalInput(event.target.value) ?? null,
+                    empty_label:
+                      normalizeOptionalInput(event.target.value) ?? null,
                   })
                 }
               />
@@ -469,7 +484,9 @@ export function DemoLiveRepoExplorerConfigFields({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Entity ID Source</label>
+          <label className="text-xs text-muted-foreground">
+            Entity ID Source
+          </label>
           <Select
             value={config.entity_id_mode}
             onValueChange={(nextValue) => {
@@ -477,10 +494,12 @@ export function DemoLiveRepoExplorerConfigFields({
               updateConfig({
                 entity_id_mode: entityIdMode,
                 entity_id:
-                  entityIdMode === "explicit" ? config.entity_id ?? "" : undefined,
+                  entityIdMode === "explicit"
+                    ? (config.entity_id ?? "")
+                    : undefined,
                 entity_id_metadata_key:
                   entityIdMode === "metadata"
-                    ? config.entity_id_metadata_key ?? "repo_id"
+                    ? (config.entity_id_metadata_key ?? "repo_id")
                     : undefined,
               })
             }}
@@ -536,7 +555,9 @@ export function DemoLiveRepoExplorerConfigFields({
               </Select>
             </div>
             <Input
-              value={normalizeOptionalDisplayValue(config.entity_id_metadata_key)}
+              value={normalizeOptionalDisplayValue(
+                config.entity_id_metadata_key,
+              )}
               placeholder="repo_id"
               onChange={(event) =>
                 updateConfig({
@@ -553,7 +574,8 @@ export function DemoLiveRepoExplorerConfigFields({
             placeholder={fallbackSelectionKey}
             onChange={(event) =>
               updateConfig({
-                selection_key: normalizeOptionalInput(event.target.value) ?? null,
+                selection_key:
+                  normalizeOptionalInput(event.target.value) ?? null,
               })
             }
           />
@@ -583,7 +605,9 @@ export function DemoLiveRepoExplorerConfigFields({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Title Override</label>
+          <label className="text-xs text-muted-foreground">
+            Title Override
+          </label>
           <Input
             value={normalizeOptionalDisplayValue(config.title)}
             placeholder="Frontend Repo"
@@ -698,7 +722,9 @@ export function DemoLiveRepoFileViewerConfigFields({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Entity ID Source</label>
+          <label className="text-xs text-muted-foreground">
+            Entity ID Source
+          </label>
           <Select
             value={config.entity_id_mode}
             onValueChange={(nextValue) => {
@@ -706,10 +732,12 @@ export function DemoLiveRepoFileViewerConfigFields({
               updateConfig({
                 entity_id_mode: entityIdMode,
                 entity_id:
-                  entityIdMode === "explicit" ? config.entity_id ?? "" : undefined,
+                  entityIdMode === "explicit"
+                    ? (config.entity_id ?? "")
+                    : undefined,
                 entity_id_metadata_key:
                   entityIdMode === "metadata"
-                    ? config.entity_id_metadata_key ?? "repo_id"
+                    ? (config.entity_id_metadata_key ?? "repo_id")
                     : undefined,
               })
             }}
@@ -765,7 +793,9 @@ export function DemoLiveRepoFileViewerConfigFields({
               </Select>
             </div>
             <Input
-              value={normalizeOptionalDisplayValue(config.entity_id_metadata_key)}
+              value={normalizeOptionalDisplayValue(
+                config.entity_id_metadata_key,
+              )}
               placeholder="repo_id"
               onChange={(event) =>
                 updateConfig({
@@ -784,11 +814,11 @@ export function DemoLiveRepoFileViewerConfigFields({
               updateConfig({
                 path_mode: pathMode,
                 fixed_path:
-                  pathMode === "fixed" ? config.fixed_path ?? "" : "",
+                  pathMode === "fixed" ? (config.fixed_path ?? "") : "",
                 selection_key:
                   pathMode === "readme"
                     ? null
-                    : config.selection_key ?? fallbackSelectionKey,
+                    : (config.selection_key ?? fallbackSelectionKey),
               })
             }}
           >
@@ -817,13 +847,16 @@ export function DemoLiveRepoFileViewerConfigFields({
           </div>
         ) : config.path_mode === "selection" ? (
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Selection Key</label>
+            <label className="text-xs text-muted-foreground">
+              Selection Key
+            </label>
             <Input
               value={normalizeOptionalDisplayValue(config.selection_key)}
               placeholder={fallbackSelectionKey}
               onChange={(event) =>
                 updateConfig({
-                  selection_key: normalizeOptionalInput(event.target.value) ?? null,
+                  selection_key:
+                    normalizeOptionalInput(event.target.value) ?? null,
                 })
               }
             />
@@ -854,7 +887,9 @@ export function DemoLiveRepoFileViewerConfigFields({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Title Override</label>
+          <label className="text-xs text-muted-foreground">
+            Title Override
+          </label>
           <Input
             value={normalizeOptionalDisplayValue(config.title)}
             placeholder="Primary Viewer"
@@ -880,7 +915,9 @@ export function DemoLiveRepoFileViewerConfigFields({
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <div className="flex items-center justify-between gap-2 rounded border p-2">
-          <label className="text-xs text-muted-foreground">Show Path Badge</label>
+          <label className="text-xs text-muted-foreground">
+            Show Path Badge
+          </label>
           <Switch
             checked={config.show_path_badge}
             onCheckedChange={(checked) =>

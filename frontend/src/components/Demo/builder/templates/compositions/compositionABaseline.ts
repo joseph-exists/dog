@@ -4,8 +4,11 @@ import type {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionABaselineTemplate(context: TemplateBuilderContext): EditableComposition {
-  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } = context
+export function buildCompositionABaselineTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
+  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } =
+    context
   const composition = createEmptyComposition()
   composition.layout_mode = "panels"
   composition.runtime_policy = "auto"
@@ -65,8 +68,7 @@ export function buildCompositionABaselineTemplate(context: TemplateBuilderContex
       visibility: "visible",
       content_json: {
         format: "markdown",
-        value:
-          "### Just an Extra Block for Funsies",
+        value: "### Just an Extra Block for Funsies",
         metadata: {
           variant: "card",
         },
@@ -75,4 +77,3 @@ export function buildCompositionABaselineTemplate(context: TemplateBuilderContex
   ]
   return composition
 }
-

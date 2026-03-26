@@ -27,7 +27,9 @@ export function SvgHeader({
           </div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-            <p className="max-w-3xl text-sm text-muted-foreground">{description}</p>
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              {description}
+            </p>
           </div>
         </div>
 
@@ -64,4 +66,3 @@ export function SvgHeader({
     </div>
   )
 }
-

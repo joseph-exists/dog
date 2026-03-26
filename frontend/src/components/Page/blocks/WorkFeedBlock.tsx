@@ -1,18 +1,17 @@
 import { BriefcaseBusiness, Pencil, Plus } from "lucide-react"
 import { useMemo, useState } from "react"
-
-import {
-  UserWorkAssociationSheet,
-  type UserWorkAssociationDraft,
-} from "@/components/UserPage/UserWorkAssociationSheet"
 import type {
   UserPageViewModel,
   UserWorkFeedItem,
   WorkFeedBlockContent,
 } from "@/components/UserPage/types"
-import { filterWorkFeedForAudience } from "@/hooks/useUserPageViewModel"
+import {
+  type UserWorkAssociationDraft,
+  UserWorkAssociationSheet,
+} from "@/components/UserPage/UserWorkAssociationSheet"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { filterWorkFeedForAudience } from "@/hooks/useUserPageViewModel"
 import { BlockContainer } from "../primitives"
 
 export interface WorkFeedBlockConfig {

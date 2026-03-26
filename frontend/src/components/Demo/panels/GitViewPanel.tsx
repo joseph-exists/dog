@@ -1,13 +1,13 @@
 import {
+  type GetGitViewRoomContextState,
+  GitViewCore,
+  GitViewInvalidConfig,
+  type ToggleGitViewRoomContext,
+} from "@/components/Demo/gitView/GitViewCore"
+import {
   createDefaultGitViewConfig,
   resolveGitViewConfig,
 } from "@/components/Demo/gitViewConfig"
-import {
-  GitViewCore,
-  GitViewInvalidConfig,
-  type GetGitViewRoomContextState,
-  type ToggleGitViewRoomContext,
-} from "@/components/Demo/gitView/GitViewCore"
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
@@ -43,20 +43,19 @@ export function GitViewPanel({
   getRoomContextState,
   onToggleRoomContext,
 }: GitViewPanelProps) {
-  const panelConfig =
-    resolvePanelGitViewConfig(options) ?? {
-      ...createDefaultGitViewConfig(),
-      entity_type: "user_repo",
-      entity_id_mode: "metadata",
-      entity_id_metadata_key: "repo_id",
-    }
+  const panelConfig = resolvePanelGitViewConfig(options) ?? {
+    ...createDefaultGitViewConfig(),
+    entity_type: "user_repo",
+    entity_id_mode: "metadata",
+    entity_id_metadata_key: "repo_id",
+  }
   const resolvedConfig = resolveGitViewConfig(panelConfig, metadataJson)
 
   if (!resolvedConfig) {
     return (
       <GitViewInvalidConfig
         title={title}
-        subtitle='Git View panel needs a resolvable repo id (typically metadata_json.repo_id).'
+        subtitle="Git View panel needs a resolvable repo id (typically metadata_json.repo_id)."
         expectedConfig={{
           metadata_json: {
             repo_id: "your-user-repo-id",

@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import type { ApiError, WorkspaceFlavour } from "@/client"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
 import {
   type BootstrapInstallMode,
   type BootstrapRepoSourceType,
@@ -11,12 +10,15 @@ import {
   type IssueWorkspacePlatformServiceAccessInput,
   WorkspaceService,
 } from "@/services/workspaceService"
+import { handleError } from "@/utils"
 
 export const workspaceKeys = {
   all: ["workspaces"] as const,
   list: () => [...workspaceKeys.all, "list"] as const,
-  detail: (workspaceId: string) => [...workspaceKeys.all, "detail", workspaceId] as const,
-  terminal: (workspaceId: string) => [...workspaceKeys.all, "terminal", workspaceId] as const,
+  detail: (workspaceId: string) =>
+    [...workspaceKeys.all, "detail", workspaceId] as const,
+  terminal: (workspaceId: string) =>
+    [...workspaceKeys.all, "terminal", workspaceId] as const,
 }
 
 export interface CreateWorkspaceFormInput {
@@ -54,7 +56,9 @@ function parseEnvVars(text: string | undefined): Record<string, string> {
   return result
 }
 
-function toCreateWorkspaceInput(input: CreateWorkspaceFormInput): CreateWorkspaceInput {
+function toCreateWorkspaceInput(
+  input: CreateWorkspaceFormInput,
+): CreateWorkspaceInput {
   return {
     name: input.name.trim(),
     flavour: input.flavour ?? "dev",
@@ -104,7 +108,8 @@ export function useStopWorkspace() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (workspaceId: string) => WorkspaceService.stopWorkspace(workspaceId),
+    mutationFn: (workspaceId: string) =>
+      WorkspaceService.stopWorkspace(workspaceId),
     onSuccess: () => {
       showSuccessToast("Workspace stop requested.")
       queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
@@ -119,7 +124,8 @@ export function useStartWorkspace() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (workspaceId: string) => WorkspaceService.startWorkspace(workspaceId),
+    mutationFn: (workspaceId: string) =>
+      WorkspaceService.startWorkspace(workspaceId),
     onSuccess: () => {
       showSuccessToast("Workspace start requested.")
       queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
@@ -134,7 +140,8 @@ export function useDestroyWorkspace() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (workspaceId: string) => WorkspaceService.destroyWorkspace(workspaceId),
+    mutationFn: (workspaceId: string) =>
+      WorkspaceService.destroyWorkspace(workspaceId),
     onSuccess: () => {
       showSuccessToast("Workspace destroyed.")
       queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
@@ -175,7 +182,9 @@ export function useWorkspacePlatformRuntimeConfig(workspaceId: string) {
   })
 }
 
-export function useRefreshWorkspacePlatformRuntimeProjection(workspaceId: string) {
+export function useRefreshWorkspacePlatformRuntimeProjection(
+  workspaceId: string,
+) {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -185,7 +194,9 @@ export function useRefreshWorkspacePlatformRuntimeProjection(workspaceId: string
       showSuccessToast(
         `Refreshed runtime projection for ${config.consumerKind.replaceAll("_", " ")}.`,
       )
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) })
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.detail(workspaceId),
+      })
       queryClient.invalidateQueries({ queryKey: workspaceKeys.list() })
     },
     onError: (err: ApiError) => {

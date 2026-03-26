@@ -37,7 +37,7 @@ function createDefaultComponents(codeTheme: string): MDXComponents {
           <code className={className}>
             {typeof children === "string"
               ? children
-              : children?.toString?.() ?? ""}
+              : (children?.toString?.() ?? "")}
           </code>
         }
       >

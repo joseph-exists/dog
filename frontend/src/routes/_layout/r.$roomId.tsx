@@ -14,7 +14,6 @@ import { AgentsService, StoriesService } from "@/client/sdk.gen"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
 import EditDrawer from "@/components/Common/EditDrawer"
 import { getUserRepoQueryOptions, renderRepoPanel } from "@/components/Repo"
-import { RoomPromptSettingsDialog } from "@/components/Room/Dialogs/RoomPromptSettingsDialog"
 import {
   A2UIPanel,
   CanvasPanel,
@@ -28,13 +27,14 @@ import {
   StoryPanel,
   WorkspaceConnectionsPanel,
 } from "@/components/Room"
-import { PanelContainer } from "@/components/Room/primitives"
+import { RoomPromptSettingsDialog } from "@/components/Room/Dialogs/RoomPromptSettingsDialog"
 import RoomDebugPanel from "@/components/Room/panels/RoomDebugPanel"
+import { PanelContainer } from "@/components/Room/primitives"
 import type { Participant } from "@/components/Room/primitives/ParticipantStack"
 import { showSuccessToast } from "@/hooks/useCustomToast"
-import { useRoomRepoContext } from "@/hooks/useRoomRepoContext"
 import { useRoom } from "@/hooks/useRoom"
 import { useRoomPanels } from "@/hooks/useRoomPanels"
+import { useRoomRepoContext } from "@/hooks/useRoomRepoContext"
 import { useRoomStream } from "@/hooks/useRoomStream"
 import { getPanelDisplayName } from "@/services/panelService"
 import {
@@ -66,7 +66,9 @@ function toRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function getString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null
 }
 
 function findRepoIdInBindingSource(source: unknown): string | null {
@@ -110,7 +112,9 @@ function resolveRepoIdForRoomPanel(params: {
   const panelConfigRepoId = findRepoIdInBindingSource(params.panelConfigJson)
   if (panelConfigRepoId) return panelConfigRepoId
 
-  const panelBindingRepoId = findRepoIdInBindingSource(params.panelEntityBinding)
+  const panelBindingRepoId = findRepoIdInBindingSource(
+    params.panelEntityBinding,
+  )
   if (panelBindingRepoId) return panelBindingRepoId
 
   const roomRepoId = findRepoIdInBindingSource(params.roomData)
@@ -288,7 +292,9 @@ function RoomRepoPanel({
   if (isLoadingRepo) {
     return (
       <PanelContainer title="Repository Panel">
-        <div className="p-4 text-sm text-muted-foreground">Loading repository...</div>
+        <div className="p-4 text-sm text-muted-foreground">
+          Loading repository...
+        </div>
       </PanelContainer>
     )
   }
@@ -358,14 +364,19 @@ function RoomView() {
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [showInternalMessages, setShowInternalMessages] = useState(false)
   const [isPromptSettingsOpen, setIsPromptSettingsOpen] = useState(false)
-  const [panelSelections, setPanelSelections] = useState<Record<string, string | null>>({})
+  const [panelSelections, setPanelSelections] = useState<
+    Record<string, string | null>
+  >({})
 
-  const updatePanelSelection = useCallback((selectionKey: string, path: string | null) => {
-    setPanelSelections((current) => ({
-      ...current,
-      [selectionKey]: path,
-    }))
-  }, [])
+  const updatePanelSelection = useCallback(
+    (selectionKey: string, path: string | null) => {
+      setPanelSelections((current) => ({
+        ...current,
+        [selectionKey]: path,
+      }))
+    },
+    [],
+  )
   const selectedRepoFiles = useMemo(
     () =>
       Object.entries(panelSelections)
@@ -806,7 +817,9 @@ function RoomView() {
           participants={roomParticipants}
           panels={panels}
           canEdit={canManage}
-          onSettings={canManage ? () => setIsPromptSettingsOpen(true) : undefined}
+          onSettings={
+            canManage ? () => setIsPromptSettingsOpen(true) : undefined
+          }
           onCopyLink={handleCopyLink}
           onDelete={canManage ? handleDeleteRoom : undefined}
           showDebugPanel={showDebugPanel}

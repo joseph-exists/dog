@@ -325,19 +325,9 @@
         "only_active_agents": false,
         "show_agent_matrix": true,
         "capability_map": {
-          "planner": [
-            "route",
-            "sequence"
-          ],
-          "coder": [
-            "code",
-            "diff",
-            "execute"
-          ],
-          "reviewer": [
-            "verify",
-            "approve"
-          ]
+          "planner": ["route", "sequence"],
+          "coder": ["code", "diff", "execute"],
+          "reviewer": ["verify", "approve"]
         }
       }
     },

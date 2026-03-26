@@ -21,8 +21,8 @@ import { Suspense, useState } from "react"
 
 import type { ApiError } from "@/client/core/ApiError"
 import { AgentsService } from "@/client/sdk.gen"
-import AgentCloneButton from "@/components/Agents/Dialogs/AgentCloneButton"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
+import AgentCloneButton from "@/components/Agents/Dialogs/AgentCloneButton"
 import AgentDetailDialog from "@/components/Agents/Dialogs/AgentDetailDialog"
 import CreateAgentDialog from "@/components/Agents/Dialogs/CreateAgentDialog"
 import CreateAgentusDialog from "@/components/Agents/Dialogs/CreateAgentusDialog"
@@ -158,7 +158,9 @@ function AgentCardItem({ agent }: { agent: UserAgentConfigPublic }) {
       href={`/agent/${agent.id}`}
       action={
         <div className="flex items-center gap-1">
-          {isSystem && <AgentCloneButton agent={agent} size="icon" variant="ghost" />}
+          {isSystem && (
+            <AgentCloneButton agent={agent} size="icon" variant="ghost" />
+          )}
           <AgentDetailDialog agentId={agent.id} className="size-7" />
           {isPersonal && <DeleteAgentButton agent={agent} />}
         </div>

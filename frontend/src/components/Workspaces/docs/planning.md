@@ -1,5 +1,9 @@
 # Workspaces Planning
 
+Current-state engineering reference:
+
+- [engineering-reference-guide.md](/home/josep/dog/frontend/src/components/Workspaces/docs/engineering-reference-guide.md)
+
 ## Primary Next Collective Milestone
 
 A user is able to:

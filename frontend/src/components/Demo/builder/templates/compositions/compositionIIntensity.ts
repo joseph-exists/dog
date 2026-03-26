@@ -1,9 +1,9 @@
-import type {
-  EditableComposition,
-} from "@/components/Demo/builder/demoBuilderSchema"
+import type { EditableComposition } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionIIntensityTemplate(context: TemplateBuilderContext): EditableComposition {
+export function buildCompositionIIntensityTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
   const { createEmptyComposition, createBlockTemplate } = context
   const composition = createEmptyComposition()
   composition.layout_mode = "panels"
@@ -85,7 +85,7 @@ export function buildCompositionIIntensityTemplate(context: TemplateBuilderConte
       content_json: {
         format: "markdown",
         value:
-          "## Live the Questions\n\n> *\"Be patient toward all that is unsolved in your heart and try to love the questions themselves, like locked rooms and like books that are now written in a very foreign tongue.\"*\n\n— Letters to a Young Poet, 1903",
+          '## Live the Questions\n\n> *"Be patient toward all that is unsolved in your heart and try to love the questions themselves, like locked rooms and like books that are now written in a very foreign tongue."*\n\n— Letters to a Young Poet, 1903',
         metadata: { variant: "card" },
       },
     },
@@ -131,7 +131,7 @@ export function buildCompositionIIntensityTemplate(context: TemplateBuilderConte
       content_json: {
         format: "markdown",
         value:
-          "## One Wild and Precious Life\n\n> *\"Tell me, what is it you plan to do with your one wild and precious life?\"*\n\nThe question that refuses to let us sleep.",
+          '## One Wild and Precious Life\n\n> *"Tell me, what is it you plan to do with your one wild and precious life?"*\n\nThe question that refuses to let us sleep.',
         metadata: { variant: "card" },
       },
     },
@@ -180,7 +180,7 @@ export function buildCompositionIIntensityTemplate(context: TemplateBuilderConte
       content_json: {
         format: "markdown",
         value:
-          "### The Shadow Work\n\n> *\"Until you make the unconscious conscious, it will direct your life and you will call it fate.\"*\n\nWhat we resist persists. What we embrace transforms.",
+          '### The Shadow Work\n\n> *"Until you make the unconscious conscious, it will direct your life and you will call it fate."*\n\nWhat we resist persists. What we embrace transforms.',
         metadata: { variant: "card" },
       },
     },
@@ -425,7 +425,7 @@ export function buildCompositionIIntensityTemplate(context: TemplateBuilderConte
       content_json: {
         format: "markdown",
         value:
-          "## The Field Beyond\n\n> *\"Out beyond ideas of wrongdoing and rightdoing, there is a field. I'll meet you there.*\n>\n> *When the soul lies down in that grass, the world is too full to talk about.\"*\n\nThe field is always there. We just forget how to see it.",
+          '## The Field Beyond\n\n> *"Out beyond ideas of wrongdoing and rightdoing, there is a field. I\'ll meet you there.*\n>\n> *When the soul lies down in that grass, the world is too full to talk about."*\n\nThe field is always there. We just forget how to see it.',
         metadata: { variant: "card" },
       },
     },
@@ -681,7 +681,7 @@ export function buildCompositionIIntensityTemplate(context: TemplateBuilderConte
       content_json: {
         format: "markdown",
         value:
-          "## God Is Change\n\n> *\"All that you touch, you Change.*\n> *All that you Change, Changes you.*\n> *The only lasting truth is Change.*\n> *God is Change.\"*\n\nThe shape of God is in the shaping.",
+          '## God Is Change\n\n> *"All that you touch, you Change.*\n> *All that you Change, Changes you.*\n> *The only lasting truth is Change.*\n> *God is Change."*\n\nThe shape of God is in the shaping.',
         metadata: { variant: "card" },
       },
     },
@@ -795,4 +795,3 @@ export function buildCompositionIIntensityTemplate(context: TemplateBuilderConte
 
   return composition
 }
-

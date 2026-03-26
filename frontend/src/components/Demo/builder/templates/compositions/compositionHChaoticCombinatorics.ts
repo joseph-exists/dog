@@ -4,8 +4,11 @@ import type {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionHChaoticCombinatoricsTemplate(context: TemplateBuilderContext): EditableComposition {
-  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } = context
+export function buildCompositionHChaoticCombinatoricsTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
+  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } =
+    context
   const composition = createEmptyComposition()
   composition.layout_mode = "panels"
   composition.runtime_policy = "auto"
@@ -547,4 +550,3 @@ export function buildCompositionHChaoticCombinatoricsTemplate(context: TemplateB
 
   return composition
 }
-

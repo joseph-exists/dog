@@ -120,7 +120,9 @@ export function AudiencePresentationForm({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor={`presentations.${index}.personaId`}>Persona Id</Label>
+                <Label htmlFor={`presentations.${index}.personaId`}>
+                  Persona Id
+                </Label>
                 <Input
                   id={`presentations.${index}.personaId`}
                   {...register(`presentations.${index}.personaId`)}
@@ -173,7 +175,9 @@ export function AudiencePresentationForm({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`presentations.${index}.headline`}>Headline</Label>
+                <Label htmlFor={`presentations.${index}.headline`}>
+                  Headline
+                </Label>
                 <Input
                   id={`presentations.${index}.headline`}
                   {...register(`presentations.${index}.headline`)}
@@ -238,7 +242,9 @@ export function AudiencePresentationForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="request_contact">Request Contact</SelectItem>
+                  <SelectItem value="request_contact">
+                    Request Contact
+                  </SelectItem>
                   <SelectItem value="invite_collaboration">
                     Invite Collaboration
                   </SelectItem>

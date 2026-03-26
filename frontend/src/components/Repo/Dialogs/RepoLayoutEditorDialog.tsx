@@ -1,13 +1,21 @@
 import { ArrowDown, ArrowUp, CopyPlus, Plus, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import {
+  type ActiveRepoBuilderPanelKind,
+  getRepoPanelCapabilityAvailability,
   REPO_BUILDER_PANEL_CAPABILITIES,
   REPO_BUILDER_PANEL_FIELD_SPECS,
-  getRepoPanelCapabilityAvailability,
-  type ActiveRepoBuilderPanelKind,
   type RepoBuilderPanelConfig,
   type RepoCapabilityAvailabilityInput,
 } from "@/components/Repo"
+import {
+  cloneRepoPanelConfigForPanelId,
+  createDefaultRepoFileViewerPanelConfig,
+  createDefaultRepoPanelConfig,
+  normalizeRepoPanelConfig,
+  parseRepoExplorerPanelConfig,
+  parseRepoFileViewerPanelConfig,
+} from "@/components/Repo/panels/config"
 import type { RepoPanelLayoutItem } from "@/components/Repo/panels/repoPanelLayoutCustomization"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,14 +38,6 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  cloneRepoPanelConfigForPanelId,
-  createDefaultRepoPanelConfig,
-  createDefaultRepoFileViewerPanelConfig,
-  normalizeRepoPanelConfig,
-  parseRepoExplorerPanelConfig,
-  parseRepoFileViewerPanelConfig,
-} from "@/components/Repo/panels/config"
 
 function toPrettyJson(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2)
@@ -60,7 +60,10 @@ function parseConfigJson(raw: string): Record<string, unknown> | null {
   return parsed as Record<string, unknown>
 }
 
-function createPanelId(kind: ActiveRepoBuilderPanelKind, existingIds: string[]): string {
+function createPanelId(
+  kind: ActiveRepoBuilderPanelKind,
+  existingIds: string[],
+): string {
   const base = kind
   if (!existingIds.includes(base)) return base
   let index = 2
@@ -106,7 +109,8 @@ function reorderPanels(
   fromIndex: number,
   toIndex: number,
 ): RepoPanelLayoutItem[] {
-  if (toIndex < 0 || toIndex >= panels.length || fromIndex === toIndex) return panels
+  if (toIndex < 0 || toIndex >= panels.length || fromIndex === toIndex)
+    return panels
   const next = [...panels]
   const [item] = next.splice(fromIndex, 1)
   if (!item) return panels
@@ -138,14 +142,18 @@ export function RepoLayoutEditorDialog({
   const [draftPanels, setDraftPanels] = useState<RepoPanelLayoutItem[]>(panels)
   const [configDrafts, setConfigDrafts] = useState<Record<string, string>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [nextKind, setNextKind] = useState<ActiveRepoBuilderPanelKind>("repoOverview")
+  const [nextKind, setNextKind] =
+    useState<ActiveRepoBuilderPanelKind>("repoOverview")
 
   useEffect(() => {
     if (!open) return
     setDraftPanels(panels)
     setConfigDrafts(
       Object.fromEntries(
-        panels.map((panel) => [panel.id, toPrettyJson(panel.config_json ?? {})]),
+        panels.map((panel) => [
+          panel.id,
+          toPrettyJson(panel.config_json ?? {}),
+        ]),
       ),
     )
     setErrors({})
@@ -164,7 +172,11 @@ export function RepoLayoutEditorDialog({
 
   const getNormalizedConfig = (panel: RepoPanelLayoutItem) => {
     try {
-      return normalizeRepoPanelConfig(panel.kind, panel.id, parseConfigJson(getRawConfigDraft(panel)))
+      return normalizeRepoPanelConfig(
+        panel.kind,
+        panel.id,
+        parseConfigJson(getRawConfigDraft(panel)),
+      )
     } catch {
       return normalizeRepoPanelConfig(panel.kind, panel.id, panel.config_json)
     }
@@ -182,19 +194,13 @@ export function RepoLayoutEditorDialog({
     handleConfigChange(panel.id, toPrettyJson(nextConfig ?? {}))
   }
 
-  const updatePanel = (
-    index: number,
-    patch: Partial<RepoPanelLayoutItem>,
-  ) => {
+  const updatePanel = (index: number, patch: Partial<RepoPanelLayoutItem>) => {
     setDraftPanels((current) => {
       const currentPanel = current[index]
       if (!currentPanel) return current
       const nextPanel = { ...currentPanel, ...patch }
 
-      if (
-        typeof patch.kind === "string" &&
-        patch.kind !== currentPanel.kind
-      ) {
+      if (typeof patch.kind === "string" && patch.kind !== currentPanel.kind) {
         const nextTitle =
           REPO_BUILDER_PANEL_CAPABILITIES.find(
             (panelCapability) => panelCapability.kind === patch.kind,
@@ -218,7 +224,8 @@ export function RepoLayoutEditorDialog({
         const nextId = patch.id
         setConfigDrafts((drafts) => {
           const currentDraft =
-            drafts[currentPanel.id] ?? toPrettyJson(currentPanel.config_json ?? {})
+            drafts[currentPanel.id] ??
+            toPrettyJson(currentPanel.config_json ?? {})
           const migratedConfig = normalizeRepoPanelConfig(
             nextPanel.kind,
             nextId,
@@ -261,11 +268,16 @@ export function RepoLayoutEditorDialog({
   const handleApply = () => {
     const nextErrors: Record<string, string> = {}
     const normalizedPanels = draftPanels.map((panel) => {
-      const rawConfig = configDrafts[panel.id] ?? toPrettyJson(panel.config_json ?? {})
+      const rawConfig =
+        configDrafts[panel.id] ?? toPrettyJson(panel.config_json ?? {})
       try {
         return {
           ...panel,
-          config_json: normalizeRepoPanelConfig(panel.kind, panel.id, parseConfigJson(rawConfig)),
+          config_json: normalizeRepoPanelConfig(
+            panel.kind,
+            panel.id,
+            parseConfigJson(rawConfig),
+          ),
         }
       } catch (error) {
         nextErrors[panel.id] =
@@ -275,7 +287,10 @@ export function RepoLayoutEditorDialog({
     })
 
     const ids = normalizedPanels.map((panel) => panel.id.trim()).filter(Boolean)
-    if (ids.length !== normalizedPanels.length || new Set(ids).size !== ids.length) {
+    if (
+      ids.length !== normalizedPanels.length ||
+      new Set(ids).size !== ids.length
+    ) {
       nextErrors.__ids = "Each panel instance needs a unique non-empty ID."
     }
 
@@ -309,14 +324,19 @@ export function RepoLayoutEditorDialog({
           <div className="flex items-center gap-2">
             <Select
               value={nextKind}
-              onValueChange={(value) => setNextKind(value as ActiveRepoBuilderPanelKind)}
+              onValueChange={(value) =>
+                setNextKind(value as ActiveRepoBuilderPanelKind)
+              }
             >
               <SelectTrigger className="w-[220px]">
                 <SelectValue placeholder="Panel kind" />
               </SelectTrigger>
               <SelectContent>
                 {REPO_BUILDER_PANEL_CAPABILITIES.map((panelCapability) => (
-                  <SelectItem key={panelCapability.kind} value={panelCapability.kind}>
+                  <SelectItem
+                    key={panelCapability.kind}
+                    value={panelCapability.kind}
+                  >
                     {panelCapability.displayName}
                   </SelectItem>
                 ))}
@@ -406,7 +426,9 @@ export function RepoLayoutEditorDialog({
                         size="sm"
                         disabled={index === 0}
                         onClick={() =>
-                          setDraftPanels((current) => reorderPanels(current, index, index - 1))
+                          setDraftPanels((current) =>
+                            reorderPanels(current, index, index - 1),
+                          )
                         }
                       >
                         <ArrowUp className="size-4" />
@@ -417,7 +439,9 @@ export function RepoLayoutEditorDialog({
                         size="sm"
                         disabled={index === draftPanels.length - 1}
                         onClick={() =>
-                          setDraftPanels((current) => reorderPanels(current, index, index + 1))
+                          setDraftPanels((current) =>
+                            reorderPanels(current, index, index + 1),
+                          )
                         }
                       >
                         <ArrowDown className="size-4" />
@@ -445,7 +469,9 @@ export function RepoLayoutEditorDialog({
                                 clone.id,
                                 (() => {
                                   try {
-                                    return parseConfigJson(getRawConfigDraft(panel))
+                                    return parseConfigJson(
+                                      getRawConfigDraft(panel),
+                                    )
                                   } catch {
                                     return panel.config_json
                                   }
@@ -464,7 +490,9 @@ export function RepoLayoutEditorDialog({
                         size="sm"
                         onClick={() => {
                           setDraftPanels((current) =>
-                            current.filter((draftPanel) => draftPanel.id !== panel.id),
+                            current.filter(
+                              (draftPanel) => draftPanel.id !== panel.id,
+                            ),
                           )
                           setConfigDrafts((current) => {
                             const { [panel.id]: _removed, ...rest } = current
@@ -483,7 +511,10 @@ export function RepoLayoutEditorDialog({
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="space-y-2" data-builder-path={`${fieldPath}.kind`}>
+                    <div
+                      className="space-y-2"
+                      data-builder-path={`${fieldPath}.kind`}
+                    >
                       <Label>{fieldLabels.kind}</Label>
                       <Select
                         value={panel.kind}
@@ -497,19 +528,24 @@ export function RepoLayoutEditorDialog({
                           <SelectValue placeholder="Kind" />
                         </SelectTrigger>
                         <SelectContent>
-                          {REPO_BUILDER_PANEL_CAPABILITIES.map((panelCapability) => (
-                            <SelectItem
-                              key={panelCapability.kind}
-                              value={panelCapability.kind}
-                            >
-                              {panelCapability.displayName}
-                            </SelectItem>
-                          ))}
+                          {REPO_BUILDER_PANEL_CAPABILITIES.map(
+                            (panelCapability) => (
+                              <SelectItem
+                                key={panelCapability.kind}
+                                value={panelCapability.kind}
+                              >
+                                {panelCapability.displayName}
+                              </SelectItem>
+                            ),
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className="space-y-2" data-builder-path={`${fieldPath}.id`}>
+                    <div
+                      className="space-y-2"
+                      data-builder-path={`${fieldPath}.id`}
+                    >
                       <Label>{fieldLabels.id}</Label>
                       <Input
                         value={panel.id}
@@ -519,7 +555,10 @@ export function RepoLayoutEditorDialog({
                       />
                     </div>
 
-                    <div className="space-y-2" data-builder-path={`${fieldPath}.title`}>
+                    <div
+                      className="space-y-2"
+                      data-builder-path={`${fieldPath}.title`}
+                    >
                       <Label>{fieldLabels.title}</Label>
                       <Input
                         value={panel.title ?? ""}
@@ -538,7 +577,8 @@ export function RepoLayoutEditorDialog({
                         value={panel.prominence}
                         onValueChange={(value) =>
                           updatePanel(index, {
-                            prominence: value as RepoBuilderPanelConfig["prominence"],
+                            prominence:
+                              value as RepoBuilderPanelConfig["prominence"],
                           })
                         }
                       >
@@ -567,7 +607,10 @@ export function RepoLayoutEditorDialog({
                       />
                     </div>
 
-                    <div className="space-y-2" data-builder-path={`${fieldPath}.min_size`}>
+                    <div
+                      className="space-y-2"
+                      data-builder-path={`${fieldPath}.min_size`}
+                    >
                       <Label>{fieldLabels.min_size}</Label>
                       <Input
                         value={String(panel.min_size ?? "")}
@@ -579,7 +622,10 @@ export function RepoLayoutEditorDialog({
                       />
                     </div>
 
-                    <div className="space-y-2" data-builder-path={`${fieldPath}.max_size`}>
+                    <div
+                      className="space-y-2"
+                      data-builder-path={`${fieldPath}.max_size`}
+                    >
                       <Label>{fieldLabels.max_size}</Label>
                       <Input
                         value={String(panel.max_size ?? "")}
@@ -614,7 +660,9 @@ export function RepoLayoutEditorDialog({
                         <Input
                           value={explorerConfig.initial_path}
                           onChange={(event) =>
-                            updatePanelConfig(panel, { initial_path: event.target.value })
+                            updatePanelConfig(panel, {
+                              initial_path: event.target.value,
+                            })
                           }
                           placeholder="src/"
                         />
@@ -636,7 +684,9 @@ export function RepoLayoutEditorDialog({
                         <Input
                           value={explorerConfig.ref ?? ""}
                           onChange={(event) =>
-                            updatePanelConfig(panel, { ref: event.target.value || null })
+                            updatePanelConfig(panel, {
+                              ref: event.target.value || null,
+                            })
                           }
                           placeholder="default branch"
                         />
@@ -669,7 +719,9 @@ export function RepoLayoutEditorDialog({
                       </div>
                       <div className="flex items-center justify-between rounded-xl border px-3 py-2">
                         <div>
-                          <div className="text-sm font-medium">Commit Badge</div>
+                          <div className="text-sm font-medium">
+                            Commit Badge
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             Show the active ref badge in panel chrome.
                           </div>
@@ -677,7 +729,9 @@ export function RepoLayoutEditorDialog({
                         <Switch
                           checked={explorerConfig.show_commit_badge}
                           onCheckedChange={(checked) =>
-                            updatePanelConfig(panel, { show_commit_badge: checked })
+                            updatePanelConfig(panel, {
+                              show_commit_badge: checked,
+                            })
                           }
                         />
                       </div>
@@ -715,7 +769,9 @@ export function RepoLayoutEditorDialog({
                           <Input
                             value={fileViewerConfig.fixed_path ?? ""}
                             onChange={(event) =>
-                              updatePanelConfig(panel, { fixed_path: event.target.value })
+                              updatePanelConfig(panel, {
+                                fixed_path: event.target.value,
+                              })
                             }
                             placeholder="README.md"
                           />
@@ -740,7 +796,9 @@ export function RepoLayoutEditorDialog({
                         <Input
                           value={fileViewerConfig.ref ?? ""}
                           onChange={(event) =>
-                            updatePanelConfig(panel, { ref: event.target.value || null })
+                            updatePanelConfig(panel, {
+                              ref: event.target.value || null,
+                            })
                           }
                           placeholder="default branch"
                         />
@@ -759,7 +817,9 @@ export function RepoLayoutEditorDialog({
                       </div>
                       <div className="flex items-center justify-between rounded-xl border px-3 py-2">
                         <div>
-                          <div className="text-sm font-medium">Show Path Badge</div>
+                          <div className="text-sm font-medium">
+                            Show Path Badge
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             Show path metadata in the viewer header.
                           </div>
@@ -767,13 +827,17 @@ export function RepoLayoutEditorDialog({
                         <Switch
                           checked={fileViewerConfig.show_path_badge}
                           onCheckedChange={(checked) =>
-                            updatePanelConfig(panel, { show_path_badge: checked })
+                            updatePanelConfig(panel, {
+                              show_path_badge: checked,
+                            })
                           }
                         />
                       </div>
                       <div className="flex items-center justify-between rounded-xl border px-3 py-2">
                         <div>
-                          <div className="text-sm font-medium">Copy Control</div>
+                          <div className="text-sm font-medium">
+                            Copy Control
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             Allow copying viewer content when supported.
                           </div>
@@ -781,17 +845,23 @@ export function RepoLayoutEditorDialog({
                         <Switch
                           checked={fileViewerConfig.show_copy_control}
                           onCheckedChange={(checked) =>
-                            updatePanelConfig(panel, { show_copy_control: checked })
+                            updatePanelConfig(panel, {
+                              show_copy_control: checked,
+                            })
                           }
                         />
                       </div>
                     </div>
                   ) : null}
 
-                  <div className="mt-4 space-y-2" data-builder-path={`${fieldPath}.config_json`}>
+                  <div
+                    className="mt-4 space-y-2"
+                    data-builder-path={`${fieldPath}.config_json`}
+                  >
                     <Label>{fieldLabels.config_json}</Label>
                     <div className="flex flex-wrap gap-2">
-                      {(panel.kind === "repoExplorer" || panel.kind === "fileViewer") && (
+                      {(panel.kind === "repoExplorer" ||
+                        panel.kind === "fileViewer") && (
                         <Button
                           type="button"
                           variant="outline"
@@ -820,10 +890,13 @@ export function RepoLayoutEditorDialog({
                             handleConfigChange(
                               panel.id,
                               toPrettyJson({
-                                ...createDefaultRepoFileViewerPanelConfig(panel.id),
+                                ...createDefaultRepoFileViewerPanelConfig(
+                                  panel.id,
+                                ),
                                 path_mode: "readme",
                                 title: "README",
-                                empty_label: "No README is available for this repository.",
+                                empty_label:
+                                  "No README is available for this repository.",
                               }),
                             )
                           }
@@ -834,7 +907,10 @@ export function RepoLayoutEditorDialog({
                     </div>
                     <Textarea
                       className="min-h-[180px] font-mono text-xs"
-                      value={configDrafts[panel.id] ?? toPrettyJson(panel.config_json ?? {})}
+                      value={
+                        configDrafts[panel.id] ??
+                        toPrettyJson(panel.config_json ?? {})
+                      }
                       onChange={(event) =>
                         handleConfigChange(panel.id, event.target.value)
                       }
@@ -843,7 +919,9 @@ export function RepoLayoutEditorDialog({
                       {getPanelConfigHelp(panel.kind)}
                     </div>
                     {errors[panel.id] ? (
-                      <div className="text-xs text-destructive">{errors[panel.id]}</div>
+                      <div className="text-xs text-destructive">
+                        {errors[panel.id]}
+                      </div>
                     ) : null}
                   </div>
 
@@ -859,7 +937,11 @@ export function RepoLayoutEditorDialog({
         </ScrollArea>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleApply}>

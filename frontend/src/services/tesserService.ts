@@ -91,8 +91,12 @@ export interface TesserExamplesIndexResponse {
 }
 
 export const TesserService = {
-  async listScripts(input?: { format?: string }): Promise<TesserScriptsResponse> {
-    const query = input?.format ? `?format=${encodeURIComponent(input.format)}` : ""
+  async listScripts(input?: {
+    format?: string
+  }): Promise<TesserScriptsResponse> {
+    const query = input?.format
+      ? `?format=${encodeURIComponent(input.format)}`
+      : ""
     const requestOptions: ApiRequestOptions<TesserScriptsResponse> = {
       method: "GET",
       url: `/api/v1/tesser/scripts${query}`,
@@ -126,9 +130,7 @@ export const TesserService = {
     return __request(OpenAPI, requestOptions)
   },
 
-  async getScriptHelp(
-    scriptName: string,
-  ): Promise<TesserScriptHelpResponse> {
+  async getScriptHelp(scriptName: string): Promise<TesserScriptHelpResponse> {
     const requestOptions: ApiRequestOptions<TesserScriptHelpResponse> = {
       method: "GET",
       url: `/api/v1/tesser/scripts/${encodeURIComponent(scriptName)}/help`,

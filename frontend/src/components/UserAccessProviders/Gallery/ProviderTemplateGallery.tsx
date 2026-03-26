@@ -1,4 +1,7 @@
-import type { LLMProviderTypePublic, UserAccessProviderPublic } from "@/client/types.gen"
+import type {
+  LLMProviderTypePublic,
+  UserAccessProviderPublic,
+} from "@/client/types.gen"
 import { BlockContainer } from "@/components/Page/primitives"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"

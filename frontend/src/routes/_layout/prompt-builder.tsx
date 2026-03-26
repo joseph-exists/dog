@@ -138,8 +138,9 @@ function PromptBuilderPage() {
     useState(false)
   const [newPromptConfigSlug, setNewPromptConfigSlug] = useState("")
   const [newPromptConfigName, setNewPromptConfigName] = useState("")
-  const [newPromptConfigDescription, setNewPromptConfigDescription] =
-    useState("Created from Prompt Builder")
+  const [newPromptConfigDescription, setNewPromptConfigDescription] = useState(
+    "Created from Prompt Builder",
+  )
   const [bindingVersionPolicy, setBindingVersionPolicy] = useState<
     "latest" | "pinned"
   >("latest")
@@ -339,7 +340,8 @@ function PromptBuilderPage() {
   const createPromptConfigMutation = useMutation({
     mutationFn: async () => {
       const generatedSlug =
-        asTrimmedString(newPromptConfigSlug) || (await generateSharedSlugValue())
+        asTrimmedString(newPromptConfigSlug) ||
+        (await generateSharedSlugValue())
       if (!generatedSlug) {
         throw new Error("Unable to generate prompt config slug.")
       }
@@ -436,7 +438,9 @@ function PromptBuilderPage() {
         queryKey: ["prompt-builder", "agents"],
       })
       const label =
-        variables.promptConfigId == null ? "Removed PromptConfig binding." : "Bound PromptConfig to agent."
+        variables.promptConfigId == null
+          ? "Removed PromptConfig binding."
+          : "Bound PromptConfig to agent."
       showSuccessToast(label)
     },
     onError: (error: unknown) => {
@@ -543,7 +547,7 @@ function PromptBuilderPage() {
     if (!newPromptConfigName) {
       setNewPromptConfigName("")
     }
-  }, [selectedPromptConfig])
+  }, [selectedPromptConfig, newPromptConfigName])
 
   useEffect(() => {
     if (!selectedAgent) {
@@ -565,6 +569,7 @@ function PromptBuilderPage() {
     selectedAgent?.id,
     selectedAgent?.prompt_config_version_policy,
     selectedAgent?.prompt_config_version_number,
+    selectedAgent,
   ])
 
   useEffect(() => {
@@ -668,9 +673,13 @@ function PromptBuilderPage() {
         : null
     if (
       bindingVersionPolicy === "pinned" &&
-      (!Number.isFinite(parsedVersionNumber) || parsedVersionNumber == null || parsedVersionNumber <= 0)
+      (!Number.isFinite(parsedVersionNumber) ||
+        parsedVersionNumber == null ||
+        parsedVersionNumber <= 0)
     ) {
-      showErrorToast("Pinned version policy requires a positive version number.")
+      showErrorToast(
+        "Pinned version policy requires a positive version number.",
+      )
       return
     }
     bindPromptConfigToAgentMutation.mutate({
@@ -945,7 +954,8 @@ function PromptBuilderPage() {
                     <div>
                       <Label>Agent Binding</Label>
                       <p className="text-xs text-muted-foreground">
-                        Bind the selected PromptConfig to the selected agent so runtime resolves this recipe by default.
+                        Bind the selected PromptConfig to the selected agent so
+                        runtime resolves this recipe by default.
                       </p>
                     </div>
                     <div className="grid gap-3 md:grid-cols-3">
@@ -954,7 +964,9 @@ function PromptBuilderPage() {
                         <Select
                           value={bindingVersionPolicy}
                           onValueChange={(value) =>
-                            setBindingVersionPolicy(value as "latest" | "pinned")
+                            setBindingVersionPolicy(
+                              value as "latest" | "pinned",
+                            )
                           }
                         >
                           <SelectTrigger>

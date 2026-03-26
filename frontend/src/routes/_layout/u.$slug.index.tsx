@@ -37,8 +37,7 @@ function UserPage() {
           tagline: "A work-centered user surface shaped through personas.",
         },
         bio: {
-          text:
-            "This page organizes work, personas, audience views, and relations without collapsing them into a single static identity.",
+          text: "This page organizes work, personas, audience views, and relations without collapsing them into a single static identity.",
         },
       })
       setShowCreateDialog(false)

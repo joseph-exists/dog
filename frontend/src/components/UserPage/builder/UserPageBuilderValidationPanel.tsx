@@ -1,4 +1,3 @@
-import type { UserPageBuilderIssue } from "./userPageBuilderSchema"
 import {
   Card,
   CardContent,
@@ -6,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import type { UserPageBuilderIssue } from "./userPageBuilderSchema"
 
 interface UserPageBuilderValidationPanelProps {
   issues: UserPageBuilderIssue[]

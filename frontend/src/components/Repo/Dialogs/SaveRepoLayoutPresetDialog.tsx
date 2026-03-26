@@ -48,7 +48,9 @@ export function SaveRepoLayoutPresetDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : null}
         </DialogHeader>
 
         <div className="space-y-4">
@@ -74,13 +76,19 @@ export function SaveRepoLayoutPresetDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button
             type="button"
             disabled={trimmedLabel.length === 0}
-            onClick={() => onConfirm({ label: trimmedLabel, description: details.trim() })}
+            onClick={() =>
+              onConfirm({ label: trimmedLabel, description: details.trim() })
+            }
           >
             {confirmLabel}
           </Button>

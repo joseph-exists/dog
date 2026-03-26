@@ -4,8 +4,9 @@
  * Lazily loads @mdx-js/mdx and compiles MDX source to React components.
  * Uses dynamic import to avoid bundling the compiler for non-MDX content.
  */
-import { useCallback, useEffect, useRef, useState } from "react"
+
 import type { RunOptions } from "@mdx-js/mdx"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { MDXCompilationState, MDXCompiledResult } from "../types"
 
 // Cache for compiled MDX to avoid recompilation

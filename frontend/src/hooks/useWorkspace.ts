@@ -3,7 +3,10 @@ import { useQuery } from "@tanstack/react-query"
 import { WorkspaceService } from "@/services/workspaceService"
 import { workspaceKeys } from "./useWorkspaces"
 
-export function useWorkspace(workspaceId: string, options?: { enabled?: boolean }) {
+export function useWorkspace(
+  workspaceId: string,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: workspaceKeys.detail(workspaceId),
     queryFn: () => WorkspaceService.getWorkspace(workspaceId),
@@ -11,7 +14,11 @@ export function useWorkspace(workspaceId: string, options?: { enabled?: boolean 
     refetchInterval: (query) => {
       const workspace = query.state.data
       if (!workspace) return false
-      if (workspace.status === "requested" || workspace.status === "provisioning" || workspace.status === "starting") {
+      if (
+        workspace.status === "requested" ||
+        workspace.status === "provisioning" ||
+        workspace.status === "starting"
+      ) {
         return 2500
       }
       if (

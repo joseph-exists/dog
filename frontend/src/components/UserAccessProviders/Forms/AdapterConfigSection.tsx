@@ -1,6 +1,7 @@
 import { ChevronDown, Settings2 } from "lucide-react"
 import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
+import { Button } from "@/components/ui/button"
 import {
   FormControl,
   FormDescription,
@@ -9,7 +10,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -17,9 +17,7 @@ interface AdapterConfigSectionProps {
   form: UseFormReturn<any>
 }
 
-export function AdapterConfigSection({
-  form,
-}: AdapterConfigSectionProps) {
+export function AdapterConfigSection({ form }: AdapterConfigSectionProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -55,7 +53,9 @@ export function AdapterConfigSection({
                   <Input
                     type="number"
                     value={String(field.value ?? 30)}
-                    onChange={(event) => field.onChange(Number(event.target.value))}
+                    onChange={(event) =>
+                      field.onChange(Number(event.target.value))
+                    }
                   />
                 </FormControl>
                 <FormMessage />
@@ -72,7 +72,9 @@ export function AdapterConfigSection({
                   <Input
                     type="number"
                     value={String(field.value ?? 3)}
-                    onChange={(event) => field.onChange(Number(event.target.value))}
+                    onChange={(event) =>
+                      field.onChange(Number(event.target.value))
+                    }
                   />
                 </FormControl>
                 <FormMessage />
@@ -89,7 +91,9 @@ export function AdapterConfigSection({
                   <Input
                     type="number"
                     value={String(field.value ?? 1000)}
-                    onChange={(event) => field.onChange(Number(event.target.value))}
+                    onChange={(event) =>
+                      field.onChange(Number(event.target.value))
+                    }
                   />
                 </FormControl>
                 <FormMessage />

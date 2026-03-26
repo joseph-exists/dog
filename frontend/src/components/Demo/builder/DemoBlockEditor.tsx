@@ -1,4 +1,9 @@
-import { CopyPlus, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronRight, CopyPlus, Plus, Trash2 } from "lucide-react"
+import {
+  DemoGitViewConfigFields,
+  DemoLiveRepoExplorerConfigFields,
+  DemoLiveRepoFileViewerConfigFields,
+} from "@/components/Demo/builder/DemoLiveRepoConfigFields"
 import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
 import {
   BUILDER_BLOCK_CAPABILITIES,
@@ -14,11 +19,6 @@ import {
   type EditableComposition,
   getBuilderBlockTypeSchema,
 } from "@/components/Demo/builder/demoBuilderSchema"
-import {
-  DemoGitViewConfigFields,
-  DemoLiveRepoExplorerConfigFields,
-  DemoLiveRepoFileViewerConfigFields,
-} from "@/components/Demo/builder/DemoLiveRepoConfigFields"
 import {
   CLICK_PROMPT_DISPATCH_KIND,
   createClickPromptDispatchStarterConfig,
@@ -90,8 +90,14 @@ function renderBlockScalarField(params: {
     category: "page" | "card"
   }>
 }) {
-  const { block, index, rootPath, field, onUpdateBlock, availableThemeOptions } =
-    params
+  const {
+    block,
+    index,
+    rootPath,
+    field,
+    onUpdateBlock,
+    availableThemeOptions,
+  } = params
   const value = (block as Record<string, unknown>)[field.key]
   if (field.key === "theme_id" && field.control === "id") {
     return (
@@ -265,7 +271,7 @@ function getChatPanelOptions(composition: EditableComposition): Array<{
         typeof panel.title === "string" && panel.title.trim().length > 0
           ? `${panel.title} (${panel.id})`
           : String(panel.id),
-  }))
+    }))
 }
 
 function updateInteractionConfig(
@@ -318,7 +324,12 @@ export function DemoBlockEditor({
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
           {onOpenCloneDialog && (
-            <Button type="button" variant="secondary" size="sm" onClick={onOpenCloneDialog}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onOpenCloneDialog}
+            >
               <CopyPlus className="h-3.5 w-3.5 mr-1" />
               Clone Existing Block
             </Button>
@@ -430,7 +441,8 @@ export function DemoBlockEditor({
                           const currentJson =
                             (block as Record<string, unknown>)[field.key] ?? {}
                           const blockId =
-                            typeof block.id === "string" && block.id.trim().length > 0
+                            typeof block.id === "string" &&
+                            block.id.trim().length > 0
                               ? block.id.trim()
                               : `block-${index + 1}`
                           const fallbackSelectionKey = `${blockId}.selection`
@@ -468,7 +480,9 @@ export function DemoBlockEditor({
                                   blockType === "gitView" && (
                                     <DemoGitViewConfigFields
                                       value={currentJson}
-                                      fallbackSelectionKey={fallbackSelectionKey}
+                                      fallbackSelectionKey={
+                                        fallbackSelectionKey
+                                      }
                                       onChange={(nextValue) =>
                                         onUpdateBlock(index, {
                                           config_json: nextValue,
@@ -482,7 +496,9 @@ export function DemoBlockEditor({
                                       {isLiveRepoExplorerConfig(currentJson) ? (
                                         <DemoLiveRepoExplorerConfigFields
                                           value={currentJson}
-                                          fallbackSelectionKey={fallbackSelectionKey}
+                                          fallbackSelectionKey={
+                                            fallbackSelectionKey
+                                          }
                                           onChange={(nextValue) =>
                                             onUpdateBlock(index, {
                                               config_json: nextValue,
@@ -492,9 +508,10 @@ export function DemoBlockEditor({
                                       ) : (
                                         <div className="rounded border p-3 space-y-2">
                                           <p className="text-[11px] text-muted-foreground">
-                                            This block is still using static explorer
-                                            JSON. Switch to live repo mode when the
-                                            room needs shared multi-repo selection and
+                                            This block is still using static
+                                            explorer JSON. Switch to live repo
+                                            mode when the room needs shared
+                                            multi-repo selection and
                                             file-context controls.
                                           </p>
                                           <Button
@@ -519,10 +536,14 @@ export function DemoBlockEditor({
                                 {field.key === "config_json" &&
                                   blockType === "fileViewer" && (
                                     <div className="space-y-2">
-                                      {isLiveRepoFileViewerConfig(currentJson) ? (
+                                      {isLiveRepoFileViewerConfig(
+                                        currentJson,
+                                      ) ? (
                                         <DemoLiveRepoFileViewerConfigFields
                                           value={currentJson}
-                                          fallbackSelectionKey={fallbackSelectionKey}
+                                          fallbackSelectionKey={
+                                            fallbackSelectionKey
+                                          }
                                           onChange={(nextValue) =>
                                             onUpdateBlock(index, {
                                               config_json: nextValue,
@@ -533,8 +554,9 @@ export function DemoBlockEditor({
                                         <div className="rounded border p-3 space-y-2">
                                           <p className="text-[11px] text-muted-foreground">
                                             Switch this surface to the live repo
-                                            file viewer when you want one explorer
-                                            to drive multiple focused viewers.
+                                            file viewer when you want one
+                                            explorer to drive multiple focused
+                                            viewers.
                                           </p>
                                           <Button
                                             type="button"

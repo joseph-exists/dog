@@ -98,8 +98,12 @@ export function RoomDebugPanelContent({
   })
 
   const [copiedPayload, setCopiedPayload] = useState(false)
-  const [removingContextIds, setRemovingContextIds] = useState<Record<string, boolean>>({})
-  const [copiedContextIds, setCopiedContextIds] = useState<Record<string, boolean>>({})
+  const [removingContextIds, setRemovingContextIds] = useState<
+    Record<string, boolean>
+  >({})
+  const [copiedContextIds, setCopiedContextIds] = useState<
+    Record<string, boolean>
+  >({})
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -255,7 +259,8 @@ export function RoomDebugPanelContent({
           <Button variant="ghost" size="sm" className="w-full justify-between">
             <span className="flex items-center gap-2">
               <Code className="h-4 w-4" />
-              Repo Files ({repoContextFiles.length} in context / {selectedRepoFiles.length} selected)
+              Repo Files ({repoContextFiles.length} in context /{" "}
+              {selectedRepoFiles.length} selected)
             </span>
             {expandedSections.repoFiles ? (
               <ChevronUp className="h-4 w-4" />
@@ -275,7 +280,10 @@ export function RoomDebugPanelContent({
               ) : (
                 <div className="space-y-1 max-h-24 overflow-y-auto">
                   {selectedRepoFiles.map((item) => (
-                    <div key={`${item.selectionKey}:${item.path}`} className="font-mono text-[10px] truncate">
+                    <div
+                      key={`${item.selectionKey}:${item.path}`}
+                      className="font-mono text-[10px] truncate"
+                    >
                       {item.selectionKey}: {item.path}
                     </div>
                   ))}
@@ -288,17 +296,25 @@ export function RoomDebugPanelContent({
                 In room context
               </p>
               {repoContextFiles.length === 0 ? (
-                <p className="text-muted-foreground">No repo files in room context.</p>
+                <p className="text-muted-foreground">
+                  No repo files in room context.
+                </p>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {repoContextFiles.map((item) => {
                     const isSelected = selectedPathSet.has(item.path)
-                    const isRemoving = removingContextIds[item.contextId] === true
+                    const isRemoving =
+                      removingContextIds[item.contextId] === true
                     return (
-                      <div key={item.contextId} className="rounded border border-border p-2">
+                      <div
+                        key={item.contextId}
+                        className="rounded border border-border p-2"
+                      >
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-mono text-[10px] truncate">{item.path}</p>
+                            <p className="font-mono text-[10px] truncate">
+                              {item.path}
+                            </p>
                             <p className="text-[10px] text-muted-foreground truncate">
                               {item.repoSlug || item.repoId} @ {item.ref}
                             </p>
@@ -326,7 +342,9 @@ export function RoomDebugPanelContent({
                                     [item.contextId]: true,
                                   }))
                                   try {
-                                    await onRemoveRepoContextFile(item.contextId)
+                                    await onRemoveRepoContextFile(
+                                      item.contextId,
+                                    )
                                   } finally {
                                     setRemovingContextIds((current) => ({
                                       ...current,
@@ -359,7 +377,10 @@ export function RoomDebugPanelContent({
                                     }))
                                   }, 1500)
                                 } catch (error) {
-                                  console.error("Failed to copy context payload", error)
+                                  console.error(
+                                    "Failed to copy context payload",
+                                    error,
+                                  )
                                 }
                               }}
                               title="Copy context payload JSON"

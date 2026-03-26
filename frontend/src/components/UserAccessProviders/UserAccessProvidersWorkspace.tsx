@@ -20,20 +20,16 @@ import type {
   UserAccessProviderUpdate,
 } from "@/client/types.gen"
 import { BlockContainer } from "@/components/Page/primitives"
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import useAuth from "@/hooks/useAuth"
+import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { ModelPinList, ProviderStatusBadge } from "./Display"
 import { SetupSuccessPanel } from "./Flows"
-import { ProviderTemplateGallery } from "./Gallery"
 import { UserAccessProviderForm, ValidationPanel } from "./Forms"
+import { ProviderTemplateGallery } from "./Gallery"
 
 const STALE_VALIDATION_WINDOW_MS = 1000 * 60 * 60 * 24 * 7
 
@@ -86,22 +82,28 @@ function getProviderTypeName(
   provider: UserAccessProviderPublic,
   providerTypes: LLMProviderTypePublic[],
 ) {
-  return providerTypes.find((item) => item.id === provider.alpha_provider_type_id)
+  return providerTypes.find(
+    (item) => item.id === provider.alpha_provider_type_id,
+  )
 }
 
 export function UserAccessProvidersWorkspace() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [powerUserMode, setPowerUserMode] = useState(false)
-  const [selectedProviderTypeId, setSelectedProviderTypeId] = useState<string | null>(
+  const [selectedProviderTypeId, setSelectedProviderTypeId] = useState<
+    string | null
+  >(null)
+  const [editingProviderId, setEditingProviderId] = useState<string | null>(
     null,
   )
-  const [editingProviderId, setEditingProviderId] = useState<string | null>(null)
   const [showModelPinsForProviderId, setShowModelPinsForProviderId] = useState<
     string | null
   >(null)
   const [highlightPins, setHighlightPins] = useState(false)
-  const [successProviderId, setSuccessProviderId] = useState<string | null>(null)
+  const [successProviderId, setSuccessProviderId] = useState<string | null>(
+    null,
+  )
   const [validationResults, setValidationResults] = useState<
     Record<string, DetailedTestResult>
   >({})
@@ -126,7 +128,8 @@ export function UserAccessProvidersWorkspace() {
   )
 
   const selectedProvider = useMemo(
-    () => providers.find((provider) => provider.id === editingProviderId) ?? null,
+    () =>
+      providers.find((provider) => provider.id === editingProviderId) ?? null,
     [providers, editingProviderId],
   )
   const selectedProviderType = useMemo(() => {
@@ -135,8 +138,9 @@ export function UserAccessProvidersWorkspace() {
     }
 
     return (
-      providerTypes.find((providerType) => providerType.id === selectedProviderTypeId) ??
-      null
+      providerTypes.find(
+        (providerType) => providerType.id === selectedProviderTypeId,
+      ) ?? null
     )
   }, [providerTypes, selectedProvider, selectedProviderTypeId])
 
@@ -209,7 +213,9 @@ export function UserAccessProvidersWorkspace() {
       ),
     onSuccess: (results) => {
       const succeeded = results.filter(
-        (result): result is PromiseFulfilledResult<{
+        (
+          result,
+        ): result is PromiseFulfilledResult<{
           providerId: string
           result: DetailedTestResult
         }> => result.status === "fulfilled" && result.value.result.valid,
@@ -258,7 +264,8 @@ export function UserAccessProvidersWorkspace() {
             </Badge>
             <Badge variant="outline" className="gap-1">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {providers.filter((provider) => provider.is_validated).length} validated
+              {providers.filter((provider) => provider.is_validated).length}{" "}
+              validated
             </Badge>
             {staleProviders.length > 0 ? (
               <Badge variant="outline" className="gap-1">
@@ -307,7 +314,8 @@ export function UserAccessProvidersWorkspace() {
               First-time path
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Choose a template, verify it, then pin the models you actually use.
+              Choose a template, verify it, then pin the models you actually
+              use.
             </p>
           </div>
           <div className="rounded-xl border bg-background/70 p-4">
@@ -315,7 +323,8 @@ export function UserAccessProvidersWorkspace() {
               Power controls
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Advanced transport settings stay available, but tucked behind a dedicated section.
+              Advanced transport settings stay available, but tucked behind a
+              dedicated section.
             </p>
           </div>
           <div className="rounded-xl border bg-background/70 p-4">
@@ -352,7 +361,9 @@ export function UserAccessProvidersWorkspace() {
             <ProviderTemplateGallery
               providerTypes={providerTypes}
               configuredProviders={providers}
-              selectedProviderTypeId={activeProviderType?.id ?? selectedProviderTypeId}
+              selectedProviderTypeId={
+                activeProviderType?.id ?? selectedProviderTypeId
+              }
               powerUserMode={powerUserMode}
               onPowerUserModeChange={setPowerUserMode}
               onSelect={(providerType) => {
@@ -366,8 +377,9 @@ export function UserAccessProvidersWorkspace() {
               <ModelPinList
                 providerId={showModelPinsForProviderId}
                 providerName={
-                  providers.find((provider) => provider.id === showModelPinsForProviderId)
-                    ?.name || "Provider"
+                  providers.find(
+                    (provider) => provider.id === showModelPinsForProviderId,
+                  )?.name || "Provider"
                 }
                 shouldHighlightPins={highlightPins}
               />
@@ -384,27 +396,36 @@ export function UserAccessProvidersWorkspace() {
             >
               {providers.length === 0 ? (
                 <div className="rounded-xl border border-dashed px-4 py-8 text-center">
-                  <p className="text-sm font-medium">No providers configured yet</p>
+                  <p className="text-sm font-medium">
+                    No providers configured yet
+                  </p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Pick a template to create your first provider connection.
                   </p>
                 </div>
               ) : (
                 providers.map((provider) => {
-                  const providerType = getProviderTypeName(provider, providerTypes)
+                  const providerType = getProviderTypeName(
+                    provider,
+                    providerTypes,
+                  )
                   const isActive = editingProviderId === provider.id
 
                   return (
                     <div
                       key={provider.id}
                       className={`rounded-xl border px-4 py-4 transition-colors ${
-                        isActive ? "border-primary/40 bg-primary/5" : "bg-background/80"
+                        isActive
+                          ? "border-primary/40 bg-primary/5"
+                          : "bg-background/80"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold">{provider.name}</p>
+                            <p className="text-sm font-semibold">
+                              {provider.name}
+                            </p>
                             <ProviderStatusBadge
                               status={
                                 provider.is_validated
@@ -422,8 +443,12 @@ export function UserAccessProvidersWorkspace() {
                             ) : null}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {providerType?.display_name || providerType?.name || "Provider"}
-                            {provider.base_url ? ` • ${formatBaseUrl(provider.base_url)}` : ""}
+                            {providerType?.display_name ||
+                              providerType?.name ||
+                              "Provider"}
+                            {provider.base_url
+                              ? ` • ${formatBaseUrl(provider.base_url)}`
+                              : ""}
                           </p>
                           {provider.description ? (
                             <p className="text-sm text-muted-foreground">
@@ -435,7 +460,8 @@ export function UserAccessProvidersWorkspace() {
                               {formatRelativeValidation(provider)}
                             </Badge>
                             <Badge variant="outline" className="text-[10px]">
-                              {provider.available_models_cache?.length ?? 0} cached models
+                              {provider.available_models_cache?.length ?? 0}{" "}
+                              cached models
                             </Badge>
                             {isProviderStale(provider) ? (
                               <Badge variant="outline" className="text-[10px]">
@@ -455,7 +481,9 @@ export function UserAccessProvidersWorkspace() {
                             size="sm"
                             onClick={() => {
                               setEditingProviderId(provider.id)
-                              setSelectedProviderTypeId(provider.alpha_provider_type_id)
+                              setSelectedProviderTypeId(
+                                provider.alpha_provider_type_id,
+                              )
                               setSuccessProviderId(null)
                             }}
                           >
@@ -551,7 +579,8 @@ export function UserAccessProvidersWorkspace() {
               >
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ArrowRight className="h-4 w-4" />
-                  New providers become editable and testable as soon as they are saved.
+                  New providers become editable and testable as soon as they are
+                  saved.
                 </div>
               </BlockContainer>
             )}
@@ -559,7 +588,9 @@ export function UserAccessProvidersWorkspace() {
             {selectedProvider && successProviderId === selectedProvider.id ? (
               <SetupSuccessPanel
                 provider={selectedProvider}
-                validationResult={validationResults[selectedProvider.id] ?? null}
+                validationResult={
+                  validationResults[selectedProvider.id] ?? null
+                }
                 onBrowseModels={() => {
                   setShowModelPinsForProviderId(selectedProvider.id)
                   setHighlightPins(false)

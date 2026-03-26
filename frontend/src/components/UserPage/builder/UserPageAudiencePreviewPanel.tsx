@@ -3,14 +3,32 @@ import { useMemo, useState } from "react"
 import type { AccessGrantPublic } from "@/client"
 import type { TemplateBlock } from "@/components/Page/registry"
 import type { AudienceScope } from "@/components/UserPage/types"
-import { buildUserPageViewModel } from "@/hooks/useUserPageViewModel"
-import { UserPersonaService, type UserPersonaAuthoringBundle } from "@/services/userPersonaService"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { EntityCombobox, type EntityComboboxOption } from "@/components/ui/entity-combobox"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  EntityCombobox,
+  type EntityComboboxOption,
+} from "@/components/ui/entity-combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { buildUserPageViewModel } from "@/hooks/useUserPageViewModel"
+import {
+  type UserPersonaAuthoringBundle,
+  UserPersonaService,
+} from "@/services/userPersonaService"
 
 type PreviewScenario = "public" | "trusted" | "collaborators" | "custom"
 
@@ -24,7 +42,9 @@ interface UserPageAudiencePreviewPanelProps {
 
 function countPublishedSnapshotItems(blocks: TemplateBlock[]) {
   const personaBlock = blocks.find((block) => block.type === "personaManager")
-  const audienceBlock = blocks.find((block) => block.type === "audiencePresentation")
+  const audienceBlock = blocks.find(
+    (block) => block.type === "audiencePresentation",
+  )
   const personas = Array.isArray(personaBlock?.content?.personas)
     ? personaBlock.content.personas
     : []
@@ -93,7 +113,13 @@ export function UserPageAudiencePreviewPanel({
         resolvedAudienceScope,
         resolvedAudienceKeys,
       }),
-    [publishedSnapshot, resolvedAudienceKeys, resolvedAudienceScope, slug, userId],
+    [
+      publishedSnapshot,
+      resolvedAudienceKeys,
+      resolvedAudienceScope,
+      slug,
+      userId,
+    ],
   )
 
   const activePresentation =
@@ -102,7 +128,9 @@ export function UserPageAudiencePreviewPanel({
         presentation.audienceScope === previewViewModel.selectedAudienceScope &&
         (previewViewModel.selectedAudienceScope !== "custom" ||
           (presentation.audienceKey &&
-            previewViewModel.resolvedAudienceKeys.includes(presentation.audienceKey))),
+            previewViewModel.resolvedAudienceKeys.includes(
+              presentation.audienceKey,
+            ))),
     ) ?? null
 
   const selectedPersona =
@@ -112,7 +140,8 @@ export function UserPageAudiencePreviewPanel({
 
   const snapshotCounts = countPublishedSnapshotItems(publishedSnapshot)
   const trustedGrantCount = pageGrants.filter(
-    (grant) => grant.subject_type === "user" || grant.subject_type === "user_persona",
+    (grant) =>
+      grant.subject_type === "user" || grant.subject_type === "user_persona",
   ).length
   const collaboratorGrantCount = pageGrants.filter(
     (grant) =>
@@ -185,40 +214,59 @@ export function UserPageAudiencePreviewPanel({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded border px-3 py-2">
-            <div className="text-xs text-muted-foreground">Published Personas</div>
-            <div className="text-lg font-semibold">{snapshotCounts.personas}</div>
+            <div className="text-xs text-muted-foreground">
+              Published Personas
+            </div>
+            <div className="text-lg font-semibold">
+              {snapshotCounts.personas}
+            </div>
           </div>
           <div className="rounded border px-3 py-2">
-            <div className="text-xs text-muted-foreground">Published Audience Views</div>
-            <div className="text-lg font-semibold">{snapshotCounts.presentations}</div>
+            <div className="text-xs text-muted-foreground">
+              Published Audience Views
+            </div>
+            <div className="text-lg font-semibold">
+              {snapshotCounts.presentations}
+            </div>
           </div>
           <div className="rounded border px-3 py-2">
-            <div className="text-xs text-muted-foreground">Visible Work In Preview</div>
-            <div className="text-lg font-semibold">{previewViewModel.workFeed.length}</div>
+            <div className="text-xs text-muted-foreground">
+              Visible Work In Preview
+            </div>
+            <div className="text-lg font-semibold">
+              {previewViewModel.workFeed.length}
+            </div>
           </div>
         </div>
 
         <div className="rounded-lg border bg-muted/30 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{previewViewModel.selectedAudienceLabel}</Badge>
+            <Badge variant="outline">
+              {previewViewModel.selectedAudienceLabel}
+            </Badge>
             {selectedPersona ? (
               <Badge>{selectedPersona.nickname || selectedPersona.name}</Badge>
             ) : (
               <Badge variant="secondary">No matching persona</Badge>
             )}
             {activePresentation ? (
-              <Badge variant="outline">{activePresentation.publicationState}</Badge>
+              <Badge variant="outline">
+                {activePresentation.publicationState}
+              </Badge>
             ) : null}
           </div>
           <div className="mt-3 space-y-2">
             <div className="text-sm font-medium">
-              {activePresentation?.headline ?? "No audience presentation matches this preview."}
+              {activePresentation?.headline ??
+                "No audience presentation matches this preview."}
             </div>
             <div className="text-sm text-muted-foreground">
               {activePresentation?.framingText ??
                 "The current published snapshot does not contain a matching audience presentation for this lens."}
             </div>
-            <div className="text-xs text-muted-foreground">{accessExplanation}</div>
+            <div className="text-xs text-muted-foreground">
+              {accessExplanation}
+            </div>
           </div>
         </div>
       </CardContent>

@@ -2,24 +2,24 @@
 
 import { useRouterState } from "@tanstack/react-router"
 import {
+  BirdhouseIcon,
   BookHeart,
   BookOpen,
   Bot,
+  CircuitBoard,
   Crown,
-  FolderKanban,
   FolderGit2,
+  FolderKanban,
   Gem,
+  GrapeIcon,
   Home,
+  Images,
   MessageSquare,
+  MoonStar,
   Smile,
   Sparkles,
   User2,
   Users,
-  GrapeIcon,
-  MoonStar,
-  BirdhouseIcon,
-  CircuitBoard,
-  Images,
 } from "lucide-react"
 import { Logo } from "@/components/Common/Logo"
 import { Sidebar } from "@/components/ui/sidebar"
@@ -67,9 +67,19 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     path: "/chatster",
     icon: BirdhouseIcon,
   },
-  { id: "prompt-builder", icon: GrapeIcon, title: "prompt builder", path: "/prompt-builder"},
-  { id: "demo-builder", icon:CircuitBoard, title: "demo builder", path: "/demo-builder"},
-  { id: "demo-library", icon: MoonStar, title: "demo library", path: "/demos"},
+  {
+    id: "prompt-builder",
+    icon: GrapeIcon,
+    title: "prompt builder",
+    path: "/prompt-builder",
+  },
+  {
+    id: "demo-builder",
+    icon: CircuitBoard,
+    title: "demo builder",
+    path: "/demo-builder",
+  },
+  { id: "demo-library", icon: MoonStar, title: "demo library", path: "/demos" },
 ]
 
 // ============================================================================

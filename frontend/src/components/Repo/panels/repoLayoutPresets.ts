@@ -1,9 +1,9 @@
 import { getDefaultRepoPanelConfigs } from "@/components/Repo/registry"
 import {
   createRepoPanelLayoutItems,
+  type RepoPanelLayoutItem,
   reconcileRepoPanelLayoutItems,
   repoPanelLayoutItemsEqual,
-  type RepoPanelLayoutItem,
 } from "./repoPanelLayoutCustomization"
 
 export type RepoLayoutPresetSource = "system" | "user"
@@ -76,7 +76,9 @@ function withPanelPatch(
   panelId: string,
   patch: Partial<RepoPanelLayoutItem>,
 ) {
-  return items.map((item) => (item.id === panelId ? { ...item, ...patch } : item))
+  return items.map((item) =>
+    item.id === panelId ? { ...item, ...patch } : item,
+  )
 }
 
 function createSystemRepoLayoutPresets(): RepoLayoutPreset[] {
@@ -129,7 +131,8 @@ function createSystemRepoLayoutPresets(): RepoLayoutPreset[] {
     {
       id: "system-default",
       label: "Default",
-      description: "Overview, README, browser, and viewer in the standard workspace.",
+      description:
+        "Overview, README, browser, and viewer in the standard workspace.",
       source: "system",
       immutable: true,
       items: defaultItems,
@@ -137,7 +140,8 @@ function createSystemRepoLayoutPresets(): RepoLayoutPreset[] {
     {
       id: "system-browser",
       label: "Browser + Viewer",
-      description: "Focused file browsing with side-by-side browser and preview panes.",
+      description:
+        "Focused file browsing with side-by-side browser and preview panes.",
       source: "system",
       immutable: true,
       items: browserItems,
@@ -145,7 +149,8 @@ function createSystemRepoLayoutPresets(): RepoLayoutPreset[] {
     {
       id: "system-overview",
       label: "Overview + README",
-      description: "Less operational chrome with repository summary and README first.",
+      description:
+        "Less operational chrome with repository summary and README first.",
       source: "system",
       immutable: true,
       items: overviewItems,

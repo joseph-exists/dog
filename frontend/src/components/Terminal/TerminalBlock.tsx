@@ -31,7 +31,12 @@ export function TerminalBlock({
       bodyClassName="min-h-[22rem] p-0"
       footer={<TerminalStatusBar session={session} status={status} />}
     >
-      <TerminalViewer session={session} status={status} mode={mode} className="h-full" />
+      <TerminalViewer
+        session={session}
+        status={status}
+        mode={mode}
+        className="h-full"
+      />
     </BlockContainer>
   )
 }

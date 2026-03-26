@@ -19,7 +19,9 @@ export function SvgLayout({ panels, mode, className }: SvgLayoutProps) {
   const isMobile = useIsMobile()
   const effectiveMode = isMobile ? "tabs" : mode
   const primaryPanels = panels.filter((panel) => panel.prominence === "primary")
-  const auxiliaryPanels = panels.filter((panel) => panel.prominence === "auxiliary")
+  const auxiliaryPanels = panels.filter(
+    (panel) => panel.prominence === "auxiliary",
+  )
 
   if (effectiveMode === "tabs") {
     return (
@@ -78,7 +80,9 @@ export function SvgLayout({ panels, mode, className }: SvgLayoutProps) {
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}
                   <ResizablePanel
-                    defaultSize={panel.default_size ?? 100 / auxiliaryPanels.length}
+                    defaultSize={
+                      panel.default_size ?? 100 / auxiliaryPanels.length
+                    }
                     minSize={panel.min_size ?? 15}
                     maxSize={panel.max_size}
                   >
@@ -93,4 +97,3 @@ export function SvgLayout({ panels, mode, className }: SvgLayoutProps) {
     </ResizablePanelGroup>
   )
 }
-

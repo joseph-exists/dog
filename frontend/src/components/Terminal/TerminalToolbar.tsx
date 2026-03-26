@@ -24,12 +24,22 @@ export function TerminalToolbar({
           Disconnect
         </Button>
       ) : (
-        <Button variant="outline" size="sm" disabled={!canConnect} onClick={onConnect}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!canConnect}
+          onClick={onConnect}
+        >
           <Wifi className="mr-2 h-4 w-4" />
           Connect
         </Button>
       )}
-      <Button variant="ghost" size="sm" onClick={onConnect} disabled={!canConnect}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onConnect}
+        disabled={!canConnect}
+      >
         <RotateCcw className="mr-2 h-4 w-4" />
         Reconnect
       </Button>

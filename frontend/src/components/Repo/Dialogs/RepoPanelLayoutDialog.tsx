@@ -1,16 +1,29 @@
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Plus,
+  X,
+} from "lucide-react"
 import type React from "react"
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Plus, X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import { InteractivePreview, type PreviewPanel } from "@/components/Page/InteractivePreview"
+import {
+  InteractivePreview,
+  type PreviewPanel,
+} from "@/components/Page/InteractivePreview"
 import { PresetPicker } from "@/components/Page/primitives/PresetPicker"
-import type { RepoLayoutPreset } from "@/components/Repo/panels/repoLayoutPresets"
-import type { RepoPanelLayoutItem } from "@/components/Repo/panels/repoPanelLayoutCustomization"
 import { createDefaultRepoPanelConfig } from "@/components/Repo/panels/config"
 import {
   REPO_PANEL_PREVIEW_COLORS,
   REPO_PANEL_PREVIEW_LABELS,
 } from "@/components/Repo/panels/previewConfig"
-import { getRepoPanelDefinition, REPO_PANEL_DEFINITIONS } from "@/components/Repo/registry"
+import type { RepoLayoutPreset } from "@/components/Repo/panels/repoLayoutPresets"
+import type { RepoPanelLayoutItem } from "@/components/Repo/panels/repoPanelLayoutCustomization"
+import {
+  getRepoPanelDefinition,
+  REPO_PANEL_DEFINITIONS,
+} from "@/components/Repo/registry"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -26,7 +39,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-function createPanelId(kind: RepoPanelLayoutItem["kind"], existingIds: string[]): string {
+function createPanelId(
+  kind: RepoPanelLayoutItem["kind"],
+  existingIds: string[],
+): string {
   const base = kind
   if (!existingIds.includes(base)) return base
   let index = 2
@@ -50,7 +66,9 @@ function applyPreviewPanels(
   items: RepoPanelLayoutItem[],
   previewPanels: PreviewPanel[],
 ): RepoPanelLayoutItem[] {
-  const visibleById = new Map(items.filter((item) => !item.hidden).map((item) => [item.id, item]))
+  const visibleById = new Map(
+    items.filter((item) => !item.hidden).map((item) => [item.id, item]),
+  )
   const hidden = items.filter((item) => item.hidden)
 
   const nextVisible = previewPanels
@@ -122,11 +140,14 @@ export function RepoPanelLayoutDialog({
   onOpenAdvanced,
 }: RepoPanelLayoutDialogProps) {
   const [draftPanels, setDraftPanels] = useState<RepoPanelLayoutItem[]>(panels)
-  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(activePresetId)
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(
+    activePresetId,
+  )
   const [addPanelOpen, setAddPanelOpen] = useState(false)
   const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null)
-  const [focusedAddPanelKind, setFocusedAddPanelKind] =
-    useState<RepoPanelLayoutItem["kind"] | null>(null)
+  const [focusedAddPanelKind, setFocusedAddPanelKind] = useState<
+    RepoPanelLayoutItem["kind"] | null
+  >(null)
 
   useEffect(() => {
     if (!open) return
@@ -137,7 +158,10 @@ export function RepoPanelLayoutDialog({
     setFocusedAddPanelKind(REPO_PANEL_DEFINITIONS[0]?.kind ?? null)
   }, [activePresetId, open, panels])
 
-  const previewPanels = useMemo(() => toPreviewPanels(draftPanels), [draftPanels])
+  const previewPanels = useMemo(
+    () => toPreviewPanels(draftPanels),
+    [draftPanels],
+  )
 
   const presetPickerOptions = useMemo(
     () =>
@@ -172,7 +196,8 @@ export function RepoPanelLayoutDialog({
         item.id === panelId
           ? {
               ...item,
-              prominence: item.prominence === "primary" ? "auxiliary" : "primary",
+              prominence:
+                item.prominence === "primary" ? "auxiliary" : "primary",
             }
           : item,
       ),
@@ -194,10 +219,10 @@ export function RepoPanelLayoutDialog({
           kind,
           title: definition?.label ?? kind,
           prominence: definition?.defaultProminence ?? "primary",
-          config_json: createDefaultRepoPanelConfig(kind, nextId) as unknown as Record<
-            string,
-            unknown
-          > | null,
+          config_json: createDefaultRepoPanelConfig(
+            kind,
+            nextId,
+          ) as unknown as Record<string, unknown> | null,
           hidden: false,
         },
       ]
@@ -240,7 +265,10 @@ export function RepoPanelLayoutDialog({
       return
     }
 
-    if (addPanelOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+    if (
+      addPanelOpen &&
+      (event.key === "ArrowDown" || event.key === "ArrowUp")
+    ) {
       event.preventDefault()
       const currentIndex = addablePanels.findIndex(
         (panel) => panel.kind === focusedAddPanelKind,
@@ -301,8 +329,8 @@ export function RepoPanelLayoutDialog({
         <DialogHeader>
           <DialogTitle>Panel Layout</DialogTitle>
           <DialogDescription>
-            Arrange the visible repository panels for {repoName}. Use the advanced
-            editor for per-instance config and duplicate-heavy layouts.
+            Arrange the visible repository panels for {repoName}. Use the
+            advanced editor for per-instance config and duplicate-heavy layouts.
           </DialogDescription>
         </DialogHeader>
 
@@ -319,7 +347,9 @@ export function RepoPanelLayoutDialog({
                 const preset = presets.find((item) => item.id === presetId)
                 if (preset) {
                   setDraftPanels(preset.items)
-                  setFocusedPanelId(toPreviewPanels(preset.items)[0]?.id ?? null)
+                  setFocusedPanelId(
+                    toPreviewPanels(preset.items)[0]?.id ?? null,
+                  )
                 }
               }}
               variant="buttons"
@@ -368,15 +398,17 @@ export function RepoPanelLayoutDialog({
                 <div
                   key={panel.id}
                   className="flex items-center justify-between rounded-lg border px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  tabIndex={0}
                   onFocus={() => setFocusedPanelId(panel.id)}
                 >
-                    <div>
-                      <div className="text-sm font-medium">
-                        {getRepoPanelDefinition(panel.kind as RepoPanelLayoutItem["kind"])?.label ??
-                          panel.kind}
-                      </div>
-                    <div className="text-xs text-muted-foreground">{panel.id}</div>
+                  <div>
+                    <div className="text-sm font-medium">
+                      {getRepoPanelDefinition(
+                        panel.kind as RepoPanelLayoutItem["kind"],
+                      )?.label ?? panel.kind}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {panel.id}
+                    </div>
                   </div>
                   <Button
                     type="button"
@@ -384,7 +416,8 @@ export function RepoPanelLayoutDialog({
                     size="sm"
                     onClick={() => handleToggleProminence(panel.id)}
                   >
-                    Move to {panel.prominence === "primary" ? "Auxiliary" : "Primary"}
+                    Move to{" "}
+                    {panel.prominence === "primary" ? "Auxiliary" : "Primary"}
                     <span className="ml-2 text-[10px] text-muted-foreground">
                       Alt+{panel.prominence === "primary" ? "→" : "←"}
                     </span>
@@ -399,7 +432,9 @@ export function RepoPanelLayoutDialog({
               <Button variant="outline" className="w-full gap-2">
                 <Plus className="h-4 w-4" />
                 Add Panel
-                <span className="ml-auto text-xs text-muted-foreground">Ctrl+Shift+A</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  Ctrl+Shift+A
+                </span>
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2">
@@ -438,11 +473,17 @@ export function RepoPanelLayoutDialog({
               onClick={() => onOpenAdvanced(draftPanels)}
             >
               Advanced Editor
-              <span className="ml-2 text-xs text-muted-foreground">Ctrl+Alt+L</span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                Ctrl+Alt+L
+              </span>
             </Button>
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="button" onClick={handleApply}>

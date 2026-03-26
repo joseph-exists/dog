@@ -15,6 +15,7 @@ import { svgsQueryKeys, usePatchSvg, useSvgsList } from "@/hooks/useSvgs"
 import { SvgAppService } from "@/services/svgService"
 import { handleError } from "@/utils"
 import { BatchSeedSvgDialog } from "../dialogs/BatchSeedSvgDialog"
+import { ComposeStudioTab } from "./ComposeStudioTab"
 
 type PatternMode = "rings" | "weave" | "tiles"
 
@@ -87,12 +88,16 @@ export function SvgOperationsPanel() {
   const [selectedAssetId, setSelectedAssetId] = useState("")
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
-  const [editVisibility, setEditVisibility] = useState<"private" | "public">("private")
+  const [editVisibility, setEditVisibility] = useState<"private" | "public">(
+    "private",
+  )
   const [editMarkup, setEditMarkup] = useState("")
   const [editMetadataJson, setEditMetadataJson] = useState("{}")
 
   const selectedAsset = useMemo(
-    () => (listQuery.data?.data ?? []).find((row) => row.id === selectedAssetId) ?? null,
+    () =>
+      (listQuery.data?.data ?? []).find((row) => row.id === selectedAssetId) ??
+      null,
     [listQuery.data?.data, selectedAssetId],
   )
 
@@ -121,27 +126,29 @@ export function SvgOperationsPanel() {
   }, [columns, rows, hueStep, variantCount])
 
   const generateCombinatorics = () => {
-    const next: VariantDraft[] = Array.from({ length: numbers.v }).map((_, index) => {
-      const seed = index + 1
-      return {
-        name: `${namePrefix.trim() || "combo"}-${pattern}-${String(seed).padStart(3, "0")}`,
-        svg_markup: buildPatternSvg({
-          columns: numbers.c,
-          rows: numbers.r,
-          hueStep: numbers.h,
-          variantSeed: seed,
-          pattern,
-        }),
-        metadata_json: {
-          source: "svg-combinatorics-studio",
-          pattern,
-          columns: numbers.c,
-          rows: numbers.r,
-          hue_step: numbers.h,
-          seed,
-        },
-      }
-    })
+    const next: VariantDraft[] = Array.from({ length: numbers.v }).map(
+      (_, index) => {
+        const seed = index + 1
+        return {
+          name: `${namePrefix.trim() || "combo"}-${pattern}-${String(seed).padStart(3, "0")}`,
+          svg_markup: buildPatternSvg({
+            columns: numbers.c,
+            rows: numbers.r,
+            hueStep: numbers.h,
+            variantSeed: seed,
+            pattern,
+          }),
+          metadata_json: {
+            source: "svg-combinatorics-studio",
+            pattern,
+            columns: numbers.c,
+            rows: numbers.r,
+            hue_step: numbers.h,
+            seed,
+          },
+        }
+      },
+    )
     setGenerated(next)
   }
 
@@ -171,7 +178,11 @@ export function SvgOperationsPanel() {
     if (!selectedAsset) return
     try {
       const metadata = JSON.parse(editMetadataJson || "{}")
-      if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
+      if (
+        typeof metadata !== "object" ||
+        metadata === null ||
+        Array.isArray(metadata)
+      ) {
         throw new Error("metadata must be a JSON object")
       }
       await patchMutation.mutateAsync({
@@ -186,7 +197,9 @@ export function SvgOperationsPanel() {
       })
     } catch (error) {
       showErrorToast(
-        error instanceof Error ? `Invalid edit payload: ${error.message}` : "Invalid edit payload",
+        error instanceof Error
+          ? `Invalid edit payload: ${error.message}`
+          : "Invalid edit payload",
       )
     }
   }
@@ -202,37 +215,47 @@ export function SvgOperationsPanel() {
   }
 
   return (
-    <PanelContainer title="Library Operations" scrollable headerActions={<BatchSeedSvgDialog />}>
+    <PanelContainer
+      title="Library Operations"
+      scrollable
+      headerActions={<BatchSeedSvgDialog />}
+    >
       <div className="space-y-4 p-4">
         <Alert>
           <WandSparkles className="h-4 w-4" />
           <AlertTitle>Combinatorics + Canonical Validation</AlertTitle>
           <AlertDescription>
-            Generate pattern variants for review, then patch selected assets. PATCH saves go through canonical validation on the backend.
+            Generate pattern variants for review, then patch selected assets.
+            PATCH saves go through canonical validation on the backend.
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="studio" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="compose" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="compose">Compose Studio</TabsTrigger>
             <TabsTrigger value="studio">Combinatorics Studio</TabsTrigger>
             <TabsTrigger value="editor">Asset Editor</TabsTrigger>
           </TabsList>
-
+          <TabsContent value="compose" className="space-y-4">
+            <ComposeStudioTab />
+          </TabsContent>
           <TabsContent value="studio" className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Pattern</Label>
                 <div className="flex flex-wrap gap-2">
-                  {(["rings", "weave", "tiles"] as PatternMode[]).map((candidate) => (
-                    <Button
-                      key={candidate}
-                      size="sm"
-                      variant={pattern === candidate ? "default" : "outline"}
-                      onClick={() => setPattern(candidate)}
-                    >
-                      {candidate}
-                    </Button>
-                  ))}
+                  {(["rings", "weave", "tiles"] as PatternMode[]).map(
+                    (candidate) => (
+                      <Button
+                        key={candidate}
+                        size="sm"
+                        variant={pattern === candidate ? "default" : "outline"}
+                        onClick={() => setPattern(candidate)}
+                      >
+                        {candidate}
+                      </Button>
+                    ),
+                  )}
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -248,19 +271,31 @@ export function SvgOperationsPanel() {
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1.5">
                 <Label>Columns</Label>
-                <Input value={columns} onChange={(event) => setColumns(event.target.value)} />
+                <Input
+                  value={columns}
+                  onChange={(event) => setColumns(event.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Rows</Label>
-                <Input value={rows} onChange={(event) => setRows(event.target.value)} />
+                <Input
+                  value={rows}
+                  onChange={(event) => setRows(event.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Hue Step</Label>
-                <Input value={hueStep} onChange={(event) => setHueStep(event.target.value)} />
+                <Input
+                  value={hueStep}
+                  onChange={(event) => setHueStep(event.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Variants</Label>
-                <Input value={variantCount} onChange={(event) => setVariantCount(event.target.value)} />
+                <Input
+                  value={variantCount}
+                  onChange={(event) => setVariantCount(event.target.value)}
+                />
               </div>
             </div>
 
@@ -272,9 +307,13 @@ export function SvgOperationsPanel() {
               <Button
                 variant="outline"
                 onClick={saveAllGenerated}
-                disabled={generated.length === 0 || createManyMutation.isPending}
+                disabled={
+                  generated.length === 0 || createManyMutation.isPending
+                }
               >
-                {createManyMutation.isPending ? "Saving..." : `Save All (${generated.length})`}
+                {createManyMutation.isPending
+                  ? "Saving..."
+                  : `Save All (${generated.length})`}
               </Button>
               <Badge variant="secondary">{pattern}</Badge>
             </div>
@@ -282,7 +321,10 @@ export function SvgOperationsPanel() {
             {generated.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {generated.map((item) => (
-                  <div key={item.name} className="space-y-2 rounded-lg border p-3">
+                  <div
+                    key={item.name}
+                    className="space-y-2 rounded-lg border p-3"
+                  >
                     <div className="text-xs font-medium">{item.name}</div>
                     <div className="h-40 overflow-hidden rounded border bg-muted/30 p-2">
                       <img
@@ -306,7 +348,10 @@ export function SvgOperationsPanel() {
                 onChange={(event) => {
                   const value = event.target.value
                   setSelectedAssetId(value)
-                  const asset = (listQuery.data?.data ?? []).find((row) => row.id === value) ?? null
+                  const asset =
+                    (listQuery.data?.data ?? []).find(
+                      (row) => row.id === value,
+                    ) ?? null
                   loadAssetForEditing(asset)
                 }}
               >
@@ -322,21 +367,28 @@ export function SvgOperationsPanel() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Name</Label>
-                <Input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                <Input
+                  value={editName}
+                  onChange={(event) => setEditName(event.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Visibility</Label>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    variant={editVisibility === "private" ? "default" : "outline"}
+                    variant={
+                      editVisibility === "private" ? "default" : "outline"
+                    }
                     onClick={() => setEditVisibility("private")}
                   >
                     private
                   </Button>
                   <Button
                     size="sm"
-                    variant={editVisibility === "public" ? "default" : "outline"}
+                    variant={
+                      editVisibility === "public" ? "default" : "outline"
+                    }
                     onClick={() => setEditVisibility("public")}
                   >
                     public
@@ -372,12 +424,19 @@ export function SvgOperationsPanel() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button disabled={!selectedAsset || patchMutation.isPending} onClick={savePatch}>
+              <Button
+                disabled={!selectedAsset || patchMutation.isPending}
+                onClick={savePatch}
+              >
                 {patchMutation.isPending ? "Saving..." : "Save Patch"}
               </Button>
               <Button
                 variant="outline"
-                disabled={!selectedAsset || patchMutation.isPending || !editMarkup.trim()}
+                disabled={
+                  !selectedAsset ||
+                  patchMutation.isPending ||
+                  !editMarkup.trim()
+                }
                 onClick={revalidateMarkup}
               >
                 Revalidate Markup

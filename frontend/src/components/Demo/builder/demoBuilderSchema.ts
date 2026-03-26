@@ -6,9 +6,6 @@ import type {
   DemoPersonaPolicy,
   DemoRuntimePolicy,
 } from "@/client/types.gen"
-import { createDefaultGitViewConfig } from "@/components/Demo/gitViewConfig"
-import { createDefaultLiveRepoExplorerConfig } from "@/components/Demo/liveRepoExplorerConfig"
-import { createDefaultLiveRepoFileViewerConfig } from "@/components/Demo/liveRepoFileViewerConfig"
 import {
   BUILDER_COMPOSITION_TEMPLATE_SCHEMAS,
   createCompositionTemplateFromRegistry,
@@ -19,7 +16,14 @@ import type {
   BuilderTemplateConfirmations,
   BuilderTemplateId,
 } from "@/components/Demo/builder/templates/types"
+import { createDefaultGitViewConfig } from "@/components/Demo/gitViewConfig"
+import { createDefaultLiveRepoExplorerConfig } from "@/components/Demo/liveRepoExplorerConfig"
+import { createDefaultLiveRepoFileViewerConfig } from "@/components/Demo/liveRepoFileViewerConfig"
 
+export {
+  BUILDER_COMPOSITION_TEMPLATE_SCHEMAS,
+  BUILDER_COMPOSITION_TEMPLATES,
+} from "@/components/Demo/builder/templates/registry"
 export type {
   BuilderCompositionTemplateOption,
   BuilderCompositionTemplateSchema,
@@ -28,10 +32,6 @@ export type {
   BuilderTemplateConfirmations,
   BuilderTemplateId,
 } from "@/components/Demo/builder/templates/types"
-export {
-  BUILDER_COMPOSITION_TEMPLATES,
-  BUILDER_COMPOSITION_TEMPLATE_SCHEMAS,
-} from "@/components/Demo/builder/templates/registry"
 
 // ============================================================================
 // Builder Schema: Canonical Authoring Layer

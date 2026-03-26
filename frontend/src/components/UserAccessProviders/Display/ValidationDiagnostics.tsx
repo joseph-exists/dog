@@ -7,9 +7,7 @@ interface ValidationDiagnosticsProps {
   result: DetailedTestResult
 }
 
-export function ValidationDiagnostics({
-  result,
-}: ValidationDiagnosticsProps) {
+export function ValidationDiagnostics({ result }: ValidationDiagnosticsProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -25,7 +23,9 @@ export function ValidationDiagnostics({
           <Info className="h-3.5 w-3.5" />
           Diagnostics
         </span>
-        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </Button>
       {open ? (
         <div className="space-y-3 border-t px-3 py-3 text-xs">

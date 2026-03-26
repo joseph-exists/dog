@@ -107,7 +107,8 @@ export function parseGitViewConfig(value: unknown): GitViewConfig | null {
       ? value.entity_id_metadata_key.trim()
       : defaults.entity_id_metadata_key
   const selectionKey =
-    typeof value.selection_key === "string" && value.selection_key.trim().length > 0
+    typeof value.selection_key === "string" &&
+    value.selection_key.trim().length > 0
       ? value.selection_key.trim()
       : defaults.selection_key
   const displayMode =
@@ -146,7 +147,8 @@ export function parseGitViewConfig(value: unknown): GitViewConfig | null {
     show_sizes: value.show_sizes !== false,
     show_commit_badge: value.show_commit_badge !== false,
     empty_label:
-      typeof value.empty_label === "string" && value.empty_label.trim().length > 0
+      typeof value.empty_label === "string" &&
+      value.empty_label.trim().length > 0
         ? value.empty_label.trim()
         : defaults.empty_label,
   }
@@ -168,7 +170,7 @@ export function resolveGitViewConfig(
 
   const entityId =
     parsed.entity_id_mode === "explicit"
-      ? parsed.entity_id?.trim() ?? ""
+      ? (parsed.entity_id?.trim() ?? "")
       : (() => {
           if (!isObjectRecord(metadataJson)) return ""
           const candidate = metadataJson[parsed.entity_id_metadata_key ?? ""]

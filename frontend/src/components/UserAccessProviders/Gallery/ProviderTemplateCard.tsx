@@ -24,7 +24,8 @@ export function ProviderTemplateCard({
   isSelected,
   onSelect,
 }: ProviderTemplateCardProps) {
-  const accent = FALLBACK_ACCENTS[providerType.category ?? "custom"] ?? "#475569"
+  const accent =
+    FALLBACK_ACCENTS[providerType.category ?? "custom"] ?? "#475569"
   const title = providerType.display_name || providerType.name
 
   return (
@@ -55,7 +56,9 @@ export function ProviderTemplateCard({
             <h4 className="text-sm font-semibold">{title}</h4>
           </div>
           <p className="text-xs text-muted-foreground">
-            {providerType.details || providerType.default_base_url || "Template"}
+            {providerType.details ||
+              providerType.default_base_url ||
+              "Template"}
           </p>
         </div>
         {isConfigured ? (

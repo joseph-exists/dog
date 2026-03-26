@@ -49,7 +49,8 @@ export function useSvg(svgId: string) {
 export function useCreatePrivateSvg() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: SvgAssetCreatePrivate) => SvgAppService.createPrivateSvg(input),
+    mutationFn: (input: SvgAssetCreatePrivate) =>
+      SvgAppService.createPrivateSvg(input),
     onSuccess: () => {
       showSuccessToast("SVG asset created")
       queryClient.invalidateQueries({ queryKey: svgsQueryKeys.all })
@@ -104,4 +105,3 @@ export function useDeleteSvg() {
     },
   })
 }
-

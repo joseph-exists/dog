@@ -4,8 +4,11 @@ import type {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionFPresentationPassthroughAuditTemplate(context: TemplateBuilderContext): EditableComposition {
-  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } = context
+export function buildCompositionFPresentationPassthroughAuditTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
+  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } =
+    context
   const composition = createEmptyComposition()
   composition.layout_mode = "tabs"
   composition.runtime_policy = "auto"
@@ -410,4 +413,3 @@ export function buildCompositionFPresentationPassthroughAuditTemplate(context: T
 
   return composition
 }
-

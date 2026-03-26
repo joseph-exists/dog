@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import { ExternalLink, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Link } from "@tanstack/react-router"
 import type { RoomWorkspaceConnectionPurpose } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useRoomWorkspaceConnection } from "@/hooks/useRoomWorkspaceConnection"
 import {
   Select,
   SelectContent,
@@ -13,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useRoomWorkspaceConnection } from "@/hooks/useRoomWorkspaceConnection"
 import { cn } from "@/lib/utils"
 import {
   RoomService,
@@ -33,16 +33,20 @@ const PURPOSE_OPTIONS: Array<{
   {
     value: "service_connect",
     label: "Service Link",
-    description: "Inspect browser-facing or API services discovered in the workspace.",
+    description:
+      "Inspect browser-facing or API services discovered in the workspace.",
   },
   {
     value: "agent_runtime_connect",
     label: "Agent Runtime",
-    description: "Inspect runtime endpoints for agent services such as codex or hermes.",
+    description:
+      "Inspect runtime endpoints for agent services such as codex or hermes.",
   },
 ]
 
-function getStatusBadgeClass(status: RoomWorkspaceConnectionViewModel["status"]) {
+function getStatusBadgeClass(
+  status: RoomWorkspaceConnectionViewModel["status"],
+) {
   if (status === "available") {
     return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
   }
@@ -71,7 +75,8 @@ function getFreshnessClass(expiresAt: Date | null) {
   if (!expiresAt) return "border-border bg-muted/40 text-muted-foreground"
   const remaining = expiresAt.getTime() - Date.now()
   if (remaining <= 0) return "border-rose-500/40 bg-rose-500/10 text-rose-700"
-  if (remaining <= 2 * 60 * 1000) return "border-amber-500/40 bg-amber-500/10 text-amber-700"
+  if (remaining <= 2 * 60 * 1000)
+    return "border-amber-500/40 bg-amber-500/10 text-amber-700"
   return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
 }
 
@@ -86,7 +91,9 @@ function relationshipLabel(
   return relationship === "shared_project" ? "Shared Project" : "Owner Private"
 }
 
-function accessLabel(accessLevel: RoomWorkspaceCandidateViewModel["access_level"]) {
+function accessLabel(
+  accessLevel: RoomWorkspaceCandidateViewModel["access_level"],
+) {
   if (accessLevel === "manage") return "Manage"
   if (accessLevel === "use") return "Use"
   return "View"
@@ -128,14 +135,17 @@ export function WorkspaceConnectionsPanel({
     const preferredWorkspace =
       workspaceOptions.find(
         (workspace) =>
-          workspace.supports_service_connect || workspace.supports_agent_runtime_connect,
+          workspace.supports_service_connect ||
+          workspace.supports_agent_runtime_connect,
       ) ?? workspaceOptions[0]
 
     setWorkspaceId(preferredWorkspace.workspace_id)
   }, [workspaceId, workspaceOptions])
 
   const selectedWorkspace =
-    workspaceOptions.find((workspace) => workspace.workspace_id === workspaceId) ?? null
+    workspaceOptions.find(
+      (workspace) => workspace.workspace_id === workspaceId,
+    ) ?? null
 
   const descriptorQuery = useQuery({
     queryKey: ["rooms", roomId, "workspace-connections", workspaceId, purpose],
@@ -153,7 +163,9 @@ export function WorkspaceConnectionsPanel({
     },
   })
 
-  const selectedPurpose = PURPOSE_OPTIONS.find((option) => option.value === purpose)
+  const selectedPurpose = PURPOSE_OPTIONS.find(
+    (option) => option.value === purpose,
+  )
   const isCurrentSelection =
     currentConnection?.workspaceId === selectedWorkspace?.workspace_id &&
     currentConnection?.purpose === purpose
@@ -169,7 +181,10 @@ export function WorkspaceConnectionsPanel({
           disabled={!workspaceId || descriptorQuery.isFetching}
         >
           <RefreshCw
-            className={cn("h-4 w-4", descriptorQuery.isFetching && "animate-spin")}
+            className={cn(
+              "h-4 w-4",
+              descriptorQuery.isFetching && "animate-spin",
+            )}
           />
         </Button>
       }
@@ -189,7 +204,9 @@ export function WorkspaceConnectionsPanel({
           <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Current room connection</div>
+                <div className="text-sm font-medium">
+                  Current room connection
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {currentConnection.workspaceName} ·{" "}
                   {currentConnection.purpose === "agent_runtime_connect"
@@ -200,7 +217,9 @@ export function WorkspaceConnectionsPanel({
               <div className="flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className={getCurrentConnectionStateClass(currentConnection.state)}
+                  className={getCurrentConnectionStateClass(
+                    currentConnection.state,
+                  )}
                 >
                   {currentConnection.state}
                 </Badge>
@@ -220,7 +239,9 @@ export function WorkspaceConnectionsPanel({
                 </Badge>
                 <Badge
                   variant="outline"
-                  className={getStatusBadgeClass(currentConnection.descriptorStatus)}
+                  className={getStatusBadgeClass(
+                    currentConnection.descriptorStatus,
+                  )}
                 >
                   {currentConnection.descriptorStatus}
                 </Badge>
@@ -249,24 +270,29 @@ export function WorkspaceConnectionsPanel({
                 Access: {accessLabel(currentConnection.accessLevel)}
               </span>
               <span className="rounded-full border bg-background px-2 py-0.5 text-muted-foreground">
-                {currentConnection.readyServiceCount}/{currentConnection.serviceCount} services ready
+                {currentConnection.readyServiceCount}/
+                {currentConnection.serviceCount} services ready
               </span>
             </div>
 
             <div className="text-xs text-muted-foreground">
               {currentConnection.state === "unavailable"
-                ? currentConnection.stateReason ??
+                ? (currentConnection.stateReason ??
                   currentConnection.reason ??
-                  "This room-held connection now points at a workspace that is no longer available."
+                  "This room-held connection now points at a workspace that is no longer available.")
                 : currentConnection.descriptorExpiresAt &&
-                    new Date(currentConnection.descriptorExpiresAt).getTime() <= Date.now()
+                    new Date(currentConnection.descriptorExpiresAt).getTime() <=
+                      Date.now()
                   ? "The held descriptor has aged out. Refresh to rebuild it from current backend state."
-                : currentConnection.reason ?? "Descriptor-backed room connection is active."}
+                  : (currentConnection.reason ??
+                    "Descriptor-backed room connection is active.")}
             </div>
 
             {currentConnection.state === "unavailable" ? (
               <div className="rounded-md border bg-background/70 p-3 text-xs text-muted-foreground">
-                The room is retaining this connection as historical session state. You can clear it and choose a new workspace candidate when you are ready.
+                The room is retaining this connection as historical session
+                state. You can clear it and choose a new workspace candidate
+                when you are ready.
               </div>
             ) : null}
 
@@ -290,14 +316,19 @@ export function WorkspaceConnectionsPanel({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="text-sm font-medium">{endpoint.label}</div>
+                          <div className="text-sm font-medium">
+                            {endpoint.label}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {endpoint.kind} · {endpoint.protocol}
-                            {endpoint.auth_mode ? ` · ${endpoint.auth_mode}` : ""}
+                            {endpoint.auth_mode
+                              ? ` · ${endpoint.auth_mode}`
+                              : ""}
                           </div>
                           {endpoint.scope ? (
                             <div className="mt-1 text-[11px] text-muted-foreground">
-                              Scope: {Object.entries(endpoint.scope)
+                              Scope:{" "}
+                              {Object.entries(endpoint.scope)
                                 .map(([key, value]) => `${key}=${value}`)
                                 .join(" · ")}
                             </div>
@@ -364,7 +395,10 @@ export function WorkspaceConnectionsPanel({
                   </SelectTrigger>
                   <SelectContent>
                     {workspaceOptions.map((workspace) => (
-                      <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                      <SelectItem
+                        key={workspace.workspace_id}
+                        value={workspace.workspace_id}
+                      >
                         {getWorkspaceOptionLabel(workspace)}
                       </SelectItem>
                     ))}
@@ -405,7 +439,9 @@ export function WorkspaceConnectionsPanel({
               <div className="rounded-lg border bg-muted/30 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-medium text-sm">{selectedWorkspace.workspace_name}</div>
+                    <div className="font-medium text-sm">
+                      {selectedWorkspace.workspace_name}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {selectedWorkspace.project_summary?.name ??
                         "No project attachment"}
@@ -477,13 +513,17 @@ export function WorkspaceConnectionsPanel({
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className={getFreshnessClass(descriptorQuery.data.expires_at)}
+                      className={getFreshnessClass(
+                        descriptorQuery.data.expires_at,
+                      )}
                     >
                       {getFreshnessLabel(descriptorQuery.data.expires_at)}
                     </Badge>
                     <Badge
                       variant="outline"
-                      className={getStatusBadgeClass(descriptorQuery.data.status)}
+                      className={getStatusBadgeClass(
+                        descriptorQuery.data.status,
+                      )}
                     >
                       {descriptorQuery.data.status}
                     </Badge>
@@ -497,8 +537,8 @@ export function WorkspaceConnectionsPanel({
                         Room-side connection state
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Hold this descriptor as the room&apos;s current workspace
-                        connection for the active session.
+                        Hold this descriptor as the room&apos;s current
+                        workspace connection for the active session.
                       </div>
                     </div>
                     <Button
@@ -510,10 +550,13 @@ export function WorkspaceConnectionsPanel({
                         })
                       }
                       disabled={
-                        descriptorQuery.data.status === "denied" || isCurrentSelection
+                        descriptorQuery.data.status === "denied" ||
+                        isCurrentSelection
                       }
                     >
-                      {isCurrentSelection ? "Current Connection" : "Set Current"}
+                      {isCurrentSelection
+                        ? "Current Connection"
+                        : "Set Current"}
                     </Button>
                   </div>
                 ) : null}
@@ -555,7 +598,9 @@ export function WorkspaceConnectionsPanel({
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {endpoint.kind} · {endpoint.protocol}
-                                {endpoint.auth_mode ? ` · ${endpoint.auth_mode}` : ""}
+                                {endpoint.auth_mode
+                                  ? ` · ${endpoint.auth_mode}`
+                                  : ""}
                               </div>
                             </div>
                             {endpoint.url ? (

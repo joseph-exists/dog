@@ -33,18 +33,11 @@ export function TerminalPanel({
   const [mode, setMode] = useState<"live" | "transcript">("live")
   const [draftInput, setDraftInput] = useState("")
 
-  const {
-    session,
-    status,
-    error,
-    connect,
-    disconnect,
-    clear,
-    sendInput,
-  } = useTerminalSession({
-    url: terminalUrl ?? null,
-    enabled: Boolean(terminalUrl),
-  })
+  const { session, status, error, connect, disconnect, clear, sendInput } =
+    useTerminalSession({
+      url: terminalUrl ?? null,
+      enabled: Boolean(terminalUrl),
+    })
 
   const requestLabel = useMemo(() => {
     if (isRequestingTerminal) return "Requesting terminal..."
@@ -106,7 +99,9 @@ export function TerminalPanel({
     >
       <div className="flex h-full min-h-[28rem] flex-col">
         {metadata ? (
-          <div className="border-b border-border/70 px-4 py-3 text-sm">{metadata}</div>
+          <div className="border-b border-border/70 px-4 py-3 text-sm">
+            {metadata}
+          </div>
         ) : null}
 
         {terminalError || error ? (
@@ -133,7 +128,10 @@ export function TerminalPanel({
               placeholder="Send a line of terminal input"
               disabled={status !== "open"}
             />
-            <Button onClick={submitInput} disabled={status !== "open" || !draftInput.trim()}>
+            <Button
+              onClick={submitInput}
+              disabled={status !== "open" || !draftInput.trim()}
+            >
               Send
             </Button>
           </div>

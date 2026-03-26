@@ -123,7 +123,10 @@ export function PersonaManagerForm({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor={`personas.${index}.name`}>Name</Label>
-                <Input id={`personas.${index}.name`} {...register(`personas.${index}.name`)} />
+                <Input
+                  id={`personas.${index}.name`}
+                  {...register(`personas.${index}.name`)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor={`personas.${index}.nickname`}>Nickname</Label>
@@ -212,7 +215,9 @@ export function PersonaManagerForm({
                   <p className="text-sm font-medium">Visible In Audience</p>
                 </div>
                 <Switch
-                  checked={watch(`personas.${index}.isVisibleInCurrentAudience`)}
+                  checked={watch(
+                    `personas.${index}.isVisibleInCurrentAudience`,
+                  )}
                   onCheckedChange={(checked) =>
                     setValue(
                       `personas.${index}.isVisibleInCurrentAudience`,

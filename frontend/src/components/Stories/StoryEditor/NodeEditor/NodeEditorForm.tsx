@@ -32,8 +32,8 @@ import type {
 import { SvgsService } from "@/client"
 import {
   type Content,
-  type ContentVariant,
   ContentRenderer,
+  type ContentVariant,
 } from "@/components/Page/primitives/ContentRenderer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -193,7 +193,7 @@ const SNIPPETS: Partial<Record<ContentFormat, CreativeSnippet[]>> = {
       label: "Kinetic CTA",
       description: "Button + momentum copy",
       value:
-        "## Ready for the jump?\n\nPress forward only if you can absorb uncertainty.\n\n<button className=\"px-4 py-2 rounded bg-black text-white\">Commit</button>",
+        '## Ready for the jump?\n\nPress forward only if you can absorb uncertainty.\n\n<button className="px-4 py-2 rounded bg-black text-white">Commit</button>',
     },
   ],
   html: [
@@ -201,13 +201,13 @@ const SNIPPETS: Partial<Record<ContentFormat, CreativeSnippet[]>> = {
       label: "Hero block",
       description: "Headline and supporting copy",
       value:
-        "<section style=\"padding:20px;border-radius:16px;background:linear-gradient(145deg,#fef3c7,#dbeafe)\"><h2 style=\"margin-top:0\">Chapter Node</h2><p>Build momentum, reveal intent, and tee up a choice.</p></section>",
+        '<section style="padding:20px;border-radius:16px;background:linear-gradient(145deg,#fef3c7,#dbeafe)"><h2 style="margin-top:0">Chapter Node</h2><p>Build momentum, reveal intent, and tee up a choice.</p></section>',
     },
     {
       label: "Two-column",
       description: "Split details and action",
       value:
-        "<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:16px\"><aside><h3>Signals</h3><ul><li>Temperature drop</li><li>Clock drift</li></ul></aside><main><h3>Action</h3><p>Stabilize the relay before opening the hatch.</p></main></div>",
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><aside><h3>Signals</h3><ul><li>Temperature drop</li><li>Clock drift</li></ul></aside><main><h3>Action</h3><p>Stabilize the relay before opening the hatch.</p></main></div>',
     },
   ],
   code: [
@@ -314,7 +314,12 @@ function presetFilterChain(preset: LayerFilterPreset): LayerFilterStep[] {
     case "softBlur":
       return [createFilterStep("feGaussianBlur", 'stdDeviation="2.4"')]
     case "glow":
-      return [createFilterStep("feDropShadow", 'dx="0" dy="0" stdDeviation="4" flood-color="#a78bfa" flood-opacity="0.8"')]
+      return [
+        createFilterStep(
+          "feDropShadow",
+          'dx="0" dy="0" stdDeviation="4" flood-color="#a78bfa" flood-opacity="0.8"',
+        ),
+      ]
     case "distort":
       return [
         createFilterStep(
@@ -323,8 +328,6 @@ function presetFilterChain(preset: LayerFilterPreset): LayerFilterStep[] {
         ),
         createFilterStep("feDisplacementMap", 'in2="noise" scale="24"'),
       ]
-    case "custom":
-    case "none":
     default:
       return []
   }
@@ -378,7 +381,8 @@ function filterDefForLayer(layer: SvgLayer): string {
       const resultName = explicitResult || fallbackResult
 
       const canUseInAttr = step.primitive !== "feTurbulence"
-      const inPrefix = canUseInAttr && !hasInAttr ? `in="${previousResult}" ` : ""
+      const inPrefix =
+        canUseInAttr && !hasInAttr ? `in="${previousResult}" ` : ""
       const resultSuffix = hasResultAttr ? "" : ` result="${resultName}"`
 
       if (step.primitive !== "feBlend") {
@@ -394,7 +398,11 @@ function filterDefForLayer(layer: SvgLayer): string {
   return `<filter id="${filterId}" x="-30%" y="-30%" width="160%" height="160%">${primitiveNodes}</filter>`
 }
 
-function buildCompositeSvg(layers: SvgLayer[], canvasWidth: number, canvasHeight: number): string {
+function buildCompositeSvg(
+  layers: SvgLayer[],
+  canvasWidth: number,
+  canvasHeight: number,
+): string {
   const visibleLayers = layers.filter((layer) => layer.visible)
   const layersWithFilters = visibleLayers.map((layer) => ({
     layer,
@@ -409,7 +417,7 @@ function buildCompositeSvg(layers: SvgLayer[], canvasWidth: number, canvasHeight
   const groups = layersWithFilters
     .map(({ layer, filterDef }) => {
       const filterId = `layer-filter-${layer.id}`
-      const filterAttr = filterDef ? ` filter=\"url(#${filterId})\"` : ""
+      const filterAttr = filterDef ? ` filter="url(#${filterId})"` : ""
       const transform = `translate(${layer.x} ${layer.y}) rotate(${layer.rotation}) scale(${layer.scale})`
 
       return `<g transform="${transform}" opacity="${layer.opacity}" style="mix-blend-mode:${layer.blendMode}"${filterAttr}>${stripOuterSvg(layer.svg)}</g>`
@@ -426,7 +434,11 @@ function escapeForTemplateLiteral(value: string): string {
     .replace(/\$\{/g, "\\${")
 }
 
-function buildLayeredMdx(compositeSvg: string, canvasWidth: number, canvasHeight: number): string {
+function buildLayeredMdx(
+  compositeSvg: string,
+  canvasWidth: number,
+  canvasHeight: number,
+): string {
   const style = `<style>{\`\n.svg-layer-scene {\n  position: relative;\n  width: 100%;\n  max-width: ${canvasWidth}px;\n  min-height: ${canvasHeight}px;\n  overflow: hidden;\n  border-radius: 16px;\n}\n.svg-layer-scene .svg-layer {\n  position: absolute;\n  inset: 0;\n  transform-origin: center;\n}\n.svg-layer-scene .svg-layer > svg {\n  width: 100%;\n  height: 100%;\n}\n\`}</style>`
   const html = `<div class="svg-layer-scene">${compositeSvg}</div>`
   return `${style}\n\n<div dangerouslySetInnerHTML={{ __html: \`${escapeForTemplateLiteral(html)}\` }} />`
@@ -497,9 +509,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
 
   const [previewVariant, setPreviewVariant] = useState<ContentVariant>("card")
   const [previewSafeMode, setPreviewSafeMode] = useState(true)
-  const [previewFrame, setPreviewFrame] = useState<"compact" | "standard" | "wide">(
-    "standard",
-  )
+  const [previewFrame, setPreviewFrame] = useState<
+    "compact" | "standard" | "wide"
+  >("standard")
   const [previewSurface, setPreviewSurface] = useState<
     "neutral" | "glass" | "ink"
   >("neutral")
@@ -512,7 +524,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     createSvgLayer(0),
     createSvgLayer(1),
   ])
-  const [activeLayerId, setActiveLayerId] = useState<string>(svgLayers[0]?.id ?? "")
+  const [activeLayerId, setActiveLayerId] = useState<string>(
+    svgLayers[0]?.id ?? "",
+  )
   const [svgApplyMode, setSvgApplyMode] = useState<SvgApplyMode>("replace")
   const [svgApplyTargetPreview, setSvgApplyTargetPreview] = useState<
     "svg" | "mdx"
@@ -525,7 +539,7 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
   const [svgLibraryVisibility, setSvgLibraryVisibility] = useState<
     "all" | "private" | "public"
   >("all")
-  const [svgLibraryReloadToken, setSvgLibraryReloadToken] = useState(0)
+  const [_svgLibraryReloadToken, setSvgLibraryReloadToken] = useState(0)
   const [showRawSvgMarkup, setShowRawSvgMarkup] = useState(false)
   const [showApplyPlanning, setShowApplyPlanning] = useState(false)
 
@@ -540,7 +554,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
   }, [node])
 
   const activeLayer =
-    svgLayers.find((layer) => layer.id === activeLayerId) ?? svgLayers[0] ?? null
+    svgLayers.find((layer) => layer.id === activeLayerId) ??
+    svgLayers[0] ??
+    null
 
   useEffect(() => {
     if (!activeLayer && svgLayers.length > 0) {
@@ -584,7 +600,7 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     return () => {
       ignore = true
     }
-  }, [activeTab, svgLibraryVisibility, svgLibraryReloadToken])
+  }, [activeTab, svgLibraryVisibility])
 
   const mutateNode = (patch: StoryNodeUpdate) => {
     if (Object.keys(patch).length === 0) return
@@ -616,15 +632,7 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     }
 
     return patch
-  }, [
-    content,
-    contentFormat,
-    isEndNode,
-    isStartNode,
-    node,
-    nodeType,
-    title,
-  ])
+  }, [content, contentFormat, isEndNode, isStartNode, node, nodeType, title])
 
   const hasUnsavedChanges = Object.keys(dirtyPatch).length > 0
 
@@ -747,7 +755,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
     if (!activeLayer) return
 
     setSvgLayers((prev) =>
-      prev.map((layer) => (layer.id === activeLayer.id ? { ...layer, ...patch } : layer)),
+      prev.map((layer) =>
+        layer.id === activeLayer.id ? { ...layer, ...patch } : layer,
+      ),
     )
   }
 
@@ -910,16 +920,7 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
 
   const svgApplyPreview = useMemo(
     () => buildSvgApplyPlan(svgApplyTargetPreview, svgApplyMode),
-    [
-      svgApplyMode,
-      svgApplyTargetPreview,
-      compositeSvg,
-      svgCanvasHeight,
-      svgCanvasWidth,
-      content,
-      contentFormat,
-      svgBackgroundMinHeight,
-    ],
+    [svgApplyMode, svgApplyTargetPreview, buildSvgApplyPlan],
   )
 
   const applySvgMarkupToContent = (
@@ -952,7 +953,10 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
 
     setContent(plan.nextContent)
     const patch: StoryNodeUpdate = { content: plan.nextContent }
-    if (contentFormat !== plan.nextFormat || node.content_format !== plan.nextFormat) {
+    if (
+      contentFormat !== plan.nextFormat ||
+      node.content_format !== plan.nextFormat
+    ) {
       setContentFormat(plan.nextFormat)
       patch.content_format = plan.nextFormat
     }
@@ -1283,8 +1287,8 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
               Layered SVG Composer
             </div>
             <p className="text-xs text-muted-foreground">
-              Build multi-layer SVG scenes with transform, blend, and filter chains,
-              then export directly into node content as `svg` or `mdx`.
+              Build multi-layer SVG scenes with transform, blend, and filter
+              chains, then export directly into node content as `svg` or `mdx`.
             </p>
           </div>
 
@@ -1295,7 +1299,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                 type="number"
                 value={svgCanvasWidth}
                 min={200}
-                onChange={(e) => setSvgCanvasWidth(Number(e.target.value) || 960)}
+                onChange={(e) =>
+                  setSvgCanvasWidth(Number(e.target.value) || 960)
+                }
               />
             </div>
             <div className="space-y-2">
@@ -1304,7 +1310,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                 type="number"
                 value={svgCanvasHeight}
                 min={120}
-                onChange={(e) => setSvgCanvasHeight(Number(e.target.value) || 560)}
+                onChange={(e) =>
+                  setSvgCanvasHeight(Number(e.target.value) || 560)
+                }
               />
             </div>
             <div className="space-y-2">
@@ -1377,22 +1385,29 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
               </div>
             ) : (
               <div className="max-h-[220px] space-y-2 overflow-auto rounded-md border bg-background p-2">
-                {!isSvgLibraryLoading && filteredSvgLibraryAssets.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No SVG assets found.</p>
-                )}
+                {!isSvgLibraryLoading &&
+                  filteredSvgLibraryAssets.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No SVG assets found.
+                    </p>
+                  )}
                 {filteredSvgLibraryAssets.map((asset) => (
                   <div
                     key={asset.id}
                     className="flex items-center justify-between gap-2 rounded-md border p-2"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{asset.name}</p>
+                      <p className="truncate text-sm font-medium">
+                        {asset.name}
+                      </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {asset.description || "No description"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{asset.visibility || "private"}</Badge>
+                      <Badge variant="outline">
+                        {asset.visibility || "private"}
+                      </Badge>
                       <Button
                         type="button"
                         size="sm"
@@ -1431,7 +1446,12 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
             <div className="space-y-2 lg:col-span-2">
               <div className="flex items-center justify-between">
                 <Label>Layer Stack</Label>
-                <Button type="button" size="sm" variant="outline" onClick={() => addLayer()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => addLayer()}
+                >
                   <Plus className="mr-1 h-4 w-4" />
                   Add
                 </Button>
@@ -1450,11 +1470,15 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium">{layer.name}</p>
+                      <p className="truncate text-sm font-medium">
+                        {layer.name}
+                      </p>
                       <Badge variant="outline">{index + 1}</Badge>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {!layer.visible && <Badge variant="secondary">hidden</Badge>}
+                      {!layer.visible && (
+                        <Badge variant="secondary">hidden</Badge>
+                      )}
                       {layer.filterPreset !== "none" && (
                         <Badge variant="secondary">{layer.filterPreset}</Badge>
                       )}
@@ -1479,7 +1503,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                       <Label>Layer Name</Label>
                       <Input
                         value={activeLayer.name}
-                        onChange={(e) => upsertActiveLayer({ name: e.target.value })}
+                        onChange={(e) =>
+                          upsertActiveLayer({ name: e.target.value })
+                        }
                       />
                     </div>
                     <div className="flex items-end gap-2">
@@ -1505,7 +1531,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => upsertActiveLayer({ visible: !activeLayer.visible })}
+                        onClick={() =>
+                          upsertActiveLayer({ visible: !activeLayer.visible })
+                        }
                       >
                         {activeLayer.visible ? "Hide" : "Show"}
                       </Button>
@@ -1594,7 +1622,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                       <Select
                         value={activeLayer.blendMode}
                         onValueChange={(value) =>
-                          upsertActiveLayer({ blendMode: value as LayerBlendMode })
+                          upsertActiveLayer({
+                            blendMode: value as LayerBlendMode,
+                          })
                         }
                       >
                         <SelectTrigger className="w-full">
@@ -1617,7 +1647,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     <Select
                       value={activeLayer.filterPreset}
                       onValueChange={(value) =>
-                        applyFilterPresetToActiveLayer(value as LayerFilterPreset)
+                        applyFilterPresetToActiveLayer(
+                          value as LayerFilterPreset,
+                        )
                       }
                     >
                       <SelectTrigger className="w-full">
@@ -1782,7 +1814,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     <CollapsibleContent>
                       <Textarea
                         value={activeLayer.svg}
-                        onChange={(e) => upsertActiveLayer({ svg: e.target.value })}
+                        onChange={(e) =>
+                          upsertActiveLayer({ svg: e.target.value })
+                        }
                         className="min-h-[220px] font-mono text-xs"
                       />
                     </CollapsibleContent>
@@ -1814,7 +1848,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     <Label>Apply Mode</Label>
                     <Select
                       value={svgApplyMode}
-                      onValueChange={(value) => setSvgApplyMode(value as SvgApplyMode)}
+                      onValueChange={(value) =>
+                        setSvgApplyMode(value as SvgApplyMode)
+                      }
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -1823,7 +1859,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                         <SelectItem value="replace">replace body</SelectItem>
                         <SelectItem value="prepend">prepend to body</SelectItem>
                         <SelectItem value="append">append to body</SelectItem>
-                        <SelectItem value="background">background wrapper</SelectItem>
+                        <SelectItem value="background">
+                          background wrapper
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1852,17 +1890,22 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                     </p>
                     <p>
                       Output format:{" "}
-                      <span className="font-medium">{svgApplyPreview.nextFormat}</span>
+                      <span className="font-medium">
+                        {svgApplyPreview.nextFormat}
+                      </span>
                     </p>
                     {svgApplyPreview.convertedToMdx && (
-                      <p>Existing body will be converted to MDX-compatible form.</p>
-                    )}
-                    {svgApplyTargetPreview === "svg" && svgApplyMode !== "replace" && (
                       <p>
-                        SVG target is replace-only. Import-to-body actions are disabled
-                        for non-replace modes.
+                        Existing body will be converted to MDX-compatible form.
                       </p>
                     )}
+                    {svgApplyTargetPreview === "svg" &&
+                      svgApplyMode !== "replace" && (
+                        <p>
+                          SVG target is replace-only. Import-to-body actions are
+                          disabled for non-replace modes.
+                        </p>
+                      )}
                   </div>
                 </div>
 
@@ -1875,7 +1918,9 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
                         min={120}
                         value={svgBackgroundMinHeight}
                         onChange={(e) =>
-                          setSvgBackgroundMinHeight(Number(e.target.value) || 320)
+                          setSvgBackgroundMinHeight(
+                            Number(e.target.value) || 320,
+                          )
                         }
                       />
                     </div>
@@ -1958,7 +2003,8 @@ const NodeEditorForm = ({ node, storyId }: NodeEditorFormProps) => {
             Node Patch Preview
           </div>
           <p className="text-xs text-muted-foreground">
-            Useful for understanding exactly what shape is being sent to the API.
+            Useful for understanding exactly what shape is being sent to the
+            API.
           </p>
 
           <Textarea

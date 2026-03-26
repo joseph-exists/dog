@@ -14,7 +14,9 @@ interface RepoPanelLayoutStoragePayload {
 const STORAGE_VERSION = 1
 const STORAGE_KEY_PREFIX = "repo-panel-layout"
 
-function isProminence(value: unknown): value is RepoBuilderPanelConfig["prominence"] {
+function isProminence(
+  value: unknown,
+): value is RepoBuilderPanelConfig["prominence"] {
   return value === "primary" || value === "auxiliary"
 }
 
@@ -34,7 +36,9 @@ function normalizeLayoutConfig(
   return normalizeRepoPanelConfig(kind, panelId, sanitizeConfigJson(value))
 }
 
-export function isRepoPanelLayoutItem(value: unknown): value is RepoPanelLayoutItem {
+export function isRepoPanelLayoutItem(
+  value: unknown,
+): value is RepoPanelLayoutItem {
   if (!isObjectRecord(value)) return false
   return (
     typeof value.id === "string" &&
@@ -137,14 +141,22 @@ export function reconcileRepoPanelLayoutItems(
         ...authoredItem,
         ...storedItem,
         config_json:
-          normalizeLayoutConfig(storedItem.kind, storedItem.id, storedItem.config_json) ??
+          normalizeLayoutConfig(
+            storedItem.kind,
+            storedItem.id,
+            storedItem.config_json,
+          ) ??
           authoredItem.config_json ??
           null,
       })
     } else {
       reconciled.push({
         ...storedItem,
-        config_json: normalizeLayoutConfig(storedItem.kind, storedItem.id, storedItem.config_json),
+        config_json: normalizeLayoutConfig(
+          storedItem.kind,
+          storedItem.id,
+          storedItem.config_json,
+        ),
       })
     }
     seenIds.add(storedItem.id)
@@ -194,7 +206,11 @@ export function applyRepoPanelLayoutItems<
         default_size: item.default_size,
         min_size: item.min_size,
         max_size: item.max_size,
-        config_json: normalizeLayoutConfig(item.kind, item.id, item.config_json),
+        config_json: normalizeLayoutConfig(
+          item.kind,
+          item.id,
+          item.config_json,
+        ),
       })
       seenBaseIds.add(item.id)
       continue
@@ -225,5 +241,7 @@ export function repoPanelLayoutItemsEqual(
   right: RepoPanelLayoutItem[],
 ): boolean {
   if (left.length !== right.length) return false
-  return left.every((item, index) => JSON.stringify(item) === JSON.stringify(right[index]))
+  return left.every(
+    (item, index) => JSON.stringify(item) === JSON.stringify(right[index]),
+  )
 }

@@ -9,15 +9,21 @@ import {
 } from "lucide-react"
 import type { UserRepoPublic } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { RepoStatusBadge } from "./RepoStatusBadge"
 import { formatRepoShortDate, getRepoInitial } from "../utils"
+import { RepoStatusBadge } from "./RepoStatusBadge"
 
 export function RepoCard({
   repo,
@@ -45,8 +51,12 @@ export function RepoCard({
               {getRepoInitial(repo.display_name)}
             </div>
             <div className="min-w-0">
-              <CardTitle className="truncate text-base">{repo.display_name}</CardTitle>
-              <div className="truncate text-sm text-muted-foreground">{repo.slug}</div>
+              <CardTitle className="truncate text-base">
+                {repo.display_name}
+              </CardTitle>
+              <div className="truncate text-sm text-muted-foreground">
+                {repo.slug}
+              </div>
             </div>
           </div>
           <RepoStatusBadge repo={repo} />
@@ -76,7 +86,9 @@ export function RepoCard({
           <div className="mb-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Source
           </div>
-          <div className="truncate font-mono text-xs">{repo.source_repo_url || "Not provided"}</div>
+          <div className="truncate font-mono text-xs">
+            {repo.source_repo_url || "Not provided"}
+          </div>
         </div>
       </CardContent>
 
@@ -86,7 +98,11 @@ export function RepoCard({
           {canManage ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Repository actions">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Repository actions"
+                >
                   <MoreVerticalIcon className="size-4" />
                 </Button>
               </DropdownMenuTrigger>

@@ -33,10 +33,7 @@ import {
 import { useCanvasRenderJobEvents } from "@/hooks/useCanvasRenderJobEvents"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useRoomStream } from "@/hooks/useRoomStream"
-import {
-  DemoService,
-  type TesserScript,
-} from "@/services/demoService"
+import { DemoService, type TesserScript } from "@/services/demoService"
 import type { ThemeViewModel } from "@/services/themeService"
 
 function isRenderableContentPayload(value: unknown): value is Content {
@@ -135,12 +132,15 @@ export function DemoBuilderPreview({
   const [tesserHelpByScriptName, setTesserHelpByScriptName] = useState<
     Record<string, string>
   >({})
-  const [tesserExamplesIndex, setTesserExamplesIndex] = useState<string | null>(null)
+  const [tesserExamplesIndex, setTesserExamplesIndex] = useState<string | null>(
+    null,
+  )
   const { data: tesserScriptsPayload } = useQuery({
     queryKey: ["demo-builder", "tesser", "scripts"],
     queryFn: () => DemoService.listTesserScripts(),
   })
-  const availableTesserScripts: TesserScript[] = tesserScriptsPayload?.data ?? []
+  const availableTesserScripts: TesserScript[] =
+    tesserScriptsPayload?.data ?? []
   const compositionFrame = useMemo(
     () =>
       resolveDemoPresentationFrame({
@@ -195,7 +195,8 @@ export function DemoBuilderPreview({
       onRenderCanvas: async (panelId, payload) => {
         const nextScriptName = payload?.scriptName ?? "simple_svg"
         if (!demoConfigId) {
-          const message = "Select and save a demo config before rendering canvas panels."
+          const message =
+            "Select and save a demo config before rendering canvas panels."
           setCanvasRenderStateByPanelId((previous) => ({
             ...previous,
             [panelId]: {
@@ -212,7 +213,8 @@ export function DemoBuilderPreview({
           return
         }
         if (!previewSession?.room.room_id) {
-          const message = "Preview room is not ready for live canvas render events."
+          const message =
+            "Preview room is not ready for live canvas render events."
           setCanvasRenderStateByPanelId((previous) => ({
             ...previous,
             [panelId]: {
@@ -275,7 +277,8 @@ export function DemoBuilderPreview({
           setCanvasRenderStateByPanelId((previous) => ({
             ...previous,
             [panelId]: {
-              isRendering: enqueueStatus === "queued" || enqueueStatus === "running",
+              isRendering:
+                enqueueStatus === "queued" || enqueueStatus === "running",
               status:
                 enqueueStatus === "queued"
                   ? "Render queued..."
@@ -283,9 +286,12 @@ export function DemoBuilderPreview({
                     ? "Rendering in worker..."
                     : null,
               error: null,
-              lastJobId: enqueueResponse.job_id ?? previous[panelId]?.lastJobId ?? null,
+              lastJobId:
+                enqueueResponse.job_id ?? previous[panelId]?.lastJobId ?? null,
               lastRequestId:
-                enqueueResponse.request_id ?? previous[panelId]?.lastRequestId ?? null,
+                enqueueResponse.request_id ??
+                previous[panelId]?.lastRequestId ??
+                null,
               lastCommitSha:
                 enqueueResponse.shadow_commit_sha ??
                 previous[panelId]?.lastCommitSha ??
@@ -297,7 +303,10 @@ export function DemoBuilderPreview({
             enqueueStatus === "queued" || enqueueStatus === "running"
               ? await waitForJob(enqueueResponse.job_id)
               : enqueueResponse
-          if (terminalResponse.status !== "completed" || !terminalResponse.svg) {
+          if (
+            terminalResponse.status !== "completed" ||
+            !terminalResponse.svg
+          ) {
             throw new Error(
               terminalResponse.error ||
                 `Canvas render ended with status '${terminalResponse.status}'.`,
@@ -342,7 +351,8 @@ export function DemoBuilderPreview({
       canvasSvgOverrideByPanelId,
       availableTesserScripts: availableTesserScripts.map((script) => ({
         ...script,
-        help_text: tesserHelpByScriptName[script.name] ?? script.help_text ?? null,
+        help_text:
+          tesserHelpByScriptName[script.name] ?? script.help_text ?? null,
       })),
       onRequestTesserScriptHelp: async (scriptName) => {
         const cached = tesserHelpByScriptName[scriptName]
@@ -378,6 +388,7 @@ export function DemoBuilderPreview({
       repoSelectedPathsByKey,
       waitForJob,
       isConnected,
+      roomId,
     ],
   )
 
@@ -416,6 +427,7 @@ export function DemoBuilderPreview({
       composition.runtime_policy,
       repoSelectedPathsByKey,
       roomStoryId,
+      roomId,
     ],
   )
 

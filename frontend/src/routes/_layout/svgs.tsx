@@ -4,10 +4,10 @@ import {
   BatchSeedSvgDialog,
   CreateSvgDialog,
   SvgOperationsPanel,
+  type SvgPanelConfig,
   SvgShell,
   SvgsGalleryPanel,
   TesserStudioPanel,
-  type SvgPanelConfig,
 } from "@/components/Svg"
 
 export const Route = createFileRoute("/_layout/svgs")({

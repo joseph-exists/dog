@@ -4,22 +4,21 @@ import { ArrowLeft, LayoutPanelLeft, Plus, User } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import {
-  AccessService,
-  GroupsService,
-  PersonaGroupsService,
   type AccessGrantPublic,
   type AccessGrantRole,
   type AccessGrantSubjectType,
+  AccessService,
+  GroupsService,
+  PersonaGroupsService,
 } from "@/client"
 import { CreatePageDialog } from "@/components/Page/Dialogs/CreatePageDialog"
 import { BlockEditorSheet } from "@/components/Page/editor/BlockEditorSheet"
 import { BlockPalette } from "@/components/Page/editor/BlockPalette"
 import type { TemplateBlock } from "@/components/Page/registry"
 import { getPageTemplate } from "@/components/Page/registry"
-import { DiscoverUserPersonaCombobox } from "@/components/UserPage/DiscoverUserPersonaCombobox"
 import {
-  UserPageBuilderNavigator,
   UserPageAudiencePreviewPanel,
+  UserPageBuilderNavigator,
   UserPageBuilderPreview,
   UserPageBuilderSaveBar,
   UserPageBuilderSurfaceEditor,
@@ -28,21 +27,31 @@ import {
 import {
   addUserPageBuilderDraftBlock,
   deleteUserPageBuilderDraftBlock,
-  type UserPageBuilderDraft,
   hydrateUserPageBuilderDraft,
   moveUserPageBuilderDraftBlock,
   resetUserPageBuilderDraftBlock,
   serializeUserPageBuilderDraft,
   toggleUserPageBuilderDraftBlockVisibility,
+  type UserPageBuilderDraft,
   updateUserPageBuilderDraftBlockContent,
 } from "@/components/UserPage/builder/userPageBuilderAdapter"
 import {
-  validateUserPageBuilderDraft,
   type UserPageBuilderSurface,
+  validateUserPageBuilderDraft,
 } from "@/components/UserPage/builder/userPageBuilderSchema"
+import { DiscoverUserPersonaCombobox } from "@/components/UserPage/DiscoverUserPersonaCombobox"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { EntityCombobox, type EntityComboboxOption } from "@/components/ui/entity-combobox"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  EntityCombobox,
+  type EntityComboboxOption,
+} from "@/components/ui/entity-combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -50,11 +59,17 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
-import { buildUserPageViewModel } from "@/hooks/useUserPageViewModel"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
+import { buildUserPageViewModel } from "@/hooks/useUserPageViewModel"
 import { PageService } from "@/services/pageService"
 import { UserPersonaService } from "@/services/userPersonaService"
 
@@ -122,7 +137,9 @@ function UserPageComposerRoute() {
 
   const personaGroupsQuery = useQuery({
     queryKey: ["persona-groups", "mine"],
-    queryFn: async () => (await PersonaGroupsService.listPersonaGroups({ skip: 0, limit: 100 })).data,
+    queryFn: async () =>
+      (await PersonaGroupsService.listPersonaGroups({ skip: 0, limit: 100 }))
+        .data,
     enabled: isOwner,
   })
 
@@ -130,10 +147,12 @@ function UserPageComposerRoute() {
     queryKey: ["access", "page", pageQuery.data?.id],
     queryFn: async () =>
       pageQuery.data
-        ? (await AccessService.listResourceAccessGrants({
-            resourceType: "page",
-            resourceId: pageQuery.data.id,
-          })).data
+        ? (
+            await AccessService.listResourceAccessGrants({
+              resourceType: "page",
+              resourceId: pageQuery.data.id,
+            })
+          ).data
         : [],
     enabled: isOwner && Boolean(pageQuery.data?.id),
   })
@@ -166,7 +185,9 @@ function UserPageComposerRoute() {
         layoutVersion: pageQuery.data?.layoutVersion,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["pages", "user", userId] })
+      await queryClient.invalidateQueries({
+        queryKey: ["pages", "user", userId],
+      })
       showSuccessToast("Saved user page composition")
     },
     onError: () => {
@@ -177,7 +198,9 @@ function UserPageComposerRoute() {
   const upsertPageGrantMutation = useMutation({
     mutationFn: async () => {
       if (!pageQuery.data?.id) {
-        throw new Error("Create and save the page before managing audience access.")
+        throw new Error(
+          "Create and save the page before managing audience access.",
+        )
       }
       return AccessService.upsertResourceAccessGrant({
         resourceType: "page",
@@ -206,7 +229,9 @@ function UserPageComposerRoute() {
   const revokePageGrantMutation = useMutation({
     mutationFn: async (grant: AccessGrantPublic) => {
       if (!pageQuery.data?.id) {
-        throw new Error("Create and save the page before managing audience access.")
+        throw new Error(
+          "Create and save the page before managing audience access.",
+        )
       }
       await AccessService.revokeResourceAccessGrant({
         resourceType: "page",
@@ -258,7 +283,10 @@ function UserPageComposerRoute() {
     [slug, userId, pageQuery.data, serializedBlocks, authoringBundleQuery.data],
   )
 
-  const issues = useMemo(() => validateUserPageBuilderDraft(builderDraft), [builderDraft])
+  const issues = useMemo(
+    () => validateUserPageBuilderDraft(builderDraft),
+    [builderDraft],
+  )
 
   const ownedPersonaOptions = useMemo<EntityComboboxOption[]>(
     () =>
@@ -314,7 +342,8 @@ function UserPageComposerRoute() {
   }, [serializedBlocks, pageQuery.data?.layout])
 
   const selectedBlock = useMemo(
-    () => serializedBlocks.find((block) => block.id === selectedBlockId) ?? null,
+    () =>
+      serializedBlocks.find((block) => block.id === selectedBlockId) ?? null,
     [serializedBlocks, selectedBlockId],
   )
 
@@ -411,8 +440,7 @@ function UserPageComposerRoute() {
         tagline: "A work-centered user surface shaped through personas.",
       },
       bio: {
-        text:
-          "This page organizes work, personas, audience views, and relations without collapsing them into a single static identity.",
+        text: "This page organizes work, personas, audience views, and relations without collapsing them into a single static identity.",
       },
     })
     const nextDraft = hydrateUserPageBuilderDraft({
@@ -528,15 +556,17 @@ function UserPageComposerRoute() {
               <CardHeader>
                 <CardTitle>Audience Access</CardTitle>
                 <CardDescription>
-                  `trusted` audience views resolve from direct user or persona grants.
-                  `collaborators` resolve from legacy groups and persona groups.
-                  `custom` views can target a specific id through an audience key.
+                  `trusted` audience views resolve from direct user or persona
+                  grants. `collaborators` resolve from legacy groups and persona
+                  groups. `custom` views can target a specific id through an
+                  audience key.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {!pageQuery.data ? (
                   <p className="text-sm text-muted-foreground">
-                    Save the page once before configuring visitor audience access.
+                    Save the page once before configuring visitor audience
+                    access.
                   </p>
                 ) : (
                   <>
@@ -554,8 +584,12 @@ function UserPageComposerRoute() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="persona_group">persona_group</SelectItem>
-                            <SelectItem value="user_persona">user_persona</SelectItem>
+                            <SelectItem value="persona_group">
+                              persona_group
+                            </SelectItem>
+                            <SelectItem value="user_persona">
+                              user_persona
+                            </SelectItem>
                             <SelectItem value="group">group</SelectItem>
                             <SelectItem value="user">user</SelectItem>
                           </SelectContent>
@@ -565,7 +599,9 @@ function UserPageComposerRoute() {
                         <Label>Role</Label>
                         <Select
                           value={grantRole}
-                          onValueChange={(value: AccessGrantRole) => setGrantRole(value)}
+                          onValueChange={(value: AccessGrantRole) =>
+                            setGrantRole(value)
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -599,7 +635,11 @@ function UserPageComposerRoute() {
                         ) : grantSubjectType === "user_persona" ? (
                           <div className="space-y-2">
                             <EntityCombobox
-                              value={personaOptionById.has(grantSubjectId) ? grantSubjectId : ""}
+                              value={
+                                personaOptionById.has(grantSubjectId)
+                                  ? grantSubjectId
+                                  : ""
+                              }
                               onChange={setGrantSubjectId}
                               options={ownedPersonaOptions}
                               placeholder="Quick pick one of your personas"
@@ -607,20 +647,28 @@ function UserPageComposerRoute() {
                               emptyMessage="No personas available."
                             />
                             <DiscoverUserPersonaCombobox
-                              value={personaOptionById.has(grantSubjectId) ? "" : grantSubjectId}
+                              value={
+                                personaOptionById.has(grantSubjectId)
+                                  ? ""
+                                  : grantSubjectId
+                              }
                               onChange={setGrantSubjectId}
                               placeholder="Search published visitor personas"
                             />
                             <Input
                               value={grantSubjectId}
-                              onChange={(event) => setGrantSubjectId(event.target.value)}
+                              onChange={(event) =>
+                                setGrantSubjectId(event.target.value)
+                              }
                               placeholder="Or paste another visitor UserPersona UUID"
                             />
                           </div>
                         ) : (
                           <Input
                             value={grantSubjectId}
-                            onChange={(event) => setGrantSubjectId(event.target.value)}
+                            onChange={(event) =>
+                              setGrantSubjectId(event.target.value)
+                            }
                             placeholder="User UUID"
                           />
                         )}
@@ -638,16 +686,16 @@ function UserPageComposerRoute() {
                         Add Audience Grant
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        Use the same ids in `custom` audience views when you need a
-                        presentation to target one specific subject.
+                        Use the same ids in `custom` audience views when you
+                        need a presentation to target one specific subject.
                       </p>
                     </div>
 
                     <div className="space-y-2">
                       {(pageAccessQuery.data ?? []).length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          No explicit page audience grants yet. Visitors without a
-                          matching grant will resolve to `public`.
+                          No explicit page audience grants yet. Visitors without
+                          a matching grant will resolve to `public`.
                         </p>
                       ) : (
                         (pageAccessQuery.data ?? []).map((grant) => {
@@ -661,10 +709,14 @@ function UserPageComposerRoute() {
                               className="flex items-center justify-between rounded-lg border p-3"
                             >
                               <div className="text-sm">
-                                <div className="font-medium">{subject.label}</div>
+                                <div className="font-medium">
+                                  {subject.label}
+                                </div>
                                 <div className="text-muted-foreground">
                                   {grant.subject_type}
-                                  {subject.subtitle ? ` · ${subject.subtitle}` : ""}
+                                  {subject.subtitle
+                                    ? ` · ${subject.subtitle}`
+                                    : ""}
                                 </div>
                                 <div className="text-muted-foreground">
                                   role: {grant.role}
@@ -674,7 +726,9 @@ function UserPageComposerRoute() {
                                 variant="outline"
                                 size="sm"
                                 disabled={revokePageGrantMutation.isPending}
-                                onClick={() => revokePageGrantMutation.mutate(grant)}
+                                onClick={() =>
+                                  revokePageGrantMutation.mutate(grant)
+                                }
                               >
                                 Remove
                               </Button>
@@ -706,7 +760,10 @@ function UserPageComposerRoute() {
             />
           </div>
 
-          <ResizablePanelGroup direction="horizontal" className="min-h-0 flex-1">
+          <ResizablePanelGroup
+            direction="horizontal"
+            className="min-h-0 flex-1"
+          >
             <ResizablePanel defaultSize={24} minSize={20}>
               <div className="h-full overflow-auto pr-2 space-y-4">
                 <UserPageBuilderNavigator
@@ -722,17 +779,17 @@ function UserPageComposerRoute() {
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={30} minSize={24}>
               <div className="h-full overflow-auto px-2">
-              <UserPageBuilderSurfaceEditor
-                selectedSurface={selectedSurface}
-                blocks={serializedBlocks}
-                viewModel={viewModel}
-                selectedBlockId={selectedBlockId}
-                onSelectBlock={setSelectedBlockId}
-                onMoveBlock={handleMoveBlock}
-                onToggleVisibility={handleToggleVisibility}
-                onResetBlock={handleResetBlock}
-                onDeleteBlock={handleDeleteBlock}
-              />
+                <UserPageBuilderSurfaceEditor
+                  selectedSurface={selectedSurface}
+                  blocks={serializedBlocks}
+                  viewModel={viewModel}
+                  selectedBlockId={selectedBlockId}
+                  onSelectBlock={setSelectedBlockId}
+                  onMoveBlock={handleMoveBlock}
+                  onToggleVisibility={handleToggleVisibility}
+                  onResetBlock={handleResetBlock}
+                  onDeleteBlock={handleDeleteBlock}
+                />
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />

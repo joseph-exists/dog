@@ -4,17 +4,16 @@
  * Resolve payloads are now consumed directly from generated SDK types.
  */
 
-import { DemosService, type ResolveDemoEntryPayload } from "@/client"
-import { OpenAPI } from "@/client"
+import { DemosService, OpenAPI, type ResolveDemoEntryPayload } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
 import {
-  TesserService,
   type TesserExamplesIndexResponse,
   type TesserScriptHelpResponse,
   type TesserScriptRunRequest,
   type TesserScriptRunResponse,
   type TesserScriptsResponse,
+  TesserService,
 } from "./tesserService"
 
 export type {

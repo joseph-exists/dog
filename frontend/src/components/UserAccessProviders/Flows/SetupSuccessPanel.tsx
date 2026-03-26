@@ -26,7 +26,8 @@ export function SetupSuccessPanel({
 }: SetupSuccessPanelProps) {
   const modelCount = validationResult?.models?.length ?? 0
   const visionCount =
-    validationResult?.models?.filter((model) => model.supports_vision).length ?? 0
+    validationResult?.models?.filter((model) => model.supports_vision).length ??
+    0
 
   return (
     <BlockContainer
@@ -47,7 +48,9 @@ export function SetupSuccessPanel({
           <Badge variant="secondary">{modelCount} models found</Badge>
           <Badge variant="outline">{visionCount} vision-ready</Badge>
           {validationResult.latency_ms ? (
-            <Badge variant="outline">{validationResult.latency_ms} ms latency</Badge>
+            <Badge variant="outline">
+              {validationResult.latency_ms} ms latency
+            </Badge>
           ) : null}
         </div>
       ) : null}

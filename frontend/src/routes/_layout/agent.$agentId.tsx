@@ -33,7 +33,6 @@ import {
   AgentScopeBadge,
   AgentStatusBadge,
 } from "@/components/Agents/Display/AgentBadge"
-import useAuth from "@/hooks/useAuth"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -46,6 +45,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/agent/$agentId")({
   component: AgentDetailPage,

@@ -22,11 +22,6 @@ from app.services.mcp_registry import (
     get_mcp_server_descriptor,
     list_mcp_server_descriptors,
 )
-from app.services.workspace_service import (
-    get_allowed_actions_for_user,
-    get_workspace_for_user,
-    get_lifecycle_allowed_actions,
-)
 
 PLATFORM_SERVICE_GRANT_TTL = timedelta(minutes=10)
 ENV_PREFIX_BY_CONSUMER: dict[WorkspacePlatformServiceConsumerKind, str] = {
@@ -96,11 +91,13 @@ async def _ensure_workspace_platform_access_allowed(
     workspace: Workspace,
     user: User,
 ) -> None:
-    lifecycle_actions = get_lifecycle_allowed_actions(workspace)
+    from app.services import workspace_service
+
+    lifecycle_actions = workspace_service.get_lifecycle_allowed_actions(workspace)
     if WorkspaceAction.discover_services not in lifecycle_actions:
         raise ValueError(f"Workspace not ready: {workspace.status}")
 
-    allowed_actions = await get_allowed_actions_for_user(
+    allowed_actions = await workspace_service.get_allowed_actions_for_user(
         db,
         workspace=workspace,
         user=user,
@@ -218,7 +215,9 @@ async def issue_workspace_platform_service_access(
     user: User,
     request: WorkspacePlatformServiceGrantRequest,
 ) -> WorkspacePlatformServiceAccessGrant:
-    workspace = await get_workspace_for_user(
+    from app.services import workspace_service
+
+    workspace = await workspace_service.get_workspace_for_user(
         db,
         workspace_id=workspace_id,
         user=user,
@@ -266,7 +265,9 @@ async def resolve_workspace_runtime_platform_config(
     user: User,
     request: WorkspacePlatformServiceGrantRequest,
 ) -> WorkspaceRuntimePlatformConfig:
-    workspace = await get_workspace_for_user(
+    from app.services import workspace_service
+
+    workspace = await workspace_service.get_workspace_for_user(
         db,
         workspace_id=workspace_id,
         user=user,
@@ -307,7 +308,9 @@ async def refresh_workspace_runtime_platform_projection(
     user: User,
     request: WorkspacePlatformServiceGrantRequest,
 ) -> WorkspacePlatformEnvProjection:
-    workspace = await get_workspace_for_user(
+    from app.services import workspace_service
+
+    workspace = await workspace_service.get_workspace_for_user(
         db,
         workspace_id=workspace_id,
         user=user,

@@ -1,14 +1,14 @@
 import { useState } from "react"
 
 import type { WorkspaceFlavour } from "@/client"
-import type { CreateWorkspaceFormInput } from "@/hooks/useWorkspaces"
-import type {
-  BootstrapInstallMode,
-  BootstrapRepoSourceType,
-  BootstrapStartupMode,
-} from "@/services/workspaceService"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -19,13 +19,25 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import type { CreateWorkspaceFormInput } from "@/hooks/useWorkspaces"
+import type {
+  BootstrapInstallMode,
+  BootstrapRepoSourceType,
+  BootstrapStartupMode,
+} from "@/services/workspaceService"
 
 export interface WorkspaceCreatePanelProps {
   isSubmitting: boolean
   onCreate: (input: CreateWorkspaceFormInput) => Promise<void>
 }
 
-const FLAVOURS: WorkspaceFlavour[] = ["base", "dev", "python", "node", "jupyter"]
+const FLAVOURS: WorkspaceFlavour[] = [
+  "base",
+  "dev",
+  "python",
+  "node",
+  "jupyter",
+]
 const INSTALL_PROFILES = ["npm", "pnpm", "yarn", "uv", "pip"] as const
 const STARTUP_PROFILES = ["vite", "nextjs", "fastapi"] as const
 const AGENT_PROFILES = ["codex", "claude_code", "hermes"] as const
@@ -37,16 +49,21 @@ export function WorkspaceCreatePanel({
   const [name, setName] = useState("")
   const [flavour, setFlavour] = useState<WorkspaceFlavour>("dev")
   const [kind, setKind] = useState("ephemeral")
-  const [repoSourceType, setRepoSourceType] = useState<BootstrapRepoSourceType>("none")
+  const [repoSourceType, setRepoSourceType] =
+    useState<BootstrapRepoSourceType>("none")
   const [repoUrl, setRepoUrl] = useState("")
   const [userRepoId, setUserRepoId] = useState("")
   const [repoRef, setRepoRef] = useState("")
   const [workspacePath, setWorkspacePath] = useState("")
   const [installMode, setInstallMode] = useState<BootstrapInstallMode>("none")
-  const [installProfile, setInstallProfile] = useState<(typeof INSTALL_PROFILES)[number]>("npm")
-  const [startupMode, setStartupMode] = useState<BootstrapStartupMode>("terminal_only")
-  const [startupProfile, setStartupProfile] = useState<(typeof STARTUP_PROFILES)[number]>("vite")
-  const [agentProfile, setAgentProfile] = useState<(typeof AGENT_PROFILES)[number]>("codex")
+  const [installProfile, setInstallProfile] =
+    useState<(typeof INSTALL_PROFILES)[number]>("npm")
+  const [startupMode, setStartupMode] =
+    useState<BootstrapStartupMode>("terminal_only")
+  const [startupProfile, setStartupProfile] =
+    useState<(typeof STARTUP_PROFILES)[number]>("vite")
+  const [agentProfile, setAgentProfile] =
+    useState<(typeof AGENT_PROFILES)[number]>("codex")
   const [sshPubkey, setSshPubkey] = useState("")
   const [envVarsText, setEnvVarsText] = useState("")
 
@@ -91,7 +108,8 @@ export function WorkspaceCreatePanel({
       <CardHeader>
         <CardTitle>Provision a Workspace</CardTitle>
         <CardDescription>
-          Create a kennel-backed environment, declare bootstrap intent, and let the backend own the execution plan.
+          Create a kennel-backed environment, declare bootstrap intent, and let
+          the backend own the execution plan.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -108,7 +126,10 @@ export function WorkspaceCreatePanel({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Flavour</Label>
-            <Select value={flavour} onValueChange={(value) => setFlavour(value as WorkspaceFlavour)}>
+            <Select
+              value={flavour}
+              onValueChange={(value) => setFlavour(value as WorkspaceFlavour)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -140,7 +161,8 @@ export function WorkspaceCreatePanel({
           <div className="space-y-1">
             <div className="text-sm font-medium">Bootstrap Intent</div>
             <p className="text-xs text-muted-foreground">
-              Start simple, then opt into repo materialization and runtime setup as needed.
+              Start simple, then opt into repo materialization and runtime setup
+              as needed.
             </p>
           </div>
 
@@ -148,7 +170,9 @@ export function WorkspaceCreatePanel({
             <Label>Repository Source</Label>
             <Select
               value={repoSourceType}
-              onValueChange={(value) => setRepoSourceType(value as BootstrapRepoSourceType)}
+              onValueChange={(value) =>
+                setRepoSourceType(value as BootstrapRepoSourceType)
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -216,7 +240,9 @@ export function WorkspaceCreatePanel({
               <Label>Install Intent</Label>
               <Select
                 value={installMode}
-                onValueChange={(value) => setInstallMode(value as BootstrapInstallMode)}
+                onValueChange={(value) =>
+                  setInstallMode(value as BootstrapInstallMode)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -233,7 +259,9 @@ export function WorkspaceCreatePanel({
               <Label>Startup Intent</Label>
               <Select
                 value={startupMode}
-                onValueChange={(value) => setStartupMode(value as BootstrapStartupMode)}
+                onValueChange={(value) =>
+                  setStartupMode(value as BootstrapStartupMode)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -247,12 +275,21 @@ export function WorkspaceCreatePanel({
             </div>
           </div>
 
-          {(installMode === "profile" || startupMode === "profile" || startupMode === "agent_service") ? (
+          {installMode === "profile" ||
+          startupMode === "profile" ||
+          startupMode === "agent_service" ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {installMode === "profile" ? (
                 <div className="space-y-1.5">
                   <Label>Install Profile</Label>
-                  <Select value={installProfile} onValueChange={(value) => setInstallProfile(value as (typeof INSTALL_PROFILES)[number])}>
+                  <Select
+                    value={installProfile}
+                    onValueChange={(value) =>
+                      setInstallProfile(
+                        value as (typeof INSTALL_PROFILES)[number],
+                      )
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -270,7 +307,14 @@ export function WorkspaceCreatePanel({
               {startupMode === "profile" ? (
                 <div className="space-y-1.5">
                   <Label>Startup Profile</Label>
-                  <Select value={startupProfile} onValueChange={(value) => setStartupProfile(value as (typeof STARTUP_PROFILES)[number])}>
+                  <Select
+                    value={startupProfile}
+                    onValueChange={(value) =>
+                      setStartupProfile(
+                        value as (typeof STARTUP_PROFILES)[number],
+                      )
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -288,7 +332,12 @@ export function WorkspaceCreatePanel({
               {startupMode === "agent_service" ? (
                 <div className="space-y-1.5">
                   <Label>Agent Runtime Profile</Label>
-                  <Select value={agentProfile} onValueChange={(value) => setAgentProfile(value as (typeof AGENT_PROFILES)[number])}>
+                  <Select
+                    value={agentProfile}
+                    onValueChange={(value) =>
+                      setAgentProfile(value as (typeof AGENT_PROFILES)[number])
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -301,7 +350,9 @@ export function WorkspaceCreatePanel({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Agent runtimes are long-running workspace processes. They may not publish a browser URL, but they still appear as discovered runtime surfaces.
+                    Agent runtimes are long-running workspace processes. They
+                    may not publish a browser URL, but they still appear as
+                    discovered runtime surfaces.
                   </p>
                 </div>
               ) : null}
@@ -340,7 +391,9 @@ export function WorkspaceCreatePanel({
             id="workspace-env-vars"
             value={envVarsText}
             onChange={(event) => setEnvVarsText(event.target.value)}
-            placeholder={"API_BASE_URL=http://localhost:8000\nFEATURE_FLAG=true"}
+            placeholder={
+              "API_BASE_URL=http://localhost:8000\nFEATURE_FLAG=true"
+            }
             rows={4}
           />
           <p className="text-xs text-muted-foreground">
@@ -348,7 +401,11 @@ export function WorkspaceCreatePanel({
           </p>
         </div>
 
-        <Button onClick={submit} disabled={isSubmitting || !name.trim()} className="w-full">
+        <Button
+          onClick={submit}
+          disabled={isSubmitting || !name.trim()}
+          className="w-full"
+        >
           {isSubmitting ? "Provisioning..." : "Create Workspace"}
         </Button>
       </CardContent>

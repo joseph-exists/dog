@@ -1,13 +1,13 @@
-import type {
-  EditableComposition,
-} from "@/components/Demo/builder/demoBuilderSchema"
+import type { EditableComposition } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
-export function buildCompositionCVisibilitySemanticsTemplate(context: TemplateBuilderContext): EditableComposition {
+export function buildCompositionCVisibilitySemanticsTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
   const { createBlockTemplate, createTemplate } = context
   const composition = createTemplate("composition_b_runtime_coupled")
   composition.metadata_json = {
@@ -53,4 +53,3 @@ export function buildCompositionCVisibilitySemanticsTemplate(context: TemplateBu
   ]
   return composition
 }
-

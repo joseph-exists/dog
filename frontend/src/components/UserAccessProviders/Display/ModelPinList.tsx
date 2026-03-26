@@ -9,9 +9,9 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import {
-  SortableContext,
   arrayMove,
   horizontalListSortingStrategy,
+  SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
 } from "@dnd-kit/sortable"
@@ -64,10 +64,16 @@ function normalizeModelResponse(value: unknown): ModelWithPin[] {
 }
 
 function SortablePinnedModelChip({ model }: { model: ModelWithPin }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id: model.id,
-    })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: model.id,
+  })
 
   return (
     <div
@@ -347,7 +353,9 @@ export function ModelPinList({
               ).map((filter) => (
                 <Button
                   key={filter.key}
-                  variant={activeFilter === filter.key ? "secondary" : "outline"}
+                  variant={
+                    activeFilter === filter.key ? "secondary" : "outline"
+                  }
                   size="sm"
                   onClick={() => setActiveFilter(filter.key)}
                 >

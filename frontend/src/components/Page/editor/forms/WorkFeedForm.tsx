@@ -52,11 +52,7 @@ function csvToList(value?: string) {
     .filter(Boolean)
 }
 
-export function WorkFeedForm({
-  content,
-  onSave,
-  onCancel,
-}: WorkFeedFormProps) {
+export function WorkFeedForm({ content, onSave, onCancel }: WorkFeedFormProps) {
   const { register, handleSubmit, control, setValue, watch } =
     useForm<WorkFeedFormData>({
       resolver: zodResolver(schema),
@@ -137,7 +133,10 @@ export function WorkFeedForm({
 
             <div className="space-y-2">
               <Label htmlFor={`items.${index}.title`}>Title</Label>
-              <Input id={`items.${index}.title`} {...register(`items.${index}.title`)} />
+              <Input
+                id={`items.${index}.title`}
+                {...register(`items.${index}.title`)}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -240,7 +239,10 @@ export function WorkFeedForm({
 
               <div className="space-y-2">
                 <Label htmlFor={`items.${index}.href`}>Href</Label>
-                <Input id={`items.${index}.href`} {...register(`items.${index}.href`)} />
+                <Input
+                  id={`items.${index}.href`}
+                  {...register(`items.${index}.href`)}
+                />
               </div>
             </div>
 

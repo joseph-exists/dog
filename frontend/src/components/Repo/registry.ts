@@ -97,7 +97,8 @@ export const REPO_PANEL_DEFINITIONS: RepoPanelDefinition[] = [
   {
     kind: "repoOverview",
     label: "Overview",
-    description: "Summary view for platform-owned repo identity and import state.",
+    description:
+      "Summary view for platform-owned repo identity and import state.",
     icon: Info,
     defaultProminence: "primary",
     requirements: { ...baseRequirements },
@@ -113,7 +114,8 @@ export const REPO_PANEL_DEFINITIONS: RepoPanelDefinition[] = [
   {
     kind: "fileViewer",
     label: "File Viewer",
-    description: "Blob/content viewer rendered through shared content primitives.",
+    description:
+      "Blob/content viewer rendered through shared content primitives.",
     icon: FileText,
     defaultProminence: "primary",
     requirements: {
@@ -181,7 +183,8 @@ export const REPO_BLOCK_DEFINITIONS: RepoBlockDefinition[] = [
   {
     type: "repoImportRecord",
     label: "Import Record",
-    description: "Original intake request metadata retained for audit and reference.",
+    description:
+      "Original intake request metadata retained for audit and reference.",
     icon: Info,
     requirements: { ...baseRequirements },
   },
@@ -223,7 +226,9 @@ export function getRepoBlockDefinition(type: RepoBlockType) {
   return REPO_BLOCK_DEFINITIONS.find((block) => block.type === type)
 }
 
-function resolveRequirementLabel(requirement: keyof RepoCapabilityRequirements) {
+function resolveRequirementLabel(
+  requirement: keyof RepoCapabilityRequirements,
+) {
   return (
     {
       requiresRepoIdentity: "repo identity",
@@ -240,13 +245,17 @@ export function getRepoCapabilityAvailability(
   requirements: RepoCapabilityRequirements,
   input: RepoCapabilityAvailabilityInput,
 ): RepoCapabilityAvailability {
-  const unmetRequirements = (Object.entries(requirements) as Array<
-    [keyof RepoCapabilityRequirements, boolean]
-  >)
+  const unmetRequirements = (
+    Object.entries(requirements) as Array<
+      [keyof RepoCapabilityRequirements, boolean]
+    >
+  )
     .filter(([key, required]) => {
       if (!required) return false
       const capabilityKey = key.replace("requires", "has")
-      return input[capabilityKey as keyof RepoCapabilityAvailabilityInput] !== true
+      return (
+        input[capabilityKey as keyof RepoCapabilityAvailabilityInput] !== true
+      )
     })
     .map(([key]) => resolveRequirementLabel(key))
 
@@ -258,7 +267,8 @@ export function getRepoCapabilityAvailability(
 
 export function getDefaultRepoPanelConfigs(): DefaultRepoPanelConfig[] {
   const sharedSelectionKey = "workspace.primary-file"
-  const readmeConfig = createDefaultRepoFileViewerPanelConfig("repoReadmeViewer")
+  const readmeConfig =
+    createDefaultRepoFileViewerPanelConfig("repoReadmeViewer")
   const explorerConfig = createDefaultRepoExplorerPanelConfig("repoExplorer")
   const fileViewerConfig = createDefaultRepoFileViewerPanelConfig("fileViewer")
 

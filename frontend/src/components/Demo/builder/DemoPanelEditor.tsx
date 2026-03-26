@@ -1,10 +1,10 @@
-import { CopyPlus, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
-import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
+import { ChevronDown, ChevronRight, CopyPlus, Plus, Trash2 } from "lucide-react"
 import {
   DemoGitViewConfigFields,
   DemoLiveRepoExplorerConfigFields,
   DemoLiveRepoFileViewerConfigFields,
 } from "@/components/Demo/builder/DemoLiveRepoConfigFields"
+import { DemoPresentationGuidedFields } from "@/components/Demo/builder/DemoPresentationGuidedFields"
 import {
   BUILDER_PANEL_CAPABILITIES,
   type BuilderPanelCapability,
@@ -85,8 +85,14 @@ function renderPanelScalarField(params: {
     category: "page" | "card"
   }>
 }) {
-  const { panel, index, rootPath, field, onUpdatePanel, availableThemeOptions } =
-    params
+  const {
+    panel,
+    index,
+    rootPath,
+    field,
+    onUpdatePanel,
+    availableThemeOptions,
+  } = params
   const value = (panel as Record<string, unknown>)[field.key]
   if (field.key === "theme_id" && field.control === "id") {
     return (
@@ -307,7 +313,12 @@ export function DemoPanelEditor({
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
           {onOpenCloneDialog && (
-            <Button type="button" variant="secondary" size="sm" onClick={onOpenCloneDialog}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onOpenCloneDialog}
+            >
               <CopyPlus className="h-3.5 w-3.5 mr-1" />
               Clone Existing Panel
             </Button>
@@ -412,7 +423,8 @@ export function DemoPanelEditor({
                         const currentJson =
                           (panel as Record<string, unknown>)[field.key] ?? {}
                         const panelId =
-                          typeof panel.id === "string" && panel.id.trim().length > 0
+                          typeof panel.id === "string" &&
+                          panel.id.trim().length > 0
                             ? panel.id.trim()
                             : `panel-${index + 1}`
                         const fallbackSelectionKey = `${panelId}.selection`
@@ -463,7 +475,9 @@ export function DemoPanelEditor({
                                     {isLiveRepoExplorerConfig(currentJson) ? (
                                       <DemoLiveRepoExplorerConfigFields
                                         value={currentJson}
-                                        fallbackSelectionKey={fallbackSelectionKey}
+                                        fallbackSelectionKey={
+                                          fallbackSelectionKey
+                                        }
                                         onChange={(nextValue) =>
                                           onUpdatePanel(index, {
                                             options: nextValue,
@@ -474,10 +488,10 @@ export function DemoPanelEditor({
                                       <div className="rounded border p-3 space-y-2">
                                         <p className="text-[11px] text-muted-foreground">
                                           This panel is still using non-live
-                                          explorer JSON. Switch it to a live repo
-                                          surface when it needs to coordinate with
-                                          repo viewers through a shared selection
-                                          key.
+                                          explorer JSON. Switch it to a live
+                                          repo surface when it needs to
+                                          coordinate with repo viewers through a
+                                          shared selection key.
                                         </p>
                                         <Button
                                           type="button"
@@ -504,7 +518,9 @@ export function DemoPanelEditor({
                                     {isLiveRepoFileViewerConfig(currentJson) ? (
                                       <DemoLiveRepoFileViewerConfigFields
                                         value={currentJson}
-                                        fallbackSelectionKey={fallbackSelectionKey}
+                                        fallbackSelectionKey={
+                                          fallbackSelectionKey
+                                        }
                                         onChange={(nextValue) =>
                                           onUpdatePanel(index, {
                                             options: nextValue,
@@ -514,9 +530,9 @@ export function DemoPanelEditor({
                                     ) : (
                                       <div className="rounded border p-3 space-y-2">
                                         <p className="text-[11px] text-muted-foreground">
-                                          Switch this panel to the live repo file
-                                          viewer when it should follow a repo
-                                          explorer or pin a specific file.
+                                          Switch this panel to the live repo
+                                          file viewer when it should follow a
+                                          repo explorer or pin a specific file.
                                         </p>
                                         <Button
                                           type="button"

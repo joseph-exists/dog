@@ -5,6 +5,10 @@
 This artifact turns the current milestone state into the shortest high-leverage
 implementation sequence that is likely to close the MVP with minimal churn.
 
+Current-state reference:
+
+- [engineering-reference-guide.md](/home/josep/dog/frontend/src/components/Workspaces/docs/engineering-reference-guide.md)
+
 It assumes:
 
 - workspace lifecycle and readiness are explicit
@@ -208,16 +212,24 @@ Anti-churn note:
 
 - avoid building polished management surfaces on top of still-moving trust semantics
 
+## Current Read
+
+The ranked sequence above is now implemented for the current MVP slice.
+
+The current engineering source of truth is:
+
+- [engineering-reference-guide.md](/home/josep/dog/frontend/src/components/Workspaces/docs/engineering-reference-guide.md)
+
 ## Recommendation
 
-The next implementation energy should go into:
+The next implementation energy should now go into selective follow-through:
 
-1. backend descriptor consumer helpers
-2. token and descriptor hardening
-3. workspace-to-platform service access
+1. repo/bootstrap completeness only where it blocks real usage
+2. operator-facing management and classification polish
+3. transport or policy hardening where a concrete surface benefits from it
 
-That is the shortest sequence that most directly closes the MVP definition while
-keeping the current room/workspace convenience layer intentionally narrow.
+That keeps the current MVP intact while focusing future work on concrete usage
+pressure instead of reopening the core trust and domain structure.
 
 ## Guardrails
 

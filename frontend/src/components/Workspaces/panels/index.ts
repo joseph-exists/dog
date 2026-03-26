@@ -1,5 +1,5 @@
-export * from "./WorkspaceCreatePanel"
 export * from "./WorkspaceControlsPanel"
+export * from "./WorkspaceCreatePanel"
 export * from "./WorkspaceDetailsPanel"
 export * from "./WorkspaceListPanel"
 export * from "./WorkspaceProjectPanel"

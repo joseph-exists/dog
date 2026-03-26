@@ -1,33 +1,33 @@
 import {
-  AccessService,
-  AgentsService,
-  DemosService,
-  GroupsService,
-  PersonaGroupsService,
-  ProjectsService,
-  RoomsService,
-  StoriesService,
-  UserPersonasService,
-  UsersService,
-  UserReposService,
   type AccessGrantPublic,
   type AccessGrantRevokeRequest,
   type AccessGrantRole,
   type AccessGrantSubjectType,
   type AccessGrantUpsertRequest,
-  type ProjectCreate,
+  AccessService,
+  AgentsService,
+  DemosService,
+  GroupsService,
+  OpenAPI,
   type PersonaGroupCreate,
   type PersonaGroupMembershipCreate,
   type PersonaGroupMembershipPublic,
   type PersonaGroupPublic,
+  PersonaGroupsService,
+  type ProjectCreate,
   type ProjectPublic,
   type ProjectResourceCreate,
   type ProjectResourcePublic,
+  ProjectsService,
   type ProjectUpdate,
+  RoomsService,
+  StoriesService,
   type UserGroupPublic,
   type UserPersonaPublic,
+  UserPersonasService,
+  UserReposService,
+  UsersService,
 } from "@/client"
-import { OpenAPI } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
 
@@ -74,7 +74,9 @@ export const ProjectsAppService = {
     await ProjectsService.deleteProjectRoute({ projectId })
   },
 
-  async listProjectResources(projectId: string): Promise<ProjectResourcePublic[]> {
+  async listProjectResources(
+    projectId: string,
+  ): Promise<ProjectResourcePublic[]> {
     const response = await ProjectsService.getProjectResources({ projectId })
     return response.data
   },
@@ -90,10 +92,15 @@ export const ProjectsAppService = {
     projectId: string,
     input: ProjectResourceCreate,
   ): Promise<void> {
-    await ProjectsService.removeProjectResource({ projectId, requestBody: input })
+    await ProjectsService.removeProjectResource({
+      projectId,
+      requestBody: input,
+    })
   },
 
-  async listProjectAccessGrants(projectId: string): Promise<AccessGrantPublic[]> {
+  async listProjectAccessGrants(
+    projectId: string,
+  ): Promise<AccessGrantPublic[]> {
     const response = await AccessService.listResourceAccessGrants({
       resourceType: "project",
       resourceId: projectId,
@@ -143,23 +150,33 @@ export const ProjectsAppService = {
   },
 
   async listMyUserPersonas(): Promise<UserPersonaPublic[]> {
-    const response = await UserPersonasService.readUserPersonas({ skip: 0, limit: 100 })
+    const response = await UserPersonasService.readUserPersonas({
+      skip: 0,
+      limit: 100,
+    })
     return response.data
   },
 
   async listMyPersonaGroups(): Promise<PersonaGroupPublic[]> {
-    const response = await PersonaGroupsService.listPersonaGroups({ skip: 0, limit: 100 })
+    const response = await PersonaGroupsService.listPersonaGroups({
+      skip: 0,
+      limit: 100,
+    })
     return response.data
   },
 
-  async createPersonaGroup(input: PersonaGroupCreate): Promise<PersonaGroupPublic> {
+  async createPersonaGroup(
+    input: PersonaGroupCreate,
+  ): Promise<PersonaGroupPublic> {
     return PersonaGroupsService.createNewPersonaGroup({ requestBody: input })
   },
 
   async listPersonaGroupMembers(
     groupId: string,
   ): Promise<PersonaGroupMembershipPublic[]> {
-    const response = await PersonaGroupsService.listPersonaGroupMembers({ groupId })
+    const response = await PersonaGroupsService.listPersonaGroupMembers({
+      groupId,
+    })
     return response.data
   },
 
@@ -174,22 +191,25 @@ export const ProjectsAppService = {
   },
 
   async listAttachableResourceOptions(): Promise<AttachableResourceOption[]> {
-    const [currentUser, stories, sessions, repos, rooms, agents] = await Promise.all([
-      UsersService.readUserMe(),
-      StoriesService.readStories({ skip: 0, limit: 100 }),
-      DemosService.listMyDemoSessions({ skip: 0, limit: 100 }),
-      UserReposService.listUserRepos(),
-      RoomsService.listUserRooms({ skip: 0, limit: 100 }),
-      AgentsService.listAvailableAgents({ skip: 0, limit: 100 }),
-    ])
+    const [currentUser, stories, sessions, repos, rooms, agents] =
+      await Promise.all([
+        UsersService.readUserMe(),
+        StoriesService.readStories({ skip: 0, limit: 100 }),
+        DemosService.listMyDemoSessions({ skip: 0, limit: 100 }),
+        UserReposService.listUserRepos(),
+        RoomsService.listUserRooms({ skip: 0, limit: 100 }),
+        AgentsService.listAvailableAgents({ skip: 0, limit: 100 }),
+      ])
 
-    const storyOptions: AttachableResourceOption[] = stories.data.map((story) => ({
-      resourceType: "story",
-      resourceId: story.id,
-      label: story.title,
-      subtitle: story.description ?? "Story",
-      scope: story.owner_id === currentUser.id ? "owned" : "available",
-    }))
+    const storyOptions: AttachableResourceOption[] = stories.data.map(
+      (story) => ({
+        resourceType: "story",
+        resourceId: story.id,
+        label: story.title,
+        subtitle: story.description ?? "Story",
+        scope: story.owner_id === currentUser.id ? "owned" : "available",
+      }),
+    )
 
     const sessionOptions: AttachableResourceOption[] = sessions.data.map(
       (session) => ({
@@ -213,19 +233,30 @@ export const ProjectsAppService = {
       resourceType: "room",
       resourceId: room.room_id,
       label: room.title ?? `Room ${room.room_id.slice(0, 8)}`,
-      subtitle: room.story_id ? `Story ${room.story_id.slice(0, 8)}` : "No story",
+      subtitle: room.story_id
+        ? `Story ${room.story_id.slice(0, 8)}`
+        : "No story",
       scope: room.creator_id === currentUser.id ? "owned" : "available",
     }))
 
-    const agentOptions: AttachableResourceOption[] = agents.data.map((agent) => ({
-      resourceType: "agent",
-      resourceId: agent.id,
-      label: agent.name ?? agent.slug ?? `Agent ${agent.id.slice(0, 8)}`,
-      subtitle: agent.description ?? agent.model_name ?? agent.scope ?? "Agent",
-      scope: agent.owner_id === currentUser.id ? "owned" : "available",
-    }))
+    const agentOptions: AttachableResourceOption[] = agents.data.map(
+      (agent) => ({
+        resourceType: "agent",
+        resourceId: agent.id,
+        label: agent.name ?? agent.slug ?? `Agent ${agent.id.slice(0, 8)}`,
+        subtitle:
+          agent.description ?? agent.model_name ?? agent.scope ?? "Agent",
+        scope: agent.owner_id === currentUser.id ? "owned" : "available",
+      }),
+    )
 
-    return [...storyOptions, ...sessionOptions, ...repoOptions, ...roomOptions, ...agentOptions]
+    return [
+      ...storyOptions,
+      ...sessionOptions,
+      ...repoOptions,
+      ...roomOptions,
+      ...agentOptions,
+    ]
   },
 }
 

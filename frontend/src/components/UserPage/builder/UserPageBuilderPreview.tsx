@@ -89,8 +89,7 @@ export function UserPageBuilderPreview({
             config={{
               layout: "stack",
               maxVisible: (config.maxVisible as number) ?? 8,
-              showPersonaBadges:
-                (config.showPersonaBadges as boolean) ?? true,
+              showPersonaBadges: (config.showPersonaBadges as boolean) ?? true,
               showAudienceBadges:
                 (config.showAudienceBadges as boolean) ?? true,
             }}
@@ -135,8 +134,7 @@ export function UserPageBuilderPreview({
             config={{
               allowAudienceSwitching:
                 (config.allowAudienceSwitching as boolean) ?? true,
-              showPreviewCards:
-                (config.showPreviewCards as boolean) ?? true,
+              showPreviewCards: (config.showPreviewCards as boolean) ?? true,
             }}
             content={
               content
@@ -163,7 +161,8 @@ export function UserPageBuilderPreview({
               content
                 ? {
                     relations:
-                      (content.relations as UserPageViewModel["relations"]) ?? [],
+                      (content.relations as UserPageViewModel["relations"]) ??
+                      [],
                   }
                 : undefined
             }

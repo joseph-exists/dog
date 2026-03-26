@@ -65,16 +65,18 @@ export function StoryPanel({
     currentConnection?.state === "unavailable" || currentConnectionIsExpired
       ? "border-rose-500/40 bg-rose-500/10 text-rose-700"
       : currentConnection?.descriptorStatus === "available"
-      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
-      : currentConnection?.descriptorStatus === "pending"
-        ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
-        : "border-rose-500/40 bg-rose-500/10 text-rose-700"
+        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+        : currentConnection?.descriptorStatus === "pending"
+          ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+          : "border-rose-500/40 bg-rose-500/10 text-rose-700"
 
   const connectionCallout = currentConnection ? (
     <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <div className="text-sm font-medium">Current workspace connection</div>
+          <div className="text-sm font-medium">
+            Current workspace connection
+          </div>
           <div className="text-xs text-muted-foreground">
             {currentConnection.workspaceName} · {currentConnectionPurposeLabel}
           </div>
@@ -91,7 +93,8 @@ export function StoryPanel({
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary">{currentConnectionPurposeLabel}</Badge>
         <Badge variant="outline">
-          {currentConnection.readyServiceCount}/{currentConnection.serviceCount} services ready
+          {currentConnection.readyServiceCount}/{currentConnection.serviceCount}{" "}
+          services ready
         </Badge>
         {currentConnection.capabilities.map((capability) => (
           <Badge key={capability} variant="outline">
@@ -102,13 +105,13 @@ export function StoryPanel({
 
       <div className="text-xs text-muted-foreground">
         {currentConnection.state === "unavailable"
-          ? currentConnection.stateReason ??
+          ? (currentConnection.stateReason ??
             currentConnection.reason ??
-            "This room-held workspace connection is being kept as historical session context."
+            "This room-held workspace connection is being kept as historical session context.")
           : currentConnectionIsExpired
             ? "This room-held descriptor has aged out. Refresh it from Workspace Links before relying on it for a new launch."
-            : currentConnection.reason ??
-              "This room is using a descriptor-backed workspace connection for the current session."}
+            : (currentConnection.reason ??
+              "This room is using a descriptor-backed workspace connection for the current session.")}
       </div>
 
       <div className="text-[11px] text-muted-foreground">
@@ -122,7 +125,11 @@ export function StoryPanel({
         <div className="flex flex-wrap gap-2">
           {availableEndpoints.map((endpoint) => (
             <Button key={endpoint.id} asChild size="sm" variant="outline">
-              <a href={endpoint.url ?? undefined} target="_blank" rel="noreferrer">
+              <a
+                href={endpoint.url ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+              >
                 {endpoint.label}
                 <ExternalLink className="ml-1 h-3.5 w-3.5" />
               </a>
@@ -135,9 +142,9 @@ export function StoryPanel({
             ? "This room is holding onto a connection whose workspace is no longer available. Choose a new workspace link before continuing."
             : currentConnectionIsExpired
               ? "This descriptor has expired. Open Workspace Links to refresh the room's current connection."
-            : currentConnection.descriptorStatus === "pending"
-            ? "This connection is still being prepared. Return to Workspace Links to refresh or wait for readiness."
-            : "No usable endpoint has been issued for the current connection yet."}
+              : currentConnection.descriptorStatus === "pending"
+                ? "This connection is still being prepared. Return to Workspace Links to refresh or wait for readiness."
+                : "No usable endpoint has been issued for the current connection yet."}
         </div>
       )}
     </div>
@@ -176,7 +183,9 @@ export function StoryPanel({
   if (!runtime || !runtime.hasRuntime) {
     return (
       <div className={cn("flex h-full flex-col", className)}>
-        {connectionCallout ? <div className="px-4 pt-4">{connectionCallout}</div> : null}
+        {connectionCallout ? (
+          <div className="px-4 pt-4">{connectionCallout}</div>
+        ) : null}
         <PlaceholderContent
           icon={BookOpen}
           title="no story attachment. luck fails us all."

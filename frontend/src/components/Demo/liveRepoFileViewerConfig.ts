@@ -35,7 +35,9 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeOptionalString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null
 }
 
 export function createDefaultLiveRepoFileViewerConfig(
@@ -103,7 +105,9 @@ export function parseLiveRepoFileViewerConfig(
     entity_type:
       normalizeOptionalString(record.entity_type) ?? defaults.entity_type,
     entity_id_mode:
-      record.entity_id_mode === "explicit" ? "explicit" : defaults.entity_id_mode,
+      record.entity_id_mode === "explicit"
+        ? "explicit"
+        : defaults.entity_id_mode,
     entity_id: normalizeOptionalString(record.entity_id) ?? undefined,
     entity_id_metadata_key:
       normalizeOptionalString(record.entity_id_metadata_key) ??
@@ -117,7 +121,8 @@ export function parseLiveRepoFileViewerConfig(
     selection_key:
       pathMode === "readme"
         ? null
-        : normalizeOptionalString(record.selection_key) ?? defaults.selection_key,
+        : (normalizeOptionalString(record.selection_key) ??
+          defaults.selection_key),
     title: normalizeOptionalString(record.title),
     show_path_badge: record.show_path_badge !== false,
     show_copy_control: record.show_copy_control !== false,
@@ -135,7 +140,7 @@ export function resolveLiveRepoFileViewerConfig(
 
   const entityId =
     parsed.entity_id_mode === "explicit"
-      ? parsed.entity_id?.trim() ?? ""
+      ? (parsed.entity_id?.trim() ?? "")
       : (() => {
           if (!isObjectRecord(metadataJson)) return ""
           const candidate = metadataJson[parsed.entity_id_metadata_key ?? ""]

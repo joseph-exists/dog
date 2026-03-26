@@ -1,19 +1,19 @@
 import type { UserRepoPublic } from "@/client/types.gen"
+import type { RepoPanelConfig } from "@/components/Repo/RepoLayout"
 import {
   getRepoCapabilityAvailability,
   getRepoPanelDefinition,
   type RepoPanelKind,
 } from "@/components/Repo/registry"
-import type { RepoPanelConfig } from "@/components/Repo/RepoLayout"
-import { RepoExplorerPanel } from "./RepoExplorerPanel"
-import { RepoFileViewerPanel } from "./RepoFileViewerPanel"
-import { RepoImportStatusPanel } from "./RepoImportStatusPanel"
-import { RepoOverviewPanel } from "./RepoOverviewPanel"
-import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
 import {
   parseRepoExplorerPanelConfig,
   parseRepoFileViewerPanelConfig,
 } from "./config"
+import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
+import { RepoExplorerPanel } from "./RepoExplorerPanel"
+import { RepoFileViewerPanel } from "./RepoFileViewerPanel"
+import { RepoImportStatusPanel } from "./RepoImportStatusPanel"
+import { RepoOverviewPanel } from "./RepoOverviewPanel"
 
 export interface RepoPanelRendererContext {
   repo: UserRepoPublic
@@ -75,7 +75,10 @@ export function renderRepoPanel(
   const kind: RepoPanelKind = panel.kind
   const definition = getRepoPanelDefinition(kind)
   const availability = definition
-    ? getRepoCapabilityAvailability(definition.requirements, context.capabilities)
+    ? getRepoCapabilityAvailability(
+        definition.requirements,
+        context.capabilities,
+      )
     : { available: false, unmetRequirements: ["unknown panel kind"] }
 
   if (!availability.available || !definition) {
@@ -122,7 +125,11 @@ export function renderRepoPanel(
           panelId={panel.id}
           config={config}
           enabled={availability.available}
-          selectedPath={selectionKey ? context.panelSelections[selectionKey] ?? null : null}
+          selectedPath={
+            selectionKey
+              ? (context.panelSelections[selectionKey] ?? null)
+              : null
+          }
           onFileOpened={context.onFileOpened}
           onRefObserved={context.onRefObserved}
           getRoomContextState={context.getFileRoomContextState}

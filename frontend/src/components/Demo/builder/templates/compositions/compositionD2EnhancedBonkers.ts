@@ -4,7 +4,9 @@ import type {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionD2EnhancedBonkersTemplate(context: TemplateBuilderContext): EditableComposition {
+export function buildCompositionD2EnhancedBonkersTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
   const { createPanelTemplate, createBlockTemplate, createTemplate } = context
   const composition = createTemplate("composition_b_runtime_coupled")
   composition.layout_mode = "panels"
@@ -394,4 +396,3 @@ export function buildCompositionD2EnhancedBonkersTemplate(context: TemplateBuild
 // - Motion timing
 //
 // =============================================================================
-

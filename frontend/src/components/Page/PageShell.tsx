@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useState } from "react"
 
 import type {
-  AudiencePresentationSummary,
   AudiencePresentationBlockContent,
+  AudiencePresentationSummary,
   PersonaManagerBlockContent,
   PersonaRelationSummary,
   PrimaryPersonaBlockContent,
@@ -191,23 +191,32 @@ export function PageShell({
     const config = block.config
     // Content is stored as Record<string, unknown>, blocks handle missing fields gracefully
     const content = block.content as Record<string, unknown> | undefined
-    const updateCurrentBlockContent = (nextContent: Record<string, unknown>) => {
+    const updateCurrentBlockContent = (
+      nextContent: Record<string, unknown>,
+    ) => {
       if (!block.id) return
       updateBlockContent(block.id, nextContent)
     }
-    const updatePrimaryPersonaContent = (nextContent: Record<string, unknown>) => {
-      const primaryBlock = blocks?.find((candidate) => candidate.type === "primaryPersona")
+    const updatePrimaryPersonaContent = (
+      nextContent: Record<string, unknown>,
+    ) => {
+      const primaryBlock = blocks?.find(
+        (candidate) => candidate.type === "primaryPersona",
+      )
       if (!primaryBlock?.id) return
       updateBlockContent(primaryBlock.id, nextContent)
     }
-    const updatePrimaryPersonaTyped = (nextContent: PrimaryPersonaBlockContent) =>
-      updateCurrentBlockContent(nextContent as Record<string, unknown>)
-    const updatePrimaryGlobalTyped = (nextContent: PrimaryPersonaBlockContent) =>
-      updatePrimaryPersonaContent(nextContent as Record<string, unknown>)
+    const updatePrimaryPersonaTyped = (
+      nextContent: PrimaryPersonaBlockContent,
+    ) => updateCurrentBlockContent(nextContent as Record<string, unknown>)
+    const updatePrimaryGlobalTyped = (
+      nextContent: PrimaryPersonaBlockContent,
+    ) => updatePrimaryPersonaContent(nextContent as Record<string, unknown>)
     const updateWorkFeedTyped = (nextContent: WorkFeedBlockContent) =>
       updateCurrentBlockContent(nextContent as Record<string, unknown>)
-    const updatePersonaManagerTyped = (nextContent: PersonaManagerBlockContent) =>
-      updateCurrentBlockContent(nextContent as Record<string, unknown>)
+    const updatePersonaManagerTyped = (
+      nextContent: PersonaManagerBlockContent,
+    ) => updateCurrentBlockContent(nextContent as Record<string, unknown>)
     const updateAudiencePresentationTyped = (
       nextContent: AudiencePresentationBlockContent,
     ) => updateCurrentBlockContent(nextContent as Record<string, unknown>)
@@ -431,7 +440,8 @@ export function PageShell({
               content={
                 content
                   ? {
-                      primaryPersonaId: (content.primaryPersonaId as string | null) ?? null,
+                      primaryPersonaId:
+                        (content.primaryPersonaId as string | null) ?? null,
                       explanation: content.explanation as string | undefined,
                     }
                   : undefined
@@ -484,7 +494,8 @@ export function PageShell({
               content={
                 content
                   ? {
-                      personas: (content.personas as UserPersonaSummary[]) ?? [],
+                      personas:
+                        (content.personas as UserPersonaSummary[]) ?? [],
                     }
                   : undefined
               }
@@ -502,8 +513,7 @@ export function PageShell({
               config={{
                 allowAudienceSwitching:
                   (config.allowAudienceSwitching as boolean) ?? true,
-                showPreviewCards:
-                  (config.showPreviewCards as boolean) ?? true,
+                showPreviewCards: (config.showPreviewCards as boolean) ?? true,
               }}
               content={
                 content
@@ -532,7 +542,8 @@ export function PageShell({
               content={
                 content
                   ? {
-                      relations: (content.relations as PersonaRelationSummary[]) ?? [],
+                      relations:
+                        (content.relations as PersonaRelationSummary[]) ?? [],
                     }
                   : undefined
               }

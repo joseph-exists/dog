@@ -1,10 +1,10 @@
 import { FileCode2, FileText, GitCommitHorizontal, Route } from "lucide-react"
+import { BlockContainer } from "@/components/Page/primitives/BlockContainer"
 import {
-  type ContentVariant,
   ContentRenderer,
+  type ContentVariant,
 } from "@/components/Page/primitives/ContentRenderer"
 import { Badge } from "@/components/ui/badge"
-import { BlockContainer } from "@/components/Page/primitives/BlockContainer"
 import type { RepoContentRendererProps } from "./types"
 
 function formatBytes(value?: number) {

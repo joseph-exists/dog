@@ -1,15 +1,26 @@
 import { useState } from "react"
-
-import { cn } from "@/lib/utils"
-import type { WorkspaceDetailViewModel } from "@/services/workspaceService"
+import { Button } from "@/components/ui/button"
 import {
-  useRefreshWorkspacePlatformRuntimeProjection,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   useIssueWorkspacePlatformServiceAccess,
+  useRefreshWorkspacePlatformRuntimeProjection,
   useWorkspacePlatformRuntimeConfig,
 } from "@/hooks/useWorkspaces"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+import type { WorkspaceDetailViewModel } from "@/services/workspaceService"
 import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
 
 function formatBootstrapPhase(phase: string): string {
@@ -25,13 +36,18 @@ function serviceKindLabel(kind: string): string {
 }
 
 function serviceStatusClass(status: string): string {
-  if (status === "ready") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
-  if (status === "pending") return "border-amber-500/30 bg-amber-500/10 text-amber-700"
-  if (status === "failed") return "border-destructive/30 bg-destructive/10 text-destructive"
+  if (status === "ready")
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
+  if (status === "pending")
+    return "border-amber-500/30 bg-amber-500/10 text-amber-700"
+  if (status === "failed")
+    return "border-destructive/30 bg-destructive/10 text-destructive"
   return "border-border bg-muted/40 text-muted-foreground"
 }
 
-function accessLevelLabel(value: WorkspaceDetailViewModel["accessLevel"]): string {
+function accessLevelLabel(
+  value: WorkspaceDetailViewModel["accessLevel"],
+): string {
   if (value === "manage") return "Manage"
   if (value === "use") return "Use"
   return "View"
@@ -49,26 +65,44 @@ function freshnessClass(expiresAt: Date | null): string {
   if (!expiresAt) return "border-border bg-muted/40 text-muted-foreground"
   const remaining = expiresAt.getTime() - Date.now()
   if (remaining <= 0) return "border-rose-500/30 bg-rose-500/10 text-rose-700"
-  if (remaining <= 2 * 60 * 1000) return "border-amber-500/30 bg-amber-500/10 text-amber-700"
+  if (remaining <= 2 * 60 * 1000)
+    return "border-amber-500/30 bg-amber-500/10 text-amber-700"
   return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
 }
 
-export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetailViewModel }) {
-  const [platformConsumerKind, setPlatformConsumerKind] = useState<"workspace_runtime" | "agent_runtime">("workspace_runtime")
-  const issuePlatformAccess = useIssueWorkspacePlatformServiceAccess(workspace.id)
+export function WorkspaceDetailsPanel({
+  workspace,
+}: {
+  workspace: WorkspaceDetailViewModel
+}) {
+  const [platformConsumerKind, setPlatformConsumerKind] = useState<
+    "workspace_runtime" | "agent_runtime"
+  >("workspace_runtime")
+  const issuePlatformAccess = useIssueWorkspacePlatformServiceAccess(
+    workspace.id,
+  )
   const runtimeConfig = useWorkspacePlatformRuntimeConfig(workspace.id)
-  const refreshRuntimeProjection = useRefreshWorkspacePlatformRuntimeProjection(workspace.id)
-  const agentRuntimeServices = workspace.services.filter((service) => service.kind === "agent_runtime")
-  const webServices = workspace.services.filter((service) => service.kind !== "agent_runtime")
+  const refreshRuntimeProjection = useRefreshWorkspacePlatformRuntimeProjection(
+    workspace.id,
+  )
+  const agentRuntimeServices = workspace.services.filter(
+    (service) => service.kind === "agent_runtime",
+  )
+  const webServices = workspace.services.filter(
+    (service) => service.kind !== "agent_runtime",
+  )
   const workspaceUnavailableForRuntimeAccess =
-    workspace.status === "failed" || workspace.status === "destroying" || workspace.status === "destroyed"
+    workspace.status === "failed" ||
+    workspace.status === "destroying" ||
+    workspace.status === "destroyed"
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Workspace Details</CardTitle>
         <CardDescription>
-          Current lifecycle state, bootstrap intent, and backend-facing operational context.
+          Current lifecycle state, bootstrap intent, and backend-facing
+          operational context.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -120,7 +154,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
           </div>
           <div>
             <dt className="text-muted-foreground">Last Transition</dt>
-            <dd>{workspace.lastTransitionAt?.toLocaleString() ?? "Not recorded"}</dd>
+            <dd>
+              {workspace.lastTransitionAt?.toLocaleString() ?? "Not recorded"}
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Terminal Status</dt>
@@ -140,20 +176,31 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
           </div>
           <div>
             <dt className="text-muted-foreground">Bootstrap Path</dt>
-            <dd>{workspace.bootstrapWorkspacePath ?? "Default workspace path"}</dd>
+            <dd>
+              {workspace.bootstrapWorkspacePath ?? "Default workspace path"}
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Readiness</dt>
             <dd>
-              {workspace.connectivitySummary ?? workspace.readinessSummary
+              {(workspace.connectivitySummary ?? workspace.readinessSummary)
                 ? [
-                    (workspace.connectivitySummary ?? workspace.readinessSummary)?.bootstrapComplete
+                    (
+                      workspace.connectivitySummary ??
+                      workspace.readinessSummary
+                    )?.bootstrapComplete
                       ? "bootstrap ready"
                       : "bootstrap pending",
-                    (workspace.connectivitySummary ?? workspace.readinessSummary)?.terminalReady
+                    (
+                      workspace.connectivitySummary ??
+                      workspace.readinessSummary
+                    )?.terminalReady
                       ? "terminal ready"
                       : "terminal pending",
-                    (workspace.connectivitySummary ?? workspace.readinessSummary)?.servicesReady
+                    (
+                      workspace.connectivitySummary ??
+                      workspace.readinessSummary
+                    )?.servicesReady
                       ? "services ready"
                       : "services pending",
                   ].join(" · ")
@@ -162,14 +209,23 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
           </div>
           <div>
             <dt className="text-muted-foreground">Agent Runtimes</dt>
-            <dd>{agentRuntimeServices.length > 0 ? agentRuntimeServices.length : "None declared"}</dd>
+            <dd>
+              {agentRuntimeServices.length > 0
+                ? agentRuntimeServices.length
+                : "None declared"}
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Discovered Services</dt>
             <dd>
-              {workspace.connectivitySummary?.serviceCount ?? workspace.readinessSummary?.serviceCount ?? 0}
-              {(workspace.connectivitySummary?.serviceCount ?? workspace.readinessSummary?.serviceCount ?? 0) > 0 &&
-              (workspace.connectivitySummary?.readyServiceCount ?? workspace.readinessSummary?.readyServiceCount) !== null
+              {workspace.connectivitySummary?.serviceCount ??
+                workspace.readinessSummary?.serviceCount ??
+                0}
+              {(workspace.connectivitySummary?.serviceCount ??
+                workspace.readinessSummary?.serviceCount ??
+                0) > 0 &&
+              (workspace.connectivitySummary?.readyServiceCount ??
+                workspace.readinessSummary?.readyServiceCount) !== null
                 ? ` (${workspace.connectivitySummary?.readyServiceCount ?? workspace.readinessSummary?.readyServiceCount} ready)`
                 : ""}
             </dd>
@@ -177,7 +233,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
         </dl>
         {workspace.isProjectWorkspace && workspace.accessLevel !== "manage" ? (
           <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-            This workspace is available through project membership. You can use the capabilities exposed by the backend, while runtime-destructive actions remain owner-scoped in the current policy pass.
+            This workspace is available through project membership. You can use
+            the capabilities exposed by the backend, while runtime-destructive
+            actions remain owner-scoped in the current policy pass.
           </div>
         ) : null}
         {workspace.bootstrapIntent || workspace.bootstrapProgress ? (
@@ -186,7 +244,8 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
               <div>
                 <div className="text-sm font-medium">Bootstrap</div>
                 <div className="text-xs text-muted-foreground">
-                  Intent and execution state for repo materialization and runtime setup.
+                  Intent and execution state for repo materialization and
+                  runtime setup.
                 </div>
               </div>
               {workspace.bootstrapProgress ? (
@@ -199,10 +258,14 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
             {workspace.bootstrapProgress ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{workspace.bootstrapProgress.message ?? "Preparing bootstrap execution."}</span>
+                  <span>
+                    {workspace.bootstrapProgress.message ??
+                      "Preparing bootstrap execution."}
+                  </span>
                   {workspace.bootstrapProgress.stepCount ? (
                     <span>
-                      {workspace.bootstrapProgress.completedSteps ?? 0}/{workspace.bootstrapProgress.stepCount} steps
+                      {workspace.bootstrapProgress.completedSteps ?? 0}/
+                      {workspace.bootstrapProgress.stepCount} steps
                     </span>
                   ) : null}
                 </div>
@@ -210,7 +273,8 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                   <div
                     className={cn(
                       "h-full rounded-full bg-foreground/80 transition-all",
-                      workspace.bootstrapProgress.phase === "failed" && "bg-destructive",
+                      workspace.bootstrapProgress.phase === "failed" &&
+                        "bg-destructive",
                     )}
                     style={{
                       width: `${Math.round((workspace.bootstrapProgress.completionRatio ?? 0) * 100)}%`,
@@ -260,7 +324,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Env Vars</dt>
-                  <dd>{Object.keys(workspace.bootstrapIntent.envVars).length}</dd>
+                  <dd>
+                    {Object.keys(workspace.bootstrapIntent.envVars).length}
+                  </dd>
                 </div>
               </dl>
             ) : null}
@@ -288,25 +354,37 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
               <div>
                 <div className="text-sm font-medium">Discovered Services</div>
                 <div className="text-xs text-muted-foreground">
-                  Runtime surfaces inferred from bootstrap profiles and kennel discovery.
+                  Runtime surfaces inferred from bootstrap profiles and kennel
+                  discovery.
                 </div>
               </div>
               <span className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                {workspace.connectivitySummary?.readyServiceCount ?? workspace.readinessSummary?.readyServiceCount ?? 0}/
-                {workspace.connectivitySummary?.serviceCount ?? workspace.readinessSummary?.serviceCount ?? workspace.services.length} ready
+                {workspace.connectivitySummary?.readyServiceCount ??
+                  workspace.readinessSummary?.readyServiceCount ??
+                  0}
+                /
+                {workspace.connectivitySummary?.serviceCount ??
+                  workspace.readinessSummary?.serviceCount ??
+                  workspace.services.length}{" "}
+                ready
               </span>
             </div>
             {agentRuntimeServices.length > 0 ? (
               <div className="rounded-lg border bg-background/70 p-3">
                 <div className="text-sm font-medium">Agent Runtime Surface</div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  Agent runtimes are tracked as long-running workspace processes. They may not publish a browser URL, but they still participate in readiness and future room connectivity.
+                  Agent runtimes are tracked as long-running workspace
+                  processes. They may not publish a browser URL, but they still
+                  participate in readiness and future room connectivity.
                 </div>
               </div>
             ) : null}
             <div className="space-y-3">
               {workspace.services.map((service) => (
-                <div key={service.id} className="rounded-lg border bg-background/70 p-3">
+                <div
+                  key={service.id}
+                  className="rounded-lg border bg-background/70 p-3"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="text-sm font-medium">{service.label}</div>
                     <span
@@ -345,14 +423,18 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                     )}
                   </div>
                   {service.readinessMessage ? (
-                    <div className="mt-2 text-xs text-muted-foreground">{service.readinessMessage}</div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {service.readinessMessage}
+                    </div>
                   ) : null}
                 </div>
               ))}
             </div>
             {webServices.length === 0 && agentRuntimeServices.length > 0 ? (
               <div className="text-xs text-muted-foreground">
-                No web endpoints are currently published. This workspace is oriented around agent runtime availability rather than browser traffic.
+                No web endpoints are currently published. This workspace is
+                oriented around agent runtime availability rather than browser
+                traffic.
               </div>
             ) : null}
           </div>
@@ -362,26 +444,36 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
             <div>
               <div className="text-sm font-medium">Platform Service Access</div>
               <div className="text-xs text-muted-foreground">
-                Inspect projected runtime access alongside the current backend-issued runtime config and grant surface.
+                Inspect projected runtime access alongside the current
+                backend-issued runtime config and grant surface.
               </div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-64">
               <Select
                 value={platformConsumerKind}
-                onValueChange={(value) => setPlatformConsumerKind(value as "workspace_runtime" | "agent_runtime")}
+                onValueChange={(value) =>
+                  setPlatformConsumerKind(
+                    value as "workspace_runtime" | "agent_runtime",
+                  )
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="workspace_runtime">Workspace Runtime</SelectItem>
+                  <SelectItem value="workspace_runtime">
+                    Workspace Runtime
+                  </SelectItem>
                   <SelectItem value="agent_runtime">Agent Runtime</SelectItem>
                 </SelectContent>
               </Select>
               <Button
                 type="button"
                 variant="secondary"
-                disabled={!workspace.canDiscoverServices || issuePlatformAccess.isPending}
+                disabled={
+                  !workspace.canDiscoverServices ||
+                  issuePlatformAccess.isPending
+                }
                 onClick={() =>
                   issuePlatformAccess.mutate({
                     consumerKind: platformConsumerKind,
@@ -389,12 +481,16 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                   })
                 }
               >
-                {issuePlatformAccess.isPending ? "Issuing Grant..." : "Issue Access For Enabled Services"}
+                {issuePlatformAccess.isPending
+                  ? "Issuing Grant..."
+                  : "Issue Access For Enabled Services"}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                disabled={!workspace.canDiscoverServices || runtimeConfig.isPending}
+                disabled={
+                  !workspace.canDiscoverServices || runtimeConfig.isPending
+                }
                 onClick={() =>
                   runtimeConfig.mutate({
                     consumerKind: platformConsumerKind,
@@ -402,23 +498,32 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                   })
                 }
               >
-                {runtimeConfig.isPending ? "Resolving Runtime Config..." : "Inspect Current Runtime Config"}
+                {runtimeConfig.isPending
+                  ? "Resolving Runtime Config..."
+                  : "Inspect Current Runtime Config"}
               </Button>
             </div>
           </div>
           {!workspace.canDiscoverServices ? (
             <div className="rounded-lg border bg-background/70 p-3 text-sm text-muted-foreground">
-              Platform-service grants become available when this workspace is in a service-discoverable state and your current access level includes discovery.
+              Platform-service grants become available when this workspace is in
+              a service-discoverable state and your current access level
+              includes discovery.
             </div>
           ) : null}
           {workspaceUnavailableForRuntimeAccess ? (
             <div className="rounded-lg border bg-background/70 p-3 text-sm text-muted-foreground">
-              This workspace is no longer in a runtime-access state. Existing projected access should be treated as historical context, and fresh runtime access should be requested only after the workspace returns to a ready state or a replacement workspace is available.
+              This workspace is no longer in a runtime-access state. Existing
+              projected access should be treated as historical context, and
+              fresh runtime access should be requested only after the workspace
+              returns to a ready state or a replacement workspace is available.
             </div>
           ) : null}
           {workspace.platformServiceProjection.length > 0 ? (
             <div className="space-y-3">
-              <div className="text-sm font-medium">Projected Runtime Access</div>
+              <div className="text-sm font-medium">
+                Projected Runtime Access
+              </div>
               <div className="space-y-3">
                 {workspace.platformServiceProjection.map((projection) => (
                   <div
@@ -427,14 +532,21 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-1">
-                        <div className="font-medium">{projection.consumerKind.replaceAll("_", " ")}</div>
+                        <div className="font-medium">
+                          {projection.consumerKind.replaceAll("_", " ")}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {projection.issuedAt ? `Projected ${projection.issuedAt.toLocaleString()}` : "Projection timestamp unavailable"}
-                          {projection.expiresAt ? ` · Expires ${projection.expiresAt.toLocaleString()}` : ""}
+                          {projection.issuedAt
+                            ? `Projected ${projection.issuedAt.toLocaleString()}`
+                            : "Projection timestamp unavailable"}
+                          {projection.expiresAt
+                            ? ` · Expires ${projection.expiresAt.toLocaleString()}`
+                            : ""}
                         </div>
                         {projection.refreshedAt ? (
                           <div className="text-[11px] text-muted-foreground">
-                            Last refreshed {projection.refreshedAt.toLocaleString()}
+                            Last refreshed{" "}
+                            {projection.refreshedAt.toLocaleString()}
                           </div>
                         ) : null}
                       </div>
@@ -463,7 +575,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                             })
                           }
                         >
-                          {refreshRuntimeProjection.isPending ? "Refreshing..." : "Refresh"}
+                          {refreshRuntimeProjection.isPending
+                            ? "Refreshing..."
+                            : "Refresh"}
                         </Button>
                       </div>
                     </div>
@@ -478,7 +592,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                           </span>
                         ))
                       ) : (
-                        <span className="text-xs text-muted-foreground">No projected services recorded.</span>
+                        <span className="text-xs text-muted-foreground">
+                          No projected services recorded.
+                        </span>
                       )}
                     </div>
                     {projection.runtimeFilePaths.length > 0 ? (
@@ -503,7 +619,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                         <div className="font-medium">Projection notes</div>
                         <ul className="mt-2 list-disc space-y-1 pl-4">
                           {projection.injectErrors.map((error) => (
-                            <li key={`${projection.consumerKind}-${error}`}>{error}</li>
+                            <li key={`${projection.consumerKind}-${error}`}>
+                              {error}
+                            </li>
                           ))}
                         </ul>
                       </div>
@@ -529,26 +647,36 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                 })
               }
             >
-              {refreshRuntimeProjection.isPending ? "Refreshing Projection..." : "Refresh Runtime Projection"}
+              {refreshRuntimeProjection.isPending
+                ? "Refreshing Projection..."
+                : "Refresh Runtime Projection"}
             </Button>
           </div>
           {runtimeConfig.data ? (
             <div className="space-y-3">
               <div className="rounded-lg border bg-background/70 p-3 text-sm">
                 <div className="font-medium">
-                  Current runtime config for {runtimeConfig.data.consumerKind.replaceAll("_", " ")}
+                  Current runtime config for{" "}
+                  {runtimeConfig.data.consumerKind.replaceAll("_", " ")}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Issued {runtimeConfig.data.issuedAt.toLocaleString()}
-                  {runtimeConfig.data.expiresAt ? ` · Expires ${runtimeConfig.data.expiresAt.toLocaleString()}` : ""}
+                  {runtimeConfig.data.expiresAt
+                    ? ` · Expires ${runtimeConfig.data.expiresAt.toLocaleString()}`
+                    : ""}
                 </div>
               </div>
               {runtimeConfig.data.services.length > 0 ? (
                 <div className="space-y-3">
                   {runtimeConfig.data.services.map((service) => (
-                    <div key={`runtime-${service.grantId}`} className="rounded-lg border bg-background/70 p-3">
+                    <div
+                      key={`runtime-${service.grantId}`}
+                      className="rounded-lg border bg-background/70 p-3"
+                    >
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="text-sm font-medium">{service.serviceId}</div>
+                        <div className="text-sm font-medium">
+                          {service.serviceId}
+                        </div>
                         <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
                           {service.transport}
                         </span>
@@ -557,7 +685,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                         </span>
                       </div>
                       {service.description ? (
-                        <div className="mt-2 text-sm text-muted-foreground">{service.description}</div>
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          {service.description}
+                        </div>
                       ) : null}
                       <div className="mt-2 text-sm">
                         <a
@@ -606,7 +736,8 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
             <div className="space-y-3">
               <div className="rounded-lg border bg-background/70 p-3 text-sm">
                 <div className="font-medium">
-                  Current grant for {issuePlatformAccess.data.consumerKind.replaceAll("_", " ")}
+                  Current grant for{" "}
+                  {issuePlatformAccess.data.consumerKind.replaceAll("_", " ")}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Issued {issuePlatformAccess.data.issuedAt.toLocaleString()}
@@ -618,9 +749,14 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
               {issuePlatformAccess.data.services.length > 0 ? (
                 <div className="space-y-3">
                   {issuePlatformAccess.data.services.map((service) => (
-                    <div key={service.grantId} className="rounded-lg border bg-background/70 p-3">
+                    <div
+                      key={service.grantId}
+                      className="rounded-lg border bg-background/70 p-3"
+                    >
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="text-sm font-medium">{service.serviceId}</div>
+                        <div className="text-sm font-medium">
+                          {service.serviceId}
+                        </div>
                         <span className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
                           {service.transport}
                         </span>
@@ -632,7 +768,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                         </span>
                       </div>
                       {service.description ? (
-                        <div className="mt-2 text-sm text-muted-foreground">{service.description}</div>
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          {service.description}
+                        </div>
                       ) : null}
                       <div className="mt-2 text-sm">
                         <a
@@ -664,7 +802,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                       </div>
                       <div className="mt-2 text-xs text-muted-foreground">
                         Grant {service.grantId}
-                        {service.expiresAt ? ` · Expires ${service.expiresAt.toLocaleString()}` : ""}
+                        {service.expiresAt
+                          ? ` · Expires ${service.expiresAt.toLocaleString()}`
+                          : ""}
                       </div>
                       {Object.keys(service.scope).length > 0 ? (
                         <pre className="mt-2 overflow-x-auto rounded-lg border bg-muted/40 p-3 text-xs">
@@ -693,15 +833,24 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
             <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-muted-foreground">Snapshot Ready</dt>
-                <dd>{workspace.flavourHealth.snapshotReady ? "ready" : "not ready"}</dd>
+                <dd>
+                  {workspace.flavourHealth.snapshotReady
+                    ? "ready"
+                    : "not ready"}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Latest Rebuild</dt>
-                <dd>{workspace.flavourHealth.latestRebuildStatus ?? "No rebuild data"}</dd>
+                <dd>
+                  {workspace.flavourHealth.latestRebuildStatus ??
+                    "No rebuild data"}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Rebuild Job</dt>
-                <dd>{workspace.flavourHealth.latestRebuildJobId ?? "Not recorded"}</dd>
+                <dd>
+                  {workspace.flavourHealth.latestRebuildJobId ?? "Not recorded"}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Flavour Key</dt>
@@ -723,7 +872,9 @@ export function WorkspaceDetailsPanel({ workspace }: { workspace: WorkspaceDetai
                 </span>
               ))
             ) : (
-              <span className="text-sm text-muted-foreground">No actions currently available.</span>
+              <span className="text-sm text-muted-foreground">
+                No actions currently available.
+              </span>
             )}
           </div>
         </div>

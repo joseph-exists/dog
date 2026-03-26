@@ -1,14 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router"
 
 import {
-  WorkspacesShell,
   type PanelConfig,
   WorkspaceCreatePanel,
   WorkspaceListPanel,
+  WorkspacesShell,
 } from "@/components/Workspaces"
-import { useCreateWorkspace, useWorkspaces } from "@/hooks/useWorkspaces"
 import { usePageThemes } from "@/hooks/useThemeBinding"
-import { useAvailableThemes, useUserThemeBindings } from "@/hooks/useThemeRegistry"
+import {
+  useAvailableThemes,
+  useUserThemeBindings,
+} from "@/hooks/useThemeRegistry"
+import { useCreateWorkspace, useWorkspaces } from "@/hooks/useWorkspaces"
 
 export const Route = createFileRoute("/_layout/workspaces")({
   component: WorkspacesPage,

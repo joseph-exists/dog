@@ -47,10 +47,10 @@ docker compose exec kennel lxc-attach -n env-a3f2c901 -- bash
 
 curl -X POST http://kennel:8090/envs \
   -H "Content-Type: application/json" \
-  -H "x-kennel-secret: pooppoop" \
+  -H "x-kennel-secret: woohoo" \
   -d '{"kind": "ephemeral", "template": "ubuntu", "release": "noble"}'
 
-curl -s http://kennel:8090/jobs/rebuild-24f7b729 -H "x-kennel-secret: woohoo"
+curl -s http://kennel:8090/jobs/rebuild-e1d829b5 -H "x-kennel-secret: woohoo"
 
 
 it'll return a job id
@@ -644,4 +644,7 @@ docker compose exec kennel mount | grep lxc
 see where lxc-create puts config:
 
 docker compose exec kennel find / -name "config" 2>/dev/null | grep lxc
+
+curl -s http://localhost:8090/rebuild-jobs/rebuild-85d71e1b -H "x-kennel-secret: woohoo"
+
 

@@ -18,12 +18,16 @@ function isCanvasRenderJobResponse(
 ): value is DemoCanvasRenderJobResponse {
   if (!value || typeof value !== "object") return false
   const payload = value as Record<string, unknown>
-  return typeof payload.job_id === "string" && typeof payload.status === "string"
+  return (
+    typeof payload.job_id === "string" && typeof payload.status === "string"
+  )
 }
 
 export function useCanvasRenderJobEvents() {
   const pendingJobsRef = useRef<Map<string, PendingCanvasJob>>(new Map())
-  const completedJobsRef = useRef<Map<string, DemoCanvasRenderJobResponse>>(new Map())
+  const completedJobsRef = useRef<Map<string, DemoCanvasRenderJobResponse>>(
+    new Map(),
+  )
 
   useEffect(() => {
     return () => {

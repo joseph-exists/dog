@@ -41,9 +41,8 @@ import AgentQuickAdd from "@/components/Agents/RoomManagers/AgentQuickAdd"
 
 // PRI0 yuck we have to review Rooms
 import AgentToggle from "@/components/Room/Dialogs/AgentToggle"
-import UserQuickAdd from "@/components/Room/Dialogs/UserQuickAdd"
-
 import RemoveParticipantButton from "@/components/Room/Dialogs/RemoveParticipantButton"
+import UserQuickAdd from "@/components/Room/Dialogs/UserQuickAdd"
 import type { ParticipantViewModel } from "@/services/roomService"
 import { PanelContainer } from "../primitives/PanelContainer"
 

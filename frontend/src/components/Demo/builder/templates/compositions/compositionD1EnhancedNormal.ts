@@ -4,7 +4,9 @@ import type {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionD1EnhancedNormalTemplate(context: TemplateBuilderContext): EditableComposition {
+export function buildCompositionD1EnhancedNormalTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
   const { createPanelTemplate, createBlockTemplate, createTemplate } = context
   const composition = createTemplate("composition_b_runtime_coupled")
   composition.layout_mode = "panels"
@@ -302,4 +304,3 @@ export function buildCompositionD1EnhancedNormalTemplate(context: TemplateBuilde
 // This is NOT meant to look good. It's meant to make regressions OBVIOUS.
 //
 // =============================================================================
-

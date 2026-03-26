@@ -8,6 +8,7 @@
  * Handles responsive behavior and panel/tab toggle.
  */
 import React from "react"
+import type { PanelImperativeHandle } from "react-resizable-panels"
 import {
   ResizableHandle,
   ResizablePanel,
@@ -16,7 +17,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
-import type { PanelImperativeHandle } from "react-resizable-panels"
 
 export interface PanelConfig {
   id: string
@@ -132,11 +132,7 @@ function PrimaryResizablePanel({
   )
 }
 
-export function DemoLayout({
-  panels,
-  mode,
-  className,
-}: DemoLayoutProps) {
+export function DemoLayout({ panels, mode, className }: DemoLayoutProps) {
   const isMobile = useIsMobile()
   const pageSizedPanel = panels.find((p) => p.viewportMode === "page")
 
@@ -210,17 +206,16 @@ export function DemoLayout({
       {auxiliaryPanels.length > 0 && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel
-            defaultSize={auxiliaryColumnDefaultSize}
-            minSize={20}
-          >
+          <ResizablePanel defaultSize={auxiliaryColumnDefaultSize} minSize={20}>
             <ResizablePanelGroup direction="vertical" className="min-h-0">
               {auxiliaryPanels.map((panel, index) => (
                 <React.Fragment key={panel.id}>
                   {index > 0 && <ResizableHandle withHandle />}
                   <ResizablePanel
                     id={panel.id}
-                    defaultSize={panel.defaultSize ?? 100 / auxiliaryPanels.length}
+                    defaultSize={
+                      panel.defaultSize ?? 100 / auxiliaryPanels.length
+                    }
                     minSize={panel.minSize ?? 10}
                     maxSize={panel.maxSize}
                   >

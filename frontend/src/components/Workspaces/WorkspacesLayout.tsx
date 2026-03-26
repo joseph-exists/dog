@@ -14,7 +14,9 @@ export interface WorkspacesLayoutProps {
 
 export function WorkspacesLayout({ panels }: WorkspacesLayoutProps) {
   const primaryPanels = panels.filter((panel) => panel.prominence === "primary")
-  const auxiliaryPanels = panels.filter((panel) => panel.prominence === "auxiliary")
+  const auxiliaryPanels = panels.filter(
+    (panel) => panel.prominence === "auxiliary",
+  )
 
   return (
     <div className="grid flex-1 min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">

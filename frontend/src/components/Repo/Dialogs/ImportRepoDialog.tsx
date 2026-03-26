@@ -105,7 +105,8 @@ export function ImportRepoDialog({ trigger }: ImportRepoDialogProps) {
             Import Repository
           </DialogTitle>
           <DialogDescription>
-            Add an external HTTPS repository to the platform workspace. Import runs asynchronously after submission.
+            Add an external HTTPS repository to the platform workspace. Import
+            runs asynchronously after submission.
           </DialogDescription>
         </DialogHeader>
 
@@ -190,7 +191,8 @@ export function ImportRepoDialog({ trigger }: ImportRepoDialogProps) {
             <div className="space-y-1">
               <div className="text-sm font-medium">Keep repository private</div>
               <div className="text-sm text-muted-foreground">
-                Privacy is set on the managed platform repo, not the external source.
+                Privacy is set on the managed platform repo, not the external
+                source.
               </div>
             </div>
           </label>
@@ -208,7 +210,9 @@ export function ImportRepoDialog({ trigger }: ImportRepoDialogProps) {
             onClick={handleSubmit}
             disabled={!form.source_repo_url.trim() || importMutation.isPending}
           >
-            {importMutation.isPending && <Loader2Icon className="size-4 animate-spin" />}
+            {importMutation.isPending && (
+              <Loader2Icon className="size-4 animate-spin" />
+            )}
             Start Import
           </Button>
         </DialogFooter>

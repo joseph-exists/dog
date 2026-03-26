@@ -1,23 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Loader2, Trash2, Unplug, Users2 } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { PageShell } from "@/components/Page"
 import { DiscoverUserPersonaCombobox } from "@/components/UserPage/DiscoverUserPersonaCombobox"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import type { EntityComboboxOption } from "@/components/ui/entity-combobox"
 import { EntityCombobox } from "@/components/ui/entity-combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import useAuth from "@/hooks/useAuth"
 import { usePageEditor } from "@/hooks/usePageEditor"
 import {
-  useAddProjectResource,
   useAddPersonaGroupMember,
+  useAddProjectResource,
   useAttachableResources,
   useCreatePersonaGroup,
   useDeleteProject,
@@ -58,15 +70,20 @@ function ProjectDetailPage() {
   const { user } = useAuth()
   const creatingRef = useRef(false)
 
-  const { data: project, isLoading: isProjectLoading, error } = useProject(projectId)
-  const isOwnerOrSuperuser = !!user && (
-    user.id === project?.owner_id || Boolean(user.is_superuser)
-  )
+  const {
+    data: project,
+    isLoading: isProjectLoading,
+    error,
+  } = useProject(projectId)
+  const isOwnerOrSuperuser =
+    !!user && (user.id === project?.owner_id || Boolean(user.is_superuser))
   const { data: myProjectRole } = useProjectMyRole(projectId, Boolean(project))
   const canManageProject = Boolean(project) && isOwnerOrSuperuser
-  const canEditProjectLayout = Boolean(project) && (
-    isOwnerOrSuperuser || myProjectRole === "editor" || myProjectRole === "manager"
-  )
+  const canEditProjectLayout =
+    Boolean(project) &&
+    (isOwnerOrSuperuser ||
+      myProjectRole === "editor" ||
+      myProjectRole === "manager")
 
   const {
     isLoading: isPageLoading,
@@ -74,7 +91,8 @@ function ProjectDetailPage() {
     createPage,
   } = usePageEditor("project", projectId)
 
-  const { data: resources, isLoading: isResourcesLoading } = useProjectResources(projectId)
+  const { data: resources, isLoading: isResourcesLoading } =
+    useProjectResources(projectId)
   const { data: grants, isLoading: isGrantsLoading } = useProjectAccessGrants(
     projectId,
     canManageProject,
@@ -94,8 +112,11 @@ function ProjectDetailPage() {
 
   const [nameDraft, setNameDraft] = useState("")
   const [descriptionDraft, setDescriptionDraft] = useState("")
-  const [resourceType, setResourceType] = useState<AttachableResourceType>("story")
-  const [resourceScope, setResourceScope] = useState<"owned" | "available">("owned")
+  const [resourceType, setResourceType] =
+    useState<AttachableResourceType>("story")
+  const [resourceScope, setResourceScope] = useState<"owned" | "available">(
+    "owned",
+  )
   const [resourceId, setResourceId] = useState("")
   const [attachSelection, setAttachSelection] = useState("")
   const [grantSubjectType, setGrantSubjectType] = useState<
@@ -136,7 +157,7 @@ function ProjectDetailPage() {
           label: group.name,
           subtitle: ownerPersona
             ? `Owned by ${ownerPersona.label}`
-            : group.group_type ?? "persona group",
+            : (group.group_type ?? "persona group"),
           keywords: [group.id, group.name, group.owner_user_persona_id],
         }
       }),
@@ -167,7 +188,9 @@ function ProjectDetailPage() {
     [groupOptions],
   )
 
-  const selectedPersonaGroupOption = personaGroupOptionById.get(selectedPersonaGroupId)
+  const selectedPersonaGroupOption = personaGroupOptionById.get(
+    selectedPersonaGroupId,
+  )
 
   const selectedAttachOption = useMemo(
     () =>
@@ -229,7 +252,8 @@ function ProjectDetailPage() {
           <CardHeader>
             <CardTitle>Project unavailable</CardTitle>
             <CardDescription>
-              {error?.message ?? "The project was not found or you do not have access."}
+              {error?.message ??
+                "The project was not found or you do not have access."}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -240,7 +264,8 @@ function ProjectDetailPage() {
   const onSaveProject = async () => {
     await updateProject.mutateAsync({
       name: (nameDraft || project.name).trim(),
-      description: (descriptionDraft || project.description || "").trim() || null,
+      description:
+        (descriptionDraft || project.description || "").trim() || null,
     })
     setNameDraft("")
     setDescriptionDraft("")
@@ -290,7 +315,10 @@ function ProjectDetailPage() {
           ? "Legacy user group"
           : "User account"
 
-  const describeGrantSubject = (subjectType: typeof grantSubjectType, subjectId: string) => {
+  const describeGrantSubject = (
+    subjectType: typeof grantSubjectType,
+    subjectId: string,
+  ) => {
     if (subjectType === "persona_group") {
       return (
         personaGroupOptionById.get(subjectId) ?? {
@@ -378,7 +406,8 @@ function ProjectDetailPage() {
               <CardHeader>
                 <CardTitle>Workspace not initialized</CardTitle>
                 <CardDescription>
-                  A project owner can initialize and customize the workspace layout.
+                  A project owner can initialize and customize the workspace
+                  layout.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -410,7 +439,10 @@ function ProjectDetailPage() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div className="space-y-1.5 md:col-span-2">
                     <Label>Quick pick</Label>
-                    <Select value={attachSelection} onValueChange={setAttachSelection}>
+                    <Select
+                      value={attachSelection}
+                      onValueChange={setAttachSelection}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a resource from the filtered set" />
                       </SelectTrigger>
@@ -440,11 +472,13 @@ function ProjectDetailPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(resourceTypeLabels).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
+                        {Object.entries(resourceTypeLabels).map(
+                          ([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -475,7 +509,10 @@ function ProjectDetailPage() {
                     />
                   </div>
                   <div className="flex items-end">
-                    <Button onClick={onAttachResource} disabled={addResource.isPending}>
+                    <Button
+                      onClick={onAttachResource}
+                      disabled={addResource.isPending}
+                    >
                       Attach Resource
                     </Button>
                   </div>
@@ -484,7 +521,8 @@ function ProjectDetailPage() {
 
               {canManageProject && filteredAttachableOptions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No {resourceTypeLabels[resourceType].toLowerCase()} resources in the current filter.
+                  No {resourceTypeLabels[resourceType].toLowerCase()} resources
+                  in the current filter.
                 </p>
               ) : null}
 
@@ -493,7 +531,9 @@ function ProjectDetailPage() {
               ) : (
                 <div className="space-y-2">
                   {(resources ?? []).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No resources attached yet.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No resources attached yet.
+                    </p>
                   ) : (
                     (resources ?? []).map((item) => (
                       <div
@@ -501,8 +541,12 @@ function ProjectDetailPage() {
                         className="flex items-center justify-between rounded-lg border p-3"
                       >
                         <div className="text-sm">
-                          <div className="font-medium">{item.resource_type}</div>
-                          <div className="text-muted-foreground">{item.resource_id}</div>
+                          <div className="font-medium">
+                            {item.resource_type}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {item.resource_id}
+                          </div>
                         </div>
                         {canManageProject ? (
                           <Button
@@ -535,8 +579,9 @@ function ProjectDetailPage() {
               <CardHeader>
                 <CardTitle>Project Access</CardTitle>
                 <CardDescription>
-                  Persona groups are the preferred workspace path. Direct persona, user,
-                  and legacy group grants remain available during coexistence.
+                  Persona groups are the preferred workspace path. Direct
+                  persona, user, and legacy group grants remain available during
+                  coexistence.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -546,7 +591,11 @@ function ProjectDetailPage() {
                     <Select
                       value={grantSubjectType}
                       onValueChange={(
-                        value: "user" | "group" | "user_persona" | "persona_group",
+                        value:
+                          | "user"
+                          | "group"
+                          | "user_persona"
+                          | "persona_group",
                       ) => {
                         setGrantSubjectType(value)
                         setGrantSubjectId("")
@@ -556,8 +605,12 @@ function ProjectDetailPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="persona_group">persona_group</SelectItem>
-                        <SelectItem value="user_persona">user_persona</SelectItem>
+                        <SelectItem value="persona_group">
+                          persona_group
+                        </SelectItem>
+                        <SelectItem value="user_persona">
+                          user_persona
+                        </SelectItem>
                         <SelectItem value="group">group</SelectItem>
                         <SelectItem value="user">user</SelectItem>
                       </SelectContent>
@@ -567,7 +620,9 @@ function ProjectDetailPage() {
                     <Label>Role</Label>
                     <Select
                       value={grantRole}
-                      onValueChange={(value: "viewer" | "editor") => setGrantRole(value)}
+                      onValueChange={(value: "viewer" | "editor") =>
+                        setGrantRole(value)
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -601,7 +656,11 @@ function ProjectDetailPage() {
                     ) : grantSubjectType === "user_persona" ? (
                       <div className="space-y-2">
                         <EntityCombobox
-                          value={personaOptionById.has(grantSubjectId) ? grantSubjectId : ""}
+                          value={
+                            personaOptionById.has(grantSubjectId)
+                              ? grantSubjectId
+                              : ""
+                          }
                           onChange={setGrantSubjectId}
                           options={ownedPersonaOptions}
                           placeholder="Quick pick one of your personas"
@@ -609,36 +668,49 @@ function ProjectDetailPage() {
                           emptyMessage="No personas available."
                         />
                         <DiscoverUserPersonaCombobox
-                          value={personaOptionById.has(grantSubjectId) ? "" : grantSubjectId}
+                          value={
+                            personaOptionById.has(grantSubjectId)
+                              ? ""
+                              : grantSubjectId
+                          }
                           onChange={setGrantSubjectId}
                           placeholder="Search published collaborator personas"
                         />
                         <Input
                           value={grantSubjectId}
-                          onChange={(event) => setGrantSubjectId(event.target.value)}
+                          onChange={(event) =>
+                            setGrantSubjectId(event.target.value)
+                          }
                           placeholder="Or paste a collaborator UserPersona UUID"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Use quick pick for one of your personas, or paste another
-                          collaborator persona ID when sharing across users.
+                          Use quick pick for one of your personas, or paste
+                          another collaborator persona ID when sharing across
+                          users.
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <Input
                           value={grantSubjectId}
-                          onChange={(event) => setGrantSubjectId(event.target.value)}
+                          onChange={(event) =>
+                            setGrantSubjectId(event.target.value)
+                          }
                           placeholder="User UUID"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Direct user grants remain available, but persona-mediated grants
-                          are preferred for workspace collaboration.
+                          Direct user grants remain available, but
+                          persona-mediated grants are preferred for workspace
+                          collaboration.
                         </p>
                       </div>
                     )}
                   </div>
                 </div>
-                <Button onClick={onGrantAccess} disabled={upsertGrant.isPending || !grantSubjectId}>
+                <Button
+                  onClick={onGrantAccess}
+                  disabled={upsertGrant.isPending || !grantSubjectId}
+                >
                   <Users2 className="mr-2 h-4 w-4" />
                   Grant Access
                 </Button>
@@ -648,44 +720,52 @@ function ProjectDetailPage() {
                 ) : (
                   <div className="space-y-2">
                     {(grants ?? []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No explicit grants yet.</p>
+                      <p className="text-sm text-muted-foreground">
+                        No explicit grants yet.
+                      </p>
                     ) : (
-                      (grants ?? []).map((grant) => (
+                      (grants ?? []).map((grant) =>
                         (() => {
                           const subject = describeGrantSubject(
                             grant.subject_type,
                             grant.subject_id,
                           )
                           return (
-                        <div
-                          key={grant.id}
-                          className="flex items-center justify-between rounded-lg border p-3"
-                        >
-                          <div className="text-sm">
-                            <div className="font-medium">{subject.label}</div>
-                            <div className="text-muted-foreground">
-                              {grant.subject_type}
-                              {subject.subtitle ? ` · ${subject.subtitle}` : ""}
+                            <div
+                              key={grant.id}
+                              className="flex items-center justify-between rounded-lg border p-3"
+                            >
+                              <div className="text-sm">
+                                <div className="font-medium">
+                                  {subject.label}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {grant.subject_type}
+                                  {subject.subtitle
+                                    ? ` · ${subject.subtitle}`
+                                    : ""}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  role: {grant.role}
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={revokeGrant.isPending}
+                                onClick={() =>
+                                  revokeGrant.mutate({
+                                    subject_type: grant.subject_type,
+                                    subject_id: grant.subject_id,
+                                  })
+                                }
+                              >
+                                Revoke
+                              </Button>
                             </div>
-                            <div className="text-muted-foreground">role: {grant.role}</div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={revokeGrant.isPending}
-                            onClick={() =>
-                              revokeGrant.mutate({
-                                subject_type: grant.subject_type,
-                                subject_id: grant.subject_id,
-                              })
-                            }
-                          >
-                            Revoke
-                          </Button>
-                        </div>
                           )
-                        })()
-                      ))
+                        })(),
+                      )
                     )}
                   </div>
                 )}
@@ -705,7 +785,9 @@ function ProjectDetailPage() {
                     <Label>Group name</Label>
                     <Input
                       value={newPersonaGroupName}
-                      onChange={(event) => setNewPersonaGroupName(event.target.value)}
+                      onChange={(event) =>
+                        setNewPersonaGroupName(event.target.value)
+                      }
                       placeholder="Design collaborators"
                     />
                   </div>
@@ -750,7 +832,11 @@ function ProjectDetailPage() {
                     <Label>Add persona member</Label>
                     <div className="space-y-2">
                       <EntityCombobox
-                        value={personaOptionById.has(personaGroupMemberId) ? personaGroupMemberId : ""}
+                        value={
+                          personaOptionById.has(personaGroupMemberId)
+                            ? personaGroupMemberId
+                            : ""
+                        }
                         onChange={setPersonaGroupMemberId}
                         options={ownedPersonaOptions}
                         placeholder="Quick pick one of your personas"
@@ -770,13 +856,16 @@ function ProjectDetailPage() {
                       />
                       <Input
                         value={personaGroupMemberId}
-                        onChange={(event) => setPersonaGroupMemberId(event.target.value)}
+                        onChange={(event) =>
+                          setPersonaGroupMemberId(event.target.value)
+                        }
                         placeholder="Or paste another user's UserPersona UUID"
                         disabled={!selectedPersonaGroupId}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Workspace groups can include your personas and collaborator personas.
+                      Workspace groups can include your personas and
+                      collaborator personas.
                     </p>
                   </div>
                   <div className="flex items-end">
@@ -810,29 +899,31 @@ function ProjectDetailPage() {
                         No persona members yet.
                       </p>
                     ) : (
-                      (personaGroupMembers ?? []).map((member) => (
+                      (personaGroupMembers ?? []).map((member) =>
                         (() => {
-                          const persona = personaOptionById.get(member.user_persona_id)
-                          return (
-                        <div
-                          key={member.id}
-                          className="flex items-center justify-between rounded border p-2 text-sm"
-                        >
-                          <div>
-                            <div className="font-medium">
-                              {persona?.label ?? "User persona"}
-                            </div>
-                            <div className="text-muted-foreground">
-                              {persona?.subtitle ?? member.user_persona_id}
-                            </div>
-                            <div className="text-muted-foreground">
-                              role: {member.role ?? "member"}
-                            </div>
-                          </div>
-                        </div>
+                          const persona = personaOptionById.get(
+                            member.user_persona_id,
                           )
-                        })()
-                      ))
+                          return (
+                            <div
+                              key={member.id}
+                              className="flex items-center justify-between rounded border p-2 text-sm"
+                            >
+                              <div>
+                                <div className="font-medium">
+                                  {persona?.label ?? "User persona"}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {persona?.subtitle ?? member.user_persona_id}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  role: {member.role ?? "member"}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })(),
+                      )
                     )}
                   </div>
                 ) : null}
@@ -864,13 +955,18 @@ function ProjectDetailPage() {
                     <Label>Description</Label>
                     <Textarea
                       value={descriptionDraft}
-                      onChange={(event) => setDescriptionDraft(event.target.value)}
+                      onChange={(event) =>
+                        setDescriptionDraft(event.target.value)
+                      }
                       placeholder={project.description ?? "No description"}
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button onClick={onSaveProject} disabled={updateProject.isPending}>
+                  <Button
+                    onClick={onSaveProject}
+                    disabled={updateProject.isPending}
+                  >
                     Save
                   </Button>
                   <Button
@@ -888,12 +984,12 @@ function ProjectDetailPage() {
         ) : null}
       </Tabs>
 
-      {(addResource.isPending ||
-        removeResource.isPending ||
-        upsertGrant.isPending ||
-        revokeGrant.isPending ||
-        updateProject.isPending ||
-        deleteProject.isPending) ? (
+      {addResource.isPending ||
+      removeResource.isPending ||
+      upsertGrant.isPending ||
+      revokeGrant.isPending ||
+      updateProject.isPending ||
+      deleteProject.isPending ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Saving changes...

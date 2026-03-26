@@ -102,7 +102,7 @@ export function CanvasPanel({
 
   useEffect(() => {
     setScriptHelp(selectedScript?.help_text ?? null)
-  }, [selectedScript?.help_text, scriptName])
+  }, [selectedScript?.help_text])
 
   const handleRenderClick = async () => {
     if (!onRenderSvg || isRendering) return
@@ -192,15 +192,19 @@ export function CanvasPanel({
               value={scriptName}
               onChange={(event) => setScriptName(event.target.value)}
             >
-              {(availableScripts.length > 0 ? availableScripts : [{ name: "simple_svg" }]).map(
-                (script) => (
-                  <option key={script.name} value={script.name}>
-                    {script.name}
-                  </option>
-                ),
-              )}
+              {(availableScripts.length > 0
+                ? availableScripts
+                : [{ name: "simple_svg" }]
+              ).map((script) => (
+                <option key={script.name} value={script.name}>
+                  {script.name}
+                </option>
+              ))}
             </select>
-            <Button onClick={() => void handleRenderClick()} disabled={isRendering}>
+            <Button
+              onClick={() => void handleRenderClick()}
+              disabled={isRendering}
+            >
               {isRendering ? "Rendering..." : "Render SVG"}
             </Button>
           </div>
@@ -212,7 +216,9 @@ export function CanvasPanel({
           {(selectedScript?.kind || selectedScript?.source_path) && (
             <div className="mt-1 text-xs text-muted-foreground">
               {selectedScript?.kind ? `kind=${selectedScript.kind} ` : ""}
-              {selectedScript?.source_path ? `path=${selectedScript.source_path}` : ""}
+              {selectedScript?.source_path
+                ? `path=${selectedScript.source_path}`
+                : ""}
             </div>
           )}
           <div className="mt-2">
@@ -236,7 +242,9 @@ export function CanvasPanel({
               onClick={() => void handleLoadExamplesIndex()}
               disabled={isLoadingExamplesIndex || !onRequestExamplesIndex}
             >
-              {isLoadingExamplesIndex ? "Loading index..." : "Show examples index"}
+              {isLoadingExamplesIndex
+                ? "Loading index..."
+                : "Show examples index"}
             </Button>
           </div>
           {scriptHelp && (
@@ -253,17 +261,22 @@ export function CanvasPanel({
             <div className="mt-2 text-xs text-red-600">{configError}</div>
           )}
           {renderStatus && !renderError && (
-            <div className="mt-2 text-xs text-muted-foreground">{renderStatus}</div>
-          )}
-          {renderError && <div className="mt-2 text-xs text-red-600">{renderError}</div>}
-          {!renderError && (lastRequestId || lastJobId || lastCommitSha || lastScriptName) && (
             <div className="mt-2 text-xs text-muted-foreground">
-              {lastScriptName ? `script=${lastScriptName} ` : ""}
-              {lastJobId ? `job=${lastJobId} ` : ""}
-              {lastRequestId ? `request=${lastRequestId} ` : ""}
-              {lastCommitSha ? `commit=${lastCommitSha.slice(0, 8)}` : ""}
+              {renderStatus}
             </div>
           )}
+          {renderError && (
+            <div className="mt-2 text-xs text-red-600">{renderError}</div>
+          )}
+          {!renderError &&
+            (lastRequestId || lastJobId || lastCommitSha || lastScriptName) && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                {lastScriptName ? `script=${lastScriptName} ` : ""}
+                {lastJobId ? `job=${lastJobId} ` : ""}
+                {lastRequestId ? `request=${lastRequestId} ` : ""}
+                {lastCommitSha ? `commit=${lastCommitSha.slice(0, 8)}` : ""}
+              </div>
+            )}
         </div>
       )}
       {content}

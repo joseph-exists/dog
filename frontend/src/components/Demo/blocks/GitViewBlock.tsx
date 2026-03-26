@@ -1,13 +1,13 @@
 import {
-  resolveGitViewConfig,
-  type ResolvedGitViewConfig,
-} from "@/components/Demo/gitViewConfig"
-import {
+  type GetGitViewRoomContextState,
   GitViewCore,
   GitViewInvalidConfig,
-  type GetGitViewRoomContextState,
   type ToggleGitViewRoomContext,
 } from "@/components/Demo/gitView/GitViewCore"
+import {
+  type ResolvedGitViewConfig,
+  resolveGitViewConfig,
+} from "@/components/Demo/gitViewConfig"
 
 interface GitViewBlockProps {
   title?: string | null
@@ -21,7 +21,7 @@ interface GitViewBlockProps {
 
 function renderInvalidConfig(title: string | null | undefined) {
   return (
-      <GitViewInvalidConfig
+    <GitViewInvalidConfig
       title={title}
       subtitle="Git view requires a live repo configuration."
       expectedConfig={{

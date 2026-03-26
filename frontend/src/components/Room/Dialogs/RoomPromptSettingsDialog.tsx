@@ -178,7 +178,8 @@ function PromptBindingEditor({
                   promptConfigId: value === "__none__" ? "" : value,
                   versionPolicy:
                     value === "__none__" ? "latest" : draft.versionPolicy,
-                  versionNumber: value === "__none__" ? "" : draft.versionNumber,
+                  versionNumber:
+                    value === "__none__" ? "" : draft.versionNumber,
                 })
               }
             >
@@ -288,12 +289,11 @@ export function RoomPromptSettingsDialog({
   agents,
 }: RoomPromptSettingsDialogProps) {
   const queryClient = useQueryClient()
-  const [roomDefaultsDraft, setRoomDefaultsDraft] = useState<PromptBindingDraft>(
-    toDraft(null),
-  )
-  const [agentDrafts, setAgentDrafts] = useState<Record<string, PromptBindingDraft>>(
-    {},
-  )
+  const [roomDefaultsDraft, setRoomDefaultsDraft] =
+    useState<PromptBindingDraft>(toDraft(null))
+  const [agentDrafts, setAgentDrafts] = useState<
+    Record<string, PromptBindingDraft>
+  >({})
   const [savingKey, setSavingKey] = useState<string | null>(null)
 
   const { data: settingsBundle, isLoading: isLoadingSettings } = useQuery<
@@ -332,7 +332,8 @@ export function RoomPromptSettingsDialog({
           id: override.id,
           slug: override.agent_slug,
           name: override.agent_slug,
-          description: "Override exists for an agent not currently in the room.",
+          description:
+            "Override exists for an agent not currently in the room.",
         })
       }
     }
@@ -370,7 +371,10 @@ export function RoomPromptSettingsDialog({
       showErrorToast("Select a PromptConfig or clear the room defaults.")
       return
     }
-    const payload = buildUpdatePayload(roomDefaultsDraft, settingsBundle?.room_defaults)
+    const payload = buildUpdatePayload(
+      roomDefaultsDraft,
+      settingsBundle?.room_defaults,
+    )
     setSavingKey("room-defaults")
     try {
       await RoomAgentSettingsService.putRoomAgentSettings({
@@ -515,7 +519,7 @@ export function RoomPromptSettingsDialog({
                   const slug = agent.slug
                   const existing = slug ? agentOverrides.get(slug) : null
                   const draft = slug
-                    ? agentDrafts[slug] ?? toDraft(existing)
+                    ? (agentDrafts[slug] ?? toDraft(existing))
                     : toDraft(existing)
                   return (
                     <PromptBindingEditor

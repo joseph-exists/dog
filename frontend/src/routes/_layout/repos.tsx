@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { ImportRepoDialog, RepoShell, type RepoPanelConfig } from "@/components/Repo"
+import {
+  ImportRepoDialog,
+  type RepoPanelConfig,
+  RepoShell,
+} from "@/components/Repo"
 import { ReposGridPanel } from "@/components/Repo/panels"
 
 export const Route = createFileRoute("/_layout/repos")({

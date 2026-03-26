@@ -1,6 +1,5 @@
 # SVG Library: Compose Studio, Batch Seed, Gallery — Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Implement the D→B sequence from the design doc: Compose Studio tab, rebuilt Batch Seed dialog, and Gallery tagging/filtering/sort.
 

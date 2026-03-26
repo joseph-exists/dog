@@ -47,7 +47,8 @@ export function PrimaryPersonaBlock({
   const primaryPersonaId =
     content?.primaryPersonaId ?? viewModel?.primaryPersonaId ?? null
   const primaryPersona = useMemo(
-    () => viewModel?.personas.find((persona) => persona.id === primaryPersonaId),
+    () =>
+      viewModel?.personas.find((persona) => persona.id === primaryPersonaId),
     [viewModel?.personas, primaryPersonaId],
   )
 

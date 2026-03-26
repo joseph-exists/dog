@@ -116,7 +116,9 @@ export function RelationshipManagerForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`relations.${index}.targetLabel`}>Target Label</Label>
+              <Label htmlFor={`relations.${index}.targetLabel`}>
+                Target Label
+              </Label>
               <Input
                 id={`relations.${index}.targetLabel`}
                 {...register(`relations.${index}.targetLabel`)}
@@ -217,7 +219,10 @@ export function RelationshipManagerForm({
 
             <div className="space-y-2">
               <Label htmlFor={`relations.${index}.note`}>Note</Label>
-              <Textarea id={`relations.${index}.note`} {...register(`relations.${index}.note`)} />
+              <Textarea
+                id={`relations.${index}.note`}
+                {...register(`relations.${index}.note`)}
+              />
             </div>
           </div>
         ))}

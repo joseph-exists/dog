@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 import type { ThemeViewModel } from "@/services/themeService"
 import { themeTokensToStyle } from "@/services/themeService"
 import { WorkspacesHeader } from "./WorkspacesHeader"
-import { WorkspacesLayout, type PanelConfig } from "./WorkspacesLayout"
+import { type PanelConfig, WorkspacesLayout } from "./WorkspacesLayout"
 
 export interface WorkspacesShellProps {
   title: string
@@ -35,7 +35,10 @@ export function WorkspacesShell({
   const cardsThemeStyle = themeTokensToStyle(cardsTheme?.tokens)
 
   return (
-    <div style={pageThemeStyle} className={cn("flex h-full min-h-0 flex-col", className)}>
+    <div
+      style={pageThemeStyle}
+      className={cn("flex h-full min-h-0 flex-col", className)}
+    >
       <WorkspacesHeader
         title={title}
         description={description}
@@ -47,7 +50,10 @@ export function WorkspacesShell({
         onCardsThemeChange={onCardsThemeChange}
         backHref={backHref}
       />
-      <div style={cardsThemeStyle} className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
+      <div
+        style={cardsThemeStyle}
+        className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6"
+      >
         <WorkspacesLayout panels={panels} />
       </div>
     </div>

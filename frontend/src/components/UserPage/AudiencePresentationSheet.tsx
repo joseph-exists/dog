@@ -18,7 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 
 export interface AudiencePresentationDraft {
@@ -131,7 +136,9 @@ export function AudiencePresentationSheet({
               <Label>Audience Scope</Label>
               <Select
                 value={audienceScope}
-                onValueChange={(value) => setAudienceScope(value as AudienceScope)}
+                onValueChange={(value) =>
+                  setAudienceScope(value as AudienceScope)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -160,7 +167,9 @@ export function AudiencePresentationSheet({
             <Select
               value={publicationState}
               onValueChange={(value) =>
-                setPublicationState(value as AudiencePresentationPublicationState)
+                setPublicationState(
+                  value as AudiencePresentationPublicationState,
+                )
               }
             >
               <SelectTrigger>
@@ -182,8 +191,8 @@ export function AudiencePresentationSheet({
               placeholder="Optional target id for custom audience views"
             />
             <p className="text-xs text-muted-foreground">
-              Use this when a custom audience view should match a specific
-              user, persona, group, or persona-group id.
+              Use this when a custom audience view should match a specific user,
+              persona, group, or persona-group id.
             </p>
           </div>
 

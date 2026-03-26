@@ -20,6 +20,7 @@ import type {
   RelationshipsContent,
   TraitsBlockConfig,
 } from "@/components/Page/blocks"
+import { getBlockType, type TemplateBlock } from "@/components/Page/registry"
 import type {
   AudiencePresentationBlockContent,
   PersonaManagerBlockContent,
@@ -27,7 +28,6 @@ import type {
   RelationshipManagerBlockContent,
   WorkFeedBlockContent,
 } from "@/components/UserPage/types"
-import { getBlockType, type TemplateBlock } from "@/components/Page/registry"
 import {
   Sheet,
   SheetContent,
@@ -213,7 +213,9 @@ export function BlockEditorSheet({
         return (
           <AudiencePresentationForm
             content={content as AudiencePresentationBlockContent}
-            onSave={createSaveHandler<AudiencePresentationBlockContent>(block.id)}
+            onSave={createSaveHandler<AudiencePresentationBlockContent>(
+              block.id,
+            )}
             onCancel={onClose}
           />
         )
@@ -221,7 +223,9 @@ export function BlockEditorSheet({
         return (
           <RelationshipManagerForm
             content={content as RelationshipManagerBlockContent}
-            onSave={createSaveHandler<RelationshipManagerBlockContent>(block.id)}
+            onSave={createSaveHandler<RelationshipManagerBlockContent>(
+              block.id,
+            )}
             onCancel={onClose}
           />
         )

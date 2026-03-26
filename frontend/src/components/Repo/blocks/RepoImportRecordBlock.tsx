@@ -7,7 +7,9 @@ export function RepoImportRecordBlock({ repo }: { repo: UserRepoPublic }) {
     <BlockContainer
       title="Import Record"
       subtitle="Original import request metadata retained for audit and user reference, not active synchronization."
-      metadata={<Badge variant="outline">Severed from upstream after intake</Badge>}
+      metadata={
+        <Badge variant="outline">Severed from upstream after intake</Badge>
+      }
       density="compact"
       variant="card"
     >

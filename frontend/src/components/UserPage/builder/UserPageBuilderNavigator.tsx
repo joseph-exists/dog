@@ -2,11 +2,6 @@ import { Edit3, Layers3 } from "lucide-react"
 
 import type { TemplateBlock } from "@/components/Page/registry"
 import { getBlockType } from "@/components/Page/registry"
-import type { UserPageBuilderSurface } from "./userPageBuilderSchema"
-import {
-  getSurfaceForBlockType,
-  type UserPageBuilderIssue,
-} from "./userPageBuilderSchema"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -15,6 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import type { UserPageBuilderSurface } from "./userPageBuilderSchema"
+import {
+  getSurfaceForBlockType,
+  type UserPageBuilderIssue,
+} from "./userPageBuilderSchema"
 
 const SURFACE_LABELS: Record<UserPageBuilderSurface, string> = {
   overview: "Overview",

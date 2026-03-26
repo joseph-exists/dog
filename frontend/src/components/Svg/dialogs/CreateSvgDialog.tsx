@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react"
 import type { SvgAssetCreatePrivate } from "@/client"
-import { useCreatePrivateSvg } from "@/hooks/useSvgs"
-import { showErrorToast } from "@/hooks/useCustomToast"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,6 +13,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { showErrorToast } from "@/hooks/useCustomToast"
+import { useCreatePrivateSvg } from "@/hooks/useSvgs"
 
 export function CreateSvgDialog() {
   const createMutation = useCreatePrivateSvg()
@@ -32,7 +32,11 @@ export function CreateSvgDialog() {
     let metadata: Record<string, unknown> = {}
     try {
       const parsed = JSON.parse(metadataJson || "{}")
-      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
         throw new Error("metadata must be a JSON object")
       }
       metadata = parsed as Record<string, unknown>
@@ -69,7 +73,8 @@ export function CreateSvgDialog() {
         <DialogHeader>
           <DialogTitle>Create SVG Asset</DialogTitle>
           <DialogDescription>
-            Paste SVG markup and optional metadata to create a private library asset.
+            Paste SVG markup and optional metadata to create a private library
+            asset.
           </DialogDescription>
         </DialogHeader>
 
@@ -124,4 +129,3 @@ export function CreateSvgDialog() {
     </Dialog>
   )
 }
-

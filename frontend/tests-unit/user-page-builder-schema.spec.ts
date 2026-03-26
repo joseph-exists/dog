@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-
+import type { TemplateBlock } from "@/components/Page/registry"
 import {
   addUserPageBuilderDraftBlock,
   deleteUserPageBuilderDraftBlock,
@@ -10,7 +10,6 @@ import {
   toggleUserPageBuilderDraftBlockVisibility,
 } from "@/components/UserPage/builder/userPageBuilderAdapter"
 import { validateUserPageBuilderDraft } from "@/components/UserPage/builder/userPageBuilderSchema"
-import type { TemplateBlock } from "@/components/Page/registry"
 
 test.describe("userPageBuilderSchema", () => {
   test("flags missing primary persona reference", async () => {
@@ -55,7 +54,9 @@ test.describe("userPageBuilderSchema", () => {
       }),
     )
 
-    expect(issues.some((issue) => issue.code === "primary_persona_missing")).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "primary_persona_missing"),
+    ).toBeTruthy()
   })
 
   test("flags audience presentations and relations that reference missing ids", async () => {
@@ -140,7 +141,9 @@ test.describe("userPageBuilderSchema", () => {
     expect(
       issues.some((issue) => issue.code === "presentation_work_missing"),
     ).toBeTruthy()
-    expect(issues.some((issue) => issue.code === "relation_source_missing")).toBeTruthy()
+    expect(
+      issues.some((issue) => issue.code === "relation_source_missing"),
+    ).toBeTruthy()
   })
 
   test("adapter round-trips typed constructs back into page blocks", async () => {
@@ -397,7 +400,9 @@ test.describe("userPageBuilderSchema", () => {
 
     const identityBlock = serialized.find((block) => block.id === "identity-1")
     const bioBlock = serialized.find((block) => block.id === "bio-1")
-    const relationsBlock = serialized.find((block) => block.id === "relations-1")
+    const relationsBlock = serialized.find(
+      (block) => block.id === "relations-1",
+    )
 
     expect(identityBlock?.order).toBe(2)
     expect(bioBlock?.order).toBe(1)
@@ -430,7 +435,10 @@ test.describe("userPageBuilderSchema", () => {
       ],
     })
 
-    const toggled = toggleUserPageBuilderDraftBlockVisibility(draft, "identity-1")
+    const toggled = toggleUserPageBuilderDraftBlockVisibility(
+      draft,
+      "identity-1",
+    )
     const serialized = serializeUserPageBuilderDraft(toggled)
 
     const identityBlock = serialized.find((block) => block.id === "identity-1")

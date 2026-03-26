@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef } from "react"
 import { ContentRenderer } from "@/components/Common/ContentRenderer"
 import { cn } from "@/lib/utils"
 import {
-  toTerminalTranscriptContent,
   type TerminalConnectionStatus,
   type TerminalSessionState,
+  toTerminalTranscriptContent,
 } from "@/services/terminalSessionService"
 
 export interface TerminalViewerProps {
@@ -29,7 +29,7 @@ export function TerminalViewer({
   useEffect(() => {
     if (!autoScroll || mode !== "live" || !viewportRef.current) return
     viewportRef.current.scrollTop = viewportRef.current.scrollHeight
-  }, [session.plainText, autoScroll, mode])
+  }, [autoScroll, mode])
 
   const transcriptContent = useMemo(
     () => toTerminalTranscriptContent(session),
@@ -52,9 +52,7 @@ export function TerminalViewer({
         className,
       )}
     >
-      <div
-        className="min-h-[20rem]"
-      >
+      <div className="min-h-[20rem]">
         <pre className="min-h-[20rem] whitespace-pre-wrap break-words p-4 font-mono text-sm leading-6">
           {session.plainText || buildEmptyStateLabel(status, emptyLabel)}
         </pre>

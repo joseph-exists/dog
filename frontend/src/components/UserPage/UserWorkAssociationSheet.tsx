@@ -16,7 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -160,7 +165,9 @@ export function UserWorkAssociationSheet({
             <Label>Audience Scope</Label>
             <Select
               value={audienceScope}
-              onValueChange={(value) => setAudienceScope(value as AudienceScope)}
+              onValueChange={(value) =>
+                setAudienceScope(value as AudienceScope)
+              }
             >
               <SelectTrigger>
                 <SelectValue />

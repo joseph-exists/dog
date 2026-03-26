@@ -27,7 +27,8 @@ export function RepoFailureDiagnosticsBlock({
         <ShieldAlertIcon className="h-4 w-4" />
         <AlertTitle>Import failure</AlertTitle>
         <AlertDescription>
-          {repo.import_error || "The platform reported a permanent import failure."}
+          {repo.import_error ||
+            "The platform reported a permanent import failure."}
         </AlertDescription>
       </Alert>
     </BlockContainer>

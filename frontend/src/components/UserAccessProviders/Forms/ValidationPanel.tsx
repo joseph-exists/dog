@@ -2,7 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CheckCircle2, Loader2, RefreshCcw, TestTube2 } from "lucide-react"
 import { useState } from "react"
 import { LlmProvidersService } from "@/client/sdk.gen"
-import type { DetailedTestResult, UserAccessProviderPublic } from "@/client/types.gen"
+import type {
+  DetailedTestResult,
+  UserAccessProviderPublic,
+} from "@/client/types.gen"
 import { BlockContainer } from "@/components/Page/primitives"
 import { Button } from "@/components/ui/button"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
@@ -26,7 +29,8 @@ export function ValidationPanel({
     useState<DetailedTestResult | null>(null)
 
   const quickTestMutation = useMutation({
-    mutationFn: () => LlmProvidersService.testProvider({ providerId: provider.id }),
+    mutationFn: () =>
+      LlmProvidersService.testProvider({ providerId: provider.id }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
       if (result.valid) {
@@ -72,7 +76,9 @@ export function ValidationPanel({
             variant="outline"
             size="sm"
             onClick={() => quickTestMutation.mutate()}
-            disabled={quickTestMutation.isPending || detailedTestMutation.isPending}
+            disabled={
+              quickTestMutation.isPending || detailedTestMutation.isPending
+            }
           >
             {quickTestMutation.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -84,7 +90,9 @@ export function ValidationPanel({
           <Button
             size="sm"
             onClick={() => detailedTestMutation.mutate()}
-            disabled={quickTestMutation.isPending || detailedTestMutation.isPending}
+            disabled={
+              quickTestMutation.isPending || detailedTestMutation.isPending
+            }
           >
             {detailedTestMutation.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -110,7 +118,9 @@ export function ValidationPanel({
           </div>
           <div>
             <p className="text-sm font-medium">
-              {provider.is_validated ? "Last known status: verified" : "Not validated yet"}
+              {provider.is_validated
+                ? "Last known status: verified"
+                : "Not validated yet"}
             </p>
             <p className="text-xs text-muted-foreground">
               {provider.last_validated_at

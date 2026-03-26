@@ -1,7 +1,5 @@
-
 // DEPRECATED: real/new version at // src/components/Common/Sidebar/AppSidebar.tsx
 // this to be deleted next time it's seen post 3/10
-
 
 // import {
 //   BookOpen,

@@ -21,7 +21,9 @@ test.describe("user page view model helpers", () => {
   })
 
   test("resolvePrimaryPersonaId accepts only known persona ids", async () => {
-    expect(resolvePrimaryPersonaId("persona-1", ["persona-1"])).toBe("persona-1")
+    expect(resolvePrimaryPersonaId("persona-1", ["persona-1"])).toBe(
+      "persona-1",
+    )
     expect(resolvePrimaryPersonaId("persona-2", ["persona-1"])).toBeNull()
   })
 

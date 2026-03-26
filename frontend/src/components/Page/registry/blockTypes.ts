@@ -280,7 +280,8 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
   {
     type: "audiencePresentation",
     label: "Audience Presentation",
-    description: "Manage what different audiences see through specific personas",
+    description:
+      "Manage what different audiences see through specific personas",
     icon: Eye,
     defaultConfig: {
       allowAudienceSwitching: true,

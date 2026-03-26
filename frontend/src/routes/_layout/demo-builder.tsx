@@ -52,8 +52,8 @@ import {
   type EditableBlock,
   type EditableComposition,
   type EditablePanel,
-  getCompositionStoryId,
   getBuilderCompositionTemplateSchema,
+  getCompositionStoryId,
   getTemplateSetupState,
   normalizeComposition,
   resolveTemplateChecklistStatus,
@@ -481,12 +481,19 @@ function DemoBuilderPage() {
     data: cloneSourceDemoCompositionRaw,
     isLoading: isLoadingCloneSourceDemoComposition,
   } = useQuery({
-    queryKey: ["demo-builder", "clone-source-composition", cloneSourceDemoConfigId],
+    queryKey: [
+      "demo-builder",
+      "clone-source-composition",
+      cloneSourceDemoConfigId,
+    ],
     queryFn: () =>
       DemosService.getDemoComposition({
         demoConfigId: cloneSourceDemoConfigId,
       }),
-    enabled: Boolean(cloneScope) && cloneSourceKind === "demo" && Boolean(cloneSourceDemoConfigId),
+    enabled:
+      Boolean(cloneScope) &&
+      cloneSourceKind === "demo" &&
+      Boolean(cloneSourceDemoConfigId),
   })
   const { data: storiesPayload, isLoading: isLoadingStories } = useQuery({
     queryKey: ["demo-builder", "stories"],
@@ -561,11 +568,7 @@ function DemoBuilderPage() {
     }
     if (!cloneSourceDemoCompositionRaw) return null
     return normalizeComposition(cloneSourceDemoCompositionRaw)
-  }, [
-    cloneSourceDemoCompositionRaw,
-    cloneSourceKind,
-    cloneSourceTemplateId,
-  ])
+  }, [cloneSourceDemoCompositionRaw, cloneSourceKind, cloneSourceTemplateId])
   const cloneSourceItems = useMemo(() => {
     if (!cloneScope || !cloneSourceComposition) return []
     if (cloneScope === "block") {
@@ -905,20 +908,25 @@ function DemoBuilderPage() {
           : max
       }, 0)
       nextChild.order = maxOrder + 1
-      if (typeof nextChild.title !== "string" || nextChild.title.trim().length === 0) {
-        nextChild.title = childKind === "panel" ? "Nested Panel" : "Nested Block"
+      if (
+        typeof nextChild.title !== "string" ||
+        nextChild.title.trim().length === 0
+      ) {
+        nextChild.title =
+          childKind === "panel" ? "Nested Panel" : "Nested Block"
       }
 
-      const updatedChildren = [...existingChildren, deepCloneJsonLike(nextChild)]
+      const updatedChildren = [
+        ...existingChildren,
+        deepCloneJsonLike(nextChild),
+      ]
       return setValueAtPath(
         current as Record<string, unknown>,
         `${parentPath}.children`,
         updatedChildren,
       ) as EditableComposition
     })
-    showSuccessToast(
-      `Added nested ${childKind} under ${parentPath}.`,
-    )
+    showSuccessToast(`Added nested ${childKind} under ${parentPath}.`)
   }
 
   function focusNodeFromTree(params: { nodePath: string }) {
@@ -1369,165 +1377,165 @@ function DemoBuilderPage() {
           </summary>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-            <label className="text-sm font-medium">Create New Demo</label>
-            <div className="grid gap-2">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <label className="text-xs text-muted-foreground">
-                    Slug <span className="opacity-70">(auto)</span>
-                  </label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void fetchSlug()}
-                    disabled={isSlugLoading}
-                  >
-                    {isSlugLoading ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <RefreshCcw className="h-3 w-3 mr-1" />
-                    )}
-                    {isSlugLoading ? "Generating..." : "Regenerate"}
-                  </Button>
+              <label className="text-sm font-medium">Create New Demo</label>
+              <div className="grid gap-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-xs text-muted-foreground">
+                      Slug <span className="opacity-70">(auto)</span>
+                    </label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void fetchSlug()}
+                      disabled={isSlugLoading}
+                    >
+                      {isSlugLoading ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCcw className="h-3 w-3 mr-1" />
+                      )}
+                      {isSlugLoading ? "Generating..." : "Regenerate"}
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder={
+                      isSlugLoading
+                        ? "Generating..."
+                        : "slug (e.g. qa-builder-demo)"
+                    }
+                    value={newSlug}
+                    onChange={(event) => setNewSlug(event.target.value)}
+                    className="font-mono"
+                  />
                 </div>
                 <Input
-                  placeholder={
-                    isSlugLoading
-                      ? "Generating..."
-                      : "slug (e.g. qa-builder-demo)"
-                  }
-                  value={newSlug}
-                  onChange={(event) => setNewSlug(event.target.value)}
-                  className="font-mono"
+                  placeholder="title"
+                  value={newTitle}
+                  onChange={(event) => setNewTitle(event.target.value)}
                 />
-              </div>
-              <Input
-                placeholder="title"
-                value={newTitle}
-                onChange={(event) => setNewTitle(event.target.value)}
-              />
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">
-                  Access Scope
-                </label>
-                <Select
-                  value={newDemoScope}
-                  onValueChange={(value) =>
-                    setNewDemoScope(value as "personal" | "shared")
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select scope..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="personal">Personal</SelectItem>
-                    <SelectItem value="shared">Shared</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Shared demos are visible to all logged-in users.
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => createDemoMutation.mutate({})}
-                disabled={createDemoMutation.isPending || isSlugLoading}
-              >
-                {createDemoMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4 mr-2" />
-                )}
-                Create Demo
-              </Button>
-            </div>
-            <div className="pt-3 border-t mt-3 space-y-2">
-              <label className="text-sm font-medium">
-                Composition Template
-              </label>
-              <div className="grid gap-2 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">
-                    Demo Config
+                    Access Scope
                   </label>
                   <Select
-                    value={selectedDemoConfigId || "_none"}
+                    value={newDemoScope}
                     onValueChange={(value) =>
-                      setSelectedDemoConfigId(value === "_none" ? "" : value)
+                      setNewDemoScope(value as "personal" | "shared")
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select demo config..." />
+                      <SelectValue placeholder="Select scope..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">None</SelectItem>
-                      {isLoadingDemos && (
-                        <SelectItem value="_loading" disabled>
-                          Loading...
-                        </SelectItem>
-                      )}
-                      {demoConfigs.map((demo) => (
-                        <SelectItem key={demo.id} value={demo.id}>
-                          {demo.slug} · {demo.title}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="personal">Personal</SelectItem>
+                      <SelectItem value="shared">Shared</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Shared demos are visible to all logged-in users.
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">
-                    Template
-                  </label>
-                  <Select
-                    value={selectedTemplateId}
-                    onValueChange={(value) =>
-                      setSelectedTemplateId(value as BuilderTemplateId)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUILDER_COMPOSITION_TEMPLATES.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => void createFromTemplate()}
+                  onClick={() => createDemoMutation.mutate({})}
                   disabled={createDemoMutation.isPending || isSlugLoading}
                 >
-                  {createDemoMutation.isPending || isSlugLoading ? (
+                  {createDemoMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <Plus className="h-4 w-4 mr-2" />
                   )}
-                  Create From Template
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={applyTemplateToEditor}
-                >
-                  Apply Template To Editor
+                  Create Demo
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {
-                  BUILDER_COMPOSITION_TEMPLATES.find(
-                    (template) => template.id === selectedTemplateId,
-                  )?.description
-                }
-              </p>
-            </div>
+              <div className="pt-3 border-t mt-3 space-y-2">
+                <label className="text-sm font-medium">
+                  Composition Template
+                </label>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      Demo Config
+                    </label>
+                    <Select
+                      value={selectedDemoConfigId || "_none"}
+                      onValueChange={(value) =>
+                        setSelectedDemoConfigId(value === "_none" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select demo config..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">None</SelectItem>
+                        {isLoadingDemos && (
+                          <SelectItem value="_loading" disabled>
+                            Loading...
+                          </SelectItem>
+                        )}
+                        {demoConfigs.map((demo) => (
+                          <SelectItem key={demo.id} value={demo.id}>
+                            {demo.slug} · {demo.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      Template
+                    </label>
+                    <Select
+                      value={selectedTemplateId}
+                      onValueChange={(value) =>
+                        setSelectedTemplateId(value as BuilderTemplateId)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select template..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BUILDER_COMPOSITION_TEMPLATES.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void createFromTemplate()}
+                    disabled={createDemoMutation.isPending || isSlugLoading}
+                  >
+                    {createDemoMutation.isPending || isSlugLoading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Create From Template
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={applyTemplateToEditor}
+                  >
+                    Apply Template To Editor
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {
+                    BUILDER_COMPOSITION_TEMPLATES.find(
+                      (template) => template.id === selectedTemplateId,
+                    )?.description
+                  }
+                </p>
+              </div>
             </div>
           </CardContent>
         </details>
@@ -1689,7 +1697,10 @@ function DemoBuilderPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(cloneScope)} onOpenChange={(open) => !open && closeCloneDialog()}>
+      <Dialog
+        open={Boolean(cloneScope)}
+        onOpenChange={(open) => !open && closeCloneDialog()}
+      >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
@@ -1704,7 +1715,9 @@ function DemoBuilderPage() {
           <div className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Source Type</label>
+                <label className="text-xs text-muted-foreground">
+                  Source Type
+                </label>
                 <Select
                   value={cloneSourceKind}
                   onValueChange={(value) => {
@@ -1717,7 +1730,9 @@ function DemoBuilderPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="demo">Demo Config</SelectItem>
-                    <SelectItem value="template">Composition Template</SelectItem>
+                    <SelectItem value="template">
+                      Composition Template
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1809,14 +1824,18 @@ function DemoBuilderPage() {
               </Select>
               {cloneSourceItems.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  No {cloneScope === "panel" ? "panels" : "blocks"} available
-                  in selected source.
+                  No {cloneScope === "panel" ? "panels" : "blocks"} available in
+                  selected source.
                 </p>
               )}
             </div>
 
             <div className="flex items-center justify-end gap-2">
-              <Button type="button" variant="outline" onClick={closeCloneDialog}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeCloneDialog}
+              >
                 Cancel
               </Button>
               <Button

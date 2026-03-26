@@ -22,9 +22,6 @@
 import {
   OpenAPI,
   type ParticipantAddRequest,
-  type RoomWorkspaceConnectionDescriptor,
-  type RoomWorkspaceConnectionPurpose,
-  type RoomWorkspaceConnectionRequest,
   type RoomContextItemCreate,
   type RoomContextItemPublic,
   type RoomContextItemsPublic,
@@ -38,6 +35,9 @@ import {
   type RoomsPublic,
   RoomsService,
   type RoomUpdate,
+  type RoomWorkspaceConnectionDescriptor,
+  type RoomWorkspaceConnectionPurpose,
+  type RoomWorkspaceConnectionRequest,
   UsersService,
 } from "@/client"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
@@ -370,15 +370,18 @@ function transformRoomWorkspaceConnection(
   descriptor: RoomWorkspaceConnectionDescriptor,
 ): RoomWorkspaceConnectionViewModel {
   return {
-    descriptor_id: (descriptor as unknown as { descriptor_id?: string }).descriptor_id ?? "",
+    descriptor_id:
+      (descriptor as unknown as { descriptor_id?: string }).descriptor_id ?? "",
     room_id: descriptor.room_id,
     workspace_id: descriptor.workspace_id,
     purpose: descriptor.purpose,
     status: descriptor.status,
     issued_at: new Date(
-      (descriptor as unknown as { issued_at?: string }).issued_at ?? new Date().toISOString(),
+      (descriptor as unknown as { issued_at?: string }).issued_at ??
+        new Date().toISOString(),
     ),
-    expires_at: (descriptor as unknown as { expires_at?: string | null }).expires_at
+    expires_at: (descriptor as unknown as { expires_at?: string | null })
+      .expires_at
       ? new Date((descriptor as unknown as { expires_at?: string }).expires_at!)
       : null,
     reason: descriptor.reason ?? null,
@@ -391,9 +394,8 @@ function transformRoomWorkspaceConnection(
       url: endpoint.url ?? null,
       auth_mode: endpoint.auth_mode ?? null,
       expires_at: endpoint.expires_at ? new Date(endpoint.expires_at) : null,
-      scope: ((endpoint as unknown as { scope?: Record<string, string> }).scope ?? null) as
-        | Record<string, string>
-        | null,
+      scope: ((endpoint as unknown as { scope?: Record<string, string> })
+        .scope ?? null) as Record<string, string> | null,
     })),
   }
 }
@@ -451,7 +453,8 @@ function transformRoomWorkspaceCurrentConnection(
         ? current.ready_service_count
         : 0,
     state: current.state === "unavailable" ? "unavailable" : "active",
-    state_reason: typeof current.state_reason === "string" ? current.state_reason : null,
+    state_reason:
+      typeof current.state_reason === "string" ? current.state_reason : null,
     descriptor: transformRoomWorkspaceConnection(
       descriptorValue as RoomWorkspaceConnectionDescriptor,
     ),
@@ -461,11 +464,14 @@ function transformRoomWorkspaceCurrentConnection(
 function transformRoomWorkspaceCandidate(
   candidate: Record<string, unknown>,
 ): RoomWorkspaceCandidateViewModel | null {
-  const room_id = typeof candidate.room_id === "string" ? candidate.room_id : null
+  const room_id =
+    typeof candidate.room_id === "string" ? candidate.room_id : null
   const workspace_id =
     typeof candidate.workspace_id === "string" ? candidate.workspace_id : null
   const workspace_name =
-    typeof candidate.workspace_name === "string" ? candidate.workspace_name : null
+    typeof candidate.workspace_name === "string"
+      ? candidate.workspace_name
+      : null
   if (!room_id || !workspace_id || !workspace_name) return null
 
   const projectSummaryValue = candidate.project_summary
@@ -489,11 +495,16 @@ function transformRoomWorkspaceCandidate(
         ? candidate.workspace_status
         : "requested",
     visibility:
-      typeof candidate.visibility === "string" ? candidate.visibility : "private",
-    project_id: typeof candidate.project_id === "string" ? candidate.project_id : null,
+      typeof candidate.visibility === "string"
+        ? candidate.visibility
+        : "private",
+    project_id:
+      typeof candidate.project_id === "string" ? candidate.project_id : null,
     project_summary,
     relationship:
-      candidate.relationship === "owner_private" ? "owner_private" : "shared_project",
+      candidate.relationship === "owner_private"
+        ? "owner_private"
+        : "shared_project",
     access_level:
       candidate.access_level === "manage"
         ? "manage"
@@ -503,7 +514,9 @@ function transformRoomWorkspaceCandidate(
     match_reason:
       typeof candidate.match_reason === "string" ? candidate.match_reason : "",
     candidate_rank:
-      typeof candidate.candidate_rank === "number" ? candidate.candidate_rank : 0,
+      typeof candidate.candidate_rank === "number"
+        ? candidate.candidate_rank
+        : 0,
     service_count:
       typeof candidate.service_count === "number" ? candidate.service_count : 0,
     ready_service_count:
@@ -892,10 +905,11 @@ export const RoomService = {
     roomId: string,
     agentSlug?: string | null,
   ): Promise<{ data: RoomContextItemViewModel[]; count: number }> {
-    const response: RoomContextItemsPublic = await RoomContextsService.listRoomContexts({
-      roomId,
-      agentSlug: agentSlug ?? undefined,
-    })
+    const response: RoomContextItemsPublic =
+      await RoomContextsService.listRoomContexts({
+        roomId,
+        agentSlug: agentSlug ?? undefined,
+      })
     return {
       data: response.data.map(transformRoomContextItem),
       count: response.count,
@@ -911,14 +925,13 @@ export const RoomService = {
     context: RoomContextItemCreate,
     options?: { replaceByType?: boolean },
   ): Promise<RoomContextItemViewModel> {
-    const response: RoomContextItemPublic = await RoomContextsService.upsertRoomContext(
-      {
+    const response: RoomContextItemPublic =
+      await RoomContextsService.upsertRoomContext({
         roomId,
         contextId,
         requestBody: context,
         replaceByType: options?.replaceByType ?? false,
-      },
-    )
+      })
     return transformRoomContextItem(response)
   },
 
@@ -958,9 +971,10 @@ export const RoomService = {
       method: "GET",
       url: `/api/v1/rooms/${roomId}/workspace-connections/current`,
     }
-    const response = (await __request(OpenAPI, requestOptions)) as
-      | Record<string, unknown>
-      | null
+    const response = (await __request(OpenAPI, requestOptions)) as Record<
+      string,
+      unknown
+    > | null
     if (!response) return null
     return transformRoomWorkspaceCurrentConnection(response)
   },
@@ -1009,7 +1023,10 @@ export const RoomService = {
     }
     return (response.data ?? [])
       .map(transformRoomWorkspaceCandidate)
-      .filter((candidate): candidate is RoomWorkspaceCandidateViewModel => candidate !== null)
+      .filter(
+        (candidate): candidate is RoomWorkspaceCandidateViewModel =>
+          candidate !== null,
+      )
   },
 
   // ==========================================================================

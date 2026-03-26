@@ -254,7 +254,12 @@ export function BlockContainer({
         {content}
       </div>
       {footer && (
-        <div className={cn("border-t border-border", densityStyles[density].footer)}>
+        <div
+          className={cn(
+            "border-t border-border",
+            densityStyles[density].footer,
+          )}
+        >
           {footer}
         </div>
       )}

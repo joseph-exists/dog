@@ -8,14 +8,14 @@ import {
   GitCommitHorizontal,
   GitPullRequest,
   Loader2,
-  SaveIcon,
   PlusIcon,
+  SaveIcon,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import {
-  type UserRepoFileMutationInput,
-  type ShadowRepoTreeEntry,
-  type UserRepoViewResponse,
+import type {
+  ShadowRepoTreeEntry,
+  UserRepoFileMutationInput,
+  UserRepoViewResponse,
 } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import { UserReposService } from "@/client/sdk.gen"
@@ -266,7 +266,8 @@ export function GitViewCore({
         repoId: config.entity_id,
         path: selectedFilePath,
       }),
-    enabled: isUserRepo && config.show_file_content && Boolean(selectedFilePath),
+    enabled:
+      isUserRepo && config.show_file_content && Boolean(selectedFilePath),
   })
   const targetRef =
     fileQuery.data?.ref ||
@@ -310,7 +311,8 @@ export function GitViewCore({
     onSuccess: async (response, payload) => {
       const upsertedPath = payload.mutations.find(
         (mutation) =>
-          mutation.operation === "upsert" && !mutation.path.endsWith("/.gitkeep"),
+          mutation.operation === "upsert" &&
+          !mutation.path.endsWith("/.gitkeep"),
       )?.path
       if (upsertedPath) {
         setSelectedFilePath(upsertedPath)
@@ -319,11 +321,18 @@ export function GitViewCore({
       setDraftCreatePath("")
       setDraftCreateContent("")
       showSuccessToast("Repository changes committed.")
-      queryClient.setQueryData(["git-view-head", config.entity_id, payload.branch], {
-        ref: payload.branch,
-        expectedHeadSha: response.new_head_sha,
-      })
-      await Promise.all([viewQuery.refetch(), fileQuery.refetch(), headQuery.refetch()])
+      queryClient.setQueryData(
+        ["git-view-head", config.entity_id, payload.branch],
+        {
+          ref: payload.branch,
+          expectedHeadSha: response.new_head_sha,
+        },
+      )
+      await Promise.all([
+        viewQuery.refetch(),
+        fileQuery.refetch(),
+        headQuery.refetch(),
+      ])
     },
     onError: async (error: ApiError) => {
       const errorCode = extractCommitErrorCode(error)
@@ -331,7 +340,11 @@ export function GitViewCore({
         showErrorToast(
           "Repo head changed. Reloading latest branch state before retry.",
         )
-        await Promise.all([viewQuery.refetch(), fileQuery.refetch(), headQuery.refetch()])
+        await Promise.all([
+          viewQuery.refetch(),
+          fileQuery.refetch(),
+          headQuery.refetch(),
+        ])
         return
       }
       if (errorCode === "REPO_NOT_READY") {
@@ -339,7 +352,9 @@ export function GitViewCore({
         return
       }
       if (errorCode === "INVALID_WRITE_REQUEST") {
-        showErrorToast("Write request was rejected. Check the new path/content.")
+        showErrorToast(
+          "Write request was rejected. Check the new path/content.",
+        )
         return
       }
       if (errorCode === "BRANCH_NOT_WRITABLE") {
@@ -493,7 +508,9 @@ export function GitViewCore({
                       value={draftCreateContent}
                       placeholder="Initial file content"
                       className="min-h-24 text-xs font-mono"
-                      onChange={(event) => setDraftCreateContent(event.target.value)}
+                      onChange={(event) =>
+                        setDraftCreateContent(event.target.value)
+                      }
                     />
                   ) : null}
                   <div className="flex items-center justify-end gap-2">
@@ -535,7 +552,8 @@ export function GitViewCore({
                             : normalizedPath
                         void createMutation.mutateAsync({
                           branch: targetRef,
-                          expectedHeadSha: headQuery.data?.expectedHeadSha || "",
+                          expectedHeadSha:
+                            headQuery.data?.expectedHeadSha || "",
                           commitMessage:
                             createMode === "folder"
                               ? `Create folder ${normalizedPath}`
@@ -545,7 +563,9 @@ export function GitViewCore({
                               path: mutationPath,
                               operation: "upsert",
                               content:
-                                createMode === "folder" ? "" : draftCreateContent,
+                                createMode === "folder"
+                                  ? ""
+                                  : draftCreateContent,
                               encoding: "utf-8",
                             },
                           ],
@@ -592,7 +612,9 @@ export function GitViewCore({
           {config.show_file_content && (
             <div className="rounded-md border bg-muted/20 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="text-xs text-muted-foreground">File content</div>
+                <div className="text-xs text-muted-foreground">
+                  File content
+                </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="max-w-[240px] truncate">
                     {selectedFilePath || "No file selected"}
@@ -603,10 +625,14 @@ export function GitViewCore({
                   roomContextState ? (
                     <Button
                       type="button"
-                      variant={roomContextState.included ? "secondary" : "ghost"}
+                      variant={
+                        roomContextState.included ? "secondary" : "ghost"
+                      }
                       size="sm"
                       className="h-7 px-2 text-xs"
-                      disabled={roomContextState.pending || !roomContextState.canToggle}
+                      disabled={
+                        roomContextState.pending || !roomContextState.canToggle
+                      }
                       title={roomContextState.disabledReason ?? undefined}
                       onClick={async () => {
                         if (!fileQuery.data) return
@@ -622,7 +648,8 @@ export function GitViewCore({
                           sizeBytes: fileQuery.data.size_bytes ?? null,
                           isBinary: fileQuery.data.is_binary === true,
                           isTruncated: fileQuery.data.is_truncated === true,
-                          truncationReason: fileQuery.data.truncation_reason || null,
+                          truncationReason:
+                            fileQuery.data.truncation_reason || null,
                         })
                       }}
                     >
@@ -633,7 +660,9 @@ export function GitViewCore({
                       ) : (
                         <PlusIcon className="size-3.5" />
                       )}
-                      {roomContextState.included ? "In Context" : "Add to Context"}
+                      {roomContextState.included
+                        ? "In Context"
+                        : "Add to Context"}
                     </Button>
                   ) : null}
                 </div>

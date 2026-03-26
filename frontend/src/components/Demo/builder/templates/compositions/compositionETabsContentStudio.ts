@@ -4,8 +4,11 @@ import type {
 } from "@/components/Demo/builder/demoBuilderSchema"
 import type { TemplateBuilderContext } from "@/components/Demo/builder/templates/templateBuilderContext"
 
-export function buildCompositionETabsContentStudioTemplate(context: TemplateBuilderContext): EditableComposition {
-  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } = context
+export function buildCompositionETabsContentStudioTemplate(
+  context: TemplateBuilderContext,
+): EditableComposition {
+  const { createEmptyComposition, createPanelTemplate, createBlockTemplate } =
+    context
   const composition = createEmptyComposition()
   composition.layout_mode = "tabs"
   composition.runtime_policy = "manual"
@@ -126,4 +129,3 @@ export function buildCompositionETabsContentStudioTemplate(context: TemplateBuil
   ]
   return composition
 }
-

@@ -39,7 +39,9 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeOptionalString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null
 }
 
 function normalizeString(value: unknown, fallback = ""): string {
@@ -111,7 +113,8 @@ export function parseRepoExplorerPanelConfig(
     repo_id: normalizeOptionalString(value.repo_id),
     initial_path: normalizeString(value.initial_path),
     ref: normalizeOptionalString(value.ref),
-    selection_key: normalizeOptionalString(value.selection_key) ?? defaults.selection_key,
+    selection_key:
+      normalizeOptionalString(value.selection_key) ?? defaults.selection_key,
     title: normalizeOptionalString(value.title),
     show_sizes: value.show_sizes !== false,
     show_commit_badge: value.show_commit_badge !== false,
@@ -156,7 +159,10 @@ export function normalizeRepoPanelConfig(
   value: unknown,
 ): Record<string, unknown> | null {
   if (kind === "repoExplorer") {
-    return parseRepoExplorerPanelConfig(value, panelId) as unknown as Record<string, unknown>
+    return parseRepoExplorerPanelConfig(value, panelId) as unknown as Record<
+      string,
+      unknown
+    >
   }
   if (kind === "fileViewer") {
     const parsed = parseRepoFileViewerPanelConfig(value, panelId)

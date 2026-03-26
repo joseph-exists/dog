@@ -349,7 +349,9 @@ function normalizePromptResponseFormat(
         name,
         schema,
         strict:
-          typeof jsonSchema.strict === "boolean" ? jsonSchema.strict : undefined,
+          typeof jsonSchema.strict === "boolean"
+            ? jsonSchema.strict
+            : undefined,
       },
     }
   }
@@ -396,7 +398,9 @@ function normalizePromptParams(input: unknown): PromptParamsByProvider {
       : "openai_compatible"
   const responseFormat = normalizePromptResponseFormat(raw.response_format)
   const responseFormatJsonLegacy =
-    typeof raw.response_format_json === "boolean" ? raw.response_format_json : null
+    typeof raw.response_format_json === "boolean"
+      ? raw.response_format_json
+      : null
   const resolvedResponseFormat =
     responseFormat ??
     (responseFormatJsonLegacy === true

@@ -25,7 +25,9 @@ function getStatusLabel(status: TerminalConnectionStatus) {
   }
 }
 
-function getStatusVariant(status: TerminalConnectionStatus): "default" | "secondary" | "destructive" | "outline" {
+function getStatusVariant(
+  status: TerminalConnectionStatus,
+): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case "open":
       return "default"

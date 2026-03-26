@@ -77,9 +77,7 @@ export function RelationshipManagerBlock({
         title="Relations"
         className={className}
         headerActions={
-          viewModel?.isOwner &&
-          isEditing &&
-          config.allowCreate !== false ? (
+          viewModel?.isOwner && isEditing && config.allowCreate !== false ? (
             <Button
               size="sm"
               variant="outline"
@@ -98,8 +96,8 @@ export function RelationshipManagerBlock({
         <div className="space-y-3 p-4">
           {relations.length === 0 ? (
             <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              Relations are managed only through personas. Add a persona relation
-              to make this surface visible.
+              Relations are managed only through personas. Add a persona
+              relation to make this surface visible.
             </div>
           ) : (
             relations.map((relation) => {
@@ -112,12 +110,16 @@ export function RelationshipManagerBlock({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Handshake className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{relation.targetLabel}</span>
+                        <span className="font-medium">
+                          {relation.targetLabel}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge>{relation.relationKind}</Badge>
                         {config.audienceScoped !== false && (
-                          <Badge variant="outline">{relation.audienceScope}</Badge>
+                          <Badge variant="outline">
+                            {relation.audienceScope}
+                          </Badge>
                         )}
                         {sourcePersona && (
                           <Badge variant="secondary">
@@ -135,18 +137,18 @@ export function RelationshipManagerBlock({
                     {viewModel?.isOwner &&
                       isEditing &&
                       config.allowEditing !== false && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        disabled={!isEditing}
-                        onClick={() => {
-                          setEditingRelation(relation)
-                          setIsSheetOpen(true)
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          disabled={!isEditing}
+                          onClick={() => {
+                            setEditingRelation(relation)
+                            setIsSheetOpen(true)
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                   </div>
                 </div>
               )

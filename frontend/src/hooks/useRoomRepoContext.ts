@@ -13,7 +13,9 @@ function toRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function getString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null
 }
 
 function hashToBase36(value: string): string {
@@ -25,16 +27,28 @@ function hashToBase36(value: string): string {
   return (hash >>> 0).toString(36)
 }
 
-function buildRepoFileContextKey(repoId: string, path: string, ref: string): string {
+function buildRepoFileContextKey(
+  repoId: string,
+  path: string,
+  ref: string,
+): string {
   return `${repoId}|${ref}|${path}`
 }
 
-function buildRepoFileContextType(repoId: string, path: string, ref: string): string {
+function buildRepoFileContextType(
+  repoId: string,
+  path: string,
+  ref: string,
+): string {
   const hash = hashToBase36(buildRepoFileContextKey(repoId, path, ref))
   return `system.repo.file.${hash}`
 }
 
-function buildRepoFileContextId(repoId: string, path: string, ref: string): string {
+function buildRepoFileContextId(
+  repoId: string,
+  path: string,
+  ref: string,
+): string {
   const hash = hashToBase36(`ctx|${buildRepoFileContextKey(repoId, path, ref)}`)
   return `repo-file-${hash}`
 }
@@ -82,9 +96,14 @@ export interface RepoFileContextToggleInput {
   truncationReason: string | null
 }
 
-export function useRoomRepoContext(roomId: string, canManageRoomContext: boolean) {
+export function useRoomRepoContext(
+  roomId: string,
+  canManageRoomContext: boolean,
+) {
   const queryClient = useQueryClient()
-  const [pendingContextKeys, setPendingContextKeys] = useState<Set<string>>(new Set())
+  const [pendingContextKeys, setPendingContextKeys] = useState<Set<string>>(
+    new Set(),
+  )
 
   const { data: roomContextsData } = useQuery({
     queryKey: ["rooms", roomId, "contexts"],
@@ -101,10 +120,13 @@ export function useRoomRepoContext(roomId: string, canManageRoomContext: boolean
       const payloadPath = getString(payload.path)
       const payloadRef = getString(payload.ref)
       if (!payloadRepoId || !payloadPath || !payloadRef) continue
-      index.set(buildRepoFileContextKey(payloadRepoId, payloadPath, payloadRef), {
-        id: item.id,
-        source: item.source,
-      })
+      index.set(
+        buildRepoFileContextKey(payloadRepoId, payloadPath, payloadRef),
+        {
+          id: item.id,
+          source: item.source,
+        },
+      )
     }
     return index
   }, [roomContextsData?.data])
@@ -136,7 +158,13 @@ export function useRoomRepoContext(roomId: string, canManageRoomContext: boolean
   }, [roomContextsData?.data])
 
   const getFileRoomContextState = useCallback(
-    ({ repoId, path, ref, isBinary, hasContent }: RepoFileContextStateInput) => {
+    ({
+      repoId,
+      path,
+      ref,
+      isBinary,
+      hasContent,
+    }: RepoFileContextStateInput) => {
       const fileKey = buildRepoFileContextKey(repoId, path, ref)
       const included = roomContextByRepoFileKey.has(fileKey)
       const pending = pendingContextKeys.has(fileKey)
@@ -185,7 +213,11 @@ export function useRoomRepoContext(roomId: string, canManageRoomContext: boolean
         return
       }
 
-      const fileKey = buildRepoFileContextKey(input.repoId, input.path, input.ref)
+      const fileKey = buildRepoFileContextKey(
+        input.repoId,
+        input.path,
+        input.ref,
+      )
       if (pendingContextKeys.has(fileKey)) return
 
       setPendingContextKeys((current) => {
@@ -291,4 +323,3 @@ export function useRoomRepoContext(roomId: string, canManageRoomContext: boolean
     removeRepoContextFile,
   }
 }
-

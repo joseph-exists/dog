@@ -287,7 +287,11 @@ export function PanelLayoutDialog({
         }
         return {
           ...panel,
-          config_json: normalizeRepoPanelConfig(panel.kind, panel.id, nextConfig),
+          config_json: normalizeRepoPanelConfig(
+            panel.kind,
+            panel.id,
+            nextConfig,
+          ),
         }
       }),
     )
@@ -374,7 +378,10 @@ export function PanelLayoutDialog({
                       panel.id,
                     )
                     return (
-                      <div key={panel.id} className="rounded-md border p-3 space-y-2">
+                      <div
+                        key={panel.id}
+                        className="rounded-md border p-3 space-y-2"
+                      >
                         <div className="text-xs font-medium text-muted-foreground">
                           {panelNames[panel.kind]} ({panel.id})
                         </div>
@@ -414,7 +421,10 @@ export function PanelLayoutDialog({
                     panel.id,
                   )
                   return (
-                    <div key={panel.id} className="rounded-md border p-3 space-y-2">
+                    <div
+                      key={panel.id}
+                      className="rounded-md border p-3 space-y-2"
+                    >
                       <div className="text-xs font-medium text-muted-foreground">
                         {panelNames[panel.kind]} ({panel.id})
                       </div>

@@ -1,6 +1,9 @@
 import { ArrowDown, ArrowUp, Eye, EyeOff, LayoutPanelLeft } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import { InteractivePreview, type PreviewPanel } from "@/components/Page/InteractivePreview"
+import {
+  InteractivePreview,
+  type PreviewPanel,
+} from "@/components/Page/InteractivePreview"
 import type { PanelProminence } from "@/components/Page/registry/panelTypes"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -103,7 +106,9 @@ function LayoutEditorBody({
             onReorder={(panels) => {
               const panelIds = panels.map((panel) => panel.id)
               const reorderedVisible = panelIds
-                .map((panelId) => visibleItems.find((item) => item.id === panelId))
+                .map((panelId) =>
+                  visibleItems.find((item) => item.id === panelId),
+                )
                 .filter((item): item is DemoPanelLayoutItem => Boolean(item))
               onChange([...reorderedVisible, ...hiddenItems])
             }}
@@ -131,7 +136,9 @@ function LayoutEditorBody({
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium">{item.title}</span>
+                  <span className="truncate text-sm font-medium">
+                    {item.title}
+                  </span>
                   <Badge variant="secondary" className="text-[10px] uppercase">
                     {item.kind}
                   </Badge>
@@ -222,7 +229,9 @@ function LayoutEditorBody({
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{item.title}</span>
+                    <span className="truncate text-sm font-medium">
+                      {item.title}
+                    </span>
                     <Badge variant="outline" className="text-[10px] uppercase">
                       {item.kind}
                     </Badge>
@@ -273,15 +282,29 @@ export function DemoPanelLayoutDialog({
 
   const content = (
     <>
-      <div className={cn("overflow-y-auto px-1", isMobile ? "max-h-[65vh]" : "max-h-[70vh]")}>
+      <div
+        className={cn(
+          "overflow-y-auto px-1",
+          isMobile ? "max-h-[65vh]" : "max-h-[70vh]",
+        )}
+      >
         <LayoutEditorBody items={draftItems} onChange={setDraftItems} />
       </div>
       <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" onClick={onReset} disabled={!canReset}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onReset}
+          disabled={!canReset}
+        >
           Reset to Demo Default
         </Button>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={() => onApply(draftItems)}>
@@ -306,9 +329,9 @@ export function DemoPanelLayoutDialog({
               local to this demo on this device.
             </SheetDescription>
           </SheetHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-2">
-          {content}
-        </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-2">
+            {content}
+          </div>
         </SheetContent>
       </Sheet>
     )

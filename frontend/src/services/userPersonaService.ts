@@ -1,15 +1,15 @@
 import type {
-  AudiencePresentationSummary,
-  UserPersonaSummary,
-  WeightedTag,
-} from "@/components/UserPage/types"
-import type { TemplateBlock } from "@/components/Page/registry"
-import type {
   Persona,
   UserPersonaPresentationPublic,
   UserPersonaPublic,
 } from "@/client"
 import { PersonasService, UserPersonasService } from "@/client"
+import type { TemplateBlock } from "@/components/Page/registry"
+import type {
+  AudiencePresentationSummary,
+  UserPersonaSummary,
+  WeightedTag,
+} from "@/components/UserPage/types"
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
@@ -57,9 +57,9 @@ function toUserPersonaSummary(
   persona: Persona,
 ): UserPersonaSummary {
   const tags =
-    entry.tags_json?.map((tag) => toWeightedTag(tag)).filter(
-      (tag): tag is WeightedTag => tag !== null,
-    ) ?? []
+    entry.tags_json
+      ?.map((tag) => toWeightedTag(tag))
+      .filter((tag): tag is WeightedTag => tag !== null) ?? []
 
   return {
     id: entry.persona_id,
@@ -67,7 +67,8 @@ function toUserPersonaSummary(
     personaVisibility: persona.visibility ?? null,
     name: persona.name,
     nickname: entry.nickname ?? null,
-    shortBio: entry.short_bio ?? entry.description ?? persona.description ?? null,
+    shortBio:
+      entry.short_bio ?? entry.description ?? persona.description ?? null,
     longBio: entry.long_bio ?? persona.long_description ?? null,
     tags: tags.length > 0 ? tags : toFallbackTags(persona),
     publicationState: entry.publication_state ?? "draft",
@@ -131,7 +132,9 @@ function replaceBlockContent(
 
 export const UserPersonaService = {
   async getUserPageAuthoringBundle(): Promise<UserPersonaAuthoringBundle> {
-    const userPersonas = await UserPersonasService.readUserPersonas({ limit: 100 })
+    const userPersonas = await UserPersonasService.readUserPersonas({
+      limit: 100,
+    })
 
     if (userPersonas.data.length === 0) {
       return {
@@ -142,7 +145,9 @@ export const UserPersonaService = {
       }
     }
 
-    const personaIds = [...new Set(userPersonas.data.map((entry) => entry.persona_id))]
+    const personaIds = [
+      ...new Set(userPersonas.data.map((entry) => entry.persona_id)),
+    ]
     const personaMap = new Map<string, Persona>()
 
     await Promise.all(
@@ -159,17 +164,21 @@ export const UserPersonaService = {
 
     await Promise.all(
       userPersonas.data.map(async (entry) => {
-        const response = await UserPersonasService.readUserPersonaPresentations({
-          id: entry.id,
-          limit: 100,
-        })
+        const response = await UserPersonasService.readUserPersonaPresentations(
+          {
+            id: entry.id,
+            limit: 100,
+          },
+        )
         presentationsByUserPersonaId.set(entry.id, response.data)
       }),
     )
 
     const personas = userPersonas.data
       .filter((entry) => personaMap.has(entry.persona_id))
-      .map((entry) => toUserPersonaSummary(entry, personaMap.get(entry.persona_id)!))
+      .map((entry) =>
+        toUserPersonaSummary(entry, personaMap.get(entry.persona_id)!),
+      )
       .sort((left, right) => {
         const primaryOrder = Number(right.isPrimary) - Number(left.isPrimary)
         if (primaryOrder !== 0) return primaryOrder
@@ -186,7 +195,12 @@ export const UserPersonaService = {
       (entry) => presentationsByUserPersonaId.get(entry.id) ?? [],
     )
 
-    return { personas, presentations, userPersonas: userPersonas.data, personaPresentations }
+    return {
+      personas,
+      presentations,
+      userPersonas: userPersonas.data,
+      personaPresentations,
+    }
   },
 
   async getUserPageData(): Promise<UserPersonaPageData> {
@@ -224,11 +238,12 @@ export const UserPersonaService = {
         publishedPersonaIds.has(presentation.personaId),
     )
 
-    const primaryPersonaId =
-      blocks.find((block) => block.type === "primaryPersona")?.content
-        ?.primaryPersonaId
+    const primaryPersonaId = blocks.find(
+      (block) => block.type === "primaryPersona",
+    )?.content?.primaryPersonaId
     const nextPrimaryPersonaId =
-      typeof primaryPersonaId === "string" && publishedPersonaIds.has(primaryPersonaId)
+      typeof primaryPersonaId === "string" &&
+      publishedPersonaIds.has(primaryPersonaId)
         ? primaryPersonaId
         : null
 
@@ -242,7 +257,8 @@ export const UserPersonaService = {
       ),
       "primaryPersona",
       {
-        ...(blocks.find((block) => block.type === "primaryPersona")?.content ?? {}),
+        ...(blocks.find((block) => block.type === "primaryPersona")?.content ??
+          {}),
         primaryPersonaId: nextPrimaryPersonaId,
       },
     )

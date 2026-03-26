@@ -48,7 +48,8 @@ export function validateUserPageBuilderDraft(
     issues.push({
       code: "primary_persona_missing",
       severity: "error",
-      message: "Primary persona id does not exist in persona management content.",
+      message:
+        "Primary persona id does not exist in persona management content.",
       path: "primaryPersona.primaryPersonaId",
     })
   }
@@ -61,7 +62,8 @@ export function validateUserPageBuilderDraft(
       issues.push({
         code: "presentation_persona_missing",
         severity: "error",
-        message: "Audience presentation references a persona that is not defined.",
+        message:
+          "Audience presentation references a persona that is not defined.",
         path: `audiencePresentation.presentations[${index}].personaId`,
       })
     }

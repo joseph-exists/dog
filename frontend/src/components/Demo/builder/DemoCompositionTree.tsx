@@ -80,12 +80,15 @@ function getNestedNodes(
   )
 }
 
-function buildCompositionTree(composition: EditableComposition): CompositionTreeNode[] {
+function buildCompositionTree(
+  composition: EditableComposition,
+): CompositionTreeNode[] {
   const maxDepth = 8
   const panelRoots = (composition.panels ?? []).map((panel, index) => {
     const rootPath = `panels[${index}]`
     const children = Object.entries(panel as Record<string, unknown>).flatMap(
-      ([key, value]) => getNestedNodes(value, `${rootPath}.${key}`, maxDepth, 0),
+      ([key, value]) =>
+        getNestedNodes(value, `${rootPath}.${key}`, maxDepth, 0),
     )
     return {
       nodeKind: "panel" as const,
@@ -101,7 +104,8 @@ function buildCompositionTree(composition: EditableComposition): CompositionTree
   const blockRoots = (composition.blocks ?? []).map((block, index) => {
     const rootPath = `blocks[${index}]`
     const children = Object.entries(block as Record<string, unknown>).flatMap(
-      ([key, value]) => getNestedNodes(value, `${rootPath}.${key}`, maxDepth, 0),
+      ([key, value]) =>
+        getNestedNodes(value, `${rootPath}.${key}`, maxDepth, 0),
     )
     return {
       nodeKind: "block" as const,
@@ -118,10 +122,7 @@ function buildCompositionTree(composition: EditableComposition): CompositionTree
 }
 
 function countNodes(nodes: CompositionTreeNode[]): number {
-  return nodes.reduce(
-    (total, node) => total + 1 + countNodes(node.children),
-    0,
-  )
+  return nodes.reduce((total, node) => total + 1 + countNodes(node.children), 0)
 }
 
 function TreeNodeRow({
@@ -149,8 +150,12 @@ function TreeNodeRow({
             {node.nodeKind}
           </Badge>
           <span className="text-sm font-medium">{node.title}</span>
-          <span className="text-xs text-muted-foreground">{node.descriptor}</span>
-          <span className="text-xs text-muted-foreground font-mono">{node.id}</span>
+          <span className="text-xs text-muted-foreground">
+            {node.descriptor}
+          </span>
+          <span className="text-xs text-muted-foreground font-mono">
+            {node.id}
+          </span>
         </div>
         <div className="text-[11px] text-muted-foreground font-mono mt-1">
           {node.path}

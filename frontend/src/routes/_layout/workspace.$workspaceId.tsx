@@ -1,22 +1,38 @@
-import { createFileRoute } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
-
+import { createFileRoute } from "@tanstack/react-router"
 import {
-  WorkspacesShell,
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
   type PanelConfig,
   WorkspaceControlsPanel,
   WorkspaceDetailsPanel,
   WorkspaceProjectPanel,
+  WorkspacesShell,
   WorkspaceTerminalPanel,
 } from "@/components/Workspaces"
-import { useAttachProjectResource, useDetachProjectResource, useProjectsList } from "@/hooks/useProjects"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useWorkspace } from "@/hooks/useWorkspace"
-import { useWorkspaceTerminal } from "@/hooks/useWorkspaceTerminal"
-import { useDestroyWorkspace, useStartWorkspace, useStopWorkspace, workspaceKeys } from "@/hooks/useWorkspaces"
-import { usePageThemes } from "@/hooks/useThemeBinding"
-import { useAvailableThemes, useUserThemeBindings } from "@/hooks/useThemeRegistry"
 import useAuth from "@/hooks/useAuth"
+import {
+  useAttachProjectResource,
+  useDetachProjectResource,
+  useProjectsList,
+} from "@/hooks/useProjects"
+import { usePageThemes } from "@/hooks/useThemeBinding"
+import {
+  useAvailableThemes,
+  useUserThemeBindings,
+} from "@/hooks/useThemeRegistry"
+import { useWorkspace } from "@/hooks/useWorkspace"
+import {
+  useDestroyWorkspace,
+  useStartWorkspace,
+  useStopWorkspace,
+  workspaceKeys,
+} from "@/hooks/useWorkspaces"
+import { useWorkspaceTerminal } from "@/hooks/useWorkspaceTerminal"
 
 export const Route = createFileRoute("/_layout/workspace/$workspaceId")({
   component: WorkspaceDetailPage,
@@ -63,7 +79,9 @@ function WorkspaceDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>Loading workspace</CardTitle>
-            <CardDescription>Preparing the workspace detail view.</CardDescription>
+            <CardDescription>
+              Preparing the workspace detail view.
+            </CardDescription>
           </CardHeader>
         </Card>
       </div>

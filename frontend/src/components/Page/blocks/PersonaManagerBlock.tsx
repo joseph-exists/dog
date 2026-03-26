@@ -4,13 +4,13 @@ import { useMemo, useState } from "react"
 
 import type { ApiError, PersonaCreate } from "@/client"
 import { PersonasService, UserPersonasService } from "@/client"
-import { UserPersonaEditorSheet } from "@/components/UserPage/UserPersonaEditorSheet"
 import type {
   PersonaManagerBlockContent,
   PrimaryPersonaBlockContent,
   UserPageViewModel,
   UserPersonaSummary,
 } from "@/components/UserPage/types"
+import { UserPersonaEditorSheet } from "@/components/UserPage/UserPersonaEditorSheet"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
@@ -59,9 +59,8 @@ export function PersonaManagerBlock({
 }: PersonaManagerBlockProps) {
   const queryClient = useQueryClient()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [editingPersona, setEditingPersona] = useState<UserPersonaSummary | null>(
-    null,
-  )
+  const [editingPersona, setEditingPersona] =
+    useState<UserPersonaSummary | null>(null)
 
   const personas = useMemo(
     () => viewModel?.personas ?? content?.personas ?? [],
@@ -176,7 +175,9 @@ export function PersonaManagerBlock({
     }
 
     const existingPersonas = personas
-    const hasExisting = existingPersonas.some((persona) => persona.id === personaId)
+    const hasExisting = existingPersonas.some(
+      (persona) => persona.id === personaId,
+    )
     const basePersonas = hasExisting
       ? existingPersonas.map((persona) =>
           persona.id === personaId ? nextPersona : persona,
@@ -263,7 +264,9 @@ export function PersonaManagerBlock({
                         {persona.nickname || persona.name}
                       </span>
                       {persona.isPrimary && <Badge>Primary</Badge>}
-                      <Badge variant="outline">{persona.publicationState}</Badge>
+                      <Badge variant="outline">
+                        {persona.publicationState}
+                      </Badge>
                       <Badge variant="secondary">
                         {persona.publicationState === "published"
                           ? "Included in visitor snapshot"

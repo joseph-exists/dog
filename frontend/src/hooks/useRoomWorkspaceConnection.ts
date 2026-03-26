@@ -1,5 +1,5 @@
-import { useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 import type { RoomWorkspaceConnectionPurpose } from "@/client"
 import type { RoomWorkspaceCandidateViewModel } from "@/services/roomService"
 import {
@@ -90,10 +90,13 @@ export function useRoomWorkspaceConnection(roomId: string) {
       candidate: RoomWorkspaceCandidateViewModel
       purpose: RoomWorkspaceConnectionPurpose
     }) => {
-      const nextState = await RoomService.setCurrentWorkspaceConnection(roomId, {
-        workspace_id: params.candidate.workspace_id,
-        purpose: params.purpose,
-      })
+      const nextState = await RoomService.setCurrentWorkspaceConnection(
+        roomId,
+        {
+          workspace_id: params.candidate.workspace_id,
+          purpose: params.purpose,
+        },
+      )
       queryClient.setQueryData(queryKey, nextState)
       return nextState
     },

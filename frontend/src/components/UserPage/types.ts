@@ -1,10 +1,6 @@
 export type UserPageMode = "owner-empty" | "owner-manage" | "visitor-view"
 
-export type AudienceScope =
-  | "public"
-  | "trusted"
-  | "collaborators"
-  | "custom"
+export type AudienceScope = "public" | "trusted" | "collaborators" | "custom"
 
 export type WorkVisibilityState = "draft" | "published"
 
