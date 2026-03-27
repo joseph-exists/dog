@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -7,6 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Select,
   SelectContent,
@@ -97,14 +103,21 @@ export function WorkspaceDetailsPanel({
     workspace.status === "destroyed"
 
   return (
+    <Collapsible defaultOpen={false}>
     <Card>
-      <CardHeader>
-        <CardTitle>Workspace Details</CardTitle>
-        <CardDescription>
-          Current lifecycle state, bootstrap intent, and backend-facing
-          operational context.
-        </CardDescription>
-      </CardHeader>
+      <CollapsibleTrigger className="group w-full" asChild>
+        <CardHeader className="flex cursor-pointer flex-row items-start justify-between space-y-0">
+          <div className="space-y-1">
+            <CardTitle>Workspace Details</CardTitle>
+            <CardDescription>
+              Current lifecycle state, bootstrap intent, and backend-facing
+              operational context.
+            </CardDescription>
+          </div>
+          <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+        </CardHeader>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{workspace.name}</span>
@@ -887,6 +900,8 @@ export function WorkspaceDetailsPanel({
           </div>
         ) : null}
       </CardContent>
+      </CollapsibleContent>
     </Card>
+    </Collapsible>
   )
 }

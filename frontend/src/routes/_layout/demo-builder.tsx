@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   ChevronDown,
   ChevronRight,
@@ -8,6 +8,7 @@ import {
   RefreshCcw,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { z } from "zod"
 import {
   AgentsService,
   DemosService,
@@ -97,8 +98,13 @@ import {
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { useAvailableThemes } from "@/hooks/useThemeRegistry"
 
+const searchSchema = z.object({
+  demoConfigId: z.string().optional().catch(undefined),
+})
+
 export const Route = createFileRoute("/_layout/demo-builder")({
   component: DemoBuilderPage,
+  validateSearch: searchSchema,
   head: () => ({
     meta: [{ title: "Demo Builder" }],
   }),
@@ -377,6 +383,8 @@ function collectCapabilityValidationIssues(
 // Route Component
 // ============================================================================
 function DemoBuilderPage() {
+  const navigate = useNavigate()
+  const { demoConfigId: demoConfigIdFromSearch } = Route.useSearch()
   const queryClient = useQueryClient()
   type BuilderSectionKey =
     | "top_level"
@@ -465,6 +473,21 @@ function DemoBuilderPage() {
   const [cloneSourceTemplateId, setCloneSourceTemplateId] =
     useState<BuilderTemplateId>(BUILDER_COMPOSITION_TEMPLATES[0].id)
   const [cloneSourceItemKey, setCloneSourceItemKey] = useState("")
+
+  const updateSelectedDemoConfigId = useCallback(
+    (nextDemoConfigId: string) => {
+      setSelectedDemoConfigId(nextDemoConfigId)
+      void navigate({
+        to: "/demo-builder",
+        search: (previous) => ({
+          ...previous,
+          demoConfigId: nextDemoConfigId || undefined,
+        }),
+        replace: true,
+      })
+    },
+    [navigate],
+  )
 
   // Load all visible demo configs for builder selection.
   const { data: demosPayload, isLoading: isLoadingDemos } = useQuery({
@@ -594,6 +617,13 @@ function DemoBuilderPage() {
       enabled: Boolean(selectedDemoConfigId),
     })
 
+  useEffect(() => {
+    const nextDemoConfigId = demoConfigIdFromSearch ?? ""
+    setSelectedDemoConfigId((current) =>
+      current === nextDemoConfigId ? current : nextDemoConfigId,
+    )
+  }, [demoConfigIdFromSearch])
+
   // Keep local editor state synchronized to latest server payload.
   useEffect(() => {
     if (!selectedComposition) return
@@ -707,7 +737,7 @@ function DemoBuilderPage() {
       setNewSlug("")
       setNewTitle("")
       queryClient.invalidateQueries({ queryKey: ["demo-builder", "configs"] })
-      setSelectedDemoConfigId(created.id)
+      updateSelectedDemoConfigId(created.id)
     },
     onError: (error: unknown, variables) => {
       if (variables?.suppressFeedback) return
@@ -1051,7 +1081,7 @@ function DemoBuilderPage() {
       setRawJsonDraft(toPrettyJson(normalized))
       setFieldErrors({})
       setIsDirty(false)
-      setSelectedDemoConfigId(created.id)
+      updateSelectedDemoConfigId(created.id)
 
       queryClient.invalidateQueries({ queryKey: ["demo-builder", "configs"] })
       queryClient.invalidateQueries({
@@ -1462,7 +1492,9 @@ function DemoBuilderPage() {
                     <Select
                       value={selectedDemoConfigId || "_none"}
                       onValueChange={(value) =>
-                        setSelectedDemoConfigId(value === "_none" ? "" : value)
+                        updateSelectedDemoConfigId(
+                          value === "_none" ? "" : value,
+                        )
                       }
                     >
                       <SelectTrigger>

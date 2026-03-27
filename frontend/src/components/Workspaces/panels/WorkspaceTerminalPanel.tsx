@@ -1,4 +1,10 @@
+import { ChevronDown } from "lucide-react"
 import { TerminalPanel } from "@/components/Terminal"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import type {
   WorkspaceDetailViewModel,
   WorkspaceTerminalDescriptor,
@@ -48,13 +54,19 @@ export function WorkspaceTerminalPanel({
         : "This workspace is visible in your current access scope, but terminal access is not available from this account."
 
   return (
+    <Collapsible defaultOpen={true} className="overflow-hidden rounded-xl border bg-card">
+      <CollapsibleTrigger className="group flex w-full items-center justify-between border-b px-4 py-3">
+        <span className="text-sm font-medium">Terminal</span>
+        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
     <TerminalPanel
-      title="Terminal"
       terminalUrl={terminal?.terminalUrl ?? null}
       canRequestTerminal={workspace.canOpenTerminal}
       isRequestingTerminal={isLoadingTerminal}
       terminalError={terminalError}
       onRequestTerminal={onRequestTerminal}
+      className="rounded-none border-none"
       metadata={
         <div className="space-y-3">
           <div className="rounded-xl border bg-muted/30 p-4 text-sm">
@@ -231,5 +243,7 @@ export function WorkspaceTerminalPanel({
         </div>
       }
     />
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

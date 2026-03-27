@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import useAuth from "@/hooks/useAuth"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
@@ -347,6 +348,132 @@ function DeleteDemoButton({
   )
 }
 
+function RenameDemoButton({
+  demo,
+}: {
+  demo: DemoConfigPublic
+}) {
+  const queryClient = useQueryClient()
+  const [isOpen, setIsOpen] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(demo.title)
+  const [descriptionDraft, setDescriptionDraft] = useState(demo.description ?? "")
+
+  const nextTitle = titleDraft.trim()
+  const nextDescription = descriptionDraft.trim()
+  const isUnchanged = nextTitle === demo.title
+  const originalDescription = (demo.description ?? "").trim()
+  const isDescriptionUnchanged = nextDescription === originalDescription
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      DemosService.updateExistingDemoConfig({
+        demoConfigId: demo.id,
+        requestBody: {
+          title: nextTitle,
+          description: nextDescription || null,
+        },
+      }),
+    onSuccess: (updated) => {
+      showSuccessToast(`Updated "${updated.title}"`)
+      setIsOpen(false)
+    },
+    onError: (error: ApiError) => {
+      const message =
+        (error.body as { detail?: string })?.detail ||
+        "Failed to update demo details"
+      showErrorToast(message)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: DEMO_LIBRARY_QUERY_KEY })
+    },
+  })
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open)
+        if (open) {
+          setTitleDraft(demo.title)
+          setDescriptionDraft(demo.description ?? "")
+        }
+      }}
+    >
+      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)}>
+        <PencilIcon className="size-4" />
+        Edit Details
+      </Button>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Demo Details</DialogTitle>
+          <DialogDescription>
+            Update the title and description shown in Demo Library and Builder.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor={`rename-demo-${demo.id}`}
+              className="text-sm font-medium"
+            >
+              Demo name
+            </label>
+            <Input
+              id={`rename-demo-${demo.id}`}
+              value={titleDraft}
+              onChange={(event) => setTitleDraft(event.target.value)}
+              placeholder="Enter a demo name"
+              maxLength={120}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor={`demo-description-${demo.id}`}
+              className="text-sm font-medium"
+            >
+              Description
+            </label>
+            <Textarea
+              id={`demo-description-${demo.id}`}
+              value={descriptionDraft}
+              onChange={(event) => setDescriptionDraft(event.target.value)}
+              placeholder="Add a short description for this demo"
+              rows={5}
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Slug stays unchanged: {demo.slug}
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            onClick={() => setIsOpen(false)}
+            disabled={mutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={
+              mutation.isPending ||
+              !nextTitle ||
+              (isUnchanged && isDescriptionUnchanged)
+            }
+          >
+            {mutation.isPending && <Loader2Icon className="size-4 animate-spin" />}
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function DemoDetailDialog({
   demo,
   isOwner,
@@ -375,9 +502,13 @@ function DemoDetailDialog({
             <DialogFooter className="sm:justify-between">
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
                 {isOwner && (
+                  <RenameDemoButton demo={demo} />
+                )}
+                {isOwner && (
                   <Button variant="outline" size="sm" asChild>
                     <Link
                       to="/demo-builder"
+                      search={{ demoConfigId: demo.id }}
                       onClick={() => onOpenChange(false)}
                     >
                       <PencilIcon className="size-4" />
