@@ -1,6 +1,22 @@
+/**
+ * WorkspacesShell
+ *
+ * Structural container for the workspace detail page.
+ * Composes: Page theme wrapper → WorkspacesHeader → Cards theme wrapper → WorkspacesLayout.
+ *
+ * Two nested theme wrappers enable the 4-layer cascade:
+ *   Application (:root) → Page theme → Cards theme → Individual card presentation
+ *
+ * layoutMode state lives here so both the header toggle and layout renderer
+ * stay in sync without prop-drilling through an intermediate component.
+ */
+
+import * as React from "react"
 import { cn } from "@/lib/utils"
-import type { ThemeViewModel } from "@/services/themeService"
-import { themeTokensToStyle } from "@/services/themeService"
+import {
+  type ThemeViewModel,
+  themeTokensToStyle,
+} from "@/services/themeService"
 import { WorkspacesHeader } from "./WorkspacesHeader"
 import { type PanelConfig, WorkspacesLayout } from "./WorkspacesLayout"
 
@@ -31,13 +47,19 @@ export function WorkspacesShell({
   backHref,
   className,
 }: WorkspacesShellProps) {
+  const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
+    "panels",
+  )
+
   const pageThemeStyle = themeTokensToStyle(pageTheme?.tokens)
   const cardsThemeStyle = themeTokensToStyle(cardsTheme?.tokens)
 
   return (
+    // Outermost: Page theme scope (affects header + content)
+    // Transparent wrapper — only sets CSS variables, does not render a surface
     <div
       style={pageThemeStyle}
-      className={cn("flex h-full min-h-0 flex-col", className)}
+      className={cn("flex h-full flex-col", className)}
     >
       <WorkspacesHeader
         title={title}
@@ -49,12 +71,14 @@ export function WorkspacesShell({
         onPageThemeChange={onPageThemeChange}
         onCardsThemeChange={onCardsThemeChange}
         backHref={backHref}
+        layoutMode={layoutMode}
+        onLayoutModeChange={setLayoutMode}
       />
-      <div
-        style={cardsThemeStyle}
-        className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6"
-      >
-        <WorkspacesLayout panels={panels} />
+
+      {/* Inner: Cards theme scope (overrides page theme for card areas) */}
+      {/* Transparent wrapper — only sets CSS variables, does not render a surface */}
+      <div style={cardsThemeStyle} className="flex-1 min-h-0">
+        <WorkspacesLayout panels={panels} mode={layoutMode} />
       </div>
     </div>
   )
