@@ -657,12 +657,15 @@ async def list_workspaces_visible_to_user(
     db: AsyncSession,
     *,
     user: User,
+    include_destroyed: bool = False,
 ) -> list[Workspace]:
     stmt = select(Workspace).order_by(Workspace.created_at.desc())
     workspaces = list((await db.exec(stmt)).all())
 
     visible: list[Workspace] = []
     for workspace in workspaces:
+        if not include_destroyed and workspace.status == WorkspaceStatus.destroyed:
+            continue
         if await user_can_view_workspace(db, workspace=workspace, user=user):
             visible.append(workspace)
 

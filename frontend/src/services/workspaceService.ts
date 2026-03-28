@@ -130,6 +130,7 @@ export interface WorkspaceListItemViewModel {
   canUseWorkspace: boolean
   canManageRuntime: boolean
   canDiscoverServices: boolean
+  canDestroy: boolean
   isProjectWorkspace: boolean
   hasTerminal: boolean
   bootstrapIntent: BootstrapIntentViewModel | null
@@ -558,6 +559,7 @@ function toWorkspaceListItemViewModel(
     canUseWorkspace: detail.canUseWorkspace,
     canManageRuntime: detail.canManageRuntime,
     canDiscoverServices: detail.canDiscoverServices,
+    canDestroy: detail.canDestroy,
     isProjectWorkspace: detail.isProjectWorkspace,
     hasTerminal: detail.hasTerminal,
     bootstrapIntent: detail.bootstrapIntent,

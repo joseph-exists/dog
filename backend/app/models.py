@@ -7428,6 +7428,7 @@ class WorkspaceFlavour(str, PyEnum):
 
     base = "base"
     dev = "dev"
+    cuda = "cuda"
     python = "python"
     node = "node"
     jupyter = "jupyter"

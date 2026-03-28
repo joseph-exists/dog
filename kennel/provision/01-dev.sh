@@ -2,6 +2,11 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+if ! id -u dev >/dev/null 2>&1; then
+  echo "Expected workspace user 'dev' to exist before applying 01-dev.sh" >&2
+  exit 1
+fi
+
 # Build essentials
 apt-get update && apt-get install -y \
   build-essential \

@@ -84,6 +84,11 @@ const AVAILABLE_PANELS: PreviewPanel[] = [
   { id: "canvas", kind: "canvas", prominence: "primary" },
   { id: "a2ui", kind: "a2ui", prominence: "primary" },
   { id: "participants", kind: "participantPanel", prominence: "auxiliary" },
+  {
+    id: "workspace-links",
+    kind: "workspaceConnections",
+    prominence: "auxiliary",
+  },
   { id: "debug", kind: "debug", prominence: "auxiliary" },
 ]
 
@@ -97,6 +102,7 @@ const panelNames: Record<string, string> = {
   canvas: "Canvas",
   a2ui: "Agent UI",
   participantPanel: "Participants",
+  workspaceConnections: "Workspace Links",
   debug: "Debug",
 }
 

@@ -2,6 +2,11 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+if ! id -u dev >/dev/null 2>&1; then
+  echo "Expected workspace user 'dev' to exist before applying 02-cuda.sh" >&2
+  exit 1
+fi
+
 # ── CUDA Toolkit ──────────────────────────────────────────────────────────────
 apt-get update && apt-get install -y --no-install-recommends \
   gnupg2 \

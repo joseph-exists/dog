@@ -5663,7 +5663,7 @@ export type WorkspaceExternalUrlRepoSource = {
 /**
  * Requested workspace image/profile.
  */
-export type WorkspaceFlavour = 'base' | 'dev' | 'python' | 'node' | 'jupyter';
+export type WorkspaceFlavour = 'base' | 'dev' | 'cuda' | 'python' | 'node' | 'jupyter';
 
 /**
  * Operator-oriented flavour health projection for workspace detail views.

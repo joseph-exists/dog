@@ -17,6 +17,8 @@ export interface WorkspaceListPanelProps {
   workspaces: WorkspaceListItemViewModel[]
   isLoading: boolean
   error?: Error | null
+  isDestroyingWorkspaceId?: string | null
+  onDestroyWorkspace?: (workspaceId: string) => Promise<void>
 }
 
 function formatBootstrapPhase(phase: string): string {
@@ -53,6 +55,8 @@ export function WorkspaceListPanel({
   workspaces,
   isLoading,
   error,
+  isDestroyingWorkspaceId = null,
+  onDestroyWorkspace,
 }: WorkspaceListPanelProps) {
   return (
     <Card>
@@ -297,15 +301,35 @@ export function WorkspaceListPanel({
                       </div>
                     ) : null}
                   </div>
-                  <Button asChild variant="outline" size="sm" className="w-fit">
-                    <Link
-                      to="/workspace/$workspaceId"
-                      params={{ workspaceId: workspace.id }}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-fit"
                     >
-                      Open Details
-                      <ArrowUpRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+                      <Link
+                        to="/workspace/$workspaceId"
+                        params={{ workspaceId: workspace.id }}
+                      >
+                        Open Details
+                        <ArrowUpRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    {workspace.canDestroy && onDestroyWorkspace ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-fit"
+                        disabled={isDestroyingWorkspaceId === workspace.id}
+                        onClick={() => void onDestroyWorkspace(workspace.id)}
+                      >
+                        {isDestroyingWorkspaceId === workspace.id
+                          ? "Destroying..."
+                          : "Destroy"}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               )
             })}

@@ -7,6 +7,7 @@ import {
   Bug,
   FileText,
   FolderTree,
+  Link2,
   MessageSquare,
   Palette,
   Play,
@@ -36,6 +37,7 @@ export type PanelKind =
   | "debug"
   | "repoExplorer"
   | "fileViewer"
+  | "workspaceConnections"
   // Story panels
   | "storyEditor"
   | "storyRuntime"
@@ -220,6 +222,16 @@ export const PANEL_TYPES: PanelTypeDefinition[] = [
     description: "Repository file content view with shared selection support",
     icon: FileText,
     defaultProminence: "primary",
+    contexts: ["room"],
+    permission: "participant",
+    cardinality: "single",
+  },
+  {
+    kind: "workspaceConnections",
+    label: "Workspace Links",
+    description: "Inspect and manage the room's current workspace connection",
+    icon: Link2,
+    defaultProminence: "auxiliary",
     contexts: ["room"],
     permission: "participant",
     cardinality: "single",

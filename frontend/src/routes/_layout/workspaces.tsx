@@ -11,7 +11,11 @@ import {
   useAvailableThemes,
   useUserThemeBindings,
 } from "@/hooks/useThemeRegistry"
-import { useCreateWorkspace, useWorkspaces } from "@/hooks/useWorkspaces"
+import {
+  useCreateWorkspace,
+  useDestroyWorkspace,
+  useWorkspaces,
+} from "@/hooks/useWorkspaces"
 
 export const Route = createFileRoute("/_layout/workspaces")({
   component: WorkspacesPage,
@@ -23,6 +27,7 @@ export const Route = createFileRoute("/_layout/workspaces")({
 function WorkspacesPage() {
   const { data: workspaces = [], isLoading, error } = useWorkspaces()
   const createWorkspace = useCreateWorkspace()
+  const destroyWorkspace = useDestroyWorkspace()
 
   const contextPath = ["page:workspaces"]
   const { themes } = usePageThemes(contextPath)
@@ -41,6 +46,12 @@ function WorkspacesPage() {
           workspaces={workspaces}
           isLoading={isLoading}
           error={error}
+          isDestroyingWorkspaceId={
+            destroyWorkspace.isPending ? destroyWorkspace.variables : null
+          }
+          onDestroyWorkspace={(workspaceId) =>
+            destroyWorkspace.mutateAsync(workspaceId)
+          }
         />
       ),
     },

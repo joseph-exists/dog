@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AgentsService, StoriesService } from "@/client/sdk.gen"
 import type { UserAgentConfigPublic } from "@/client/types.gen"
 import EditDrawer from "@/components/Common/EditDrawer"
+import type { PanelKind } from "@/components/Page/registry/panelTypes"
 import { getUserRepoQueryOptions, renderRepoPanel } from "@/components/Repo"
 import {
   A2UIPanel,
@@ -718,6 +719,7 @@ function RoomView() {
     ),
     canvas: () => <CanvasPanel />,
     a2ui: () => <A2UIPanel roomId={roomId} />,
+    workspaceConnections: () => <WorkspaceConnectionsPanel roomId={roomId} />,
     participantPanel: () => (
       <ParticipantPanel
         activeUsers={activeUsers}
@@ -746,19 +748,7 @@ function RoomView() {
     id: config.id,
     kind: config.kind,
     prominence: config.prominence,
-    title: getPanelDisplayName(
-      config.kind as
-        | "chat"
-        | "storyEditor"
-        | "storyRuntime"
-        | "storyPlayer"
-        | "debug"
-        | "canvas"
-        | "a2ui"
-        | "participantPanel"
-        | "repoExplorer"
-        | "fileViewer",
-    ),
+    title: getPanelDisplayName(config.kind as PanelKind),
     render:
       config.kind === "repoExplorer" || config.kind === "fileViewer"
         ? () => (
@@ -798,15 +788,6 @@ function RoomView() {
       },
     )
   }
-
-  panels.push({
-    id: "workspace-links",
-    kind: "workspaceConnections",
-    prominence: "auxiliary",
-    title: "Workspace Links",
-    render: () => <WorkspaceConnectionsPanel roomId={roomId} />,
-  })
-
   return (
     <div className="h-[calc(100vh-8rem)] flex">
       <div className="flex-1 min-w-0">

@@ -193,7 +193,11 @@ def _agent_service_start_command(profile: AgentServiceProfile) -> str:
         'if [ -n "${DOG_WORKSPACE_AGENT_STORY_URL:-}" ]; then '
         'echo "Story MCP: $DOG_WORKSPACE_AGENT_STORY_URL"; '
         'fi; '
-        'exec bash -lc "$AGENT_CMD"'
+        'if command -v "${AGENT_CMD%% *}" >/dev/null 2>&1; then '
+        'exec bash -lc "$AGENT_CMD"; '
+        'fi; '
+        'echo "Agent command not found: $AGENT_CMD; keeping runtime alive for operator inspection."; '
+        'exec tail -f /dev/null'
     )
 
 

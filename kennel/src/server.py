@@ -242,8 +242,8 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         label="Codex Runtime",
         kind="agent_runtime",
         protocol="http",
-        port=4317,
-        path="/",
+        port=None,
+        path=None,
         source="bootstrap_profile",
         service_name_hint="codex",
     ),
@@ -253,8 +253,8 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         label="Claude Code Runtime",
         kind="agent_runtime",
         protocol="http",
-        port=4318,
-        path="/",
+        port=None,
+        path=None,
         source="bootstrap_profile",
         service_name_hint="claude",
     ),
@@ -264,8 +264,8 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         label="Hermes Runtime",
         kind="agent_runtime",
         protocol="http",
-        port=4319,
-        path="/",
+        port=None,
+        path=None,
         source="bootstrap_profile",
         service_name_hint="hermes",
     ),
@@ -392,6 +392,33 @@ def _write_runtime_file(
             f"chown -R {user}:{user} {parent_dir} && "
             f"chmod 644 {escaped_path}"
         ),
+        timeout=30,
+    )
+
+
+def _ensure_workspace_user(
+    env_name: str,
+    *,
+    user: str,
+) -> subprocess.CompletedProcess:
+    quoted_user = shlex.quote(user)
+    quoted_home = shlex.quote(f"/home/{user}")
+    return _attach_exec(
+        env_name,
+        f"""
+        set -e
+        if ! getent group {quoted_user} >/dev/null 2>&1; then
+          groupadd {quoted_user}
+        fi
+        if ! id -u {quoted_user} >/dev/null 2>&1; then
+          useradd -m -g {quoted_user} -G sudo -s /bin/bash {quoted_user}
+        fi
+        mkdir -p {quoted_home}
+        chown {quoted_user}:{quoted_user} {quoted_home}
+        usermod -d {quoted_home} -s /bin/bash -a -G sudo {quoted_user}
+        echo {quoted_user}' ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/{quoted_user}
+        chmod 0440 /etc/sudoers.d/{quoted_user}
+        """,
         timeout=30,
     )
 
@@ -966,6 +993,13 @@ async def create_env(req: CreateEnvRequest, _=Depends(require_management_secret)
     name   = req.name or f"env-{uuid.uuid4().hex[:8]}"
     job_id = f"job-{uuid.uuid4().hex[:8]}"
 
+    if req.base_snapshot is None:
+        if req.flavour not in FLAVOURS:
+            raise HTTPException(400, detail=f"Unknown flavour: {req.flavour}")
+
+        req.base_snapshot = f"base-{req.flavour}"
+        req.base_snapshot_name = req.base_snapshot_name or "snap0"
+
     jobs[job_id] = {"status": JobStatus.pending, "env_name": name, "error": None}
 
     thread = threading.Thread(
@@ -1042,6 +1076,13 @@ async def inject_workspace(
     step_results: list[dict] = []
     started_services: list[str] = []
     fatal_error: str | None = None
+
+    ensure_user_result = _ensure_workspace_user(name, user=req.user)
+    if ensure_user_result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to ensure workspace user '{req.user}': {ensure_user_result.stderr.strip()}",
+        )
 
     # Git identity remains outside the bootstrap plan for now because it is
     # workspace-scoped personalization rather than repo/runtime orchestration.

@@ -50,10 +50,12 @@ async def create_workspace(
 async def list_workspaces(
     session: AsyncSessionDep,
     current_user: CurrentUser,
+    include_destroyed: bool = False,
 ) -> Any:
     workspaces = await workspace_service.list_workspaces_visible_to_user(
         session,
         user=current_user,
+        include_destroyed=include_destroyed,
     )
     return WorkspacesPublic(
         data=[

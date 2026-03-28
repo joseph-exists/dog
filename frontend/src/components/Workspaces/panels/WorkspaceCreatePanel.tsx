@@ -34,9 +34,7 @@ export interface WorkspaceCreatePanelProps {
 const FLAVOURS: WorkspaceFlavour[] = [
   "base",
   "dev",
-  "python",
-  "node",
-  "jupyter",
+  "cuda",
 ]
 const INSTALL_PROFILES = ["npm", "pnpm", "yarn", "uv", "pip"] as const
 const STARTUP_PROFILES = ["vite", "nextjs", "fastapi"] as const

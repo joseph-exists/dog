@@ -64,6 +64,7 @@ const panelNames: Record<string, string> = {
   repoExplorer: "Repo Explorer",
   fileViewer: "File Viewer",
   participantPanel: "Participants",
+  workspaceConnections: "Workspace Links",
   debug: "Debug",
   canvas: "Canvas",
   a2ui: "Agent UI",
