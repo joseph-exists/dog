@@ -34,8 +34,7 @@ export function buildTesserSvgAssetPayload(input: {
     visibility: "private",
     name: input.name ?? buildTimestampedScriptAssetName(input.scriptName),
     description:
-      input.description ??
-      `Generated from Tesser script "${input.scriptName}"`,
+      input.description ?? `Generated from Tesser script "${input.scriptName}"`,
     svg_markup: svgMarkup,
     metadata_json: {
       source: "tesser",

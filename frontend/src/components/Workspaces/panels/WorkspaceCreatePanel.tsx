@@ -31,11 +31,7 @@ export interface WorkspaceCreatePanelProps {
   onCreate: (input: CreateWorkspaceFormInput) => Promise<void>
 }
 
-const FLAVOURS: WorkspaceFlavour[] = [
-  "base",
-  "dev",
-  "cuda",
-]
+const FLAVOURS: WorkspaceFlavour[] = ["base", "dev", "cuda"]
 const INSTALL_PROFILES = ["npm", "pnpm", "yarn", "uv", "pip"] as const
 const STARTUP_PROFILES = ["vite", "nextjs", "fastapi"] as const
 const AGENT_PROFILES = ["codex", "claude_code", "hermes"] as const

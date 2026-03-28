@@ -35,9 +35,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { showErrorToast, showSuccessToast, showWarningToast } from "@/hooks/useCustomToast"
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from "@/hooks/useCustomToast"
 import { useCreatePrivateSvg } from "@/hooks/useSvgs"
 import { useEnqueueTesserScript } from "@/hooks/useTesser"
+import {
+  type TesserJobStatusResponse,
+  TesserService,
+} from "@/services/tesserService"
 import {
   buildScenarios,
   FAMILY_ACCENT,
@@ -49,7 +57,6 @@ import {
 } from "../constants/svgComposeDomains"
 import { type LocalTesserJob, TesserJobRow } from "../display/TesserJobRow"
 import { buildTesserSvgAssetPayload } from "../utils/buildTesserSvgAssetPayload"
-import { TesserService, type TesserJobStatusResponse } from "@/services/tesserService"
 
 type Phase = "configure" | "preview" | "enqueuing" | "done"
 
@@ -227,7 +234,10 @@ export function BatchSeedSvgDialog() {
     )
   }
 
-  function buildScenarioAssetName(job: LocalTesserJob, jobStatus: TesserJobStatusResponse) {
+  function buildScenarioAssetName(
+    job: LocalTesserJob,
+    jobStatus: TesserJobStatusResponse,
+  ) {
     const family =
       typeof job.scriptInput.style_family === "string"
         ? job.scriptInput.style_family
@@ -238,15 +248,22 @@ export function BatchSeedSvgDialog() {
       typeof job.scriptInput.palette_family === "string"
         ? job.scriptInput.palette_family
         : "mixed"
-    const stamp = (jobStatus.completed_at ?? jobStatus.queued_at ?? new Date().toISOString())
-      .replace(/[:.]/g, "-")
+    const stamp = (
+      jobStatus.completed_at ??
+      jobStatus.queued_at ??
+      new Date().toISOString()
+    ).replace(/[:.]/g, "-")
     return `batch-seed-${family}-${palette}-${stamp}`
   }
 
-  async function saveJob(job: LocalTesserJob, jobStatus?: TesserJobStatusResponse) {
+  async function saveJob(
+    job: LocalTesserJob,
+    jobStatus?: TesserJobStatusResponse,
+  ) {
     if (savedAssetIdByJobId[job.jobId]) return null
 
-    const resolvedJob = jobStatus ?? (await TesserService.getJobStatus(job.jobId))
+    const resolvedJob =
+      jobStatus ?? (await TesserService.getJobStatus(job.jobId))
     const payload = buildTesserSvgAssetPayload({
       scriptName: job.scriptName,
       job: resolvedJob,
@@ -316,7 +333,9 @@ export function BatchSeedSvgDialog() {
       }
 
       if (savedCount > 0) {
-        showSuccessToast(`Saved ${savedCount} SVG${savedCount === 1 ? "" : "s"} to the library`)
+        showSuccessToast(
+          `Saved ${savedCount} SVG${savedCount === 1 ? "" : "s"} to the library`,
+        )
       }
       if (pendingCount > 0 || failedCount > 0) {
         showWarningToast(
@@ -587,7 +606,9 @@ export function BatchSeedSvgDialog() {
                     try {
                       const created = await saveJob(job, input.job)
                       if (!created) {
-                        showErrorToast("This job does not have SVG output ready yet")
+                        showErrorToast(
+                          "This job does not have SVG output ready yet",
+                        )
                       }
                     } catch (error) {
                       showErrorToast(

@@ -25,9 +25,9 @@ import {
   useTesserScriptHelp,
   useTesserScripts,
 } from "@/hooks/useTesser"
-import {
-  type TesserJobStatusResponse,
-  type TesserRenderPayload,
+import type {
+  TesserJobStatusResponse,
+  TesserRenderPayload,
 } from "@/services/tesserService"
 import { type LocalTesserJob, TesserJobRow } from "../display/TesserJobRow"
 import {

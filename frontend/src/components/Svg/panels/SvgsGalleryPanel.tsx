@@ -45,7 +45,7 @@ import {
   useSvgsList,
 } from "@/hooks/useSvgs"
 import { SvgAppService } from "@/services/svgService"
-import { SvgCard, TagEditor, deriveTags } from "../display/SvgCard"
+import { deriveTags, SvgCard, TagEditor } from "../display/SvgCard"
 
 const TIER_FILTERS = [
   "pairwise-core",
@@ -231,8 +231,9 @@ export function SvgsGalleryPanel() {
 
   const selectedAsset = useMemo(
     () =>
-      (listQuery.data?.data ?? []).find((asset) => asset.id === selectedAssetId) ??
-      null,
+      (listQuery.data?.data ?? []).find(
+        (asset) => asset.id === selectedAssetId,
+      ) ?? null,
     [listQuery.data?.data, selectedAssetId],
   )
 
@@ -267,7 +268,9 @@ export function SvgsGalleryPanel() {
   }, [selectedAsset])
 
   useEffect(() => {
-    const validIds = new Set((listQuery.data?.data ?? []).map((asset) => asset.id))
+    const validIds = new Set(
+      (listQuery.data?.data ?? []).map((asset) => asset.id),
+    )
     setSelectedIds((previous) => {
       const next = new Set([...previous].filter((id) => validIds.has(id)))
       return next
@@ -387,7 +390,10 @@ export function SvgsGalleryPanel() {
       )
       await queryClient.invalidateQueries({ queryKey: svgsQueryKeys.all })
       setSelectedIds(new Set())
-      if (selectedAssetId && rows.some((asset) => asset.id === selectedAssetId)) {
+      if (
+        selectedAssetId &&
+        rows.some((asset) => asset.id === selectedAssetId)
+      ) {
         setSelectedAssetId(null)
         setExactSizeOpen(false)
       }
@@ -691,7 +697,9 @@ export function SvgsGalleryPanel() {
                 onCreatePublicCopy={onCreatePublicCopy}
                 onTagFilter={handleTagFilter}
                 selected={selectedIds.has(asset.id)}
-                onSelectedChange={(checked) => toggleSelection(asset.id, checked)}
+                onSelectedChange={(checked) =>
+                  toggleSelection(asset.id, checked)
+                }
               />
             ))}
           </div>
@@ -755,7 +763,9 @@ export function SvgsGalleryPanel() {
                   <div className="flex min-h-[26rem] items-center justify-center overflow-auto rounded-xl border bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.12),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.02),rgba(15,23,42,0.06))] p-6">
                     <div
                       className="flex items-center justify-center [&_svg]:block [&_svg]:max-h-full [&_svg]:max-w-full"
-                      dangerouslySetInnerHTML={{ __html: selectedAsset.svg_markup }}
+                      dangerouslySetInnerHTML={{
+                        __html: selectedAsset.svg_markup,
+                      }}
                     />
                   </div>
 
@@ -911,7 +921,9 @@ export function SvgsGalleryPanel() {
           </DialogHeader>
           {selectedAsset ? (
             <div className="h-full overflow-auto rounded-xl border bg-white p-8">
-              <div dangerouslySetInnerHTML={{ __html: selectedAsset.svg_markup }} />
+              <div
+                dangerouslySetInnerHTML={{ __html: selectedAsset.svg_markup }}
+              />
             </div>
           ) : null}
         </DialogContent>

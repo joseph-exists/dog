@@ -1,3 +1,4 @@
+import { Terminal } from "@xterm/xterm"
 import { useEffect, useMemo, useRef } from "react"
 import { ContentRenderer } from "@/components/Common/ContentRenderer"
 import { cn } from "@/lib/utils"
@@ -6,7 +7,6 @@ import {
   type TerminalSessionState,
   toTerminalTranscriptContent,
 } from "@/services/terminalSessionService"
-import { Terminal } from "@xterm/xterm"
 import "@xterm/xterm/css/xterm.css"
 
 export interface TerminalViewerProps {

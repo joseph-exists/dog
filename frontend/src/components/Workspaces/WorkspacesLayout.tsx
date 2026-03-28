@@ -88,9 +88,7 @@ export function WorkspacesLayout({
           <ResizablePanel defaultSize={35} minSize={20}>
             <div className="h-full overflow-y-auto p-4 space-y-4">
               {auxiliaryPanels.map((panel) => (
-                <React.Fragment key={panel.id}>
-                  {panel.render()}
-                </React.Fragment>
+                <React.Fragment key={panel.id}>{panel.render()}</React.Fragment>
               ))}
             </div>
           </ResizablePanel>

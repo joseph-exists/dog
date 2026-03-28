@@ -58,7 +58,12 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "rooms", title: "Rooms", path: "/rooms", icon: MessageSquare },
   { id: "agents", title: "Agents", path: "/agents", icon: Bot },
   { id: "projects", title: "Projects", path: "/projects", icon: FolderKanban },
-  { id: "workspaces", title: "Workspaces", path: "/workspaces", icon: MonitorPlay },
+  {
+    id: "workspaces",
+    title: "Workspaces",
+    path: "/workspaces",
+    icon: MonitorPlay,
+  },
   { id: "repos", title: "Repo Library", path: "/repos", icon: FolderGit2 },
   { id: "svgs", title: "SVG Library", path: "/svgs", icon: Images },
   { id: "personas", title: "Identity Manager", path: "/personas", icon: Smile },

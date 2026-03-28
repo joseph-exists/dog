@@ -37,7 +37,7 @@ import {
 import { showSuccessToast } from "@/hooks/useCustomToast"
 import { useCreatePrivateSvg } from "@/hooks/useSvgs"
 import { useEnqueueTesserScript } from "@/hooks/useTesser"
-import { type TesserJobStatusResponse } from "@/services/tesserService"
+import type { TesserJobStatusResponse } from "@/services/tesserService"
 import {
   applyFamilyBias,
   buildDefaultKnobs,

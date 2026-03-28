@@ -33,6 +33,12 @@ FLAVOURS: dict[str, FlavourDef] = {
         scripts     = ["02-cuda.sh"],
         description = "dev + CUDA toolkit, PyTorch",
     ),
+    "dev-codex": FlavourDef(
+        name        = "dev-codex",
+        parent      = "dev",
+        scripts     = ["03-codex.sh"],
+        description = "dev + scaffold for a prebaked Codex runtime",
+    ),
 }
 
 

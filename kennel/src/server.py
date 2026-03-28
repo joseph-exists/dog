@@ -92,6 +92,8 @@ class CreateEnvRequest(BaseModel):
     distro:             str        = "ubuntu"
     release:            str        = "noble"
     arch:               str        = "amd64"
+    base_container:     str | None = None
+    # Deprecated compatibility fields from the older snapshot-based model.
     base_snapshot:      str | None = None
     base_snapshot_name: str | None = None
 
@@ -287,6 +289,11 @@ def lxc(*args, timeout: int = 60) -> subprocess.CompletedProcess:
     return subprocess.run(
         list(args), capture_output=True, text=True, timeout=timeout
     )
+
+
+def _container_exists(name: str) -> bool:
+    result = lxc("lxc-info", "-n", name)
+    return result.returncode == 0
 
 
 async def publish_event(env_name: str, event: str, data: dict = {}):
@@ -763,14 +770,23 @@ ENVEOF
 
 # ── Background create worker ──────────────────────────────────────────────────
 
+def _resolve_base_container(req: CreateEnvRequest) -> str | None:
+    if req.base_container:
+        return req.base_container
+    if req.base_snapshot:
+        return req.base_snapshot
+    if req.flavour in FLAVOURS:
+        return f"base-{req.flavour}"
+    return None
+
 def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
     jobs[job_id]["status"] = JobStatus.running
     try:
-        if req.base_snapshot:
+        base_container = _resolve_base_container(req)
+        if base_container:
             r = subprocess.run(
-                ["lxc-copy", "-n", req.base_snapshot,
-                 "-N", name, "-s",
-                 *(["-B", req.base_snapshot_name] if req.base_snapshot_name else [])],
+                ["lxc-copy", "-n", base_container,
+                 "-N", name, "-s", "-B", "overlay"],
                 capture_output=True, text=True, timeout=300,
             )
         else:
@@ -863,22 +879,19 @@ def get_env_services(name: str, _=Depends(require_management_secret)):
 
 @app.get("/flavours")
 def list_flavours(_=Depends(require_management_secret)):
-    """List all flavours and their current snapshot status."""
+    """List all flavours and their current base-container readiness."""
     result = {}
     for name, defn in FLAVOURS.items():
         base = f"base-{name}"
-        snap_check = subprocess.run(
-            ["lxc-snapshot", "-n", base, "-L"],
-            capture_output=True, text=True
-        )
         latest_job = rebuild_store.latest_for(name)
         result[name] = {
-            "description":     defn.description,
-            "parent":          defn.parent,
-            "scripts":         defn.scripts,
-            "snapshot_ready":  "snap0" in snap_check.stdout,
-            "latest_job":      latest_job.job_id if latest_job else None,
-            "latest_status":   latest_job.status if latest_job else None,
+            "description":   defn.description,
+            "parent":        defn.parent,
+            "scripts":       defn.scripts,
+            "base_container": base,
+            "base_ready":    _container_exists(base),
+            "latest_job":    latest_job.job_id if latest_job else None,
+            "latest_status": latest_job.status if latest_job else None,
         }
     return result
 
@@ -993,12 +1006,22 @@ async def create_env(req: CreateEnvRequest, _=Depends(require_management_secret)
     name   = req.name or f"env-{uuid.uuid4().hex[:8]}"
     job_id = f"job-{uuid.uuid4().hex[:8]}"
 
-    if req.base_snapshot is None:
-        if req.flavour not in FLAVOURS:
-            raise HTTPException(400, detail=f"Unknown flavour: {req.flavour}")
+    base_container = _resolve_base_container(req)
+    if base_container is None and req.flavour in FLAVOURS:
+        base_container = f"base-{req.flavour}"
 
-        req.base_snapshot = f"base-{req.flavour}"
-        req.base_snapshot_name = req.base_snapshot_name or "snap0"
+    if base_container is not None:
+        req.base_container = base_container
+        if not _container_exists(base_container):
+            raise HTTPException(
+                400,
+                detail=(
+                    f"Base container not ready: {base_container}. "
+                    f"Rebuild flavour '{req.flavour}' first."
+                ),
+            )
+    elif req.flavour not in FLAVOURS:
+        raise HTTPException(400, detail=f"Unknown flavour: {req.flavour}")
 
     jobs[job_id] = {"status": JobStatus.pending, "env_name": name, "error": None}
 

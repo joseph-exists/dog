@@ -348,15 +348,13 @@ function DeleteDemoButton({
   )
 }
 
-function RenameDemoButton({
-  demo,
-}: {
-  demo: DemoConfigPublic
-}) {
+function RenameDemoButton({ demo }: { demo: DemoConfigPublic }) {
   const queryClient = useQueryClient()
   const [isOpen, setIsOpen] = useState(false)
   const [titleDraft, setTitleDraft] = useState(demo.title)
-  const [descriptionDraft, setDescriptionDraft] = useState(demo.description ?? "")
+  const [descriptionDraft, setDescriptionDraft] = useState(
+    demo.description ?? "",
+  )
 
   const nextTitle = titleDraft.trim()
   const nextDescription = descriptionDraft.trim()
@@ -465,7 +463,9 @@ function RenameDemoButton({
               (isUnchanged && isDescriptionUnchanged)
             }
           >
-            {mutation.isPending && <Loader2Icon className="size-4 animate-spin" />}
+            {mutation.isPending && (
+              <Loader2Icon className="size-4 animate-spin" />
+            )}
             Save
           </Button>
         </DialogFooter>
@@ -501,9 +501,7 @@ function DemoDetailDialog({
 
             <DialogFooter className="sm:justify-between">
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                {isOwner && (
-                  <RenameDemoButton demo={demo} />
-                )}
+                {isOwner && <RenameDemoButton demo={demo} />}
                 {isOwner && (
                   <Button variant="outline" size="sm" asChild>
                     <Link
