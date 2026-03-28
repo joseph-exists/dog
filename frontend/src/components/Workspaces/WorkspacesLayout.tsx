@@ -1,3 +1,6 @@
+// Follows AgentsLayout's implementation: ResizablePanelGroup, tabs mode, mobile → tabs.
+// Auxiliary panels differ from AgentsLayout: Workspaces uses stacked collapsible cards
+// in a single scrollable column rather than side-by-side resizable panels.
 import * as React from "react"
 import {
   ResizableHandle,
