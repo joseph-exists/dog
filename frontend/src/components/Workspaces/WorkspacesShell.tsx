@@ -7,6 +7,12 @@
  * Two nested theme wrappers enable the 4-layer cascade:
  *   Application (:root) → Page theme → Cards theme → Individual card presentation
  *
+ * CSS custom property inheritance means inner wrappers override outer ones
+ * for the same variable. No specificity hacks needed.
+ *
+ * Themes are resolved by the route via usePageThemes hook and passed
+ * as ThemeViewModel objects. The shell converts tokens to CSS styles.
+ *
  * layoutMode state lives here so both the header toggle and layout renderer
  * stay in sync without prop-drilling through an intermediate component.
  */
@@ -51,6 +57,7 @@ export function WorkspacesShell({
     "panels",
   )
 
+  // Convert theme tokens to CSS style objects
   const pageThemeStyle = themeTokensToStyle(pageTheme?.tokens)
   const cardsThemeStyle = themeTokensToStyle(cardsTheme?.tokens)
 
@@ -59,7 +66,7 @@ export function WorkspacesShell({
     // Transparent wrapper — only sets CSS variables, does not render a surface
     <div
       style={pageThemeStyle}
-      className={cn("flex h-full flex-col", className)}
+      className={cn("flex flex-col h-full", className)}
     >
       <WorkspacesHeader
         title={title}
