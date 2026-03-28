@@ -63,14 +63,16 @@ export function WorkspacesHeader({
       {/* Top bar: sidebar trigger + separator (standard app chrome) */}
       <div className="flex h-12 items-center gap-2 px-4">
         <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="h-4" />
         {backHref ? (
-          <Button asChild variant="ghost" size="sm" className="-ml-1">
-            <Link to={backHref}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Workspaces
-            </Link>
-          </Button>
+          <>
+            <Separator orientation="vertical" className="h-4" />
+            <Button asChild variant="ghost" size="sm" className="-ml-1">
+              <Link to={backHref}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Workspaces
+              </Link>
+            </Button>
+          </>
         ) : null}
       </div>
 
@@ -86,16 +88,17 @@ export function WorkspacesHeader({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-4">
-          {/* Layout mode toggle */}
-          <TooltipProvider>
+        <TooltipProvider>
+          <div className="flex flex-wrap items-end gap-4">
+            {/* Layout mode toggle */}
             <ToggleGroup
               type="single"
               value={layoutMode}
               onValueChange={(value) => {
-                if (value) onLayoutModeChange(value as "panels" | "tabs")
+                if (value === "panels" || value === "tabs")
+                  onLayoutModeChange(value)
               }}
-              className="border rounded-md"
+              className="hidden md:flex border rounded-md"
             >
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -114,53 +117,53 @@ export function WorkspacesHeader({
                 <TooltipContent>Tabs</TooltipContent>
               </Tooltip>
             </ToggleGroup>
-          </TooltipProvider>
 
-          {/* Theme selectors */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Page Theme
+            {/* Theme selectors */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Page Theme
+                </div>
+                <Select
+                  value={pageTheme?.id ?? ""}
+                  onValueChange={onPageThemeChange}
+                >
+                  <SelectTrigger className="min-w-44">
+                    <SelectValue placeholder="Select page theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePageThemes.map((theme) => (
+                      <SelectItem key={theme.id} value={theme.id}>
+                        {theme.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select
-                value={pageTheme?.id ?? ""}
-                onValueChange={onPageThemeChange}
-              >
-                <SelectTrigger className="min-w-44">
-                  <SelectValue placeholder="Select page theme" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePageThemes.map((theme) => (
-                    <SelectItem key={theme.id} value={theme.id}>
-                      {theme.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div className="space-y-1.5">
-              <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Cards Theme
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Cards Theme
+                </div>
+                <Select
+                  value={cardsTheme?.id ?? ""}
+                  onValueChange={onCardsThemeChange}
+                >
+                  <SelectTrigger className="min-w-44">
+                    <SelectValue placeholder="Select cards theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCardThemes.map((theme) => (
+                      <SelectItem key={theme.id} value={theme.id}>
+                        {theme.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select
-                value={cardsTheme?.id ?? ""}
-                onValueChange={onCardsThemeChange}
-              >
-                <SelectTrigger className="min-w-44">
-                  <SelectValue placeholder="Select cards theme" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCardThemes.map((theme) => (
-                    <SelectItem key={theme.id} value={theme.id}>
-                      {theme.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
-        </div>
+        </TooltipProvider>
       </div>
     </div>
   )
