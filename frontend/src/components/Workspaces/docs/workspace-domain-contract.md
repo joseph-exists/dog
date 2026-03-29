@@ -4,8 +4,6 @@
 
 This artifact defines the first concrete domain-contract proposal for `Workspaces`.
 
-The goal is not to fully design every future integration. The goal is to make the workspace contract explicit enough that the next milestone can proceed without the frontend carrying hidden domain logic or the backend collapsing distinct operational states into ambiguous fields.
-
 This draft is based on the current implementation in:
 
 - [models.py](/home/josep/dog/backend/app/models.py#L7264)

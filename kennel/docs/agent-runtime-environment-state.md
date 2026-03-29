@@ -1,6 +1,6 @@
 # Kennel Agent Runtime Environment State
 
-This note summarizes the current `kennel` implementation so we can plan ephemeral and persistent agent runtime environments with tools like `codex`, `claude-code`, or `hermes-agent` preinstalled.
+This note summarizes the current `kennel` implementation so we can provide ephemeral and persistent agent runtime environments with tools like `codex`, `claude-code`, or `hermes-agent`
 
 ## Current Model
 
@@ -32,7 +32,7 @@ The main optimization is that expensive package installation happens during flav
 
 This means the current fast path is:
 
-1. Prebuild `base-dev` or `base-cuda`.
+1. Prebuild `base-dev` or `base-cuda`.  
 2. Clone a new env from that base.
 3. Start it.
 4. Inject repo, env vars, keys, files, and background runtime commands.
@@ -62,7 +62,7 @@ This is the main extension seam for agent runtimes right now. A backend can alre
 
 ## Agent Runtime Support Already Present
 
-`server.py` already contains service profiles for:
+`server.py`   service profiles for:
 
 - `codex`
 - `claude_code`
@@ -75,35 +75,14 @@ These profiles currently provide metadata and process tracking only:
 - service discovery via `/envs/{name}/services`,
 - readiness based on PID presence and optional port listening.
 
-What is not present yet:
+Update: the repo now has an initial `dev-codex` flavour scaffold and a `codex_app_server` bootstrap profile in [src/server.py](/home/josep/dog/kennel/src/server.py) that writes a default Codex config and launches `codex app-server` as a tracked websocket service.
 
-- no flavour that preinstalls `codex`, `claude-code`, or `hermes-agent`,
-- no canned bootstrap profiles that install or launch those runtimes,
-- no package/version management for runtime toolchains,
-- no first-class distinction between runtime image selection and repo bootstrap.
+Update: kennel also now accepts a first-class `runtime_preset` contract for `codex`, which normalizes the default flavour/bootstrap pairing to `dev-codex` plus `codex_app_server`.
 
-## Important Gaps Between Docs and Code
+Update: kennel now also supports a `claude_code` runtime preset, mapped to `dev-claude-code` plus `claude_code_remote_control`.
 
-There is a real mismatch between the top-level docs and the implementation.
 
-In [layer-model.md](/home/josep/dog/kennel/layer-model.md), the model is described as snapshot-based and references `snap0`.
-
-In current code:
-
-- [src/rebuild_worker.py](/home/josep/dog/kennel/src/rebuild_worker.py) does not create LXC snapshots.
-- It builds reusable `base-{flavour}` containers directly and stops them when provisioning is complete.
-- [src/server.py](/home/josep/dog/kennel/src/server.py) still defaults new env creation to `base_snapshot_name = "snap0"`.
-- [src/server.py](/home/josep/dog/kennel/src/server.py) also reports `snapshot_ready` by checking for `snap0`.
-
-So the current system behaves more like "overlay-clone from stopped base containers" than "clone from named snapshots".
-
-That mismatch should be resolved before adding runtime presets, because the planning language will otherwise be wrong about where preinstalled agent tooling lives.
-
-## Practical Planning Implications
-
-Based on the current codebase, there are two viable ways to add agent runtime environments.
-
-### Option A: Prebaked runtime flavours
+### implemented Prebaked runtime flavours
 
 Add flavours like:
 
@@ -112,28 +91,3 @@ Add flavours like:
 - `dev-hermes`
 
 These would extend `dev` and install the runtime tool during rebuild. This keeps spawn fast and predictable, and matches the existing optimization strategy.
-
-### Option B: Runtime install at injection time
-
-Keep using `dev`, then install or activate the runtime in the `bootstrap_plan`.
-
-This gives flexibility but shifts cost and failure risk into workspace startup.
-
-Given the current architecture, Option A is the better fit for stable, repeatable agent environments. Spawn-time injection is better used for:
-
-- repo-specific config,
-- secrets and keys,
-- runtime config files,
-- launch commands,
-- per-session personalization.
-
-## Recommended Next Design Step
-
-The cleanest next abstraction is to separate:
-
-- `base flavour`: OS/toolchain image to clone from.
-- `runtime preset`: `codex`, `claude-code`, `hermes-agent`, or none.
-- `workspace bootstrap`: repo clone, config files, env vars, and runtime launch plan.
-- `persistence mode`: ephemeral or persistent.
-
-That would let kennel keep its current layering benefits while making agent runtime environments a first-class concept instead of overloading generic injection.

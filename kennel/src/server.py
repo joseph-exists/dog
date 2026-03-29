@@ -84,10 +84,16 @@ class JobStatus(str, Enum):
     done    = "done"
     failed  = "failed"
 
+
+class RuntimePreset(str, Enum):
+    codex = "codex"
+    claude_code = "claude_code"
+
 class CreateEnvRequest(BaseModel):
     name:               str | None = None
     kind:               EnvKind    = EnvKind.ephemeral
     flavour:            str        = "dev"
+    runtime_preset:     RuntimePreset | None = None
     template:           str        = "download"
     distro:             str        = "ubuntu"
     release:            str        = "noble"
@@ -113,6 +119,8 @@ class InjectRequest(BaseModel):
     git_email:  str | None      = None
     # TTL for the issued terminal token (seconds)
     token_ttl:  int             = 3600
+    runtime_preset: RuntimePreset | None = None
+    bootstrap_profile: str | None = None
     bootstrap_plan: "BootstrapExecutionPlan | None" = None
     runtime_files: dict[str, str] = {}
 
@@ -243,9 +251,9 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         service_name="codex",
         label="Codex Runtime",
         kind="agent_runtime",
-        protocol="http",
-        port=None,
-        path=None,
+        protocol="ws",
+        port=4500,
+        path="/",
         source="bootstrap_profile",
         service_name_hint="codex",
     ),
@@ -254,7 +262,7 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         service_name="claude_code",
         label="Claude Code Runtime",
         kind="agent_runtime",
-        protocol="http",
+        protocol="ws",
         port=None,
         path=None,
         source="bootstrap_profile",
@@ -281,6 +289,18 @@ class IssueTerminalTokenRequest(BaseModel):
 # ── Job state ─────────────────────────────────────────────────────────────────
 
 jobs: dict[str, dict] = {}
+
+
+RUNTIME_PRESET_DEFAULTS: dict[RuntimePreset, dict[str, str]] = {
+    RuntimePreset.codex: {
+        "flavour": "dev-codex",
+        "bootstrap_profile": "codex_app_server",
+    },
+    RuntimePreset.claude_code: {
+        "flavour": "dev-claude-code",
+        "bootstrap_profile": "claude_code_remote_control",
+    },
+}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -379,6 +399,110 @@ def _legacy_bootstrap_plan(req: InjectRequest) -> BootstrapExecutionPlan:
         )
 
     return BootstrapExecutionPlan(workspace_path=workspace_path, steps=steps)
+
+
+def _codex_runtime_files(user: str) -> dict[str, str]:
+    user_home = f"/home/{user}"
+    return {
+        f"{user_home}/.codex/config.toml": """model = "gpt-5.4"
+model_provider = "openai"
+cli_auth_credentials_store = "file"
+"""
+    }
+
+
+def _claude_code_runtime_files(user: str) -> dict[str, str]:
+    user_home = f"/home/{user}"
+    return {
+        f"{user_home}/.claude/settings.json": json.dumps(
+            {
+                "env": {
+                    "DISABLE_AUTOUPDATER": "1",
+                }
+            },
+            indent=2,
+        )
+    }
+
+
+def _bootstrap_profile_runtime_files(req: InjectRequest) -> dict[str, str]:
+    if req.bootstrap_profile == "codex_app_server":
+        return _codex_runtime_files(req.user)
+    if req.bootstrap_profile == "claude_code_remote_control":
+        return _claude_code_runtime_files(req.user)
+    if req.bootstrap_profile:
+        raise ValueError(f"Unknown bootstrap_profile: {req.bootstrap_profile}")
+    return {}
+
+
+def _bootstrap_profile_plan(req: InjectRequest) -> BootstrapExecutionPlan | None:
+    if not req.bootstrap_profile:
+        return None
+
+    if req.bootstrap_profile == "claude_code_remote_control":
+        plan = _legacy_bootstrap_plan(req)
+        workspace_path = plan.workspace_path
+
+        if not any(
+            isinstance(step, BootstrapCloneRepoStep) and step.target_path == workspace_path
+            for step in plan.steps
+        ):
+            plan.steps.append(
+                BootstrapRunCommandStep(
+                    phase="preparing_workspace",
+                    label="Create workspace directory",
+                    command=f"mkdir -p {shlex.quote(workspace_path)}",
+                )
+            )
+
+        plan.steps.append(
+            BootstrapRunCommandStep(
+                phase="starting_runtime",
+                label="Start Claude Code remote control",
+                command=(
+                    "claude remote-control "
+                    "--name kennel "
+                    "--permission-mode bypassPermissions "
+                    "--spawn same-dir"
+                ),
+                cwd=workspace_path,
+                background=True,
+                service_name="claude_code",
+            )
+        )
+
+        return plan
+
+    if req.bootstrap_profile != "codex_app_server":
+        raise ValueError(f"Unknown bootstrap_profile: {req.bootstrap_profile}")
+
+    plan = _legacy_bootstrap_plan(req)
+    workspace_path = plan.workspace_path
+
+    if not any(
+        isinstance(step, BootstrapCloneRepoStep) and step.target_path == workspace_path
+        for step in plan.steps
+    ):
+        plan.steps.append(
+            BootstrapRunCommandStep(
+                phase="preparing_workspace",
+                label="Create workspace directory",
+                command=f"mkdir -p {shlex.quote(workspace_path)}",
+            )
+        )
+
+    plan.steps.append(
+        BootstrapRunCommandStep(
+            phase="starting_runtime",
+            label="Start Codex app server",
+            command="codex app-server --listen ws://0.0.0.0:4500",
+            cwd=workspace_path,
+            background=True,
+            service_name="codex",
+        )
+    )
+
+    return plan
 
 
 def _write_runtime_file(
@@ -779,6 +903,24 @@ def _resolve_base_container(req: CreateEnvRequest) -> str | None:
         return f"base-{req.flavour}"
     return None
 
+
+def _apply_runtime_preset_to_create_request(req: CreateEnvRequest) -> None:
+    if not req.runtime_preset:
+        return
+
+    defaults = RUNTIME_PRESET_DEFAULTS[req.runtime_preset]
+    if not req.base_container and not req.base_snapshot and req.flavour == "dev":
+        req.flavour = defaults["flavour"]
+
+
+def _apply_runtime_preset_to_inject_request(req: InjectRequest) -> None:
+    if not req.runtime_preset:
+        return
+
+    defaults = RUNTIME_PRESET_DEFAULTS[req.runtime_preset]
+    if req.bootstrap_profile is None:
+        req.bootstrap_profile = defaults["bootstrap_profile"]
+
 def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
     jobs[job_id]["status"] = JobStatus.running
     try:
@@ -1006,6 +1148,7 @@ async def create_env(req: CreateEnvRequest, _=Depends(require_management_secret)
     name   = req.name or f"env-{uuid.uuid4().hex[:8]}"
     job_id = f"job-{uuid.uuid4().hex[:8]}"
 
+    _apply_runtime_preset_to_create_request(req)
     base_container = _resolve_base_container(req)
     if base_container is None and req.flavour in FLAVOURS:
         base_container = f"base-{req.flavour}"
@@ -1094,11 +1237,17 @@ async def inject_workspace(
     Never called by browser clients.
     """
     errors = []
-    plan = req.bootstrap_plan or _legacy_bootstrap_plan(req)
+    _apply_runtime_preset_to_inject_request(req)
+    try:
+        profile_runtime_files = _bootstrap_profile_runtime_files(req)
+        plan = req.bootstrap_plan or _bootstrap_profile_plan(req) or _legacy_bootstrap_plan(req)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     service_manifest = _service_manifest_for_plan(plan)
     step_results: list[dict] = []
     started_services: list[str] = []
     fatal_error: str | None = None
+    runtime_files = {**profile_runtime_files, **req.runtime_files}
 
     ensure_user_result = _ensure_workspace_user(name, user=req.user)
     if ensure_user_result.returncode != 0:
@@ -1119,7 +1268,7 @@ async def inject_workspace(
         if r.returncode != 0:
             errors.append(f"git_config: {r.stderr.strip()}")
 
-    for path, content in req.runtime_files.items():
+    for path, content in runtime_files.items():
         if not path.strip():
             continue
         runtime_file_result = _write_runtime_file(

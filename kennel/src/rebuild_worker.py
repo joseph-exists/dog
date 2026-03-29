@@ -135,6 +135,21 @@ def _destroy_chain_from(layer: str, job: RebuildJob) -> None:
         _destroy_container(base, job)
 
 
+def _list_user_envs() -> list[str]:
+    result = subprocess.run(
+        ["lxc-ls", "-1"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return []
+    return [
+        line.strip()
+        for line in result.stdout.splitlines()
+        if line.strip().startswith("env-")
+    ]
+
+
 # ── Main worker ───────────────────────────────────────────────────────────────
 
 def rebuild_flavour(job_id: str, flavour: str, force: bool = False) -> None:
@@ -163,6 +178,15 @@ def rebuild_flavour(job_id: str, flavour: str, force: bool = False) -> None:
     try:
         chain = build_order(flavour)
         job.append_log(f"Build order: {' → '.join(chain)}")
+
+        if force:
+            user_envs = _list_user_envs()
+            if user_envs:
+                raise RuntimeError(
+                    "force rebuild blocked while user env containers exist: "
+                    + ", ".join(user_envs)
+                    + ". Destroy them first to avoid breaking overlay ancestry."
+                )
 
         for layer in chain:
             defn           = FLAVOURS[layer]

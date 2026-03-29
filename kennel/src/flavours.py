@@ -39,6 +39,18 @@ FLAVOURS: dict[str, FlavourDef] = {
         scripts     = ["03-codex.sh"],
         description = "dev + scaffold for a prebaked Codex runtime",
     ),
+    "dev-hermes": FlavourDef(
+        name        = "dev-hermes",
+        parent      = "dev",
+        scripts     = ["04-hermes.sh"],
+        description = "dev + scaffold for a prebaked Hermes runtime",
+    ),
+    "dev-claude-code": FlavourDef(
+        name        = "dev-claude-code",
+        parent      = "dev",
+        scripts     = ["05-claude-code.sh"],
+        description = "dev + Claude Code runtime",
+    ),
 }
 
 
