@@ -1,0 +1,52 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://localhost:8090/envs/env-41c97c00/inject",
+    "body": {
+      "runtime_preset": "codex",
+      "repo_url": "https://github.com/octocat/Hello-World.git"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "env": "env-41c97c00",
+      "token": "efkLrx6wrSLPlxmAvfQ-xur1cOFvJdw1tJa9qJHARt0",
+      "errors": [
+        "clone_repo: Cloning into '/home/dev/workspace'...\nfatal: unable to access 'https://github.com/octocat/Hello-World.git/': Could not resolve host: github.com"
+      ],
+      "terminal": "/envs/env-41c97c00/ws",
+      "bootstrap_success": false,
+      "fatal_error": "Cloning into '/home/dev/workspace'...\nfatal: unable to access 'https://github.com/octocat/Hello-World.git/': Could not resolve host: github.com",
+      "step_results": [
+        {
+          "index": 0,
+          "type": "clone_repo",
+          "phase": "materializing_repo",
+          "label": "Clone repository",
+          "status": "failed",
+          "error": "Cloning into '/home/dev/workspace'...\nfatal: unable to access 'https://github.com/octocat/Hello-World.git/': Could not resolve host: github.com",
+          "service_name": null
+        }
+      ],
+      "started_services": [],
+      "workspace_path": "/home/dev/workspace",
+      "declared_services": [
+        {
+          "id": "codex",
+          "service_name": "codex",
+          "label": "Codex Runtime",
+          "kind": "agent_runtime",
+          "protocol": "ws",
+          "port": 4500,
+          "path": "/",
+          "source": "bootstrap_profile",
+          "workspace_path": "/home/dev/workspace",
+          "pid_path": "/tmp/codex.pid",
+          "log_path": "/tmp/codex.log",
+          "service_name_hint": "codex"
+        }
+      ]
+    }
+  }
+}

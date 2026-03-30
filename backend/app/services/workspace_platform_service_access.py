@@ -32,7 +32,13 @@ ENV_PREFIX_BY_CONSUMER: dict[WorkspacePlatformServiceConsumerKind, str] = {
 
 @dataclass(frozen=True)
 class WorkspacePlatformEnvProjection:
-    """Runtime-facing environment projection derived from canonical config."""
+    """
+    Runtime-facing projection derived from canonical platform-service config.
+
+    Both `env_vars` and `runtime_files` are intended to cross the backend->kennel
+    inject seam together. Keeping both on the projection prevents us from
+    documenting file materialization while only actually wiring env vars.
+    """
 
     consumer_kind: WorkspacePlatformServiceConsumerKind
     config: WorkspaceRuntimePlatformConfig

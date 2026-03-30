@@ -112,7 +112,18 @@ STARTUP_PROFILE_COMMANDS: dict[str, tuple[str, str]] = {
 
 @dataclass(frozen=True)
 class AgentServiceProfile:
-    """Backend-owned runtime profile for agent-oriented startup."""
+    """
+    Backend-owned startup defaults for an agent-oriented runtime.
+
+    These values describe the backend side of the seam:
+    - which runtime identifier the backend intends to start
+    - which env vars the launched process should receive
+    - which `service_name` kennel will later interpret for service metadata
+
+    They are working defaults for the current implementation slice, not a claim
+    that backend startup semantics are the only correct interpretation for a
+    given runtime. The cross-service contract is expected to evolve iteratively.
+    """
 
     profile_id: str
     label: str
@@ -157,6 +168,12 @@ AGENT_SERVICE_PROFILES: dict[str, AgentServiceProfile] = {
     ),
 }
 
+# This registry is the backend half of the runtime/service alignment seam.
+# Keep these keys aligned with kennel runtime/service identifiers where possible,
+# but do not assume every field here must exactly mirror kennel defaults. Stage 1
+# work documents the current relationship so later iterations can adjust it
+# deliberately instead of through parallel, implicit drift.
+
 
 def _agent_service_start_command(profile: AgentServiceProfile) -> str:
     """
@@ -170,6 +187,11 @@ def _agent_service_start_command(profile: AgentServiceProfile) -> str:
 
     Operators can still override the final launcher command per profile with an
     env var while the concrete runtime semantics continue to evolve.
+
+    Note that this launcher expresses the backend's current execution intent.
+    Kennel may still have its own profile-owned defaults for the same runtime
+    identifier. The alignment work here is to keep that relationship visible and
+    adjustable, not to freeze one side as universally canonical.
     """
 
     return (

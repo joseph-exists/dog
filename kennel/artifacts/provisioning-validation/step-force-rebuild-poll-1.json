@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "http://localhost:8090/rebuild-jobs/rebuild-8cab04af",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "job_id": "rebuild-8cab04af",
+      "flavour": "dev-codex",
+      "status": "running",
+      "error": null,
+      "elapsed_s": 0.0,
+      "log_lines": [
+        "14:30:24 Build order: base \u2192 dev \u2192 dev-codex"
+      ]
+    }
+  }
+}

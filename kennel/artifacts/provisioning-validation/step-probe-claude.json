@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "http://localhost:8090/envs/env-ee212cc4/services",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "env": "env-ee212cc4",
+      "services": [
+        {
+          "id": "claude_code",
+          "service_name": "claude_code",
+          "label": "Claude Code Runtime",
+          "kind": "agent_runtime",
+          "status": "failed",
+          "protocol": "ws",
+          "host": null,
+          "port": null,
+          "path": null,
+          "url": null,
+          "source": "bootstrap_profile",
+          "readiness_message": "Expected service process is not running.",
+          "pid_running": false,
+          "port_listening": false
+        }
+      ],
+      "service_count": 1,
+      "ready_service_count": 0
+    }
+  }
+}

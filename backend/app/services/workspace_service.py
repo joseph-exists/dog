@@ -59,6 +59,8 @@ from app.services.workspace_platform_service_access import (
 log = logging.getLogger(__name__)
 _FLAVOUR_CACHE_TTL_SECONDS = 30.0
 _flavour_cache: tuple[float, dict[str, dict]] | None = None
+_KENNEL_RUNTIME_PRESETS_BY_AGENT_PROFILE = frozenset({"codex", "claude_code"})
+_DEFAULT_KENNEL_WORKSPACE_USER = "dev"
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,7 @@ class NormalizedWorkspaceBootstrap:
     intent: WorkspaceBootstrapIntent
     materialized_repo_url: str | None
     plan: WorkspaceBootstrapPlan
+    runtime_preset: str | None
 
 
 @dataclass(frozen=True)
@@ -85,6 +88,155 @@ class FlavourHealthSnapshot:
     snapshot_ready: bool
     latest_rebuild_status: str | None
     latest_rebuild_job_id: str | None
+
+
+@dataclass(frozen=True)
+class WorkspaceKennelCreateRequest:
+    """
+    Backend-normalized create payload for kennel.
+
+    This is the create half of the backend/kennel seam. It keeps create-time
+    precedence explicit and leaves room for runtime-preset defaulting without
+    forcing backend callers to give up explicit flavour control.
+    """
+
+    name: str
+    kind: str
+    flavour: str
+    runtime_preset: str | None = None
+
+    def as_payload(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "name": self.name,
+            "kind": self.kind,
+            "flavour": self.flavour,
+        }
+        if self.runtime_preset is not None:
+            payload["runtime_preset"] = self.runtime_preset
+        return payload
+
+
+@dataclass(frozen=True)
+class WorkspaceKennelInjectRequest:
+    """
+    Backend-normalized inject payload for kennel.
+
+    This is the inject half of the seam. It intentionally supports mixed-mode
+    shapes where backend still sends an explicit bootstrap plan while kennel can
+    contribute runtime-preset-owned assets through its existing defaulting path.
+    """
+
+    user: str
+    ssh_pubkey: str | None
+    repo_url: str | None
+    env_vars: dict[str, str]
+    runtime_preset: str | None = None
+    bootstrap_profile: str | None = None
+    runtime_files: dict[str, str] | None = None
+    bootstrap_plan: WorkspaceBootstrapPlan | None = None
+
+
+@dataclass(frozen=True)
+class WorkspaceKennelProvisioningRequest:
+    """
+    Backend-owned normalized seam for kennel provisioning.
+
+    This structure is intentionally ahead of the public API surface. It gives us
+    one place to encode precedence, merge behavior, and mixed-mode shapes before
+    widening backend request contracts.
+    """
+
+    create: WorkspaceKennelCreateRequest
+    inject: WorkspaceKennelInjectRequest
+
+
+def _kennel_runtime_preset_from_bootstrap_intent(
+    bootstrap_intent: WorkspaceBootstrapIntent,
+) -> str | None:
+    startup_intent = bootstrap_intent.startup_intent
+    if getattr(startup_intent, "mode", None) != "agent_service":
+        return None
+
+    agent_profile = getattr(startup_intent, "agent_profile", None)
+    if agent_profile in _KENNEL_RUNTIME_PRESETS_BY_AGENT_PROFILE:
+        return agent_profile
+    return None
+
+
+def _resolve_kennel_runtime_preset(
+    *,
+    explicit_runtime_preset: str | None,
+    bootstrap_intent: WorkspaceBootstrapIntent,
+) -> str | None:
+    """
+    Resolve the kennel runtime preset for the normalized seam.
+
+    An explicit backend request value wins when present. Otherwise we retain the
+    current startup-intent-based inference for supported agent-service runtimes.
+    """
+
+    if explicit_runtime_preset is not None:
+        candidate = explicit_runtime_preset.strip()
+        return candidate or None
+    return _kennel_runtime_preset_from_bootstrap_intent(bootstrap_intent)
+
+
+def build_workspace_kennel_provisioning_request(
+    *,
+    kennel_name: str,
+    workspace_kind: str,
+    workspace_flavour: str,
+    explicit_runtime_preset: str | None,
+    bootstrap_intent: WorkspaceBootstrapIntent,
+    resolved_repo_url: str | None,
+    bootstrap_plan: WorkspaceBootstrapPlan,
+    explicit_env_vars: dict[str, str] | None = None,
+    projected_env_vars: dict[str, str] | None = None,
+    explicit_runtime_files: dict[str, str] | None = None,
+    projected_runtime_files: dict[str, str] | None = None,
+) -> WorkspaceKennelProvisioningRequest:
+    """
+    Normalize the backend->kennel seam into explicit create and inject payloads.
+
+    The current implementation keeps the backend explicit-plan path intact while
+    also supporting kennel runtime-preset asset defaults for supported agent
+    runtimes. That gives us one place to evolve mixed-mode behavior without
+    reworking the orchestration flow repeatedly.
+
+    Env vars intentionally merge in this order:
+    1. projected platform/runtime seam vars
+    2. explicit workspace env vars
+    so user-declared workspace values remain the final override on the backend
+    side before the payload is handed to kennel.
+    """
+
+    runtime_preset = _resolve_kennel_runtime_preset(
+        explicit_runtime_preset=explicit_runtime_preset,
+        bootstrap_intent=bootstrap_intent,
+    )
+    merged_env_vars = dict(projected_env_vars or {})
+    merged_env_vars.update(explicit_env_vars or {})
+    merged_runtime_files = dict(projected_runtime_files or {})
+    merged_runtime_files.update(explicit_runtime_files or {})
+    create_request = WorkspaceKennelCreateRequest(
+        name=kennel_name,
+        kind=bootstrap_kind_from_intent(bootstrap_intent) or workspace_kind,
+        flavour=bootstrap_flavour_from_intent(bootstrap_intent) or workspace_flavour,
+        runtime_preset=runtime_preset,
+    )
+    inject_request = WorkspaceKennelInjectRequest(
+        user=_DEFAULT_KENNEL_WORKSPACE_USER,
+        ssh_pubkey=bootstrap_intent.ssh_pubkey,
+        repo_url=resolved_repo_url,
+        env_vars=merged_env_vars,
+        runtime_preset=runtime_preset,
+        runtime_files=merged_runtime_files,
+        bootstrap_plan=bootstrap_plan,
+    )
+    return WorkspaceKennelProvisioningRequest(
+        create=create_request,
+        inject=inject_request,
+    )
 
 
 async def spawn_workspace(
@@ -115,6 +267,7 @@ async def spawn_workspace(
             "env_vars": normalized_bootstrap.intent.env_vars,
             "bootstrap_intent": normalized_bootstrap.intent.model_dump(mode="json"),
             "bootstrap_plan": normalized_bootstrap.plan.model_dump(mode="json"),
+            "runtime_preset": normalized_bootstrap.runtime_preset,
             "bootstrap_progress": WorkspaceBootstrapProgress(
                 phase=WorkspaceBootstrapPhase.pending,
                 message="Bootstrap intent accepted.",
@@ -133,6 +286,7 @@ async def spawn_workspace(
             kennel_name=kennel_name,
             workspace_kind=req.kind,
             workspace_flavour=req.flavour.value,
+            runtime_preset=normalized_bootstrap.runtime_preset,
             bootstrap_intent=normalized_bootstrap.intent,
             resolved_repo_url=normalized_bootstrap.materialized_repo_url,
             bootstrap_plan=normalized_bootstrap.plan,
@@ -147,6 +301,7 @@ async def _provision_workspace_after_commit(
     kennel_name: str,
     workspace_kind: str,
     workspace_flavour: str,
+    runtime_preset: str | None,
     bootstrap_intent: WorkspaceBootstrapIntent,
     resolved_repo_url: str | None,
     bootstrap_plan: WorkspaceBootstrapPlan,
@@ -161,6 +316,7 @@ async def _provision_workspace_after_commit(
         kennel_name=kennel_name,
         workspace_kind=workspace_kind,
         workspace_flavour=workspace_flavour,
+        runtime_preset=runtime_preset,
         bootstrap_intent=bootstrap_intent,
         resolved_repo_url=resolved_repo_url,
         bootstrap_plan=bootstrap_plan,
@@ -172,6 +328,7 @@ async def _provision_workspace(
     kennel_name: str,
     workspace_kind: str,
     workspace_flavour: str,
+    runtime_preset: str | None,
     bootstrap_intent: WorkspaceBootstrapIntent,
     resolved_repo_url: str | None,
     bootstrap_plan: WorkspaceBootstrapPlan,
@@ -180,10 +337,25 @@ async def _provision_workspace(
     Drive the kennel lifecycle: create -> poll -> inject -> mark ready.
     """
     try:
+        provisioning_request = build_workspace_kennel_provisioning_request(
+            kennel_name=kennel_name,
+            workspace_kind=workspace_kind,
+            workspace_flavour=workspace_flavour,
+            explicit_runtime_preset=runtime_preset,
+            bootstrap_intent=bootstrap_intent,
+            resolved_repo_url=resolved_repo_url,
+            bootstrap_plan=bootstrap_plan,
+        )
+
+        # Backend currently owns the normalized create payload it sends to kennel.
+        # This seam now supports both:
+        # - explicit backend flavour control
+        # - kennel runtime_preset defaulting for supported runtimes
         job = await kennel_client.create_env(
-            name=kennel_name,
-            kind=bootstrap_kind_from_intent(bootstrap_intent) or workspace_kind,
-            flavour=bootstrap_flavour_from_intent(bootstrap_intent) or workspace_flavour,
+            name=provisioning_request.create.name,
+            kind=provisioning_request.create.kind,
+            flavour=provisioning_request.create.flavour,
+            runtime_preset=provisioning_request.create.runtime_preset,
         )
         job_id = job["job_id"]
         await _update_workspace(
@@ -229,7 +401,8 @@ async def _provision_workspace(
             ),
         )
 
-        projected_env_vars = dict(bootstrap_intent.env_vars or {})
+        projected_env_vars: dict[str, str] = {}
+        projected_runtime_files: dict[str, str] = {}
         platform_service_projection_summary: list[dict[str, object]] = []
         async with async_session_maker() as projection_session:
             projection_workspace = await projection_session.get(Workspace, ws_id)
@@ -241,6 +414,7 @@ async def _provision_workspace(
                 consumer_kind=WorkspacePlatformServiceConsumerKind.workspace_runtime,
             )
             projected_env_vars.update(workspace_runtime_projection.env_vars)
+            projected_runtime_files.update(workspace_runtime_projection.runtime_files)
             platform_service_projection_summary.append(
                 {
                     "consumer_kind": workspace_runtime_projection.consumer_kind.value,
@@ -263,6 +437,7 @@ async def _provision_workspace(
                     consumer_kind=WorkspacePlatformServiceConsumerKind.agent_runtime,
                 )
                 projected_env_vars.update(agent_runtime_projection.env_vars)
+                projected_runtime_files.update(agent_runtime_projection.runtime_files)
                 platform_service_projection_summary.append(
                     {
                         "consumer_kind": agent_runtime_projection.consumer_kind.value,
@@ -278,15 +453,33 @@ async def _provision_workspace(
                     }
                 )
 
+        provisioning_request = build_workspace_kennel_provisioning_request(
+            kennel_name=kennel_name,
+            workspace_kind=workspace_kind,
+            workspace_flavour=workspace_flavour,
+            explicit_runtime_preset=runtime_preset,
+            bootstrap_intent=bootstrap_intent,
+            resolved_repo_url=resolved_repo_url,
+            bootstrap_plan=bootstrap_plan,
+            explicit_env_vars=bootstrap_intent.env_vars,
+            projected_env_vars=projected_env_vars,
+            projected_runtime_files=projected_runtime_files,
+        )
+
+        # This is the backend->kennel inject seam.
+        # The normalized request now keeps explicit bootstrap-plan execution while
+        # also allowing kennel to contribute preset-owned runtime assets for
+        # supported runtimes through runtime_preset defaulting.
         inject_result = await kennel_client.inject_workspace(
             kennel_name,
-            {
-                "user": "dev",
-                "ssh_pubkey": bootstrap_intent.ssh_pubkey,
-                "repo_url": resolved_repo_url,
-                "env_vars": projected_env_vars,
-                "bootstrap_plan": bootstrap_plan.model_dump(mode="json"),
-            },
+            user=provisioning_request.inject.user,
+            ssh_pubkey=provisioning_request.inject.ssh_pubkey,
+            repo_url=provisioning_request.inject.repo_url,
+            env_vars=provisioning_request.inject.env_vars,
+            runtime_preset=provisioning_request.inject.runtime_preset,
+            bootstrap_profile=provisioning_request.inject.bootstrap_profile,
+            bootstrap_plan=provisioning_request.inject.bootstrap_plan,
+            runtime_files=provisioning_request.inject.runtime_files,
         )
 
         completed_step_count = len(
@@ -305,6 +498,16 @@ async def _provision_workspace(
             "bootstrap_started_services": inject_result.get("started_services", []),
             "bootstrap_workspace_path": inject_result.get("workspace_path"),
             "platform_service_projection": platform_service_projection_summary,
+            "kennel_create_request": provisioning_request.create.as_payload(),
+            "kennel_inject_request": {
+                "user": provisioning_request.inject.user,
+                "repo_url": provisioning_request.inject.repo_url,
+                "runtime_preset": provisioning_request.inject.runtime_preset,
+                "bootstrap_profile": provisioning_request.inject.bootstrap_profile,
+                "env_var_keys": sorted(provisioning_request.inject.env_vars.keys()),
+                "runtime_file_paths": sorted((provisioning_request.inject.runtime_files or {}).keys()),
+                "has_bootstrap_plan": provisioning_request.inject.bootstrap_plan is not None,
+            },
         }
 
         if not bootstrap_success:
@@ -597,6 +800,10 @@ async def normalize_bootstrap_intent(
         intent=normalized_intent,
         materialized_repo_url=materialized_repo_url,
         plan=bootstrap_plan,
+        runtime_preset=_resolve_kennel_runtime_preset(
+            explicit_runtime_preset=req.runtime_preset,
+            bootstrap_intent=normalized_intent,
+        ),
     )
 
 

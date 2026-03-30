@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://localhost:8090/envs",
+    "body": {
+      "kind": "persistent",
+      "runtime_preset": "codex"
+    }
+  },
+  "response": {
+    "status": 202,
+    "body": {
+      "job_id": "job-f43a4a78",
+      "name": "env-41c97c00",
+      "kind": "persistent",
+      "status": "pending",
+      "poll": "/jobs/job-f43a4a78"
+    }
+  }
+}

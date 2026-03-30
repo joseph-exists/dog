@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "http://localhost:8090/rebuild-jobs/rebuild-d84eaf82",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "job_id": "rebuild-d84eaf82",
+      "flavour": "dev-claude-code",
+      "status": "running",
+      "error": null,
+      "elapsed_s": 0.0,
+      "log_lines": [
+        "14:29:55 Build order: base \u2192 dev \u2192 dev-claude-code"
+      ]
+    }
+  }
+}

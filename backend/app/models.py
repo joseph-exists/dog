@@ -7577,6 +7577,8 @@ class WorkspaceBootstrapIntent(SQLModel):
     startup_intent: WorkspaceStartupIntent | None = None
     env_vars: dict[str, str] = Field(default_factory=dict)
     ssh_pubkey: str | None = None
+    bootstrap_profile: str | None = Field(default=None, max_length=120)
+    runtime_files: dict[str, str] = Field(default_factory=dict)
 
 
 class WorkspaceBootstrapProgress(SQLModel):
@@ -7754,6 +7756,7 @@ class WorkspaceCreate(SQLModel):
 
     name: str = Field(min_length=1, max_length=120)
     flavour: WorkspaceFlavour = WorkspaceFlavour.dev
+    runtime_preset: str | None = Field(default=None, max_length=120)
     kind: str = Field(default="ephemeral", min_length=1, max_length=32)
     bootstrap: WorkspaceBootstrapIntent | None = None
     repo_url: str | None = Field(default=None, max_length=2000)

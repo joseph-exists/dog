@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://localhost:8090/flavours/dev-claude-code/rebuild",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "job_id": "rebuild-d84eaf82",
+      "flavour": "dev-claude-code",
+      "status": "pending",
+      "logs": "/rebuild-jobs/rebuild-d84eaf82/logs",
+      "poll": "/rebuild-jobs/rebuild-d84eaf82"
+    }
+  }
+}

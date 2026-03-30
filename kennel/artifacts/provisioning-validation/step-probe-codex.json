@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "http://localhost:8090/envs/env-41c97c00/services",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "env": "env-41c97c00",
+      "services": [
+        {
+          "id": "codex",
+          "service_name": "codex",
+          "label": "Codex Runtime",
+          "kind": "agent_runtime",
+          "status": "failed",
+          "protocol": "ws",
+          "host": "127.0.0.1",
+          "port": 4500,
+          "path": "/",
+          "url": "ws://127.0.0.1:4500/",
+          "source": "bootstrap_profile",
+          "readiness_message": "Expected service process is not running.",
+          "pid_running": false,
+          "port_listening": false
+        }
+      ],
+      "service_count": 1,
+      "ready_service_count": 0
+    }
+  }
+}

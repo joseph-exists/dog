@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://localhost:8090/flavours/dev-codex/rebuild?force=true",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "job_id": "rebuild-8cab04af",
+      "flavour": "dev-codex",
+      "status": "pending",
+      "logs": "/rebuild-jobs/rebuild-8cab04af/logs",
+      "poll": "/rebuild-jobs/rebuild-8cab04af"
+    }
+  }
+}

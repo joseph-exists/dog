@@ -320,23 +320,51 @@ Recommended delta:
 ```ts
 interface WorkspaceCreate {
   name: string
-  flavour?: "base" | "dev" | "python" | "node" | "jupyter"
+  flavour?: "base" | "dev" | "cuda" | "python" | "node" | "jupyter"
+  runtime_preset?: string | null
   kind?: string
   project_id?: string | null
   visibility?: "private" | "project" | "shared"
 
-  repo_source_type?: "external_url" | "user_repo" | "shadow_repo" | null
-  repo_source_id?: string | null
   repo_url?: string | null
-
   ssh_pubkey?: string | null
   env_vars?: Record<string, string>
 
-  bootstrap_profile?: string | null
-  startup_profile?: string | null
-  install_command?: string | null
-  startup_command?: string | null
-  requested_agent_profile?: string | null
+  bootstrap?: {
+    repo_source?:
+      | {
+          type: "external_url"
+          repo_url: string
+          ref?: string | null
+        }
+      | {
+          type: "user_repo"
+          repo_id: string
+          ref?: string | null
+        }
+      | {
+          type: "shadow_repo"
+          entity_type: string
+          entity_id: string
+          ref?: string | null
+        }
+      | null
+    workspace_path?: string | null
+    install_intent?:
+      | { mode: "none" }
+      | { mode: "auto" }
+      | { mode: "profile"; profile: string }
+      | null
+    startup_intent?:
+      | { mode: "terminal_only" }
+      | { mode: "profile"; profile: string }
+      | { mode: "agent_service"; agent_profile: string }
+      | null
+    env_vars?: Record<string, string>
+    ssh_pubkey?: string | null
+    bootstrap_profile?: string | null
+    runtime_files?: Record<string, string> | null
+  } | null
 
   tags?: string[]
 }
@@ -347,7 +375,63 @@ Notes:
 - `repo_url` should remain valid for external imports.
 - `project_id` should be optional for the first pass.
 - `visibility` should likely default to `private`.
-- command fields can be accepted but initially feature-gated if needed.
+- `runtime_preset` is a backend-to-kennel defaulting hook, not a replacement for explicit env definition.
+- `bootstrap` is the more local orchestration surface and should remain operator-friendly rather than artificially narrow.
+- `bootstrap_profile` should stay public because it is a meaningful kennel-side override layer.
+- `runtime_files` is intentionally exposed for broader operator paths; it is low-level, but it is a legitimate and useful override surface.
+
+### Create / Inject Precedence Contract
+
+The backend workspace contract should mirror the kennel integration ordering explicitly.
+
+This is an interface-ordering rule, not an ownership rule.
+
+#### Create precedence
+
+At env creation time, the effective precedence should be:
+
+1. `base_container` / `base_snapshot`
+2. explicit non-default `flavour`
+3. `runtime_preset` default flavour
+4. kennel default `dev`
+
+Implications:
+
+- backend should be able to pass `runtime_preset` without losing the ability to set an explicit `flavour`
+- kennel should continue to support runtime-specific presets even when backend does not know every preset in advance
+
+#### Inject precedence
+
+At workspace inject time, the effective precedence should be:
+
+1. explicit `bootstrap_plan`
+2. explicit `bootstrap.bootstrap_profile`
+3. `runtime_preset` default bootstrap profile
+4. legacy inject derivation from `ssh_pubkey`, `env_vars`, and `repo_url`
+
+Implications:
+
+- backend should retain the explicit-plan path
+- kennel should retain profile-driven and preset-driven defaults
+- mixed-mode behavior has to be documented in terms of ordering rather than inferred from whichever field happens to be present
+
+#### Runtime file merge
+
+Runtime files should merge in this order:
+
+1. profile-owned runtime files
+2. caller/backend-supplied `runtime_files`
+
+#### Env var merge
+
+Env vars should merge in this order:
+
+1. baseline runtime defaults, if any
+2. backend-projected platform-service env vars
+3. top-level `env_vars`
+4. `bootstrap.env_vars`
+
+The final merged inject payload should be assembled deterministically in the backend integration layer before it is handed to kennel.
 
 ### Proposed `WorkspacePublic`
 

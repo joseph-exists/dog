@@ -215,6 +215,13 @@ class DiscoveredWorkspaceService(BaseModel):
 
 
 SERVICE_MANIFEST_PATH = "/tmp/kennel-services.json"
+# This registry is kennel's current interpretation of shared runtime/service
+# identifiers when a bootstrap step declares `service_name`.
+#
+# These entries are intentionally operational rather than absolute. They capture
+# kennel's current metadata and readiness expectations so backend and kennel can
+# reason about the same runtime identifiers explicitly, while still leaving room
+# to refine those expectations in later iterations.
 SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
     "vite": DeclaredWorkspaceService(
         id="vite",
@@ -301,6 +308,10 @@ RUNTIME_PRESET_DEFAULTS: dict[RuntimePreset, dict[str, str]] = {
         "bootstrap_profile": "claude_code_remote_control",
     },
 }
+
+# Presets map a kennel-facing runtime identifier to kennel-owned default flavour
+# and bootstrap-profile choices. This is a defaulting layer, not a statement
+# that every caller or integration path must adopt the same runtime semantics.
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -561,6 +572,11 @@ def _service_manifest_for_plan(plan: BootstrapExecutionPlan) -> list[DeclaredWor
         if not isinstance(step, BootstrapRunCommandStep) or not step.background or not step.service_name:
             continue
 
+        # The service manifest is the hand-off from bootstrap execution intent to
+        # kennel discovery semantics. If a known runtime/service identifier is
+        # used, kennel attaches the current metadata/readiness defaults from
+        # `SERVICE_PROFILE_DEFAULTS`. Unknown identifiers stay valid, but are
+        # treated as custom services with more conservative assumptions.
         profile = SERVICE_PROFILE_DEFAULTS.get(step.service_name)
         if profile is None:
             services.append(
@@ -673,6 +689,10 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
     port_listening = _is_port_listening(env_name, declared.port) if declared.port else False
     env_host = _get_env_ipv4(env_name)
 
+    # Readiness is derived from kennel's current interpretation of the declared
+    # service metadata. Different deployments may reasonably tighten or relax
+    # these expectations later; the important thing in this slice is that the
+    # runtime identifier -> metadata -> readiness path is explicit and reviewable.
     status: Literal["pending", "ready", "failed", "unknown"]
     readiness_message: str | None
 
@@ -909,6 +929,14 @@ def _apply_runtime_preset_to_create_request(req: CreateEnvRequest) -> None:
         return
 
     defaults = RUNTIME_PRESET_DEFAULTS[req.runtime_preset]
+    # Create-time precedence stays additive:
+    # 1. explicit base_container / base_snapshot
+    # 2. explicit non-default flavour
+    # 3. runtime_preset default flavour
+    # 4. kennel default flavour
+    #
+    # So runtime_preset only rewrites flavour while the request is still on the
+    # default generic flavour path.
     if not req.base_container and not req.base_snapshot and req.flavour == "dev":
         req.flavour = defaults["flavour"]
 
@@ -918,6 +946,14 @@ def _apply_runtime_preset_to_inject_request(req: InjectRequest) -> None:
         return
 
     defaults = RUNTIME_PRESET_DEFAULTS[req.runtime_preset]
+    # Inject-time precedence is:
+    # 1. explicit bootstrap_plan
+    # 2. explicit bootstrap_profile
+    # 3. runtime_preset default bootstrap_profile
+    # 4. legacy inject derivation
+    #
+    # This helper only fills bootstrap_profile when the caller has not already
+    # supplied a more explicit profile override.
     if req.bootstrap_profile is None:
         req.bootstrap_profile = defaults["bootstrap_profile"]
 
@@ -1239,6 +1275,10 @@ async def inject_workspace(
     errors = []
     _apply_runtime_preset_to_inject_request(req)
     try:
+        # Kennel resolves the final inject execution shape in precedence order:
+        # explicit bootstrap_plan -> profile-derived plan -> legacy plan.
+        # Runtime files also layer in order:
+        # profile runtime files -> caller runtime_files.
         profile_runtime_files = _bootstrap_profile_runtime_files(req)
         plan = req.bootstrap_plan or _bootstrap_profile_plan(req) or _legacy_bootstrap_plan(req)
     except ValueError as exc:

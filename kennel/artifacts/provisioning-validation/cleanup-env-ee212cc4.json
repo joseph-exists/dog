@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "DELETE",
+    "url": "http://localhost:8090/envs/env-ee212cc4",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "destroyed": "env-ee212cc4"
+    }
+  }
+}

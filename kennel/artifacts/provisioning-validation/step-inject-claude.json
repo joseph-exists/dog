@@ -1,0 +1,52 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://localhost:8090/envs/env-ee212cc4/inject",
+    "body": {
+      "runtime_preset": "claude_code",
+      "repo_url": "https://github.com/octocat/Hello-World.git"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "env": "env-ee212cc4",
+      "token": "ZHGtQHwq0MyDYllJFgfWiwjf1egAOs2-ZoIAEdf-9LU",
+      "errors": [
+        "clone_repo: Cloning into '/home/dev/workspace'...\nfatal: unable to access 'https://github.com/octocat/Hello-World.git/': Could not resolve host: github.com"
+      ],
+      "terminal": "/envs/env-ee212cc4/ws",
+      "bootstrap_success": false,
+      "fatal_error": "Cloning into '/home/dev/workspace'...\nfatal: unable to access 'https://github.com/octocat/Hello-World.git/': Could not resolve host: github.com",
+      "step_results": [
+        {
+          "index": 0,
+          "type": "clone_repo",
+          "phase": "materializing_repo",
+          "label": "Clone repository",
+          "status": "failed",
+          "error": "Cloning into '/home/dev/workspace'...\nfatal: unable to access 'https://github.com/octocat/Hello-World.git/': Could not resolve host: github.com",
+          "service_name": null
+        }
+      ],
+      "started_services": [],
+      "workspace_path": "/home/dev/workspace",
+      "declared_services": [
+        {
+          "id": "claude_code",
+          "service_name": "claude_code",
+          "label": "Claude Code Runtime",
+          "kind": "agent_runtime",
+          "protocol": "ws",
+          "port": null,
+          "path": null,
+          "source": "bootstrap_profile",
+          "workspace_path": "/home/dev/workspace",
+          "pid_path": "/tmp/claude_code.pid",
+          "log_path": "/tmp/claude_code.log",
+          "service_name_hint": "claude"
+        }
+      ]
+    }
+  }
+}

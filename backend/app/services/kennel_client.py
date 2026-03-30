@@ -1,6 +1,7 @@
 import httpx
 
 from app.core.config import settings
+from app.services.workspace_bootstrap_service import WorkspaceBootstrapPlan
 
 KENNEL_HEADERS = {"x-kennel-secret": settings.KENNEL_SECRET}
 
@@ -22,10 +23,20 @@ async def create_env(
     name: str,
     kind: str = "ephemeral",
     flavour: str = "dev",
+    runtime_preset: str | None = None,
+    base_container: str | None = None,
+    base_snapshot: str | None = None,
 ) -> dict:
+    payload = {"name": name, "kind": kind, "flavour": flavour}
+    if runtime_preset is not None:
+        payload["runtime_preset"] = runtime_preset
+    if base_container is not None:
+        payload["base_container"] = base_container
+    if base_snapshot is not None:
+        payload["base_snapshot"] = base_snapshot
     response = await get_client().post(
         "/envs",
-        json={"name": name, "kind": kind, "flavour": flavour},
+        json=payload,
     )
     response.raise_for_status()
     return response.json()
@@ -37,8 +48,49 @@ async def poll_job(job_id: str) -> dict:
     return response.json()
 
 
-async def inject_workspace(kennel_name: str, config: dict) -> dict:
-    response = await get_client().post(f"/envs/{kennel_name}/inject", json=config)
+async def inject_workspace(
+    kennel_name: str,
+    *,
+    user: str = "dev",
+    ssh_pubkey: str | None = None,
+    repo_url: str | None = None,
+    env_vars: dict[str, str] | None = None,
+    git_name: str | None = None,
+    git_email: str | None = None,
+    token_ttl: int | None = None,
+    runtime_preset: str | None = None,
+    bootstrap_profile: str | None = None,
+    bootstrap_plan: WorkspaceBootstrapPlan | dict | None = None,
+    runtime_files: dict[str, str] | None = None,
+) -> dict:
+    payload: dict[str, object] = {
+        "user": user,
+        "env_vars": dict(env_vars or {}),
+    }
+    if ssh_pubkey is not None:
+        payload["ssh_pubkey"] = ssh_pubkey
+    if repo_url is not None:
+        payload["repo_url"] = repo_url
+    if git_name is not None:
+        payload["git_name"] = git_name
+    if git_email is not None:
+        payload["git_email"] = git_email
+    if token_ttl is not None:
+        payload["token_ttl"] = token_ttl
+    if runtime_preset is not None:
+        payload["runtime_preset"] = runtime_preset
+    if bootstrap_profile is not None:
+        payload["bootstrap_profile"] = bootstrap_profile
+    if bootstrap_plan is not None:
+        payload["bootstrap_plan"] = (
+            bootstrap_plan.model_dump(mode="json")
+            if isinstance(bootstrap_plan, WorkspaceBootstrapPlan)
+            else bootstrap_plan
+        )
+    if runtime_files:
+        payload["runtime_files"] = dict(runtime_files)
+
+    response = await get_client().post(f"/envs/{kennel_name}/inject", json=payload)
     response.raise_for_status()
     return response.json()
 

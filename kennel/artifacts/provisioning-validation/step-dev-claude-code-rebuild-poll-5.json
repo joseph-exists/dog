@@ -1,0 +1,39 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "http://localhost:8090/rebuild-jobs/rebuild-d84eaf82",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "job_id": "rebuild-d84eaf82",
+      "flavour": "dev-claude-code",
+      "status": "running",
+      "error": null,
+      "elapsed_s": 8.0,
+      "log_lines": [
+        "14:29:55 Build order: base \u2192 dev \u2192 dev-claude-code",
+        "14:29:55 [base] base-base exists \u2014 skipping (pass force=true to rebuild)",
+        "14:29:55 [dev] base-dev exists \u2014 skipping (pass force=true to rebuild)",
+        "14:29:55 \n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "14:29:55 [dev-claude-code] building layer",
+        "14:29:55 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "14:29:55 [dev-claude-code] overlay clone of base-dev",
+        "14:29:55 $ lxc-copy -n base-dev -N base-dev-claude-code -s -B overlay",
+        "14:29:58 [dev-claude-code] starting base-dev-claude-code",
+        "14:29:58 $ lxc-start -n base-dev-claude-code",
+        "14:30:01 [dev-claude-code] provisioning: 05-claude-code.sh",
+        "14:30:01 [inject] 05-claude-code.sh \u2192 /tmp/05-claude-code.sh",
+        "14:30:01 $ lxc-attach -n base-dev-claude-code -- bash /tmp/05-claude-code.sh",
+        "14:30:01 Ign:1 http://archive.ubuntu.com/ubuntu noble InRelease",
+        "14:30:01 Ign:2 http://security.ubuntu.com/ubuntu noble-security InRelease",
+        "14:30:01 Ign:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease",
+        "14:30:02 Get:1 http://archive.ubuntu.com/ubuntu noble InRelease [256 kB]",
+        "14:30:02 Get:2 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]",
+        "14:30:03 Get:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]",
+        "14:30:03 Get:4 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages [1401 kB]"
+      ]
+    }
+  }
+}
