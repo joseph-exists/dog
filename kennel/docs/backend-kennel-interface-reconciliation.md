@@ -50,9 +50,9 @@ References:
 
 ## Current Disconnects To Reconcile
 
-### 1. Backend does not currently surface kennel `runtime_preset`
+### 1. Backend only partially surfaces kennel `runtime_preset`
 
-Kennel supports `runtime_preset` on both create and inject, but backend currently sends:
+Kennel supports `runtime_preset` on both create and inject. Backend now uses it for the default Codex agent-runtime handoff, while many other flows still send:
 
 - explicit `flavour` on create,
 - explicit `bootstrap_plan` on inject.
@@ -177,6 +177,8 @@ Expected shape:
 - inject with the same `runtime_preset`
 - omit explicit `bootstrap_plan`
 
+This is now the default backend path for Codex agent-runtime workspaces.
+
 ### Case C: Kennel preset with backend override
 
 Use when kennel should provide runtime defaults, but backend still needs targeted overrides.
@@ -213,6 +215,11 @@ The reconciliation work is therefore documentation and interface-shape work:
 ## Working Summary
 
 Backend and kennel can both continue to contain preset/profile logic.
+
+The current concrete ownership split is:
+
+- Codex agent-runtime default startup: kennel-owned via `runtime_preset`
+- generic/startup-profile/backend-custom runtime startup: backend-owned via explicit `bootstrap_plan`
 
 What needs to be reconciled is:
 

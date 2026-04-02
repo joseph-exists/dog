@@ -18,6 +18,7 @@ Current strengths:
 - create, list, detail, terminal, stop, and destroy routes exist
 - kennel-backed provisioning is real
 - frontend already consumes a stable vertical slice
+- backend create semantics now include top-level `runtime_preset` and nested bootstrap override fields for runtime-oriented provisioning
 
 Current weaknesses:
 
@@ -26,6 +27,7 @@ Current weaknesses:
 - project association, repo identity, access semantics, and service discovery are not first-class
 - important operational intent is stored only in `meta`
 - terminal access exists, but broader connectivity is not yet modeled
+- current frontend create surfaces do not yet expose the newer runtime-oriented create fields
 
 ## Current Implementation Snapshot
 

@@ -98,12 +98,30 @@ def test_generate_bootstrap_plan_supports_known_agent_service_profiles(
 
     plan = generate_bootstrap_plan(intent, materialized_repo_url=None)
 
-    assert len(plan.steps) == 1
+    assert len(plan.steps) == 2
     assert plan.steps[0].type == "run_command"
-    assert plan.steps[0].phase == WorkspaceBootstrapPhase.starting_services
-    assert plan.steps[0].background is True
-    assert plan.steps[0].service_name == service_name
-    assert AGENT_SERVICE_PROFILES[agent_profile].command_env_var in plan.steps[0].command
+    assert plan.steps[0].label == "Create workspace directory"
+    assert plan.steps[0].phase == WorkspaceBootstrapPhase.resolving_source
+    assert plan.steps[1].type == "run_command"
+    assert plan.steps[1].phase == WorkspaceBootstrapPhase.starting_services
+    assert plan.steps[1].background is True
+    assert plan.steps[1].service_name == service_name
+    assert AGENT_SERVICE_PROFILES[agent_profile].command_env_var in plan.steps[1].command
+    assert 'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"' in plan.steps[1].command
+
+
+def test_generate_bootstrap_plan_creates_workspace_directory_before_profile_start_without_repo() -> None:
+    intent = WorkspaceBootstrapIntent(
+        startup_intent=WorkspaceStartupIntentProfile(profile="vite"),
+    )
+
+    plan = generate_bootstrap_plan(intent, materialized_repo_url=None)
+
+    assert len(plan.steps) == 2
+    assert plan.steps[0].label == "Create workspace directory"
+    assert plan.steps[0].command == "mkdir -p /home/dev/workspace"
+    assert plan.steps[1].label == "Start service profile 'vite'"
+    assert plan.steps[1].cwd == "/home/dev/workspace"
 
 
 def test_generate_bootstrap_plan_rejects_unknown_agent_service_profile() -> None:

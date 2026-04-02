@@ -1,7 +1,13 @@
 import { useState } from "react"
+import { ChevronDown } from "lucide-react"
 
 import type { WorkspaceFlavour } from "@/client"
 import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Card,
   CardContent,
@@ -32,9 +38,37 @@ export interface WorkspaceCreatePanelProps {
 }
 
 const FLAVOURS: WorkspaceFlavour[] = ["base", "dev", "cuda"]
+const RUNTIME_PRESETS = [
+  { value: "none", label: "None" },
+  { value: "codex", label: "codex" },
+  { value: "claude_code", label: "claude_code" },
+  { value: "hermes-agent", label: "hermes-agent" },
+] as const
 const INSTALL_PROFILES = ["npm", "pnpm", "yarn", "uv", "pip"] as const
 const STARTUP_PROFILES = ["vite", "nextjs", "fastapi"] as const
 const AGENT_PROFILES = ["codex", "claude_code", "hermes"] as const
+const AGENT_PROFILE_RUNTIME_PRESET: Record<
+  (typeof AGENT_PROFILES)[number],
+  string
+> = {
+  codex: "codex",
+  claude_code: "claude_code",
+  hermes: "hermes-agent",
+}
+
+type RuntimeFileDraft = {
+  id: string
+  path: string
+  content: string
+}
+
+function createRuntimeFileDraft(): RuntimeFileDraft {
+  return {
+    id: `runtime-file-${Math.random().toString(36).slice(2, 10)}`,
+    path: "",
+    content: "",
+  }
+}
 
 export function WorkspaceCreatePanel({
   isSubmitting,
@@ -42,6 +76,7 @@ export function WorkspaceCreatePanel({
 }: WorkspaceCreatePanelProps) {
   const [name, setName] = useState("")
   const [flavour, setFlavour] = useState<WorkspaceFlavour>("dev")
+  const [runtimePreset, setRuntimePreset] = useState("none")
   const [kind, setKind] = useState("ephemeral")
   const [repoSourceType, setRepoSourceType] =
     useState<BootstrapRepoSourceType>("none")
@@ -60,12 +95,24 @@ export function WorkspaceCreatePanel({
     useState<(typeof AGENT_PROFILES)[number]>("codex")
   const [sshPubkey, setSshPubkey] = useState("")
   const [envVarsText, setEnvVarsText] = useState("")
+  const [bootstrapProfile, setBootstrapProfile] = useState("")
+  const [runtimeFiles, setRuntimeFiles] = useState<RuntimeFileDraft[]>([])
+
+  const setAgentProfileWithPreset = (
+    value: (typeof AGENT_PROFILES)[number],
+  ) => {
+    setAgentProfile(value)
+    if (runtimePreset === "none") {
+      setRuntimePreset(AGENT_PROFILE_RUNTIME_PRESET[value] ?? "none")
+    }
+  }
 
   const submit = async () => {
     if (!name.trim()) return
     await onCreate({
       name,
       flavour,
+      runtimePreset: runtimePreset === "none" ? undefined : runtimePreset,
       kind,
       repoSourceType,
       repoUrl,
@@ -79,8 +126,11 @@ export function WorkspaceCreatePanel({
       agentProfile: startupMode === "agent_service" ? agentProfile : undefined,
       sshPubkey,
       envVarsText,
+      bootstrapProfile,
+      runtimeFiles: runtimeFiles.map(({ path, content }) => ({ path, content })),
     })
     setName("")
+    setRuntimePreset("none")
     setRepoSourceType("none")
     setRepoUrl("")
     setUserRepoId("")
@@ -93,6 +143,8 @@ export function WorkspaceCreatePanel({
     setAgentProfile("codex")
     setSshPubkey("")
     setEnvVarsText("")
+    setBootstrapProfile("")
+    setRuntimeFiles([])
     setFlavour("dev")
     setKind("ephemeral")
   }
@@ -119,6 +171,26 @@ export function WorkspaceCreatePanel({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
+            <Label>Runtime Preset</Label>
+            <Select value={runtimePreset} onValueChange={setRuntimePreset}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RUNTIME_PRESETS.map((preset) => (
+                  <SelectItem key={preset.value} value={preset.value}>
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Use a runtime preset for sane defaults. Keep flavour editable when
+              you need to override the base environment.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
             <Label>Flavour</Label>
             <Select
               value={flavour}
@@ -136,19 +208,19 @@ export function WorkspaceCreatePanel({
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          <div className="space-y-1.5">
-            <Label>Kind</Label>
-            <Select value={kind} onValueChange={setKind}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ephemeral">ephemeral</SelectItem>
-                <SelectItem value="persistent">persistent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-1.5">
+          <Label>Kind</Label>
+          <Select value={kind} onValueChange={setKind}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ephemeral">ephemeral</SelectItem>
+              <SelectItem value="persistent">persistent</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
@@ -329,7 +401,9 @@ export function WorkspaceCreatePanel({
                   <Select
                     value={agentProfile}
                     onValueChange={(value) =>
-                      setAgentProfile(value as (typeof AGENT_PROFILES)[number])
+                      setAgentProfileWithPreset(
+                        value as (typeof AGENT_PROFILES)[number],
+                      )
                     }
                   >
                     <SelectTrigger>
@@ -347,6 +421,11 @@ export function WorkspaceCreatePanel({
                     Agent runtimes are long-running workspace processes. They
                     may not publish a browser URL, but they still appear as
                     discovered runtime surfaces.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    If no runtime preset is selected yet, choosing an agent
+                    runtime will prefill the closest preset while keeping it
+                    editable.
                   </p>
                 </div>
               ) : null}
@@ -394,6 +473,134 @@ export function WorkspaceCreatePanel({
             Use one `KEY=value` pair per line.
           </p>
         </div>
+
+        <Collapsible
+          defaultOpen={false}
+          className="overflow-hidden rounded-xl border bg-muted/10"
+        >
+          <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-3 text-left">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">
+                Advanced Runtime Overrides
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Override or extend runtime-specific defaults when presets are
+                close but not sufficient.
+              </div>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 border-t bg-background/70 p-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="workspace-bootstrap-profile">
+                Bootstrap Profile
+              </Label>
+              <Input
+                id="workspace-bootstrap-profile"
+                value={bootstrapProfile}
+                onChange={(event) => setBootstrapProfile(event.target.value)}
+                placeholder="codex_app_server"
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional kennel-side bootstrap profile override.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Runtime Files</div>
+                  <div className="text-xs text-muted-foreground">
+                    Add or override runtime-owned files by path.
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setRuntimeFiles((current) => [
+                      ...current,
+                      createRuntimeFileDraft(),
+                    ])
+                  }
+                >
+                  Add File
+                </Button>
+              </div>
+
+              {runtimeFiles.length === 0 ? (
+                <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
+                  No runtime file overrides configured.
+                </div>
+              ) : null}
+
+              {runtimeFiles.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  className="space-y-3 rounded-lg border bg-background/80 p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-medium">
+                      Runtime File {index + 1}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setRuntimeFiles((current) =>
+                          current.filter((item) => item.id !== entry.id),
+                        )
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`runtime-file-path-${entry.id}`}>Path</Label>
+                    <Input
+                      id={`runtime-file-path-${entry.id}`}
+                      value={entry.path}
+                      onChange={(event) =>
+                        setRuntimeFiles((current) =>
+                          current.map((item) =>
+                            item.id === entry.id
+                              ? { ...item, path: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                      placeholder="/home/dev/.config/runtime.json"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`runtime-file-content-${entry.id}`}>
+                      Content
+                    </Label>
+                    <Textarea
+                      id={`runtime-file-content-${entry.id}`}
+                      value={entry.content}
+                      onChange={(event) =>
+                        setRuntimeFiles((current) =>
+                          current.map((item) =>
+                            item.id === entry.id
+                              ? { ...item, content: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                      placeholder={`{\n  "key": "value"\n}`}
+                      rows={6}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         <Button
           onClick={submit}

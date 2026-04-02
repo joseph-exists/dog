@@ -37,7 +37,7 @@ CODEX_BIN="$(su - dev -c '
   export NVM_DIR=$HOME/.nvm
   . $NVM_DIR/nvm.sh
   nvm use default >/dev/null
-  command -v codex
+  command -v codex exec --help
 ')"
 ln -sf "$CODEX_BIN" /usr/local/bin/codex
 

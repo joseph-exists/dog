@@ -316,6 +316,7 @@ async def build_room_workspace_connection_descriptor(
     return await _build_room_workspace_connection_descriptor_for_room(
         session,
         room=room,
+        current_user=current_user,
         request=request,
         allow_superuser=current_user.is_superuser,
     )
@@ -325,6 +326,7 @@ async def _build_room_workspace_connection_descriptor_for_room(
     session: AsyncSession,
     *,
     room: Room,
+    current_user: User | None = None,
     request: RoomWorkspaceConnectionRequest,
     allow_superuser: bool = False,
     current_connection_payload: dict[str, object] | None = None,
@@ -357,9 +359,25 @@ async def _build_room_workspace_connection_descriptor_for_room(
     )
 
     shared_project_ids = room_project_ids & workspace_project_ids
-    owner_private_allowed = room.creator_id == current_user.id and workspace.owner_id == current_user.id
+    owner_private_allowed = (
+        current_user is not None
+        and room.creator_id == current_user.id
+        and workspace.owner_id == current_user.id
+    )
+    persisted_owner_private_allowed = (
+        current_user is None
+        and isinstance(current_connection_payload, dict)
+        and current_connection_payload.get("relationship")
+        == RoomWorkspaceCandidateRelationship.owner_private.value
+        and room.creator_id == workspace.owner_id
+    )
 
-    if not (allow_superuser or shared_project_ids or owner_private_allowed):
+    if not (
+        allow_superuser
+        or shared_project_ids
+        or owner_private_allowed
+        or persisted_owner_private_allowed
+    ):
         return RoomWorkspaceConnectionDescriptor(
             descriptor_id=descriptor_id,
             room_id=room.room_id,
@@ -557,6 +575,7 @@ async def get_current_room_workspace_connection(
     descriptor = await _build_room_workspace_connection_descriptor_for_room(
         session,
         room=room,
+        current_user=current_user,
         request=RoomWorkspaceConnectionRequest(
             workspace_id=workspace_id,
             purpose=purpose,
@@ -727,6 +746,7 @@ async def set_current_room_workspace_connection(
     descriptor = await _build_room_workspace_connection_descriptor_for_room(
         session,
         room=room,
+        current_user=current_user,
         request=RoomWorkspaceConnectionRequest(
             workspace_id=request.workspace_id,
             purpose=request.purpose,

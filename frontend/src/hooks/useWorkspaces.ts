@@ -24,6 +24,7 @@ export const workspaceKeys = {
 export interface CreateWorkspaceFormInput {
   name: string
   flavour?: WorkspaceFlavour
+  runtimePreset?: string
   kind?: string
   repoSourceType?: BootstrapRepoSourceType
   repoUrl?: string
@@ -39,6 +40,11 @@ export interface CreateWorkspaceFormInput {
   agentProfile?: string
   sshPubkey?: string
   envVarsText?: string
+  bootstrapProfile?: string
+  runtimeFiles?: Array<{
+    path: string
+    content: string
+  }>
 }
 
 function parseEnvVars(text: string | undefined): Record<string, string> {
@@ -56,12 +62,26 @@ function parseEnvVars(text: string | undefined): Record<string, string> {
   return result
 }
 
+function toRuntimeFiles(
+  entries: CreateWorkspaceFormInput["runtimeFiles"],
+): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const entry of entries ?? []) {
+    const path = entry.path.trim()
+    if (!path) continue
+    result[path] = entry.content
+  }
+  return result
+}
+
 function toCreateWorkspaceInput(
   input: CreateWorkspaceFormInput,
 ): CreateWorkspaceInput {
+  const runtimeFiles = toRuntimeFiles(input.runtimeFiles)
   return {
     name: input.name.trim(),
     flavour: input.flavour ?? "dev",
+    runtimePreset: input.runtimePreset?.trim() || null,
     kind: input.kind ?? "ephemeral",
     repoSourceType: input.repoSourceType ?? "none",
     repoUrl: input.repoUrl?.trim() || null,
@@ -77,6 +97,8 @@ function toCreateWorkspaceInput(
     agentProfile: input.agentProfile?.trim() || null,
     sshPubkey: input.sshPubkey?.trim() || null,
     envVars: parseEnvVars(input.envVarsText),
+    bootstrapProfile: input.bootstrapProfile?.trim() || null,
+    runtimeFiles,
   }
 }
 

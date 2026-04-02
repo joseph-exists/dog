@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     curl \
     ca-certificates \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
 # LXC storage and runtime dirs

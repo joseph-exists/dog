@@ -221,6 +221,7 @@ export interface IssueWorkspacePlatformServiceAccessInput {
 export interface CreateWorkspaceInput {
   name: string
   flavour?: WorkspaceFlavour
+  runtimePreset?: string | null
   kind?: string
   repoSourceType?: BootstrapRepoSourceType
   repoUrl?: string | null
@@ -236,6 +237,8 @@ export interface CreateWorkspaceInput {
   agentProfile?: string | null
   sshPubkey?: string | null
   envVars?: Record<string, string>
+  bootstrapProfile?: string | null
+  runtimeFiles?: Record<string, string>
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -830,6 +833,8 @@ export const WorkspaceService = {
       input.installMode !== undefined ||
       input.startupMode !== undefined ||
       input.sshPubkey ||
+      input.bootstrapProfile ||
+      (input.runtimeFiles && Object.keys(input.runtimeFiles).length > 0) ||
       (input.envVars && Object.keys(input.envVars).length > 0)
         ? ({
             repo_source: repoSource ?? undefined,
@@ -863,12 +868,15 @@ export const WorkspaceService = {
                     } satisfies WorkspaceStartupIntentTerminalOnly),
             ssh_pubkey: input.sshPubkey ?? undefined,
             env_vars: input.envVars ?? {},
+            bootstrap_profile: input.bootstrapProfile ?? undefined,
+            runtime_files: input.runtimeFiles,
           } satisfies WorkspaceBootstrapIntent)
         : undefined
 
     const requestBody: WorkspaceCreate = {
       name: input.name,
       flavour: input.flavour,
+      runtime_preset: input.runtimePreset ?? undefined,
       kind: input.kind,
       repo_url:
         input.repoSourceType === "external_url" ? input.repoUrl : undefined,

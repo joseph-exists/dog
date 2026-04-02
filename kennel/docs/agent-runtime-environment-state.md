@@ -79,6 +79,8 @@ Update: the repo now has an initial `dev-codex` flavour scaffold and a `codex_ap
 
 Update: kennel also now accepts a first-class `runtime_preset` contract for `codex`, which normalizes the default flavour/bootstrap pairing to `dev-codex` plus `codex_app_server`.
 
+Update: backend now uses that preset as the default Codex agent-runtime startup path by omitting an explicit inject `bootstrap_plan`, so kennel owns `codex_app_server` instantiation for the default Codex runtime flow.
+
 Update: kennel now also supports a `claude_code` runtime preset, mapped to `dev-claude-code` plus `claude_code_remote_control`.
 
 

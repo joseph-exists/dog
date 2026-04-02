@@ -12031,6 +12031,129 @@ export const RoomUpdateSchema = {
     description: 'Properties that can be updated via API.'
 } as const;
 
+export const RoomWorkspaceCandidateSchema = {
+    properties: {
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        workspace_name: {
+            type: 'string',
+            title: 'Workspace Name'
+        },
+        workspace_status: {
+            '$ref': '#/components/schemas/WorkspaceStatus'
+        },
+        visibility: {
+            '$ref': '#/components/schemas/WorkspaceVisibility'
+        },
+        project_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
+        project_summary: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/WorkspaceProjectSummary'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        relationship: {
+            '$ref': '#/components/schemas/RoomWorkspaceCandidateRelationship'
+        },
+        access_level: {
+            '$ref': '#/components/schemas/RoomWorkspaceCandidateAccessLevel'
+        },
+        match_reason: {
+            type: 'string',
+            title: 'Match Reason'
+        },
+        candidate_rank: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Candidate Rank',
+            default: 0
+        },
+        service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Service Count',
+            default: 0
+        },
+        ready_service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Ready Service Count',
+            default: 0
+        },
+        supports_service_connect: {
+            type: 'boolean',
+            title: 'Supports Service Connect',
+            default: false
+        },
+        supports_agent_runtime_connect: {
+            type: 'boolean',
+            title: 'Supports Agent Runtime Connect',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['room_id', 'workspace_id', 'workspace_name', 'workspace_status', 'visibility', 'relationship', 'access_level', 'match_reason'],
+    title: 'RoomWorkspaceCandidate',
+    description: 'Room-aware workspace candidate projection.'
+} as const;
+
+export const RoomWorkspaceCandidateAccessLevelSchema = {
+    type: 'string',
+    enum: ['view', 'use', 'manage'],
+    title: 'RoomWorkspaceCandidateAccessLevel',
+    description: 'Room-facing access posture for a workspace candidate.'
+} as const;
+
+export const RoomWorkspaceCandidateRelationshipSchema = {
+    type: 'string',
+    enum: ['shared_project', 'owner_private'],
+    title: 'RoomWorkspaceCandidateRelationship',
+    description: 'Why a workspace is being surfaced as a candidate for a room.'
+} as const;
+
+export const RoomWorkspaceCandidatesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/RoomWorkspaceCandidate'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'RoomWorkspaceCandidatesPublic',
+    description: 'Collection response model for room-aware workspace candidates.'
+} as const;
+
 export const RoomWorkspaceConnectionCapabilitySchema = {
     type: 'string',
     enum: ['terminal_view', 'service_connect', 'agent_runtime_connect'],
@@ -12040,6 +12163,10 @@ export const RoomWorkspaceConnectionCapabilitySchema = {
 
 export const RoomWorkspaceConnectionDescriptorSchema = {
     properties: {
+        descriptor_id: {
+            type: 'string',
+            title: 'Descriptor Id'
+        },
         room_id: {
             type: 'string',
             format: 'uuid',
@@ -12055,6 +12182,23 @@ export const RoomWorkspaceConnectionDescriptorSchema = {
         },
         status: {
             '$ref': '#/components/schemas/RoomWorkspaceConnectionStatus'
+        },
+        issued_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Issued At'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
         },
         reason: {
             anyOf: [
@@ -12083,7 +12227,7 @@ export const RoomWorkspaceConnectionDescriptorSchema = {
         }
     },
     type: 'object',
-    required: ['room_id', 'workspace_id', 'purpose', 'status'],
+    required: ['descriptor_id', 'room_id', 'workspace_id', 'purpose', 'status', 'issued_at'],
     title: 'RoomWorkspaceConnectionDescriptor',
     description: 'Backend-issued room/workspace connectivity descriptor.'
 } as const;
@@ -12118,6 +12262,102 @@ export const RoomWorkspaceConnectionStatusSchema = {
     enum: ['available', 'pending', 'denied'],
     title: 'RoomWorkspaceConnectionStatus',
     description: 'Availability state for a room/workspace connection descriptor.'
+} as const;
+
+export const RoomWorkspaceCurrentConnectionSchema = {
+    properties: {
+        connection_id: {
+            type: 'string',
+            title: 'Connection Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        workspace_name: {
+            type: 'string',
+            title: 'Workspace Name'
+        },
+        purpose: {
+            '$ref': '#/components/schemas/RoomWorkspaceConnectionPurpose'
+        },
+        relationship: {
+            '$ref': '#/components/schemas/RoomWorkspaceCandidateRelationship'
+        },
+        access_level: {
+            '$ref': '#/components/schemas/RoomWorkspaceCandidateAccessLevel'
+        },
+        selected_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Selected At'
+        },
+        service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Service Count',
+            default: 0
+        },
+        ready_service_count: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Ready Service Count',
+            default: 0
+        },
+        state: {
+            '$ref': '#/components/schemas/RoomWorkspaceCurrentConnectionState',
+            default: 'active'
+        },
+        state_reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'State Reason'
+        },
+        descriptor: {
+            '$ref': '#/components/schemas/RoomWorkspaceConnectionDescriptor'
+        }
+    },
+    type: 'object',
+    required: ['connection_id', 'room_id', 'workspace_id', 'workspace_name', 'purpose', 'relationship', 'access_level', 'selected_at', 'descriptor'],
+    title: 'RoomWorkspaceCurrentConnection',
+    description: 'Backend-projected current room/workspace connection.'
+} as const;
+
+export const RoomWorkspaceCurrentConnectionStateSchema = {
+    type: 'string',
+    enum: ['active', 'unavailable'],
+    title: 'RoomWorkspaceCurrentConnectionState',
+    description: 'Current room/workspace connection posture.'
+} as const;
+
+export const RoomWorkspaceCurrentConnectionUpdateSchema = {
+    properties: {
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        purpose: {
+            '$ref': '#/components/schemas/RoomWorkspaceConnectionPurpose',
+            default: 'service_connect'
+        }
+    },
+    type: 'object',
+    required: ['workspace_id'],
+    title: 'RoomWorkspaceCurrentConnectionUpdate',
+    description: 'Request model for setting the current room/workspace connection.'
 } as const;
 
 export const RoomWorkspaceEndpointAuthModeSchema = {
@@ -12170,6 +12410,13 @@ export const RoomWorkspaceEndpointDescriptorSchema = {
                 }
             ],
             title: 'Expires At'
+        },
+        scope: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Scope'
         }
     },
     type: 'object',
@@ -20969,6 +21216,25 @@ export const WorkspaceBootstrapIntentSchema = {
                 }
             ],
             title: 'Ssh Pubkey'
+        },
+        bootstrap_profile: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Bootstrap Profile'
+        },
+        runtime_files: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Runtime Files'
         }
     },
     type: 'object',
@@ -21116,6 +21382,18 @@ export const WorkspaceCreateSchema = {
             '$ref': '#/components/schemas/WorkspaceFlavour',
             default: 'dev'
         },
+        runtime_preset: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Preset'
+        },
         kind: {
             type: 'string',
             maxLength: 32,
@@ -21205,7 +21483,7 @@ export const WorkspaceExternalUrlRepoSourceSchema = {
 
 export const WorkspaceFlavourSchema = {
     type: 'string',
-    enum: ['base', 'dev', 'python', 'node', 'jupyter'],
+    enum: ['base', 'dev', 'cuda', 'python', 'node', 'jupyter'],
     title: 'WorkspaceFlavour',
     description: 'Requested workspace image/profile.'
 } as const;
@@ -21301,6 +21579,157 @@ export const WorkspaceInstallIntentProfileSchema = {
     required: ['profile'],
     title: 'WorkspaceInstallIntentProfile',
     description: 'Bootstrap intent meaning a named backend-defined install profile.'
+} as const;
+
+export const WorkspacePlatformServiceAccessGrantSchema = {
+    properties: {
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        consumer_kind: {
+            '$ref': '#/components/schemas/WorkspacePlatformServiceConsumerKind'
+        },
+        issued_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Issued At'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
+        services: {
+            items: {
+                '$ref': '#/components/schemas/WorkspacePlatformServiceGrant'
+            },
+            type: 'array',
+            title: 'Services'
+        }
+    },
+    type: 'object',
+    required: ['workspace_id', 'consumer_kind', 'issued_at'],
+    title: 'WorkspacePlatformServiceAccessGrant',
+    description: 'Workspace-scoped collection of granted platform service descriptors.'
+} as const;
+
+export const WorkspacePlatformServiceConsumerKindSchema = {
+    type: 'string',
+    enum: ['workspace_runtime', 'agent_runtime'],
+    title: 'WorkspacePlatformServiceConsumerKind',
+    description: 'Kinds of workspace-side consumers that may request platform service access.'
+} as const;
+
+export const WorkspacePlatformServiceGrantSchema = {
+    properties: {
+        grant_id: {
+            type: 'string',
+            title: 'Grant Id'
+        },
+        service_id: {
+            type: 'string',
+            title: 'Service Id'
+        },
+        transport: {
+            type: 'string',
+            title: 'Transport'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        auth_mode: {
+            type: 'string',
+            title: 'Auth Mode',
+            default: 'none'
+        },
+        require_approval: {
+            type: 'string',
+            title: 'Require Approval',
+            default: 'never'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        scopes: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Scopes'
+        },
+        tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Tags'
+        },
+        scope: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Scope'
+        },
+        issued_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Issued At'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        }
+    },
+    type: 'object',
+    required: ['grant_id', 'service_id', 'transport', 'url', 'issued_at'],
+    title: 'WorkspacePlatformServiceGrant',
+    description: 'Descriptor for a platform service granted to a workspace consumer.'
+} as const;
+
+export const WorkspacePlatformServiceGrantRequestSchema = {
+    properties: {
+        consumer_kind: {
+            '$ref': '#/components/schemas/WorkspacePlatformServiceConsumerKind',
+            default: 'workspace_runtime'
+        },
+        service_ids: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Service Ids'
+        }
+    },
+    type: 'object',
+    title: 'WorkspacePlatformServiceGrantRequest',
+    description: 'Request model for backend-issued workspace platform service grants.'
 } as const;
 
 export const WorkspaceProjectSummarySchema = {
@@ -21623,6 +22052,47 @@ export const WorkspaceReadinessSummarySchema = {
     type: 'object',
     title: 'WorkspaceReadinessSummary',
     description: 'High-level readiness signals for clients that need more than status.'
+} as const;
+
+export const WorkspaceRuntimePlatformConfigSchema = {
+    properties: {
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        consumer_kind: {
+            '$ref': '#/components/schemas/WorkspacePlatformServiceConsumerKind'
+        },
+        issued_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Issued At'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
+        services: {
+            items: {
+                '$ref': '#/components/schemas/WorkspacePlatformServiceGrant'
+            },
+            type: 'array',
+            title: 'Services'
+        }
+    },
+    type: 'object',
+    required: ['workspace_id', 'consumer_kind', 'issued_at'],
+    title: 'WorkspaceRuntimePlatformConfig',
+    description: 'Canonical runtime-facing platform service config for a workspace consumer.'
 } as const;
 
 export const WorkspaceServiceKindSchema = {

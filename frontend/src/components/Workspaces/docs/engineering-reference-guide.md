@@ -68,6 +68,15 @@ Current shape:
 
 - typed bootstrap intent and progress are live
 - backend-generated bootstrap plans are live
+- backend public workspace create now supports:
+  - top-level `runtime_preset`
+  - nested `bootstrap.bootstrap_profile`
+  - nested `bootstrap.runtime_files`
+- the normalized backend to kennel seam now carries:
+  - preset selection
+  - explicit bootstrap profile overrides
+  - projected and explicit env vars
+  - projected and explicit runtime files
 - first service and agent-runtime startup profiles are supported
 - service readiness and discovery are live
 - workspace detail and list surfaces expose bootstrap and readiness state
@@ -78,9 +87,21 @@ Current supported operational profiles:
 - service startup profiles: `vite`, `nextjs`, `fastapi`
 - agent runtime profiles: `codex`, `claude_code`, `hermes`
 
+Current frontend integration note:
+
+- the frontend create form and submission helpers now expose `runtime_preset`, `bootstrap_profile`, and `runtime_files`
+- the initial frontend path is preset-first with advanced operator controls in a separate collapsed section
+- the frontend now includes `hermes-agent` as a runtime preset option so the next runtime slice can land without reshaping the form again
+
+Current kennel validation note:
+
+- [validate_provisioning.py](/home/josep/dog/kennel/scripts/validate_provisioning.py) is currently passing for the kennel-owned Codex preset path
+- that validated path uses `runtime_preset: "codex"` for both create and inject and expects a healthy `codex` websocket service on port `4500`
+
 Primary references:
 
 - [repo-bootstrap-contract.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-contract.md)
+- [frontend-create-form-shape.md](/home/josep/dog/frontend/src/components/Workspaces/docs/frontend-create-form-shape.md)
 - [repo-bootstrap-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-implementation-roadmap.md)
 - [service-readiness-discovery-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/service-readiness-discovery-roadmap.md)
 - [agent-service-runtime-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/agent-service-runtime-roadmap.md)
@@ -185,6 +206,7 @@ These boundaries should remain explicit in future work:
   access model
 - environment projection is a convenience adapter derived from canonical runtime
   config
+- create and inject precedence should be documented at the interface seam, not inferred from whichever layer happened to populate a field first
 - bootstrap profiles are operational profiles, not the final domain ontology
 - metadata-backed details should keep graduating into typed contract space when
   they become central to orchestration or policy

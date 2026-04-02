@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 from dataclasses import dataclass
 from typing import Literal
 
@@ -175,6 +176,25 @@ AGENT_SERVICE_PROFILES: dict[str, AgentServiceProfile] = {
 # deliberately instead of through parallel, implicit drift.
 
 
+def _agent_runtime_shell_preamble() -> str:
+    """
+    Load user-level runtime tooling before launching agent commands.
+
+    Node-backed tools like `codex` and `claude` are currently installed via
+    nvm in kennel flavour rebuilds. Bootstrap-time startup should therefore
+    source nvm explicitly instead of assuming a non-interactive login shell has
+    already populated PATH correctly.
+    """
+
+    return (
+        'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; '
+        'if [ -s "$NVM_DIR/nvm.sh" ]; then '
+        '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; '
+        'nvm use default >/dev/null 2>&1 || true; '
+        'fi; '
+    )
+
+
 def _agent_service_start_command(profile: AgentServiceProfile) -> str:
     """
     Build the shell launcher for an agent runtime profile.
@@ -215,6 +235,7 @@ def _agent_service_start_command(profile: AgentServiceProfile) -> str:
         'if [ -n "${DOG_WORKSPACE_AGENT_STORY_URL:-}" ]; then '
         'echo "Story MCP: $DOG_WORKSPACE_AGENT_STORY_URL"; '
         'fi; '
+        f'{_agent_runtime_shell_preamble()}'
         'if command -v "${AGENT_CMD%% *}" >/dev/null 2>&1; then '
         'exec bash -lc "$AGENT_CMD"; '
         'fi; '
@@ -340,6 +361,26 @@ def generate_bootstrap_plan(
                 background=True,
                 service_name=agent_profile.service_name,
             )
+        )
+
+    plan_uses_workspace_path = any(
+        isinstance(step, BootstrapRunCommandStep) and step.cwd == workspace_path
+        for step in steps
+    )
+    plan_materializes_workspace_path = any(
+        isinstance(step, BootstrapCloneRepoStep) and step.target_path == workspace_path
+        for step in steps
+    )
+    if plan_uses_workspace_path and not plan_materializes_workspace_path:
+        # Keep the backend-owned workspace path stable for no-repo plans, but
+        # ensure the directory exists before any step relies on it as cwd.
+        steps.insert(
+            0,
+            BootstrapRunCommandStep(
+                phase=WorkspaceBootstrapPhase.resolving_source,
+                label="Create workspace directory",
+                command=f"mkdir -p {shlex.quote(workspace_path)}",
+            ),
         )
 
     return WorkspaceBootstrapPlan(workspace_path=workspace_path, steps=steps)

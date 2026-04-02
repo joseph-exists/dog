@@ -3165,6 +3165,45 @@ export type RoomUpdate = {
 };
 
 /**
+ * Room-aware workspace candidate projection.
+ */
+export type RoomWorkspaceCandidate = {
+    room_id: string;
+    workspace_id: string;
+    workspace_name: string;
+    workspace_status: WorkspaceStatus;
+    visibility: WorkspaceVisibility;
+    project_id?: (string | null);
+    project_summary?: (WorkspaceProjectSummary | null);
+    relationship: RoomWorkspaceCandidateRelationship;
+    access_level: RoomWorkspaceCandidateAccessLevel;
+    match_reason: string;
+    candidate_rank?: number;
+    service_count?: number;
+    ready_service_count?: number;
+    supports_service_connect?: boolean;
+    supports_agent_runtime_connect?: boolean;
+};
+
+/**
+ * Room-facing access posture for a workspace candidate.
+ */
+export type RoomWorkspaceCandidateAccessLevel = 'view' | 'use' | 'manage';
+
+/**
+ * Why a workspace is being surfaced as a candidate for a room.
+ */
+export type RoomWorkspaceCandidateRelationship = 'shared_project' | 'owner_private';
+
+/**
+ * Collection response model for room-aware workspace candidates.
+ */
+export type RoomWorkspaceCandidatesPublic = {
+    data: Array<RoomWorkspaceCandidate>;
+    count: number;
+};
+
+/**
  * Capability scopes that may be granted on a room/workspace connection.
  */
 export type RoomWorkspaceConnectionCapability = 'terminal_view' | 'service_connect' | 'agent_runtime_connect';
@@ -3173,10 +3212,13 @@ export type RoomWorkspaceConnectionCapability = 'terminal_view' | 'service_conne
  * Backend-issued room/workspace connectivity descriptor.
  */
 export type RoomWorkspaceConnectionDescriptor = {
+    descriptor_id: string;
     room_id: string;
     workspace_id: string;
     purpose: RoomWorkspaceConnectionPurpose;
     status: RoomWorkspaceConnectionStatus;
+    issued_at: string;
+    expires_at?: (string | null);
     reason?: (string | null);
     capabilities?: Array<RoomWorkspaceConnectionCapability>;
     endpoints?: Array<RoomWorkspaceEndpointDescriptor>;
@@ -3201,6 +3243,38 @@ export type RoomWorkspaceConnectionRequest = {
 export type RoomWorkspaceConnectionStatus = 'available' | 'pending' | 'denied';
 
 /**
+ * Backend-projected current room/workspace connection.
+ */
+export type RoomWorkspaceCurrentConnection = {
+    connection_id: string;
+    room_id: string;
+    workspace_id: string;
+    workspace_name: string;
+    purpose: RoomWorkspaceConnectionPurpose;
+    relationship: RoomWorkspaceCandidateRelationship;
+    access_level: RoomWorkspaceCandidateAccessLevel;
+    selected_at: string;
+    service_count?: number;
+    ready_service_count?: number;
+    state?: RoomWorkspaceCurrentConnectionState;
+    state_reason?: (string | null);
+    descriptor: RoomWorkspaceConnectionDescriptor;
+};
+
+/**
+ * Current room/workspace connection posture.
+ */
+export type RoomWorkspaceCurrentConnectionState = 'active' | 'unavailable';
+
+/**
+ * Request model for setting the current room/workspace connection.
+ */
+export type RoomWorkspaceCurrentConnectionUpdate = {
+    workspace_id: string;
+    purpose?: RoomWorkspaceConnectionPurpose;
+};
+
+/**
  * Authentication mode expected by a connection endpoint.
  */
 export type RoomWorkspaceEndpointAuthMode = 'token' | 'session' | 'none';
@@ -3216,6 +3290,9 @@ export type RoomWorkspaceEndpointDescriptor = {
     url?: (string | null);
     auth_mode?: RoomWorkspaceEndpointAuthMode;
     expires_at?: (string | null);
+    scope?: {
+        [key: string]: (string);
+    };
 };
 
 /**
@@ -5599,6 +5676,10 @@ export type WorkspaceBootstrapIntent = {
         [key: string]: (string);
     };
     ssh_pubkey?: (string | null);
+    bootstrap_profile?: (string | null);
+    runtime_files?: {
+        [key: string]: (string);
+    };
 };
 
 /**
@@ -5642,6 +5723,7 @@ export type WorkspaceConnectivitySummary = {
 export type WorkspaceCreate = {
     name: string;
     flavour?: WorkspaceFlavour;
+    runtime_preset?: (string | null);
     kind?: string;
     bootstrap?: (WorkspaceBootstrapIntent | null);
     repo_url?: (string | null);
@@ -5695,6 +5777,50 @@ export type WorkspaceInstallIntentNone = {
 export type WorkspaceInstallIntentProfile = {
     mode?: "profile";
     profile: string;
+};
+
+/**
+ * Workspace-scoped collection of granted platform service descriptors.
+ */
+export type WorkspacePlatformServiceAccessGrant = {
+    workspace_id: string;
+    consumer_kind: WorkspacePlatformServiceConsumerKind;
+    issued_at: string;
+    expires_at?: (string | null);
+    services?: Array<WorkspacePlatformServiceGrant>;
+};
+
+/**
+ * Kinds of workspace-side consumers that may request platform service access.
+ */
+export type WorkspacePlatformServiceConsumerKind = 'workspace_runtime' | 'agent_runtime';
+
+/**
+ * Descriptor for a platform service granted to a workspace consumer.
+ */
+export type WorkspacePlatformServiceGrant = {
+    grant_id: string;
+    service_id: string;
+    transport: string;
+    url: string;
+    auth_mode?: string;
+    require_approval?: string;
+    description?: (string | null);
+    scopes?: Array<(string)>;
+    tags?: Array<(string)>;
+    scope?: {
+        [key: string]: (string);
+    };
+    issued_at: string;
+    expires_at?: (string | null);
+};
+
+/**
+ * Request model for backend-issued workspace platform service grants.
+ */
+export type WorkspacePlatformServiceGrantRequest = {
+    consumer_kind?: WorkspacePlatformServiceConsumerKind;
+    service_ids?: Array<(string)>;
 };
 
 /**
@@ -5752,6 +5878,17 @@ export type WorkspaceReadinessSummary = {
     services_ready?: boolean;
     service_count?: number;
     ready_service_count?: number;
+};
+
+/**
+ * Canonical runtime-facing platform service config for a workspace consumer.
+ */
+export type WorkspaceRuntimePlatformConfig = {
+    workspace_id: string;
+    consumer_kind: WorkspacePlatformServiceConsumerKind;
+    issued_at: string;
+    expires_at?: (string | null);
+    services?: Array<WorkspacePlatformServiceGrant>;
 };
 
 /**
@@ -7081,6 +7218,31 @@ export type RoomsCreateRoomWorkspaceConnectionData = {
 
 export type RoomsCreateRoomWorkspaceConnectionResponse = (RoomWorkspaceConnectionDescriptor);
 
+export type RoomsListRoomWorkspaceCandidatesRouteData = {
+    roomId: string;
+};
+
+export type RoomsListRoomWorkspaceCandidatesRouteResponse = (RoomWorkspaceCandidatesPublic);
+
+export type RoomsGetCurrentRoomWorkspaceConnectionRouteData = {
+    roomId: string;
+};
+
+export type RoomsGetCurrentRoomWorkspaceConnectionRouteResponse = ((RoomWorkspaceCurrentConnection | null));
+
+export type RoomsSetCurrentRoomWorkspaceConnectionRouteData = {
+    requestBody: RoomWorkspaceCurrentConnectionUpdate;
+    roomId: string;
+};
+
+export type RoomsSetCurrentRoomWorkspaceConnectionRouteResponse = (RoomWorkspaceCurrentConnection);
+
+export type RoomsClearCurrentRoomWorkspaceConnectionRouteData = {
+    roomId: string;
+};
+
+export type RoomsClearCurrentRoomWorkspaceConnectionRouteResponse = (unknown);
+
 export type RoomsAddRoomParticipantData = {
     requestBody: ParticipantAddRequest;
     roomId: string;
@@ -7957,13 +8119,17 @@ export type UtilsTestEmailResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);
 
-export type WorkspacesListWorkspacesResponse = (WorkspacesPublic);
-
 export type WorkspacesCreateWorkspaceData = {
     requestBody: WorkspaceCreate;
 };
 
 export type WorkspacesCreateWorkspaceResponse = (WorkspacePublic);
+
+export type WorkspacesListWorkspacesData = {
+    includeDestroyed?: boolean;
+};
+
+export type WorkspacesListWorkspacesResponse = (WorkspacesPublic);
 
 export type WorkspacesGetWorkspaceData = {
     workspaceId: string;
@@ -7996,3 +8162,24 @@ export type WorkspacesStartWorkspaceData = {
 };
 
 export type WorkspacesStartWorkspaceResponse = (Message);
+
+export type WorkspacesIssueWorkspacePlatformServiceAccessData = {
+    requestBody: WorkspacePlatformServiceGrantRequest;
+    workspaceId: string;
+};
+
+export type WorkspacesIssueWorkspacePlatformServiceAccessResponse = (WorkspacePlatformServiceAccessGrant);
+
+export type WorkspacesGetWorkspacePlatformRuntimeConfigData = {
+    requestBody: WorkspacePlatformServiceGrantRequest;
+    workspaceId: string;
+};
+
+export type WorkspacesGetWorkspacePlatformRuntimeConfigResponse = (WorkspaceRuntimePlatformConfig);
+
+export type WorkspacesRefreshWorkspacePlatformRuntimeProjectionData = {
+    requestBody: WorkspacePlatformServiceGrantRequest;
+    workspaceId: string;
+};
+
+export type WorkspacesRefreshWorkspacePlatformRuntimeProjectionResponse = (WorkspaceRuntimePlatformConfig);

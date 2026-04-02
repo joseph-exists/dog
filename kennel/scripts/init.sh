@@ -8,6 +8,11 @@ LXC_SUBNET="10.0.3.0/24"
 LXC_GATEWAY="10.0.3.1"
 DNSMASQ_PIDFILE="/run/dnsmasq-${LXC_BRIDGE}.pid"
 DNSMASQ_LEASEFILE="/run/dnsmasq-${LXC_BRIDGE}.leases"
+GITTIN_PROXY_LISTEN_HOST="${KENNEL_GITTIN_PROXY_LISTEN_HOST:-${LXC_GATEWAY}}"
+GITTIN_PROXY_LISTEN_PORT="${KENNEL_GITTIN_PROXY_LISTEN_PORT:-3000}"
+GITTIN_PROXY_TARGET_HOST="${KENNEL_GITTIN_PROXY_TARGET_HOST:-gittin}"
+GITTIN_PROXY_TARGET_PORT="${KENNEL_GITTIN_PROXY_TARGET_PORT:-3000}"
+GITTIN_PROXY_PIDFILE="/run/kennel-gittin-proxy.pid"
 
 # Set up lxcbr0 if not present
 if ! ip link show "${LXC_BRIDGE}" &>/dev/null; then
@@ -33,6 +38,13 @@ if [[ ! -f "${DNSMASQ_PIDFILE}" ]] || ! kill -0 "$(cat "${DNSMASQ_PIDFILE}")" &>
     --dhcp-option=6,"${LXC_GATEWAY}",1.1.1.1,8.8.8.8 \
     --pid-file="${DNSMASQ_PIDFILE}" \
     --dhcp-leasefile="${DNSMASQ_LEASEFILE}"
+fi
+
+if [[ ! -f "${GITTIN_PROXY_PIDFILE}" ]] || ! kill -0 "$(cat "${GITTIN_PROXY_PIDFILE}")" &>/dev/null; then
+  socat \
+    TCP-LISTEN:"${GITTIN_PROXY_LISTEN_PORT}",bind="${GITTIN_PROXY_LISTEN_HOST}",fork,reuseaddr \
+    TCP:"${GITTIN_PROXY_TARGET_HOST}":"${GITTIN_PROXY_TARGET_PORT}" &
+  echo $! > "${GITTIN_PROXY_PIDFILE}"
 fi
 
 bootstrap_base_container() {

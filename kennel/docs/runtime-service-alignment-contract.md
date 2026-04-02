@@ -44,10 +44,11 @@ Backend side:
 
 - runtime id: `codex`
 - service name: `codex`
-- backend default command: `codex`
+- backend startup ownership: kennel-owned for the default agent-runtime path
+- backend default command override env var: `DOG_WORKSPACE_AGENT_CODEX_CMD`
 - backend default host env var: `DOG_WORKSPACE_AGENT_CODEX_HOST`
 - backend default port env var: `DOG_WORKSPACE_AGENT_CODEX_PORT`
-- backend default port value: `4317`
+- backend projected port value: `4317`
 
 Kennel side:
 
@@ -70,8 +71,9 @@ Current readiness interpretation:
 Alignment notes:
 
 - backend and kennel currently share the same runtime/service identifier
-- backend default execution intent and kennel profile-owned execution intent are not identical
-- this is currently acceptable as long as the distinction remains visible and later seam work decides when those paths should converge or stay intentionally separate
+- backend now delegates default Codex runtime startup to kennel by omitting an explicit inject `bootstrap_plan` for Codex agent-service workspaces
+- kennel therefore owns the default Codex launch shape, workspace-directory preparation, runtime file write, and readiness contract for that path
+- backend still projects env vars and runtime files into inject, and explicit bootstrap overrides can still reintroduce backend-owned execution when needed
 
 ### `claude_code`
 
@@ -174,7 +176,7 @@ are part of the runtime contract, not just convenience details. Mixed-mode suppo
 
 These are not unresolved in a blocking sense, but they remain intentionally open for later stages:
 
-- whether Codex backend startup defaults should converge toward kennel's `codex_app_server` semantics
+- whether the backend should retire Codex-specific startup command defaults entirely now that default startup is kennel-owned
 - whether Claude Code protocol labeling should remain `ws` or become more explicitly tied to the remote-control exposure model
 - whether kennel should gain a first-class profile-owned Hermes preset
 - where the shared runtime/service registry should live if we later want machine-enforced parity rather than parallel documented mappings

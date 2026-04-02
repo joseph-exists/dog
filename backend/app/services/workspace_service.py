@@ -4,12 +4,13 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.db import async_session_maker
 from app.models import (
     AccessGrantRole,
@@ -52,6 +53,7 @@ from app.services.workspace_bootstrap_service import (
     WorkspaceBootstrapValidationError,
     generate_bootstrap_plan,
 )
+from app.services.user_repo_service import user_repo_service
 from app.services.workspace_platform_service_access import (
     build_workspace_platform_env_projection_for_workspace,
 )
@@ -181,6 +183,21 @@ def _resolve_kennel_runtime_preset(
     return _kennel_runtime_preset_from_bootstrap_intent(bootstrap_intent)
 
 
+def _should_delegate_runtime_startup_to_kennel(
+    *,
+    runtime_preset: str | None,
+    bootstrap_intent: WorkspaceBootstrapIntent,
+    explicit_bootstrap_profile: str | None,
+) -> bool:
+    startup_intent = bootstrap_intent.startup_intent
+    if getattr(startup_intent, "mode", None) != "agent_service":
+        return False
+
+    # Codex now uses kennel's built-in bootstrap profile as the canonical
+    # runtime startup path unless the caller explicitly overrides it.
+    return runtime_preset == "codex" and explicit_bootstrap_profile is None
+
+
 def build_workspace_kennel_provisioning_request(
     *,
     kennel_name: str,
@@ -190,6 +207,7 @@ def build_workspace_kennel_provisioning_request(
     bootstrap_intent: WorkspaceBootstrapIntent,
     resolved_repo_url: str | None,
     bootstrap_plan: WorkspaceBootstrapPlan,
+    explicit_bootstrap_profile: str | None = None,
     explicit_env_vars: dict[str, str] | None = None,
     projected_env_vars: dict[str, str] | None = None,
     explicit_runtime_files: dict[str, str] | None = None,
@@ -214,6 +232,11 @@ def build_workspace_kennel_provisioning_request(
         explicit_runtime_preset=explicit_runtime_preset,
         bootstrap_intent=bootstrap_intent,
     )
+    delegate_runtime_startup = _should_delegate_runtime_startup_to_kennel(
+        runtime_preset=runtime_preset,
+        bootstrap_intent=bootstrap_intent,
+        explicit_bootstrap_profile=explicit_bootstrap_profile,
+    )
     merged_env_vars = dict(projected_env_vars or {})
     merged_env_vars.update(explicit_env_vars or {})
     merged_runtime_files = dict(projected_runtime_files or {})
@@ -230,13 +253,54 @@ def build_workspace_kennel_provisioning_request(
         repo_url=resolved_repo_url,
         env_vars=merged_env_vars,
         runtime_preset=runtime_preset,
+        bootstrap_profile=explicit_bootstrap_profile,
         runtime_files=merged_runtime_files,
-        bootstrap_plan=bootstrap_plan,
+        bootstrap_plan=None if delegate_runtime_startup else bootstrap_plan,
     )
     return WorkspaceKennelProvisioningRequest(
         create=create_request,
         inject=inject_request,
     )
+
+
+def _materialized_user_repo_clone_url(repo: UserRepo) -> str:
+    """
+    Resolve the workspace clone URL for a platform-managed user repo.
+
+    Workspace bootstrap runs inside the provisioned guest, not inside the
+    Docker network. Prefer an explicit guest-routable clone base URL when
+    configured, then fall back to the repo's advertised HTML URL, and only use
+    the backend-oriented internal remote shape when neither is available.
+    """
+
+    if settings.USER_REPO_WORKSPACE_CLONE_BASE_URL:
+        base_url = urlparse(str(settings.USER_REPO_WORKSPACE_CLONE_BASE_URL).rstrip("/"))
+        return urlunparse(
+            (
+                base_url.scheme,
+                base_url.netloc,
+                f"{base_url.path.rstrip('/')}/{repo.gogs_full_name or f'dog/{repo.gogs_repo_name}'}.git",
+                "",
+                "",
+                "",
+            )
+        )
+
+    if repo.gogs_html_url:
+        parsed = urlparse(repo.gogs_html_url)
+        path = parsed.path if parsed.path.endswith(".git") else f"{parsed.path}.git"
+        return urlunparse(
+            (
+                parsed.scheme,
+                parsed.netloc,
+                path,
+                "",
+                "",
+                "",
+            )
+        )
+
+    return user_repo_service._build_authenticated_git_remote_url(user_repo=repo)  # noqa: SLF001
 
 
 async def spawn_workspace(
@@ -345,6 +409,7 @@ async def _provision_workspace(
             bootstrap_intent=bootstrap_intent,
             resolved_repo_url=resolved_repo_url,
             bootstrap_plan=bootstrap_plan,
+            explicit_bootstrap_profile=bootstrap_intent.bootstrap_profile,
         )
 
         # Backend currently owns the normalized create payload it sends to kennel.
@@ -461,7 +526,9 @@ async def _provision_workspace(
             bootstrap_intent=bootstrap_intent,
             resolved_repo_url=resolved_repo_url,
             bootstrap_plan=bootstrap_plan,
+            explicit_bootstrap_profile=bootstrap_intent.bootstrap_profile,
             explicit_env_vars=bootstrap_intent.env_vars,
+            explicit_runtime_files=bootstrap_intent.runtime_files,
             projected_env_vars=projected_env_vars,
             projected_runtime_files=projected_runtime_files,
         )
@@ -756,6 +823,8 @@ async def normalize_bootstrap_intent(
         startup_intent=startup_intent,
         env_vars=env_vars,
         ssh_pubkey=ssh_pubkey,
+        bootstrap_profile=bootstrap.bootstrap_profile,
+        runtime_files=dict(bootstrap.runtime_files or {}),
     )
 
     materialized_repo_url: str | None = None
@@ -782,7 +851,7 @@ async def normalize_bootstrap_intent(
                 status_code=409,
                 error_code="WORKSPACE_USER_REPO_NOT_READY",
             )
-        materialized_repo_url = repo.source_repo_url
+        materialized_repo_url = _materialized_user_repo_clone_url(repo)
 
     elif isinstance(repo_source, WorkspaceShadowRepoSource):
         raise WorkspaceBootstrapValidationError(

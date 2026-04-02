@@ -174,9 +174,12 @@ The integration question is therefore not whether both sides may contain preset/
 
 ## Current Backend Relationship
 
-`dog/backend` currently uses kennel primarily through explicit `flavour` plus explicit `bootstrap_plan`, and does not currently pass `runtime_preset`.
+`dog/backend` now uses kennel in two distinct ways:
 
-That means kennel’s preset system is present and usable, but it is not yet fully surfaced through the active backend workspace contract.
+- generic and explicitly backend-owned workspace startup still uses explicit `flavour` plus explicit `bootstrap_plan`
+- default Codex agent-runtime startup now passes `runtime_preset: "codex"` and intentionally omits inject `bootstrap_plan` so kennel instantiates `codex_app_server`
+
+That means kennel’s preset system is now partially surfaced through the active backend workspace contract for Codex runtime startup, while backend retains explicit-plan control for other cases.
 
 References:
 

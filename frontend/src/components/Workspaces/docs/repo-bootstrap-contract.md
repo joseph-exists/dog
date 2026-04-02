@@ -38,6 +38,20 @@ Current problems:
 - clone/install/start concerns are mixed together
 - workspace readiness currently means roughly “kennel is up and injection finished,” which is not strong enough for agent/service workflows
 
+This section is now historically useful, but incomplete as a current-state reference.
+
+The current public backend create surface now also supports:
+
+- top-level `runtime_preset`
+- nested `bootstrap.bootstrap_profile`
+- nested `bootstrap.runtime_files`
+
+And the current backend seam now supports mixed-mode requests where:
+
+- backend may still provide explicit bootstrap execution intent
+- kennel may still provide runtime preset and profile-owned defaults
+- env vars and runtime files are merged through the normalized backend-to-kennel seam
+
 ## Current Implementation Snapshot
 
 The first Track 2 implementation slices have now made the contract partially real:
@@ -89,21 +103,66 @@ Current plan support is intentionally compact:
 
 These registries should be read as extension points, not closed sets. The point of this slice is to make backend intent explicit and kennel execution legible without pretending the runtime vocabulary is final.
 
-## Core Decision
+## Current Integration Understanding
 
-The backend should own bootstrap orchestration.
+The useful current understanding is not that one layer must replace the other.
 
-That means:
+The important concern is that backend and kennel interfaces must remain connected and ordered consistently.
+
+Today that means:
 
 - the frontend declares intent
 - backend validates and normalizes that intent
-- backend sends explicit bootstrap instructions to kennel
+- backend may send explicit bootstrap instructions to kennel
+- backend may also send `runtime_preset` and `bootstrap_profile` so kennel can apply preset-owned defaults
 - kennel executes provision/bootstrap steps inside the workspace
 - backend records progress and exposes state back to the frontend
 
 The frontend should not compose shell commands as business logic.
 
 The kennel layer should not have to infer platform semantics from a loose `meta` blob.
+
+The current goal is to preserve both:
+
+- backend-defined and backend-overridden environments
+- kennel-local runtime preset expansion
+
+without forcing either into the role of the single source of truth for all cases.
+
+## Current Precedence Direction
+
+Create-time direction:
+
+1. internal or operator create-time infrastructure overrides when present
+2. explicit `flavour`
+3. `runtime_preset` default flavour behavior
+4. service default fallback
+
+Inject-time direction:
+
+1. internal explicit bootstrap plan when present
+2. explicit `bootstrap.bootstrap_profile`
+3. `runtime_preset` default profile behavior
+4. legacy inject derivation and fallback behavior
+
+Merge direction:
+
+- env vars should remain additive with the most local explicit caller value winning
+- runtime files should remain additive with explicit caller entries able to override preset-owned entries
+
+These directions matter more than defending one runtime interpretation as universally correct.
+
+## Kennel Validation Note
+
+[validate_provisioning.py](/home/josep/dog/kennel/scripts/validate_provisioning.py) is currently passing for the kennel-owned Codex preset path.
+
+That matters for frontend work because it gives us a clearly healthy default path to prioritize:
+
+- `runtime_preset: "codex"` on create
+- `runtime_preset: "codex"` on inject
+- service discovery expecting a healthy `codex` websocket service on port `4500`
+
+The current frontend create slice now begins from a preset-first happy path, while still preserving broader override paths through the bootstrap surface.
 
 ## Repo Source Model
 

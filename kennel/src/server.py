@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     kennel_base_image:          str = "ubuntu"
     kennel_base_release:        str = "noble"
     kennel_max_envs:            int = 20
+    kennel_gittin_guest_host:   str = "gittin"
+    kennel_gittin_guest_ip:     str = "10.0.3.1"
 
     class Config:
         env_file = ".env"
@@ -327,6 +329,37 @@ def _container_exists(name: str) -> bool:
     return result.returncode == 0
 
 
+def _wait_for_attach_ready(
+    name: str,
+    *,
+    timeout: float = 30.0,
+    interval: float = 0.5,
+) -> tuple[bool, str | None]:
+    """
+    Wait until a started container is ready for `lxc-attach`.
+
+    Create jobs should not be marked done until inject operations can actually
+    attach and run commands inside the environment.
+    """
+
+    deadline = time.monotonic() + timeout
+    last_error: str | None = None
+
+    while time.monotonic() < deadline:
+        result = subprocess.run(
+            ["lxc-attach", "-n", name, "--", "true"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return True, None
+        last_error = (result.stderr or result.stdout or "").strip() or None
+        time.sleep(interval)
+
+    return False, last_error
+
+
 async def publish_event(env_name: str, event: str, data: dict = {}):
     payload = json.dumps({"env": env_name, "event": event, **data})
     redis_client = aioredis.Redis(
@@ -364,6 +397,95 @@ def _run_as_user(
         env_name,
         f"su - {user} -c {quoted_command}",
         timeout=timeout,
+    )
+
+
+def _background_launch_command(
+    *,
+    cwd: str | None,
+    command: str,
+    log_path: str,
+    pid_path: str,
+) -> str:
+    """
+    Launch a long-lived workspace service without keeping `lxc-attach` alive.
+
+    `nohup ... &` from within the attached shell leaves the spawned process tied
+    closely enough to the attach session that `subprocess.run()` can block until
+    timeout for long-running runtimes like `codex app-server`. Launching via a
+    short Python supervisor lets the attached process exit promptly after it has
+    spawned and verified the detached child.
+    """
+
+    launcher = {
+        "cwd": cwd,
+        "command": command,
+        "log_path": log_path,
+        "pid_path": pid_path,
+    }
+    launcher_json = json.dumps(launcher)
+    return (
+        "python3 -c "
+        + shlex.quote(
+            """
+import json
+import os
+import signal
+import subprocess
+import sys
+import time
+
+cfg = json.loads(sys.argv[1])
+with open(cfg["log_path"], "ab", buffering=0) as log_file:
+    proc = subprocess.Popen(
+        ["bash", "-lc", cfg["command"]],
+        cwd=cfg["cwd"],
+        stdin=subprocess.DEVNULL,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+
+with open(cfg["pid_path"], "w", encoding="utf-8") as pid_file:
+    pid_file.write(f"{proc.pid}\\n")
+
+time.sleep(1.0)
+os.kill(proc.pid, 0)
+"""
+        )
+        + " "
+        + shlex.quote(launcher_json)
+    )
+
+
+def _terminal_shell_command() -> str:
+    """
+    Prefer the workspace user for browser terminals when available.
+
+    Runtime tooling is currently provisioned primarily for the `dev` user, so a
+    root login shell can present a misleadingly incomplete PATH even when the
+    environment itself is healthy. Browser terminal sessions are also currently
+    pipe-backed rather than PTY-backed, so startup should source the user
+    runtime environment explicitly instead of relying on interactive shell
+    initialization alone. Falling back to root keeps terminal access available
+    for older or partially initialized envs.
+    """
+
+    return (
+        "if id -u dev >/dev/null 2>&1; then "
+        "exec su - dev -c "
+        + shlex.quote(
+            'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; '
+            'if [ -s "$NVM_DIR/nvm.sh" ]; then '
+            '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; '
+            'nvm use default >/dev/null 2>&1 || true; '
+            'fi; '
+            'exec bash -il'
+        )
+        + "; "
+        "else "
+        "exec bash --login; "
+        "fi"
     )
 
 
@@ -446,6 +568,23 @@ def _bootstrap_profile_runtime_files(req: InjectRequest) -> dict[str, str]:
     return {}
 
 
+def _node_runtime_shell_preamble() -> str:
+    """
+    Load nvm-managed Node before starting npm-installed runtime CLIs.
+
+    Built-in runtime profiles should not rely on non-interactive shell startup
+    behavior to place user-level Node installations on PATH.
+    """
+
+    return (
+        'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; '
+        'if [ -s "$NVM_DIR/nvm.sh" ]; then '
+        '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; '
+        'nvm use default >/dev/null 2>&1 || true; '
+        'fi; '
+    )
+
+
 def _bootstrap_profile_plan(req: InjectRequest) -> BootstrapExecutionPlan | None:
     if not req.bootstrap_profile:
         return None
@@ -471,6 +610,7 @@ def _bootstrap_profile_plan(req: InjectRequest) -> BootstrapExecutionPlan | None
                 phase="starting_runtime",
                 label="Start Claude Code remote control",
                 command=(
+                    f"{_node_runtime_shell_preamble()}"
                     "claude remote-control "
                     "--name kennel "
                     "--permission-mode bypassPermissions "
@@ -506,7 +646,10 @@ def _bootstrap_profile_plan(req: InjectRequest) -> BootstrapExecutionPlan | None
         BootstrapRunCommandStep(
             phase="starting_runtime",
             label="Start Codex app server",
-            command="codex app-server --listen ws://0.0.0.0:4500",
+            command=(
+                f"{_node_runtime_shell_preamble()}"
+                "codex app-server --listen ws://0.0.0.0:4500"
+            ),
             cwd=workspace_path,
             background=True,
             service_name="codex",
@@ -560,6 +703,44 @@ def _ensure_workspace_user(
         usermod -d {quoted_home} -s /bin/bash -a -G sudo {quoted_user}
         echo {quoted_user}' ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/{quoted_user}
         chmod 0440 /etc/sudoers.d/{quoted_user}
+        """,
+        timeout=30,
+    )
+
+
+def _ensure_static_host_alias(
+    env_name: str,
+    *,
+    hostname: str,
+    address: str,
+) -> subprocess.CompletedProcess:
+    return _attach_exec(
+        env_name,
+        f"""
+        set -e
+        python3 - <<'PY'
+from pathlib import Path
+
+hosts_path = Path("/etc/hosts")
+hostname = {hostname!r}
+address = {address!r}
+line = f"{{address}} {{hostname}}"
+
+existing_lines = hosts_path.read_text(encoding="utf-8").splitlines()
+filtered_lines = []
+for existing_line in existing_lines:
+    stripped = existing_line.strip()
+    if not stripped or stripped.startswith("#"):
+        filtered_lines.append(existing_line)
+        continue
+    parts = stripped.split()
+    if hostname in parts[1:]:
+        continue
+    filtered_lines.append(existing_line)
+
+filtered_lines.append(line)
+hosts_path.write_text("\\n".join(filtered_lines) + "\\n", encoding="utf-8")
+PY
         """,
         timeout=30,
     )
@@ -825,18 +1006,33 @@ ENVEOF
                 ),
                 parent_result.stderr.strip(),
             )
+        repo_url = shlex.quote(step.repo_url)
+        target_path = shlex.quote(step.target_path)
         clone_command = (
-            f"if [ -e {shlex.quote(step.target_path)} ]; then "
+            f"if [ -e {target_path} ]; then "
             f"echo 'Target path already exists: {step.target_path}' >&2; exit 1; "
             "fi && "
-            f"git clone {shlex.quote(step.repo_url)} {shlex.quote(step.target_path)}"
+            "attempt=1; "
+            "until git ls-remote "
+            f"{repo_url} "
+            "> /dev/null 2>&1; do "
+            'if [ "$attempt" -ge 20 ]; then '
+            f"echo 'Repository did not become reachable for clone: {step.repo_url}' >&2; "
+            "exit 1; "
+            "fi; "
+            'echo "Waiting for repository endpoint to become reachable '
+            f'($attempt/20): {step.repo_url}" >&2; '
+            "attempt=$((attempt + 1)); "
+            "sleep 1; "
+            "done && "
+            f"git clone {repo_url} {target_path}"
         )
         if step.ref:
             clone_command += (
-                f" && cd {shlex.quote(step.target_path)} "
+                f" && cd {target_path} "
                 f"&& git checkout {shlex.quote(step.ref)}"
             )
-        r = _run_as_user(env_name, user=user, command=clone_command, timeout=180)
+        r = _run_as_user(env_name, user=user, command=clone_command, timeout=240)
         if r.returncode != 0:
             return (
                 BootstrapStepResult(
@@ -861,17 +1057,18 @@ ENVEOF
         )
 
     if isinstance(step, BootstrapRunCommandStep):
-        cwd_prefix = f"cd {shlex.quote(step.cwd)} && " if step.cwd else ""
         if step.background:
             service_name = step.service_name or "workspace-service"
             log_path = f"/tmp/{service_name}.log"
             pid_path = f"/tmp/{service_name}.pid"
-            command = (
-                f"{cwd_prefix}nohup bash -lc {shlex.quote(step.command)} "
-                f"> {shlex.quote(log_path)} 2>&1 < /dev/null & echo $! > {shlex.quote(pid_path)} "
-                f"&& sleep 1 && kill -0 $(cat {shlex.quote(pid_path)})"
+            command = _background_launch_command(
+                cwd=step.cwd,
+                command=step.command,
+                log_path=log_path,
+                pid_path=pid_path,
             )
         else:
+            cwd_prefix = f"cd {shlex.quote(step.cwd)} && " if step.cwd else ""
             command = f"{cwd_prefix}{step.command}"
         r = _run_as_user(env_name, user=user, command=command, timeout=300)
         if r.returncode != 0:
@@ -910,6 +1107,88 @@ ENVEOF
         ),
         "Unknown bootstrap step",
     )
+
+
+def _inject_workspace_sync(
+    name: str,
+    req: InjectRequest,
+    *,
+    profile_runtime_files: dict[str, str],
+    plan: BootstrapExecutionPlan,
+    service_manifest: list[DeclaredWorkspaceService],
+) -> dict[str, object]:
+    errors: list[str] = []
+    step_results: list[dict] = []
+    started_services: list[str] = []
+    fatal_error: str | None = None
+    runtime_files = {**profile_runtime_files, **req.runtime_files}
+
+    ensure_user_result = _ensure_workspace_user(name, user=req.user)
+    if ensure_user_result.returncode != 0:
+        raise RuntimeError(
+            f"Failed to ensure workspace user '{req.user}': {ensure_user_result.stderr.strip()}"
+        )
+
+    host_alias_result = _ensure_static_host_alias(
+        name,
+        hostname=settings.kennel_gittin_guest_host,
+        address=settings.kennel_gittin_guest_ip,
+    )
+    if host_alias_result.returncode != 0:
+        raise RuntimeError(
+            "Failed to configure guest host alias "
+            f"'{settings.kennel_gittin_guest_host}': {host_alias_result.stderr.strip()}"
+        )
+
+    if req.git_name or req.git_email:
+        git_cmds = []
+        if req.git_name:
+            git_cmds.append(f"git config --global user.name '{req.git_name}'")
+        if req.git_email:
+            git_cmds.append(f"git config --global user.email '{req.git_email}'")
+        r = _attach_exec(name, f"su - {req.user} -c \"{' && '.join(git_cmds)}\"")
+        if r.returncode != 0:
+            errors.append(f"git_config: {r.stderr.strip()}")
+
+    for path, content in runtime_files.items():
+        if not path.strip():
+            continue
+        runtime_file_result = _write_runtime_file(
+            name,
+            path=path,
+            content=content,
+            user=req.user,
+        )
+        if runtime_file_result.returncode != 0:
+            errors.append(f"runtime_file:{path}: {runtime_file_result.stderr.strip()}")
+
+    for index, step in enumerate(plan.steps):
+        result, service_or_error = _execute_bootstrap_step(
+            name,
+            user=req.user,
+            step=step,
+        )
+        result = result.model_copy(update={"index": index})
+        step_results.append(result.model_dump(mode="json"))
+        if result.status == "failed":
+            fatal_error = service_or_error
+            errors.append(f"{step.type}: {service_or_error}")
+            break
+        if result.service_name and service_or_error:
+            started_services.append(service_or_error)
+
+    manifest_result = _write_service_manifest(name, manifest=service_manifest)
+    if manifest_result.returncode != 0:
+        errors.append(f"service_manifest: {manifest_result.stderr.strip()}")
+
+    return {
+        "errors": errors,
+        "step_results": step_results,
+        "started_services": started_services,
+        "fatal_error": fatal_error,
+        "workspace_path": plan.workspace_path,
+        "declared_services": [service.model_dump(mode="json") for service in service_manifest],
+    }
 
 
 # ── Background create worker ──────────────────────────────────────────────────
@@ -1008,7 +1287,30 @@ def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
         start_args = ["lxc-start", "-n", name]
         if req.kind == EnvKind.ephemeral:
             start_args.append("-e")
-        subprocess.run(start_args, timeout=30, capture_output=True)
+        start_result = subprocess.run(
+            start_args,
+            timeout=30,
+            capture_output=True,
+            text=True,
+        )
+        if start_result.returncode != 0:
+            jobs[job_id].update(
+                {
+                    "status": JobStatus.failed,
+                    "error": (start_result.stderr or start_result.stdout or "").strip(),
+                }
+            )
+            return
+
+        ready, ready_error = _wait_for_attach_ready(name)
+        if not ready:
+            jobs[job_id].update(
+                {
+                    "status": JobStatus.failed,
+                    "error": ready_error or "Container did not become attachable after start.",
+                }
+            )
+            return
 
         jobs[job_id]["status"] = JobStatus.done
 
@@ -1272,7 +1574,6 @@ async def inject_workspace(
     Called by the backend provisioner after lxc-create completes.
     Never called by browser clients.
     """
-    errors = []
     _apply_runtime_preset_to_inject_request(req)
     try:
         # Kennel resolves the final inject execution shape in precedence order:
@@ -1284,64 +1585,23 @@ async def inject_workspace(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     service_manifest = _service_manifest_for_plan(plan)
-    step_results: list[dict] = []
-    started_services: list[str] = []
-    fatal_error: str | None = None
-    runtime_files = {**profile_runtime_files, **req.runtime_files}
-
-    ensure_user_result = _ensure_workspace_user(name, user=req.user)
-    if ensure_user_result.returncode != 0:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to ensure workspace user '{req.user}': {ensure_user_result.stderr.strip()}",
-        )
-
-    # Git identity remains outside the bootstrap plan for now because it is
-    # workspace-scoped personalization rather than repo/runtime orchestration.
-    if req.git_name or req.git_email:
-        git_cmds = []
-        if req.git_name:
-            git_cmds.append(f"git config --global user.name '{req.git_name}'")
-        if req.git_email:
-            git_cmds.append(f"git config --global user.email '{req.git_email}'")
-        r = _attach_exec(name, f"su - {req.user} -c \"{' && '.join(git_cmds)}\"")
-        if r.returncode != 0:
-            errors.append(f"git_config: {r.stderr.strip()}")
-
-    for path, content in runtime_files.items():
-        if not path.strip():
-            continue
-        runtime_file_result = _write_runtime_file(
+    try:
+        sync_result = await asyncio.to_thread(
+            _inject_workspace_sync,
             name,
-            path=path,
-            content=content,
-            user=req.user,
+            req,
+            profile_runtime_files=profile_runtime_files,
+            plan=plan,
+            service_manifest=service_manifest,
         )
-        if runtime_file_result.returncode != 0:
-            errors.append(f"runtime_file:{path}: {runtime_file_result.stderr.strip()}")
-
-    for index, step in enumerate(plan.steps):
-        result, service_or_error = _execute_bootstrap_step(
-            name,
-            user=req.user,
-            step=step,
-        )
-        result = result.model_copy(update={"index": index})
-        step_results.append(result.model_dump(mode="json"))
-        if result.status == "failed":
-            fatal_error = service_or_error
-            errors.append(f"{step.type}: {service_or_error}")
-            break
-        if result.service_name and service_or_error:
-            started_services.append(service_or_error)
-
-    # Issue terminal token even when bootstrap fails so the backend can choose
-    # how to expose or suppress recovery/debug flows.
-    manifest_result = _write_service_manifest(name, manifest=service_manifest)
-    if manifest_result.returncode != 0:
-        errors.append(f"service_manifest: {manifest_result.stderr.strip()}")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
     ws_token = token_store.issue(name, ttl=req.token_ttl)
+    errors = sync_result["errors"]
+    step_results = sync_result["step_results"]
+    started_services = sync_result["started_services"]
+    fatal_error = sync_result["fatal_error"]
 
     await publish_event(
         name,
@@ -1362,8 +1622,8 @@ async def inject_workspace(
         "fatal_error":       fatal_error,
         "step_results":      step_results,
         "started_services":  started_services,
-        "workspace_path":    plan.workspace_path,
-        "declared_services": [service.model_dump(mode="json") for service in service_manifest],
+        "workspace_path":    sync_result["workspace_path"],
+        "declared_services": sync_result["declared_services"],
     }
 
 
@@ -1424,7 +1684,7 @@ async def env_terminal(websocket: WebSocket, name: str):
 
     proc = await asyncio.create_subprocess_exec(
         "lxc-attach", "-n", name, "--",
-        "bash", "--login",
+        "bash", "-lc", _terminal_shell_command(),
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
