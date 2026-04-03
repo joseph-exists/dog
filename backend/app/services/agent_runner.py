@@ -139,6 +139,7 @@ async def _run_agent_for_a2a(
             trigger_message=trigger_message,
             a2a_depth=a2a_depth,
             user_id=user_id,
+            enable_workspace_runtime_tool=True,
         ),
         session=session,
     )
@@ -270,6 +271,7 @@ async def run_agent_for_room_streaming(
     a2a_depth: int = 0,
     enable_a2a_tool: bool = False,
     enable_ag_ui_tool: bool = False,
+    enable_workspace_runtime_tool: bool = False,
 ) -> dict[str, Any]:
     """
     Run an agent with token-by-token streaming and A2A support.
@@ -310,6 +312,7 @@ async def run_agent_for_room_streaming(
         "a2a_depth": a2a_depth,
         "a2a_tool_enabled": enable_a2a_tool,
         "ag_ui_tool_enabled": enable_ag_ui_tool,
+        "workspace_runtime_tool_enabled": enable_workspace_runtime_tool,
     }
 
     with logfire.span("agent.run_agent_for_room_streaming", **span_tags):
@@ -323,6 +326,7 @@ async def run_agent_for_room_streaming(
                 a2a_depth=a2a_depth,
                 enable_a2a_tool=enable_a2a_tool,
                 enable_ag_ui_tool=enable_ag_ui_tool,
+                enable_workspace_runtime_tool=enable_workspace_runtime_tool,
             ),
             session=session,
         )
@@ -347,6 +351,7 @@ async def run_agents_for_message(
     user_id: uuid.UUID | None = None,
     enable_a2a_tool: bool = False,
     enable_ag_ui_tool: bool = False,
+    enable_workspace_runtime_tool: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Run agents in a room that should respond to a message based on participation mode.
@@ -382,6 +387,7 @@ async def run_agents_for_message(
         "trigger_length": len(trigger_message),
         "a2a_tool_enabled": enable_a2a_tool,
         "ag_ui_tool_enabled": enable_ag_ui_tool,
+        "workspace_runtime_tool_enabled": enable_workspace_runtime_tool,
     }
 
     with logfire.span("agent.run_agents_for_message", **span_tags):
@@ -416,6 +422,7 @@ async def run_agents_for_message(
                     user_id=user_id,
                     enable_a2a_tool=enable_a2a_tool,
                     enable_ag_ui_tool=enable_ag_ui_tool,
+                    enable_workspace_runtime_tool=enable_workspace_runtime_tool,
                 )
             logfire.info(
                 "agent.phase_completed",
@@ -465,6 +472,7 @@ async def run_agents_for_message(
                     user_id=user_id,
                     enable_a2a_tool=enable_a2a_tool,
                     enable_ag_ui_tool=enable_ag_ui_tool,
+                    enable_workspace_runtime_tool=enable_workspace_runtime_tool,
                 )
             logfire.info(
                 "agent.phase_completed",
@@ -490,6 +498,7 @@ async def invoke_agent_manually(
     user_id: uuid.UUID | None = None,
     enable_a2a_tool: bool = False,
     enable_ag_ui_tool: bool = False,
+    enable_workspace_runtime_tool: bool = False,
 ) -> dict[str, Any]:
     """
     Explicitly invoke an agent regardless of participation mode.
@@ -518,6 +527,7 @@ async def invoke_agent_manually(
         "user_id": user_id_str,
         "a2a_tool_enabled": enable_a2a_tool,
         "ag_ui_tool_enabled": enable_ag_ui_tool,
+        "workspace_runtime_tool_enabled": enable_workspace_runtime_tool,
     }
 
     with logfire.span("agent.invoke_manually", **span_tags):
@@ -589,6 +599,7 @@ async def invoke_agent_manually(
             user_id=user_id,
             enable_a2a_tool=enable_a2a_tool,
             enable_ag_ui_tool=enable_ag_ui_tool,
+            enable_workspace_runtime_tool=enable_workspace_runtime_tool,
         )
         logfire.info(
             "agent.invoke_completed",

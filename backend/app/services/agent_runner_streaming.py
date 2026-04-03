@@ -71,6 +71,7 @@ class StreamingAgentRunner:
             "a2a_depth": req.a2a_depth,
             "a2a_tool_enabled": req.enable_a2a_tool,
             "ag_ui_tool_enabled": req.enable_ag_ui_tool,
+            "workspace_runtime_tool_enabled": req.enable_workspace_runtime_tool,
         }
 
         with logfire.span("agent.run_streaming", **span_tags):
@@ -99,6 +100,7 @@ class StreamingAgentRunner:
                         user_id=req.user_id,
                         enable_a2a_tool=req.enable_a2a_tool,
                         enable_ag_ui_tool=req.enable_ag_ui_tool,
+                        enable_workspace_runtime_tool=req.enable_workspace_runtime_tool,
                         room_id=room_id,
                     )
                     logfire.info(

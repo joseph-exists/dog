@@ -3837,6 +3837,28 @@ class RoomWorkspaceCurrentConnection(SQLModel):
     descriptor: RoomWorkspaceConnectionDescriptor
 
 
+class RoomWorkspaceRuntimeInvokeRequest(SQLModel):
+    """Request model for invoking the room's connected workspace runtime."""
+
+    input: str = Field(min_length=1, description="Message sent to the connected workspace runtime")
+
+
+class RoomWorkspaceRuntimeInvokeResponse(SQLModel):
+    """Response model for a room-scoped workspace runtime invocation."""
+
+    status: str = "completed"
+    request_id: str
+    connection_id: str
+    workspace_id: uuid.UUID
+    descriptor_id: str
+    endpoint_id: str
+    runtime_label: str
+    protocol: str
+    success: bool
+    output_text: str
+    message_id: uuid.UUID | None = None
+
+
 # ============================================================================
 # RoomParticipant Models (Projection)
 # ============================================================================

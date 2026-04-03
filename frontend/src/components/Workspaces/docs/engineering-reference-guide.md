@@ -140,6 +140,9 @@ Current shape:
 Primary references:
 
 - [room-workspace-connectivity.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-connectivity.md)
+- [room-workspace-connection-service-reference.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-connection-service-reference.md)
+- [room-workspace-execution-layer-mvp-plan.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-execution-layer-mvp-plan.md)
+- [room-workspace-execution-layer-sequenced-implementation.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-execution-layer-sequenced-implementation.md)
 - [room-workspace-descriptor-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-descriptor-roadmap.md)
 - [room-workspace-current-connection-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-current-connection-roadmap.md)
 - [concurrent-many-to-many.md](/home/josep/dog/frontend/src/components/Workspaces/docs/concurrent-many-to-many.md)

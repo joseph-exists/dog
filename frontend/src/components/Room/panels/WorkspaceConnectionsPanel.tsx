@@ -18,7 +18,9 @@ import {
   RoomService,
   type RoomWorkspaceCandidateViewModel,
   type RoomWorkspaceConnectionViewModel,
+  type RoomWorkspaceRuntimeInvokeResponseViewModel,
 } from "@/services/roomService"
+import { Textarea } from "@/components/ui/textarea"
 import { PanelContainer } from "../primitives"
 
 interface WorkspaceConnectionsPanelProps {
@@ -120,6 +122,13 @@ export function WorkspaceConnectionsPanel({
   const [workspaceId, setWorkspaceId] = useState<string>("")
   const [purpose, setPurpose] =
     useState<RoomWorkspaceConnectionPurpose>("service_connect")
+  const [runtimeInput, setRuntimeInput] = useState("")
+  const [runtimeInvokeResult, setRuntimeInvokeResult] =
+    useState<RoomWorkspaceRuntimeInvokeResponseViewModel | null>(null)
+  const [runtimeInvokeError, setRuntimeInvokeError] = useState<string | null>(
+    null,
+  )
+  const [isInvokingRuntime, setIsInvokingRuntime] = useState(false)
 
   useEffect(() => {
     if (!workspaceOptions.length) {
@@ -169,6 +178,39 @@ export function WorkspaceConnectionsPanel({
   const isCurrentSelection =
     currentConnection?.workspaceId === selectedWorkspace?.workspace_id &&
     currentConnection?.purpose === purpose
+  const currentConnectionIsFresh =
+    !currentConnection?.descriptorExpiresAt ||
+    new Date(currentConnection.descriptorExpiresAt).getTime() > Date.now()
+  const canInvokeCurrentRuntime =
+    currentConnection?.purpose === "agent_runtime_connect" &&
+    currentConnection.state === "active" &&
+    currentConnection.descriptorStatus === "available" &&
+    currentConnectionIsFresh
+
+  async function handleInvokeRuntime() {
+    const normalizedInput = runtimeInput.trim()
+    if (!normalizedInput || !canInvokeCurrentRuntime) return
+
+    setIsInvokingRuntime(true)
+    setRuntimeInvokeError(null)
+    setRuntimeInvokeResult(null)
+
+    try {
+      const result = await RoomService.invokeWorkspaceRuntime(roomId, {
+        input: normalizedInput,
+      })
+      setRuntimeInvokeResult(result)
+      setRuntimeInput("")
+    } catch (error) {
+      const nextError =
+        error instanceof Error
+          ? error.message
+          : "Unable to invoke the connected runtime."
+      setRuntimeInvokeError(nextError)
+    } finally {
+      setIsInvokingRuntime(false)
+    }
+  }
 
   return (
     <PanelContainer
@@ -361,6 +403,79 @@ export function WorkspaceConnectionsPanel({
             <div className="text-[11px] text-muted-foreground">
               Selected {new Date(currentConnection.selectedAt).toLocaleString()}
             </div>
+
+            {currentConnection.purpose === "agent_runtime_connect" ? (
+              <div className="space-y-3 rounded-lg border border-dashed p-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">
+                    Send To Connected Runtime
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Send a room-scoped message through the backend execution
+                    path instead of opening the runtime endpoint manually.
+                  </div>
+                </div>
+
+                <Textarea
+                  value={runtimeInput}
+                  onChange={(event) => setRuntimeInput(event.target.value)}
+                  placeholder="Ask the connected runtime to inspect code, summarize state, or perform a task."
+                  disabled={!canInvokeCurrentRuntime || isInvokingRuntime}
+                />
+
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] text-muted-foreground">
+                    {canInvokeCurrentRuntime
+                      ? "The response will be written back into room history as a runtime message."
+                      : "Runtime invocation is available only for an active, fresh, available agent-runtime connection."}
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => void handleInvokeRuntime()}
+                    disabled={
+                      !canInvokeCurrentRuntime ||
+                      !runtimeInput.trim() ||
+                      isInvokingRuntime
+                    }
+                  >
+                    {isInvokingRuntime ? "Invoking..." : "Send To Runtime"}
+                  </Button>
+                </div>
+
+                {runtimeInvokeError ? (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-3 text-sm text-destructive">
+                    {runtimeInvokeError}
+                  </div>
+                ) : null}
+
+                {runtimeInvokeResult ? (
+                  <div className="rounded-md border bg-background/70 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium">
+                        {runtimeInvokeResult.runtime_label}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          runtimeInvokeResult.success
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                            : "border-rose-500/40 bg-rose-500/10 text-rose-700"
+                        }
+                      >
+                        {runtimeInvokeResult.success ? "success" : "failed"}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                      {runtimeInvokeResult.output_text}
+                    </div>
+                    <div className="mt-2 text-[11px] text-muted-foreground">
+                      Request {runtimeInvokeResult.request_id} · Endpoint{" "}
+                      {runtimeInvokeResult.endpoint_id}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

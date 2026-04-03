@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
@@ -53,6 +54,26 @@ CURRENT_CONNECTION_CONTEXT_TYPE = "system.room.workspace.current_connection"
 CURRENT_CONNECTION_CONTEXT_SOURCE = "room_workspace_connection"
 CURRENT_CONNECTION_TTL = timedelta(minutes=10)
 DESCRIPTOR_TTL = timedelta(minutes=5)
+
+
+@dataclass(frozen=True)
+class RoomWorkspaceRuntimeTarget:
+    """Resolved runtime endpoint for backend-mediated room execution."""
+
+    connection_id: str
+    room_id: UUID
+    workspace_id: UUID
+    workspace_name: str
+    descriptor_id: str
+    endpoint_id: str
+    endpoint_label: str
+    protocol: str
+    url: str
+    scope: dict[str, str]
+
+
+class RoomWorkspaceRuntimeTargetResolutionError(ValueError):
+    """Raised when the room's current workspace runtime cannot be consumed."""
 
 
 async def _get_project_ids_for_resource(
@@ -170,6 +191,22 @@ def _current_connection_payload(
         "ready_service_count": candidate.ready_service_count,
         "selected_at": selected_at.isoformat(),
     }
+
+
+def _select_runtime_endpoint(
+    current_connection: RoomWorkspaceCurrentConnection,
+) -> RoomWorkspaceEndpointDescriptor | None:
+    runtime_endpoints = [
+        endpoint
+        for endpoint in current_connection.descriptor.endpoints
+        if endpoint.kind == RoomWorkspaceEndpointKind.agent_runtime and endpoint.url
+    ]
+    if not runtime_endpoints:
+        return None
+    return sorted(
+        runtime_endpoints,
+        key=lambda endpoint: (endpoint.id, endpoint.label, endpoint.url or ""),
+    )[0]
 
 
 async def _find_current_connection_context(
@@ -694,6 +731,74 @@ async def consume_current_room_workspace_connection(
         state=_current_connection_state_from_descriptor(descriptor)[0],
         state_reason=_current_connection_state_from_descriptor(descriptor)[1],
         descriptor=descriptor,
+    )
+
+
+async def consume_current_room_workspace_runtime_target(
+    session: AsyncSession,
+    *,
+    room_id: UUID,
+    context_store: ContextItemStore | None = None,
+) -> RoomWorkspaceRuntimeTarget:
+    current_connection = await consume_current_room_workspace_connection(
+        session,
+        room_id=room_id,
+        context_store=context_store,
+    )
+    if current_connection is None:
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            "Room does not have a current workspace connection.",
+        )
+
+    if current_connection.purpose != RoomWorkspaceConnectionPurpose.agent_runtime_connect:
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            "Current room workspace connection is not configured for agent runtime use.",
+        )
+
+    now = datetime.now(timezone.utc)
+    current_connection_expires_at = current_connection.selected_at + CURRENT_CONNECTION_TTL
+    if current_connection_expires_at <= now:
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            "Current room workspace connection has expired and must be refreshed.",
+        )
+
+    if current_connection.state != RoomWorkspaceCurrentConnectionState.active:
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            current_connection.state_reason
+            or "Current room workspace connection is unavailable.",
+        )
+
+    if (
+        current_connection.descriptor.expires_at is not None
+        and current_connection.descriptor.expires_at <= now
+    ):
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            "Current room workspace descriptor has expired and must be refreshed.",
+        )
+
+    if current_connection.descriptor.status != RoomWorkspaceConnectionStatus.available:
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            current_connection.descriptor.reason
+            or "Current room workspace runtime is not yet available.",
+        )
+
+    endpoint = _select_runtime_endpoint(current_connection)
+    if endpoint is None or endpoint.url is None:
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            "Current room workspace connection does not have a usable agent runtime endpoint.",
+        )
+
+    return RoomWorkspaceRuntimeTarget(
+        connection_id=current_connection.connection_id,
+        room_id=current_connection.room_id,
+        workspace_id=current_connection.workspace_id,
+        workspace_name=current_connection.workspace_name,
+        descriptor_id=current_connection.descriptor.descriptor_id,
+        endpoint_id=endpoint.id,
+        endpoint_label=endpoint.label,
+        protocol=endpoint.protocol,
+        url=endpoint.url,
+        scope=dict(endpoint.scope),
     )
 
 

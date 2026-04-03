@@ -457,6 +457,7 @@ async def handle_user_message(
                         trigger_message=content,
                         session=session,
                         user_id=user.id,
+                        enable_workspace_runtime_tool=True,
                     )
                 except Exception:
                     logger.exception(

@@ -19,6 +19,14 @@ from app.services.a2a_orchestrator import DEFAULT_MAX_A2A_DEPTH, A2AOrchestrator
 from app.services.agent_prompt import build_agent_prompt
 from app.services.context_provider import build_room_context
 from app.services.context_store import RedisContextStore
+from app.services.room_workspace_runtime_execution_service import (
+    RoomWorkspaceRuntimeInvocationCaller,
+    RoomWorkspaceRuntimeInvocationRequest,
+    execute_room_workspace_runtime_invocation,
+)
+from app.services.room_workspace_connection_service import (
+    consume_current_room_workspace_runtime_target,
+)
 from app.services.user_repo_service import (
     UserRepoFileMutation,
     UserRepoWriteConflict,
@@ -457,6 +465,60 @@ async def read_repo_file(
             normalized_path,
         )
         return f"Read failed due to unexpected error: {exc}"
+
+
+async def invoke_connected_workspace_runtime(
+    ctx: RunContext[AgentDeps],
+    input: str,
+) -> str:
+    """
+    Invoke the room's currently connected workspace runtime.
+
+    This sends the shared backend-owned websocket envelope to the runtime
+    currently selected by the room's `agent_runtime_connect` connection.
+    """
+    deps = ctx.deps
+    normalized_input = (input or "").strip()
+    if not normalized_input:
+        return "Runtime invocation blocked: input is required."
+
+    try:
+        target = await consume_current_room_workspace_runtime_target(
+            deps.session,
+            room_id=deps.room_id,
+        )
+        result = await execute_room_workspace_runtime_invocation(
+            RoomWorkspaceRuntimeInvocationRequest(
+                target=target,
+                input=normalized_input,
+                caller=RoomWorkspaceRuntimeInvocationCaller(
+                    kind="agent",
+                    id=deps.current_agent_slug,
+                ),
+            )
+        )
+    except Exception as exc:
+        logger.exception(
+            "invoke_connected_workspace_runtime tool error room_id=%s agent=%s",
+            deps.room_id,
+            deps.current_agent_slug,
+        )
+        return f"Runtime invocation failed: {exc}"
+
+    return json.dumps(
+        {
+            "request_id": result.request_id,
+            "connection_id": result.connection_id,
+            "workspace_id": result.workspace_id,
+            "endpoint_id": result.endpoint_id,
+            "runtime_label": result.runtime_label,
+            "protocol": result.protocol,
+            "success": result.success,
+            "output_text": result.output_text,
+            "raw": result.raw,
+        },
+        ensure_ascii=True,
+    )
 
 
 def emit_ui_component(

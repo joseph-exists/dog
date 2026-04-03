@@ -14,6 +14,7 @@ class AgentRunRequest:
     a2a_depth: int = 0
     enable_a2a_tool: bool = False
     enable_ag_ui_tool: bool = False
+    enable_workspace_runtime_tool: bool = False
 
 
 @dataclass(frozen=True)

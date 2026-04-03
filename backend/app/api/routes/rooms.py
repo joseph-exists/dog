@@ -21,6 +21,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
+from sqlmodel import select
 
 from app.api.deps import AsyncSessionDep, AsyncSessionTransactionDep, CurrentUser
 from app.crud import (
@@ -62,6 +63,8 @@ from app.models import (
     RoomWorkspaceConnectionDescriptor,
     RoomWorkspaceCurrentConnection,
     RoomWorkspaceCurrentConnectionUpdate,
+    RoomWorkspaceRuntimeInvokeRequest,
+    RoomWorkspaceRuntimeInvokeResponse,
     RoomWorkspaceConnectionRequest,
     RoomWorkspaceCandidatesPublic,
     RoomsPublic,
@@ -71,9 +74,15 @@ from app.models import (
 )
 from app.services.agent_runner import invoke_agent_manually, run_agents_for_message
 from app.services.event_emitter import emit_event
+from app.services.room_workspace_runtime_execution_service import (
+    RoomWorkspaceRuntimeInvocationCaller,
+    RoomWorkspaceRuntimeInvocationRequest,
+    execute_room_workspace_runtime_invocation,
+)
 from app.services.room_workspace_connection_service import (
     build_room_workspace_connection_descriptor,
     clear_current_room_workspace_connection,
+    consume_current_room_workspace_runtime_target,
     get_current_room_workspace_connection,
     list_room_workspace_candidates,
     set_current_room_workspace_connection,
@@ -484,6 +493,7 @@ async def send_message(
             trigger_message=message_in.content,
             session=session,
             user_id=current_user.id,
+            enable_workspace_runtime_tool=True,
         )
     except Exception:
         logger.exception(
@@ -493,6 +503,95 @@ async def send_message(
 
     # 3. Transaction commits here (on return)
     return room_message
+
+
+@router.post(
+    "/{room_id}/workspace-runtime/invoke",
+    response_model=RoomWorkspaceRuntimeInvokeResponse,
+)
+async def invoke_room_workspace_runtime(
+    *,
+    room_id: UUID,
+    session: AsyncSessionTransactionDep,
+    current_user: CurrentUser,
+    request: RoomWorkspaceRuntimeInvokeRequest,
+) -> Any:
+    """
+    Invoke the room's current connected workspace runtime.
+
+    This is the first room-native execution path for descriptor-backed runtime
+    use. It resolves the current runtime target from backend truth, sends the
+    shared websocket invocation envelope, and persists the normalized runtime
+    output back into room history as an agent message.
+    """
+
+    await check_room_membership(
+        room_id=room_id,
+        user_id=current_user.id,
+        session=session,
+    )
+
+    try:
+        target = await consume_current_room_workspace_runtime_target(
+            session,
+            room_id=room_id,
+        )
+        invocation_result = await execute_room_workspace_runtime_invocation(
+            RoomWorkspaceRuntimeInvocationRequest(
+                target=target,
+                input=request.input,
+                caller=RoomWorkspaceRuntimeInvocationCaller(
+                    kind="user",
+                    id=str(current_user.id),
+                ),
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    runtime_event = await emit_event(
+        session=session,
+        room_id=room_id,
+        event_type="room_message.agent",
+        payload={
+            "agent_name": target.endpoint_label,
+            "content": invocation_result.output_text,
+        },
+        enrichment_metadata={
+            "workspace_runtime_invocation": {
+                "request_id": invocation_result.request_id,
+                "connection_id": target.connection_id,
+                "workspace_id": str(target.workspace_id),
+                "descriptor_id": target.descriptor_id,
+                "endpoint_id": target.endpoint_id,
+                "protocol": target.protocol,
+                "success": invocation_result.success,
+            }
+        },
+    )
+
+    result = await session.exec(
+        select(RoomMessage).where(
+            RoomMessage.room_id == room_id,
+            RoomMessage.sender_type == "agent",
+            RoomMessage.agent_name == target.endpoint_label,
+            RoomMessage.created_at == runtime_event.created_at,
+        )
+    )
+    runtime_message = result.first()
+
+    return RoomWorkspaceRuntimeInvokeResponse(
+        request_id=invocation_result.request_id,
+        connection_id=target.connection_id,
+        workspace_id=target.workspace_id,
+        descriptor_id=target.descriptor_id,
+        endpoint_id=target.endpoint_id,
+        runtime_label=target.endpoint_label,
+        protocol=target.protocol,
+        success=invocation_result.success,
+        output_text=invocation_result.output_text,
+        message_id=runtime_message.message_id if runtime_message is not None else None,
+    )
 
 
 @router.get("/{room_id}/messages", response_model=RoomMessagesPublic)
@@ -830,6 +929,7 @@ async def handle_ui_action(
         trigger_message=trigger_message,
         session=session,
         user_id=current_user.id,
+        enable_workspace_runtime_tool=True,
     )
 
     # Return 200 with status. The agent's response arrives asynchronously

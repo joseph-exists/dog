@@ -28,6 +28,7 @@ from app.models import (
 from app.services.agent_tools import (
     AgentDeps,
     emit_ui_component,
+    invoke_connected_workspace_runtime,
     read_repo_file,
     request_agent_assistance,
     write_repo_files,
@@ -408,6 +409,7 @@ async def get_agent_instance_with_tools(
     user_id: uuid.UUID | None = None,
     enable_a2a_tool: bool = False,
     enable_ag_ui_tool: bool = False,
+    enable_workspace_runtime_tool: bool = False,
     room_id: uuid.UUID | None = None,
 ) -> Agent[Any, Any] | None:
     """
@@ -425,6 +427,8 @@ async def get_agent_instance_with_tools(
         When True, include `request_agent_assistance` tool for agent-to-agent calls.
     enable_ag_ui_tool : bool
         When True, include `emit_ui_component` tool for UI emission.
+    enable_workspace_runtime_tool : bool
+        When True, include the connected workspace runtime invocation tool.
     room_id : uuid.UUID | None
         Room context, reserved for future room-scoped settings.
 
@@ -436,11 +440,12 @@ async def get_agent_instance_with_tools(
     """
     config = await get_agent_config(session, slug)
     logger.info(
-        "[AGENT_INSTANCE.get_agent_instance_with_tools] slug=%s config_present=%s enable_a2a=%s enable_ag_ui=%s",
+        "[AGENT_INSTANCE.get_agent_instance_with_tools] slug=%s config_present=%s enable_a2a=%s enable_ag_ui=%s enable_workspace_runtime=%s",
         slug,
         config is not None,
         getattr(config, "enable_a2a_tool", "MISSING") if config else None,
         getattr(config, "enable_ag_ui_tool", "MISSING") if config else None,
+        enable_workspace_runtime_tool,
     )
 
     if not config:
@@ -571,6 +576,8 @@ async def get_agent_instance_with_tools(
         tools.append(request_agent_assistance)
     if effective_ag_ui:
         tools.append(emit_ui_component)
+    if enable_workspace_runtime_tool:
+        tools.append(invoke_connected_workspace_runtime)
     if effective_repo_read:
         tools.append(read_repo_file)
     if effective_repo_write:
@@ -578,12 +585,13 @@ async def get_agent_instance_with_tools(
 
     # INFO level so we can trace tool resolution in production
     logger.info(
-        "[AGENT_INSTANCE.tool_resolution] slug=%s config_a2a=%s config_ag_ui=%s runtime_a2a=%s runtime_ag_ui=%s effective_a2a=%s effective_ag_ui=%s repo_tools_enabled=%s effective_repo_read=%s effective_repo_write=%s requested_mcp_ids=%s attached_mcp_ids=%s rejected_mcp_ids=%s tools_count=%d toolsets_count=%d",
+        "[AGENT_INSTANCE.tool_resolution] slug=%s config_a2a=%s config_ag_ui=%s runtime_a2a=%s runtime_ag_ui=%s runtime_workspace=%s effective_a2a=%s effective_ag_ui=%s repo_tools_enabled=%s effective_repo_read=%s effective_repo_write=%s requested_mcp_ids=%s attached_mcp_ids=%s rejected_mcp_ids=%s tools_count=%d toolsets_count=%d",
         slug,
         config_a2a,
         config_ag_ui,
         enable_a2a_tool,
         enable_ag_ui_tool,
+        enable_workspace_runtime_tool,
         effective_a2a,
         effective_ag_ui,
         settings.AGENT_REPO_TOOLS_ENABLED,
@@ -621,7 +629,7 @@ async def get_agent_instance_with_tools(
     setattr(agent, "_runtime_mcp_attached_ids", attached_mcp_ids)
     setattr(agent, "_runtime_mcp_rejected_ids", rejected_mcp_ids)
     logger.debug(
-        "[AGENT_INSTANCE.get_agent_instance_with_tools] instantiated slug=%s model=%s tools=%d toolsets=%d mcp_attached=%s a2a=%s ag_ui=%s (config: a2a=%s ag_ui=%s)",
+        "[AGENT_INSTANCE.get_agent_instance_with_tools] instantiated slug=%s model=%s tools=%d toolsets=%d mcp_attached=%s a2a=%s ag_ui=%s workspace_runtime=%s (config: a2a=%s ag_ui=%s)",
         slug,
         model_name,
         len(tools),
@@ -629,6 +637,7 @@ async def get_agent_instance_with_tools(
         attached_mcp_ids,
         effective_a2a,
         effective_ag_ui,
+        enable_workspace_runtime_tool,
         config_a2a,
         config_ag_ui,
     )

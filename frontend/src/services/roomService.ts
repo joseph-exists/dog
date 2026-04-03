@@ -244,6 +244,20 @@ export interface RoomWorkspaceCandidateViewModel {
   supports_agent_runtime_connect: boolean
 }
 
+export interface RoomWorkspaceRuntimeInvokeResponseViewModel {
+  status: string
+  request_id: string
+  connection_id: string
+  workspace_id: string
+  descriptor_id: string
+  endpoint_id: string
+  runtime_label: string
+  protocol: string
+  success: boolean
+  output_text: string
+  message_id: string | null
+}
+
 // ============================================================================
 // Transformation Functions
 // ============================================================================
@@ -526,6 +540,38 @@ function transformRoomWorkspaceCandidate(
     supports_service_connect: candidate.supports_service_connect === true,
     supports_agent_runtime_connect:
       candidate.supports_agent_runtime_connect === true,
+  }
+}
+
+function transformRoomWorkspaceRuntimeInvokeResponse(
+  response: Record<string, unknown>,
+): RoomWorkspaceRuntimeInvokeResponseViewModel | null {
+  if (
+    typeof response.request_id !== "string" ||
+    typeof response.connection_id !== "string" ||
+    typeof response.workspace_id !== "string" ||
+    typeof response.descriptor_id !== "string" ||
+    typeof response.endpoint_id !== "string" ||
+    typeof response.runtime_label !== "string" ||
+    typeof response.protocol !== "string" ||
+    typeof response.success !== "boolean" ||
+    typeof response.output_text !== "string"
+  ) {
+    return null
+  }
+
+  return {
+    status: typeof response.status === "string" ? response.status : "completed",
+    request_id: response.request_id,
+    connection_id: response.connection_id,
+    workspace_id: response.workspace_id,
+    descriptor_id: response.descriptor_id,
+    endpoint_id: response.endpoint_id,
+    runtime_label: response.runtime_label,
+    protocol: response.protocol,
+    success: response.success,
+    output_text: response.output_text,
+    message_id: typeof response.message_id === "string" ? response.message_id : null,
   }
 }
 
@@ -1027,6 +1073,27 @@ export const RoomService = {
         (candidate): candidate is RoomWorkspaceCandidateViewModel =>
           candidate !== null,
       )
+  },
+
+  async invokeWorkspaceRuntime(
+    roomId: string,
+    request: { input: string },
+  ): Promise<RoomWorkspaceRuntimeInvokeResponseViewModel> {
+    const requestOptions: ApiRequestOptions = {
+      method: "POST",
+      url: `/api/v1/rooms/${roomId}/workspace-runtime/invoke`,
+      body: request,
+      mediaType: "application/json",
+    }
+    const response = (await __request(OpenAPI, requestOptions)) as Record<
+      string,
+      unknown
+    >
+    const transformed = transformRoomWorkspaceRuntimeInvokeResponse(response)
+    if (!transformed) {
+      throw new Error("Invalid workspace runtime invoke response")
+    }
+    return transformed
   },
 
   // ==========================================================================
