@@ -976,12 +976,64 @@ def _service_source_from_value(value: str | None) -> WorkspaceServiceSource:
         return WorkspaceServiceSource.bootstrap_profile
 
 
+def _runtime_transport_kind_from_value(value: object) -> str | None:
+    return value if isinstance(value, str) and value.strip() else None
+
+
+def _runtime_profile_from_workspace_meta(
+    workspace: Workspace,
+    *,
+    service_kind: WorkspaceServiceKind,
+) -> str | None:
+    if service_kind != WorkspaceServiceKind.agent_runtime:
+        return None
+    meta = workspace.meta or {}
+    kennel_inject_request = meta.get("kennel_inject_request")
+    if not isinstance(kennel_inject_request, dict):
+        return None
+    runtime_profile = kennel_inject_request.get("bootstrap_profile")
+    if isinstance(runtime_profile, str) and runtime_profile.strip():
+        return runtime_profile
+    return None
+
+
+def _runtime_id_from_service_dict(data: dict, *, service_kind: WorkspaceServiceKind) -> str | None:
+    runtime_id = data.get("runtime_id")
+    if isinstance(runtime_id, str) and runtime_id.strip():
+        return runtime_id
+    if service_kind == WorkspaceServiceKind.agent_runtime:
+        service_id = data.get("id")
+        if isinstance(service_id, str) and service_id.strip():
+            return service_id
+    return None
+
+
+def _runtime_transport_kind_from_service_dict(
+    data: dict,
+    *,
+    service_kind: WorkspaceServiceKind,
+    protocol: WorkspaceServiceProtocol,
+) -> str | None:
+    transport_kind = _runtime_transport_kind_from_value(data.get("transport_kind"))
+    if transport_kind is not None:
+        return transport_kind
+    if service_kind != WorkspaceServiceKind.agent_runtime:
+        return None
+    if protocol in {WorkspaceServiceProtocol.ws, WorkspaceServiceProtocol.wss}:
+        return "websocket"
+    if protocol in {WorkspaceServiceProtocol.http, WorkspaceServiceProtocol.https}:
+        return "http"
+    return None
+
+
 def _service_summary_from_dict(data: dict) -> WorkspaceServiceSummary | None:
     service_id = data.get("id")
     label = data.get("label")
     if not isinstance(service_id, str) or not isinstance(label, str):
         return None
 
+    service_kind = _service_kind_from_value(data.get("kind"))
+    protocol = _service_protocol_from_value(data.get("protocol"))
     host = data.get("host")
     port = data.get("port")
     path = data.get("path")
@@ -990,10 +1042,21 @@ def _service_summary_from_dict(data: dict) -> WorkspaceServiceSummary | None:
 
     return WorkspaceServiceSummary(
         id=service_id,
-        kind=_service_kind_from_value(data.get("kind")),
+        kind=service_kind,
         label=label,
+        runtime_id=_runtime_id_from_service_dict(data, service_kind=service_kind),
+        runtime_profile=(
+            data.get("runtime_profile")
+            if isinstance(data.get("runtime_profile"), str) and data.get("runtime_profile").strip()
+            else None
+        ),
+        transport_kind=_runtime_transport_kind_from_service_dict(
+            data,
+            service_kind=service_kind,
+            protocol=protocol,
+        ),
         status=_service_status_from_value(data.get("status")),
-        protocol=_service_protocol_from_value(data.get("protocol")),
+        protocol=protocol,
         host=host if isinstance(host, str) else None,
         port=port if isinstance(port, int) else None,
         path=path if isinstance(path, str) else None,
@@ -1019,6 +1082,7 @@ def _fallback_service_summaries(workspace: Workspace) -> list[WorkspaceServiceSu
             continue
 
         service_kind = _service_kind_from_value(item.get("kind"))
+        protocol = _service_protocol_from_value(item.get("protocol"))
         path = item.get("path")
         port = item.get("port")
         is_runtime_active = workspace.status in {WorkspaceStatus.starting, WorkspaceStatus.ready}
@@ -1051,8 +1115,22 @@ def _fallback_service_summaries(workspace: Workspace) -> list[WorkspaceServiceSu
                 id=service_id,
                 kind=service_kind,
                 label=label,
+                runtime_id=_runtime_id_from_service_dict(item, service_kind=service_kind),
+                runtime_profile=(
+                    item.get("runtime_profile")
+                    if isinstance(item.get("runtime_profile"), str) and item.get("runtime_profile").strip()
+                    else _runtime_profile_from_workspace_meta(
+                        workspace,
+                        service_kind=service_kind,
+                    )
+                ),
+                transport_kind=_runtime_transport_kind_from_service_dict(
+                    item,
+                    service_kind=service_kind,
+                    protocol=protocol,
+                ),
                 status=fallback_status,
-                protocol=_service_protocol_from_value(item.get("protocol")),
+                protocol=protocol,
                 host="127.0.0.1" if isinstance(port, int) else None,
                 port=port if isinstance(port, int) else None,
                 path=path if isinstance(path, str) else None,

@@ -37,6 +37,7 @@ export interface WorkspacesShellProps {
   onPageThemeChange: (themeId: string) => void
   onCardsThemeChange: (themeId: string) => void
   backHref?: string
+  defaultLayoutMode?: "panels" | "tabs"
   className?: string
 }
 
@@ -51,10 +52,11 @@ export function WorkspacesShell({
   onPageThemeChange,
   onCardsThemeChange,
   backHref,
+  defaultLayoutMode = "tabs",
   className,
 }: WorkspacesShellProps) {
   const [layoutMode, setLayoutMode] = React.useState<"panels" | "tabs">(
-    "panels",
+    defaultLayoutMode,
   )
 
   // Convert theme tokens to CSS style objects

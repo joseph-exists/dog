@@ -55,6 +55,9 @@ typer/
 └── commands/             # Command modules
     ├── __init__.py
     └── _template.py      # Template for new commands
+    └── *.py              # 20+ existing command modules
+    └── COMMANDS.md       # Commands documentation
+
 ```
 
 ## Adding New Commands

@@ -110,6 +110,48 @@ async def get_env_services(kennel_name: str) -> dict:
     return response.json()
 
 
+async def invoke_agent_runtime(
+    kennel_name: str,
+    *,
+    service_id: str,
+    payload: dict | list | str | None = None,
+    invoke_mode: str = "websocket",
+    json_rpc_session: dict[str, object] | None = None,
+    argv: list[str] | None = None,
+    cwd: str | None = None,
+    user: str | None = None,
+    timeout_seconds: float = 15.0,
+) -> dict:
+    request_body: dict[str, object] = {
+        "invoke_mode": invoke_mode,
+        "timeout_seconds": timeout_seconds,
+    }
+    if payload is not None:
+        request_body["payload"] = payload
+    if json_rpc_session is not None:
+        request_body["json_rpc_session"] = json_rpc_session
+    if argv:
+        request_body["argv"] = list(argv)
+    if cwd is not None:
+        request_body["cwd"] = cwd
+    if user is not None:
+        request_body["user"] = user
+    response = await get_client().post(
+        f"/envs/{kennel_name}/agent-runtimes/{service_id}/invoke",
+        json=request_body,
+    )
+    if response.status_code >= 400:
+        detail: str
+        try:
+            payload_data = response.json()
+        except ValueError:
+            detail = response.text
+        else:
+            detail = str(payload_data.get("detail") or payload_data)
+        raise RuntimeError(detail)
+    return response.json()
+
+
 async def list_flavours() -> dict:
     response = await get_client().get("/flavours")
     response.raise_for_status()

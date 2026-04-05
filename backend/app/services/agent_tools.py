@@ -21,11 +21,9 @@ from app.services.context_provider import build_room_context
 from app.services.context_store import RedisContextStore
 from app.services.room_workspace_runtime_execution_service import (
     RoomWorkspaceRuntimeInvocationCaller,
-    RoomWorkspaceRuntimeInvocationRequest,
-    execute_room_workspace_runtime_invocation,
 )
-from app.services.room_workspace_connection_service import (
-    consume_current_room_workspace_runtime_target,
+from app.services.room_workspace_runtime_orchestrator import (
+    invoke_room_workspace_runtime,
 )
 from app.services.user_repo_service import (
     UserRepoFileMutation,
@@ -483,19 +481,14 @@ async def invoke_connected_workspace_runtime(
         return "Runtime invocation blocked: input is required."
 
     try:
-        target = await consume_current_room_workspace_runtime_target(
+        execution = await invoke_room_workspace_runtime(
             deps.session,
             room_id=deps.room_id,
-        )
-        result = await execute_room_workspace_runtime_invocation(
-            RoomWorkspaceRuntimeInvocationRequest(
-                target=target,
-                input=normalized_input,
-                caller=RoomWorkspaceRuntimeInvocationCaller(
-                    kind="agent",
-                    id=deps.current_agent_slug,
-                ),
-            )
+            input=normalized_input,
+            caller=RoomWorkspaceRuntimeInvocationCaller(
+                kind="agent",
+                id=deps.current_agent_slug,
+            ),
         )
     except Exception as exc:
         logger.exception(
@@ -505,6 +498,8 @@ async def invoke_connected_workspace_runtime(
         )
         return f"Runtime invocation failed: {exc}"
 
+    target = execution.target
+    result = execution.result
     return json.dumps(
         {
             "request_id": result.request_id,
@@ -515,6 +510,7 @@ async def invoke_connected_workspace_runtime(
             "protocol": result.protocol,
             "success": result.success,
             "output_text": result.output_text,
+            "invocation_id": str(execution.invocation.id),
             "raw": result.raw,
         },
         ensure_ascii=True,

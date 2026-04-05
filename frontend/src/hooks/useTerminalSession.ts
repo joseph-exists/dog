@@ -15,6 +15,25 @@ export interface UseTerminalSessionOptions {
   enabled?: boolean
   maxFrames?: number
   maxChars?: number
+  allowDirectInput?: boolean
+  allowPaste?: boolean
+  allowResize?: boolean
+  defaultInputMode?: Exclude<TerminalInputMode, "none">
+}
+
+export type TerminalInputMode = "none" | "line" | "direct"
+
+export interface TerminalCapabilities {
+  connect: boolean
+  reconnect: boolean
+  disconnect: boolean
+  sendInput: boolean
+  directInput: boolean
+  paste: boolean
+  sendResize: boolean
+  transcript: boolean
+  clearBuffer: boolean
+  inputMode: TerminalInputMode
 }
 
 export function useTerminalSession({
@@ -22,6 +41,10 @@ export function useTerminalSession({
   enabled = true,
   maxFrames,
   maxChars,
+  allowDirectInput = true,
+  allowPaste = true,
+  allowResize = true,
+  defaultInputMode = "direct",
 }: UseTerminalSessionOptions) {
   const [session, setSession] = useState<TerminalSessionState>(() =>
     createTerminalSession(url),
@@ -103,10 +126,18 @@ export function useTerminalSession({
       ws.close()
       wsRef.current = null
     }
-  }, [url, enabled, maxFrames, maxChars])
+  }, [url, enabled, maxFrames, maxChars, _connectionNonce])
 
   const connect = useCallback(() => {
     if (!url) return
+    setError(null)
+    setConnectionNonce((value) => value + 1)
+  }, [url])
+
+  const reconnect = useCallback(() => {
+    if (!url) return
+    manualDisconnectRef.current = false
+    setError(null)
     setConnectionNonce((value) => value + 1)
   }, [url])
 
@@ -130,16 +161,33 @@ export function useTerminalSession({
       }
 
       wsRef.current.send(new TextEncoder().encode(data))
-      setSession((current) =>
-        appendTerminalFrame(current, createTerminalFrame("input", data), {
-          maxFrames,
-          maxChars,
-        }),
-      )
       return true
     },
-    [maxFrames, maxChars],
+    [],
   )
+
+  const sendResize = useCallback((cols: number, rows: number) => {
+    if (
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN ||
+      !Number.isFinite(cols) ||
+      !Number.isFinite(rows) ||
+      cols <= 0 ||
+      rows <= 0
+    ) {
+      return false
+    }
+
+    wsRef.current.send(
+      JSON.stringify({
+        type: "terminal_control",
+        control: "resize",
+        cols,
+        rows,
+      }),
+    )
+    return true
+  }, [])
 
   const setViewport = useCallback(
     (cols: number | null, rows: number | null) => {
@@ -148,18 +196,35 @@ export function useTerminalSession({
     [],
   )
 
+  const capabilities: TerminalCapabilities = {
+    connect: Boolean(url),
+    reconnect: Boolean(url),
+    disconnect:
+      session.status === "connecting" || session.status === "open",
+    sendInput: Boolean(url),
+    directInput: Boolean(url) && allowDirectInput && defaultInputMode === "direct",
+    paste: Boolean(url) && allowPaste,
+    sendResize: Boolean(url) && allowResize,
+    transcript: true,
+    clearBuffer: true,
+    inputMode: url
+      ? defaultInputMode === "line" || !allowDirectInput
+        ? "line"
+        : "direct"
+      : "none",
+  }
+
   return {
     session,
     status: session.status,
     error,
     connect,
+    reconnect,
     disconnect,
     clear,
     sendInput,
+    sendResize,
     setViewport,
-    capabilities: {
-      sendInput: true,
-      sendResize: false,
-    },
+    capabilities,
   }
 }

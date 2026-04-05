@@ -1,3 +1,4 @@
+import { useCallback } from "react"
 import { BlockContainer } from "@/components/Page/primitives"
 import { useTerminalSession } from "@/hooks/useTerminalSession"
 import { TerminalStatusBar } from "./TerminalStatusBar"
@@ -18,10 +19,20 @@ export function TerminalBlock({
   mode = "transcript",
   className,
 }: TerminalBlockProps) {
-  const { session, status } = useTerminalSession({
-    url: terminalUrl ?? null,
-    enabled: Boolean(terminalUrl) && mode === "live",
-  })
+  const { session, status, sendInput, sendResize, setViewport, capabilities } =
+    useTerminalSession({
+      url: terminalUrl ?? null,
+      enabled: Boolean(terminalUrl) && mode === "live",
+    })
+  const handleViewportChange = useCallback(
+    (cols: number, rows: number) => {
+      setViewport(cols, rows)
+      if (capabilities.sendResize) {
+        sendResize(cols, rows)
+      }
+    },
+    [capabilities.sendResize, sendResize, setViewport],
+  )
 
   return (
     <BlockContainer
@@ -29,13 +40,23 @@ export function TerminalBlock({
       subtitle={subtitle}
       className={className}
       bodyClassName="min-h-[22rem] p-0"
-      footer={<TerminalStatusBar session={session} status={status} />}
+      footer={
+        <TerminalStatusBar
+          session={session}
+          status={status}
+          capabilities={capabilities}
+        />
+      }
     >
       <TerminalViewer
         session={session}
         status={status}
+        capabilities={capabilities}
         mode={mode}
         className="h-full"
+        onSendInput={sendInput}
+        onPasteInput={async (value) => sendInput(value)}
+        onViewportChange={handleViewportChange}
       />
     </BlockContainer>
   )

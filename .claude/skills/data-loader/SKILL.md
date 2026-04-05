@@ -47,6 +47,10 @@ python main.py personas create-persona-from-archetype $ARCHETYPE_ID \
 Build stories with branching paths:
 
 ```bash
+# 0. Introspect the story affordance space first
+python main.py story-affordances list           # understand available operations
+python main.py story-affordances dimensions     # understand required data/schema
+
 # 1. Create story
 python main.py stories create "The Quest" --desc "An adventure"
 # Save ID: STORY_ID
@@ -67,9 +71,10 @@ python main.py stories add-node $STORY_ID --title "Armory" --content "Weapons aw
 python main.py stories add-node $STORY_ID --title "Victory" --content "You win!" --end
 # Save ID: NODE_END
 
-# 4. Create choices (state set via API, not CLI currently)
+# 4. Create choices (supports --requires-state and --sets-state for guards/effects)
 python main.py stories add-choice $NODE_START $NODE_ARMORY --text "Visit the armory"
-python main.py stories add-choice $NODE_ARMORY $NODE_END --text "Continue to battle"
+python main.py stories add-choice $NODE_ARMORY $NODE_END --text "Continue to battle" \
+  --requires-state '{"has_sword": true}' --sets-state '{"courage": 1}'
 
 # 5. Validate and publish
 python main.py stories validate-state-schema $STORY_ID

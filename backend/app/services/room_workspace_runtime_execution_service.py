@@ -35,6 +35,25 @@ class RoomWorkspaceRuntimeInvocationRequest:
 
 
 @dataclass(frozen=True)
+class RoomWorkspaceJsonRpcRequest:
+    """A single JSON-RPC request frame for a runtime-managed session."""
+
+    id: str
+    method: str
+    params: Any = None
+
+
+@dataclass(frozen=True)
+class RoomWorkspaceJsonRpcSession:
+    """A JSON-RPC session definition executed over a runtime websocket."""
+
+    requests: tuple[RoomWorkspaceJsonRpcRequest, ...]
+    terminal_notification_methods: tuple[str, ...] = ()
+    tracked_notification_methods: tuple[str, ...] = ()
+    fail_on_server_request: bool = True
+
+
+@dataclass(frozen=True)
 class RoomWorkspaceRuntimeInvocationResult:
     """Normalized runtime invocation result returned to backend callers."""
 
@@ -61,6 +80,27 @@ class RoomWorkspaceRuntimeResponseTimeoutError(RoomWorkspaceRuntimeExecutionErro
     """Raised when the runtime websocket opens but no response arrives in time."""
 
 
+def build_room_workspace_runtime_prompt_text(
+    request: RoomWorkspaceRuntimeInvocationRequest,
+) -> str:
+    """Render room runtime invocation intent as plain text for text-first runtimes."""
+
+    return (
+        "Room runtime invocation\n"
+        f"room_id: {request.target.room_id}\n"
+        f"workspace_id: {request.target.workspace_id}\n"
+        f"workspace_name: {request.target.workspace_name}\n"
+        f"connection_id: {request.target.connection_id}\n"
+        f"descriptor_id: {request.target.descriptor_id}\n"
+        f"endpoint_id: {request.target.endpoint_id}\n"
+        f"endpoint_label: {request.target.endpoint_label}\n"
+        f"caller_kind: {request.caller.kind}\n"
+        f"caller_id: {request.caller.id}\n"
+        "request:\n"
+        f"{request.input}"
+    )
+
+
 def build_room_workspace_runtime_invocation_message(
     request: RoomWorkspaceRuntimeInvocationRequest,
 ) -> dict[str, Any]:
@@ -85,6 +125,26 @@ def build_room_workspace_runtime_invocation_message(
             "id": request.caller.id,
         },
         "input": request.input,
+    }
+
+
+def build_room_workspace_json_rpc_session_payload(
+    session: RoomWorkspaceJsonRpcSession,
+) -> dict[str, Any]:
+    """Serialize a backend JSON-RPC session definition for kennel transport."""
+
+    return {
+        "requests": [
+            {
+                "id": request.id,
+                "method": request.method,
+                "params": request.params,
+            }
+            for request in session.requests
+        ],
+        "terminal_notification_methods": list(session.terminal_notification_methods),
+        "tracked_notification_methods": list(session.tracked_notification_methods),
+        "fail_on_server_request": session.fail_on_server_request,
     }
 
 
@@ -143,6 +203,14 @@ def _normalize_runtime_response(
         output_text=_coerce_output_text(raw_payload),
         raw=raw_payload,
     )
+
+
+def normalize_room_workspace_runtime_response(
+    *,
+    request: RoomWorkspaceRuntimeInvocationRequest,
+    response: Any,
+) -> RoomWorkspaceRuntimeInvocationResult:
+    return _normalize_runtime_response(request=request, response=response)
 
 
 async def execute_room_workspace_runtime_invocation(

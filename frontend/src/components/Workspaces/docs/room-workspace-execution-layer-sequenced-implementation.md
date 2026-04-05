@@ -13,6 +13,10 @@ the next slice.
 
 ### Slice 1. Runtime Identity Projection
 
+Status:
+
+- implemented
+
 **Backend**
 
 - extend the resolved runtime target model with:
@@ -48,6 +52,10 @@ the next slice.
 
 ### Slice 2. Backend Adapter Registry
 
+Status:
+
+- implemented
+
 **Backend**
 
 - add a runtime adapter interface
@@ -76,9 +84,14 @@ the next slice.
 
 - route and agent tool call the orchestrator rather than a transport-specific
   helper
-- adapter selection is test-covered for the currently supported runtime ids
+- deferred until after Slice 4: adapter selection is test-covered for the currently supported runtime ids
 
 ### Slice 3. Kennel-Routed Runtime Invoke Endpoint
+
+Status:
+
+- implemented for the kennel-routed runtime invoke endpoint used by the active
+  websocket runtime path
 
 **Kennel**
 
@@ -117,6 +130,10 @@ Suggested endpoint family:
 
 ### Slice 4. Codex Adapter
 
+Status:
+
+- implemented
+
 **Backend**
 
 - add a Codex runtime adapter
@@ -147,6 +164,8 @@ Suggested endpoint family:
 - a room connected to a Codex runtime can complete a request through the room
   invoke route
 - the same connection can be used through the room agent tool
+- the Codex app-server profile executes through the generic JSON-RPC adapter
+  path rather than the raw room-envelope websocket path
 
 ### Slice 5. Claude Code Adapter
 
@@ -203,6 +222,10 @@ Suggested endpoint family:
 
 ### Slice 7. Invocation Lifecycle Recording
 
+Status:
+
+- implemented
+
 **Backend**
 
 - add a persisted invocation record for room workspace runtime calls
@@ -244,6 +267,10 @@ Suggested endpoint family:
 
 ### Slice 8. Frontend Invocation Status Refinement
 
+Status:
+
+- implemented
+
 **Frontend**
 
 - update the room workspace panel to surface:
@@ -275,6 +302,10 @@ Suggested endpoint family:
   response timeouts in room UX
 
 ### Slice 9. Agent Runner Completion
+
+Status:
+
+- implemented
 
 **Backend**
 

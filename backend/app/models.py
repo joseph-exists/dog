@@ -3741,6 +3741,9 @@ class RoomWorkspaceEndpointDescriptor(SQLModel):
     id: str
     kind: RoomWorkspaceEndpointKind
     label: str
+    runtime_id: str | None = Field(default=None, max_length=120)
+    runtime_profile: str | None = Field(default=None, max_length=120)
+    transport_kind: str | None = Field(default=None, max_length=120)
     protocol: str
     url: str | None = None
     auth_mode: RoomWorkspaceEndpointAuthMode = RoomWorkspaceEndpointAuthMode.none
@@ -3848,15 +3851,75 @@ class RoomWorkspaceRuntimeInvokeResponse(SQLModel):
 
     status: str = "completed"
     request_id: str
+    invocation_id: uuid.UUID
     connection_id: str
     workspace_id: uuid.UUID
     descriptor_id: str
     endpoint_id: str
     runtime_label: str
+    runtime_id: str | None = None
+    runtime_profile: str | None = None
     protocol: str
     success: bool
     output_text: str
     message_id: uuid.UUID | None = None
+
+
+class RoomWorkspaceRuntimeInvocationStatus(str, PyEnum):
+    """Lifecycle states for persisted room workspace runtime invocations."""
+
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+
+
+class RoomWorkspaceRuntimeInvocation(SQLModel, table=True):
+    """Persisted audit record for room workspace runtime invocation lifecycle."""
+
+    __tablename__ = "room_workspace_runtime_invocations"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    request_id: str = Field(index=True, max_length=120, nullable=False)
+    room_id: uuid.UUID = Field(
+        foreign_key="rooms.room_id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    workspace_id: uuid.UUID = Field(
+        foreign_key="workspaces.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    connection_id: str = Field(max_length=120, nullable=False, index=True)
+    runtime_id: str | None = Field(default=None, max_length=120)
+    runtime_profile: str | None = Field(default=None, max_length=120)
+    caller_kind: str = Field(max_length=32, nullable=False)
+    caller_id: str = Field(max_length=255, nullable=False)
+    status: RoomWorkspaceRuntimeInvocationStatus = Field(
+        default=RoomWorkspaceRuntimeInvocationStatus.running,
+        nullable=False,
+    )
+    error_category: str | None = Field(default=None, max_length=120)
+    started_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    completed_at: datetime | None = Field(default=None)
+
+
+class RoomWorkspaceRuntimeInvocationPublic(SQLModel):
+    id: uuid.UUID
+    request_id: str
+    room_id: uuid.UUID
+    workspace_id: uuid.UUID
+    connection_id: str
+    runtime_id: str | None = None
+    runtime_profile: str | None = None
+    caller_kind: str
+    caller_id: str
+    status: RoomWorkspaceRuntimeInvocationStatus
+    error_category: str | None = None
+    started_at: datetime
+    completed_at: datetime | None = None
 
 
 # ============================================================================
@@ -7661,6 +7724,9 @@ class WorkspaceServiceSummary(SQLModel):
     id: str = Field(min_length=1, max_length=120)
     kind: WorkspaceServiceKind
     label: str = Field(min_length=1, max_length=200)
+    runtime_id: str | None = Field(default=None, max_length=120)
+    runtime_profile: str | None = Field(default=None, max_length=120)
+    transport_kind: str | None = Field(default=None, max_length=120)
     status: WorkspaceServiceStatus = Field(default=WorkspaceServiceStatus.unknown)
     protocol: WorkspaceServiceProtocol = Field(default=WorkspaceServiceProtocol.http)
     host: str | None = Field(default=None, max_length=255)

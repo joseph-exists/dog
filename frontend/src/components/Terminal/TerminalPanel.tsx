@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { PanelContainer } from "@/components/Page/primitives"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,7 +7,19 @@ import { useTerminalSession } from "@/hooks/useTerminalSession"
 import { cn } from "@/lib/utils"
 import { TerminalStatusBar } from "./TerminalStatusBar"
 import { TerminalToolbar } from "./TerminalToolbar"
-import { TerminalViewer } from "./TerminalViewer"
+import {
+  DEFAULT_TERMINAL_VIEWER_PREFERENCES,
+  type TerminalViewerPreferences,
+  type TerminalViewerThemePreset,
+  type TerminalViewerWrapMode,
+  TerminalViewer,
+} from "./TerminalViewer"
+
+type TerminalAdjacentTab = {
+  id: string
+  label: string
+  content: React.ReactNode
+}
 
 export interface TerminalPanelProps {
   title?: string
@@ -17,6 +29,18 @@ export interface TerminalPanelProps {
   terminalError?: Error | null
   onRequestTerminal?: () => Promise<unknown> | unknown
   metadata?: React.ReactNode
+  adjacentTabs?: TerminalAdjacentTab[]
+  viewerPreferences?: Partial<TerminalViewerPreferences>
+  endpointState?:
+    | "idle"
+    | "loading"
+    | "available"
+    | "expired"
+    | "unavailable"
+    | "not_allowed"
+    | "error"
+  endpointStateMessage?: string | null
+  endpointFetchedAt?: Date | null
   className?: string
 }
 
@@ -28,20 +52,66 @@ export function TerminalPanel({
   terminalError,
   onRequestTerminal,
   metadata,
+  adjacentTabs = [],
+  viewerPreferences,
+  endpointState = "idle",
+  endpointStateMessage,
+  endpointFetchedAt,
   className,
 }: TerminalPanelProps) {
-  const [mode, setMode] = useState<"live" | "transcript">("live")
+  const [activeTab, setActiveTab] = useState<string>("live")
   const [draftInput, setDraftInput] = useState("")
+  const [fontSize, setFontSize] = useState(
+    viewerPreferences?.fontSize ?? DEFAULT_TERMINAL_VIEWER_PREFERENCES.fontSize,
+  )
+  const [wrapMode, setWrapMode] = useState<TerminalViewerWrapMode>(
+    viewerPreferences?.wrapMode ?? DEFAULT_TERMINAL_VIEWER_PREFERENCES.wrapMode,
+  )
+  const [autoScroll, setAutoScroll] = useState(
+    viewerPreferences?.autoScroll ??
+      DEFAULT_TERMINAL_VIEWER_PREFERENCES.autoScroll,
+  )
+  const [themePreset, setThemePreset] = useState<TerminalViewerThemePreset>(
+    viewerPreferences?.themePreset ??
+      DEFAULT_TERMINAL_VIEWER_PREFERENCES.themePreset,
+  )
 
-  const { session, status, error, connect, disconnect, clear, sendInput } =
-    useTerminalSession({
-      url: terminalUrl ?? null,
-      enabled: Boolean(terminalUrl),
-    })
+  const {
+    session,
+    status,
+    error,
+    connect,
+    reconnect,
+    disconnect,
+    clear,
+    sendInput,
+    sendResize,
+    setViewport,
+    capabilities,
+  } = useTerminalSession({
+    url: terminalUrl ?? null,
+    enabled: Boolean(terminalUrl),
+  })
+  const isLiveTab = activeTab === "live"
+  const directInputActive =
+    isLiveTab &&
+    status === "open" &&
+    capabilities.directInput &&
+    capabilities.sendInput
+  const canPaste = directInputActive && capabilities.paste
+  const canCopy = session.plainText.trim().length > 0
+  const resolvedViewerPreferences: TerminalViewerPreferences = {
+    ...DEFAULT_TERMINAL_VIEWER_PREFERENCES,
+    ...viewerPreferences,
+    fontSize,
+    wrapMode,
+    autoScroll,
+    themePreset,
+  }
 
   const requestLabel = useMemo(() => {
     if (isRequestingTerminal) return "Requesting terminal..."
-    if (terminalUrl) return "Refresh endpoint"
+    if (terminalUrl) return "Request fresh endpoint"
     return "Request terminal"
   }, [isRequestingTerminal, terminalUrl])
 
@@ -54,24 +124,135 @@ export function TerminalPanel({
     }
   }
 
+  const pasteFromClipboard = async () => {
+    if (!capabilities.paste || status !== "open") return
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) {
+        sendInput(text)
+      }
+    } catch {
+      // Browser clipboard access is best-effort; the terminal still supports native paste events.
+    }
+  }
+
+  const copyVisibleBuffer = async () => {
+    if (!session.plainText) return
+    try {
+      await navigator.clipboard.writeText(session.plainText)
+    } catch {
+      // Clipboard write is best-effort.
+    }
+  }
+
+  const endpointBanner =
+    endpointStateMessage &&
+    (endpointState === "expired" ||
+      endpointState === "unavailable" ||
+      endpointState === "not_allowed" ||
+      endpointState === "error")
+      ? endpointStateMessage
+      : null
+  const socketBanner =
+    status === "error"
+      ? "Socket transport failed. Reconnect the websocket or request a fresh endpoint."
+      : status === "closed" && terminalUrl
+        ? "Socket transport closed. Reconnect the websocket to continue."
+        : null
+  const handleViewportChange = useCallback(
+    (cols: number, rows: number) => {
+      setViewport(cols, rows)
+      if (capabilities.sendResize) {
+        sendResize(cols, rows)
+      }
+    },
+    [capabilities.sendResize, sendResize, setViewport],
+  )
+
   const headerActions = (
     <div className="flex flex-wrap items-center gap-2">
       <Tabs
-        value={mode}
-        onValueChange={(value) => setMode(value as "live" | "transcript")}
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value)}
       >
-        <TabsList className="grid w-[11rem] grid-cols-2">
+        <TabsList
+          className="grid w-auto"
+          style={{
+            gridTemplateColumns: `repeat(${2 + adjacentTabs.length}, minmax(0, 1fr))`,
+          }}
+        >
           <TabsTrigger value="live">Live</TabsTrigger>
           <TabsTrigger value="transcript">Transcript</TabsTrigger>
+          {adjacentTabs.map((tab) => (
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
       </Tabs>
       <TerminalToolbar
-        canConnect={Boolean(terminalUrl)}
+        canConnect={capabilities.connect}
+        canReconnect={capabilities.reconnect}
+        canClear={capabilities.clearBuffer}
+        canPaste={canPaste}
+        canCopy={canCopy}
         isConnected={status === "open"}
         onConnect={() => connect()}
+        onReconnect={() => reconnect()}
         onDisconnect={() => disconnect()}
         onClear={() => clear()}
+        onPaste={pasteFromClipboard}
+        onCopy={copyVisibleBuffer}
       />
+      <div className="flex items-center gap-1 rounded-md border border-border/60 p-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setFontSize((value) => Math.max(10, value - 1))}
+          title="Decrease font size"
+        >
+          A-
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setFontSize((value) => Math.min(20, value + 1))}
+          title="Increase font size"
+        >
+          A+
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            setWrapMode((value) => (value === "wrap" ? "nowrap" : "wrap"))
+          }
+        >
+          {wrapMode === "wrap" ? "Wrap on" : "Wrap off"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setAutoScroll((value) => !value)}
+        >
+          {autoScroll ? "Auto-scroll on" : "Auto-scroll off"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            setThemePreset((value) =>
+              value === "graphite"
+                ? "midnight"
+                : value === "midnight"
+                  ? "amber"
+                  : "graphite",
+            )
+          }
+        >
+          Theme: {themePreset}
+        </Button>
+      </div>
       {onRequestTerminal ? (
         <Button
           variant="outline"
@@ -86,21 +267,38 @@ export function TerminalPanel({
   )
 
   return (
-    <PanelContainer
+      <PanelContainer
       title={title}
       className={cn("h-full rounded-xl border bg-card", className)}
       headerActions={headerActions}
       scrollable={false}
       footer={
-        <div className="border-t border-border/70">
-          <TerminalStatusBar session={session} status={status} />
-        </div>
+        resolvedViewerPreferences.statusBarVisible ? (
+          <div className="border-t border-border/70">
+            <TerminalStatusBar
+              session={session}
+              status={status}
+              capabilities={capabilities}
+              endpointLabel={
+                endpointFetchedAt
+                  ? `Endpoint refreshed ${endpointFetchedAt.toLocaleTimeString()}`
+                  : "Endpoint state unknown"
+              }
+            />
+          </div>
+        ) : undefined
       }
     >
       <div className="flex h-full min-h-[28rem] flex-col">
-        {metadata ? (
+        {metadata && adjacentTabs.length === 0 ? (
           <div className="border-b border-border/70 px-4 py-3 text-sm">
             {metadata}
+          </div>
+        ) : null}
+
+        {endpointBanner ? (
+          <div className="border-b border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-700">
+            {endpointBanner}
           </div>
         ) : null}
 
@@ -109,33 +307,71 @@ export function TerminalPanel({
             {(terminalError ?? error)?.message}
           </div>
         ) : null}
+        {socketBanner ? (
+          <div className="border-b border-border/70 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+            {socketBanner}
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1">
-          <TerminalViewer session={session} status={status} mode={mode} />
+          {activeTab === "transcript" ? (
+            <TerminalViewer
+              session={session}
+              status={status}
+              mode="transcript"
+            />
+          ) : activeTab === "live" ? (
+            <TerminalViewer
+              session={session}
+              status={status}
+              capabilities={capabilities}
+              mode="live"
+              preferences={resolvedViewerPreferences}
+              onSendInput={sendInput}
+              onPasteInput={async (value) => sendInput(value)}
+              onCopyVisibleBuffer={copyVisibleBuffer}
+              onViewportChange={handleViewportChange}
+            />
+          ) : (
+            <div className="h-full overflow-y-auto p-4">
+              {adjacentTabs.find((tab) => tab.id === activeTab)?.content ?? null}
+            </div>
+          )}
         </div>
 
-        <div className="border-t border-border/70 p-3">
-          <div className="flex flex-col gap-2 md:flex-row">
-            <Input
-              value={draftInput}
-              onChange={(event) => setDraftInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault()
-                  submitInput()
-                }
-              }}
-              placeholder="Send a line of terminal input"
-              disabled={status !== "open"}
-            />
-            <Button
-              onClick={submitInput}
-              disabled={status !== "open" || !draftInput.trim()}
-            >
-              Send
-            </Button>
+        {isLiveTab && capabilities.sendInput && !capabilities.directInput ? (
+          <div className="border-t border-border/70 p-3">
+            <div className="flex flex-col gap-2 md:flex-row">
+              <Input
+                value={draftInput}
+                onChange={(event) => setDraftInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault()
+                    submitInput()
+                  }
+                }}
+                placeholder="Send a line of terminal input"
+                disabled={status !== "open"}
+              />
+              <Button
+                onClick={submitInput}
+                disabled={status !== "open" || !draftInput.trim()}
+              >
+                Send
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : null}
+
+        {directInputActive ? (
+          <div className="border-t border-border/70 px-3 py-2 text-xs text-muted-foreground">
+            Live terminal supports direct shell input. Reconnect recovers the
+            websocket transport, while Request fresh endpoint asks for a new
+            terminal descriptor. Runtime diagnostics are available in the Runtime
+            tab.
+          </div>
+        ) : null}
       </div>
     </PanelContainer>
   )

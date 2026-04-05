@@ -809,14 +809,14 @@ def setup_gauntlet(
             # Create nodes for each module
             for mod_id, module in GAUNTLET_MODULES.items():
                 node_payload = {
+                    "story_id": story["id"],
                     "story_version": 1,
                     "title": module["title"],
                     "content": module["node"]["narrative"],
-                    "node_type": "normal",
-                    "is_start": module.get("is_start", False),
-                    "is_end": module.get("is_end", False),
+                    "is_start_node": module.get("is_start", False),
+                    "is_end_node": module.get("is_end", False),
                 }
-                node_resp = session.post(f"{BASE_URL}/stories/{story['id']}/nodes", json=node_payload)
+                node_resp = session.post(f"{BASE_URL}/storynodes", json=node_payload)
                 if node_resp.status_code == 200:
                     log(f"    Created node: {mod_id}")
                 else:

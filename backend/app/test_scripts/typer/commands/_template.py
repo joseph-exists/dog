@@ -77,7 +77,7 @@ def create(
             typer.echo("\nFull response:")
             typer.echo(json.dumps(item, indent=2))
     else:
-        typer.secho(f"❌ Failed to create item", fg=typer.colors.RED, err=True)
+        typer.secho("❌ Failed to create item", fg=typer.colors.RED, err=True)
         typer.echo(f"Status: {response.status_code}")
         typer.echo(f"Error: {response.text}")
         raise typer.Exit(1)
@@ -132,7 +132,7 @@ def list(
                         typer.echo(f"    Desc: {item['description']}")
                     typer.echo()
     else:
-        typer.secho(f"❌ Failed to list items", fg=typer.colors.RED, err=True)
+        typer.secho("❌ Failed to list items", fg=typer.colors.RED, err=True)
         typer.echo(f"Status: {response.status_code}")
         typer.echo(f"Error: {response.text}")
         raise typer.Exit(1)

@@ -1,4 +1,7 @@
-# Story State Machine Typer Backlog
+# Story State Machine Typer 
+
+NOTE: ALL FUNCTIONALITY IMPLEMENTED.  HISTORICAL DOCUMENT.
+
 
 Purpose: prioritized implementation backlog to close the gap between current Typer coverage and full story state-machine authoring/runtime workflows.
 

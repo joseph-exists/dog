@@ -438,6 +438,10 @@ The transport and viewer foundation now exist. The next design problem is narrow
 
 ## Terminal Viewer Direction
 
+Current canonical reference:
+
+- [terminal-viewer-control-plane.md](/home/josep/dog/frontend/src/components/Terminal/docs/terminal-viewer-control-plane.md)
+
 The terminal viewer should be treated as a composed capability with four layers:
 
 1. `transport`

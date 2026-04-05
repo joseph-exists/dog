@@ -103,6 +103,9 @@ function WorkspaceDetailPage() {
           terminal={terminalQuery.terminal}
           isLoadingTerminal={terminalQuery.isLoading}
           terminalError={terminalQuery.error}
+          endpointState={terminalQuery.endpointState}
+          endpointStateMessage={terminalQuery.endpointStateMessage}
+          endpointFetchedAt={terminalQuery.descriptorFetchedAt}
           onRequestTerminal={() => terminalQuery.requestTerminal()}
         />
       ),
@@ -191,6 +194,7 @@ function WorkspaceDetailPage() {
         setBinding({ contextKey: "page:workspace", slot: "cards", themeId })
       }
       backHref="/workspaces"
+      defaultLayoutMode="tabs"
     />
   )
 }

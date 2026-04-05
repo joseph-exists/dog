@@ -56,6 +56,7 @@ async def test_consume_runtime_target_returns_active_runtime_endpoint(
         name="Runtime Workspace",
         status=WorkspaceStatus.ready,
         kennel_name="env-runtime",
+        meta={"bootstrap_workspace_path": "/home/dev/workspace"},
     )
     async_session.add(workspace)
     await async_session.commit()
@@ -66,6 +67,9 @@ async def test_consume_runtime_target_returns_active_runtime_endpoint(
                 id="codex",
                 kind=WorkspaceServiceKind.agent_runtime,
                 label="Codex Runtime",
+                runtime_id="codex",
+                runtime_profile="codex_app_server",
+                transport_kind="websocket",
                 status=WorkspaceServiceStatus.ready,
                 protocol=WorkspaceServiceProtocol.ws,
                 url="ws://runtime.internal:4500",
@@ -102,8 +106,13 @@ async def test_consume_runtime_target_returns_active_runtime_endpoint(
 
     assert target.room_id == test_room.room_id
     assert target.workspace_id == workspace.id
+    assert target.kennel_name == "env-runtime"
+    assert target.workspace_path == "/home/dev/workspace"
     assert target.endpoint_id == "codex"
     assert target.endpoint_label == "Codex Runtime"
+    assert target.runtime_id == "codex"
+    assert target.runtime_profile == "codex_app_server"
+    assert target.transport_kind == "websocket"
     assert target.protocol == "ws"
     assert target.url == "ws://runtime.internal:4500"
     assert target.scope["purpose"] == RoomWorkspaceConnectionPurpose.agent_runtime_connect.value

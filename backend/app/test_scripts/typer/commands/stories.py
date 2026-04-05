@@ -542,31 +542,40 @@ def add_choice(
 def list_nodes(
     story_id: Annotated[str, typer.Argument(help="Story ID")],
     version: Annotated[int | None, typer.Option("--version", "-v", help="Story version")] = None,
-    limit: Annotated[int, typer.Option(help="Max nodes to list")] = 50,
-    offset: Annotated[int, typer.Option(help="Pagination offset")] = 0,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ):
-    """List story nodes."""
+    """List story nodes (via story tree, filtered to this story)."""
     try:
         session = get_authenticated_session()
     except Exception as exc:
         typer.secho(f"❌ Authentication failed: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
 
-    params = {"limit": limit, "offset": offset, "story_id": story_id}
+    params: dict = {}
     if version is not None:
-        params["story_version"] = version
+        params["version"] = version
 
-    response = session.get(f"{BASE_URL}/storynodes", params=params)
+    response = session.get(f"{BASE_URL}/stories/{story_id}/tree", params=params)
 
     if response.status_code == 200:
-        data = response.json()
+        tree = response.json()
+
+        # Flatten recursive tree into ordered list
+        def flatten(node: dict) -> list:
+            result = [node]
+            for child in node.get("children", []):
+                result.extend(flatten(child))
+            return result
+
+        root = tree.get("root")
+        nodes = flatten(root) if root else []
+        orphans = tree.get("orphaned_nodes", [])
+
         if json_output:
-            typer.echo(json.dumps(data, indent=2))
+            typer.echo(json.dumps({"nodes": nodes, "orphaned_nodes": orphans}, indent=2))
             return
-        nodes = data.get("data", [])
-        total = data.get("count", 0)
-        typer.echo(f"\n📚 Story Nodes ({len(nodes)} of {total}):\n")
+
+        typer.echo(f"\n📚 Story Nodes ({len(nodes)} reachable, {len(orphans)} orphaned):\n")
         if not nodes:
             typer.secho("  No nodes found", fg=typer.colors.YELLOW)
         else:
@@ -576,12 +585,15 @@ def list_nodes(
                     tags.append("START")
                 if node.get("is_end_node"):
                     tags.append("END")
+                indent = "  " + ("  " * node.get("level", 0))
                 tag_str = f" [{' '.join(tags)}]" if tags else ""
-                typer.echo(f"  • {node.get('title', 'Untitled')}{tag_str}")
+                typer.echo(f"{indent}• {node.get('title', 'Untitled')}{tag_str}")
+                typer.echo(f"{indent}  ID: {node.get('id')}")
+        if orphans:
+            typer.echo(f"\n⚠️  Orphaned nodes ({len(orphans)}):\n")
+            for node in orphans:
+                typer.echo(f"  • {node.get('title', 'Untitled')}")
                 typer.echo(f"    ID: {node.get('id')}")
-                if node.get("node_type"):
-                    typer.echo(f"    Type: {node.get('node_type')}")
-                typer.echo()
     else:
         typer.secho("❌ Failed to list nodes", fg=typer.colors.RED, err=True)
         typer.echo(f"Status: {response.status_code}")

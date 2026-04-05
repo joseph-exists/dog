@@ -214,6 +214,36 @@ The next implementation slices should:
 - project runtime identity and profile metadata needed for adapter selection
 - keep the route, agent tool, and frontend invocation surface stable
 
+Current status:
+
+- Slice 1 runtime identity projection is implemented in the backend and kennel
+  service metadata path
+- runtime targets now carry:
+  - `runtime_id`
+  - `runtime_profile`
+  - `transport_kind`
+- Slice 2 backend adapter registry is implemented in
+  [room_workspace_runtime_orchestrator.py](/home/josep/dog/backend/app/services/room_workspace_runtime_orchestrator.py)
+- the room route and agent tool now invoke connected runtimes through the
+  runtime orchestrator and adapter registry
+- Slice 3 kennel-routed invoke ingress is implemented for kennel-managed agent
+  runtime invocation
+- the default runtime adapter path now calls kennel-owned runtime ingress rather
+  than dialing the raw runtime URL from the backend container
+- Slice 4 Codex runtime adapter is implemented with profile-aware execution for:
+  - `codex_app_server`
+  - `codex_exec`
+- the `codex_app_server` profile now uses the generic JSON-RPC session adapter
+  path over kennel-routed websocket transport
+- Slice 7 invocation lifecycle recording is implemented with persisted room
+  workspace runtime invocation records and room message enrichment references
+- Slice 8 frontend invocation status refinement is implemented with structured
+  backend invoke error details and panel-visible invocation state, runtime
+  identity, and invocation identifiers
+- Slice 9 agent runner completion is implemented for the current orchestrated
+  backend flow, with focused kennel invoke coverage for the active adapter
+  execution paths
+
 ## Primary References
 
 - [room-workspace-connection-service-reference.md](/home/josep/dog/frontend/src/components/Workspaces/docs/room-workspace-connection-service-reference.md)

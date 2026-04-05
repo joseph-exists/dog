@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { ExternalLink, RefreshCw } from "lucide-react"
+import { AlertCircle, ExternalLink, LoaderCircle, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { RoomWorkspaceConnectionPurpose } from "@/client"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ import {
   RoomService,
   type RoomWorkspaceCandidateViewModel,
   type RoomWorkspaceConnectionViewModel,
+  RoomWorkspaceRuntimeInvokeError,
   type RoomWorkspaceRuntimeInvokeResponseViewModel,
 } from "@/services/roomService"
 import { Textarea } from "@/components/ui/textarea"
@@ -25,6 +26,12 @@ import { PanelContainer } from "../primitives"
 
 interface WorkspaceConnectionsPanelProps {
   roomId: string
+}
+
+interface RuntimeInvokeErrorState {
+  message: string
+  errorCategory: string | null
+  errorPhase: string | null
 }
 
 const PURPOSE_OPTIONS: Array<{
@@ -101,6 +108,34 @@ function accessLabel(
   return "View"
 }
 
+function getRuntimeInvokeStateLabel(
+  isInvokingRuntime: boolean,
+  runtimeInvokeResult: RoomWorkspaceRuntimeInvokeResponseViewModel | null,
+  runtimeInvokeError: RuntimeInvokeErrorState | null,
+) {
+  if (isInvokingRuntime) return "Invoking runtime"
+  if (runtimeInvokeError) return "Invocation failed"
+  if (runtimeInvokeResult) return "Invocation completed"
+  return "Ready"
+}
+
+function getRuntimeInvokeStateClass(
+  isInvokingRuntime: boolean,
+  runtimeInvokeResult: RoomWorkspaceRuntimeInvokeResponseViewModel | null,
+  runtimeInvokeError: RuntimeInvokeErrorState | null,
+) {
+  if (isInvokingRuntime) {
+    return "border-amber-500/40 bg-amber-500/10 text-amber-700"
+  }
+  if (runtimeInvokeError) {
+    return "border-rose-500/40 bg-rose-500/10 text-rose-700"
+  }
+  if (runtimeInvokeResult) {
+    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+  }
+  return "border-border bg-muted/40 text-muted-foreground"
+}
+
 export function WorkspaceConnectionsPanel({
   roomId,
 }: WorkspaceConnectionsPanelProps) {
@@ -125,9 +160,8 @@ export function WorkspaceConnectionsPanel({
   const [runtimeInput, setRuntimeInput] = useState("")
   const [runtimeInvokeResult, setRuntimeInvokeResult] =
     useState<RoomWorkspaceRuntimeInvokeResponseViewModel | null>(null)
-  const [runtimeInvokeError, setRuntimeInvokeError] = useState<string | null>(
-    null,
-  )
+  const [runtimeInvokeError, setRuntimeInvokeError] =
+    useState<RuntimeInvokeErrorState | null>(null)
   const [isInvokingRuntime, setIsInvokingRuntime] = useState(false)
 
   useEffect(() => {
@@ -202,15 +236,30 @@ export function WorkspaceConnectionsPanel({
       setRuntimeInvokeResult(result)
       setRuntimeInput("")
     } catch (error) {
-      const nextError =
-        error instanceof Error
-          ? error.message
-          : "Unable to invoke the connected runtime."
-      setRuntimeInvokeError(nextError)
+      if (error instanceof RoomWorkspaceRuntimeInvokeError) {
+        setRuntimeInvokeError({
+          message: error.message,
+          errorCategory: error.errorCategory,
+          errorPhase: error.errorPhase,
+        })
+      } else {
+        setRuntimeInvokeError({
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to invoke the connected runtime.",
+          errorCategory: null,
+          errorPhase: null,
+        })
+      }
     } finally {
       setIsInvokingRuntime(false)
     }
   }
+
+  const connectedRuntimeLabel =
+    currentConnection?.endpoints.find((endpoint) => endpoint.kind === "agent-runtime")
+      ?.label ?? "Connected Runtime"
 
   return (
     <PanelContainer
@@ -407,12 +456,34 @@ export function WorkspaceConnectionsPanel({
             {currentConnection.purpose === "agent_runtime_connect" ? (
               <div className="space-y-3 rounded-lg border border-dashed p-3">
                 <div className="space-y-1">
-                  <div className="text-sm font-medium">
-                    Send To Connected Runtime
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-medium">
+                      Send To Connected Runtime
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={getRuntimeInvokeStateClass(
+                        isInvokingRuntime,
+                        runtimeInvokeResult,
+                        runtimeInvokeError,
+                      )}
+                    >
+                      {getRuntimeInvokeStateLabel(
+                        isInvokingRuntime,
+                        runtimeInvokeResult,
+                        runtimeInvokeError,
+                      )}
+                    </Badge>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Send a room-scoped message through the backend execution
                     path instead of opening the runtime endpoint manually.
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Runtime: {runtimeInvokeResult?.runtime_label ?? connectedRuntimeLabel}
+                    {runtimeInvokeResult?.runtime_profile
+                      ? ` · Profile ${runtimeInvokeResult.runtime_profile}`
+                      : ""}
                   </div>
                 </div>
 
@@ -444,7 +515,29 @@ export function WorkspaceConnectionsPanel({
 
                 {runtimeInvokeError ? (
                   <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-3 text-sm text-destructive">
-                    {runtimeInvokeError}
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div className="space-y-1">
+                        <div>{runtimeInvokeError.message}</div>
+                        <div className="text-[11px] text-destructive/80">
+                          {runtimeInvokeError.errorPhase
+                            ? `Phase ${runtimeInvokeError.errorPhase}`
+                            : "Phase unavailable"}
+                          {runtimeInvokeError.errorCategory
+                            ? ` · ${runtimeInvokeError.errorCategory}`
+                            : ""}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {isInvokingRuntime ? (
+                  <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-3 text-sm text-amber-700">
+                    <div className="flex items-center gap-2">
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Waiting for the connected runtime to return a response.
+                    </div>
                   </div>
                 ) : null}
 
@@ -469,7 +562,8 @@ export function WorkspaceConnectionsPanel({
                       {runtimeInvokeResult.output_text}
                     </div>
                     <div className="mt-2 text-[11px] text-muted-foreground">
-                      Request {runtimeInvokeResult.request_id} · Endpoint{" "}
+                      Invocation {runtimeInvokeResult.invocation_id} · Request{" "}
+                      {runtimeInvokeResult.request_id} · Endpoint{" "}
                       {runtimeInvokeResult.endpoint_id}
                     </div>
                   </div>

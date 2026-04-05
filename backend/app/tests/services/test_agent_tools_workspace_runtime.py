@@ -9,7 +9,11 @@ import pytest
 from app.services.agent_tools import AgentDeps, invoke_connected_workspace_runtime
 from app.services.room_workspace_connection_service import RoomWorkspaceRuntimeTarget
 from app.services.room_workspace_runtime_execution_service import (
+    RoomWorkspaceRuntimeInvocationCaller,
     RoomWorkspaceRuntimeInvocationResult,
+)
+from app.services.room_workspace_runtime_orchestrator import (
+    RoomWorkspaceRuntimeInvocationExecution,
 )
 
 
@@ -22,9 +26,14 @@ async def test_invoke_connected_workspace_runtime_returns_normalized_json(
         room_id=uuid4(),
         workspace_id=uuid4(),
         workspace_name="Runtime Workspace",
+        kennel_name="env-runtime",
+        workspace_path="/home/dev/workspace",
         descriptor_id=str(uuid4()),
         endpoint_id="runtime",
         endpoint_label="Hermes Runtime",
+        runtime_id="hermes",
+        runtime_profile=None,
+        transport_kind="websocket",
         protocol="ws",
         url="ws://runtime.internal/socket",
         scope={"purpose": "agent_runtime_connect"},
@@ -41,22 +50,20 @@ async def test_invoke_connected_workspace_runtime_returns_normalized_json(
         raw={"output_text": "Hermes completed the task."},
     )
 
-    async def fake_consume_current_room_workspace_runtime_target(session, *, room_id, context_store=None):  # noqa: ARG001
-        return target
-
-    async def fake_execute_room_workspace_runtime_invocation(request, *, timeout_seconds=15.0, websocket_connect=None):  # noqa: ARG001
-        assert request.input == "Inspect the room state."
-        assert request.caller.kind == "agent"
-        assert request.caller.id == "story-advisor"
-        return invocation_result
+    async def fake_invoke_room_workspace_runtime(session, *, room_id, input, caller, adapter_registry=None):  # noqa: ARG001,A002
+        assert input == "Inspect the room state."
+        assert isinstance(caller, RoomWorkspaceRuntimeInvocationCaller)
+        assert caller.kind == "agent"
+        assert caller.id == "story-advisor"
+        return RoomWorkspaceRuntimeInvocationExecution(
+            target=target,
+            result=invocation_result,
+            invocation=type("_Invocation", (), {"id": uuid4()})(),
+        )
 
     monkeypatch.setattr(
-        "app.services.agent_tools.consume_current_room_workspace_runtime_target",
-        fake_consume_current_room_workspace_runtime_target,
-    )
-    monkeypatch.setattr(
-        "app.services.agent_tools.execute_room_workspace_runtime_invocation",
-        fake_execute_room_workspace_runtime_invocation,
+        "app.services.agent_tools.invoke_room_workspace_runtime",
+        fake_invoke_room_workspace_runtime,
     )
 
     ctx = SimpleNamespace(
@@ -77,3 +84,4 @@ async def test_invoke_connected_workspace_runtime_returns_normalized_json(
     assert payload["runtime_label"] == "Hermes Runtime"
     assert payload["success"] is True
     assert payload["output_text"] == "Hermes completed the task."
+    assert payload["invocation_id"] is not None

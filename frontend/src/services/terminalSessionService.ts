@@ -31,6 +31,10 @@ export interface TerminalSessionState {
   frames: TerminalFrame[]
   plainText: string
   ansiChunks: string[]
+  truncation: {
+    droppedFrames: number
+    droppedChars: number
+  }
   viewport: TerminalViewport
 }
 
@@ -59,6 +63,10 @@ export function createTerminalSession(
     frames: [],
     plainText: "",
     ansiChunks: [],
+    truncation: {
+      droppedFrames: 0,
+      droppedChars: 0,
+    },
     viewport: {
       cols: null,
       rows: null,
@@ -111,12 +119,15 @@ export function appendTerminalFrame(
   const maxFrames = options.maxFrames ?? DEFAULT_MAX_FRAMES
   const maxChars = options.maxChars ?? DEFAULT_MAX_CHARS
 
-  const nextFrames = [...session.frames, frame].slice(-maxFrames)
-  const nextAnsiChunks = [...session.ansiChunks, frame.ansiText].slice(
+  const allFrames = [...session.frames, frame]
+  const allAnsiChunks = [...session.ansiChunks, frame.ansiText]
+  const droppedFrames = Math.max(0, allFrames.length - maxFrames)
+  const nextFrames = allFrames.slice(-maxFrames)
+  const nextAnsiChunks = allAnsiChunks.slice(
     -maxFrames,
   )
 
-  const nextPlainText = trimToMaxChars(
+  const { value: nextPlainText, droppedChars } = trimToMaxChars(
     nextFrames.map((item) => item.text).join(""),
     maxChars,
   )
@@ -127,6 +138,10 @@ export function appendTerminalFrame(
     frames: nextFrames,
     ansiChunks: nextAnsiChunks,
     plainText: nextPlainText,
+    truncation: {
+      droppedFrames: session.truncation.droppedFrames + droppedFrames,
+      droppedChars: session.truncation.droppedChars + droppedChars,
+    },
   }
 }
 
@@ -152,6 +167,10 @@ export function clearTerminalSession(
     frames: [],
     plainText: "",
     ansiChunks: [],
+    truncation: {
+      droppedFrames: 0,
+      droppedChars: 0,
+    },
     lastFrameAt: null,
   }
 }
@@ -172,12 +191,11 @@ export function updateTerminalViewport(
 export function toTerminalTranscriptContent(
   session: TerminalSessionState,
 ): Content<"code"> {
+  const transcriptValue = buildTranscriptDocument(session)
+
   return {
     format: "code",
-    value:
-      session.plainText.trim().length > 0
-        ? session.plainText
-        : "# Terminal transcript will appear here once output arrives.\n",
+    value: transcriptValue,
     metadata: {
       variant: "card",
       label: "Terminal Transcript",
@@ -189,7 +207,45 @@ export function toTerminalTranscriptContent(
   }
 }
 
-function trimToMaxChars(value: string, maxChars: number): string {
-  if (value.length <= maxChars) return value
-  return value.slice(value.length - maxChars)
+function buildTranscriptDocument(session: TerminalSessionState): string {
+  if (session.frames.length === 0) {
+    return "# Terminal transcript will appear here once output arrives.\n"
+  }
+
+  const lines: string[] = []
+
+  if (
+    session.truncation.droppedFrames > 0 ||
+    session.truncation.droppedChars > 0
+  ) {
+    lines.push(
+      `# Transcript truncated: dropped ${session.truncation.droppedFrames} older frame(s), ${session.truncation.droppedChars} older character(s).`,
+      "",
+    )
+  }
+
+  for (const frame of session.frames) {
+    const timestamp = frame.timestamp.toLocaleTimeString()
+    const kind = frame.kind.toUpperCase()
+    lines.push(`[${timestamp}] ${kind}`)
+    lines.push(frame.text || "(empty frame)")
+    lines.push("")
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`
+}
+
+function trimToMaxChars(
+  value: string,
+  maxChars: number,
+): { value: string; droppedChars: number } {
+  if (value.length <= maxChars) {
+    return { value, droppedChars: 0 }
+  }
+
+  const droppedChars = value.length - maxChars
+  return {
+    value: value.slice(value.length - maxChars),
+    droppedChars,
+  }
 }

@@ -64,9 +64,14 @@ class RoomWorkspaceRuntimeTarget:
     room_id: UUID
     workspace_id: UUID
     workspace_name: str
+    kennel_name: str
+    workspace_path: str | None
     descriptor_id: str
     endpoint_id: str
     endpoint_label: str
+    runtime_id: str | None
+    runtime_profile: str | None
+    transport_kind: str | None
     protocol: str
     url: str
     scope: dict[str, str]
@@ -514,6 +519,9 @@ async def _build_room_workspace_connection_descriptor_for_room(
                     id=service.id,
                     kind=endpoint_kind,
                     label=service.label,
+                    runtime_id=service.runtime_id,
+                    runtime_profile=service.runtime_profile,
+                    transport_kind=service.transport_kind,
                     protocol=service.protocol.value,
                     url=service.url,
                     auth_mode=RoomWorkspaceEndpointAuthMode.none,
@@ -551,6 +559,9 @@ async def _build_room_workspace_connection_descriptor_for_room(
                     id=service.id,
                     kind=endpoint_kind,
                     label=service.label,
+                    runtime_id=service.runtime_id,
+                    runtime_profile=service.runtime_profile,
+                    transport_kind=service.transport_kind,
                     protocol=service.protocol.value,
                     url=service.url,
                     auth_mode=RoomWorkspaceEndpointAuthMode.none,
@@ -788,14 +799,30 @@ async def consume_current_room_workspace_runtime_target(
             "Current room workspace connection does not have a usable agent runtime endpoint.",
         )
 
+    workspace = await session.get(Workspace, current_connection.workspace_id)
+    if workspace is None or not workspace.kennel_name:
+        raise RoomWorkspaceRuntimeTargetResolutionError(
+            "Current room workspace runtime does not have a kennel environment name.",
+        )
+
     return RoomWorkspaceRuntimeTarget(
         connection_id=current_connection.connection_id,
         room_id=current_connection.room_id,
         workspace_id=current_connection.workspace_id,
         workspace_name=current_connection.workspace_name,
+        kennel_name=workspace.kennel_name,
+        workspace_path=(
+            workspace.meta.get("bootstrap_workspace_path")
+            if isinstance(workspace.meta, dict)
+            and isinstance(workspace.meta.get("bootstrap_workspace_path"), str)
+            else None
+        ),
         descriptor_id=current_connection.descriptor.descriptor_id,
         endpoint_id=endpoint.id,
         endpoint_label=endpoint.label,
+        runtime_id=endpoint.runtime_id,
+        runtime_profile=endpoint.runtime_profile,
+        transport_kind=endpoint.transport_kind,
         protocol=endpoint.protocol,
         url=endpoint.url,
         scope=dict(endpoint.scope),

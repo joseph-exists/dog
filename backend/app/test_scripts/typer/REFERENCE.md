@@ -6,19 +6,6 @@ Reference guide for extending the TinyFoot CLI using Typer for staging environme
 
 This CLI exposes test script functionality through a typer-based command-line interface for use in staging/testing environments. It provides authenticated access to backend operations without needing to write custom scripts.
 
-## Directory Structure
-
-```
-backend/app/test_scripts/typer/
-├── REFERENCE.md          # This file
-├── auth_helper.py        # Authentication utilities
-├── wonka.py             # Example commands
-└── commands/            # Command modules (create as needed)
-    ├── __init__.py
-    ├── stories.py       # Story-related commands
-    ├── personas.py      # Persona/character commands
-    └── rooms.py         # Room management commands
-```
 
 ## Quick Start
 
@@ -481,7 +468,7 @@ def list(
 
 ## Testing Commands
 
-Test your commands locally:
+Test your commands locally: *(NOTE: this is dependent on working directory, and will vary. the following commands assume that you are working from a sourced ~/dog environment, ie `source ~/dog/backend/.venv/bin/activate)` Other documentation, including but not limited to AGENT.md or COMMANDS.md, may show other paths which may be more effective in your current sandbox/dev environment.
 
 ```bash
 # Run command module directly
@@ -577,10 +564,8 @@ def jungian_system():
 
 ### Import Errors
 
-If you get import errors, ensure:
-1. You're in the correct directory
-2. `__init__.py` files exist
-3. Using relative imports (`from ..auth_helper import ...`)
+If you get import errors, ensure your working directory is appropriate and you have sourced the ~/dog/backend environment.
+
 
 ### Authentication Failures
 

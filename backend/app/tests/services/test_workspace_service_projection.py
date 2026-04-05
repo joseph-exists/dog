@@ -25,10 +25,16 @@ def test_fallback_service_summaries_marks_agent_runtime_unknown_when_ready_but_d
                     "id": "codex",
                     "label": "Codex Runtime",
                     "kind": "agent_runtime",
+                    "runtime_id": "codex",
+                    "runtime_profile": "codex_app_server",
+                    "transport_kind": "websocket",
                     "protocol": "ws",
                     "source": "bootstrap_profile",
                 }
-            ]
+            ],
+            "kennel_inject_request": {
+                "bootstrap_profile": "codex_app_server",
+            },
         },
     )
 
@@ -36,6 +42,9 @@ def test_fallback_service_summaries_marks_agent_runtime_unknown_when_ready_but_d
 
     assert len(services) == 1
     assert services[0].kind == WorkspaceServiceKind.agent_runtime
+    assert services[0].runtime_id == "codex"
+    assert services[0].runtime_profile == "codex_app_server"
+    assert services[0].transport_kind == "websocket"
     assert services[0].status == WorkspaceServiceStatus.unknown
     assert services[0].readiness_message == (
         "Agent runtime was declared, but live discovery is currently unavailable."
@@ -63,6 +72,9 @@ def test_services_ready_prefers_agent_runtime_state_when_present() -> None:
                         "id": "codex",
                         "label": "Codex Runtime",
                         "kind": "agent_runtime",
+                        "runtime_id": "codex",
+                        "runtime_profile": "codex_app_server",
+                        "transport_kind": "websocket",
                         "protocol": "ws",
                         "source": "bootstrap_profile",
                     },

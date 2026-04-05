@@ -40,6 +40,7 @@ import {
   type RoomWorkspaceConnectionRequest,
   UsersService,
 } from "@/client"
+import { ApiError } from "@/client/core/ApiError"
 import type { ApiRequestOptions } from "@/client/core/ApiRequestOptions"
 import { request as __request } from "@/client/core/request"
 import { AgentsService, RoomContextsService } from "@/client/sdk.gen"
@@ -107,6 +108,7 @@ export interface MessageViewModel {
   can_edit: boolean
   can_delete: boolean
   can_pin: boolean
+  metadata?: Record<string, unknown> | null
 }
 
 /**
@@ -247,15 +249,39 @@ export interface RoomWorkspaceCandidateViewModel {
 export interface RoomWorkspaceRuntimeInvokeResponseViewModel {
   status: string
   request_id: string
+  invocation_id: string
   connection_id: string
   workspace_id: string
   descriptor_id: string
   endpoint_id: string
   runtime_label: string
+  runtime_id: string | null
+  runtime_profile: string | null
   protocol: string
   success: boolean
   output_text: string
   message_id: string | null
+}
+
+export interface RoomWorkspaceRuntimeInvokeErrorDetail {
+  status: string
+  error_category: string
+  error_phase: string
+  message: string
+}
+
+export class RoomWorkspaceRuntimeInvokeError extends Error {
+  status: string
+  errorCategory: string
+  errorPhase: string
+
+  constructor(detail: RoomWorkspaceRuntimeInvokeErrorDetail) {
+    super(detail.message)
+    this.name = "RoomWorkspaceRuntimeInvokeError"
+    this.status = detail.status
+    this.errorCategory = detail.error_category
+    this.errorPhase = detail.error_phase
+  }
 }
 
 // ============================================================================
@@ -330,6 +356,10 @@ function transformMessage(
     can_edit: msg.can_edit ?? false,
     can_delete: msg.can_delete ?? false,
     can_pin: msg.can_pin ?? false,
+    metadata:
+      msg.metadata && typeof msg.metadata === "object"
+        ? (msg.metadata as Record<string, unknown>)
+        : null,
   }
 }
 
@@ -548,6 +578,7 @@ function transformRoomWorkspaceRuntimeInvokeResponse(
 ): RoomWorkspaceRuntimeInvokeResponseViewModel | null {
   if (
     typeof response.request_id !== "string" ||
+    typeof response.invocation_id !== "string" ||
     typeof response.connection_id !== "string" ||
     typeof response.workspace_id !== "string" ||
     typeof response.descriptor_id !== "string" ||
@@ -563,15 +594,47 @@ function transformRoomWorkspaceRuntimeInvokeResponse(
   return {
     status: typeof response.status === "string" ? response.status : "completed",
     request_id: response.request_id,
+    invocation_id: response.invocation_id,
     connection_id: response.connection_id,
     workspace_id: response.workspace_id,
     descriptor_id: response.descriptor_id,
     endpoint_id: response.endpoint_id,
     runtime_label: response.runtime_label,
+    runtime_id:
+      typeof response.runtime_id === "string" ? response.runtime_id : null,
+    runtime_profile:
+      typeof response.runtime_profile === "string"
+        ? response.runtime_profile
+        : null,
     protocol: response.protocol,
     success: response.success,
     output_text: response.output_text,
     message_id: typeof response.message_id === "string" ? response.message_id : null,
+  }
+}
+
+function transformRoomWorkspaceRuntimeInvokeError(
+  body: unknown,
+): RoomWorkspaceRuntimeInvokeErrorDetail | null {
+  if (!body || typeof body !== "object") return null
+  const detail = (body as Record<string, unknown>).detail
+  if (!detail || typeof detail !== "object") return null
+
+  const errorDetail = detail as Record<string, unknown>
+  if (
+    typeof errorDetail.status !== "string" ||
+    typeof errorDetail.error_category !== "string" ||
+    typeof errorDetail.error_phase !== "string" ||
+    typeof errorDetail.message !== "string"
+  ) {
+    return null
+  }
+
+  return {
+    status: errorDetail.status,
+    error_category: errorDetail.error_category,
+    error_phase: errorDetail.error_phase,
+    message: errorDetail.message,
   }
 }
 
@@ -1079,21 +1142,31 @@ export const RoomService = {
     roomId: string,
     request: { input: string },
   ): Promise<RoomWorkspaceRuntimeInvokeResponseViewModel> {
-    const requestOptions: ApiRequestOptions = {
-      method: "POST",
-      url: `/api/v1/rooms/${roomId}/workspace-runtime/invoke`,
-      body: request,
-      mediaType: "application/json",
+    try {
+      const requestOptions: ApiRequestOptions = {
+        method: "POST",
+        url: `/api/v1/rooms/${roomId}/workspace-runtime/invoke`,
+        body: request,
+        mediaType: "application/json",
+      }
+      const response = (await __request(OpenAPI, requestOptions)) as Record<
+        string,
+        unknown
+      >
+      const transformed = transformRoomWorkspaceRuntimeInvokeResponse(response)
+      if (!transformed) {
+        throw new Error("Invalid workspace runtime invoke response")
+      }
+      return transformed
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const detail = transformRoomWorkspaceRuntimeInvokeError(error.body)
+        if (detail) {
+          throw new RoomWorkspaceRuntimeInvokeError(detail)
+        }
+      }
+      throw error
     }
-    const response = (await __request(OpenAPI, requestOptions)) as Record<
-      string,
-      unknown
-    >
-    const transformed = transformRoomWorkspaceRuntimeInvokeResponse(response)
-    if (!transformed) {
-      throw new Error("Invalid workspace runtime invoke response")
-    }
-    return transformed
   },
 
   // ==========================================================================

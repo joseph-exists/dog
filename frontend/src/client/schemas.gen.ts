@@ -12380,6 +12380,42 @@ export const RoomWorkspaceEndpointDescriptorSchema = {
             type: 'string',
             title: 'Label'
         },
+        runtime_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Id'
+        },
+        runtime_profile: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Profile'
+        },
+        transport_kind: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Transport Kind'
+        },
         protocol: {
             type: 'string',
             title: 'Protocol'
@@ -12430,6 +12466,111 @@ export const RoomWorkspaceEndpointKindSchema = {
     enum: ['service', 'terminal', 'agent-runtime'],
     title: 'RoomWorkspaceEndpointKind',
     description: 'Kinds of endpoints carried by a room/workspace descriptor.'
+} as const;
+
+export const RoomWorkspaceRuntimeInvokeRequestSchema = {
+    properties: {
+        input: {
+            type: 'string',
+            minLength: 1,
+            title: 'Input',
+            description: 'Message sent to the connected workspace runtime'
+        }
+    },
+    type: 'object',
+    required: ['input'],
+    title: 'RoomWorkspaceRuntimeInvokeRequest',
+    description: "Request model for invoking the room's connected workspace runtime."
+} as const;
+
+export const RoomWorkspaceRuntimeInvokeResponseSchema = {
+    properties: {
+        status: {
+            type: 'string',
+            title: 'Status',
+            default: 'completed'
+        },
+        request_id: {
+            type: 'string',
+            title: 'Request Id'
+        },
+        invocation_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Invocation Id'
+        },
+        connection_id: {
+            type: 'string',
+            title: 'Connection Id'
+        },
+        workspace_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Workspace Id'
+        },
+        descriptor_id: {
+            type: 'string',
+            title: 'Descriptor Id'
+        },
+        endpoint_id: {
+            type: 'string',
+            title: 'Endpoint Id'
+        },
+        runtime_label: {
+            type: 'string',
+            title: 'Runtime Label'
+        },
+        runtime_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Id'
+        },
+        runtime_profile: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Profile'
+        },
+        protocol: {
+            type: 'string',
+            title: 'Protocol'
+        },
+        success: {
+            type: 'boolean',
+            title: 'Success'
+        },
+        output_text: {
+            type: 'string',
+            title: 'Output Text'
+        },
+        message_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message Id'
+        }
+    },
+    type: 'object',
+    required: ['request_id', 'invocation_id', 'connection_id', 'workspace_id', 'descriptor_id', 'endpoint_id', 'runtime_label', 'protocol', 'success', 'output_text'],
+    title: 'RoomWorkspaceRuntimeInvokeResponse',
+    description: 'Response model for a room-scoped workspace runtime invocation.'
 } as const;
 
 export const RoomsPublicSchema = {
@@ -22139,6 +22280,42 @@ export const WorkspaceServiceSummarySchema = {
             maxLength: 200,
             minLength: 1,
             title: 'Label'
+        },
+        runtime_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Id'
+        },
+        runtime_profile: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Profile'
+        },
+        transport_kind: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 120
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Transport Kind'
         },
         status: {
             '$ref': '#/components/schemas/WorkspaceServiceStatus',

@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import type { WorkspaceTerminalEndpointState } from "@/hooks/useWorkspaceTerminal"
 import type {
   WorkspaceDetailViewModel,
   WorkspaceTerminalDescriptor,
@@ -33,6 +34,9 @@ export interface WorkspaceTerminalPanelProps {
   terminal: WorkspaceTerminalDescriptor | null
   isLoadingTerminal: boolean
   terminalError?: Error | null
+  endpointState?: WorkspaceTerminalEndpointState
+  endpointStateMessage?: string | null
+  endpointFetchedAt?: Date | null
   onRequestTerminal: () => Promise<unknown>
 }
 
@@ -41,6 +45,9 @@ export function WorkspaceTerminalPanel({
   terminal,
   isLoadingTerminal,
   terminalError,
+  endpointState = "idle",
+  endpointStateMessage,
+  endpointFetchedAt,
   onRequestTerminal,
 }: WorkspaceTerminalPanelProps) {
   const agentRuntimeServices = workspace.services.filter(
@@ -52,6 +59,202 @@ export function WorkspaceTerminalPanel({
       : workspace.canOpenTerminal
         ? "This workspace is available through your current project access, and terminal use is allowed."
         : "This workspace is visible in your current access scope, but terminal access is not available from this account."
+  const runtimeTabContent = (
+    <div className="space-y-3">
+      <div className="rounded-xl border bg-muted/30 p-4 text-sm">
+        Workspace status: <span className="font-medium">{workspace.status}</span>
+        <span className="mx-2 text-muted-foreground">·</span>
+        Terminal status:{" "}
+        <span className="font-medium">{workspace.terminalStatus}</span>
+        <span className="mx-2 text-muted-foreground">·</span>
+        Access: <span className="font-medium">{workspace.accessLevel}</span>
+        {workspace.connectivitySummary ? (
+          <>
+            <span className="mx-2 text-muted-foreground">·</span>
+            Services:{" "}
+            <span className="font-medium">
+              {workspace.connectivitySummary.readyServiceCount ?? 0}/
+              {workspace.connectivitySummary.serviceCount ?? 0} ready
+            </span>
+          </>
+        ) : null}
+        {workspace.bootstrapProgress ? (
+          <>
+            <span className="mx-2 text-muted-foreground">·</span>
+            Bootstrap phase:{" "}
+            <span className="font-medium">
+              {workspace.bootstrapProgress.phase}
+            </span>
+          </>
+        ) : null}
+      </div>
+
+      <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+        {accessSummary}
+      </div>
+
+      {workspace.failureMessage ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {workspace.failureMessage}
+        </div>
+      ) : null}
+
+      {workspace.bootstrapProgress?.message ? (
+        <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+          {workspace.bootstrapProgress.message}
+        </div>
+      ) : null}
+
+      {workspace.startedServices.length > 0 ? (
+        <div className="rounded-lg border bg-muted/20 p-4 text-sm">
+          <div className="mb-2 font-medium">Started Services</div>
+          <div className="flex flex-wrap gap-2">
+            {workspace.startedServices.map((service) => (
+              <span
+                key={service}
+                className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground"
+              >
+                {service}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {agentRuntimeServices.length > 0 ? (
+        <div className="rounded-lg border bg-muted/20 p-4 text-sm">
+          <div className="mb-2 font-medium">Agent Runtime Status</div>
+          <div className="space-y-2">
+            {agentRuntimeServices.map((service) => (
+              <div
+                key={service.id}
+                className="rounded-lg border bg-background/80 p-3"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{service.label}</span>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}
+                  >
+                    {service.status}
+                  </span>
+                  <span className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
+                    {serviceKindLabel(service.kind)}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {service.readinessMessage ??
+                    "Agent runtime discovery is active. This runtime may be available for room connectivity even when it does not publish a browser endpoint."}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {workspace.services.length > 0 ? (
+        <div className="rounded-lg border bg-muted/20 p-4 text-sm">
+          <div className="mb-2 font-medium">Discovered Services</div>
+          <div className="space-y-2">
+            {workspace.services.map((service) => (
+              <div
+                key={service.id}
+                className="flex flex-col gap-2 rounded-lg border bg-background/80 p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{service.label}</span>
+                    <span
+                      className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}
+                    >
+                      {service.status}
+                    </span>
+                    <span className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
+                      {serviceKindLabel(service.kind)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {service.readinessMessage ??
+                      (service.url
+                        ? "Service endpoint is available."
+                        : "Endpoint discovery is still resolving.")}
+                  </div>
+                </div>
+                {service.url ? (
+                  <a
+                    href={service.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium underline underline-offset-4"
+                  >
+                    Open service
+                  </a>
+                ) : service.kind === "agent_runtime" ? (
+                  <div className="text-xs text-muted-foreground">
+                    No browser endpoint published. Use terminal access and later
+                    room connectivity surfaces to interact with this runtime.
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    {service.host || service.port
+                      ? `${service.protocol ?? "tcp"}://${service.host ?? "127.0.0.1"}${service.port ? `:${service.port}` : ""}${service.path ?? ""}`
+                      : "No endpoint published yet"}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {!workspace.canOpenTerminal ? (
+        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          {workspace.bootstrapProgress?.phase === "failed"
+            ? "Terminal access is currently withheld because bootstrap failed before the workspace reached a terminal-ready state."
+            : "Terminal access becomes available when the backend exposes the `request_terminal` action for this workspace."}
+        </div>
+      ) : null}
+
+      <div className="rounded-lg border bg-muted/20 p-4 text-sm">
+        <div className="mb-2 font-medium">Terminal Endpoint Descriptor</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border bg-background px-2.5 py-1 text-xs capitalize text-muted-foreground">
+            {endpointState}
+          </span>
+          {endpointFetchedAt ? (
+            <span className="text-xs text-muted-foreground">
+              Last refresh {endpointFetchedAt.toLocaleTimeString()}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              No endpoint descriptor fetched yet
+            </span>
+          )}
+        </div>
+        {endpointStateMessage ? (
+          <div className="mt-2 text-xs text-muted-foreground">
+            {endpointStateMessage}
+          </div>
+        ) : null}
+      </div>
+
+      {terminal ? (
+        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+          <div>
+            <div className="text-muted-foreground">Protocol</div>
+            <div>{terminal.protocol}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Host</div>
+            <div>{terminal.host}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Connection Model</div>
+            <div>{terminal.isDirectConnection ? "direct" : "proxied"}</div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
 
   return (
     <Collapsible
@@ -68,188 +271,18 @@ export function WorkspaceTerminalPanel({
           canRequestTerminal={workspace.canOpenTerminal}
           isRequestingTerminal={isLoadingTerminal}
           terminalError={terminalError}
+          endpointState={endpointState}
+          endpointStateMessage={endpointStateMessage}
+          endpointFetchedAt={endpointFetchedAt}
           onRequestTerminal={onRequestTerminal}
           className="rounded-none border-none"
-          metadata={
-            <div className="space-y-3">
-              <div className="rounded-xl border bg-muted/30 p-4 text-sm">
-                Workspace status:{" "}
-                <span className="font-medium">{workspace.status}</span>
-                <span className="mx-2 text-muted-foreground">·</span>
-                Terminal status:{" "}
-                <span className="font-medium">{workspace.terminalStatus}</span>
-                <span className="mx-2 text-muted-foreground">·</span>
-                Access:{" "}
-                <span className="font-medium">{workspace.accessLevel}</span>
-                {workspace.connectivitySummary ? (
-                  <>
-                    <span className="mx-2 text-muted-foreground">·</span>
-                    Services:{" "}
-                    <span className="font-medium">
-                      {workspace.connectivitySummary.readyServiceCount ?? 0}/
-                      {workspace.connectivitySummary.serviceCount ?? 0} ready
-                    </span>
-                  </>
-                ) : null}
-                {workspace.bootstrapProgress ? (
-                  <>
-                    <span className="mx-2 text-muted-foreground">·</span>
-                    Bootstrap phase:{" "}
-                    <span className="font-medium">
-                      {workspace.bootstrapProgress.phase}
-                    </span>
-                  </>
-                ) : null}
-              </div>
-
-              <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-                {accessSummary}
-              </div>
-
-              {workspace.failureMessage ? (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                  {workspace.failureMessage}
-                </div>
-              ) : null}
-
-              {workspace.bootstrapProgress?.message ? (
-                <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-                  {workspace.bootstrapProgress.message}
-                </div>
-              ) : null}
-
-              {workspace.startedServices.length > 0 ? (
-                <div className="rounded-lg border bg-muted/20 p-4 text-sm">
-                  <div className="mb-2 font-medium">Started Services</div>
-                  <div className="flex flex-wrap gap-2">
-                    {workspace.startedServices.map((service) => (
-                      <span
-                        key={service}
-                        className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground"
-                      >
-                        {service}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {agentRuntimeServices.length > 0 ? (
-                <div className="rounded-lg border bg-muted/20 p-4 text-sm">
-                  <div className="mb-2 font-medium">Agent Runtime Status</div>
-                  <div className="space-y-2">
-                    {agentRuntimeServices.map((service) => (
-                      <div
-                        key={service.id}
-                        className="rounded-lg border bg-background/80 p-3"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{service.label}</span>
-                          <span
-                            className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}
-                          >
-                            {service.status}
-                          </span>
-                          <span className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                            {serviceKindLabel(service.kind)}
-                          </span>
-                        </div>
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          {service.readinessMessage ??
-                            "Agent runtime discovery is active. This runtime may be available for room connectivity even when it does not publish a browser endpoint."}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {workspace.services.length > 0 ? (
-                <div className="rounded-lg border bg-muted/20 p-4 text-sm">
-                  <div className="mb-2 font-medium">Discovered Services</div>
-                  <div className="space-y-2">
-                    {workspace.services.map((service) => (
-                      <div
-                        key={service.id}
-                        className="flex flex-col gap-2 rounded-lg border bg-background/80 p-3 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">{service.label}</span>
-                            <span
-                              className={`rounded-full border px-2.5 py-1 text-xs capitalize ${serviceStatusClass(service.status)}`}
-                            >
-                              {service.status}
-                            </span>
-                            <span className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                              {serviceKindLabel(service.kind)}
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {service.readinessMessage ??
-                              (service.url
-                                ? "Service endpoint is available."
-                                : "Endpoint discovery is still resolving.")}
-                          </div>
-                        </div>
-                        {service.url ? (
-                          <a
-                            href={service.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sm font-medium underline underline-offset-4"
-                          >
-                            Open service
-                          </a>
-                        ) : service.kind === "agent_runtime" ? (
-                          <div className="text-xs text-muted-foreground">
-                            No browser endpoint published. Use terminal access
-                            and later room connectivity surfaces to interact
-                            with this runtime.
-                          </div>
-                        ) : (
-                          <div className="text-xs text-muted-foreground">
-                            {service.host || service.port
-                              ? `${service.protocol ?? "tcp"}://${service.host ?? "127.0.0.1"}${service.port ? `:${service.port}` : ""}${service.path ?? ""}`
-                              : "No endpoint published yet"}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {!workspace.canOpenTerminal ? (
-                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                  {workspace.bootstrapProgress?.phase === "failed"
-                    ? "Terminal access is currently withheld because bootstrap failed before the workspace reached a terminal-ready state."
-                    : "Terminal access becomes available when the backend exposes the `request_terminal` action for this workspace."}
-                </div>
-              ) : null}
-
-              {terminal ? (
-                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-                  <div>
-                    <div className="text-muted-foreground">Protocol</div>
-                    <div>{terminal.protocol}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Host</div>
-                    <div>{terminal.host}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">
-                      Connection Model
-                    </div>
-                    <div>
-                      {terminal.isDirectConnection ? "direct" : "proxied"}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          }
+          adjacentTabs={[
+            {
+              id: "runtime",
+              label: "Runtime",
+              content: runtimeTabContent,
+            },
+          ]}
         />
       </CollapsibleContent>
     </Collapsible>

@@ -3286,6 +3286,9 @@ export type RoomWorkspaceEndpointDescriptor = {
     id: string;
     kind: RoomWorkspaceEndpointKind;
     label: string;
+    runtime_id?: (string | null);
+    runtime_profile?: (string | null);
+    transport_kind?: (string | null);
     protocol: string;
     url?: (string | null);
     auth_mode?: RoomWorkspaceEndpointAuthMode;
@@ -3299,6 +3302,36 @@ export type RoomWorkspaceEndpointDescriptor = {
  * Kinds of endpoints carried by a room/workspace descriptor.
  */
 export type RoomWorkspaceEndpointKind = 'service' | 'terminal' | 'agent-runtime';
+
+/**
+ * Request model for invoking the room's connected workspace runtime.
+ */
+export type RoomWorkspaceRuntimeInvokeRequest = {
+    /**
+     * Message sent to the connected workspace runtime
+     */
+    input: string;
+};
+
+/**
+ * Response model for a room-scoped workspace runtime invocation.
+ */
+export type RoomWorkspaceRuntimeInvokeResponse = {
+    status?: string;
+    request_id: string;
+    invocation_id: string;
+    connection_id: string;
+    workspace_id: string;
+    descriptor_id: string;
+    endpoint_id: string;
+    runtime_label: string;
+    runtime_id?: (string | null);
+    runtime_profile?: (string | null);
+    protocol: string;
+    success: boolean;
+    output_text: string;
+    message_id?: (string | null);
+};
 
 export type ShadowRepoCommitSummary = {
     sha: string;
@@ -5918,6 +5951,9 @@ export type WorkspaceServiceSummary = {
     id: string;
     kind: WorkspaceServiceKind;
     label: string;
+    runtime_id?: (string | null);
+    runtime_profile?: (string | null);
+    transport_kind?: (string | null);
     status?: WorkspaceServiceStatus;
     protocol?: WorkspaceServiceProtocol;
     host?: (string | null);
@@ -7299,6 +7335,13 @@ export type RoomsListMessagesData = {
 };
 
 export type RoomsListMessagesResponse = (RoomMessagesPublic);
+
+export type RoomsInvokeRoomWorkspaceRuntimeData = {
+    requestBody: RoomWorkspaceRuntimeInvokeRequest;
+    roomId: string;
+};
+
+export type RoomsInvokeRoomWorkspaceRuntimeResponse = (RoomWorkspaceRuntimeInvokeResponse);
 
 export type RoomsEditMessageEndpointData = {
     messageId: string;

@@ -75,21 +75,64 @@ from app.models import (
 from app.services.agent_runner import invoke_agent_manually, run_agents_for_message
 from app.services.event_emitter import emit_event
 from app.services.room_workspace_runtime_execution_service import (
+    RoomWorkspaceRuntimeConnectionError,
+    RoomWorkspaceRuntimeExecutionError,
     RoomWorkspaceRuntimeInvocationCaller,
-    RoomWorkspaceRuntimeInvocationRequest,
-    execute_room_workspace_runtime_invocation,
+    RoomWorkspaceRuntimeResponseTimeoutError,
+)
+from app.services.room_workspace_runtime_orchestrator import (
+    invoke_room_workspace_runtime as invoke_room_workspace_runtime_orchestrated,
 )
 from app.services.room_workspace_connection_service import (
     build_room_workspace_connection_descriptor,
     clear_current_room_workspace_connection,
-    consume_current_room_workspace_runtime_target,
     get_current_room_workspace_connection,
     list_room_workspace_candidates,
     set_current_room_workspace_connection,
 )
+from app.services.room_workspace_connection_service import (
+    RoomWorkspaceRuntimeTargetResolutionError,
+)
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 logger = logging.getLogger(__name__)
+
+
+def _runtime_invoke_error_detail(exc: Exception) -> dict[str, Any]:
+    if isinstance(exc, RoomWorkspaceRuntimeTargetResolutionError):
+        return {
+            "status": "failed",
+            "error_category": "target_resolution_error",
+            "error_phase": "resolve_target",
+            "message": str(exc),
+        }
+    if isinstance(exc, RoomWorkspaceRuntimeConnectionError):
+        return {
+            "status": "failed",
+            "error_category": "connection_error",
+            "error_phase": "connect",
+            "message": str(exc),
+        }
+    if isinstance(exc, RoomWorkspaceRuntimeResponseTimeoutError):
+        return {
+            "status": "failed",
+            "error_category": "response_timeout",
+            "error_phase": "await_response",
+            "message": str(exc),
+        }
+    if isinstance(exc, RoomWorkspaceRuntimeExecutionError):
+        return {
+            "status": "failed",
+            "error_category": "execution_error",
+            "error_phase": "execute",
+            "message": str(exc),
+        }
+    return {
+        "status": "failed",
+        "error_category": "unknown_error",
+        "error_phase": "unknown",
+        "message": str(exc),
+    }
 
 
 # ============================================================================
@@ -532,22 +575,25 @@ async def invoke_room_workspace_runtime(
     )
 
     try:
-        target = await consume_current_room_workspace_runtime_target(
+        invocation_execution = await invoke_room_workspace_runtime_orchestrated(
             session,
             room_id=room_id,
+            input=request.input,
+            caller=RoomWorkspaceRuntimeInvocationCaller(
+                kind="user",
+                id=str(current_user.id),
+            ),
         )
-        invocation_result = await execute_room_workspace_runtime_invocation(
-            RoomWorkspaceRuntimeInvocationRequest(
-                target=target,
-                input=request.input,
-                caller=RoomWorkspaceRuntimeInvocationCaller(
-                    kind="user",
-                    id=str(current_user.id),
-                ),
-            )
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (
+        RoomWorkspaceRuntimeTargetResolutionError,
+        RoomWorkspaceRuntimeExecutionError,
+    ) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=_runtime_invoke_error_detail(exc),
+        ) from exc
+    target = invocation_execution.target
+    invocation_result = invocation_execution.result
 
     runtime_event = await emit_event(
         session=session,
@@ -566,6 +612,7 @@ async def invoke_room_workspace_runtime(
                 "endpoint_id": target.endpoint_id,
                 "protocol": target.protocol,
                 "success": invocation_result.success,
+                "invocation_id": str(invocation_execution.invocation.id),
             }
         },
     )
@@ -582,11 +629,14 @@ async def invoke_room_workspace_runtime(
 
     return RoomWorkspaceRuntimeInvokeResponse(
         request_id=invocation_result.request_id,
+        invocation_id=invocation_execution.invocation.id,
         connection_id=target.connection_id,
         workspace_id=target.workspace_id,
         descriptor_id=target.descriptor_id,
         endpoint_id=target.endpoint_id,
         runtime_label=target.endpoint_label,
+        runtime_id=target.runtime_id,
+        runtime_profile=target.runtime_profile,
         protocol=target.protocol,
         success=invocation_result.success,
         output_text=invocation_result.output_text,

@@ -1,11 +1,18 @@
 import asyncio
+import errno
+import fcntl
 import json
 import logging
+import os
+import pty
 import shlex
+import signal
+import struct
 import subprocess
+import termios
 import uuid
 import threading
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from enum import Enum
 import time
 from typing import Annotated, Literal
@@ -15,6 +22,7 @@ from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconn
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
+import websockets
 
 from tokens import token_store
 from rebuild_jobs import rebuild_store, RebuildStatus
@@ -189,6 +197,9 @@ class DeclaredWorkspaceService(BaseModel):
     service_name: str
     label: str
     kind: Literal["web_app", "agent_runtime", "jupyter", "custom"] = "custom"
+    runtime_id: str | None = None
+    runtime_profile: str | None = None
+    transport_kind: str | None = None
     protocol: Literal["http", "https", "ws", "wss"] = "http"
     port: int | None = None
     path: str | None = None
@@ -204,6 +215,9 @@ class DiscoveredWorkspaceService(BaseModel):
     service_name: str
     label: str
     kind: Literal["web_app", "agent_runtime", "jupyter", "custom"] = "custom"
+    runtime_id: str | None = None
+    runtime_profile: str | None = None
+    transport_kind: str | None = None
     status: Literal["pending", "ready", "failed", "unknown"] = "unknown"
     protocol: Literal["http", "https", "ws", "wss"] = "http"
     host: str | None = None
@@ -260,6 +274,9 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         service_name="codex",
         label="Codex Runtime",
         kind="agent_runtime",
+        runtime_id="codex",
+        runtime_profile="codex_app_server",
+        transport_kind="websocket",
         protocol="ws",
         port=4500,
         path="/",
@@ -271,6 +288,9 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         service_name="claude_code",
         label="Claude Code Runtime",
         kind="agent_runtime",
+        runtime_id="claude_code",
+        runtime_profile="claude_code_remote_control",
+        transport_kind="websocket",
         protocol="ws",
         port=None,
         path=None,
@@ -282,6 +302,8 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         service_name="hermes",
         label="Hermes Runtime",
         kind="agent_runtime",
+        runtime_id="hermes",
+        transport_kind="http",
         protocol="http",
         port=None,
         path=None,
@@ -293,6 +315,32 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
 
 class IssueTerminalTokenRequest(BaseModel):
     token_ttl: int = 3600
+
+
+class AgentRuntimeInvokeRequest(BaseModel):
+    invoke_mode: Literal["websocket", "command", "json_rpc"] = "websocket"
+    payload: dict | list | str | None = None
+    json_rpc_session: "JsonRpcInvokeSessionRequest | None" = None
+    argv: list[str] = Field(default_factory=list)
+    cwd: str | None = None
+    user: str = "dev"
+    timeout_seconds: float = Field(default=15.0, ge=1.0, le=300.0)
+
+
+class JsonRpcInvokeRequestMessage(BaseModel):
+    id: str | int
+    method: str
+    params: object | None = None
+
+
+class JsonRpcInvokeSessionRequest(BaseModel):
+    requests: list[JsonRpcInvokeRequestMessage] = Field(default_factory=list)
+    terminal_notification_methods: list[str] = Field(default_factory=list)
+    tracked_notification_methods: list[str] = Field(default_factory=list)
+    fail_on_server_request: bool = True
+
+
+AgentRuntimeInvokeRequest.model_rebuild()
 
 
 # ── Job state ─────────────────────────────────────────────────────────────────
@@ -464,17 +512,21 @@ def _terminal_shell_command() -> str:
 
     Runtime tooling is currently provisioned primarily for the `dev` user, so a
     root login shell can present a misleadingly incomplete PATH even when the
-    environment itself is healthy. Browser terminal sessions are also currently
-    pipe-backed rather than PTY-backed, so startup should source the user
-    runtime environment explicitly instead of relying on interactive shell
-    initialization alone. Falling back to root keeps terminal access available
-    for older or partially initialized envs.
+    environment itself is healthy. Browser terminal sessions now run on a PTY,
+    but startup should still source the user runtime environment explicitly
+    instead of relying on interactive shell initialization alone. Falling back
+    to root keeps terminal access available for older or partially initialized
+    envs.
     """
 
     return (
+        'export TERM="${TERM:-xterm-256color}"; '
+        'export COLORTERM="${COLORTERM:-truecolor}"; '
         "if id -u dev >/dev/null 2>&1; then "
         "exec su - dev -c "
         + shlex.quote(
+            'export TERM="${TERM:-xterm-256color}"; '
+            'export COLORTERM="${COLORTERM:-truecolor}"; '
             'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; '
             'if [ -s "$NVM_DIR/nvm.sh" ]; then '
             '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; '
@@ -486,6 +538,60 @@ def _terminal_shell_command() -> str:
         "else "
         "exec bash --login; "
         "fi"
+    )
+
+
+class TerminalControlResize(BaseModel):
+    type: Literal["terminal_control"] = "terminal_control"
+    control: Literal["resize"] = "resize"
+    cols: int = Field(..., ge=1, le=1000)
+    rows: int = Field(..., ge=1, le=1000)
+
+
+def _parse_terminal_control_message(text: str) -> TerminalControlResize | None:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(payload, dict) or payload.get("type") != "terminal_control":
+        return None
+
+    try:
+        return TerminalControlResize.model_validate(payload)
+    except Exception:
+        logger.warning("terminal control message rejected payload=%s", payload)
+        return None
+
+
+def _spawn_terminal_pty(env_name: str) -> tuple[int, int]:
+    pid, master_fd = pty.fork()
+    if pid == 0:
+        os.execvpe(
+            "lxc-attach",
+            [
+                "lxc-attach",
+                "-n",
+                env_name,
+                "--",
+                "bash",
+                "-lc",
+                _terminal_shell_command(),
+            ],
+            {
+                **os.environ,
+                "TERM": os.environ.get("TERM", "xterm-256color"),
+                "COLORTERM": os.environ.get("COLORTERM", "truecolor"),
+            },
+        )
+    return pid, master_fd
+
+
+def _set_pty_winsize(fd: int, cols: int, rows: int) -> None:
+    fcntl.ioctl(
+        fd,
+        termios.TIOCSWINSZ,
+        struct.pack("HHHH", rows, cols, 0, 0),
     )
 
 
@@ -903,6 +1009,9 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
         service_name=declared.service_name,
         label=declared.label,
         kind=declared.kind,
+        runtime_id=declared.runtime_id,
+        runtime_profile=declared.runtime_profile,
+        transport_kind=declared.transport_kind,
         status=status,
         protocol=declared.protocol,
         host=env_host or ("127.0.0.1" if declared.port is not None else None),
@@ -914,6 +1023,279 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
         pid_running=pid_running,
         port_listening=port_listening,
     )
+
+
+async def _invoke_agent_runtime_websocket(
+    *,
+    service: DiscoveredWorkspaceService,
+    payload: dict | list | str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    if not service.url:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent runtime does not have a routable URL.",
+        )
+
+    message = json.dumps(payload) if not isinstance(payload, str) else payload
+
+    try:
+        async with websockets.connect(
+            service.url,
+            open_timeout=timeout_seconds,
+            close_timeout=timeout_seconds,
+        ) as websocket:
+            await websocket.send(message)
+            response = await asyncio.wait_for(websocket.recv(), timeout=timeout_seconds)
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="Agent runtime invocation timed out.",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Agent runtime invocation failed: {exc}",
+        ) from exc
+
+    raw: object = response
+    if isinstance(response, bytes):
+        try:
+            raw = response.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Agent runtime returned a non-UTF-8 websocket payload.",
+            ) from exc
+
+    parsed: object = raw
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = raw
+
+    return {
+        "status": "completed",
+        "transport_kind": service.transport_kind,
+        "protocol": service.protocol,
+        "response": parsed,
+    }
+
+
+def _decode_json_rpc_message(raw: object) -> object:
+    if isinstance(raw, bytes):
+        try:
+            raw = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Agent runtime returned a non-UTF-8 websocket payload.",
+            ) from exc
+
+    if isinstance(raw, str):
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Agent runtime returned a non-JSON JSON-RPC frame.",
+            ) from exc
+
+    return raw
+
+
+async def _invoke_agent_runtime_json_rpc(
+    *,
+    service: DiscoveredWorkspaceService,
+    session_request: JsonRpcInvokeSessionRequest,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    if not service.url:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent runtime does not have a routable URL.",
+        )
+    if len(session_request.requests) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent runtime JSON-RPC invocation requires at least one request.",
+        )
+
+    responses: list[object] = []
+    notifications: list[object] = []
+    terminal_notification: object | None = None
+
+    async def recv_message(websocket) -> object:
+        try:
+            raw = await asyncio.wait_for(websocket.recv(), timeout=timeout_seconds)
+        except asyncio.TimeoutError as exc:
+            raise HTTPException(
+                status_code=504,
+                detail="Agent runtime invocation timed out.",
+            ) from exc
+        return _decode_json_rpc_message(raw)
+
+    try:
+        async with websockets.connect(
+            service.url,
+            open_timeout=timeout_seconds,
+            close_timeout=timeout_seconds,
+        ) as websocket:
+            for request in session_request.requests:
+                await websocket.send(
+                    json.dumps(
+                        {
+                            "id": request.id,
+                            "method": request.method,
+                            "params": request.params,
+                        }
+                    )
+                )
+
+                while True:
+                    message = await recv_message(websocket)
+                    if not isinstance(message, dict):
+                        raise HTTPException(
+                            status_code=502,
+                            detail="Agent runtime returned an invalid JSON-RPC frame.",
+                        )
+
+                    if "id" in message and ("result" in message or "error" in message):
+                        if message.get("id") == request.id:
+                            if "error" in message:
+                                raise HTTPException(
+                                    status_code=502,
+                                    detail=f"Agent runtime JSON-RPC error: {message['error']}",
+                                )
+                            responses.append(message)
+                            break
+                        responses.append(message)
+                        continue
+
+                    method = message.get("method")
+                    if isinstance(method, str):
+                        if "id" in message and session_request.fail_on_server_request:
+                            raise HTTPException(
+                                status_code=502,
+                                detail=(
+                                    "Agent runtime issued a JSON-RPC server request that "
+                                    f"the kennel bridge is not handling: {method}"
+                                ),
+                            )
+                        if (
+                            method in session_request.tracked_notification_methods
+                            or method in session_request.terminal_notification_methods
+                        ):
+                            notifications.append(message)
+                        if method in session_request.terminal_notification_methods:
+                            terminal_notification = message
+                            return {
+                                "status": "completed",
+                                "transport_kind": service.transport_kind,
+                                "protocol": service.protocol,
+                                "response": {
+                                    "responses": responses,
+                                    "notifications": notifications,
+                                    "terminal_notification": terminal_notification,
+                                },
+                            }
+
+            if session_request.terminal_notification_methods:
+                while True:
+                    message = await recv_message(websocket)
+                    if not isinstance(message, dict):
+                        raise HTTPException(
+                            status_code=502,
+                            detail="Agent runtime returned an invalid JSON-RPC frame.",
+                        )
+                    method = message.get("method")
+                    if isinstance(method, str):
+                        if "id" in message and session_request.fail_on_server_request:
+                            raise HTTPException(
+                                status_code=502,
+                                detail=(
+                                    "Agent runtime issued a JSON-RPC server request that "
+                                    f"the kennel bridge is not handling: {method}"
+                                ),
+                            )
+                        if (
+                            method in session_request.tracked_notification_methods
+                            or method in session_request.terminal_notification_methods
+                        ):
+                            notifications.append(message)
+                        if method in session_request.terminal_notification_methods:
+                            terminal_notification = message
+                            break
+                    elif "id" in message and ("result" in message or "error" in message):
+                        responses.append(message)
+    except HTTPException:
+        raise
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="Agent runtime invocation timed out.",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Agent runtime invocation failed: {exc}",
+        ) from exc
+
+    return {
+        "status": "completed",
+        "transport_kind": service.transport_kind,
+        "protocol": service.protocol,
+        "response": {
+            "responses": responses,
+            "notifications": notifications,
+            "terminal_notification": terminal_notification,
+        },
+    }
+
+
+def _invoke_agent_runtime_command(
+    *,
+    env_name: str,
+    service: DeclaredWorkspaceService,
+    argv: list[str],
+    cwd: str | None,
+    user: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    if not argv:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent runtime command invocation requires argv.",
+        )
+
+    command = " ".join(shlex.quote(part) for part in argv)
+    if cwd:
+        command = f"cd {shlex.quote(cwd)} && {command}"
+
+    result = _run_as_user(
+        env_name,
+        user=user,
+        command=command,
+        timeout=max(1, min(int(timeout_seconds), 300)),
+    )
+    if result.returncode != 0:
+        error_output = (result.stderr or result.stdout or "").strip() or "Agent runtime command failed."
+        raise HTTPException(
+            status_code=502,
+            detail=error_output,
+        )
+
+    output_text = (result.stdout or "").strip()
+    return {
+        "status": "completed",
+        "transport_kind": "command",
+        "protocol": service.protocol,
+        "response": {
+            "success": True,
+            "output_text": output_text,
+        },
+    }
 
 
 def _execute_bootstrap_step(
@@ -1645,6 +2027,95 @@ async def issue_terminal_token(
     }
 
 
+@app.post("/envs/{name}/agent-runtimes/{service_id}/invoke")
+async def invoke_agent_runtime(
+    name: str,
+    service_id: str,
+    req: AgentRuntimeInvokeRequest,
+    _=Depends(require_management_secret),
+):
+    info = lxc("lxc-info", "-n", name)
+    if info.returncode != 0:
+        raise HTTPException(404, detail=f"Environment not found: {name}")
+
+    declared_services = _read_service_manifest(name)
+    declared = next((service for service in declared_services if service.id == service_id), None)
+    if declared is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Declared agent runtime not found: {service_id}",
+        )
+    if declared.kind != "agent_runtime":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Declared service '{service_id}' is not an agent runtime.",
+        )
+
+    discovered = _discover_service(name, declared)
+    if discovered.status != "ready":
+        raise HTTPException(
+            status_code=400,
+            detail=discovered.readiness_message or "Agent runtime is not ready.",
+        )
+
+    if req.invoke_mode == "command":
+        result = await asyncio.to_thread(
+            _invoke_agent_runtime_command,
+            env_name=name,
+            service=declared,
+            argv=req.argv,
+            cwd=req.cwd or declared.workspace_path,
+            user=req.user,
+            timeout_seconds=req.timeout_seconds,
+        )
+    elif req.invoke_mode == "json_rpc":
+        if discovered.transport_kind != "websocket":
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Agent runtime transport is not supported by the kennel JSON-RPC invoke endpoint yet: "
+                    f"{discovered.transport_kind or discovered.protocol}"
+                ),
+            )
+        if req.json_rpc_session is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Agent runtime JSON-RPC invocation requires json_rpc_session.",
+            )
+        result = await _invoke_agent_runtime_json_rpc(
+            service=discovered,
+            session_request=req.json_rpc_session,
+            timeout_seconds=req.timeout_seconds,
+        )
+    else:
+        if discovered.transport_kind != "websocket":
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Agent runtime transport is not supported by the kennel invoke endpoint yet: "
+                    f"{discovered.transport_kind or discovered.protocol}"
+                ),
+            )
+        if req.payload is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Agent runtime websocket invocation requires payload.",
+            )
+        result = await _invoke_agent_runtime_websocket(
+            service=discovered,
+            payload=req.payload,
+            timeout_seconds=req.timeout_seconds,
+        )
+
+    return {
+        "env": name,
+        "service_id": service_id,
+        "runtime_id": discovered.runtime_id,
+        "runtime_profile": discovered.runtime_profile,
+        **result,
+    }
+
+
 # ── WebSocket: terminal ───────────────────────────────────────────────────────
 
 @app.websocket("/envs/{name}/ws")
@@ -1681,26 +2152,25 @@ async def env_terminal(websocket: WebSocket, name: str):
 
     await websocket.accept()
     logger.info("terminal websocket accepted env=%s client=%s", name, client_host)
-
-    proc = await asyncio.create_subprocess_exec(
-        "lxc-attach", "-n", name, "--",
-        "bash", "-lc", _terminal_shell_command(),
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,
-    )
+    loop = asyncio.get_running_loop()
+    child_pid, pty_master_fd = await loop.run_in_executor(None, _spawn_terminal_pty, name)
+    await loop.run_in_executor(None, _set_pty_winsize, pty_master_fd, 120, 32)
 
     async def read_output():
         try:
             while True:
-                chunk = await proc.stdout.read(4096)
+                chunk = await loop.run_in_executor(None, os.read, pty_master_fd, 4096)
                 if not chunk:
                     break
                 await websocket.send_bytes(chunk)
+        except OSError as exc:
+            if exc.errno != errno.EIO:
+                logger.exception("terminal websocket output pump failed env=%s", name)
         except Exception:
             logger.exception("terminal websocket output pump failed env=%s", name)
         finally:
-            await websocket.close()
+            with suppress(Exception):
+                await websocket.close()
 
     async def read_input():
         try:
@@ -1714,19 +2184,31 @@ async def env_terminal(websocket: WebSocket, name: str):
                     text = message.get("text")
                     if text is None:
                         continue
+                    control = _parse_terminal_control_message(text)
+                    if control is not None:
+                        await loop.run_in_executor(
+                            None,
+                            _set_pty_winsize,
+                            pty_master_fd,
+                            control.cols,
+                            control.rows,
+                        )
+                        continue
                     data = text.encode()
 
-                proc.stdin.write(data)
-                await proc.stdin.drain()
+                await loop.run_in_executor(None, os.write, pty_master_fd, data)
         except WebSocketDisconnect:
             logger.info("terminal websocket client disconnected env=%s client=%s", name, client_host)
         except Exception:
             logger.exception("terminal websocket input pump failed env=%s", name)
-        finally:
-            proc.stdin.close()
 
     await asyncio.gather(read_output(), read_input())
-    proc.kill()
+    with suppress(OSError):
+        os.close(pty_master_fd)
+    with suppress(ProcessLookupError):
+        os.kill(child_pid, signal.SIGTERM)
+    with suppress(ChildProcessError):
+        await loop.run_in_executor(None, os.waitpid, child_pid, 0)
     logger.info("terminal websocket closed env=%s client=%s", name, client_host)
     await publish_event(name, "ws_disconnected")
 

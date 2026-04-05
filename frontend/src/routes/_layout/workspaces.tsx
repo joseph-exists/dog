@@ -86,6 +86,7 @@ function WorkspacesPage() {
       onCardsThemeChange={(themeId) =>
         setBinding({ contextKey: "page:workspaces", slot: "cards", themeId })
       }
+      defaultLayoutMode="tabs"
     />
   )
 }

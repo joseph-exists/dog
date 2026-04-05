@@ -62,6 +62,137 @@ type RuntimeFileDraft = {
   content: string
 }
 
+type ResolvedRuntimeSummary = {
+  flavourOutcome: string
+  startupOwner: string
+  startupProcess: string
+  codexExecRole: string
+  notes: string[]
+}
+
+function getRuntimePresetHelperText(runtimePreset: string): string {
+  if (runtimePreset === "codex") {
+    return "Codex preset defaults the base image toward dev-codex and, when paired with Codex agent runtime startup, hands launch to kennel's codex_app_server profile."
+  }
+  if (runtimePreset === "claude_code") {
+    return "Claude Code preset defaults the base image toward dev-claude-code and keeps kennel runtime defaults available when the flow chooses them."
+  }
+  if (runtimePreset === "hermes-agent") {
+    return "Hermes preset naming is exposed here, but kennel does not currently have a first-class Hermes preset/bootstrap path."
+  }
+  return "Use a runtime preset for sane defaults. Keep flavour editable when you need to override the base environment."
+}
+
+function resolveRuntimeSummary(params: {
+  flavour: WorkspaceFlavour
+  runtimePreset: string
+  startupMode: BootstrapStartupMode
+  startupProfile: (typeof STARTUP_PROFILES)[number]
+  agentProfile: (typeof AGENT_PROFILES)[number]
+  bootstrapProfile: string
+}): ResolvedRuntimeSummary {
+  const {
+    flavour,
+    runtimePreset,
+    startupMode,
+    startupProfile,
+    agentProfile,
+    bootstrapProfile,
+  } = params
+  const preset = runtimePreset === "none" ? null : runtimePreset
+  const hasBootstrapProfileOverride = bootstrapProfile.trim().length > 0
+
+  let flavourOutcome = `Create uses the selected flavour \`${flavour}\`.`
+  if (preset === "codex" && flavour === "dev") {
+    flavourOutcome =
+      "Create resolves the default `dev` flavour to `dev-codex`, so the Codex CLI is prebaked into the workspace image."
+  } else if (preset === "claude_code" && flavour === "dev") {
+    flavourOutcome =
+      "Create resolves the default `dev` flavour to `dev-claude-code`, so Claude Code is prebaked into the workspace image."
+  } else if (preset) {
+    flavourOutcome = `Runtime preset \`${preset}\` is selected, but the explicit flavour \`${flavour}\` remains the create-time base image.`
+  }
+
+  if (startupMode === "terminal_only") {
+    return {
+      flavourOutcome,
+      startupOwner: "No runtime service is auto-started.",
+      startupProcess:
+        preset === "codex"
+          ? "Codex is installed in the workspace image, but provisioning does not auto-launch `codex`, `codex exec`, or `codex app-server`."
+          : "Provisioning stops at terminal-ready workspace setup. No long-running runtime process is auto-launched.",
+      codexExecRole:
+        "`codex exec` is never auto-started by workspace provisioning. Use it manually inside the terminal when you want one-shot non-interactive Codex runs.",
+      notes: [
+        "Choose Agent Runtime startup if you want the workspace to come up with a long-running runtime service.",
+      ],
+    }
+  }
+
+  if (startupMode === "profile") {
+    return {
+      flavourOutcome,
+      startupOwner: "Backend bootstrap plan owns startup.",
+      startupProcess: `Provisioning auto-starts the selected startup profile \`${startupProfile}\`, not a Codex runtime command.`,
+      codexExecRole:
+        "`codex exec` is not involved in profile startup. It remains a manual terminal command only.",
+      notes: [
+        "Profile startup is intended for app/dev-server commands like vite, nextjs, or fastapi.",
+      ],
+    }
+  }
+
+  if (agentProfile === "codex") {
+    if (preset === "codex" && !hasBootstrapProfileOverride) {
+      return {
+        flavourOutcome,
+        startupOwner: "Kennel runtime preset/profile owns startup.",
+        startupProcess:
+          "Provisioning launches `codex app-server --listen ws://0.0.0.0:4500` as the long-running Codex runtime.",
+        codexExecRole:
+          "`codex exec` is not used for workspace startup. It stays available as a manual one-shot command after the workspace is provisioned.",
+        notes: [
+          "This is the default Codex agent-runtime path.",
+          "The app server is the long-running websocket service; it is distinct from the interactive `codex` CLI and the one-shot `codex exec` mode.",
+        ],
+      }
+    }
+
+    return {
+      flavourOutcome,
+      startupOwner: hasBootstrapProfileOverride
+        ? "Advanced override path: backend bootstrap plan may still own startup."
+        : "Backend agent-runtime bootstrap plan owns startup.",
+      startupProcess:
+        "Provisioning launches the backend Codex agent-runtime command (`codex`), not `codex exec`. Do not assume a bootstrap profile field alone changes that command.",
+      codexExecRole:
+        "`codex exec` is still never auto-started by this flow.",
+      notes: hasBootstrapProfileOverride
+        ? [
+            "Bootstrap profile overrides are operator-level knobs.",
+            "Current backend behavior may keep its explicit startup plan even when a bootstrap profile is filled in.",
+          ]
+        : [
+            "Select the `codex` runtime preset and leave advanced bootstrap overrides empty if you want kennel-owned `codex app-server` startup.",
+          ],
+    }
+  }
+
+  const backendAgentCommand =
+    agentProfile === "claude_code" ? "`claude`" : "`hermes`"
+
+  return {
+    flavourOutcome,
+    startupOwner: "Backend agent-runtime bootstrap plan owns startup.",
+    startupProcess: `Provisioning launches ${backendAgentCommand} as the long-running agent runtime for the selected profile \`${agentProfile}\`.`,
+    codexExecRole:
+      "`codex exec` is not involved in this runtime path.",
+    notes: [
+      "Agent Runtime startup is for long-running workspace services rather than one-shot terminal commands.",
+    ],
+  }
+}
+
 function createRuntimeFileDraft(): RuntimeFileDraft {
   return {
     id: `runtime-file-${Math.random().toString(36).slice(2, 10)}`,
@@ -97,6 +228,14 @@ export function WorkspaceCreatePanel({
   const [envVarsText, setEnvVarsText] = useState("")
   const [bootstrapProfile, setBootstrapProfile] = useState("")
   const [runtimeFiles, setRuntimeFiles] = useState<RuntimeFileDraft[]>([])
+  const resolvedRuntime = resolveRuntimeSummary({
+    flavour,
+    runtimePreset,
+    startupMode,
+    startupProfile,
+    agentProfile,
+    bootstrapProfile,
+  })
 
   const setAgentProfileWithPreset = (
     value: (typeof AGENT_PROFILES)[number],
@@ -185,8 +324,7 @@ export function WorkspaceCreatePanel({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Use a runtime preset for sane defaults. Keep flavour editable when
-              you need to override the base environment.
+              {getRuntimePresetHelperText(runtimePreset)}
             </p>
           </div>
 
@@ -445,6 +583,58 @@ export function WorkspaceCreatePanel({
                   ? "Backend will validate repo ownership/readiness, materialize the repo, and start the selected agent runtime."
                   : "Backend will validate repo ownership and readiness before generating the bootstrap plan."}
           </div>
+
+          <div className="space-y-3 rounded-xl border bg-background/85 p-4">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Resolved Runtime Behavior</div>
+              <p className="text-xs text-muted-foreground">
+                This explains what the current combination of preset, startup
+                mode, and advanced overrides actually does at provision time.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  Base Image
+                </div>
+                <p className="text-sm leading-6">{resolvedRuntime.flavourOutcome}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  Startup Owner
+                </div>
+                <p className="text-sm leading-6">{resolvedRuntime.startupOwner}</p>
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  Long-Running Process
+                </div>
+                <p className="text-sm leading-6">
+                  {resolvedRuntime.startupProcess}
+                </p>
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  `codex exec`
+                </div>
+                <p className="text-sm leading-6">
+                  {resolvedRuntime.codexExecRole}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-dashed bg-muted/20 p-3">
+              <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Notes
+              </div>
+              {resolvedRuntime.notes.map((note) => (
+                <p key={note} className="text-xs leading-5 text-muted-foreground">
+                  {note}
+                </p>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -502,7 +692,9 @@ export function WorkspaceCreatePanel({
                 placeholder="codex_app_server"
               />
               <p className="text-xs text-muted-foreground">
-                Optional kennel-side bootstrap profile override.
+                Optional kennel-side bootstrap profile override. Advanced
+                operator field: it can change which layer owns startup, and it
+                does not cause `codex exec` to be auto-launched.
               </p>
             </div>
 
