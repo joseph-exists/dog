@@ -160,7 +160,7 @@ AGENT_SERVICE_PROFILES: dict[str, AgentServiceProfile] = {
     "hermes": AgentServiceProfile(
         profile_id="hermes",
         label="Hermes Runtime",
-        default_command="hermes",
+        default_command="$HOME/.hermes/hermes-agent",
         command_env_var="DOG_WORKSPACE_AGENT_HERMES_CMD",
         host_env_var="DOG_WORKSPACE_AGENT_HERMES_HOST",
         port_env_var="DOG_WORKSPACE_AGENT_HERMES_PORT",

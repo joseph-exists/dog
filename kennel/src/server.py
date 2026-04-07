@@ -98,6 +98,7 @@ class JobStatus(str, Enum):
 class RuntimePreset(str, Enum):
     codex = "codex"
     claude_code = "claude_code"
+    hermes = "hermes"
 
 class CreateEnvRequest(BaseModel):
     name:               str | None = None
@@ -356,6 +357,10 @@ RUNTIME_PRESET_DEFAULTS: dict[RuntimePreset, dict[str, str]] = {
     RuntimePreset.claude_code: {
         "flavour": "dev-claude-code",
         "bootstrap_profile": "claude_code_remote_control",
+    },
+    RuntimePreset.hermes: {
+        "flavour": "hermes-agent",
+        "bootstrap_profile": "hermes_agent_runtime",
     },
 }
 
@@ -664,11 +669,53 @@ def _claude_code_runtime_files(user: str) -> dict[str, str]:
     }
 
 
+def _hermes_runtime_files(user: str) -> dict[str, str]:
+    user_home = f"/home/{user}"
+    return {
+        f"{user_home}/.hermes/config.yaml": (
+            "# Hermes runtime configuration for kennel-managed workspaces.\n"
+            "# Align these values with Hermes gateway setup from the official quickstart.\n"
+            "gateway:\n"
+            "  url: ${HERMES_GATEWAY_URL:-http://127.0.0.1:9001}\n"
+            "runtime:\n"
+            "  profile: kennel\n"
+            "  workspace_path: /home/dev/workspace\n"
+        ),
+        f"{user_home}/.hermes/.env": (
+            "# Workspace-scoped Hermes secrets.\n"
+            "# Keep real values in this file or inject them through workspace env vars.\n"
+            "HERMES_API_KEY=\n"
+            "HERMES_GATEWAY_TOKEN=\n"
+        ),
+        f"{user_home}/.hermes/hermes-agent": (
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "export PATH=\"$HOME/.local/bin:$PATH\"\n"
+            "if [ -f \"$HOME/.hermes/.env\" ]; then\n"
+            "  set -a\n"
+            "  # shellcheck disable=SC1090\n"
+            "  source \"$HOME/.hermes/.env\"\n"
+            "  set +a\n"
+            "fi\n"
+            "if command -v hermes >/dev/null 2>&1; then\n"
+            "  exec hermes \"$@\"\n"
+            "fi\n"
+            "if command -v hermes-agent >/dev/null 2>&1; then\n"
+            "  exec hermes-agent \"$@\"\n"
+            "fi\n"
+            "echo \"Hermes runtime command not found; install Hermes Agent or adjust PATH.\" >&2\n"
+            "exec tail -f /dev/null\n"
+        ),
+    }
+
+
 def _bootstrap_profile_runtime_files(req: InjectRequest) -> dict[str, str]:
     if req.bootstrap_profile == "codex_app_server":
         return _codex_runtime_files(req.user)
     if req.bootstrap_profile == "claude_code_remote_control":
         return _claude_code_runtime_files(req.user)
+    if req.bootstrap_profile == "hermes_agent_runtime":
+        return _hermes_runtime_files(req.user)
     if req.bootstrap_profile:
         raise ValueError(f"Unknown bootstrap_profile: {req.bootstrap_profile}")
     return {}
@@ -730,6 +777,45 @@ def _bootstrap_profile_plan(req: InjectRequest) -> BootstrapExecutionPlan | None
 
         return plan
 
+    if req.bootstrap_profile == "hermes_agent_runtime":
+        plan = _legacy_bootstrap_plan(req)
+        workspace_path = plan.workspace_path
+
+        if not any(
+            isinstance(step, BootstrapCloneRepoStep) and step.target_path == workspace_path
+            for step in plan.steps
+        ):
+            plan.steps.append(
+                BootstrapRunCommandStep(
+                    phase="preparing_workspace",
+                    label="Create workspace directory",
+                    command=f"mkdir -p {shlex.quote(workspace_path)}",
+                )
+            )
+
+        plan.steps.append(
+            BootstrapRunCommandStep(
+                phase="starting_runtime",
+                label="Start Hermes agent runtime",
+                command=(
+                    "if [ -x \"$HOME/.hermes/hermes-agent\" ]; then "
+                    "exec \"$HOME/.hermes/hermes-agent\"; "
+                    "elif command -v hermes >/dev/null 2>&1; then "
+                    "exec hermes; "
+                    "elif command -v hermes-agent >/dev/null 2>&1; then "
+                    "exec hermes-agent; "
+                    "fi; "
+                    "echo 'Hermes runtime command not found; keeping service alive for operator inspection.'; "
+                    "exec tail -f /dev/null"
+                ),
+                cwd=workspace_path,
+                background=True,
+                service_name="hermes",
+            )
+        )
+
+        return plan
+
     if req.bootstrap_profile != "codex_app_server":
         raise ValueError(f"Unknown bootstrap_profile: {req.bootstrap_profile}")
 
@@ -775,13 +861,18 @@ def _write_runtime_file(
     escaped_path = shlex.quote(path)
     parent_dir = shlex.quote(path.rsplit("/", 1)[0] or "/")
     payload = content
+    mode = "644"
+    if path.endswith("/.env"):
+        mode = "600"
+    elif content.lstrip().startswith("#!"):
+        mode = "755"
     return _attach_exec(
         env_name,
         (
             f"mkdir -p {parent_dir} && "
             f"cat > {escaped_path} <<'RUNTIMEFILE'\n{payload}\nRUNTIMEFILE\n"
             f"chown -R {user}:{user} {parent_dir} && "
-            f"chmod 644 {escaped_path}"
+            f"chmod {mode} {escaped_path}"
         ),
         timeout=30,
     )
@@ -2125,17 +2216,19 @@ async def env_terminal(websocket: WebSocket, name: str):
     Token is validated before the lxc-attach subprocess is spawned.
     """
     token = websocket.query_params.get("token", "")
+    debug_session_id = websocket.query_params.get("debug_session_id")
     client_host = getattr(websocket.client, "host", None)
     origin = websocket.headers.get("origin")
     user_agent = websocket.headers.get("user-agent")
 
     logger.info(
-        "terminal websocket attempt env=%s client=%s origin=%s user_agent=%s token_prefix=%s",
+        "terminal websocket attempt env=%s client=%s origin=%s user_agent=%s token_prefix=%s debug_session_id=%s",
         name,
         client_host,
         origin,
         user_agent,
         token[:8],
+        debug_session_id,
     )
 
     valid, reason = token_store.validate(token, name)
@@ -2151,17 +2244,32 @@ async def env_terminal(websocket: WebSocket, name: str):
         return
 
     await websocket.accept()
-    logger.info("terminal websocket accepted env=%s client=%s", name, client_host)
+    logger.info(
+        "terminal websocket accepted env=%s client=%s debug_session_id=%s",
+        name,
+        client_host,
+        debug_session_id,
+    )
     loop = asyncio.get_running_loop()
     child_pid, pty_master_fd = await loop.run_in_executor(None, _spawn_terminal_pty, name)
     await loop.run_in_executor(None, _set_pty_winsize, pty_master_fd, 120, 32)
 
     async def read_output():
+        first_output_logged = False
         try:
             while True:
                 chunk = await loop.run_in_executor(None, os.read, pty_master_fd, 4096)
                 if not chunk:
                     break
+                if debug_session_id and not first_output_logged:
+                    first_output_logged = True
+                    logger.info(
+                        "terminal websocket first output env=%s client=%s debug_session_id=%s bytes=%s",
+                        name,
+                        client_host,
+                        debug_session_id,
+                        len(chunk),
+                    )
                 await websocket.send_bytes(chunk)
         except OSError as exc:
             if exc.errno != errno.EIO:
@@ -2173,6 +2281,7 @@ async def env_terminal(websocket: WebSocket, name: str):
                 await websocket.close()
 
     async def read_input():
+        first_input_logged = False
         try:
             while True:
                 message = await websocket.receive()
@@ -2186,6 +2295,15 @@ async def env_terminal(websocket: WebSocket, name: str):
                         continue
                     control = _parse_terminal_control_message(text)
                     if control is not None:
+                        if debug_session_id:
+                            logger.info(
+                                "terminal websocket resize control env=%s client=%s debug_session_id=%s cols=%s rows=%s",
+                                name,
+                                client_host,
+                                debug_session_id,
+                                control.cols,
+                                control.rows,
+                            )
                         await loop.run_in_executor(
                             None,
                             _set_pty_winsize,
@@ -2196,9 +2314,23 @@ async def env_terminal(websocket: WebSocket, name: str):
                         continue
                     data = text.encode()
 
+                if debug_session_id and not first_input_logged:
+                    first_input_logged = True
+                    logger.info(
+                        "terminal websocket first input env=%s client=%s debug_session_id=%s bytes=%s",
+                        name,
+                        client_host,
+                        debug_session_id,
+                        len(data),
+                    )
                 await loop.run_in_executor(None, os.write, pty_master_fd, data)
         except WebSocketDisconnect:
-            logger.info("terminal websocket client disconnected env=%s client=%s", name, client_host)
+            logger.info(
+                "terminal websocket client disconnected env=%s client=%s debug_session_id=%s",
+                name,
+                client_host,
+                debug_session_id,
+            )
         except Exception:
             logger.exception("terminal websocket input pump failed env=%s", name)
 
@@ -2209,7 +2341,12 @@ async def env_terminal(websocket: WebSocket, name: str):
         os.kill(child_pid, signal.SIGTERM)
     with suppress(ChildProcessError):
         await loop.run_in_executor(None, os.waitpid, child_pid, 0)
-    logger.info("terminal websocket closed env=%s client=%s", name, client_host)
+    logger.info(
+        "terminal websocket closed env=%s client=%s debug_session_id=%s",
+        name,
+        client_host,
+        debug_session_id,
+    )
     await publish_event(name, "ws_disconnected")
 
 

@@ -7,21 +7,27 @@ if ! id -u dev >/dev/null 2>&1; then
   exit 1
 fi
 
-# Scaffold for a prebaked Hermes runtime image.
-# This layer is intentionally conservative until the Hermes packaging,
-# authentication, and long-running service contract are finalized.
-
-apt-get update && apt-get install -y \
-  ripgrep \
-  fd-find
+# Prebaked Hermes Agent runtime image.
+# Installs Hermes using the installer path validated in provisioned dev envs.
+apt-get update && apt-get install -y ca-certificates curl
 
 su - dev -c "
+  set -euo pipefail
+  export PATH=\$HOME/.local/bin:\$PATH
+  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash --skip-setup
   mkdir -p \$HOME/.config/hermes
   cat > \$HOME/.config/hermes/kennel-runtime-note.txt << 'EOF'
-This flavour is the scaffold for a prebaked Hermes runtime image.
-Install and version-pin the Hermes runtime here once its distribution and
-service launch contract are finalized.
+This flavour preinstalls Hermes Agent for kennel-managed agent runtimes.
+Runtime launch/auth behavior can still be configured during workspace inject.
 EOF
 "
+
+if su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes >/dev/null 2>&1'; then
+  HERMES_BIN="$(su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes')"
+  ln -sf "$HERMES_BIN" /usr/local/bin/hermes
+elif su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes-agent >/dev/null 2>&1'; then
+  HERMES_BIN="$(su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes-agent')"
+  ln -sf "$HERMES_BIN" /usr/local/bin/hermes-agent
+fi
 
 apt-get clean && rm -rf /var/lib/apt/lists/*

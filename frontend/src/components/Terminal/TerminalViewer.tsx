@@ -1,5 +1,5 @@
-import { Terminal } from "@xterm/xterm"
-import { useEffect, useMemo, useRef, useState } from "react"
+import type { Terminal as XTermTerminal } from "@xterm/xterm"
+import { useEffect, useRef, useState } from "react"
 import { ContentRenderer } from "@/components/Common/ContentRenderer"
 import type {
   TerminalCapabilities,
@@ -11,7 +11,6 @@ import {
   type TerminalSessionState,
   toTerminalTranscriptContent,
 } from "@/services/terminalSessionService"
-import "@xterm/xterm/css/xterm.css"
 
 export type TerminalViewerThemePreset = "graphite" | "midnight" | "amber"
 export type TerminalViewerWrapMode = "wrap" | "nowrap"
@@ -52,6 +51,7 @@ export interface TerminalViewerProps {
   onPasteInput?: (data: string) => boolean | Promise<boolean>
   onCopyVisibleBuffer?: (data: string) => void | Promise<void>
   onViewportChange?: (cols: number, rows: number) => void
+  debugSessionId?: string | null
 }
 
 export function TerminalViewer({
@@ -67,13 +67,17 @@ export function TerminalViewer({
   onPasteInput,
   onCopyVisibleBuffer,
   onViewportChange,
+  debugSessionId,
 }: TerminalViewerProps) {
+  const perfIdRef = useRef<string>(`terminal-viewer-${Math.random().toString(36).slice(2, 10)}`)
+  const viewerRootRef = useRef<HTMLDivElement | null>(null)
   const terminalHostRef = useRef<HTMLDivElement | null>(null)
-  const terminalRef = useRef<Terminal | null>(null)
+  const terminalRef = useRef<XTermTerminal | null>(null)
   const renderedChunksRef = useRef(0)
   const sessionIdRef = useRef<string | null>(null)
   const measurementRef = useRef<HTMLSpanElement | null>(null)
   const lastViewportRef = useRef<{ cols: number; rows: number } | null>(null)
+  const [emulatorReady, setEmulatorReady] = useState(false)
   const [hasTerminalFocus, setHasTerminalFocus] = useState(false)
   const fontSize =
     preferences?.fontSize ?? DEFAULT_TERMINAL_VIEWER_PREFERENCES.fontSize
@@ -93,71 +97,171 @@ export function TerminalViewer({
     capabilities?.directInput && capabilities?.sendInput,
   )
   const canHandlePaste = Boolean(capabilities?.paste && onPasteInput)
+  const shouldInitializeEmulator =
+    mode === "live" && Boolean(session.url || session.ansiChunks.length > 0)
 
   useEffect(() => {
-    if (mode !== "live" || !terminalHostRef.current || terminalRef.current) {
+    if (
+      !shouldInitializeEmulator ||
+      !terminalHostRef.current ||
+      terminalRef.current
+    ) {
       return
     }
 
-    const terminal = new Terminal({
-      convertEol: true,
-      cursorBlink: true,
-      disableStdin: !canUseDirectInput,
-      fontFamily:
-        'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, "Liberation Mono", monospace',
-      fontSize,
-      lineHeight,
-      scrollback,
-      theme: terminalThemeFromPreset(themePreset),
+    let isDisposed = false
+    performanceMark(`${perfIdRef.current}:init_requested`)
+    performanceLog({
+      scope: "terminal_viewer",
+      phase: "init_requested",
+      perfId: perfIdRef.current,
+      hasSessionUrl: Boolean(session.url),
+      ansiChunkCount: session.ansiChunks.length,
+      debugSessionId,
     })
 
-    terminal.open(terminalHostRef.current)
-    if (canUseDirectInput) {
-      terminal.focus()
+    const mountTerminal = async () => {
+      performanceMark(`${perfIdRef.current}:asset_load_start`)
+      const [{ Terminal }] = await Promise.all([
+        import("@xterm/xterm"),
+        import("@xterm/xterm/css/xterm.css"),
+      ])
+      performanceMark(`${perfIdRef.current}:asset_load_end`)
+      performanceMeasure(
+        `${perfIdRef.current}:asset_load_ms`,
+        `${perfIdRef.current}:asset_load_start`,
+        `${perfIdRef.current}:asset_load_end`,
+      )
+      performanceLog({
+        scope: "terminal_viewer",
+        phase: "asset_load_complete",
+        perfId: perfIdRef.current,
+        debugSessionId,
+      })
+      if (isDisposed || !terminalHostRef.current || terminalRef.current) {
+        return
+      }
+
+      const terminal = new Terminal({
+        convertEol: true,
+        cursorBlink: true,
+        disableStdin: !canUseDirectInput,
+        fontFamily:
+          'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, "Liberation Mono", monospace',
+        fontSize,
+        lineHeight,
+        scrollback,
+        theme: terminalThemeFromPreset(themePreset),
+      })
+
+      performanceMark(`${perfIdRef.current}:emulator_open_start`)
+      terminal.open(terminalHostRef.current)
+      if (canUseDirectInput) {
+        terminal.focus()
+      }
+      performanceMark(`${perfIdRef.current}:emulator_open_end`)
+      performanceMeasure(
+        `${perfIdRef.current}:emulator_open_ms`,
+        `${perfIdRef.current}:emulator_open_start`,
+        `${perfIdRef.current}:emulator_open_end`,
+      )
+      performanceMeasure(
+        `${perfIdRef.current}:init_to_open_ms`,
+        `${perfIdRef.current}:init_requested`,
+        `${perfIdRef.current}:emulator_open_end`,
+      )
+      performanceLog({
+        scope: "terminal_viewer",
+        phase: "emulator_open_complete",
+        perfId: perfIdRef.current,
+        debugSessionId,
+      })
+      terminalRef.current = terminal
+      setEmulatorReady(true)
     }
-    terminalRef.current = terminal
+
+    void mountTerminal()
 
     return () => {
-      terminal.dispose()
+      isDisposed = true
+      terminalRef.current?.dispose()
       terminalRef.current = null
+      setEmulatorReady(false)
       renderedChunksRef.current = 0
       sessionIdRef.current = null
       lastViewportRef.current = null
+      performanceLog({
+        scope: "terminal_viewer",
+        phase: "dispose",
+        perfId: perfIdRef.current,
+        debugSessionId,
+      })
     }
-  }, [canUseDirectInput, mode])
+  }, [
+    canUseDirectInput,
+    debugSessionId,
+    session.ansiChunks.length,
+    session.url,
+    shouldInitializeEmulator,
+  ])
 
   useEffect(() => {
-    if (mode !== "live") return
+    if (!shouldInitializeEmulator) return
 
     const terminal = terminalRef.current
-    if (!terminal) return
+    if (!terminal || !emulatorReady) return
 
     terminal.options.disableStdin = !canUseDirectInput
     terminal.options.fontSize = fontSize
     terminal.options.lineHeight = lineHeight
     terminal.options.scrollback = scrollback
     terminal.options.theme = terminalThemeFromPreset(themePreset)
-  }, [canUseDirectInput, mode, fontSize, lineHeight, scrollback, themePreset])
+  }, [
+    canUseDirectInput,
+    emulatorReady,
+    shouldInitializeEmulator,
+    fontSize,
+    lineHeight,
+    scrollback,
+    themePreset,
+  ])
 
   useEffect(() => {
-    if (mode !== "live") return
+    if (!shouldInitializeEmulator) return
 
-    const host = terminalHostRef.current
+    const root = viewerRootRef.current
     const terminal = terminalRef.current
     const measurement = measurementRef.current
-    if (!host || !terminal || !measurement) return
+    if (!root || !terminal || !measurement || !emulatorReady) return
+
+    const TERMINAL_PADDING_PX = 16
+    const MIN_COLS = 20
+    const MAX_COLS = 300
+    const MIN_ROWS = 8
+    const MAX_ROWS = 200
 
     const updateViewport = () => {
-      const bounds = host.getBoundingClientRect()
+      const bounds = root.getBoundingClientRect()
       const sample = measurement.getBoundingClientRect()
       const cellWidth = sample.width / 10
       const cellHeight = sample.height
-      if (!Number.isFinite(cellWidth) || !Number.isFinite(cellHeight)) {
+      if (
+        !Number.isFinite(cellWidth) ||
+        !Number.isFinite(cellHeight) ||
+        cellWidth <= 0 ||
+        cellHeight <= 0
+      ) {
         return
       }
 
-      const cols = Math.max(20, Math.floor(bounds.width / cellWidth))
-      const rows = Math.max(8, Math.floor(bounds.height / cellHeight))
+      const usableWidth = Math.max(0, bounds.width - TERMINAL_PADDING_PX * 2)
+      const usableHeight = Math.max(0, bounds.height - TERMINAL_PADDING_PX * 2)
+      const cols = clamp(Math.floor(usableWidth / cellWidth), MIN_COLS, MAX_COLS)
+      const rows = clamp(
+        Math.floor(usableHeight / cellHeight),
+        MIN_ROWS,
+        MAX_ROWS,
+      )
 
       if (terminal.cols !== cols || terminal.rows !== rows) {
         terminal.resize(cols, rows)
@@ -176,18 +280,24 @@ export function TerminalViewer({
     const observer = new ResizeObserver(() => {
       updateViewport()
     })
-    observer.observe(host)
+    observer.observe(root)
 
     return () => {
       observer.disconnect()
     }
-  }, [mode, onViewportChange, fontSize, lineHeight])
+  }, [
+    emulatorReady,
+    shouldInitializeEmulator,
+    onViewportChange,
+    fontSize,
+    lineHeight,
+  ])
 
   useEffect(() => {
-    if (mode !== "live") return
+    if (!shouldInitializeEmulator) return
 
     const terminal = terminalRef.current
-    if (!terminal || !canUseDirectInput) {
+    if (!terminal || !emulatorReady || !canUseDirectInput) {
       return
     }
 
@@ -201,16 +311,17 @@ export function TerminalViewer({
     }
   }, [
     canUseDirectInput,
-    mode,
+    emulatorReady,
+    shouldInitializeEmulator,
     onSendInput,
     status,
   ])
 
   useEffect(() => {
-    if (mode !== "live") return
+    if (!shouldInitializeEmulator) return
 
     const terminal = terminalRef.current
-    if (!terminal) return
+    if (!terminal || !emulatorReady) return
 
     const isNewSession = sessionIdRef.current !== session.id
 
@@ -226,22 +337,24 @@ export function TerminalViewer({
     }
 
     const nextChunks = session.ansiChunks.slice(renderedChunksRef.current)
-    for (const chunk of nextChunks) {
-      terminal.write(chunk)
+    if (nextChunks.length > 0) {
+      terminal.write(nextChunks.join(""))
     }
     renderedChunksRef.current = session.ansiChunks.length
 
     if (resolvedAutoScroll) {
       terminal.scrollToBottom()
     }
-  }, [mode, resolvedAutoScroll, session.ansiChunks, session.id])
-
-  const transcriptContent = useMemo(
-    () => toTerminalTranscriptContent(session),
-    [session],
-  )
+  }, [
+    emulatorReady,
+    shouldInitializeEmulator,
+    resolvedAutoScroll,
+    session.ansiChunks,
+    session.id,
+  ])
 
   if (mode === "transcript") {
+    const transcriptContent = toTerminalTranscriptContent(session)
     return (
       <div className={cn("h-full min-h-[20rem]", className)}>
         <ContentRenderer content={transcriptContent} variant="card" safeMode />
@@ -251,6 +364,7 @@ export function TerminalViewer({
 
   return (
     <div
+      ref={viewerRootRef}
       className={cn(
         "relative h-full min-h-[20rem] overflow-hidden bg-neutral-950 text-neutral-100 transition-shadow",
         hasTerminalFocus
@@ -309,29 +423,35 @@ export function TerminalViewer({
         void onPasteInput(text)
       }}
     >
-      <div
-        ref={terminalHostRef}
-        className={cn(
-          "h-full min-h-[20rem] p-4",
-          wrapMode === "nowrap" ? "overflow-x-auto" : "",
-        )}
-      />
-      <span
-        ref={measurementRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute opacity-0"
-        style={{
-          left: 0,
-          top: 0,
-          fontFamily:
-            'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, "Liberation Mono", monospace',
-          fontSize: `${fontSize}px`,
-          lineHeight,
-          whiteSpace: "pre",
-        }}
-      >
-        0000000000
-      </span>
+      {shouldInitializeEmulator ? (
+        <>
+          <div
+            ref={terminalHostRef}
+            className={cn(
+              "absolute inset-0 p-4 overflow-hidden",
+              wrapMode === "nowrap" ? "overflow-x-auto" : "overflow-x-hidden",
+            )}
+          />
+          <span
+            ref={measurementRef}
+            aria-hidden="true"
+            className="pointer-events-none absolute opacity-0"
+            style={{
+              left: 0,
+              top: 0,
+              fontFamily:
+                'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, "Liberation Mono", monospace',
+              fontSize: `${fontSize}px`,
+              lineHeight,
+              whiteSpace: "pre",
+            }}
+          >
+            0000000000
+          </span>
+        </>
+      ) : (
+        <div className="h-full min-h-[20rem] p-4" />
+      )}
       {session.ansiChunks.length === 0 ? (
         <div className="pointer-events-none absolute inset-0 flex items-start p-4">
           <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-6 text-neutral-400">
@@ -401,4 +521,43 @@ function terminalThemeFromPreset(
     foreground: "#f5f5f5",
     cursor: "#f5f5f5",
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+type PerfLogPayload = {
+  scope: "terminal_panel" | "terminal_viewer"
+  phase: string
+  perfId: string
+  [key: string]: unknown
+}
+
+function performanceMark(name: string) {
+  if (typeof window === "undefined" || typeof performance === "undefined") return
+  performance.mark(name)
+}
+
+function performanceMeasure(name: string, startMark: string, endMark: string) {
+  if (typeof window === "undefined" || typeof performance === "undefined") return
+  try {
+    performance.measure(name, startMark, endMark)
+  } catch {
+    // Marks may be missing if initialization is interrupted.
+  }
+}
+
+function performanceLog(payload: PerfLogPayload) {
+  if (typeof window === "undefined") return
+  const target = window as typeof window & {
+    __terminalPerfLog?: PerfLogPayload[]
+  }
+  if (!Array.isArray(target.__terminalPerfLog)) {
+    target.__terminalPerfLog = []
+  }
+  target.__terminalPerfLog.push({
+    ...payload,
+    at: Date.now(),
+  })
 }

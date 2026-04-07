@@ -29,9 +29,19 @@ def test_kennel_runtime_preset_is_inferred_for_supported_agent_profile() -> None
     assert runtime_preset == "codex"
 
 
-def test_kennel_runtime_preset_is_not_inferred_for_agent_profile_without_preset() -> None:
+def test_kennel_runtime_preset_is_inferred_for_hermes_agent_profile() -> None:
     intent = WorkspaceBootstrapIntent(
         startup_intent=WorkspaceStartupIntentAgentService(agent_profile="hermes"),
+    )
+
+    runtime_preset = _kennel_runtime_preset_from_bootstrap_intent(intent)
+
+    assert runtime_preset == "hermes"
+
+
+def test_kennel_runtime_preset_is_not_inferred_for_non_agent_startup() -> None:
+    intent = WorkspaceBootstrapIntent(
+        startup_intent=WorkspaceStartupIntentProfile(profile="vite"),
     )
 
     runtime_preset = _kennel_runtime_preset_from_bootstrap_intent(intent)
@@ -39,9 +49,9 @@ def test_kennel_runtime_preset_is_not_inferred_for_agent_profile_without_preset(
     assert runtime_preset is None
 
 
-def test_kennel_runtime_preset_is_not_inferred_for_non_agent_startup() -> None:
+def test_kennel_runtime_preset_is_not_inferred_for_unknown_agent_profile() -> None:
     intent = WorkspaceBootstrapIntent(
-        startup_intent=WorkspaceStartupIntentProfile(profile="vite"),
+        startup_intent=WorkspaceStartupIntentAgentService(agent_profile="custom_agent"),
     )
 
     runtime_preset = _kennel_runtime_preset_from_bootstrap_intent(intent)
@@ -119,6 +129,39 @@ def test_build_workspace_kennel_provisioning_request_delegates_codex_agent_start
     assert request.inject.runtime_files == {
         "/home/dev/.dog/platform-services/agent-runtime.json": '{"services":[]}'
     }
+
+
+def test_build_workspace_kennel_provisioning_request_delegates_hermes_agent_startup_to_kennel() -> None:
+    bootstrap_plan = WorkspaceBootstrapPlan(
+        steps=[
+            {
+                "type": "run_command",
+                "phase": "starting_services",
+                "label": "Start Hermes Runtime",
+                "command": "hermes",
+                "cwd": "/home/dev/workspace",
+                "background": True,
+                "service_name": "hermes",
+            }
+        ]
+    )
+    request = build_workspace_kennel_provisioning_request(
+        kennel_name="env-1234abcd",
+        workspace_kind="persistent",
+        workspace_flavour="dev",
+        explicit_runtime_preset=None,
+        bootstrap_intent=WorkspaceBootstrapIntent(
+            startup_intent=WorkspaceStartupIntentAgentService(agent_profile="hermes"),
+        ),
+        resolved_repo_url=None,
+        bootstrap_plan=bootstrap_plan,
+        projected_env_vars={"DOG_PLATFORM_SERVICE_COUNT": "2"},
+    )
+
+    assert request.inject.runtime_preset == "hermes"
+    assert request.inject.bootstrap_profile is None
+    assert request.inject.bootstrap_plan is None
+    assert request.inject.env_vars == {"DOG_PLATFORM_SERVICE_COUNT": "2"}
 
 
 def test_build_workspace_kennel_provisioning_request_supports_mixed_mode_assets_plus_explicit_plan() -> None:

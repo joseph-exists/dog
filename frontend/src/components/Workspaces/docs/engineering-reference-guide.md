@@ -91,7 +91,7 @@ Current frontend integration note:
 
 - the frontend create form and submission helpers now expose `runtime_preset`, `bootstrap_profile`, and `runtime_files`
 - the initial frontend path is preset-first with advanced operator controls in a separate collapsed section
-- the frontend now includes `hermes-agent` as a runtime preset option so the next runtime slice can land without reshaping the form again
+- the frontend now includes `hermes` as a runtime preset option mapped to the `hermes-agent` base flavour default
 
 Current kennel validation note:
 
@@ -102,6 +102,7 @@ Primary references:
 
 - [repo-bootstrap-contract.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-contract.md)
 - [frontend-create-form-shape.md](/home/josep/dog/frontend/src/components/Workspaces/docs/frontend-create-form-shape.md)
+- [hermes-agent-workspace-runbook.md](/home/josep/dog/frontend/src/components/Workspaces/docs/hermes-agent-workspace-runbook.md)
 - [repo-bootstrap-implementation-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/repo-bootstrap-implementation-roadmap.md)
 - [service-readiness-discovery-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/service-readiness-discovery-roadmap.md)
 - [agent-service-runtime-roadmap.md](/home/josep/dog/frontend/src/components/Workspaces/docs/agent-service-runtime-roadmap.md)

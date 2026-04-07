@@ -89,7 +89,8 @@ Update: kennel now also supports a `claude_code` runtime preset, mapped to `dev-
 Add flavours like:
 
 - `dev-codex`
-- `dev-claude`
-- `dev-hermes`
+- `dev-claude-code`
+- `hermes-agent`
+- `hermes-agent-dev`
 
 These would extend `dev` and install the runtime tool during rebuild. This keeps spawn fast and predictable, and matches the existing optimization strategy.

@@ -80,7 +80,7 @@ Recommended first options:
   - none
   - `codex`
   - `claude_code`
-  - `hermes-agent`
+  - `hermes`
 - flavours:
   - `base`
   - `dev`

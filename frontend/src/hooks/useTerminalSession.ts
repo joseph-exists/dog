@@ -46,6 +46,8 @@ export function useTerminalSession({
   allowResize = true,
   defaultInputMode = "direct",
 }: UseTerminalSessionOptions) {
+  const debugSessionIdRef = useRef<string>(`termdbg-${Math.random().toString(36).slice(2, 10)}`)
+  const debugEnabledRef = useRef<boolean>(isTerminalDebugEnabled())
   const [session, setSession] = useState<TerminalSessionState>(() =>
     createTerminalSession(url),
   )
@@ -54,10 +56,51 @@ export function useTerminalSession({
 
   const wsRef = useRef<WebSocket | null>(null)
   const manualDisconnectRef = useRef(false)
+  const pendingOutputRef = useRef<string[]>([])
+  const flushTimeoutRef = useRef<number | null>(null)
+  const resizeTimeoutRef = useRef<number | null>(null)
+  const pendingResizeRef = useRef<{ cols: number; rows: number } | null>(null)
+  const lastSentResizeRef = useRef<{ cols: number; rows: number } | null>(null)
+
+  const flushPendingFrames = useCallback(() => {
+    flushTimeoutRef.current = null
+    const pending = pendingOutputRef.current
+    if (pending.length === 0) return
+
+    pendingOutputRef.current = []
+    setSession((current) => {
+      let next = current
+      for (const chunk of pending) {
+        next = appendTerminalFrame(next, createTerminalFrame("output", chunk), {
+          maxFrames,
+          maxChars,
+        })
+      }
+      return next
+    })
+  }, [maxChars, maxFrames])
+
+  const scheduleFrameFlush = useCallback(() => {
+    if (flushTimeoutRef.current !== null) return
+    flushTimeoutRef.current = window.setTimeout(() => {
+      flushPendingFrames()
+    }, 16)
+  }, [flushPendingFrames])
 
   useEffect(() => {
     setSession(createTerminalSession(url))
     setError(null)
+    pendingOutputRef.current = []
+    if (flushTimeoutRef.current !== null) {
+      window.clearTimeout(flushTimeoutRef.current)
+      flushTimeoutRef.current = null
+    }
+    pendingResizeRef.current = null
+    lastSentResizeRef.current = null
+    if (resizeTimeoutRef.current !== null) {
+      window.clearTimeout(resizeTimeoutRef.current)
+      resizeTimeoutRef.current = null
+    }
   }, [url])
 
   useEffect(() => {
@@ -68,28 +111,41 @@ export function useTerminalSession({
     manualDisconnectRef.current = false
     setSession((current) => setTerminalConnectionStatus(current, "connecting"))
 
-    const ws = new WebSocket(url)
+    const connectionUrl = withTerminalDebugSessionId(
+      url,
+      debugEnabledRef.current ? debugSessionIdRef.current : null,
+    )
+    const ws = new WebSocket(connectionUrl)
     ws.binaryType = "arraybuffer"
     wsRef.current = ws
+    if (debugEnabledRef.current) {
+      terminalDebugLog("socket_connecting", {
+        debugSessionId: debugSessionIdRef.current,
+        url: connectionUrl,
+      })
+    }
 
     ws.onopen = () => {
       setError(null)
       setSession((current) => setTerminalConnectionStatus(current, "open"))
+      if (debugEnabledRef.current) {
+        terminalDebugLog("socket_open", {
+          debugSessionId: debugSessionIdRef.current,
+        })
+      }
     }
 
     ws.onmessage = (event) => {
       void decodeTerminalEventData(event.data)
         .then((decoded) => {
-          setSession((current) =>
-            appendTerminalFrame(
-              current,
-              createTerminalFrame("output", decoded),
-              {
-                maxFrames,
-                maxChars,
-              },
-            ),
-          )
+          pendingOutputRef.current.push(decoded)
+          scheduleFrameFlush()
+          if (debugEnabledRef.current && pendingOutputRef.current.length === 1) {
+            terminalDebugLog("first_output_received", {
+              debugSessionId: debugSessionIdRef.current,
+              chunkLength: decoded.length,
+            })
+          }
         })
         .catch((messageError) => {
           const nextError =
@@ -119,14 +175,29 @@ export function useTerminalSession({
               : "closed",
         ),
       )
+      if (debugEnabledRef.current) {
+        terminalDebugLog("socket_closed", {
+          debugSessionId: debugSessionIdRef.current,
+        })
+      }
     }
 
     return () => {
       manualDisconnectRef.current = true
       ws.close()
       wsRef.current = null
+      pendingOutputRef.current = []
+      if (flushTimeoutRef.current !== null) {
+        window.clearTimeout(flushTimeoutRef.current)
+        flushTimeoutRef.current = null
+      }
+      pendingResizeRef.current = null
+      if (resizeTimeoutRef.current !== null) {
+        window.clearTimeout(resizeTimeoutRef.current)
+        resizeTimeoutRef.current = null
+      }
     }
-  }, [url, enabled, maxFrames, maxChars, _connectionNonce])
+  }, [url, enabled, _connectionNonce, scheduleFrameFlush])
 
   const connect = useCallback(() => {
     if (!url) return
@@ -161,21 +232,38 @@ export function useTerminalSession({
       }
 
       wsRef.current.send(new TextEncoder().encode(data))
+      if (debugEnabledRef.current) {
+        terminalDebugLog("input_sent", {
+          debugSessionId: debugSessionIdRef.current,
+          inputLength: data.length,
+        })
+      }
       return true
     },
     [],
   )
 
-  const sendResize = useCallback((cols: number, rows: number) => {
+const flushResize = useCallback(() => {
+    resizeTimeoutRef.current = null
+    const next = pendingResizeRef.current
+    pendingResizeRef.current = null
+    if (!next) return
+
+    const cols = Math.max(1, Math.min(1000, Math.floor(next.cols)))
+    const rows = Math.max(1, Math.min(1000, Math.floor(next.rows)))
+
     if (
       !wsRef.current ||
       wsRef.current.readyState !== WebSocket.OPEN ||
       !Number.isFinite(cols) ||
-      !Number.isFinite(rows) ||
-      cols <= 0 ||
-      rows <= 0
+      !Number.isFinite(rows)
     ) {
-      return false
+      return
+    }
+
+    const last = lastSentResizeRef.current
+    if (last && last.cols === cols && last.rows === rows) {
+      return
     }
 
     wsRef.current.send(
@@ -186,8 +274,32 @@ export function useTerminalSession({
         rows,
       }),
     )
-    return true
+    lastSentResizeRef.current = { cols, rows }
   }, [])
+
+  const sendResize = useCallback(
+    (cols: number, rows: number) => {
+      if (
+        !Number.isFinite(cols) ||
+        !Number.isFinite(rows) ||
+        cols <= 0 ||
+        rows <= 0
+      ) {
+        return false
+      }
+
+      pendingResizeRef.current = { cols, rows }
+      if (resizeTimeoutRef.current !== null) {
+        return true
+      }
+
+      resizeTimeoutRef.current = window.setTimeout(() => {
+        flushResize()
+      }, 150)
+      return true
+    },
+    [flushResize],
+  )
 
   const setViewport = useCallback(
     (cols: number | null, rows: number | null) => {
@@ -226,5 +338,43 @@ export function useTerminalSession({
     sendResize,
     setViewport,
     capabilities,
+    debugSessionId: debugEnabledRef.current ? debugSessionIdRef.current : null,
   }
+}
+
+function isTerminalDebugEnabled(): boolean {
+  if (typeof window === "undefined") return false
+  const query = new URLSearchParams(window.location.search)
+  if (query.get("terminalDebug") === "1") return true
+  return window.localStorage.getItem("terminalDebug") === "1"
+}
+
+function withTerminalDebugSessionId(
+  url: string,
+  debugSessionId: string | null,
+): string {
+  if (!debugSessionId) return url
+  try {
+    const parsed = new URL(url)
+    parsed.searchParams.set("debug_session_id", debugSessionId)
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
+function terminalDebugLog(event: string, payload: Record<string, unknown>) {
+  if (typeof window === "undefined") return
+  const target = window as typeof window & {
+    __terminalPerfLog?: Array<Record<string, unknown>>
+  }
+  if (!Array.isArray(target.__terminalPerfLog)) {
+    target.__terminalPerfLog = []
+  }
+  target.__terminalPerfLog.push({
+    scope: "terminal_hook",
+    phase: event,
+    ...payload,
+    at: Date.now(),
+  })
 }

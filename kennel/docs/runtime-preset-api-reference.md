@@ -26,11 +26,13 @@ Today kennel defines:
 
 - `codex`
 - `claude_code`
+- `hermes`
 
 Current mapping:
 
 - `codex` -> create flavour `dev-codex`, inject bootstrap profile `codex_app_server`
 - `claude_code` -> create flavour `dev-claude-code`, inject bootstrap profile `claude_code_remote_control`
+- `hermes` -> create flavour `hermes-agent`, inject bootstrap profile `hermes_agent_runtime`
 
 References:
 
@@ -135,6 +137,18 @@ Current built-in behavior:
 - starts `claude remote-control --name kennel --permission-mode bypassPermissions --spawn same-dir`
 - registers the runtime as service `claude_code`
 
+### `hermes_agent_runtime`
+
+Current built-in behavior:
+
+- writes default runtime files under `~/.hermes`:
+  - `config.yaml`
+  - `.env`
+  - `hermes-agent` launcher
+- creates the workspace directory if needed
+- starts `~/.hermes/hermes-agent` (or falls back to `hermes` / `hermes-agent`)
+- registers the runtime as service `hermes`
+
 References:
 
 - [kennel/src/server.py](/home/josep/dog/kennel/src/server.py#L395)
@@ -178,6 +192,7 @@ The integration question is therefore not whether both sides may contain preset/
 
 - generic and explicitly backend-owned workspace startup still uses explicit `flavour` plus explicit `bootstrap_plan`
 - default Codex agent-runtime startup now passes `runtime_preset: "codex"` and intentionally omits inject `bootstrap_plan` so kennel instantiates `codex_app_server`
+- default Hermes agent-runtime startup can now pass `runtime_preset: "hermes"` to get kennel-owned default flavour/profile wiring when compatible startup settings are used
 
 That means kennel’s preset system is now partially surfaced through the active backend workspace contract for Codex runtime startup, while backend retains explicit-plan control for other cases.
 

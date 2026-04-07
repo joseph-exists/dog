@@ -152,6 +152,10 @@ Expected keys of interest:
 - `dev-claude-code`
 - `base_container`
 - `base_ready`
+- `dev-hermes`
+- `hermes-agent`
+- `hermes-agent-dev`
+(note: the hermes were added after original documentation, so aren't reflected below. put on your thinking cap and figure it out - deduction and induction are both important.)
 
 ## Step 3: Rebuild Runtime Flavours If Needed
 
@@ -166,6 +170,8 @@ CODEX_REBUILD_JOB="$(
 )"
 echo "$CODEX_REBUILD_JOB"
 ```
+
+curl -s X POST "kennel
 
 Validates:
 
@@ -224,6 +230,47 @@ Validates:
 
 - `dev-claude-code` is rebuildable as a first-class flavour,
 - its provision script is reachable and syntactically valid at runtime.
+
+
+then hermes:
+```
+HERMES_REBUILD_JOB="$(
+  curl -s -X POST "$KENNEL_BASE_URL/flavours/dev-hermes/rebuild" \
+    -H "x-kennel-secret: $KENNEL_SECRET" | jq -r '.job_id'
+)"
+echo "$HERMES_REBUILD_JOB"
+
+while true; do
+  curl -s "$KENNEL_BASE_URL/rebuild-jobs/$HERMES_REBUILD_JOB" \
+    -H "x-kennel-secret: $KENNEL_SECRET" | tee /tmp/dev-hermes-rebuild.json | jq
+  STATUS="$(jq -r '.status' /tmp/dev-hermes-rebuild.json)"
+  if [ "$STATUS" = "done" ] || [ "$STATUS" = "failed" ]; then
+    break
+  fi
+  sleep 2
+done
+```
+
+
+then hermes agent:
+```
+HERMES_AGENT_REBUILD_JOB="$(
+  curl -s -X POST "$KENNEL_BASE_URL/flavours/hermes-agent-dev/rebuild" \
+    -H "x-kennel-secret: $KENNEL_SECRET" | jq -r '.job_id'
+)"
+echo "$HERMES_AGENT_REBUILD_JOB"
+
+while true; do
+  curl -s "$KENNEL_BASE_URL/rebuild-jobs/$HERMES_AGENT_REBUILD_JOB" \
+    -H "x-kennel-secret: $KENNEL_SECRET" | tee /tmp/hermes-agent-dev-rebuild.json | jq
+  STATUS="$(jq -r '.status' /tmp/hermes-agent-dev-rebuild.json)"
+  if [ "$STATUS" = "done" ] || [ "$STATUS" = "failed" ]; then
+    break
+  fi
+  sleep 2
+done
+```
+
 
 ## Step 4: Confirm Base Containers Are Ready
 
@@ -436,6 +483,21 @@ echo "$CLAUDE_CREATE_JSON" | jq
 export CLAUDE_ENV_NAME="$(echo "$CLAUDE_CREATE_JSON" | jq -r '.name')"
 export CLAUDE_JOB_ID="$(echo "$CLAUDE_CREATE_JSON" | jq -r '.job_id')"
 ```
+
+CLAUDE_CREATE_JSON="$(
+  curl -s -X POST "localhost:8090/envs" \
+    -H "Content-Type: application/json" \
+    -H "x-kennel-secret: woohoo" \
+    -d '{
+      "kind": "persistent",
+      "runtime_preset": "claude_code"
+    }'
+)"
+echo "$CLAUDE_CREATE_JSON" | jq
+export CLAUDE_ENV_NAME="$(echo "$CLAUDE_CREATE_JSON" | jq -r '.name')"
+export CLAUDE_JOB_ID="$(echo "$CLAUDE_CREATE_JSON" | jq -r '.job_id')"
+
+curl -s POST "http://localhost:8090/jobs/job-3e617fdf" -H "x-kennel-secret: woohoo"
 
 Validates:
 

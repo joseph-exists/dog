@@ -127,8 +127,9 @@ Kennel side:
 - service kind: `agent_runtime`
 - service protocol: `http`
 - service port: none
-- no kennel `runtime_preset` mapping currently exists
-- no kennel built-in bootstrap profile currently exists
+- preset flavour default: `hermes-agent`
+- preset bootstrap profile default: `hermes_agent_runtime`
+- profile-owned startup command: `hermes` (fallback: `hermes-agent`)
 
 Current readiness interpretation:
 
@@ -136,9 +137,9 @@ Current readiness interpretation:
 
 Alignment notes:
 
-- `hermes` is currently aligned primarily through the shared service identifier and service manifest behavior
-- kennel has service metadata for Hermes, but not a kennel-owned preset/profile path yet
-- this makes Hermes a useful example of a runtime that can participate in the shared seam without requiring preset ownership
+- backend and kennel currently agree on the shared identifier
+- kennel now includes a first-class Hermes preset/profile default path
+- callers can still use explicit bootstrap plans when they need backend-owned runtime startup
 
 ## Shared Interpretation Rules
 

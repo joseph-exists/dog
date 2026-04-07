@@ -42,7 +42,7 @@ const RUNTIME_PRESETS = [
   { value: "none", label: "None" },
   { value: "codex", label: "codex" },
   { value: "claude_code", label: "claude_code" },
-  { value: "hermes-agent", label: "hermes-agent" },
+  { value: "hermes", label: "hermes" },
 ] as const
 const INSTALL_PROFILES = ["npm", "pnpm", "yarn", "uv", "pip"] as const
 const STARTUP_PROFILES = ["vite", "nextjs", "fastapi"] as const
@@ -53,7 +53,7 @@ const AGENT_PROFILE_RUNTIME_PRESET: Record<
 > = {
   codex: "codex",
   claude_code: "claude_code",
-  hermes: "hermes-agent",
+  hermes: "hermes",
 }
 
 type RuntimeFileDraft = {
@@ -77,8 +77,8 @@ function getRuntimePresetHelperText(runtimePreset: string): string {
   if (runtimePreset === "claude_code") {
     return "Claude Code preset defaults the base image toward dev-claude-code and keeps kennel runtime defaults available when the flow chooses them."
   }
-  if (runtimePreset === "hermes-agent") {
-    return "Hermes preset naming is exposed here, but kennel does not currently have a first-class Hermes preset/bootstrap path."
+  if (runtimePreset === "hermes") {
+    return "Hermes preset defaults the base image toward hermes-agent and, when paired with Hermes agent runtime startup, hands launch to kennel's hermes_agent_runtime profile."
   }
   return "Use a runtime preset for sane defaults. Keep flavour editable when you need to override the base environment."
 }
@@ -109,6 +109,9 @@ function resolveRuntimeSummary(params: {
   } else if (preset === "claude_code" && flavour === "dev") {
     flavourOutcome =
       "Create resolves the default `dev` flavour to `dev-claude-code`, so Claude Code is prebaked into the workspace image."
+  } else if (preset === "hermes" && flavour === "dev") {
+    flavourOutcome =
+      "Create resolves the default `dev` flavour to `hermes-agent`, so the Hermes Agent CLI is prebaked into the workspace image."
   } else if (preset) {
     flavourOutcome = `Runtime preset \`${preset}\` is selected, but the explicit flavour \`${flavour}\` remains the create-time base image.`
   }
@@ -175,6 +178,24 @@ function resolveRuntimeSummary(params: {
         : [
             "Select the `codex` runtime preset and leave advanced bootstrap overrides empty if you want kennel-owned `codex app-server` startup.",
           ],
+    }
+  }
+
+  if (agentProfile === "hermes") {
+    if (preset === "hermes" && !hasBootstrapProfileOverride) {
+      return {
+        flavourOutcome,
+        startupOwner: "Kennel runtime preset/profile owns startup.",
+        startupProcess:
+          "Provisioning launches kennel's Hermes runtime profile, which starts `~/.hermes/hermes-agent` (with fallback to `hermes` or `hermes-agent`) as the long-running runtime process.",
+        codexExecRole:
+          "`codex exec` is not involved in this runtime path.",
+        notes: [
+          "This is the default Hermes runtime-preset path.",
+          "Kennel also writes default Hermes runtime files to `/home/dev/.hermes/config.yaml`, `/home/dev/.hermes/.env`, and `/home/dev/.hermes/hermes-agent`.",
+          "Use advanced bootstrap overrides only when you need to force a non-default runtime startup contract.",
+        ],
+      }
     }
   }
 

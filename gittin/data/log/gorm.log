@@ -1,0 +1,2 @@
+2026/04/06 13:00:55 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.120ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-45ee7005" ORDER BY `repository`.`id` LIMIT 1

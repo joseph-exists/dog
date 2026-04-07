@@ -43,7 +43,19 @@ FLAVOURS: dict[str, FlavourDef] = {
         name        = "dev-hermes",
         parent      = "dev",
         scripts     = ["04-hermes.sh"],
-        description = "dev + scaffold for a prebaked Hermes runtime",
+        description = "dev + Hermes Agent runtime (legacy alias)",
+    ),
+    "hermes-agent": FlavourDef(
+        name        = "hermes-agent",
+        parent      = "dev",
+        scripts     = ["04-hermes.sh"],
+        description = "dev + Hermes Agent runtime",
+    ),
+    "hermes-agent-dev": FlavourDef(
+        name        = "hermes-agent-dev",
+        parent      = "hermes-agent",
+        scripts     = ["06-hermes-agent-dev.sh"],
+        description = "hermes-agent + Hermes Agent repo clone, editable deps, and tests",
     ),
     "dev-claude-code": FlavourDef(
         name        = "dev-claude-code",

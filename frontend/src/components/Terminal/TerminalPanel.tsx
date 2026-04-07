@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { PanelContainer } from "@/components/Page/primitives"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -59,6 +59,7 @@ export function TerminalPanel({
   endpointFetchedAt,
   className,
 }: TerminalPanelProps) {
+  const perfIdRef = useRef<string>(`terminal-panel-${Math.random().toString(36).slice(2, 10)}`)
   const [activeTab, setActiveTab] = useState<string>("live")
   const [draftInput, setDraftInput] = useState("")
   const [fontSize, setFontSize] = useState(
@@ -88,6 +89,7 @@ export function TerminalPanel({
     sendResize,
     setViewport,
     capabilities,
+    debugSessionId,
   } = useTerminalSession({
     url: terminalUrl ?? null,
     enabled: Boolean(terminalUrl),
@@ -168,6 +170,27 @@ export function TerminalPanel({
     },
     [capabilities.sendResize, sendResize, setViewport],
   )
+
+  useEffect(() => {
+    performanceMark(`${perfIdRef.current}:mount`)
+    performanceLog({
+      scope: "terminal_panel",
+      phase: "mount",
+      perfId: perfIdRef.current,
+      hasTerminalUrl: Boolean(terminalUrl),
+      debugSessionId,
+    })
+  }, [debugSessionId, terminalUrl])
+
+  useEffect(() => {
+    performanceLog({
+      scope: "terminal_panel",
+      phase: "tab_change",
+      perfId: perfIdRef.current,
+      activeTab,
+      debugSessionId,
+    })
+  }, [activeTab, debugSessionId])
 
   const headerActions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -331,6 +354,7 @@ export function TerminalPanel({
               onPasteInput={async (value) => sendInput(value)}
               onCopyVisibleBuffer={copyVisibleBuffer}
               onViewportChange={handleViewportChange}
+              debugSessionId={debugSessionId}
             />
           ) : (
             <div className="h-full overflow-y-auto p-4">
@@ -375,4 +399,30 @@ export function TerminalPanel({
       </div>
     </PanelContainer>
   )
+}
+
+type PerfLogPayload = {
+  scope: "terminal_panel" | "terminal_viewer"
+  phase: string
+  perfId: string
+  [key: string]: unknown
+}
+
+function performanceMark(name: string) {
+  if (typeof window === "undefined" || typeof performance === "undefined") return
+  performance.mark(name)
+}
+
+function performanceLog(payload: PerfLogPayload) {
+  if (typeof window === "undefined") return
+  const target = window as typeof window & {
+    __terminalPerfLog?: PerfLogPayload[]
+  }
+  if (!Array.isArray(target.__terminalPerfLog)) {
+    target.__terminalPerfLog = []
+  }
+  target.__terminalPerfLog.push({
+    ...payload,
+    at: Date.now(),
+  })
 }

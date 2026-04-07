@@ -342,8 +342,8 @@ This keeps the system flexible without turning workspace creation into remote sh
 - named agent runtime should be installed or started as part of bootstrap
 - examples:
   - `codex`
-  - `claude-code`
-  - `hermes-agent`
+  - `claude_code`
+  - `hermes`
 
 ### Recommendation
 

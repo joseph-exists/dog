@@ -19,7 +19,15 @@ export function TerminalBlock({
   mode = "transcript",
   className,
 }: TerminalBlockProps) {
-  const { session, status, sendInput, sendResize, setViewport, capabilities } =
+  const {
+    session,
+    status,
+    sendInput,
+    sendResize,
+    setViewport,
+    capabilities,
+    debugSessionId,
+  } =
     useTerminalSession({
       url: terminalUrl ?? null,
       enabled: Boolean(terminalUrl) && mode === "live",
@@ -57,6 +65,7 @@ export function TerminalBlock({
         onSendInput={sendInput}
         onPasteInput={async (value) => sendInput(value)}
         onViewportChange={handleViewportChange}
+        debugSessionId={debugSessionId}
       />
     </BlockContainer>
   )

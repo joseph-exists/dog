@@ -61,7 +61,9 @@ from app.services.workspace_platform_service_access import (
 log = logging.getLogger(__name__)
 _FLAVOUR_CACHE_TTL_SECONDS = 30.0
 _flavour_cache: tuple[float, dict[str, dict]] | None = None
-_KENNEL_RUNTIME_PRESETS_BY_AGENT_PROFILE = frozenset({"codex", "claude_code"})
+_KENNEL_RUNTIME_PRESETS_BY_AGENT_PROFILE = frozenset(
+    {"codex", "claude_code", "hermes"}
+)
 _DEFAULT_KENNEL_WORKSPACE_USER = "dev"
 
 
@@ -193,9 +195,9 @@ def _should_delegate_runtime_startup_to_kennel(
     if getattr(startup_intent, "mode", None) != "agent_service":
         return False
 
-    # Codex now uses kennel's built-in bootstrap profile as the canonical
-    # runtime startup path unless the caller explicitly overrides it.
-    return runtime_preset == "codex" and explicit_bootstrap_profile is None
+    # Codex and Hermes now use kennel's built-in bootstrap profiles as the
+    # canonical runtime startup path unless the caller explicitly overrides it.
+    return runtime_preset in {"codex", "hermes"} and explicit_bootstrap_profile is None
 
 
 def build_workspace_kennel_provisioning_request(
