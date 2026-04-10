@@ -13,8 +13,8 @@ apt-get update && apt-get install -y ca-certificates curl
 
 su - dev -c "
   set -euo pipefail
-  export PATH=\$HOME/.local/bin:\$PATH
-  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash --skip-setup
+  export PATH=\$HOME/.local/bin:\$HOME/.cargo/bin:\$PATH
+  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --skip-setup
   mkdir -p \$HOME/.config/hermes
   cat > \$HOME/.config/hermes/kennel-runtime-note.txt << 'EOF'
 This flavour preinstalls Hermes Agent for kennel-managed agent runtimes.
@@ -22,11 +22,11 @@ Runtime launch/auth behavior can still be configured during workspace inject.
 EOF
 "
 
-if su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes >/dev/null 2>&1'; then
-  HERMES_BIN="$(su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes')"
+if su - dev -c 'export PATH=$HOME/.local/bin:$HOME/.cargo/bin:$PATH && command -v hermes >/dev/null 2>&1'; then
+  HERMES_BIN="$(su - dev -c 'export PATH=$HOME/.local/bin:$HOME/.cargo/bin:$PATH && command -v hermes')"
   ln -sf "$HERMES_BIN" /usr/local/bin/hermes
-elif su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes-agent >/dev/null 2>&1'; then
-  HERMES_BIN="$(su - dev -c 'export PATH=$HOME/.local/bin:$PATH && command -v hermes-agent')"
+elif su - dev -c 'export PATH=$HOME/.local/bin:$HOME/.cargo/bin:$PATH && command -v hermes-agent >/dev/null 2>&1'; then
+  HERMES_BIN="$(su - dev -c 'export PATH=$HOME/.local/bin:$HOME/.cargo/bin:$PATH && command -v hermes-agent')"
   ln -sf "$HERMES_BIN" /usr/local/bin/hermes-agent
 fi
 

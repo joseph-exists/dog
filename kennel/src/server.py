@@ -304,10 +304,13 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         label="Hermes Runtime",
         kind="agent_runtime",
         runtime_id="hermes",
-        transport_kind="http",
-        protocol="http",
-        port=None,
-        path=None,
+        runtime_profile="hermes_gateway_ws",
+        # This websocket endpoint is consumed through backend-routed runtime
+        # invoke semantics for rooms, not as a browser-owned transport.
+        transport_kind="websocket",
+        protocol="ws",
+        port=4319,
+        path="/",
         source="bootstrap_profile",
         service_name_hint="hermes",
     ),
@@ -676,7 +679,8 @@ def _hermes_runtime_files(user: str) -> dict[str, str]:
             "# Hermes runtime configuration for kennel-managed workspaces.\n"
             "# Align these values with Hermes gateway setup from the official quickstart.\n"
             "gateway:\n"
-            "  url: ${HERMES_GATEWAY_URL:-http://127.0.0.1:9001}\n"
+            "  listen: ${HERMES_GATEWAY_LISTEN:-ws://0.0.0.0:4319}\n"
+            "  transport: websocket\n"
             "runtime:\n"
             "  profile: kennel\n"
             "  workspace_path: /home/dev/workspace\n"
@@ -686,24 +690,50 @@ def _hermes_runtime_files(user: str) -> dict[str, str]:
             "# Keep real values in this file or inject them through workspace env vars.\n"
             "HERMES_API_KEY=\n"
             "HERMES_GATEWAY_TOKEN=\n"
+            "API_SERVER_ENABLED=false\n"
+            "API_SERVER_HOST=127.0.0.1\n"
+            "API_SERVER_PORT=8642\n"
+            "API_SERVER_KEY=\n"
         ),
-        f"{user_home}/.hermes/hermes-agent": (
+        f"{user_home}/.hermes/hermes-agent-launcher": (
             "#!/usr/bin/env bash\n"
             "set -euo pipefail\n"
-            "export PATH=\"$HOME/.local/bin:$PATH\"\n"
+            "export PATH=\"$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:$PATH\"\n"
+            "export DOG_WORKSPACE_AGENT_HERMES_RUNTIME_MODE=\"${DOG_WORKSPACE_AGENT_HERMES_RUNTIME_MODE:-gateway_ws}\"\n"
+            "export DOG_WORKSPACE_AGENT_HERMES_HOST=\"${DOG_WORKSPACE_AGENT_HERMES_HOST:-0.0.0.0}\"\n"
+            "export DOG_WORKSPACE_AGENT_HERMES_PORT=\"${DOG_WORKSPACE_AGENT_HERMES_PORT:-4319}\"\n"
+            "export HERMES_GATEWAY_LISTEN=\"${HERMES_GATEWAY_LISTEN:-ws://${DOG_WORKSPACE_AGENT_HERMES_HOST}:${DOG_WORKSPACE_AGENT_HERMES_PORT}}\"\n"
             "if [ -f \"$HOME/.hermes/.env\" ]; then\n"
             "  set -a\n"
             "  # shellcheck disable=SC1090\n"
             "  source \"$HOME/.hermes/.env\"\n"
             "  set +a\n"
             "fi\n"
+            "if [ \"$#\" -gt 0 ]; then\n"
+            "  if command -v hermes >/dev/null 2>&1; then exec hermes \"$@\"; fi\n"
+            "  if command -v hermes-agent >/dev/null 2>&1; then exec hermes-agent \"$@\"; fi\n"
+            "fi\n"
+            "if [ -n \"${DOG_WORKSPACE_AGENT_HERMES_GATEWAY_CMD:-}\" ]; then\n"
+            "  exec bash -lc \"$DOG_WORKSPACE_AGENT_HERMES_GATEWAY_CMD\"\n"
+            "fi\n"
+            "if ! command -v hermes >/dev/null 2>&1 && ! command -v hermes-agent >/dev/null 2>&1; then\n"
+            "  if [ \"${DOG_WORKSPACE_AGENT_HERMES_AUTO_INSTALL:-true}\" = \"true\" ] && command -v curl >/dev/null 2>&1; then\n"
+            "    echo \"Hermes runtime command not found; attempting installer bootstrap.\" >&2\n"
+            "    if command -v getent >/dev/null 2>&1 && ! getent hosts raw.githubusercontent.com >/dev/null 2>&1; then\n"
+            "      echo \"Hermes installer bootstrap skipped: raw.githubusercontent.com is not resolvable in this workspace.\" >&2\n"
+            "    else\n"
+            "      curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --skip-setup || true\n"
+            "    fi\n"
+            "    export PATH=\"$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:$PATH\"\n"
+            "  fi\n"
+            "fi\n"
             "if command -v hermes >/dev/null 2>&1; then\n"
-            "  exec hermes \"$@\"\n"
+            "  exec hermes gateway run\n"
             "fi\n"
             "if command -v hermes-agent >/dev/null 2>&1; then\n"
-            "  exec hermes-agent \"$@\"\n"
+            "  exec hermes-agent gateway run\n"
             "fi\n"
-            "echo \"Hermes runtime command not found; install Hermes Agent or adjust PATH.\" >&2\n"
+            "echo \"Hermes runtime command not found after bootstrap attempt; install Hermes Agent or adjust PATH.\" >&2\n"
             "exec tail -f /dev/null\n"
         ),
     }
@@ -798,12 +828,14 @@ def _bootstrap_profile_plan(req: InjectRequest) -> BootstrapExecutionPlan | None
                 phase="starting_runtime",
                 label="Start Hermes agent runtime",
                 command=(
-                    "if [ -x \"$HOME/.hermes/hermes-agent\" ]; then "
+                    "if [ -f \"$HOME/.hermes/hermes-agent-launcher\" ] && [ -x \"$HOME/.hermes/hermes-agent-launcher\" ]; then "
+                    "exec \"$HOME/.hermes/hermes-agent-launcher\"; "
+                    "elif [ -f \"$HOME/.hermes/hermes-agent\" ] && [ -x \"$HOME/.hermes/hermes-agent\" ]; then "
                     "exec \"$HOME/.hermes/hermes-agent\"; "
                     "elif command -v hermes >/dev/null 2>&1; then "
-                    "exec hermes; "
+                    "exec hermes gateway run; "
                     "elif command -v hermes-agent >/dev/null 2>&1; then "
-                    "exec hermes-agent; "
+                    "exec hermes-agent gateway run; "
                     "fi; "
                     "echo 'Hermes runtime command not found; keeping service alive for operator inspection.'; "
                     "exec tail -f /dev/null"
@@ -870,6 +902,7 @@ def _write_runtime_file(
         env_name,
         (
             f"mkdir -p {parent_dir} && "
+            f"if [ -d {escaped_path} ]; then rm -rf {escaped_path}; fi && "
             f"cat > {escaped_path} <<'RUNTIMEFILE'\n{payload}\nRUNTIMEFILE\n"
             f"chown -R {user}:{user} {parent_dir} && "
             f"chmod {mode} {escaped_path}"
@@ -1082,7 +1115,13 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
         readiness_message = "Runtime process is running."
     elif pid_running:
         status = "pending"
-        readiness_message = "Process is running, but the expected port is not listening yet."
+        if declared.runtime_id == "hermes" and declared.port == 4319:
+            readiness_message = (
+                "Hermes runtime process is running, but websocket port 4319 is not listening yet. "
+                "Inspect /tmp/hermes.log for startup errors."
+            )
+        else:
+            readiness_message = "Process is running, but the expected port is not listening yet."
     elif declared.pid_path:
         status = "failed"
         readiness_message = "Expected service process is not running."

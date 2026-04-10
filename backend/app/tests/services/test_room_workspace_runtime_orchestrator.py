@@ -120,9 +120,11 @@ def test_default_runtime_adapter_registry_resolves_current_runtime_ids() -> None
 
     codex_adapter = registry.resolve(_runtime_target(runtime_id="codex"))
     claude_adapter = registry.resolve(_runtime_target(runtime_id="claude_code"))
+    hermes_adapter = registry.resolve(_runtime_target(runtime_id="hermes"))
 
     assert isinstance(codex_adapter, CodexRoomWorkspaceRuntimeAdapter)
     assert isinstance(claude_adapter, KennelRoutedRoomWorkspaceRuntimeAdapter)
+    assert isinstance(hermes_adapter, KennelRoutedRoomWorkspaceRuntimeAdapter)
 
 
 @pytest.mark.asyncio

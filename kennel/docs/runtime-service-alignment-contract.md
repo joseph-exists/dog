@@ -115,7 +115,7 @@ Backend side:
 
 - runtime id: `hermes`
 - service name: `hermes`
-- backend default command: `hermes`
+- backend default command: `~/.hermes/hermes-agent-launcher`
 - backend default host env var: `DOG_WORKSPACE_AGENT_HERMES_HOST`
 - backend default port env var: `DOG_WORKSPACE_AGENT_HERMES_PORT`
 - backend default port value: `4319`
@@ -125,20 +125,25 @@ Kennel side:
 - service id: `hermes`
 - service label: `Hermes Runtime`
 - service kind: `agent_runtime`
-- service protocol: `http`
-- service port: none
+- runtime profile: `hermes_gateway_ws`
+- service protocol: `ws`
+- service port: `4319`
+- service path: `/`
 - preset flavour default: `hermes-agent`
 - preset bootstrap profile default: `hermes_agent_runtime`
-- profile-owned startup command: `hermes` (fallback: `hermes-agent`)
+- profile-owned startup command: websocket gateway launch via `~/.hermes/hermes-agent-launcher` (legacy fallback: `~/.hermes/hermes-agent`, plus `hermes gateway run` / `hermes-agent gateway run`)
+- room invoke integration: backend-routed runtime adapter path (room websocket is observer-only)
 
 Current readiness interpretation:
 
-- ready when the tracked PID is running
+- ready when declared port `4319` is listening
+- pending when PID is running but `4319` is not yet listening (readiness message points to `/tmp/hermes.log`)
 
 Alignment notes:
 
 - backend and kennel currently agree on the shared identifier
-- kennel now includes a first-class Hermes preset/profile default path
+- kennel now includes a first-class Hermes preset/profile default path with websocket gateway semantics
+- API server mode is a supported extension path through runtime env/config toggles and is disabled by default
 - callers can still use explicit bootstrap plans when they need backend-owned runtime startup
 
 ## Shared Interpretation Rules
@@ -180,6 +185,7 @@ These are not unresolved in a blocking sense, but they remain intentionally open
 - whether the backend should retire Codex-specific startup command defaults entirely now that default startup is kennel-owned
 - whether Claude Code protocol labeling should remain `ws` or become more explicitly tied to the remote-control exposure model
 - whether kennel should gain a first-class profile-owned Hermes preset
+- whether Hermes API mode should be exposed by default through platform edge routes or kept opt-in
 - where the shared runtime/service registry should live if we later want machine-enforced parity rather than parallel documented mappings
 
 ## Source References

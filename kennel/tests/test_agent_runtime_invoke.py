@@ -254,14 +254,14 @@ async def test_invoke_agent_runtime_uses_json_rpc_path(monkeypatch: pytest.Monke
 @pytest.mark.asyncio
 async def test_invoke_agent_runtime_rejects_unsupported_transport(monkeypatch: pytest.MonkeyPatch) -> None:
     declared = _declared_runtime_service(
-        service_id="hermes",
-        runtime_id="hermes",
+        service_id="custom_runtime",
+        runtime_id="custom_runtime",
         runtime_profile=None,
         transport_kind="http",
     )
     discovered = _discovered_runtime_service(
-        service_id="hermes",
-        runtime_id="hermes",
+        service_id="custom_runtime",
+        runtime_id="custom_runtime",
         runtime_profile=None,
         transport_kind="http",
     )
@@ -277,7 +277,7 @@ async def test_invoke_agent_runtime_rejects_unsupported_transport(monkeypatch: p
     with pytest.raises(HTTPException) as exc_info:
         await server.invoke_agent_runtime(
             name="env-runtime",
-            service_id="hermes",
+            service_id="custom_runtime",
             req=server.AgentRuntimeInvokeRequest(
                 payload={"type": "room.workspace.runtime.invoke"},
             ),

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
 
 import type { WorkspaceFlavour } from "@/client"
@@ -78,7 +78,7 @@ function getRuntimePresetHelperText(runtimePreset: string): string {
     return "Claude Code preset defaults the base image toward dev-claude-code and keeps kennel runtime defaults available when the flow chooses them."
   }
   if (runtimePreset === "hermes") {
-    return "Hermes preset defaults the base image toward hermes-agent and, when paired with Hermes agent runtime startup, hands launch to kennel's hermes_agent_runtime profile."
+    return "Hermes preset defaults the base image toward hermes-agent and, when paired with Hermes agent runtime startup, launches kennel's hermes_agent_runtime websocket gateway profile."
   }
   return "Use a runtime preset for sane defaults. Keep flavour editable when you need to override the base environment."
 }
@@ -187,12 +187,14 @@ function resolveRuntimeSummary(params: {
         flavourOutcome,
         startupOwner: "Kennel runtime preset/profile owns startup.",
         startupProcess:
-          "Provisioning launches kennel's Hermes runtime profile, which starts `~/.hermes/hermes-agent` (with fallback to `hermes` or `hermes-agent`) as the long-running runtime process.",
+          "Provisioning launches kennel's Hermes runtime profile, which starts `~/.hermes/hermes-agent-launcher` (fallback to legacy `~/.hermes/hermes-agent`, then `hermes` / `hermes-agent`) as a websocket gateway runtime on port `4319`.",
         codexExecRole:
           "`codex exec` is not involved in this runtime path.",
         notes: [
           "This is the default Hermes runtime-preset path.",
-          "Kennel also writes default Hermes runtime files to `/home/dev/.hermes/config.yaml`, `/home/dev/.hermes/.env`, and `/home/dev/.hermes/hermes-agent`.",
+          "Kennel also writes default Hermes runtime files to `/home/dev/.hermes/config.yaml`, `/home/dev/.hermes/.env`, and `/home/dev/.hermes/hermes-agent-launcher`.",
+          "Room `Agent Runtime` descriptors become `available` only when the Hermes runtime is ready and exposes a routable websocket URL.",
+          "Hermes API server mode (`/v1` HTTP) is a separate optional runtime mode and is not required for room runtime invoke.",
           "Use advanced bootstrap overrides only when you need to force a non-default runtime startup contract.",
         ],
       }
@@ -249,6 +251,26 @@ export function WorkspaceCreatePanel({
   const [envVarsText, setEnvVarsText] = useState("")
   const [bootstrapProfile, setBootstrapProfile] = useState("")
   const [runtimeFiles, setRuntimeFiles] = useState<RuntimeFileDraft[]>([])
+  const shouldEnforceHermesBaseFlavour =
+    runtimePreset === "hermes" ||
+    (startupMode === "agent_service" && agentProfile === "hermes")
+
+  useEffect(() => {
+    if (
+      startupMode === "agent_service" &&
+      agentProfile === "hermes" &&
+      runtimePreset !== "hermes"
+    ) {
+      setRuntimePreset("hermes")
+    }
+  }, [agentProfile, runtimePreset, startupMode])
+
+  useEffect(() => {
+    if (shouldEnforceHermesBaseFlavour && flavour !== "dev") {
+      setFlavour("dev")
+    }
+  }, [flavour, shouldEnforceHermesBaseFlavour])
+
   const resolvedRuntime = resolveRuntimeSummary({
     flavour,
     runtimePreset,
@@ -332,7 +354,15 @@ export function WorkspaceCreatePanel({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Runtime Preset</Label>
-            <Select value={runtimePreset} onValueChange={setRuntimePreset}>
+            <Select
+              value={runtimePreset}
+              onValueChange={(value) => {
+                setRuntimePreset(value)
+                if (value === "hermes") {
+                  setFlavour("dev")
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -354,6 +384,7 @@ export function WorkspaceCreatePanel({
             <Select
               value={flavour}
               onValueChange={(value) => setFlavour(value as WorkspaceFlavour)}
+              disabled={shouldEnforceHermesBaseFlavour}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -366,6 +397,12 @@ export function WorkspaceCreatePanel({
                 ))}
               </SelectContent>
             </Select>
+            {shouldEnforceHermesBaseFlavour ? (
+              <p className="text-xs text-muted-foreground">
+                Locked to `dev` for Hermes runtime intent so kennel resolves the
+                workspace to the upstream `hermes-agent` flavour image.
+              </p>
+            ) : null}
           </div>
         </div>
 

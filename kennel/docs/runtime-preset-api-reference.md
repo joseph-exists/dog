@@ -145,8 +145,19 @@ Current built-in behavior:
   - `config.yaml`
   - `.env`
   - `hermes-agent` launcher
+- launcher defaults include:
+  - `DOG_WORKSPACE_AGENT_HERMES_RUNTIME_MODE=gateway_ws`
+  - `DOG_WORKSPACE_AGENT_HERMES_HOST=0.0.0.0`
+  - `DOG_WORKSPACE_AGENT_HERMES_PORT=4319`
+  - `DOG_WORKSPACE_AGENT_HERMES_AUTO_INSTALL=true` (attempt installer bootstrap when runtime command is missing)
+  - optional `DOG_WORKSPACE_AGENT_HERMES_GATEWAY_CMD` override
+- `.env` includes API mode placeholders (disabled by default):
+  - `API_SERVER_ENABLED=false`
+  - `API_SERVER_HOST=127.0.0.1`
+  - `API_SERVER_PORT=8642`
+  - `API_SERVER_KEY=`
 - creates the workspace directory if needed
-- starts `~/.hermes/hermes-agent` (or falls back to `hermes` / `hermes-agent`)
+- starts `~/.hermes/hermes-agent-launcher` as a websocket gateway runtime on port `4319` (or falls back to `hermes` / `hermes-agent` gateway commands)
 - registers the runtime as service `hermes`
 
 References:
@@ -165,6 +176,10 @@ Current readiness rules:
 - if a declared service has a port and that port is listening, it is `ready`
 - if a declared service has no port and its PID is running, it is `ready`
 - if a declared service has a PID but the expected port is not listening yet, it is `pending`
+
+Hermes-specific readiness note:
+
+- when Hermes PID is running but port `4319` is not listening, readiness text points operators to `/tmp/hermes.log`
 
 References:
 

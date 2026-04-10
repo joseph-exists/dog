@@ -43,13 +43,13 @@ const PURPOSE_OPTIONS: Array<{
     value: "service_connect",
     label: "Service Link",
     description:
-      "Inspect browser-facing or API services discovered in the workspace.",
+      "Inspect browser-facing or API services discovered in the workspace for direct links.",
   },
   {
     value: "agent_runtime_connect",
     label: "Agent Runtime",
     description:
-      "Inspect runtime endpoints for agent services such as codex or hermes.",
+      "Use backend-routed runtime endpoints for room-managed execution (codex, hermes, and similar runtimes).",
   },
 ]
 
@@ -92,6 +92,15 @@ function getFreshnessClass(expiresAt: Date | null) {
 function getWorkspaceOptionLabel(workspace: RoomWorkspaceCandidateViewModel) {
   const projectLabel = workspace.project_summary?.name ?? "Private"
   return `${workspace.workspace_name} · ${workspace.workspace_status} · ${projectLabel}`
+}
+
+function getEndpointKindLabel(
+  endpoint: RoomWorkspaceConnectionViewModel["endpoints"][number],
+) {
+  if (endpoint.kind === "agent-runtime") {
+    return "backend-routed runtime endpoint"
+  }
+  return endpoint.kind
 }
 
 function relationshipLabel(
@@ -411,7 +420,7 @@ export function WorkspaceConnectionsPanel({
                             {endpoint.label}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {endpoint.kind} · {endpoint.protocol}
+                            {getEndpointKindLabel(endpoint)} · {endpoint.protocol}
                             {endpoint.auth_mode
                               ? ` · ${endpoint.auth_mode}`
                               : ""}
@@ -425,7 +434,7 @@ export function WorkspaceConnectionsPanel({
                             </div>
                           ) : null}
                         </div>
-                        {endpoint.url ? (
+                        {endpoint.url && endpoint.kind !== "agent-runtime" ? (
                           <a
                             href={endpoint.url}
                             target="_blank"
@@ -435,6 +444,19 @@ export function WorkspaceConnectionsPanel({
                             Open
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
+                        ) : endpoint.url ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">Backend-routed invoke</Badge>
+                            <a
+                              href={endpoint.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:underline"
+                            >
+                              Direct Open (diagnostic)
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </div>
                         ) : (
                           <Badge variant="outline">No URL yet</Badge>
                         )}
@@ -641,6 +663,11 @@ export function WorkspaceConnectionsPanel({
                     {selectedPurpose.description}
                   </p>
                 ) : null}
+                <p className="text-[11px] text-muted-foreground">
+                  {purpose === "agent_runtime_connect"
+                    ? "Agent Runtime connections are invoked by backend orchestration. Room websocket clients observe room events, but do not own runtime transport."
+                    : "Service Link is for direct service endpoint inspection and browser/API navigation."}
+                </p>
               </div>
             </div>
 
@@ -712,6 +739,13 @@ export function WorkspaceConnectionsPanel({
                       {descriptorQuery.data.reason ??
                         "Descriptor issued successfully."}
                     </div>
+                    {descriptorQuery.data.status === "pending" &&
+                    purpose === "agent_runtime_connect" ? (
+                      <div className="text-[11px] text-muted-foreground">
+                        Pending usually means the runtime process is present but
+                        the websocket listener is not yet ready on port `4319`.
+                      </div>
+                    ) : null}
                     <div className="text-[11px] text-muted-foreground">
                       Descriptor {descriptorQuery.data.descriptor_id}
                       {descriptorQuery.data.expires_at
@@ -806,13 +840,13 @@ export function WorkspaceConnectionsPanel({
                                 {endpoint.label}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {endpoint.kind} · {endpoint.protocol}
+                                {getEndpointKindLabel(endpoint)} · {endpoint.protocol}
                                 {endpoint.auth_mode
                                   ? ` · ${endpoint.auth_mode}`
                                   : ""}
                               </div>
                             </div>
-                            {endpoint.url ? (
+                            {endpoint.url && endpoint.kind !== "agent-runtime" ? (
                               <a
                                 href={endpoint.url}
                                 target="_blank"
@@ -822,6 +856,19 @@ export function WorkspaceConnectionsPanel({
                                 Open
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
+                            ) : endpoint.url ? (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">Backend-routed invoke</Badge>
+                                <a
+                                  href={endpoint.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:underline"
+                                >
+                                  Direct Open (diagnostic)
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                              </div>
                             ) : (
                               <Badge variant="outline">No URL yet</Badge>
                             )}

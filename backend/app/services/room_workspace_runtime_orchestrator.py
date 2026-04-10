@@ -335,6 +335,8 @@ def _normalize_json_rpc_runtime_result(
 
 _DEFAULT_ADAPTER = KennelRoutedRoomWorkspaceRuntimeAdapter()
 _CODEX_ADAPTER = CodexRoomWorkspaceRuntimeAdapter()
+# Hermes and Claude Code stay on the kennel-routed adapter so room websocket
+# clients remain observers of room events, not owners of runtime transport.
 _DEFAULT_RUNTIME_ADAPTERS: dict[str, RoomWorkspaceRuntimeAdapter] = {
     "codex": _CODEX_ADAPTER,
     "claude_code": _DEFAULT_ADAPTER,

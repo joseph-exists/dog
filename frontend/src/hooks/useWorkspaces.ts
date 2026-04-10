@@ -78,10 +78,24 @@ function toCreateWorkspaceInput(
   input: CreateWorkspaceFormInput,
 ): CreateWorkspaceInput {
   const runtimeFiles = toRuntimeFiles(input.runtimeFiles)
+  const startupMode = input.startupMode ?? "terminal_only"
+  const agentProfile = input.agentProfile?.trim() || null
+  const runtimePreset = input.runtimePreset?.trim() || null
+  const wantsHermesRuntime =
+    runtimePreset === "hermes" ||
+    (startupMode === "agent_service" && agentProfile === "hermes")
+
+  // Kennel only applies runtime_preset flavour defaults when flavour is the
+  // default `dev`. For Hermes runtime intent we keep flavour at `dev` so
+  // kennel resolves to the hermes-agent flavour contract consistently.
+  const normalizedFlavour: WorkspaceFlavour = wantsHermesRuntime
+    ? "dev"
+    : (input.flavour ?? "dev")
+
   return {
     name: input.name.trim(),
-    flavour: input.flavour ?? "dev",
-    runtimePreset: input.runtimePreset?.trim() || null,
+    flavour: normalizedFlavour,
+    runtimePreset: wantsHermesRuntime ? "hermes" : runtimePreset,
     kind: input.kind ?? "ephemeral",
     repoSourceType: input.repoSourceType ?? "none",
     repoUrl: input.repoUrl?.trim() || null,
@@ -92,9 +106,9 @@ function toCreateWorkspaceInput(
     workspacePath: input.workspacePath?.trim() || null,
     installMode: input.installMode ?? "none",
     installProfile: input.installProfile?.trim() || null,
-    startupMode: input.startupMode ?? "terminal_only",
+    startupMode,
     startupProfile: input.startupProfile?.trim() || null,
-    agentProfile: input.agentProfile?.trim() || null,
+    agentProfile,
     sshPubkey: input.sshPubkey?.trim() || null,
     envVars: parseEnvVars(input.envVarsText),
     bootstrapProfile: input.bootstrapProfile?.trim() || null,

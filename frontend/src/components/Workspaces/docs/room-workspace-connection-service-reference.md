@@ -35,7 +35,7 @@ It does not currently own:
 
 - a websocket protocol of its own
 - message streaming between room and workspace
-- proxying or tunneling traffic through the backend
+- browser-owned runtime websocket transport
 - multi-connection room orchestration beyond the single persisted "current"
   record
 
@@ -82,6 +82,9 @@ must publish service descriptors with:
 
 If kennel discovery does not return a routable `url`, the room descriptor can
 remain `pending` even when the runtime is otherwise healthy.
+
+For Hermes runtime workspaces, the expected gateway contract is websocket
+`ws://<workspace-ip>:4319/` with `kind=agent_runtime`.
 
 ## Current Public API Messages
 
@@ -156,7 +159,7 @@ Request shape:
 Current `purpose` values:
 
 - `service_connect`
-- `agent_runtime_connect`
+- `agent_runtime_connect` (backend-routed runtime connectivity for room invoke)
 
 Response shape:
 
@@ -316,7 +319,7 @@ Matching service sets are purpose-specific:
 Outcomes:
 
 - no matching services: `denied`
-- matching service is `ready` and has `url`: `available`
+- matching service is `ready` and has `url`: `available` (`ready + url`)
 - matching service is `ready` but has no `url`: `pending`
 - matching service is `pending` or `unknown`: `pending`
 
@@ -334,6 +337,12 @@ services such as:
 
 For `agent_runtime_connect`, the container should expose agent runtime services
 such as Codex or Hermes with `kind = "agent_runtime"`.
+
+For Hermes in the current gateway path, the expected runtime endpoint is:
+
+- protocol `ws`
+- port `4319`
+- path `/`
 
 The practical rule is:
 

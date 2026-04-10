@@ -42,7 +42,9 @@ COPY ./app /app/app
 
 # Sync the project
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync
+# Avoid reusing uv's persisted build cache for the local /app package.
+# That cache can retain references to temp build interpreters that disappear
+# across host restarts, causing "No such file or directory" during `uv sync`.
+RUN uv sync --frozen --no-cache
 
 CMD ["fastapi", "run", "--workers", "4", "app/main.py"]

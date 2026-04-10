@@ -249,11 +249,9 @@ async def refresh_workspace_platform_runtime_projection(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Workspace has no active kennel environment")
         inject_result = await kennel_client.inject_workspace(
             workspace.kennel_name,
-            {
-                "user": "dev",
-                "env_vars": projection.env_vars,
-                "runtime_files": projection.runtime_files,
-            },
+            user="dev",
+            env_vars=projection.env_vars,
+            runtime_files=projection.runtime_files,
         )
 
         meta = dict(workspace.meta or {})

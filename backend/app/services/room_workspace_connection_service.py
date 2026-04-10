@@ -540,6 +540,15 @@ async def _build_room_workspace_connection_descriptor_for_room(
         )
 
     if ready_unroutable_services or pending_services:
+        pending_reason = (
+            "Matching runtime is healthy, but no backend-routable runtime endpoint has been issued yet."
+            if ready_unroutable_services and request.purpose == RoomWorkspaceConnectionPurpose.agent_runtime_connect
+            else (
+                "Matching service is healthy, but no routed connection endpoint has been issued yet."
+                if ready_unroutable_services
+                else "Matching runtime surfaces are still starting or awaiting live discovery."
+            )
+        )
         return RoomWorkspaceConnectionDescriptor(
             descriptor_id=descriptor_id,
             room_id=room.room_id,
@@ -548,11 +557,7 @@ async def _build_room_workspace_connection_descriptor_for_room(
             status=RoomWorkspaceConnectionStatus.pending,
             issued_at=issued_at,
             expires_at=expires_at,
-            reason=(
-                "Matching runtime is healthy, but no routed connection endpoint has been issued yet."
-                if ready_unroutable_services
-                else "Matching runtime surfaces are still starting or awaiting live discovery."
-            ),
+            reason=pending_reason,
             capabilities=capabilities,
             endpoints=[
                 RoomWorkspaceEndpointDescriptor(

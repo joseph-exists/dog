@@ -234,6 +234,17 @@ def build_workspace_kennel_provisioning_request(
         explicit_runtime_preset=explicit_runtime_preset,
         bootstrap_intent=bootstrap_intent,
     )
+    requested_workspace_flavour = (
+        bootstrap_flavour_from_intent(bootstrap_intent) or workspace_flavour
+    )
+    # Kennel runtime_preset flavour defaults only apply while flavour is still
+    # `dev`. For Hermes runtime startup, keep the create flavour on `dev` so
+    # kennel can resolve to its hermes-agent flavour contract consistently.
+    normalized_workspace_flavour = (
+        "dev"
+        if runtime_preset == "hermes"
+        else requested_workspace_flavour
+    )
     delegate_runtime_startup = _should_delegate_runtime_startup_to_kennel(
         runtime_preset=runtime_preset,
         bootstrap_intent=bootstrap_intent,
@@ -246,7 +257,7 @@ def build_workspace_kennel_provisioning_request(
     create_request = WorkspaceKennelCreateRequest(
         name=kennel_name,
         kind=bootstrap_kind_from_intent(bootstrap_intent) or workspace_kind,
-        flavour=bootstrap_flavour_from_intent(bootstrap_intent) or workspace_flavour,
+        flavour=normalized_workspace_flavour,
         runtime_preset=runtime_preset,
     )
     inject_request = WorkspaceKennelInjectRequest(

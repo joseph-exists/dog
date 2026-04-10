@@ -604,6 +604,19 @@ async def invoke_room_workspace_runtime(
             "content": invocation_result.output_text,
         },
         enrichment_metadata={
+            "runtime_status": "completed" if invocation_result.success else "failed",
+            "runtime_output": invocation_result.output_text,
+            "runtime_error": (
+                None
+                if invocation_result.success
+                else "Runtime returned an unsuccessful invocation result."
+            ),
+            "runtime_tool_progress": {
+                "phase": "completed" if invocation_result.success else "failed",
+                "request_id": invocation_result.request_id,
+                "runtime_id": target.runtime_id,
+                "runtime_profile": target.runtime_profile,
+            },
             "workspace_runtime_invocation": {
                 "request_id": invocation_result.request_id,
                 "connection_id": target.connection_id,

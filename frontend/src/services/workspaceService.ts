@@ -803,85 +803,105 @@ export const WorkspaceService = {
   async createWorkspace(
     input: CreateWorkspaceInput,
   ): Promise<WorkspaceDetailViewModel> {
+    const startupMode = input.startupMode ?? "terminal_only"
+    const agentProfile = input.agentProfile ?? null
+    const runtimePreset = input.runtimePreset ?? null
+    const wantsHermesRuntime =
+      runtimePreset === "hermes" ||
+      (startupMode === "agent_service" && agentProfile === "hermes")
+    const normalizedInput: CreateWorkspaceInput = {
+      ...input,
+      startupMode,
+      agentProfile,
+      runtimePreset: wantsHermesRuntime ? "hermes" : runtimePreset,
+      flavour: wantsHermesRuntime ? "dev" : input.flavour,
+    }
+
     const repoSource =
-      input.repoSourceType === "external_url" && input.repoUrl
+      normalizedInput.repoSourceType === "external_url" && normalizedInput.repoUrl
         ? ({
             type: "external_url" as const,
-            repo_url: input.repoUrl,
-            ref: input.repoRef ?? undefined,
+            repo_url: normalizedInput.repoUrl,
+            ref: normalizedInput.repoRef ?? undefined,
           } satisfies WorkspaceExternalUrlRepoSource)
-        : input.repoSourceType === "user_repo" && input.userRepoId
+        : normalizedInput.repoSourceType === "user_repo" && normalizedInput.userRepoId
           ? ({
               type: "user_repo" as const,
-              repo_id: input.userRepoId,
-              ref: input.repoRef ?? undefined,
+              repo_id: normalizedInput.userRepoId,
+              ref: normalizedInput.repoRef ?? undefined,
             } satisfies WorkspaceUserRepoSource)
-          : input.repoSourceType === "shadow_repo" &&
-              input.shadowRepoEntityType &&
-              input.shadowRepoEntityId
+          : normalizedInput.repoSourceType === "shadow_repo" &&
+              normalizedInput.shadowRepoEntityType &&
+              normalizedInput.shadowRepoEntityId
             ? ({
                 type: "shadow_repo" as const,
-                entity_type: input.shadowRepoEntityType,
-                entity_id: input.shadowRepoEntityId,
-                ref: input.repoRef ?? undefined,
+                entity_type: normalizedInput.shadowRepoEntityType,
+                entity_id: normalizedInput.shadowRepoEntityId,
+                ref: normalizedInput.repoRef ?? undefined,
               } satisfies WorkspaceShadowRepoSource)
             : null
 
     const bootstrap =
       repoSource ||
-      input.workspacePath ||
-      input.installMode !== undefined ||
-      input.startupMode !== undefined ||
-      input.sshPubkey ||
-      input.bootstrapProfile ||
-      (input.runtimeFiles && Object.keys(input.runtimeFiles).length > 0) ||
-      (input.envVars && Object.keys(input.envVars).length > 0)
+      normalizedInput.workspacePath ||
+      normalizedInput.installMode !== undefined ||
+      normalizedInput.startupMode !== undefined ||
+      normalizedInput.sshPubkey ||
+      normalizedInput.bootstrapProfile ||
+      (normalizedInput.runtimeFiles &&
+        Object.keys(normalizedInput.runtimeFiles).length > 0) ||
+      (normalizedInput.envVars && Object.keys(normalizedInput.envVars).length > 0)
         ? ({
             repo_source: repoSource ?? undefined,
-            workspace_path: input.workspacePath ?? undefined,
+            workspace_path: normalizedInput.workspacePath ?? undefined,
             install_intent:
-              input.installMode === "auto"
+              normalizedInput.installMode === "auto"
                 ? ({
                     mode: "auto" as const,
                   } satisfies WorkspaceInstallIntentAuto)
-                : input.installMode === "profile" && input.installProfile
+                : normalizedInput.installMode === "profile" &&
+                    normalizedInput.installProfile
                   ? ({
                       mode: "profile" as const,
-                      profile: input.installProfile,
+                      profile: normalizedInput.installProfile,
                     } satisfies WorkspaceInstallIntentProfile)
                   : ({
                       mode: "none" as const,
                     } satisfies WorkspaceInstallIntentNone),
             startup_intent:
-              input.startupMode === "profile" && input.startupProfile
+              normalizedInput.startupMode === "profile" &&
+              normalizedInput.startupProfile
                 ? ({
                     mode: "profile" as const,
-                    profile: input.startupProfile,
+                    profile: normalizedInput.startupProfile,
                   } satisfies WorkspaceStartupIntentProfile)
-                : input.startupMode === "agent_service" && input.agentProfile
+                : normalizedInput.startupMode === "agent_service" &&
+                    normalizedInput.agentProfile
                   ? ({
                       mode: "agent_service" as const,
-                      agent_profile: input.agentProfile,
+                      agent_profile: normalizedInput.agentProfile,
                     } satisfies WorkspaceStartupIntentAgentService)
                   : ({
                       mode: "terminal_only" as const,
                     } satisfies WorkspaceStartupIntentTerminalOnly),
-            ssh_pubkey: input.sshPubkey ?? undefined,
-            env_vars: input.envVars ?? {},
-            bootstrap_profile: input.bootstrapProfile ?? undefined,
-            runtime_files: input.runtimeFiles,
+            ssh_pubkey: normalizedInput.sshPubkey ?? undefined,
+            env_vars: normalizedInput.envVars ?? {},
+            bootstrap_profile: normalizedInput.bootstrapProfile ?? undefined,
+            runtime_files: normalizedInput.runtimeFiles,
           } satisfies WorkspaceBootstrapIntent)
         : undefined
 
     const requestBody: WorkspaceCreate = {
-      name: input.name,
-      flavour: input.flavour,
-      runtime_preset: input.runtimePreset ?? undefined,
-      kind: input.kind,
+      name: normalizedInput.name,
+      flavour: normalizedInput.flavour,
+      runtime_preset: normalizedInput.runtimePreset ?? undefined,
+      kind: normalizedInput.kind,
       repo_url:
-        input.repoSourceType === "external_url" ? input.repoUrl : undefined,
-      ssh_pubkey: input.sshPubkey,
-      env_vars: input.envVars,
+        normalizedInput.repoSourceType === "external_url"
+          ? normalizedInput.repoUrl
+          : undefined,
+      ssh_pubkey: normalizedInput.sshPubkey,
+      env_vars: normalizedInput.envVars,
       bootstrap,
     }
     const response = await WorkspacesService.createWorkspace({ requestBody })

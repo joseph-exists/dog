@@ -164,6 +164,23 @@ def test_build_workspace_kennel_provisioning_request_delegates_hermes_agent_star
     assert request.inject.env_vars == {"DOG_PLATFORM_SERVICE_COUNT": "2"}
 
 
+def test_build_workspace_kennel_provisioning_request_normalizes_hermes_flavour_to_dev() -> None:
+    request = build_workspace_kennel_provisioning_request(
+        kennel_name="env-1234abcd",
+        workspace_kind="persistent",
+        workspace_flavour="cuda",
+        explicit_runtime_preset=None,
+        bootstrap_intent=WorkspaceBootstrapIntent(
+            startup_intent=WorkspaceStartupIntentAgentService(agent_profile="hermes"),
+        ),
+        resolved_repo_url=None,
+        bootstrap_plan=WorkspaceBootstrapPlan(),
+    )
+
+    assert request.create.flavour == "dev"
+    assert request.create.runtime_preset == "hermes"
+
+
 def test_build_workspace_kennel_provisioning_request_supports_mixed_mode_assets_plus_explicit_plan() -> None:
     bootstrap_plan = WorkspaceBootstrapPlan()
     request = build_workspace_kennel_provisioning_request(
