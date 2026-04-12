@@ -314,6 +314,20 @@ SERVICE_PROFILE_DEFAULTS: dict[str, DeclaredWorkspaceService] = {
         source="bootstrap_profile",
         service_name_hint="hermes",
     ),
+    "hermes_api": DeclaredWorkspaceService(
+        id="hermes_api",
+        service_name="hermes_api",
+        label="Hermes API Server",
+        kind="agent_runtime",
+        runtime_id="hermes",
+        runtime_profile="hermes_api_server",
+        transport_kind="http",
+        protocol="http",
+        port=8642,
+        path="/",
+        source="bootstrap_profile",
+        service_name_hint="hermes",
+    ),
 }
 
 
@@ -322,11 +336,12 @@ class IssueTerminalTokenRequest(BaseModel):
 
 
 class AgentRuntimeInvokeRequest(BaseModel):
-    invoke_mode: Literal["websocket", "command", "json_rpc"] = "websocket"
+    invoke_mode: Literal["websocket", "command", "json_rpc", "http"] = "websocket"
     payload: dict | list | str | None = None
     json_rpc_session: "JsonRpcInvokeSessionRequest | None" = None
     argv: list[str] = Field(default_factory=list)
     cwd: str | None = None
+    http_path: str = "/"
     user: str = "dev"
     timeout_seconds: float = Field(default=15.0, ge=1.0, le=300.0)
 
@@ -414,6 +429,39 @@ def _wait_for_attach_ready(
         time.sleep(interval)
 
     return False, last_error
+
+
+def _start_env_container(name: str, *, kind: EnvKind) -> subprocess.CompletedProcess:
+    """
+    Start a container, retrying without `-e` when the local LXC runtime does not
+    support ephemeral-start overlays.
+
+    Kennel already provisions ephemeral workspaces as overlay clones during
+    `lxc-copy -s -B overlay`, so a plain start is still the correct behavior on
+    hosts where `lxc-start -e` is unavailable.
+    """
+
+    start_args = ["lxc-start", "-n", name]
+    if kind != EnvKind.ephemeral:
+        return lxc(*start_args, timeout=30)
+
+    ephemeral_result = lxc(*start_args, "-e", timeout=30)
+    if ephemeral_result.returncode == 0:
+        return ephemeral_result
+
+    error_text = (
+        f"{ephemeral_result.stderr or ''}\n{ephemeral_result.stdout or ''}"
+    ).lower()
+    if (
+        "invalid option" in error_text and "'e'" in error_text
+    ) or "unrecognized option" in error_text:
+        logger.warning(
+            "lxc-start -e unsupported for env %s; retrying with plain lxc-start",
+            name,
+        )
+        return lxc(*start_args, timeout=30)
+
+    return ephemeral_result
 
 
 async def publish_event(env_name: str, event: str, data: dict = {}):
@@ -674,6 +722,11 @@ def _claude_code_runtime_files(user: str) -> dict[str, str]:
 
 def _hermes_runtime_files(user: str) -> dict[str, str]:
     user_home = f"/home/{user}"
+    hermes_test_env = (
+        "# Test-environment Hermes settings for kennel-managed workspaces.\n"
+        "GATEWAY_ALLOW_ALL_USERS=true\n"
+        "OPENROUTER_API_KEY=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\n"
+    )
     return {
         f"{user_home}/.hermes/config.yaml": (
             "# Hermes runtime configuration for kennel-managed workspaces.\n"
@@ -685,6 +738,7 @@ def _hermes_runtime_files(user: str) -> dict[str, str]:
             "  profile: kennel\n"
             "  workspace_path: /home/dev/workspace\n"
         ),
+        f"{user_home}/.hermes.env": hermes_test_env,
         f"{user_home}/.hermes/.env": (
             "# Workspace-scoped Hermes secrets.\n"
             "# Keep real values in this file or inject them through workspace env vars.\n"
@@ -703,18 +757,17 @@ def _hermes_runtime_files(user: str) -> dict[str, str]:
             "export DOG_WORKSPACE_AGENT_HERMES_HOST=\"${DOG_WORKSPACE_AGENT_HERMES_HOST:-0.0.0.0}\"\n"
             "export DOG_WORKSPACE_AGENT_HERMES_PORT=\"${DOG_WORKSPACE_AGENT_HERMES_PORT:-4319}\"\n"
             "export HERMES_GATEWAY_LISTEN=\"${HERMES_GATEWAY_LISTEN:-ws://${DOG_WORKSPACE_AGENT_HERMES_HOST}:${DOG_WORKSPACE_AGENT_HERMES_PORT}}\"\n"
+            "if [ -f \"$HOME/.hermes.env\" ]; then\n"
+            "  set -a\n"
+            "  # shellcheck disable=SC1090\n"
+            "  source \"$HOME/.hermes.env\"\n"
+            "  set +a\n"
+            "fi\n"
             "if [ -f \"$HOME/.hermes/.env\" ]; then\n"
             "  set -a\n"
             "  # shellcheck disable=SC1090\n"
             "  source \"$HOME/.hermes/.env\"\n"
             "  set +a\n"
-            "fi\n"
-            "if [ \"$#\" -gt 0 ]; then\n"
-            "  if command -v hermes >/dev/null 2>&1; then exec hermes \"$@\"; fi\n"
-            "  if command -v hermes-agent >/dev/null 2>&1; then exec hermes-agent \"$@\"; fi\n"
-            "fi\n"
-            "if [ -n \"${DOG_WORKSPACE_AGENT_HERMES_GATEWAY_CMD:-}\" ]; then\n"
-            "  exec bash -lc \"$DOG_WORKSPACE_AGENT_HERMES_GATEWAY_CMD\"\n"
             "fi\n"
             "if ! command -v hermes >/dev/null 2>&1 && ! command -v hermes-agent >/dev/null 2>&1; then\n"
             "  if [ \"${DOG_WORKSPACE_AGENT_HERMES_AUTO_INSTALL:-true}\" = \"true\" ] && command -v curl >/dev/null 2>&1; then\n"
@@ -728,6 +781,18 @@ def _hermes_runtime_files(user: str) -> dict[str, str]:
             "  fi\n"
             "fi\n"
             "if command -v hermes >/dev/null 2>&1; then\n"
+            "  hermes config set model openrouter/free || echo \"Hermes model config update failed; continuing startup.\" >&2\n"
+            "elif command -v hermes-agent >/dev/null 2>&1; then\n"
+            "  hermes-agent config set model openrouter/free || echo \"Hermes Agent model config update failed; continuing startup.\" >&2\n"
+            "fi\n"
+            "if [ \"$#\" -gt 0 ]; then\n"
+            "  if command -v hermes >/dev/null 2>&1; then exec hermes \"$@\"; fi\n"
+            "  if command -v hermes-agent >/dev/null 2>&1; then exec hermes-agent \"$@\"; fi\n"
+            "fi\n"
+            "if [ -n \"${DOG_WORKSPACE_AGENT_HERMES_GATEWAY_CMD:-}\" ]; then\n"
+            "  exec bash -lc \"$DOG_WORKSPACE_AGENT_HERMES_GATEWAY_CMD\"\n"
+            "fi\n"
+            "if command -v hermes >/dev/null 2>&1; then\n"
             "  exec hermes gateway run\n"
             "fi\n"
             "if command -v hermes-agent >/dev/null 2>&1; then\n"
@@ -739,6 +804,80 @@ def _hermes_runtime_files(user: str) -> dict[str, str]:
     }
 
 
+def _hermes_api_runtime_files(user: str) -> dict[str, str]:
+    user_home = f"/home/{user}"
+    hermes_test_env = (
+        "# Test-environment Hermes settings for kennel-managed workspaces.\n"
+        "GATEWAY_ALLOW_ALL_USERS=true\n"
+        "OPENROUTER_API_KEY=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\n"
+    )
+    return {
+        f"{user_home}/.hermes/config.yaml": (
+            "# Hermes API runtime configuration for kennel-managed workspaces.\n"
+            "runtime:\n"
+            "  profile: kennel-api\n"
+            "  workspace_path: /home/dev/workspace\n"
+        ),
+        f"{user_home}/.hermes.env": hermes_test_env,
+        f"{user_home}/.hermes/.env": (
+            "# Workspace-scoped Hermes API settings.\n"
+            "# Keep real values in this file or inject them through workspace env vars.\n"
+            "HERMES_API_KEY=\n"
+            "API_SERVER_ENABLED=true\n"
+            "API_SERVER_HOST=127.0.0.1\n"
+            "API_SERVER_PORT=8642\n"
+            "API_SERVER_KEY=\n"
+            "API_SERVER_MODEL_NAME=hermes\n"
+        ),
+        f"{user_home}/.hermes/hermes-api-launcher": (
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "export PATH=\"$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:$PATH\"\n"
+            "export DOG_WORKSPACE_AGENT_HERMES_API_HOST=\"${DOG_WORKSPACE_AGENT_HERMES_API_HOST:-127.0.0.1}\"\n"
+            "export DOG_WORKSPACE_AGENT_HERMES_API_PORT=\"${DOG_WORKSPACE_AGENT_HERMES_API_PORT:-8642}\"\n"
+            "if [ -f \"$HOME/.hermes.env\" ]; then\n"
+            "  set -a\n"
+            "  # shellcheck disable=SC1090\n"
+            "  source \"$HOME/.hermes.env\"\n"
+            "  set +a\n"
+            "fi\n"
+            "if [ -f \"$HOME/.hermes/.env\" ]; then\n"
+            "  set -a\n"
+            "  # shellcheck disable=SC1090\n"
+            "  source \"$HOME/.hermes/.env\"\n"
+            "  set +a\n"
+            "fi\n"
+            "if ! command -v hermes >/dev/null 2>&1 && ! command -v hermes-agent >/dev/null 2>&1; then\n"
+            "  if [ \"${DOG_WORKSPACE_AGENT_HERMES_AUTO_INSTALL:-true}\" = \"true\" ] && command -v curl >/dev/null 2>&1; then\n"
+            "    echo \"Hermes API runtime command not found; attempting installer bootstrap.\" >&2\n"
+            "    if command -v getent >/dev/null 2>&1 && ! getent hosts raw.githubusercontent.com >/dev/null 2>&1; then\n"
+            "      echo \"Hermes installer bootstrap skipped: raw.githubusercontent.com is not resolvable in this workspace.\" >&2\n"
+            "    else\n"
+            "      curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --skip-setup || true\n"
+            "    fi\n"
+            "    export PATH=\"$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:$PATH\"\n"
+            "  fi\n"
+            "fi\n"
+            "if command -v hermes >/dev/null 2>&1; then\n"
+            "  hermes config set model openrouter/free || echo \"Hermes model config update failed; continuing startup.\" >&2\n"
+            "elif command -v hermes-agent >/dev/null 2>&1; then\n"
+            "  hermes-agent config set model openrouter/free || echo \"Hermes Agent model config update failed; continuing startup.\" >&2\n"
+            "fi\n"
+            "if [ -n \"${DOG_WORKSPACE_AGENT_HERMES_CMD:-}\" ]; then\n"
+            "  exec bash -lc \"$DOG_WORKSPACE_AGENT_HERMES_CMD\"\n"
+            "fi\n"
+            "if command -v hermes >/dev/null 2>&1; then\n"
+            "  exec hermes gateway run\n"
+            "fi\n"
+            "if command -v hermes-agent >/dev/null 2>&1; then\n"
+            "  exec hermes-agent gateway run\n"
+            "fi\n"
+            "echo \"Hermes API runtime command not found after bootstrap attempt; install Hermes Agent or adjust PATH.\" >&2\n"
+            "exit 1\n"
+        ),
+    }
+
+
 def _bootstrap_profile_runtime_files(req: InjectRequest) -> dict[str, str]:
     if req.bootstrap_profile == "codex_app_server":
         return _codex_runtime_files(req.user)
@@ -746,6 +885,8 @@ def _bootstrap_profile_runtime_files(req: InjectRequest) -> dict[str, str]:
         return _claude_code_runtime_files(req.user)
     if req.bootstrap_profile == "hermes_agent_runtime":
         return _hermes_runtime_files(req.user)
+    if req.bootstrap_profile == "hermes_api_server":
+        return _hermes_api_runtime_files(req.user)
     if req.bootstrap_profile:
         raise ValueError(f"Unknown bootstrap_profile: {req.bootstrap_profile}")
     return {}
@@ -843,6 +984,45 @@ def _bootstrap_profile_plan(req: InjectRequest) -> BootstrapExecutionPlan | None
                 cwd=workspace_path,
                 background=True,
                 service_name="hermes",
+            )
+        )
+
+        return plan
+
+    if req.bootstrap_profile == "hermes_api_server":
+        plan = _legacy_bootstrap_plan(req)
+        workspace_path = plan.workspace_path
+
+        if not any(
+            isinstance(step, BootstrapCloneRepoStep) and step.target_path == workspace_path
+            for step in plan.steps
+        ):
+            plan.steps.append(
+                BootstrapRunCommandStep(
+                    phase="preparing_workspace",
+                    label="Create workspace directory",
+                    command=f"mkdir -p {shlex.quote(workspace_path)}",
+                )
+            )
+
+        plan.steps.append(
+            BootstrapRunCommandStep(
+                phase="starting_runtime",
+                label="Start Hermes API server",
+                command=(
+                    "if [ -f \"$HOME/.hermes/hermes-api-launcher\" ] && [ -x \"$HOME/.hermes/hermes-api-launcher\" ]; then "
+                    "exec \"$HOME/.hermes/hermes-api-launcher\"; "
+                    "elif command -v hermes >/dev/null 2>&1; then "
+                    "exec hermes gateway run; "
+                    "elif command -v hermes-agent >/dev/null 2>&1; then "
+                    "exec hermes-agent gateway run; "
+                    "fi; "
+                    "echo 'Hermes API runtime command not found.' >&2; "
+                    "exit 1"
+                ),
+                cwd=workspace_path,
+                background=True,
+                service_name="hermes_api",
             )
         )
 
@@ -1084,6 +1264,36 @@ def _is_port_listening(env_name: str, port: int) -> bool:
     return result.returncode == 0
 
 
+def _is_http_endpoint_ready(
+    env_name: str,
+    *,
+    port: int,
+    path: str = "/v1/models",
+) -> bool:
+    result = _attach_exec(
+        env_name,
+        (
+            "python3 - <<'PY'\n"
+            "import sys\n"
+            "import urllib.error\n"
+            "import urllib.request\n"
+            f"url = 'http://127.0.0.1:{port}{path}'\n"
+            "request = urllib.request.Request(url)\n"
+            "try:\n"
+            "    with urllib.request.urlopen(request, timeout=3) as response:\n"
+            "        code = response.getcode() or 0\n"
+            "        raise SystemExit(0 if code < 500 else 1)\n"
+            "except urllib.error.HTTPError as exc:\n"
+            "    raise SystemExit(0 if exc.code < 500 else 1)\n"
+            "except Exception:\n"
+            "    raise SystemExit(1)\n"
+            "PY"
+        ),
+        timeout=10,
+    )
+    return result.returncode == 0
+
+
 def _get_env_ipv4(env_name: str) -> str | None:
     result = lxc("lxc-info", "-n", env_name, "-iH")
     if result.returncode != 0:
@@ -1098,6 +1308,11 @@ def _get_env_ipv4(env_name: str) -> str | None:
 def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> DiscoveredWorkspaceService:
     pid_running = _is_pid_running(env_name, declared.pid_path) if declared.pid_path else False
     port_listening = _is_port_listening(env_name, declared.port) if declared.port else False
+    http_ready = (
+        _is_http_endpoint_ready(env_name, port=declared.port)
+        if declared.runtime_profile == "hermes_api_server" and declared.port is not None
+        else False
+    )
     env_host = _get_env_ipv4(env_name)
 
     # Readiness is derived from kennel's current interpretation of the declared
@@ -1107,7 +1322,10 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
     status: Literal["pending", "ready", "failed", "unknown"]
     readiness_message: str | None
 
-    if declared.port is not None and port_listening:
+    if declared.runtime_profile == "hermes_api_server" and declared.port is not None and http_ready:
+        status = "ready"
+        readiness_message = f"HTTP endpoint on port {declared.port} responded successfully."
+    elif declared.port is not None and port_listening:
         status = "ready"
         readiness_message = f"Port {declared.port} is listening."
     elif pid_running and declared.port is None:
@@ -1119,6 +1337,11 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
             readiness_message = (
                 "Hermes runtime process is running, but websocket port 4319 is not listening yet. "
                 "Inspect /tmp/hermes.log for startup errors."
+            )
+        elif declared.runtime_profile == "hermes_api_server" and declared.port == 8642:
+            readiness_message = (
+                "Hermes API process is running, but HTTP port 8642 is not responding successfully yet. "
+                "Inspect /tmp/hermes_api.log for startup errors."
             )
         else:
             readiness_message = "Process is running, but the expected port is not listening yet."
@@ -1425,6 +1648,105 @@ def _invoke_agent_runtime_command(
             "success": True,
             "output_text": output_text,
         },
+    }
+
+
+def _invoke_agent_runtime_http(
+    *,
+    env_name: str,
+    service: DeclaredWorkspaceService,
+    payload: dict | list | str,
+    path: str,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    if service.port is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent runtime HTTP invocation requires a declared port.",
+        )
+    if service.protocol not in {"http", "https"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Agent runtime HTTP invocation requires HTTP(S), got {service.protocol}.",
+        )
+
+    safe_path = path if path.startswith("/") else f"/{path}"
+    payload_json = json.dumps(payload)
+    command = (
+        "python3 - "
+        f"{shlex.quote(service.protocol)} "
+        f"{shlex.quote(str(service.port))} "
+        f"{shlex.quote(safe_path)} "
+        f"{shlex.quote(str(max(1, min(int(timeout_seconds), 300))))} "
+        f"{shlex.quote(payload_json)} <<'PY'\n"
+        "import json\n"
+        "import sys\n"
+        "import urllib.error\n"
+        "import urllib.request\n"
+        "protocol, port, path, timeout, payload = sys.argv[1:6]\n"
+        "url = f'{protocol}://127.0.0.1:{port}{path}'\n"
+        "request = urllib.request.Request(\n"
+        "    url,\n"
+        "    data=payload.encode('utf-8'),\n"
+        "    headers={'Content-Type': 'application/json'},\n"
+        "    method='POST',\n"
+        ")\n"
+        "try:\n"
+        "    with urllib.request.urlopen(request, timeout=float(timeout)) as response:\n"
+        "        body = response.read().decode('utf-8', errors='replace')\n"
+        "        print(json.dumps({'status_code': response.getcode(), 'body': body}))\n"
+        "except urllib.error.HTTPError as exc:\n"
+        "    body = exc.read().decode('utf-8', errors='replace')\n"
+        "    print(json.dumps({'status_code': exc.code, 'body': body}))\n"
+        "    raise SystemExit(0)\n"
+        "except Exception as exc:\n"
+        "    print(json.dumps({'error': str(exc)}))\n"
+        "    raise SystemExit(1)\n"
+        "PY"
+    )
+    result = _attach_exec(
+        env_name,
+        command,
+        timeout=max(1, min(int(timeout_seconds), 300)) + 5,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip() or "Agent runtime HTTP invocation failed."
+        raise HTTPException(status_code=502, detail=detail)
+
+    try:
+        response_payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Agent runtime HTTP invocation returned an invalid response envelope.",
+        ) from exc
+
+    if response_payload.get("error"):
+        raise HTTPException(status_code=502, detail=str(response_payload["error"]))
+
+    status_code = response_payload.get("status_code")
+    body = response_payload.get("body")
+    if not isinstance(status_code, int) or not isinstance(body, str):
+        raise HTTPException(
+            status_code=502,
+            detail="Agent runtime HTTP invocation returned an incomplete response envelope.",
+        )
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Agent runtime HTTP invocation failed with status {status_code}: {body}",
+        )
+
+    try:
+        parsed_body: object = json.loads(body) if body else {}
+    except json.JSONDecodeError:
+        parsed_body = body
+
+    return {
+        "status": "completed",
+        "transport_kind": service.transport_kind or "http",
+        "protocol": service.protocol,
+        "response": parsed_body,
     }
 
 
@@ -1796,15 +2118,7 @@ def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
             jobs[job_id].update({"status": JobStatus.failed, "error": r.stderr})
             return
 
-        start_args = ["lxc-start", "-n", name]
-        if req.kind == EnvKind.ephemeral:
-            start_args.append("-e")
-        start_result = subprocess.run(
-            start_args,
-            timeout=30,
-            capture_output=True,
-            text=True,
-        )
+        start_result = _start_env_container(name, kind=req.kind)
         if start_result.returncode != 0:
             jobs[job_id].update(
                 {
@@ -2196,6 +2510,28 @@ async def invoke_agent_runtime(
             argv=req.argv,
             cwd=req.cwd or declared.workspace_path,
             user=req.user,
+            timeout_seconds=req.timeout_seconds,
+        )
+    elif req.invoke_mode == "http":
+        if discovered.transport_kind != "http":
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Agent runtime transport is not supported by the kennel HTTP invoke endpoint: "
+                    f"{discovered.transport_kind or discovered.protocol}"
+                ),
+            )
+        if req.payload is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Agent runtime HTTP invocation requires payload.",
+            )
+        result = await asyncio.to_thread(
+            _invoke_agent_runtime_http,
+            env_name=name,
+            service=declared,
+            payload=req.payload,
+            path=req.http_path,
             timeout_seconds=req.timeout_seconds,
         )
     elif req.invoke_mode == "json_rpc":

@@ -18,6 +18,7 @@ def test_hermes_bootstrap_profile_runtime_files_include_standard_paths() -> None
     files = server._bootstrap_profile_runtime_files(req)
 
     assert "/home/dev/.hermes/config.yaml" in files
+    assert "/home/dev/.hermes.env" in files
     assert "/home/dev/.hermes/.env" in files
     assert "/home/dev/.hermes/hermes-agent-launcher" in files
     assert files["/home/dev/.hermes/hermes-agent-launcher"].startswith("#!/usr/bin/env bash")
@@ -31,8 +32,32 @@ def test_hermes_bootstrap_profile_runtime_files_include_standard_paths() -> None
     assert "DOG_WORKSPACE_AGENT_HERMES_AUTO_INSTALL" in files["/home/dev/.hermes/hermes-agent-launcher"]
     assert "bash -s -- --skip-setup" in files["/home/dev/.hermes/hermes-agent-launcher"]
     assert "raw.githubusercontent.com is not resolvable" in files["/home/dev/.hermes/hermes-agent-launcher"]
+    assert "GATEWAY_ALLOW_ALL_USERS=true" in files["/home/dev/.hermes.env"]
+    assert "OPENROUTER_API_KEY=sk-or-v1-" in files["/home/dev/.hermes.env"]
+    assert 'source "$HOME/.hermes.env"' in files["/home/dev/.hermes/hermes-agent-launcher"]
+    assert "hermes config set model openrouter/free" in files["/home/dev/.hermes/hermes-agent-launcher"]
     assert "API_SERVER_ENABLED=false" in files["/home/dev/.hermes/.env"]
     assert "API_SERVER_PORT=8642" in files["/home/dev/.hermes/.env"]
+
+
+def test_hermes_api_bootstrap_profile_runtime_files_include_standard_paths() -> None:
+    req = server.InjectRequest(user="dev", bootstrap_profile="hermes_api_server")
+
+    files = server._bootstrap_profile_runtime_files(req)
+
+    assert "/home/dev/.hermes/config.yaml" in files
+    assert "/home/dev/.hermes.env" in files
+    assert "/home/dev/.hermes/.env" in files
+    assert "/home/dev/.hermes/hermes-api-launcher" in files
+    assert files["/home/dev/.hermes/hermes-api-launcher"].startswith("#!/usr/bin/env bash")
+    assert "API_SERVER_ENABLED=true" in files["/home/dev/.hermes/.env"]
+    assert "API_SERVER_PORT=8642" in files["/home/dev/.hermes/.env"]
+    assert "API_SERVER_MODEL_NAME=hermes" in files["/home/dev/.hermes/.env"]
+    assert "GATEWAY_ALLOW_ALL_USERS=true" in files["/home/dev/.hermes.env"]
+    assert "OPENROUTER_API_KEY=sk-or-v1-" in files["/home/dev/.hermes.env"]
+    assert 'source "$HOME/.hermes.env"' in files["/home/dev/.hermes/hermes-api-launcher"]
+    assert "hermes config set model openrouter/free" in files["/home/dev/.hermes/hermes-api-launcher"]
+    assert 'DOG_WORKSPACE_AGENT_HERMES_API_PORT="${DOG_WORKSPACE_AGENT_HERMES_API_PORT:-8642}"' in files["/home/dev/.hermes/hermes-api-launcher"]
 
 
 def test_hermes_service_defaults_are_websocket_gateway() -> None:
@@ -44,6 +69,18 @@ def test_hermes_service_defaults_are_websocket_gateway() -> None:
     assert profile.transport_kind == "websocket"
     assert profile.protocol == "ws"
     assert profile.port == 4319
+    assert profile.path == "/"
+
+
+def test_hermes_api_service_defaults_are_http() -> None:
+    profile = server.SERVICE_PROFILE_DEFAULTS["hermes_api"]
+
+    assert profile.kind == "agent_runtime"
+    assert profile.runtime_id == "hermes"
+    assert profile.runtime_profile == "hermes_api_server"
+    assert profile.transport_kind == "http"
+    assert profile.protocol == "http"
+    assert profile.port == 8642
     assert profile.path == "/"
 
 
@@ -107,6 +144,18 @@ def test_hermes_bootstrap_profile_uses_file_guard_for_launcher() -> None:
     assert '[ -f "$HOME/.hermes/hermes-agent-launcher" ] && [ -x "$HOME/.hermes/hermes-agent-launcher" ]' in start_step.command
 
 
+def test_hermes_api_bootstrap_profile_uses_file_guard_for_launcher() -> None:
+    req = server.InjectRequest(user="dev", bootstrap_profile="hermes_api_server")
+
+    plan = server._bootstrap_profile_plan(req)
+
+    assert plan is not None
+    start_step = plan.steps[-1]
+    assert isinstance(start_step, server.BootstrapRunCommandStep)
+    assert start_step.service_name == "hermes_api"
+    assert '[ -f "$HOME/.hermes/hermes-api-launcher" ] && [ -x "$HOME/.hermes/hermes-api-launcher" ]' in start_step.command
+
+
 def test_hermes_readiness_message_points_to_runtime_log(monkeypatch) -> None:
     declared = server.SERVICE_PROFILE_DEFAULTS["hermes"]
     declared = declared.model_copy(
@@ -126,3 +175,88 @@ def test_hermes_readiness_message_points_to_runtime_log(monkeypatch) -> None:
     assert discovered.readiness_message is not None
     assert "4319" in discovered.readiness_message
     assert "/tmp/hermes.log" in discovered.readiness_message
+
+
+def test_hermes_api_readiness_message_points_to_runtime_log(monkeypatch) -> None:
+    declared = server.SERVICE_PROFILE_DEFAULTS["hermes_api"]
+    declared = declared.model_copy(
+        update={
+            "pid_path": "/tmp/hermes_api.pid",
+            "port": 8642,
+        }
+    )
+
+    monkeypatch.setattr(server, "_is_pid_running", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(server, "_is_port_listening", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(server, "_is_http_endpoint_ready", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(server, "_get_env_ipv4", lambda *_args, **_kwargs: "10.0.3.99")
+
+    discovered = server._discover_service("env-hermes-api", declared)
+
+    assert discovered.status == "pending"
+    assert discovered.readiness_message is not None
+    assert "8642" in discovered.readiness_message
+    assert "/tmp/hermes_api.log" in discovered.readiness_message
+
+
+def test_hermes_api_ready_when_http_endpoint_responds(monkeypatch) -> None:
+    declared = server.SERVICE_PROFILE_DEFAULTS["hermes_api"]
+    declared = declared.model_copy(
+        update={
+            "pid_path": "/tmp/hermes_api.pid",
+            "port": 8642,
+        }
+    )
+
+    monkeypatch.setattr(server, "_is_pid_running", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(server, "_is_port_listening", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(server, "_is_http_endpoint_ready", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(server, "_get_env_ipv4", lambda *_args, **_kwargs: "10.0.3.99")
+
+    discovered = server._discover_service("env-hermes-api", declared)
+
+    assert discovered.status == "ready"
+    assert discovered.readiness_message == "HTTP endpoint on port 8642 responded successfully."
+
+
+def test_start_env_container_retries_without_ephemeral_flag_when_unsupported(monkeypatch) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    def fake_lxc(*args, timeout: int = 60):  # noqa: ARG001
+        calls.append(tuple(str(arg) for arg in args))
+        if args[-1] == "-e":
+            return SimpleNamespace(
+                returncode=1,
+                stderr="lxc-start: invalid option -- 'e'",
+                stdout="",
+            )
+        return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(server, "lxc", fake_lxc)
+
+    result = server._start_env_container("env-test", kind=server.EnvKind.ephemeral)
+
+    assert result.returncode == 0
+    assert calls == [
+        ("lxc-start", "-n", "env-test", "-e"),
+        ("lxc-start", "-n", "env-test"),
+    ]
+
+
+def test_start_env_container_keeps_ephemeral_flag_errors_when_not_option_related(monkeypatch) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    def fake_lxc(*args, timeout: int = 60):  # noqa: ARG001
+        calls.append(tuple(str(arg) for arg in args))
+        return SimpleNamespace(
+            returncode=1,
+            stderr="lxc-start: failed to mount overlay",
+            stdout="",
+        )
+
+    monkeypatch.setattr(server, "lxc", fake_lxc)
+
+    result = server._start_env_container("env-test", kind=server.EnvKind.ephemeral)
+
+    assert result.returncode == 1
+    assert calls == [("lxc-start", "-n", "env-test", "-e")]

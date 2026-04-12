@@ -189,15 +189,19 @@ def _should_delegate_runtime_startup_to_kennel(
     *,
     runtime_preset: str | None,
     bootstrap_intent: WorkspaceBootstrapIntent,
-    explicit_bootstrap_profile: str | None,
+    bootstrap_profile: str | None,
 ) -> bool:
     startup_intent = bootstrap_intent.startup_intent
     if getattr(startup_intent, "mode", None) != "agent_service":
         return False
 
-    # Codex and Hermes now use kennel's built-in bootstrap profiles as the
-    # canonical runtime startup path unless the caller explicitly overrides it.
-    return runtime_preset in {"codex", "hermes"} and explicit_bootstrap_profile is None
+    if runtime_preset == "codex":
+        return bootstrap_profile is None
+
+    if runtime_preset == "hermes":
+        return bootstrap_profile in {None, "hermes_api_server"}
+
+    return False
 
 
 def build_workspace_kennel_provisioning_request(
@@ -234,6 +238,14 @@ def build_workspace_kennel_provisioning_request(
         explicit_runtime_preset=explicit_runtime_preset,
         bootstrap_intent=bootstrap_intent,
     )
+    effective_bootstrap_profile = explicit_bootstrap_profile
+    startup_intent = bootstrap_intent.startup_intent
+    if (
+        runtime_preset == "hermes"
+        and getattr(startup_intent, "mode", None) == "agent_service"
+        and effective_bootstrap_profile is None
+    ):
+        effective_bootstrap_profile = "hermes_api_server"
     requested_workspace_flavour = (
         bootstrap_flavour_from_intent(bootstrap_intent) or workspace_flavour
     )
@@ -248,7 +260,7 @@ def build_workspace_kennel_provisioning_request(
     delegate_runtime_startup = _should_delegate_runtime_startup_to_kennel(
         runtime_preset=runtime_preset,
         bootstrap_intent=bootstrap_intent,
-        explicit_bootstrap_profile=explicit_bootstrap_profile,
+        bootstrap_profile=effective_bootstrap_profile,
     )
     merged_env_vars = dict(projected_env_vars or {})
     merged_env_vars.update(explicit_env_vars or {})
@@ -266,7 +278,7 @@ def build_workspace_kennel_provisioning_request(
         repo_url=resolved_repo_url,
         env_vars=merged_env_vars,
         runtime_preset=runtime_preset,
-        bootstrap_profile=explicit_bootstrap_profile,
+        bootstrap_profile=effective_bootstrap_profile,
         runtime_files=merged_runtime_files,
         bootstrap_plan=None if delegate_runtime_startup else bootstrap_plan,
     )

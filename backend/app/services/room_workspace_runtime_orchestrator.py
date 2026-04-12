@@ -72,6 +72,93 @@ class KennelRoutedRoomWorkspaceRuntimeAdapter:
         )
 
 
+def _extract_hermes_api_output_text(payload: object) -> str:
+    if isinstance(payload, dict):
+        choices = payload.get("choices")
+        if isinstance(choices, list) and choices:
+            first_choice = choices[0]
+            if isinstance(first_choice, dict):
+                message = first_choice.get("message")
+                if isinstance(message, dict):
+                    content = message.get("content")
+                    if isinstance(content, str):
+                        return content
+                    if isinstance(content, list):
+                        parts: list[str] = []
+                        for item in content:
+                            if isinstance(item, dict):
+                                text = item.get("text")
+                                if isinstance(text, str):
+                                    parts.append(text)
+                        if parts:
+                            return "".join(parts)
+        for key in ("output_text", "content", "message"):
+            value = payload.get(key)
+            if isinstance(value, str):
+                return value
+
+    if isinstance(payload, str):
+        return payload
+
+    return json.dumps(payload, ensure_ascii=True)
+
+
+@dataclass(frozen=True)
+class HermesApiRoomWorkspaceRuntimeAdapter:
+    timeout_seconds: float = 30.0
+    api_path: str = "/v1/chat/completions"
+
+    async def invoke(
+        self,
+        request: RoomWorkspaceRuntimeInvocationRequest,
+    ) -> RoomWorkspaceRuntimeInvocationResult:
+        if request.target.protocol not in {"http", "https"}:
+            raise RoomWorkspaceRuntimeExecutionError(
+                f"Hermes API runtime requires an HTTP(S) target, got '{request.target.protocol}'.",
+            )
+        if not request.target.url:
+            raise RoomWorkspaceRuntimeExecutionError(
+                "Hermes API runtime target does not have a usable URL.",
+            )
+
+        payload = {
+            "model": "hermes",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": build_room_workspace_runtime_prompt_text(request),
+                }
+            ],
+            "stream": False,
+        }
+
+        try:
+            response = await kennel_client.invoke_agent_runtime(
+                request.target.kennel_name,
+                service_id=request.target.endpoint_id,
+                invoke_mode="http",
+                payload=payload,
+                http_path=self.api_path,
+                timeout_seconds=self.timeout_seconds,
+            )
+            response_payload = response.get("response")
+        except Exception as exc:
+            raise RoomWorkspaceRuntimeExecutionError(
+                f"Hermes API invocation failed: {exc}",
+            ) from exc
+
+        normalized_payload = {
+            "request_id": request.request_id,
+            "success": True,
+            "output_text": _extract_hermes_api_output_text(response_payload),
+            "response": response_payload,
+        }
+        return normalize_room_workspace_runtime_response(
+            request=request,
+            response=normalized_payload,
+        )
+
+
 @dataclass(frozen=True)
 class JsonRpcKennelRuntimeAdapter:
     timeout_seconds: float = 30.0
@@ -335,6 +422,7 @@ def _normalize_json_rpc_runtime_result(
 
 _DEFAULT_ADAPTER = KennelRoutedRoomWorkspaceRuntimeAdapter()
 _CODEX_ADAPTER = CodexRoomWorkspaceRuntimeAdapter()
+_HERMES_API_ADAPTER = HermesApiRoomWorkspaceRuntimeAdapter()
 # Hermes and Claude Code stay on the kennel-routed adapter so room websocket
 # clients remain observers of room events, not owners of runtime transport.
 _DEFAULT_RUNTIME_ADAPTERS: dict[str, RoomWorkspaceRuntimeAdapter] = {
@@ -379,6 +467,9 @@ def get_room_workspace_runtime_adapter_registry() -> RoomWorkspaceRuntimeAdapter
     return RoomWorkspaceRuntimeAdapterRegistry(
         adapters_by_runtime_id=dict(_DEFAULT_RUNTIME_ADAPTERS),
         default_adapter=_DEFAULT_ADAPTER,
+        profile_specific_adapters={
+            ("hermes", "hermes_api_server"): _HERMES_API_ADAPTER,
+        },
     )
 
 

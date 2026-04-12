@@ -159,7 +159,7 @@ def test_build_workspace_kennel_provisioning_request_delegates_hermes_agent_star
     )
 
     assert request.inject.runtime_preset == "hermes"
-    assert request.inject.bootstrap_profile is None
+    assert request.inject.bootstrap_profile == "hermes_api_server"
     assert request.inject.bootstrap_plan is None
     assert request.inject.env_vars == {"DOG_PLATFORM_SERVICE_COUNT": "2"}
 

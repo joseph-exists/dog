@@ -5,12 +5,23 @@ Commands for creating and managing chat rooms, participants, and messages.
 """
 import typer
 import json
+from pathlib import Path
+import sys
 from typing_extensions import Annotated
 from auth_helper import get_authenticated_session
 
 app = typer.Typer(help="Room management commands")
 
 BASE_URL = "http://localhost:8000/api/v1"
+TEST_SCRIPTS_ROOT = Path(__file__).resolve().parents[2]
+if str(TEST_SCRIPTS_ROOT) not in sys.path:
+    sys.path.append(str(TEST_SCRIPTS_ROOT))
+
+from rooms.hermes_workspace_roundtrip import (
+    HermesWorkspaceRoundTripConfig,
+    HermesWorkspaceRoundTripError,
+    run_hermes_workspace_roundtrip,
+)
 
 # ============================================================================
 # Room CRUD Commands
@@ -750,6 +761,49 @@ def runtime_reset(
         typer.echo(f"Status: {response.status_code}")
         typer.echo(f"Error: {response.text}")
         raise typer.Exit(1)
+
+
+@app.command("hermes-roundtrip")
+def hermes_roundtrip(
+    workspace_name: Annotated[str, typer.Option("--workspace-name", help="Workspace name")] = "Hermes API Validation Workspace",
+    room_title: Annotated[str, typer.Option("--room-title", help="Room title")] = "Hermes API Validation Room",
+    prompt: Annotated[str, typer.Option("--prompt", help="Prompt sent through room workspace runtime")] = (
+        "Reply with exactly: HERMES_ROOM_RUNTIME_OK. Do not add any other words."
+    ),
+    timeout_seconds: Annotated[int, typer.Option("--timeout-seconds", help="Overall readiness timeout")] = 240,
+    poll_interval_seconds: Annotated[float, typer.Option("--poll-interval-seconds", help="Polling interval")] = 3.0,
+    cleanup: Annotated[bool, typer.Option("--cleanup", help="Destroy created room and workspace when finished")] = False,
+    output_file: Annotated[str, typer.Option("--output-file", help="JSON output file; use 'none' to disable")] = str(
+        TEST_SCRIPTS_ROOT / "rooms" / "test_results_hermes_workspace_roundtrip.json"
+    ),
+):
+    """Provision a Hermes workspace, attach it to a room, and validate one runtime round trip."""
+    output_path = None if output_file.lower() == "none" else Path(output_file)
+    config = HermesWorkspaceRoundTripConfig(
+        base_url=BASE_URL.removesuffix("/api/v1"),
+        workspace_name=workspace_name,
+        room_title=room_title,
+        prompt=prompt,
+        timeout_seconds=timeout_seconds,
+        poll_interval_seconds=poll_interval_seconds,
+        cleanup=cleanup,
+        output_file=output_path,
+    )
+    try:
+        result = run_hermes_workspace_roundtrip(config, verbose=True)
+    except HermesWorkspaceRoundTripError as exc:
+        typer.secho(f"❌ Hermes round trip failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+    except Exception as exc:
+        typer.secho(f"❌ Hermes round trip could not start: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+
+    typer.secho("✅ Hermes room/runtime round trip succeeded!", fg=typer.colors.GREEN)
+    typer.echo(f"Workspace ID: {result['workspace']['id']}")
+    typer.echo(f"Room ID: {result['room']['id']}")
+    typer.echo(f"Runtime output: {result['invocation']['output_text']}")
+    if output_path is not None:
+        typer.echo(f"Result file: {output_path}")
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ This is the main extension seam for agent runtimes right now. A backend can alre
 - `claude_code`
 - `hermes`
 
-These profiles currently provide metadata and process tracking only:
+These profiles provide service metadata, runtime-file defaults, and readiness semantics:
 
 - label and runtime kind,
 - PID/log file conventions,
@@ -83,14 +83,27 @@ Update: backend now uses that preset as the default Codex agent-runtime startup 
 
 Update: kennel now also supports a `claude_code` runtime preset, mapped to `dev-claude-code` plus `claude_code_remote_control`.
 
+Update: kennel also supports a first-class Hermes preset, mapped to `hermes-agent` plus `hermes_agent_runtime`.
 
-### implemented Prebaked runtime flavours
+Current Hermes behavior in kennel:
 
-Add flavours like:
+- rebuild-time Hermes installation via the `hermes-agent` flavour chain
+- inject-time runtime file materialization under `/home/dev/.hermes`
+- canonical workspace path `/home/dev/workspace`
+- default websocket gateway startup on port `4319`
+- runtime service registration as `hermes`
+- agent-runtime readiness and invoke support through kennel service endpoints
+
+Hermes API-server mode is not yet a separate first-class profile. The current `.env` that kennel writes includes API-mode placeholders, but they are disabled by default.
+
+
+### Implemented prebaked runtime flavours
+
+Implemented flavours:
 
 - `dev-codex`
 - `dev-claude-code`
 - `hermes-agent`
 - `hermes-agent-dev`
 
-These would extend `dev` and install the runtime tool during rebuild. This keeps spawn fast and predictable, and matches the existing optimization strategy.
+These extend `dev` and install the runtime tool during rebuild. This keeps spawn fast and predictable, and matches the existing optimization strategy.

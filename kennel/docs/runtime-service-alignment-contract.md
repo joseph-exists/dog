@@ -131,7 +131,13 @@ Kennel side:
 - service path: `/`
 - preset flavour default: `hermes-agent`
 - preset bootstrap profile default: `hermes_agent_runtime`
-- profile-owned startup command: websocket gateway launch via `~/.hermes/hermes-agent-launcher` (legacy fallback: `~/.hermes/hermes-agent`, plus `hermes gateway run` / `hermes-agent gateway run`)
+- canonical runtime home: `/home/dev/.hermes`
+- canonical workspace path: `/home/dev/workspace`
+- profile-owned runtime files:
+  - `/home/dev/.hermes/config.yaml`
+  - `/home/dev/.hermes/.env`
+  - `/home/dev/.hermes/hermes-agent-launcher`
+- profile-owned startup command: websocket gateway launch via `/home/dev/.hermes/hermes-agent-launcher` (legacy fallback: `~/.hermes/hermes-agent`, plus `hermes gateway run` / `hermes-agent gateway run`)
 - room invoke integration: backend-routed runtime adapter path (room websocket is observer-only)
 
 Current readiness interpretation:
@@ -175,6 +181,9 @@ Runtime files such as:
 
 - `~/.codex/config.toml`
 - `~/.claude/settings.json`
+- `/home/dev/.hermes/config.yaml`
+- `/home/dev/.hermes/.env`
+- `/home/dev/.hermes/hermes-agent-launcher`
 
 are part of the runtime contract, not just convenience details. Mixed-mode support will need to treat them explicitly.
 
@@ -184,7 +193,6 @@ These are not unresolved in a blocking sense, but they remain intentionally open
 
 - whether the backend should retire Codex-specific startup command defaults entirely now that default startup is kennel-owned
 - whether Claude Code protocol labeling should remain `ws` or become more explicitly tied to the remote-control exposure model
-- whether kennel should gain a first-class profile-owned Hermes preset
 - whether Hermes API mode should be exposed by default through platform edge routes or kept opt-in
 - where the shared runtime/service registry should live if we later want machine-enforced parity rather than parallel documented mappings
 

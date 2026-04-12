@@ -19,6 +19,7 @@ from app.services.room_workspace_runtime_execution_service import (
 )
 from app.services.room_workspace_runtime_orchestrator import (
     CodexRoomWorkspaceRuntimeAdapter,
+    HermesApiRoomWorkspaceRuntimeAdapter,
     get_room_workspace_runtime_adapter_registry,
     KennelRoutedRoomWorkspaceRuntimeAdapter,
     RoomWorkspaceRuntimeAdapterRegistry,
@@ -42,6 +43,26 @@ def _runtime_target(*, runtime_id: str = "codex") -> RoomWorkspaceRuntimeTarget:
         transport_kind="websocket",
         protocol="ws",
         url="ws://runtime.internal/socket",
+        scope={"purpose": "agent_runtime_connect"},
+    )
+
+
+def _hermes_api_target() -> RoomWorkspaceRuntimeTarget:
+    return RoomWorkspaceRuntimeTarget(
+        connection_id=str(uuid4()),
+        room_id=uuid4(),
+        workspace_id=uuid4(),
+        workspace_name="Hermes API Workspace",
+        kennel_name="env-hermes-api",
+        workspace_path="/home/dev/workspace",
+        descriptor_id=str(uuid4()),
+        endpoint_id="hermes_api",
+        endpoint_label="Hermes API Server",
+        runtime_id="hermes",
+        runtime_profile="hermes_api_server",
+        transport_kind="http",
+        protocol="http",
+        url="http://runtime.internal:8642/",
         scope={"purpose": "agent_runtime_connect"},
     )
 
@@ -121,10 +142,66 @@ def test_default_runtime_adapter_registry_resolves_current_runtime_ids() -> None
     codex_adapter = registry.resolve(_runtime_target(runtime_id="codex"))
     claude_adapter = registry.resolve(_runtime_target(runtime_id="claude_code"))
     hermes_adapter = registry.resolve(_runtime_target(runtime_id="hermes"))
+    hermes_api_adapter = registry.resolve(_hermes_api_target())
 
     assert isinstance(codex_adapter, CodexRoomWorkspaceRuntimeAdapter)
     assert isinstance(claude_adapter, KennelRoutedRoomWorkspaceRuntimeAdapter)
     assert isinstance(hermes_adapter, KennelRoutedRoomWorkspaceRuntimeAdapter)
+    assert isinstance(hermes_api_adapter, HermesApiRoomWorkspaceRuntimeAdapter)
+
+
+@pytest.mark.asyncio
+async def test_hermes_api_adapter_posts_to_kennel_routed_http_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    target = _hermes_api_target()
+    adapter = HermesApiRoomWorkspaceRuntimeAdapter(timeout_seconds=12.0)
+    request = RoomWorkspaceRuntimeInvocationRequest(
+        target=target,
+        input="Summarize the active room state.",
+        caller=RoomWorkspaceRuntimeInvocationCaller(kind="user", id=str(uuid4())),
+    )
+
+    async def fake_invoke_agent_runtime(
+        kennel_name,
+        *,
+        service_id,
+        invoke_mode="websocket",
+        payload=None,
+        http_path=None,
+        timeout_seconds=15.0,
+        **_kwargs,
+    ):
+        assert kennel_name == target.kennel_name
+        assert service_id == "hermes_api"
+        assert invoke_mode == "http"
+        assert http_path == "/v1/chat/completions"
+        assert timeout_seconds == 12.0
+        assert payload["model"] == "hermes"
+        assert payload["stream"] is False
+        assert payload["messages"][0]["role"] == "user"
+        assert "room_id:" in payload["messages"][0]["content"]
+        return {
+            "response": {
+                "id": "chatcmpl-hermes-1",
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": "Hermes API completed the request.",
+                        }
+                    }
+                ],
+            }
+        }
+
+    monkeypatch.setattr(
+        "app.services.room_workspace_runtime_orchestrator.kennel_client.invoke_agent_runtime",
+        fake_invoke_agent_runtime,
+    )
+
+    result = await adapter.invoke(request)
+
+    assert result.success is True
+    assert result.output_text == "Hermes API completed the request."
 
 
 @pytest.mark.asyncio

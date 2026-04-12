@@ -1,0 +1,156 @@
+{
+  "status": "passed",
+  "started_at": "2026-04-12T15:27:21.083272+00:00",
+  "completed_at": "2026-04-12T15:28:01.350375+00:00",
+  "duration_seconds": 40.267103,
+  "workspace": {
+    "id": "5d294869-54cc-49ce-a47c-c8a3399f1ff5",
+    "name": "Hermes API Validation Workspace",
+    "status": "ready",
+    "bootstrap_profile": "hermes_api_server",
+    "service": {
+      "id": "hermes_api",
+      "kind": "agent_runtime",
+      "label": "Hermes API Server",
+      "runtime_id": "hermes",
+      "runtime_profile": "hermes_api_server",
+      "transport_kind": "http",
+      "status": "ready",
+      "protocol": "http",
+      "host": "10.0.3.189",
+      "port": 8642,
+      "path": "/",
+      "url": "http://10.0.3.189:8642/",
+      "source": "bootstrap_profile",
+      "readiness_message": "HTTP endpoint on port 8642 responded successfully."
+    },
+    "canonical_paths": {
+      "workspace_path": "/home/dev/workspace",
+      "hermes_home": "/home/dev/.hermes"
+    }
+  },
+  "room": {
+    "id": "904bb646-cbe5-4c03-b7a9-70c2cd6f3012",
+    "title": "Hermes API Validation Room"
+  },
+  "descriptor": {
+    "descriptor_id": "4d5811b1-a426-4984-8892-e1255ae6062d",
+    "room_id": "904bb646-cbe5-4c03-b7a9-70c2cd6f3012",
+    "workspace_id": "5d294869-54cc-49ce-a47c-c8a3399f1ff5",
+    "purpose": "agent_runtime_connect",
+    "status": "available",
+    "issued_at": "2026-04-12T15:27:45.397349Z",
+    "expires_at": "2026-04-12T15:32:45.397349Z",
+    "reason": null,
+    "capabilities": [
+      "agent_runtime_connect"
+    ],
+    "endpoints": [
+      {
+        "id": "hermes_api",
+        "kind": "agent-runtime",
+        "label": "Hermes API Server",
+        "runtime_id": "hermes",
+        "runtime_profile": "hermes_api_server",
+        "transport_kind": "http",
+        "protocol": "http",
+        "url": "http://10.0.3.189:8642/",
+        "auth_mode": "none",
+        "expires_at": null,
+        "scope": {
+          "room_id": "904bb646-cbe5-4c03-b7a9-70c2cd6f3012",
+          "workspace_id": "5d294869-54cc-49ce-a47c-c8a3399f1ff5",
+          "purpose": "agent_runtime_connect",
+          "endpoint_id": "hermes_api",
+          "descriptor_id": "4d5811b1-a426-4984-8892-e1255ae6062d"
+        }
+      }
+    ]
+  },
+  "current_connection": {
+    "connection_id": "da99db8a-802e-408c-99f9-8a134a967e99",
+    "room_id": "904bb646-cbe5-4c03-b7a9-70c2cd6f3012",
+    "workspace_id": "5d294869-54cc-49ce-a47c-c8a3399f1ff5",
+    "workspace_name": "Hermes API Validation Workspace",
+    "purpose": "agent_runtime_connect",
+    "relationship": "owner_private",
+    "access_level": "manage",
+    "selected_at": "2026-04-12T15:27:45.929998",
+    "service_count": 1,
+    "ready_service_count": 1,
+    "state": "active",
+    "state_reason": null,
+    "descriptor": {
+      "descriptor_id": "ab54b33d-73b6-4b66-9f73-7f4c683daeb8",
+      "room_id": "904bb646-cbe5-4c03-b7a9-70c2cd6f3012",
+      "workspace_id": "5d294869-54cc-49ce-a47c-c8a3399f1ff5",
+      "purpose": "agent_runtime_connect",
+      "status": "available",
+      "issued_at": "2026-04-12T15:27:45.798219Z",
+      "expires_at": "2026-04-12T15:32:45.798219Z",
+      "reason": null,
+      "capabilities": [
+        "agent_runtime_connect"
+      ],
+      "endpoints": [
+        {
+          "id": "hermes_api",
+          "kind": "agent-runtime",
+          "label": "Hermes API Server",
+          "runtime_id": "hermes",
+          "runtime_profile": "hermes_api_server",
+          "transport_kind": "http",
+          "protocol": "http",
+          "url": "http://10.0.3.189:8642/",
+          "auth_mode": "none",
+          "expires_at": null,
+          "scope": {
+            "room_id": "904bb646-cbe5-4c03-b7a9-70c2cd6f3012",
+            "workspace_id": "5d294869-54cc-49ce-a47c-c8a3399f1ff5",
+            "purpose": "agent_runtime_connect",
+            "endpoint_id": "hermes_api",
+            "connection_id": "da99db8a-802e-408c-99f9-8a134a967e99",
+            "descriptor_id": "ab54b33d-73b6-4b66-9f73-7f4c683daeb8"
+          }
+        }
+      ]
+    }
+  },
+  "invocation": {
+    "status": "completed",
+    "request_id": "380d261c-5467-4faf-8dab-dd2d61fb60d9",
+    "invocation_id": "be6fcfb7-014d-40ff-bc86-6f5debf4e4be",
+    "connection_id": "da99db8a-802e-408c-99f9-8a134a967e99",
+    "workspace_id": "5d294869-54cc-49ce-a47c-c8a3399f1ff5",
+    "descriptor_id": "48b4afc3-cba7-446c-b05b-3590967bab2d",
+    "endpoint_id": "hermes_api",
+    "runtime_label": "Hermes API Server",
+    "runtime_id": "hermes",
+    "runtime_profile": "hermes_api_server",
+    "protocol": "http",
+    "success": true,
+    "output_text": "HERMES_ROOM_RUNTIME_OK",
+    "message_id": "10abc125-6736-400a-a50f-ba46cb236ca8"
+  },
+  "runtime_message": {
+    "content": "HERMES_ROOM_RUNTIME_OK",
+    "sender_type": "agent",
+    "message_id": "10abc125-6736-400a-a50f-ba46cb236ca8",
+    "room_id": "904bb646-cbe5-4c03-b7a9-70c2cd6f3012",
+    "sender_id": null,
+    "agent_name": "Hermes API Server",
+    "created_at": "2026-04-12T15:28:01.326630",
+    "edited_at": null,
+    "edited_by": null,
+    "is_pinned": false,
+    "pinned_at": null,
+    "pinned_by": null,
+    "active_for_context": true,
+    "can_edit": false,
+    "can_delete": false,
+    "can_pin": false,
+    "sender_display_name": "Hermes API Server",
+    "button_options": null,
+    "ui_components": null
+  }
+}

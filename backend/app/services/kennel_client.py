@@ -119,6 +119,7 @@ async def invoke_agent_runtime(
     json_rpc_session: dict[str, object] | None = None,
     argv: list[str] | None = None,
     cwd: str | None = None,
+    http_path: str | None = None,
     user: str | None = None,
     timeout_seconds: float = 15.0,
 ) -> dict:
@@ -134,6 +135,8 @@ async def invoke_agent_runtime(
         request_body["argv"] = list(argv)
     if cwd is not None:
         request_body["cwd"] = cwd
+    if http_path is not None:
+        request_body["http_path"] = http_path
     if user is not None:
         request_body["user"] = user
     response = await get_client().post(

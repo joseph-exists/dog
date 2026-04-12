@@ -141,10 +141,10 @@ Current built-in behavior:
 
 Current built-in behavior:
 
-- writes default runtime files under `~/.hermes`:
+- writes default runtime files under `/home/dev/.hermes`:
   - `config.yaml`
   - `.env`
-  - `hermes-agent` launcher
+  - `hermes-agent-launcher`
 - launcher defaults include:
   - `DOG_WORKSPACE_AGENT_HERMES_RUNTIME_MODE=gateway_ws`
   - `DOG_WORKSPACE_AGENT_HERMES_HOST=0.0.0.0`
@@ -156,9 +156,14 @@ Current built-in behavior:
   - `API_SERVER_HOST=127.0.0.1`
   - `API_SERVER_PORT=8642`
   - `API_SERVER_KEY=`
-- creates the workspace directory if needed
-- starts `~/.hermes/hermes-agent-launcher` as a websocket gateway runtime on port `4319` (or falls back to `hermes` / `hermes-agent` gateway commands)
+- creates `/home/dev/workspace` if needed
+- starts `/home/dev/.hermes/hermes-agent-launcher` as a websocket gateway runtime on port `4319` (or falls back to `hermes` / `hermes-agent` gateway commands)
 - registers the runtime as service `hermes`
+
+Canonical Stage 1 paths:
+
+- Hermes home: `/home/dev/.hermes`
+- workspace path: `/home/dev/workspace`
 
 References:
 

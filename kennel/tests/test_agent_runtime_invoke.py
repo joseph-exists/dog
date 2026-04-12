@@ -22,6 +22,7 @@ def _declared_runtime_service(
     runtime_profile: str | None = "codex_app_server",
     transport_kind: str | None = "websocket",
     workspace_path: str | None = "/home/dev/workspace",
+    protocol: str = "ws",
 ) -> server.DeclaredWorkspaceService:
     return server.DeclaredWorkspaceService(
         id=service_id,
@@ -31,7 +32,7 @@ def _declared_runtime_service(
         runtime_id=runtime_id,
         runtime_profile=runtime_profile,
         transport_kind=transport_kind,
-        protocol="ws",
+        protocol=protocol,
         port=4500,
         path="/",
         workspace_path=workspace_path,
@@ -45,6 +46,7 @@ def _discovered_runtime_service(
     runtime_profile: str | None = "codex_app_server",
     transport_kind: str | None = "websocket",
     status: str = "ready",
+    protocol: str = "ws",
 ) -> server.DiscoveredWorkspaceService:
     return server.DiscoveredWorkspaceService(
         id=service_id,
@@ -55,11 +57,11 @@ def _discovered_runtime_service(
         runtime_profile=runtime_profile,
         transport_kind=transport_kind,
         status=status,
-        protocol="ws",
+        protocol=protocol,
         host="10.0.3.22",
         port=4500,
         path="/",
-        url="ws://10.0.3.22:4500/",
+        url=f"{protocol}://10.0.3.22:4500/",
     )
 
 
@@ -249,6 +251,84 @@ async def test_invoke_agent_runtime_uses_json_rpc_path(monkeypatch: pytest.Monke
     assert response["runtime_profile"] == "codex_app_server"
     assert response["status"] == "completed"
     assert response["response"]["terminal_notification"]["method"] == "turn/completed"
+
+
+@pytest.mark.asyncio
+async def test_invoke_agent_runtime_uses_http_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    declared = _declared_runtime_service(
+        service_id="hermes_api",
+        runtime_id="hermes",
+        runtime_profile="hermes_api_server",
+        transport_kind="http",
+        protocol="http",
+    )
+    discovered = _discovered_runtime_service(
+        service_id="hermes_api",
+        runtime_id="hermes",
+        runtime_profile="hermes_api_server",
+        transport_kind="http",
+        protocol="http",
+    )
+
+    monkeypatch.setattr(
+        server,
+        "lxc",
+        lambda *args: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(server, "_read_service_manifest", lambda name: [declared])
+    monkeypatch.setattr(server, "_discover_service", lambda name, service: discovered)
+
+    def fake_invoke_agent_runtime_http(
+        *,
+        env_name,
+        service,
+        payload,
+        path,
+        timeout_seconds,
+    ):
+        assert env_name == "env-runtime"
+        assert service == declared
+        assert payload["model"] == "hermes"
+        assert path == "/v1/chat/completions"
+        assert timeout_seconds == 30.0
+        return {
+            "status": "completed",
+            "transport_kind": "http",
+            "protocol": "http",
+            "response": {
+                "choices": [
+                    {"message": {"content": "Hermes HTTP reply."}},
+                ],
+            },
+        }
+
+    async def fake_to_thread(fn, /, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    monkeypatch.setattr(
+        server,
+        "_invoke_agent_runtime_http",
+        fake_invoke_agent_runtime_http,
+    )
+    monkeypatch.setattr(server.asyncio, "to_thread", fake_to_thread)
+
+    response = await server.invoke_agent_runtime(
+        name="env-runtime",
+        service_id="hermes_api",
+        req=server.AgentRuntimeInvokeRequest(
+            invoke_mode="http",
+            payload={"model": "hermes", "messages": []},
+            http_path="/v1/chat/completions",
+            timeout_seconds=30.0,
+        ),
+    )
+
+    assert response["env"] == "env-runtime"
+    assert response["service_id"] == "hermes_api"
+    assert response["runtime_id"] == "hermes"
+    assert response["runtime_profile"] == "hermes_api_server"
+    assert response["status"] == "completed"
+    assert response["response"]["choices"][0]["message"]["content"] == "Hermes HTTP reply."
 
 
 @pytest.mark.asyncio

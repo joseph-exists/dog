@@ -119,6 +119,74 @@ async def test_consume_runtime_target_returns_active_runtime_endpoint(
 
 
 @pytest.mark.asyncio
+async def test_consume_runtime_target_accepts_http_agent_runtime_endpoint(
+    async_session,
+    test_room,
+    test_user,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = Workspace(
+        id=uuid4(),
+        owner_id=test_user.id,
+        name="Hermes API Workspace",
+        status=WorkspaceStatus.ready,
+        kennel_name="env-hermes-api",
+        meta={"bootstrap_workspace_path": "/home/dev/workspace"},
+    )
+    async_session.add(workspace)
+    await async_session.commit()
+
+    async def _mock_get_workspace_service_summaries(_workspace: Workspace):
+        return [
+            WorkspaceServiceSummary(
+                id="hermes_api",
+                kind=WorkspaceServiceKind.agent_runtime,
+                label="Hermes API Server",
+                runtime_id="hermes",
+                runtime_profile="hermes_api_server",
+                transport_kind="http",
+                status=WorkspaceServiceStatus.ready,
+                protocol=WorkspaceServiceProtocol.http,
+                url="http://runtime.internal:8642/",
+                source=WorkspaceServiceSource.runtime_probe,
+            )
+        ]
+
+    monkeypatch.setattr(
+        "app.services.room_workspace_connection_service.get_workspace_service_summaries",
+        _mock_get_workspace_service_summaries,
+    )
+
+    store = InMemoryContextStore()
+    await store.add(
+        ContextItem(
+            id="runtime-connection-http",
+            room_id=test_room.room_id,
+            agent_slug=None,
+            context_type=CURRENT_CONNECTION_CONTEXT_TYPE,
+            payload=_current_connection_payload(
+                workspace_id=str(workspace.id),
+                workspace_name=workspace.name,
+            ),
+            source="system",
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+
+    target = await consume_current_room_workspace_runtime_target(
+        async_session,
+        room_id=test_room.room_id,
+        context_store=store,
+    )
+
+    assert target.runtime_id == "hermes"
+    assert target.runtime_profile == "hermes_api_server"
+    assert target.transport_kind == "http"
+    assert target.protocol == "http"
+    assert target.url == "http://runtime.internal:8642/"
+
+
+@pytest.mark.asyncio
 async def test_consume_runtime_target_rejects_non_runtime_current_connection(
     async_session,
     test_room,
