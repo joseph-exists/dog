@@ -43,6 +43,7 @@ from rich.table import Table
 from rich.syntax import Syntax
 
 import auth_helper
+from cli_config import get_api_v1_url
 
 console = Console()
 app = typer.Typer(
@@ -299,7 +300,7 @@ def get_client() -> httpx.Client:
     """Get authenticated HTTP client."""
     token = auth_helper.get_access_token()
     return httpx.Client(
-        base_url="http://localhost:8000/api/v1/demos",
+        base_url=f"{get_api_v1_url()}/demos",
         headers={"Authorization": f"Bearer {token}"},
         timeout=30.0,
     )

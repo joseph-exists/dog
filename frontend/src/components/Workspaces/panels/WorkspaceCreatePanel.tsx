@@ -40,9 +40,13 @@ export interface WorkspaceCreatePanelProps {
 const FLAVOURS: WorkspaceFlavour[] = ["base", "dev", "cuda"]
 const RUNTIME_PRESETS = [
   { value: "none", label: "None" },
+  { value: "typer", label: "typer" },
   { value: "codex", label: "codex" },
+  { value: "codex_typer", label: "codex_typer" },
   { value: "claude_code", label: "claude_code" },
+  { value: "claude_code_typer", label: "claude_code_typer" },
   { value: "hermes", label: "hermes" },
+  { value: "hermes_typer", label: "hermes_typer" },
 ] as const
 const INSTALL_PROFILES = ["npm", "pnpm", "yarn", "uv", "pip"] as const
 const STARTUP_PROFILES = ["vite", "nextjs", "fastapi"] as const
@@ -51,9 +55,16 @@ const AGENT_PROFILE_RUNTIME_PRESET: Record<
   (typeof AGENT_PROFILES)[number],
   string
 > = {
-  codex: "codex",
-  claude_code: "claude_code",
-  hermes: "hermes",
+  codex: "codex_typer",
+  claude_code: "claude_code_typer",
+  hermes: "hermes_typer",
+}
+
+const RUNTIME_PRESET_BASE: Record<string, string> = {
+  typer: "typer",
+  codex_typer: "codex",
+  claude_code_typer: "claude_code",
+  hermes_typer: "hermes",
 }
 
 type RuntimeFileDraft = {
@@ -70,15 +81,40 @@ type ResolvedRuntimeSummary = {
   notes: string[]
 }
 
+function getRuntimePresetBase(runtimePreset: string | null): string | null {
+  if (!runtimePreset || runtimePreset === "none") return null
+  return RUNTIME_PRESET_BASE[runtimePreset] ?? runtimePreset
+}
+
+function hasTyperEnv(runtimePreset: string | null): boolean {
+  return (
+    runtimePreset === "typer" ||
+    runtimePreset === "codex_typer" ||
+    runtimePreset === "claude_code_typer" ||
+    runtimePreset === "hermes_typer"
+  )
+}
+
+function isHermesRuntimePreset(runtimePreset: string | null): boolean {
+  return getRuntimePresetBase(runtimePreset) === "hermes"
+}
+
 function getRuntimePresetHelperText(runtimePreset: string): string {
-  if (runtimePreset === "codex") {
-    return "Codex preset defaults the base image toward dev-codex and, when paired with Codex agent runtime startup, hands launch to kennel's codex_app_server profile."
+  const basePreset = getRuntimePresetBase(runtimePreset)
+  const typerSuffix = hasTyperEnv(runtimePreset)
+    ? " It also injects TinyFoot API env for the Typer CLI."
+    : ""
+  if (runtimePreset === "typer") {
+    return "Typer preset keeps the dev base image and injects TinyFoot API env for the Typer CLI."
   }
-  if (runtimePreset === "claude_code") {
-    return "Claude Code preset defaults the base image toward dev-claude-code and keeps kennel runtime defaults available when the flow chooses them."
+  if (basePreset === "codex") {
+    return `Codex preset defaults the base image toward dev-codex and, when paired with Codex agent runtime startup, hands launch to kennel's codex_app_server profile.${typerSuffix}`
   }
-  if (runtimePreset === "hermes") {
-    return "Hermes preset defaults the base image toward hermes-agent and, when paired with Hermes agent runtime startup, launches kennel's hermes_agent_runtime websocket gateway profile."
+  if (basePreset === "claude_code") {
+    return `Claude Code preset defaults the base image toward dev-claude-code and keeps kennel runtime defaults available when the flow chooses them.${typerSuffix}`
+  }
+  if (basePreset === "hermes") {
+    return `Hermes preset defaults the base image toward hermes-agent and, when paired with Hermes agent runtime startup, launches kennel's hermes_agent_runtime websocket gateway profile.${typerSuffix}`
   }
   return "Use a runtime preset for sane defaults. Keep flavour editable when you need to override the base environment."
 }
@@ -100,18 +136,25 @@ function resolveRuntimeSummary(params: {
     bootstrapProfile,
   } = params
   const preset = runtimePreset === "none" ? null : runtimePreset
+  const basePreset = getRuntimePresetBase(preset)
+  const typerNotes = hasTyperEnv(preset)
+    ? ["This preset injects `TINYFOOT_API_URL` so the workspace Typer CLI can call the backend."]
+    : []
   const hasBootstrapProfileOverride = bootstrapProfile.trim().length > 0
 
   let flavourOutcome = `Create uses the selected flavour \`${flavour}\`.`
-  if (preset === "codex" && flavour === "dev") {
+  if (basePreset === "codex" && flavour === "dev") {
     flavourOutcome =
       "Create resolves the default `dev` flavour to `dev-codex`, so the Codex CLI is prebaked into the workspace image."
-  } else if (preset === "claude_code" && flavour === "dev") {
+  } else if (basePreset === "claude_code" && flavour === "dev") {
     flavourOutcome =
       "Create resolves the default `dev` flavour to `dev-claude-code`, so Claude Code is prebaked into the workspace image."
-  } else if (preset === "hermes" && flavour === "dev") {
+  } else if (basePreset === "hermes" && flavour === "dev") {
     flavourOutcome =
       "Create resolves the default `dev` flavour to `hermes-agent`, so the Hermes Agent CLI is prebaked into the workspace image."
+  } else if (preset === "typer" && flavour === "dev") {
+    flavourOutcome =
+      "Create keeps the default `dev` flavour and injects TinyFoot API env for the Typer CLI."
   } else if (preset) {
     flavourOutcome = `Runtime preset \`${preset}\` is selected, but the explicit flavour \`${flavour}\` remains the create-time base image.`
   }
@@ -121,13 +164,14 @@ function resolveRuntimeSummary(params: {
       flavourOutcome,
       startupOwner: "No runtime service is auto-started.",
       startupProcess:
-        preset === "codex"
+        basePreset === "codex"
           ? "Codex is installed in the workspace image, but provisioning does not auto-launch `codex`, `codex exec`, or `codex app-server`."
           : "Provisioning stops at terminal-ready workspace setup. No long-running runtime process is auto-launched.",
       codexExecRole:
         "`codex exec` is never auto-started by workspace provisioning. Use it manually inside the terminal when you want one-shot non-interactive Codex runs.",
       notes: [
         "Choose Agent Runtime startup if you want the workspace to come up with a long-running runtime service.",
+        ...typerNotes,
       ],
     }
   }
@@ -141,12 +185,13 @@ function resolveRuntimeSummary(params: {
         "`codex exec` is not involved in profile startup. It remains a manual terminal command only.",
       notes: [
         "Profile startup is intended for app/dev-server commands like vite, nextjs, or fastapi.",
+        ...typerNotes,
       ],
     }
   }
 
   if (agentProfile === "codex") {
-    if (preset === "codex" && !hasBootstrapProfileOverride) {
+    if (basePreset === "codex" && !hasBootstrapProfileOverride) {
       return {
         flavourOutcome,
         startupOwner: "Kennel runtime preset/profile owns startup.",
@@ -157,6 +202,7 @@ function resolveRuntimeSummary(params: {
         notes: [
           "This is the default Codex agent-runtime path.",
           "The app server is the long-running websocket service; it is distinct from the interactive `codex` CLI and the one-shot `codex exec` mode.",
+          ...typerNotes,
         ],
       }
     }
@@ -176,13 +222,14 @@ function resolveRuntimeSummary(params: {
             "Current backend behavior may keep its explicit startup plan even when a bootstrap profile is filled in.",
           ]
         : [
-            "Select the `codex` runtime preset and leave advanced bootstrap overrides empty if you want kennel-owned `codex app-server` startup.",
+            "Select the `codex_typer` runtime preset and leave advanced bootstrap overrides empty if you want kennel-owned `codex app-server` startup with Typer CLI backend access.",
+            ...typerNotes,
           ],
     }
   }
 
   if (agentProfile === "hermes") {
-    if (preset === "hermes" && !hasBootstrapProfileOverride) {
+    if (basePreset === "hermes" && !hasBootstrapProfileOverride) {
       return {
         flavourOutcome,
         startupOwner: "Kennel runtime preset/profile owns startup.",
@@ -196,6 +243,7 @@ function resolveRuntimeSummary(params: {
           "Room `Agent Runtime` descriptors become `available` only when the Hermes runtime is ready and exposes a routable websocket URL.",
           "Hermes API server mode (`/v1` HTTP) is a separate optional runtime mode and is not required for room runtime invoke.",
           "Use advanced bootstrap overrides only when you need to force a non-default runtime startup contract.",
+          ...typerNotes,
         ],
       }
     }
@@ -212,6 +260,7 @@ function resolveRuntimeSummary(params: {
       "`codex exec` is not involved in this runtime path.",
     notes: [
       "Agent Runtime startup is for long-running workspace services rather than one-shot terminal commands.",
+      ...typerNotes,
     ],
   }
 }
@@ -252,16 +301,21 @@ export function WorkspaceCreatePanel({
   const [bootstrapProfile, setBootstrapProfile] = useState("")
   const [runtimeFiles, setRuntimeFiles] = useState<RuntimeFileDraft[]>([])
   const shouldEnforceHermesBaseFlavour =
-    runtimePreset === "hermes" ||
+    isHermesRuntimePreset(runtimePreset) ||
     (startupMode === "agent_service" && agentProfile === "hermes")
 
   useEffect(() => {
+    if (startupMode !== "agent_service") return
+    const agentPreset = AGENT_PROFILE_RUNTIME_PRESET[agentProfile] ?? "none"
+    if (runtimePreset === "none") {
+      setRuntimePreset(agentPreset)
+      return
+    }
     if (
-      startupMode === "agent_service" &&
       agentProfile === "hermes" &&
-      runtimePreset !== "hermes"
+      !isHermesRuntimePreset(runtimePreset)
     ) {
-      setRuntimePreset("hermes")
+      setRuntimePreset(agentPreset)
     }
   }, [agentProfile, runtimePreset, startupMode])
 
@@ -358,7 +412,7 @@ export function WorkspaceCreatePanel({
               value={runtimePreset}
               onValueChange={(value) => {
                 setRuntimePreset(value)
-                if (value === "hermes") {
+                if (isHermesRuntimePreset(value)) {
                   setFlavour("dev")
                 }
               }}

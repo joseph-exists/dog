@@ -48,7 +48,7 @@ When adding a new command group:
    - use consistent exit codes (`raise typer.Exit(1)` on failures)
 5. For API-backed commands:
    - use `get_authenticated_session()` from `auth_helper.py`
-   - use `BASE_URL = "http://localhost:8000/api/v1"` convention unless intentionally different
+   - use `BASE_URL = get_api_v1_url()` from `cli_config.py` unless intentionally different
 6. Keep debug output behind `--verbose` and a local `log()` helper.
 
 ## Output And Error Conventions

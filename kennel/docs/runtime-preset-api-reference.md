@@ -27,12 +27,22 @@ Today kennel defines:
 - `codex`
 - `claude_code`
 - `hermes`
+- `typer`
+- `codex_typer`
+- `claude_code_typer`
+- `hermes_typer`
 
 Current mapping:
 
 - `codex` -> create flavour `dev-codex`, inject bootstrap profile `codex_app_server`
 - `claude_code` -> create flavour `dev-claude-code`, inject bootstrap profile `claude_code_remote_control`
 - `hermes` -> create flavour `hermes-agent`, inject bootstrap profile `hermes_agent_runtime`
+- `typer` -> create flavour `dev`, no inject bootstrap profile, inject TinyFoot API env vars
+- `codex_typer` -> `codex` runtime mapping plus TinyFoot API env vars
+- `claude_code_typer` -> `claude_code` runtime mapping plus TinyFoot API env vars
+- `hermes_typer` -> `hermes` runtime mapping plus TinyFoot API env vars
+
+The Typer branch presets set `TINYFOOT_API_URL`. Its default API root comes from kennel setting `KENNEL_TINYFOOT_API_URL`, which defaults to `http://10.0.3.1:8000` for local LXC guests. Caller-supplied `env_vars` override preset-provided values.
 
 References:
 

@@ -41,9 +41,11 @@ class Settings(BaseSettings):
     kennel_max_envs:            int = 20
     kennel_gittin_guest_host:   str = "gittin"
     kennel_gittin_guest_ip:     str = "10.0.3.1"
+    kennel_tinyfoot_api_url:    str = "http://10.0.3.1:8000"
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings  = Settings()
 logger = logging.getLogger(__name__)
@@ -99,6 +101,10 @@ class RuntimePreset(str, Enum):
     codex = "codex"
     claude_code = "claude_code"
     hermes = "hermes"
+    typer = "typer"
+    codex_typer = "codex_typer"
+    claude_code_typer = "claude_code_typer"
+    hermes_typer = "hermes_typer"
 
 class CreateEnvRequest(BaseModel):
     name:               str | None = None
@@ -380,7 +386,32 @@ RUNTIME_PRESET_DEFAULTS: dict[RuntimePreset, dict[str, str]] = {
         "flavour": "hermes-agent",
         "bootstrap_profile": "hermes_agent_runtime",
     },
+    RuntimePreset.typer: {
+        "flavour": "dev",
+        "bootstrap_profile": "",
+    },
+    RuntimePreset.codex_typer: {
+        "flavour": "dev-codex",
+        "bootstrap_profile": "codex_app_server",
+    },
+    RuntimePreset.claude_code_typer: {
+        "flavour": "dev-claude-code",
+        "bootstrap_profile": "claude_code_remote_control",
+    },
+    RuntimePreset.hermes_typer: {
+        "flavour": "hermes-agent",
+        "bootstrap_profile": "hermes_agent_runtime",
+    },
 }
+
+RUNTIME_PRESETS_WITH_TYPER_ENV: frozenset[RuntimePreset] = frozenset(
+    {
+        RuntimePreset.typer,
+        RuntimePreset.codex_typer,
+        RuntimePreset.claude_code_typer,
+        RuntimePreset.hermes_typer,
+    }
+)
 
 # Presets map a kennel-facing runtime identifier to kennel-owned default flavour
 # and bootstrap-profile choices. This is a defaulting layer, not a statement
@@ -1325,6 +1356,12 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
     if declared.runtime_profile == "hermes_api_server" and declared.port is not None and http_ready:
         status = "ready"
         readiness_message = f"HTTP endpoint on port {declared.port} responded successfully."
+    elif declared.runtime_profile == "hermes_api_server" and declared.port is not None and pid_running:
+        status = "pending"
+        readiness_message = (
+            f"Hermes API process is running, but HTTP port {declared.port} is not responding successfully yet. "
+            "Inspect /tmp/hermes_api.log for startup errors."
+        )
     elif declared.port is not None and port_listening:
         status = "ready"
         readiness_message = f"Port {declared.port} is listening."
@@ -1337,11 +1374,6 @@ def _discover_service(env_name: str, declared: DeclaredWorkspaceService) -> Disc
             readiness_message = (
                 "Hermes runtime process is running, but websocket port 4319 is not listening yet. "
                 "Inspect /tmp/hermes.log for startup errors."
-            )
-        elif declared.runtime_profile == "hermes_api_server" and declared.port == 8642:
-            readiness_message = (
-                "Hermes API process is running, but HTTP port 8642 is not responding successfully yet. "
-                "Inspect /tmp/hermes_api.log for startup errors."
             )
         else:
             readiness_message = "Process is running, but the expected port is not listening yet."
@@ -2068,7 +2100,21 @@ def _apply_runtime_preset_to_inject_request(req: InjectRequest) -> None:
     # This helper only fills bootstrap_profile when the caller has not already
     # supplied a more explicit profile override.
     if req.bootstrap_profile is None:
-        req.bootstrap_profile = defaults["bootstrap_profile"]
+        req.bootstrap_profile = defaults["bootstrap_profile"] or None
+
+    preset_env_vars = _runtime_preset_env_vars(req.runtime_preset)
+    if preset_env_vars:
+        req.env_vars = {**preset_env_vars, **req.env_vars}
+
+
+def _runtime_preset_env_vars(runtime_preset: RuntimePreset) -> dict[str, str]:
+    if runtime_preset not in RUNTIME_PRESETS_WITH_TYPER_ENV:
+        return {}
+
+    api_root = settings.kennel_tinyfoot_api_url.rstrip("/")
+    return {
+        "TINYFOOT_API_URL": api_root,
+    }
 
 def _create_env_worker(job_id: str, name: str, req: CreateEnvRequest):
     jobs[job_id]["status"] = JobStatus.running

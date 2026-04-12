@@ -38,7 +38,9 @@ from svg_library_tools import build_asset_metadata, build_generation_plan  # noq
 
 app = typer.Typer(help="SVG library management and generation commands", no_args_is_help=True)
 
-BASE_URL = "http://localhost:8000/api/v1"
+from cli_config import get_api_v1_url
+
+BASE_URL = get_api_v1_url()
 
 
 def _get_session():

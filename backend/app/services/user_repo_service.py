@@ -850,8 +850,8 @@ class UserRepoService:
 
     def _normalize_source_repo_url(self, source_repo_url: str) -> str:
         parsed = urlparse(source_repo_url.strip())
-        if parsed.scheme.lower() != "https":
-            raise ValueError("Only https repository URLs are supported")
+        # if parsed.scheme.lower() != "https":
+        #     raise ValueError("Only https repository URLs are supported")
         if not parsed.netloc or not parsed.path.strip("/"):
             raise ValueError("A valid repository URL is required")
         if parsed.username or parsed.password:

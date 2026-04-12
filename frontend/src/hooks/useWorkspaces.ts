@@ -74,15 +74,37 @@ function toRuntimeFiles(
   return result
 }
 
+function isHermesRuntimePreset(runtimePreset: string | null): boolean {
+  return runtimePreset === "hermes" || runtimePreset === "hermes_typer"
+}
+
+function normalizeHermesRuntimePreset(runtimePreset: string | null): string {
+  return runtimePreset === "hermes" || runtimePreset === "hermes_typer"
+    ? runtimePreset
+    : "hermes_typer"
+}
+
+function getDefaultAgentRuntimePreset(agentProfile: string | null): string | null {
+  if (agentProfile === "codex") return "codex_typer"
+  if (agentProfile === "claude_code") return "claude_code_typer"
+  if (agentProfile === "hermes") return "hermes_typer"
+  return null
+}
+
 function toCreateWorkspaceInput(
   input: CreateWorkspaceFormInput,
 ): CreateWorkspaceInput {
   const runtimeFiles = toRuntimeFiles(input.runtimeFiles)
   const startupMode = input.startupMode ?? "terminal_only"
   const agentProfile = input.agentProfile?.trim() || null
-  const runtimePreset = input.runtimePreset?.trim() || null
+  const rawRuntimePreset = input.runtimePreset?.trim() || null
+  const runtimePreset =
+    rawRuntimePreset ??
+    (startupMode === "agent_service"
+      ? getDefaultAgentRuntimePreset(agentProfile)
+      : null)
   const wantsHermesRuntime =
-    runtimePreset === "hermes" ||
+    isHermesRuntimePreset(runtimePreset) ||
     (startupMode === "agent_service" && agentProfile === "hermes")
 
   // Kennel only applies runtime_preset flavour defaults when flavour is the
@@ -95,7 +117,9 @@ function toCreateWorkspaceInput(
   return {
     name: input.name.trim(),
     flavour: normalizedFlavour,
-    runtimePreset: wantsHermesRuntime ? "hermes" : runtimePreset,
+    runtimePreset: wantsHermesRuntime
+      ? normalizeHermesRuntimePreset(runtimePreset)
+      : runtimePreset,
     kind: input.kind ?? "ephemeral",
     repoSourceType: input.repoSourceType ?? "none",
     repoUrl: input.repoUrl?.trim() || null,

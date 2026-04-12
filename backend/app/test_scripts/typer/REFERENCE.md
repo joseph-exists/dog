@@ -31,7 +31,7 @@ def create(
 
     session = get_authenticated_session()
     response = session.post(
-        "http://localhost:8000/api/v1/items",
+        f"{get_api_v1_url()}/items",
         json={"name": name, "description": description}
     )
 
@@ -75,9 +75,10 @@ Always use the auth_helper for authenticated requests:
 
 ```python
 from auth_helper import get_authenticated_session
+from cli_config import get_api_v1_url
 
 session = get_authenticated_session()
-response = session.post("http://localhost:8000/api/v1/endpoint", json={...})
+response = session.post(f"{get_api_v1_url()}/endpoint", json={...})
 ```
 
 ### 2. Arguments vs Options
@@ -153,7 +154,7 @@ def create(name: str):
     """Create an item."""
     try:
         session = get_authenticated_session()
-        response = session.post("http://localhost:8000/api/v1/items", json={"name": name})
+        response = session.post(f"{get_api_v1_url()}/items", json={"name": name})
 
         if response.status_code in [200, 201]:
             typer.secho("✅ Success!", fg=typer.colors.GREEN)
@@ -202,10 +203,11 @@ import typer
 import json
 from typing_extensions import Annotated
 from ..auth_helper import get_authenticated_session
+from cli_config import get_api_v1_url
 
 app = typer.Typer(help="Story management commands")
 
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = get_api_v1_url()
 
 @app.command()
 def create(
@@ -520,12 +522,12 @@ python -m backend.app.test_scripts.typer.main stories create "My Story" --desc "
 
 ### 6. Configuration
 
-Use environment variables or config files:
+Use the shared config helper. It reads `TINYFOOT_API_V1_URL` first, then `TINYFOOT_API_URL` / `TINYFOOT_API_ROOT_URL`, and defaults to `http://localhost:8000/api/v1`.
 
 ```python
-import os
+from cli_config import get_api_v1_url
 
-BASE_URL = os.getenv("TINYFOOT_API_URL", "http://localhost:8000")
+BASE_URL = get_api_v1_url()
 ```
 
 ## Integration with Existing Scripts

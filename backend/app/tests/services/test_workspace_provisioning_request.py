@@ -278,6 +278,59 @@ def test_build_workspace_kennel_provisioning_request_uses_explicit_runtime_prese
     assert request.inject.bootstrap_plan == bootstrap_plan
 
 
+def test_build_workspace_kennel_provisioning_request_treats_codex_typer_as_agent_runtime_branch() -> None:
+    bootstrap_plan = WorkspaceBootstrapPlan(
+        steps=[
+            {
+                "type": "run_command",
+                "phase": "starting_services",
+                "label": "Start Codex Runtime",
+                "command": "codex",
+                "cwd": "/home/dev/workspace",
+                "background": True,
+                "service_name": "codex",
+            }
+        ]
+    )
+    request = build_workspace_kennel_provisioning_request(
+        kennel_name="env-1234abcd",
+        workspace_kind="ephemeral",
+        workspace_flavour="dev",
+        explicit_runtime_preset="codex_typer",
+        bootstrap_intent=WorkspaceBootstrapIntent(
+            startup_intent=WorkspaceStartupIntentAgentService(agent_profile="codex"),
+        ),
+        resolved_repo_url=None,
+        bootstrap_plan=bootstrap_plan,
+    )
+
+    assert request.create.runtime_preset == "codex_typer"
+    assert request.create.flavour == "dev"
+    assert request.inject.runtime_preset == "codex_typer"
+    assert request.inject.bootstrap_profile is None
+    assert request.inject.bootstrap_plan is None
+
+
+def test_build_workspace_kennel_provisioning_request_treats_hermes_typer_as_hermes_branch() -> None:
+    request = build_workspace_kennel_provisioning_request(
+        kennel_name="env-1234abcd",
+        workspace_kind="ephemeral",
+        workspace_flavour="cuda",
+        explicit_runtime_preset="hermes_typer",
+        bootstrap_intent=WorkspaceBootstrapIntent(
+            startup_intent=WorkspaceStartupIntentAgentService(agent_profile="hermes"),
+        ),
+        resolved_repo_url=None,
+        bootstrap_plan=WorkspaceBootstrapPlan(),
+    )
+
+    assert request.create.runtime_preset == "hermes_typer"
+    assert request.create.flavour == "dev"
+    assert request.inject.runtime_preset == "hermes_typer"
+    assert request.inject.bootstrap_profile == "hermes_api_server"
+    assert request.inject.bootstrap_plan is None
+
+
 def test_build_workspace_kennel_provisioning_request_explicit_runtime_files_override_projected_values() -> None:
     request = build_workspace_kennel_provisioning_request(
         kennel_name="env-1234abcd",

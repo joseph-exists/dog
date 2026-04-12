@@ -19,7 +19,9 @@ from auth_helper import get_authenticated_session
 app = typer.Typer(help="Template commands - replace with your feature area")
 
 # Configuration
-BASE_URL = "http://localhost:8000/api/v1"
+from cli_config import get_api_v1_url
+
+BASE_URL = get_api_v1_url()
 
 # ============================================================================
 # Commands

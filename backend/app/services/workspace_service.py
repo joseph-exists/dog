@@ -64,6 +64,11 @@ _flavour_cache: tuple[float, dict[str, dict]] | None = None
 _KENNEL_RUNTIME_PRESETS_BY_AGENT_PROFILE = frozenset(
     {"codex", "claude_code", "hermes"}
 )
+_KENNEL_RUNTIME_PRESET_BRANCH_BASE: dict[str, str] = {
+    "codex_typer": "codex",
+    "claude_code_typer": "claude_code",
+    "hermes_typer": "hermes",
+}
 _DEFAULT_KENNEL_WORKSPACE_USER = "dev"
 
 
@@ -185,6 +190,12 @@ def _resolve_kennel_runtime_preset(
     return _kennel_runtime_preset_from_bootstrap_intent(bootstrap_intent)
 
 
+def _base_kennel_runtime_preset(runtime_preset: str | None) -> str | None:
+    if runtime_preset is None:
+        return None
+    return _KENNEL_RUNTIME_PRESET_BRANCH_BASE.get(runtime_preset, runtime_preset)
+
+
 def _should_delegate_runtime_startup_to_kennel(
     *,
     runtime_preset: str | None,
@@ -195,10 +206,12 @@ def _should_delegate_runtime_startup_to_kennel(
     if getattr(startup_intent, "mode", None) != "agent_service":
         return False
 
-    if runtime_preset == "codex":
+    base_runtime_preset = _base_kennel_runtime_preset(runtime_preset)
+
+    if base_runtime_preset == "codex":
         return bootstrap_profile is None
 
-    if runtime_preset == "hermes":
+    if base_runtime_preset == "hermes":
         return bootstrap_profile in {None, "hermes_api_server"}
 
     return False
@@ -240,8 +253,9 @@ def build_workspace_kennel_provisioning_request(
     )
     effective_bootstrap_profile = explicit_bootstrap_profile
     startup_intent = bootstrap_intent.startup_intent
+    base_runtime_preset = _base_kennel_runtime_preset(runtime_preset)
     if (
-        runtime_preset == "hermes"
+        base_runtime_preset == "hermes"
         and getattr(startup_intent, "mode", None) == "agent_service"
         and effective_bootstrap_profile is None
     ):
@@ -254,7 +268,7 @@ def build_workspace_kennel_provisioning_request(
     # kennel can resolve to its hermes-agent flavour contract consistently.
     normalized_workspace_flavour = (
         "dev"
-        if runtime_preset == "hermes"
+        if base_runtime_preset == "hermes"
         else requested_workspace_flavour
     )
     delegate_runtime_startup = _should_delegate_runtime_startup_to_kennel(

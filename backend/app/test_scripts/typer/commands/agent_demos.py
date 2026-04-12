@@ -42,7 +42,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-BASE_URL = "http://localhost:8000/api/v1"
+from cli_config import get_api_v1_url
+
+BASE_URL = get_api_v1_url()
 
 # ============================================================================
 # DEMO AGENT CONFIGURATIONS

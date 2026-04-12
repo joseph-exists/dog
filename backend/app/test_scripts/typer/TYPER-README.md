@@ -26,7 +26,7 @@ python main.py demo goodbye "Alice" --formal
 
 ### Prerequisites
 
-1. **Backend server running** on `http://localhost:8000`
+1. **Backend server running** on `http://localhost:8000`, or set `TINYFOOT_API_URL` / `TINYFOOT_API_V1_URL`
 2. **test.env file** with credentials:
    ```bash
    TEST_USER_EMAIL=test@example.com
@@ -82,15 +82,17 @@ cp _template.py stories.py
 import typer
 from typing_extensions import Annotated
 from auth_helper import get_authenticated_session
+from cli_config import get_api_v1_url
 
 app = typer.Typer(help="Story management commands")
+BASE_URL = get_api_v1_url()
 
 @app.command()
 def create(title: Annotated[str, typer.Argument(help="Story title")]):
     """Create a new story."""
     session = get_authenticated_session()
     response = session.post(
-        "http://localhost:8000/api/v1/stories",
+        f"{BASE_URL}/stories",
         json={"title": title, "current_version": 1}
     )
 

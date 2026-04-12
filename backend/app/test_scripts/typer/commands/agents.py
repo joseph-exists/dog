@@ -25,7 +25,9 @@ from auth_helper import get_authenticated_session
 
 app = typer.Typer(help="Agent registry management commands")
 
-BASE_URL = "http://localhost:8000/api/v1"
+from cli_config import get_api_v1_url
+
+BASE_URL = get_api_v1_url()
 
 # Provider type UUIDs for the discriminated union
 PROVIDER_TYPES = {

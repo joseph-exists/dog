@@ -12,7 +12,9 @@ from auth_helper import get_authenticated_session
 
 app = typer.Typer(help="Room management commands")
 
-BASE_URL = "http://localhost:8000/api/v1"
+from cli_config import get_api_v1_url
+
+BASE_URL = get_api_v1_url()
 TEST_SCRIPTS_ROOT = Path(__file__).resolve().parents[2]
 if str(TEST_SCRIPTS_ROOT) not in sys.path:
     sys.path.append(str(TEST_SCRIPTS_ROOT))

@@ -74,10 +74,10 @@ export function ImportRepoDialog({ trigger }: ImportRepoDialogProps) {
       return
     }
 
-    if (!sourceUrl.startsWith("https://")) {
-      showErrorToast("Repository URL must use HTTPS.")
-      return
-    }
+    // if (!sourceUrl.startsWith("https://")) {
+    //   showErrorToast("Repository URL must use HTTPS.")
+    //   return
+    // }
 
     importMutation.mutate({
       source_repo_url: sourceUrl,
@@ -105,7 +105,7 @@ export function ImportRepoDialog({ trigger }: ImportRepoDialogProps) {
             Import Repository
           </DialogTitle>
           <DialogDescription>
-            Add an external HTTPS repository to the platform workspace. Import
+            Add an external repository to the platform workspace. Import
             runs asynchronously after submission.
           </DialogDescription>
         </DialogHeader>

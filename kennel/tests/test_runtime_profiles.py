@@ -156,6 +156,35 @@ def test_hermes_api_bootstrap_profile_uses_file_guard_for_launcher() -> None:
     assert '[ -f "$HOME/.hermes/hermes-api-launcher" ] && [ -x "$HOME/.hermes/hermes-api-launcher" ]' in start_step.command
 
 
+def test_typer_runtime_preset_injects_api_env_without_bootstrap_profile() -> None:
+    req = server.InjectRequest(
+        user="dev",
+        runtime_preset=server.RuntimePreset.typer,
+    )
+
+    server._apply_runtime_preset_to_inject_request(req)
+
+    assert req.bootstrap_profile is None
+    assert req.env_vars == {
+        "TINYFOOT_API_URL": "http://10.0.3.1:8000",
+    }
+
+
+def test_agent_runtime_typer_branch_preserves_runtime_profile_and_allows_env_override() -> None:
+    req = server.InjectRequest(
+        user="dev",
+        runtime_preset=server.RuntimePreset.codex_typer,
+        env_vars={"TINYFOOT_API_URL": "http://backend:8000"},
+    )
+
+    server._apply_runtime_preset_to_inject_request(req)
+
+    assert req.bootstrap_profile == "codex_app_server"
+    assert req.env_vars == {
+        "TINYFOOT_API_URL": "http://backend:8000",
+    }
+
+
 def test_hermes_readiness_message_points_to_runtime_log(monkeypatch) -> None:
     declared = server.SERVICE_PROFILE_DEFAULTS["hermes"]
     declared = declared.model_copy(

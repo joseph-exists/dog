@@ -152,7 +152,6 @@ Expected keys of interest:
 - `dev-claude-code`
 - `base_container`
 - `base_ready`
-- `dev-hermes`
 - `hermes-agent`
 - `hermes-agent-dev`
 (note: the hermes were added after original documentation, so aren't reflected below. put on your thinking cap and figure it out - deduction and induction are both important.)
@@ -234,16 +233,16 @@ Validates:
 
 then hermes:
 ```
-HERMES_REBUILD_JOB="$(
-  curl -s -X POST "$KENNEL_BASE_URL/flavours/dev-hermes/rebuild" \
+BASE_HERMES_REBUILD_JOB="$(
+  curl -s -X POST "$KENNEL_BASE_URL/flavours/base-hermes-agent/rebuild" \
     -H "x-kennel-secret: $KENNEL_SECRET" | jq -r '.job_id'
 )"
-echo "$HERMES_REBUILD_JOB"
+echo "$BASE_HERMES_REBUILD_JOB"
 
 while true; do
-  curl -s "$KENNEL_BASE_URL/rebuild-jobs/$HERMES_REBUILD_JOB" \
-    -H "x-kennel-secret: $KENNEL_SECRET" | tee /tmp/dev-hermes-rebuild.json | jq
-  STATUS="$(jq -r '.status' /tmp/dev-hermes-rebuild.json)"
+  curl -s "$KENNEL_BASE_URL/rebuild-jobs/$BASE_HERMES_REBUILD_JOB" \
+    -H "x-kennel-secret: $KENNEL_SECRET" | tee /tmp/base-hermes-agent-rebuild.json | jq
+  STATUS="$(jq -r '.status' /tmp/base-hermes-agent-rebuild.json)"
   if [ "$STATUS" = "done" ] || [ "$STATUS" = "failed" ]; then
     break
   fi

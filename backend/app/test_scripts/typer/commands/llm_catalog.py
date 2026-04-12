@@ -132,7 +132,9 @@ app = typer.Typer(
 )
 
 # API base URL (adjust for your environment)
-BASE_URL = "http://localhost:8000/api/v1"
+from cli_config import get_api_v1_url
+
+BASE_URL = get_api_v1_url()
 
 
 # =============================================================================

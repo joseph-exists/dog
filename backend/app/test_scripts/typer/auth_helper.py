@@ -12,7 +12,7 @@ Usage:
 
     # Get authenticated requests session
     session = get_authenticated_session()
-    response = session.get("http://localhost:8000/api/users/me")
+    response = session.get("<api-root>/api/users/me")
 
     # Or just get the token
     token = get_access_token()
@@ -20,7 +20,7 @@ Usage:
 
 Requirements:
     - .env file in backend/ directory with TEST_USER_EMAIL and TEST_USER_PASSWORD
-    - Backend server running on localhost:8000
+    - Backend server running at TINYFOOT_API_URL or http://localhost:8000
     - Test user account created in database
 """
 
@@ -28,14 +28,13 @@ import sys
 from pathlib import Path
 
 import requests
+from cli_config import get_api_root_url
 
 # Add parent directory to path to import from backend
 sys.path.append(str(Path(__file__)))
 
 # Configuration
-BASE_URL = "http://localhost:8000"
-LOGIN_ENDPOINT = f"{BASE_URL}/api/v1/login/access-token"
-TEST_TOKEN_ENDPOINT = f"{BASE_URL}/api/v1/login/test-token"
+BASE_URL = get_api_root_url()
 
 class AuthenticationError(Exception):
     """Raised when authentication fails"""
@@ -44,8 +43,12 @@ class AuthenticationError(Exception):
 class AuthHelper:
     """Manages authentication for test scripts"""
 
-    def __init__(self, base_url: str = BASE_URL):
+    def __init__(self, base_url: str | None = None):
+        if base_url is None:
+            base_url = get_api_root_url()
         self.base_url = base_url
+        self.login_endpoint = f"{self.base_url}/api/v1/login/access-token"
+        self.test_token_endpoint = f"{self.base_url}/api/v1/login/test-token"
         self.access_token: str | None = None
         self._load_credentials()
 
@@ -112,7 +115,7 @@ class AuthHelper:
 
         try:
             response = requests.post(
-                LOGIN_ENDPOINT,
+                self.login_endpoint,
                 data=login_data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"}
             )
@@ -156,7 +159,7 @@ class AuthHelper:
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         try:
-            response = requests.post(TEST_TOKEN_ENDPOINT, headers=headers)
+            response = requests.post(self.test_token_endpoint, headers=headers)
 
             if response.status_code == 200:
                 user_data = response.json()
@@ -249,7 +252,7 @@ def test_authentication():
 
         # Test authenticated session
         session = helper.get_authenticated_session()
-        response = session.get(f"{BASE_URL}/api/v1/users/me")
+        response = session.get(f"{helper.base_url}/api/v1/users/me")
         if response.status_code == 200:
             print("✅ Authenticated session working")
         else:
@@ -261,7 +264,7 @@ def test_authentication():
         print("💡 Usage in other scripts:")
         print("   from auth_helper import get_authenticated_session")
         print("   session = get_authenticated_session()")
-        print("   response = session.get('http://localhost:8000/api/master-templates')")
+        print(f"   response = session.get('{helper.base_url}/api/master-templates')")
 
         return True
 
@@ -271,7 +274,7 @@ def test_authentication():
         print()
         print("🔧 Troubleshooting steps:")
         print("   1. Check .env file exists with TEST_USER_EMAIL and TEST_USER_PASSWORD")
-        print("   2. Verify backend server is running on localhost:8000")
+        print(f"   2. Verify backend server is running at {get_api_root_url()}")
         print("   3. Confirm test user account exists in database")
         print("   4. Check user credentials are correct")
         return False

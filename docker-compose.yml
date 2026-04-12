@@ -58,6 +58,7 @@ services:
       - KENNEL_BASE_RELEASE=${KENNEL_BASE_RELEASE:-noble}
       - KENNEL_MAX_ENVS=${KENNEL_MAX_ENVS:-20}
       - KENNEL_SECRET=${KENNEL_SECRET?Variable not set}  # shared with backend for auth
+      - KENNEL_TINYFOOT_API_URL=${KENNEL_TINYFOOT_API_URL:-http://10.0.3.1:8000}
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw   # cgroup access for LXC
       - /lib/modules:/lib/modules:ro        # kernel modules
