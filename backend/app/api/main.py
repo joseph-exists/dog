@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     access,
+    agent_invocations,
     agent_personas,
     agent_routes,
     archetype_qualities,
@@ -83,6 +84,7 @@ api_router.include_router(catalog.router)
 api_router.include_router(user_personas.router)
 api_router.include_router(user_story_progress.router)
 api_router.include_router(user_repos.router)
+api_router.include_router(agent_invocations.router)
 api_router.include_router(agent_routes.router)
 api_router.include_router(agent_personas.router)
 api_router.include_router(llm_providers.router)

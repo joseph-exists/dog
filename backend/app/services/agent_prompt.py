@@ -5,6 +5,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+PROMPT_BUILDER_VERSION = "agent_prompt.v1"
+
 
 def build_agent_prompt(
     trigger_message: str,

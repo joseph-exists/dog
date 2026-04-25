@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.models import RoomEvent
 from app.services.event_emitter import emit_event, publish_agent_token
 
 
@@ -32,7 +33,8 @@ class AgentEventPublisher:
         agent_name: str,
         content: str,
         ui_components: list[dict[str, Any]] | None = None,
-    ) -> None:
+        enrichment_metadata: dict[str, Any] | None = None,
+    ) -> RoomEvent:
         payload: dict[str, Any] = {
             "agent_name": agent_name,
             "content": content,
@@ -40,9 +42,10 @@ class AgentEventPublisher:
         if ui_components:
             payload["ui_components"] = ui_components
 
-        await emit_event(
+        return await emit_event(
             session=session,
             room_id=room_id,
             event_type="room_message.agent",
             payload=payload,
+            enrichment_metadata=enrichment_metadata,
         )

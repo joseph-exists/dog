@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
 from collections.abc import Awaitable, Callable
+from typing import Any
 
-from app.services.logfire_client import ServiceLogfire
 from pydantic_ai import ModelAPIError
 from pydantic_ai.usage import UsageLimits
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -13,7 +12,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.services.a2a_orchestrator import A2AOrchestrator
 from app.services.agent_context import RoomContextService
 from app.services.agent_events import AgentEventPublisher
+from app.services.agent_invocation_audit import (
+    complete_agent_invocation,
+    create_agent_invocation,
+)
 from app.services.agent_runner_types import AgentRunRequest, AgentRunResult
+from app.services.logfire_client import ServiceLogfire
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +89,7 @@ class StreamingAgentRunner:
                     error=f"Agent '{agent_name}' not found",
                 )
 
+            invocation = None
             try:
                 context = await self._context_service.build(
                     room_id=room_id,
@@ -129,6 +134,19 @@ class StreamingAgentRunner:
                 full_prompt = self._build_agent_prompt(
                     trigger_message, context, current_agent_slug=agent_name
                 )
+                invocation = await create_agent_invocation(
+                    session=session,
+                    room_id=room_id,
+                    agent_slug=agent_name,
+                    trigger_message=trigger_message,
+                    trigger_source="room_message",
+                    a2a_depth=req.a2a_depth,
+                    acting_user_id=req.user_id,
+                    context=context,
+                    full_prompt=full_prompt,
+                    agent=agent,
+                    request_limit=request_limit,
+                )
 
                 logger.debug(
                     f"Agent {agent_name} making LLM call:\n"
@@ -164,12 +182,20 @@ class StreamingAgentRunner:
                         "...UI components, no full_response because things are awful and you deserve to feel bad text..."
                     )
 
-                await self._event_publisher.emit_message(
+                response_event = await self._event_publisher.emit_message(
                     session=session,
                     room_id=room_id,
                     agent_name=agent_name,
                     content=message_content,
                     ui_components=ui_components_data if ui_components_data else None,
+                    enrichment_metadata={"agent_invocation_id": str(invocation.id)},
+                )
+                await complete_agent_invocation(
+                    session=session,
+                    invocation=invocation,
+                    response_text=message_content,
+                    response_event_id=response_event.event_id,
+                    success=True,
                 )
 
                 if ui_components:
@@ -237,11 +263,24 @@ class StreamingAgentRunner:
                 error_content = f"API Error: {exc}"
 
                 try:
-                    await self._event_publisher.emit_message(
+                    response_event = await self._event_publisher.emit_message(
                         session=session,
                         room_id=room_id,
                         agent_name=agent_name,
                         content=error_content,
+                        enrichment_metadata=(
+                            {"agent_invocation_id": str(invocation.id)}
+                            if invocation is not None
+                            else None
+                        ),
+                    )
+                    await complete_agent_invocation(
+                        session=session,
+                        invocation=invocation,
+                        response_text=error_content,
+                        response_event_id=response_event.event_id,
+                        success=False,
+                        error=str(exc),
                     )
                 except Exception as emit_error:
                     logger.error(f"Failed to emit error message: {emit_error}")
@@ -268,11 +307,24 @@ class StreamingAgentRunner:
                 error_content = "I really borked the manujas on this one, pal."
 
                 try:
-                    await self._event_publisher.emit_message(
+                    response_event = await self._event_publisher.emit_message(
                         session=session,
                         room_id=room_id,
                         agent_name=agent_name,
                         content=error_content,
+                        enrichment_metadata=(
+                            {"agent_invocation_id": str(invocation.id)}
+                            if invocation is not None
+                            else None
+                        ),
+                    )
+                    await complete_agent_invocation(
+                        session=session,
+                        invocation=invocation,
+                        response_text=error_content,
+                        response_event_id=response_event.event_id,
+                        success=False,
+                        error=str(exc),
                     )
                 except Exception as emit_error:
                     logger.error(f"Failed to emit error message: {emit_error}")

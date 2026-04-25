@@ -1,6 +1,6 @@
 # Agent Invocation Observability And Replayability Plan
 
-Status: `implementation plan`
+Status: `backend first pass implemented`
 Created: `2026-04-25`
 Owner: `LLM agent / backend-first implementation`
 
@@ -84,10 +84,10 @@ Suggested fields:
 - `completed_at: datetime | None`
 
 Checklist:
-- [ ] Add SQLModel table. (use project conventions.)
-- [ ] Add public/read DTOs with redacted-safe fields.
-- [ ] Human run alembic migration
-- [ ] Add indexes for `(room_id, started_at)` and `(room_id, agent_slug, started_at)`.
+- [x] Add SQLModel table. (use project conventions.)
+- [x] Add public/read DTOs with redacted-safe fields.
+- [x] Add alembic migration file. (Migration still needs to be applied per environment.)
+- [x] Add indexes for `(room_id, started_at)` and `(room_id, agent_slug, started_at)`.
 
 ## Slice 1: Serialization Helpers
 
@@ -115,9 +115,9 @@ Steps:
 5. Create `hash_prompt(full_prompt: str) -> str`.
 
 Checklist:
-- [ ] Unit test serializes `StoryRuntimeContext`.
-- [ ] Unit test prompt hash is stable.
-- [ ] Unit test redaction function is deterministic.
+- [x] Unit test serializes `StoryRuntimeContext`.
+- [x] Unit test prompt hash is stable.
+- [x] Unit test redaction function is deterministic.
 
 ## Slice 2: Primary Invocation Persistence
 
@@ -154,10 +154,10 @@ Steps:
    - No room response event is expected for this path.
 
 Checklist:
-- [ ] Streaming success creates and completes invocation.
+- [x] Streaming success creates and completes invocation.
 - [ ] Streaming model error completes invocation with error.
-- [ ] A2A tool call creates an invocation without a room message event.
-- [ ] Existing agent response behavior is unchanged.
+- [x] A2A tool call creates an invocation without a room message event.
+- [x] Existing agent response behavior is unchanged.
 
 ## Slice 3: Debug Read API
 
@@ -183,10 +183,10 @@ Authorization:
 - default response should be redacted.
 
 Checklist:
-- [ ] List endpoint returns latest invocations for room.
-- [ ] Detail endpoint returns structured `story_runtime_json`.
-- [ ] Detail endpoint returns redacted prompt by default.
-- [ ] Unauthorized room user receives 403 or opaque 404 per local convention.
+- [x] List endpoint returns latest invocations for room.
+- [x] Detail endpoint returns structured `story_runtime_json`.
+- [x] Detail endpoint returns redacted prompt by default.
+- [x] Unauthorized room user receives 403 or opaque 404 per local convention.
 - [ ] Superuser/owner full-prompt policy is covered by tests.
 
 ## Slice 4: Frontend DebugPanel Integration
@@ -248,8 +248,8 @@ Steps:
    replay/debug reads restore model input snapshots.
 
 Checklist:
-- [ ] Event replay output remains backwards compatible.
-- [ ] Agent response event can be correlated with invocation server-side.
+- [x] Event replay output remains backwards compatible.
+- [x] Agent response event can be correlated with invocation server-side.
 - [ ] Docs explicitly distinguish client replay from invocation replay.
 
 ## Slice 6: Shadow Export Mirror

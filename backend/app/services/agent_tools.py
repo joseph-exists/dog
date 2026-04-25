@@ -16,6 +16,10 @@ from app.core.db import engine
 from app.models import RoomParticipant, User
 from app.schemas.ag_ui import UIComponent, UIComponentType
 from app.services.a2a_orchestrator import DEFAULT_MAX_A2A_DEPTH, A2AOrchestrator
+from app.services.agent_invocation_audit import (
+    complete_agent_invocation,
+    create_agent_invocation,
+)
 from app.services.agent_prompt import build_agent_prompt
 from app.services.context_provider import build_room_context
 from app.services.context_store import RedisContextStore
@@ -90,7 +94,7 @@ class AgentDeps:
 async def request_agent_assistance(
     ctx: RunContext[AgentDeps],
     target_agent: str,
-    request: str, 
+    request: str,
 ) -> str:
     """
     Request another agent's expertise on a specific topic.
@@ -133,6 +137,7 @@ async def request_agent_assistance(
         requesting_agent=deps.current_agent_slug,
         session=deps.session,
         _a2a_depth=deps.a2a_depth + 1,
+        acting_user_id=deps.acting_user_id,
     )
 
     if response["success"]:
@@ -149,6 +154,7 @@ async def _run_agent_for_tool_call(
     requesting_agent: str,
     session: AsyncSession,
     _a2a_depth: int,
+    acting_user_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     """
     Internal function to run an agent for a tool call (non-streaming).
@@ -170,6 +176,7 @@ async def _run_agent_for_tool_call(
             "error": f"Failed to instantiate agent '{agent_slug}'",
         }
 
+    invocation = None
     try:
         context = await build_room_context(
             room_id=room_id,
@@ -181,8 +188,27 @@ async def _run_agent_for_tool_call(
 
         prompt = f"@{requesting_agent} is asking for your assistance:\n\n{request}"
         full_prompt = build_agent_prompt(prompt, context, current_agent_slug=agent_slug)
+        invocation = await create_agent_invocation(
+            session=session,
+            room_id=room_id,
+            agent_slug=agent_slug,
+            trigger_message=prompt,
+            trigger_source="a2a_tool",
+            a2a_depth=_a2a_depth,
+            acting_user_id=acting_user_id,
+            context=context,
+            full_prompt=full_prompt,
+            agent=agent,
+            request_limit=None,
+        )
 
         result = await agent.run(full_prompt)
+        await complete_agent_invocation(
+            session=session,
+            invocation=invocation,
+            response_text=result.output,
+            success=True,
+        )
 
         logger.debug(
             f"A2A Tool: {agent_slug} responded to {requesting_agent} "
@@ -197,6 +223,13 @@ async def _run_agent_for_tool_call(
         }
 
     except Exception as exc:
+        await complete_agent_invocation(
+            session=session,
+            invocation=invocation,
+            response_text="",
+            success=False,
+            error=str(exc),
+        )
         logger.error(f"A2A Tool error: {agent_slug} failed to respond: {exc}")
         return {
             "agent_name": agent_slug,
@@ -498,7 +531,6 @@ async def invoke_connected_workspace_runtime(
         )
         return f"Runtime invocation failed: {exc}"
 
-    target = execution.target
     result = execution.result
     return json.dumps(
         {
