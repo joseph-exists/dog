@@ -101,6 +101,75 @@ export type AccountInfo = {
     soft_limit_usd?: (number | null);
 };
 
+/**
+ * Redacted-safe API response for agent invocation debug views.
+ */
+export type AgentInvocationPublic = {
+    id: string;
+    room_id: string;
+    agent_slug: string;
+    trigger_message: string;
+    trigger_source: string;
+    a2a_depth: number;
+    acting_user_id?: (string | null);
+    room_context_json: {
+        [key: string]: unknown;
+    };
+    story_runtime_json?: ({
+    [key: string]: unknown;
+} | null);
+    full_prompt?: (string | null);
+    full_prompt_redacted?: (string | null);
+    prompt_sha256: string;
+    prompt_builder_version: string;
+    model_name?: (string | null);
+    runtime_prompt_payload?: ({
+    [key: string]: unknown;
+} | null);
+    runtime_prompt_provenance?: ({
+    [key: string]: unknown;
+} | null);
+    request_limit?: (number | null);
+    response_text?: (string | null);
+    response_event_id?: (string | null);
+    response_message_id?: (string | null);
+    success?: (boolean | null);
+    error?: (string | null);
+    started_at: string;
+    completed_at?: (string | null);
+};
+
+/**
+ * Collection response for agent invocation debug lists.
+ */
+export type AgentInvocationsPublic = {
+    data: Array<AgentInvocationSummaryPublic>;
+    count: number;
+};
+
+/**
+ * Compact redacted invocation row for room debug lists.
+ */
+export type AgentInvocationSummaryPublic = {
+    id: string;
+    room_id: string;
+    agent_slug: string;
+    trigger_source: string;
+    a2a_depth: number;
+    prompt_sha256: string;
+    prompt_builder_version: string;
+    model_name?: (string | null);
+    response_event_id?: (string | null);
+    response_message_id?: (string | null);
+    success?: (boolean | null);
+    error?: (string | null);
+    started_at: string;
+    completed_at?: (string | null);
+    story_runtime_json?: ({
+    [key: string]: unknown;
+} | null);
+};
+
 export type AgentPersonaCreate = {
     nickname?: (string | null);
     is_active?: boolean;
@@ -6058,6 +6127,20 @@ export type AccessRevokeResourceAccessGrantData = {
 };
 
 export type AccessRevokeResourceAccessGrantResponse = (Message);
+
+export type AgentInvocationsListAgentInvocationsData = {
+    limit?: number;
+    roomId: string;
+};
+
+export type AgentInvocationsListAgentInvocationsResponse = (AgentInvocationsPublic);
+
+export type AgentInvocationsGetAgentInvocationData = {
+    invocationId: string;
+    roomId: string;
+};
+
+export type AgentInvocationsGetAgentInvocationResponse = (AgentInvocationPublic);
 
 export type AgentPersonasReadAgentPersonasData = {
     agentId: string;

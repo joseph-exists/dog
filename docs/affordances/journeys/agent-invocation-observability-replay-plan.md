@@ -220,11 +220,11 @@ Steps:
    e.g. `Message Context Preview`.
 
 Checklist:
-- [ ] Debug panel still works without invocation records.
-- [ ] Existing active-context display remains.
-- [ ] New exact invocation panel distinguishes exact backend snapshot from
+- [x] Debug panel still works without invocation records.
+- [x] Existing active-context display remains.
+- [x] New exact invocation panel distinguishes exact backend snapshot from
       frontend approximation.
-- [ ] Prompt copy button copies only what the API returned.
+- [x] Prompt copy button copies only what the API returned.
 
 ## Slice 5: Event Linkage And Replay Semantics
 

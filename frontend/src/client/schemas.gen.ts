@@ -255,6 +255,365 @@ export const AccountInfoSchema = {
     description: 'Account/billing information from a provider.'
 } as const;
 
+export const AgentInvocationPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        agent_slug: {
+            type: 'string',
+            title: 'Agent Slug'
+        },
+        trigger_message: {
+            type: 'string',
+            title: 'Trigger Message'
+        },
+        trigger_source: {
+            type: 'string',
+            title: 'Trigger Source'
+        },
+        a2a_depth: {
+            type: 'integer',
+            title: 'A2A Depth'
+        },
+        acting_user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Acting User Id'
+        },
+        room_context_json: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Room Context Json'
+        },
+        story_runtime_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Story Runtime Json'
+        },
+        full_prompt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Full Prompt'
+        },
+        full_prompt_redacted: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Full Prompt Redacted'
+        },
+        prompt_sha256: {
+            type: 'string',
+            title: 'Prompt Sha256'
+        },
+        prompt_builder_version: {
+            type: 'string',
+            title: 'Prompt Builder Version'
+        },
+        model_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name'
+        },
+        runtime_prompt_payload: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Prompt Payload'
+        },
+        runtime_prompt_provenance: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime Prompt Provenance'
+        },
+        request_limit: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Request Limit'
+        },
+        response_text: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Response Text'
+        },
+        response_event_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Response Event Id'
+        },
+        response_message_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Response Message Id'
+        },
+        success: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Success'
+        },
+        error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error'
+        },
+        started_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Started At'
+        },
+        completed_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Completed At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'room_id', 'agent_slug', 'trigger_message', 'trigger_source', 'a2a_depth', 'room_context_json', 'prompt_sha256', 'prompt_builder_version', 'started_at'],
+    title: 'AgentInvocationPublic',
+    description: 'Redacted-safe API response for agent invocation debug views.'
+} as const;
+
+export const AgentInvocationSummaryPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        agent_slug: {
+            type: 'string',
+            title: 'Agent Slug'
+        },
+        trigger_source: {
+            type: 'string',
+            title: 'Trigger Source'
+        },
+        a2a_depth: {
+            type: 'integer',
+            title: 'A2A Depth'
+        },
+        prompt_sha256: {
+            type: 'string',
+            title: 'Prompt Sha256'
+        },
+        prompt_builder_version: {
+            type: 'string',
+            title: 'Prompt Builder Version'
+        },
+        model_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model Name'
+        },
+        response_event_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Response Event Id'
+        },
+        response_message_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Response Message Id'
+        },
+        success: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Success'
+        },
+        error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error'
+        },
+        started_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Started At'
+        },
+        completed_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Completed At'
+        },
+        story_runtime_json: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Story Runtime Json'
+        }
+    },
+    type: 'object',
+    required: ['id', 'room_id', 'agent_slug', 'trigger_source', 'a2a_depth', 'prompt_sha256', 'prompt_builder_version', 'started_at'],
+    title: 'AgentInvocationSummaryPublic',
+    description: 'Compact redacted invocation row for room debug lists.'
+} as const;
+
+export const AgentInvocationsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/AgentInvocationSummaryPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'AgentInvocationsPublic',
+    description: 'Collection response for agent invocation debug lists.'
+} as const;
+
 export const AgentPersonaCreateSchema = {
     properties: {
         nickname: {

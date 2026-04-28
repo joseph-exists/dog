@@ -15,20 +15,30 @@
  */
 
 import {
+  AlertTriangle,
   Bot,
   Bug,
   Check,
   ChevronDown,
   ChevronUp,
+  Clock,
   Code,
   Copy,
+  Database,
   Eye,
+  FileJson,
+  Hash,
   MessageSquare,
+  RefreshCw,
   Trash2,
   Wifi,
   WifiOff,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import type {
+  AgentInvocationPublic,
+  AgentInvocationSummaryPublic,
+} from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,12 +48,82 @@ import {
 } from "@/components/ui/collapsible"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import {
+  useAgentInvocationDetail,
+  useAgentInvocations,
+} from "@/hooks/useAgentInvocations"
 import type {
   MessageViewModel,
   ParticipantViewModel,
 } from "@/services/roomService"
 
+type JsonRecord = Record<string, unknown>
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "pending"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })
+}
+
+function formatDuration(
+  startedAt: string,
+  completedAt: string | null | undefined,
+): string {
+  if (!completedAt) return "running"
+  const start = new Date(startedAt).getTime()
+  const end = new Date(completedAt).getTime()
+  if (Number.isNaN(start) || Number.isNaN(end)) return "unknown"
+  const ms = Math.max(0, end - start)
+  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
+}
+
+function shortId(value: string | null | undefined): string {
+  if (!value) return "none"
+  return value.length > 12 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value
+}
+
+function storyNodeTitle(
+  invocation: AgentInvocationSummaryPublic | AgentInvocationPublic | null,
+): string | null {
+  const storyRuntime = invocation?.story_runtime_json
+  if (!isRecord(storyRuntime)) return null
+  const title = storyRuntime.current_node_title
+  return typeof title === "string" && title.trim() ? title : null
+}
+
+function getExtraContexts(
+  invocation: AgentInvocationPublic | null,
+): JsonRecord[] {
+  const context = invocation?.room_context_json
+  if (!isRecord(context) || !Array.isArray(context.extra_contexts)) return []
+  return context.extra_contexts.filter(isRecord)
+}
+
+function countRepoContexts(invocation: AgentInvocationPublic | null): number {
+  return getExtraContexts(invocation).filter((item) => {
+    const contextType =
+      typeof item.context_type === "string" ? item.context_type : ""
+    const source = typeof item.source === "string" ? item.source : ""
+    return /repo|file|git/i.test(`${contextType} ${source}`)
+  }).length
+}
+
+function jsonText(value: unknown): string {
+  if (typeof value === "string") return value
+  return JSON.stringify(value ?? null, null, 2)
+}
+
 export interface RoomDebugPanelContentProps {
+  roomId?: string
   messages: MessageViewModel[]
   streamingMessage: { agent_name: string; content: string } | null
   isConnected: boolean
@@ -77,6 +157,7 @@ export interface RoomDebugPanelContentProps {
  * Can be used standalone or wrapped by different containers
  */
 export function RoomDebugPanelContent({
+  roomId: roomIdProp,
   messages,
   streamingMessage,
   isConnected,
@@ -89,7 +170,8 @@ export function RoomDebugPanelContent({
   onRemoveRepoContextFile,
 }: RoomDebugPanelContentProps) {
   const [expandedSections, setExpandedSections] = useState({
-    apiPayload: true,
+    apiPayload: false,
+    invocations: true,
     context: true,
     streaming: true,
     agents: true,
@@ -98,6 +180,12 @@ export function RoomDebugPanelContent({
   })
 
   const [copiedPayload, setCopiedPayload] = useState(false)
+  const [selectedInvocationId, setSelectedInvocationId] = useState<
+    string | null
+  >(null)
+  const [copiedInvocationTarget, setCopiedInvocationTarget] = useState<
+    string | null
+  >(null)
   const [removingContextIds, setRemovingContextIds] = useState<
     Record<string, boolean>
   >({})
@@ -144,10 +232,46 @@ export function RoomDebugPanelContent({
     }
   }, [contextMessages, messages])
 
+  const roomId = roomIdProp ?? messages[0]?.room_id ?? null
+  const invocationsQuery = useAgentInvocations({
+    roomId,
+    limit: 20,
+    live: Boolean(streamingMessage),
+  })
+  const invocations = invocationsQuery.data?.data ?? []
+  const selectedInvocationSummary =
+    invocations.find((item) => item.id === selectedInvocationId) ??
+    invocations[0] ??
+    null
+  const detailQuery = useAgentInvocationDetail({
+    roomId,
+    invocationId: selectedInvocationSummary?.id,
+  })
+  const selectedInvocation = detailQuery.data ?? null
+  const selectedStoryNode =
+    storyNodeTitle(selectedInvocation) ??
+    storyNodeTitle(selectedInvocationSummary)
+  const selectedRepoContextCount = countRepoContexts(selectedInvocation)
+  const selectedExtraContextCount = getExtraContexts(selectedInvocation).length
+
   const selectedPathSet = useMemo(
     () => new Set(selectedRepoFiles.map((item) => item.path)),
     [selectedRepoFiles],
   )
+
+  useEffect(() => {
+    if (!selectedInvocationId && invocations.length > 0) {
+      setSelectedInvocationId(invocations[0].id)
+      return
+    }
+    if (
+      selectedInvocationId &&
+      invocations.length > 0 &&
+      !invocations.some((item) => item.id === selectedInvocationId)
+    ) {
+      setSelectedInvocationId(invocations[0].id)
+    }
+  }, [invocations, selectedInvocationId])
 
   const handleCopyPayload = async () => {
     try {
@@ -156,6 +280,16 @@ export function RoomDebugPanelContent({
       setTimeout(() => setCopiedPayload(false), 2000)
     } catch (err) {
       console.error("Failed to copy:", err)
+    }
+  }
+
+  const handleCopyInvocation = async (target: string, value: unknown) => {
+    try {
+      await navigator.clipboard.writeText(jsonText(value))
+      setCopiedInvocationTarget(target)
+      setTimeout(() => setCopiedInvocationTarget(null), 1600)
+    } catch (err) {
+      console.error("Failed to copy invocation data:", err)
     }
   }
 
@@ -200,6 +334,325 @@ export function RoomDebugPanelContent({
         )}
       </div>
 
+      {/* Exact Backend Invocation Snapshots */}
+      <Collapsible
+        open={expandedSections.invocations}
+        onOpenChange={() => toggleSection("invocations")}
+      >
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-full justify-between">
+            <span className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Agent Invocations ({invocations.length})
+              {invocations.some((item) => item.completed_at === null) ? (
+                <Badge variant="default" className="animate-pulse text-[10px]">
+                  LIVE
+                </Badge>
+              ) : null}
+            </span>
+            {expandedSections.invocations ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="bg-muted rounded-md p-3 mt-2 text-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-muted-foreground text-[10px] uppercase">
+                  Exact backend snapshots
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  Stored prompt and context at model invocation time
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+                disabled={!roomId || invocationsQuery.isFetching}
+                onClick={() => invocationsQuery.refetch()}
+                title="Refresh invocation history"
+              >
+                <RefreshCw
+                  className={`h-3 w-3 ${
+                    invocationsQuery.isFetching ? "animate-spin" : ""
+                  }`}
+                />
+              </Button>
+            </div>
+
+            {!roomId ? (
+              <p className="text-amber-600 dark:text-amber-400">
+                Waiting for a room id before loading invocation records.
+              </p>
+            ) : invocationsQuery.isError ? (
+              <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-4 w-4 mt-0.5" />
+                <p>
+                  Invocation records could not be loaded. Check room membership
+                  and backend availability.
+                </p>
+              </div>
+            ) : invocationsQuery.isLoading ? (
+              <p className="text-muted-foreground">Loading invocations...</p>
+            ) : invocations.length === 0 ? (
+              <p className="text-muted-foreground">
+                No recorded agent invocations for this room yet.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {invocations.map((item) => {
+                    const selected = item.id === selectedInvocationSummary?.id
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedInvocationId(item.id)}
+                        className={`w-full rounded border p-2 text-left transition-colors ${
+                          selected
+                            ? "border-primary bg-background"
+                            : "border-border hover:bg-background/70"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">
+                              {item.agent_slug}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {item.trigger_source}
+                              {item.a2a_depth > 0
+                                ? ` depth ${item.a2a_depth}`
+                                : ""}{" "}
+                              • {formatDateTime(item.started_at)}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={
+                              item.success === false
+                                ? "destructive"
+                                : item.completed_at
+                                  ? "secondary"
+                                  : "default"
+                            }
+                            className="text-[9px]"
+                          >
+                            {item.success === false
+                              ? "error"
+                              : item.completed_at
+                                ? "done"
+                                : "running"}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1 min-w-0">
+                            <Clock className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {formatDuration(
+                                item.started_at,
+                                item.completed_at,
+                              )}
+                            </span>
+                          </span>
+                          <span className="flex items-center gap-1 min-w-0">
+                            <Hash className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {item.prompt_sha256.slice(0, 12)}
+                            </span>
+                          </span>
+                        </div>
+                        {storyNodeTitle(item) ? (
+                          <p className="mt-1 text-[10px] text-muted-foreground truncate">
+                            Story node: {storyNodeTitle(item)}
+                          </p>
+                        ) : null}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="rounded border border-border bg-background p-2 space-y-3">
+                  {detailQuery.isLoading ? (
+                    <p className="text-muted-foreground">
+                      Loading invocation detail...
+                    </p>
+                  ) : selectedInvocation ? (
+                    <>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">
+                            {selectedInvocation.agent_slug}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {selectedInvocation.model_name || "model unknown"} •{" "}
+                            {selectedInvocation.prompt_builder_version}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2"
+                          onClick={() =>
+                            handleCopyInvocation(
+                              "invocation",
+                              selectedInvocation,
+                            )
+                          }
+                          title="Copy full invocation response JSON"
+                        >
+                          {copiedInvocationTarget === "invocation" ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[10px]">
+                        <div>
+                          <p className="text-muted-foreground">Prompt hash</p>
+                          <p className="font-mono truncate">
+                            {selectedInvocation.prompt_sha256}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">
+                            Response event
+                          </p>
+                          <p className="font-mono truncate">
+                            {shortId(selectedInvocation.response_event_id)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Story node</p>
+                          <p className="truncate">
+                            {selectedStoryNode || "none captured"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Context items</p>
+                          <p>
+                            {selectedExtraContextCount} extra /{" "}
+                            {selectedRepoContextCount} repo-like
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() =>
+                              handleCopyInvocation(
+                                "prompt",
+                                selectedInvocation.full_prompt ??
+                                  selectedInvocation.full_prompt_redacted ??
+                                  "",
+                              )
+                            }
+                          >
+                            {copiedInvocationTarget === "prompt" ? (
+                              <Check className="h-3 w-3 mr-1 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3 mr-1" />
+                            )}
+                            Prompt
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() =>
+                              handleCopyInvocation(
+                                "context",
+                                selectedInvocation.room_context_json,
+                              )
+                            }
+                          >
+                            {copiedInvocationTarget === "context" ? (
+                              <Check className="h-3 w-3 mr-1 text-green-500" />
+                            ) : (
+                              <FileJson className="h-3 w-3 mr-1" />
+                            )}
+                            Context
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() =>
+                              handleCopyInvocation(
+                                "runtime",
+                                selectedInvocation.story_runtime_json,
+                              )
+                            }
+                          >
+                            {copiedInvocationTarget === "runtime" ? (
+                              <Check className="h-3 w-3 mr-1 text-green-500" />
+                            ) : (
+                              <FileJson className="h-3 w-3 mr-1" />
+                            )}
+                            Runtime
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() =>
+                              handleCopyInvocation("provenance", {
+                                runtime_prompt_payload:
+                                  selectedInvocation.runtime_prompt_payload,
+                                runtime_prompt_provenance:
+                                  selectedInvocation.runtime_prompt_provenance,
+                              })
+                            }
+                          >
+                            {copiedInvocationTarget === "provenance" ? (
+                              <Check className="h-3 w-3 mr-1 text-green-500" />
+                            ) : (
+                              <FileJson className="h-3 w-3 mr-1" />
+                            )}
+                            Provenance
+                          </Button>
+                        </div>
+
+                        <pre className="bg-muted rounded p-2 max-h-56 overflow-auto text-[10px] font-mono whitespace-pre-wrap">
+                          {selectedInvocation.full_prompt ??
+                            selectedInvocation.full_prompt_redacted ??
+                            "No prompt returned by API policy."}
+                        </pre>
+                        {selectedInvocation.full_prompt ? null : (
+                          <p className="text-[10px] text-muted-foreground">
+                            Full prompt is hidden for this user; copy uses the
+                            redacted prompt returned by the API.
+                          </p>
+                        )}
+                        {selectedInvocation.error ? (
+                          <p className="text-[10px] text-destructive">
+                            Error: {selectedInvocation.error}
+                          </p>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Select an invocation to inspect its exact prompt and
+                      context snapshot.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* API Payload Preview */}
       <Collapsible
         open={expandedSections.apiPayload}
@@ -209,7 +662,7 @@ export function RoomDebugPanelContent({
           <Button variant="ghost" size="sm" className="w-full justify-between">
             <span className="flex items-center gap-2">
               <Code className="h-4 w-4" />
-              API Payload Preview
+              Message Context Preview
             </span>
             {expandedSections.apiPayload ? (
               <ChevronUp className="h-4 w-4" />
@@ -222,7 +675,7 @@ export function RoomDebugPanelContent({
           <div className="bg-muted rounded-md p-3 mt-2 text-xs">
             <div className="flex items-center justify-between mb-2">
               <p className="text-muted-foreground text-[10px] uppercase">
-                Messages sent to agent:
+                Frontend approximation:
               </p>
               <Button
                 size="sm"
