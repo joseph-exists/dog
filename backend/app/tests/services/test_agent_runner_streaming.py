@@ -7,7 +7,10 @@ from types import SimpleNamespace
 import pytest
 
 from app.models import AgentInvocation
-from app.services.agent_runner_streaming import StreamingAgentRunner
+from app.services.agent_runner_streaming import (
+    StreamingAgentRunner,
+    should_expose_workspace_runtime_tool,
+)
 from app.services.agent_runner_types import AgentRunRequest
 
 
@@ -150,3 +153,11 @@ async def test_streaming_runner_uses_resolved_runtime_request_limit() -> None:
     assert invocation.agent_slug == "story-advisor"
     assert invocation.success is True
     assert invocation.prompt_sha256
+
+
+def test_should_expose_workspace_runtime_tool_requires_execution_intent() -> None:
+    assert should_expose_workspace_runtime_tool("Hello @Qwenzorius") is False
+    assert (
+        should_expose_workspace_runtime_tool("Please run pytest in the workspace")
+        is True
+    )

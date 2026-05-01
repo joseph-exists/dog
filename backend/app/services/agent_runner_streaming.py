@@ -32,6 +32,34 @@ def _get_agent_request_limit(agent: Any) -> int:
     return 10
 
 
+def should_expose_workspace_runtime_tool(trigger_message: str) -> bool:
+    """Gate provider-visible workspace runtime schema by message intent."""
+
+    normalized = f" {trigger_message.lower()} "
+    intent_terms = (
+        " run ",
+        " execute ",
+        " test ",
+        " pytest",
+        " npm ",
+        " pnpm ",
+        " yarn ",
+        " cargo ",
+        " python ",
+        " script",
+        " command",
+        " terminal",
+        " shell",
+        " workspace",
+        " runtime",
+        " start server",
+        " dev server",
+        " check ",
+        " build ",
+    )
+    return any(term in normalized for term in intent_terms)
+
+
 class StreamingAgentRunner:
     """Run agents with token streaming and optional A2A."""
 
@@ -99,19 +127,24 @@ class StreamingAgentRunner:
                 )
 
                 with logfire.span("agent.instantiate_with_tools", **span_tags):
+                    expose_workspace_runtime_tool = (
+                        req.enable_workspace_runtime_tool
+                        and should_expose_workspace_runtime_tool(trigger_message)
+                    )
                     agent = await self._get_agent_instance_with_tools(
                         session,
                         agent_name,
                         user_id=req.user_id,
                         enable_a2a_tool=req.enable_a2a_tool,
                         enable_ag_ui_tool=req.enable_ag_ui_tool,
-                        enable_workspace_runtime_tool=req.enable_workspace_runtime_tool,
+                        enable_workspace_runtime_tool=expose_workspace_runtime_tool,
                         room_id=room_id,
                     )
                     logfire.info(
                         "agent.instantiated",
                         **span_tags,
                         agent_model=getattr(agent, "model", None),
+                        workspace_runtime_tool_exposed=expose_workspace_runtime_tool,
                     )
                 if not agent:
                     logfire.warning("agent.instantiate_failed", **span_tags)
