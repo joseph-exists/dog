@@ -334,6 +334,442 @@ class ProjectWorkspaceRepoReviewBuilder:
         self.log(f"  Created {len(self.state_vars)} state variables")
         test_results["state_variable_ids"] = {name: var["id"] for name, var in self.state_vars.items()}
 
+        self.log("\n🎭 Creating story nodes...")
+
+        # START node
+        self.nodes["project_intake"] = self.create_node(
+            title="Project Intake",
+            content="""# Project Workspace Repository Review
+
+Welcome to the Project Workspace Repository Review story. This workflow guides
+an Orchestrator agent and a human collaborator through scaffolding a Project,
+reviewing its dev environment, inventorying attached repositories, initializing
+agent-facing documentation, and — with human approval — making bounded repository
+updates.
+
+## What the Orchestrator should do at this node
+
+Ask the human for any missing essentials:
+
+- **Project name and owner** — who owns this project and why does it exist?
+- **Participating Room** — which Room are we working in?
+- **Demo goal** — what should be demonstrable at the end of this story?
+- **Known repositories** — which repos are attached or expected?
+- **Dev environment expectations** — local, container, remote, sandbox?
+
+Do not invent context. If the human has already provided this in the Room
+conversation, summarize it back for confirmation rather than asking again.
+
+## Human gate
+
+*You are about to make the first choice in this story. Agents cannot choose for
+you — their job is to gather and present information so you can decide.*
+
+Choose **Begin** when you have a project, at least one repo to review, and a
+workspace you can point the Orchestrator at.
+
+Choose **Blocked** if something essential is missing and you need to resolve it
+before starting.""",
+            is_start=True
+        )
+        self.debug("Created node: project_intake")
+
+        # Rewind loop node
+        self.nodes["rewind"] = self.create_node(
+            title="Human Requested Rewind",
+            content="""# Rewind Requested
+
+A human has requested a return to the analysis phase with new direction.
+
+## What the Orchestrator should do at this node
+
+1. Acknowledge the rewind clearly.
+2. Ask the human what changed or what additional direction they want to provide.
+3. Summarize the new instruction before proceeding.
+4. Carry forward any useful evidence already gathered — do not discard prior
+   analysis, annotate it as superseded if needed.
+
+## Human gate
+
+Choose **Direction given** when you have provided the Orchestrator with clear
+updated instruction and are ready for it to re-run the analysis."""
+        )
+        self.debug("Created node: rewind")
+
+        # END nodes
+        self.nodes["demo_ready"] = self.create_node(
+            title="Demo Ready",
+            content="""# Demo Ready
+
+The Project scaffold, workspace context, repository inventory, agent docs
+initialization, and update evidence are all complete.
+
+Agents in the Room associated with this Demo will receive this Story and Story
+State as context when called via API. The Orchestrator can use this state to
+orient new participants, summarize what happened, and describe what was changed
+and why.
+
+**Story complete.** No further choices are required.""",
+            is_end=True
+        )
+        self.debug("Created node: demo_ready")
+
+        self.nodes["blocked"] = self.create_node(
+            title="Blocked",
+            content="""# Blocked
+
+The workflow has stopped because of a missing access, missing repository,
+unresolved risk, or human request.
+
+## What the Orchestrator should do at this node
+
+1. State the exact blocker clearly — what is missing, what permission or input
+   is needed, and from whom.
+2. Do not attempt to work around the blocker or guess at missing context.
+3. Offer the human specific options: provide the missing input, grant the
+   required access, or reset the story.
+
+**This is a terminal node.** Story State must be reset by a human or host
+system before the workflow can restart.""",
+            is_end=True
+        )
+        self.debug("Created node: blocked")
+
+        self.nodes["reset"] = self.create_node(
+            title="Human Requested Reset",
+            content="""# Human Requested Reset
+
+A human has requested a full story reset. Automated progression has stopped.
+
+The Orchestrator should acknowledge the reset, summarize what was accomplished
+before the reset point, and confirm that Story State will need to be cleared
+by the human or host system before this workflow can be restarted.
+
+**This is a terminal node.** No further choices are available.""",
+            is_end=True
+        )
+        self.debug("Created node: reset")
+
+        self.nodes["workspace_repo_review"] = self.create_node(
+            title="Workspace and Repository Review",
+            content="""# Workspace and Repository Review
+
+## What the Orchestrator should do at this node
+
+### Workspace review
+
+Inspect and report on:
+
+- Workspace path and type (local filesystem, container, remote, sandbox)
+- Available CLI tools and dependency managers (`git`, `npm`, `uv`, `docker`, etc.)
+- Runtime services (databases, queues, dev servers) and how to start them
+- Relevant environment variables (names only — do not expose secret values)
+- Project-level documentation already present (`README`, `CLAUDE.md`, `AGENTS.md`, etc.)
+- Any credential or sandbox constraints that will limit what the Orchestrator can do
+
+### Repository inventory
+
+For each attached repository, collect:
+
+- Repository name, local path, and remote URL
+- Default and current branch
+- Dirty worktree status (uncommitted changes)
+- Top-level directory structure (one level deep)
+- Ownership signals: `CODEOWNERS`, team references in docs, primary language
+- Whether the Orchestrator has `repo_write` tool access to this repository
+
+Report clearly if any repository is missing, inaccessible, or has an unexpected state.
+
+## Human gate
+
+*The Orchestrator has reported its findings. You are making the next choice.*
+
+Choose the option that reflects what was discovered about `repo_write` access.
+Choose **Blocked** if the workspace or repositories are unavailable or unusable."""
+        )
+        self.debug("Created node: workspace_repo_review")
+
+        self.nodes["agent_docs_init"] = self.create_node(
+            title="Agent Docs Initialization",
+            content="""# Agent Docs Initialization
+
+## What the Orchestrator should do at this node
+
+Initialize or verify agent-facing documentation for the attached repository
+before deeper analysis begins.
+
+### If `repo_write_confirmed` is true
+
+Using `repo_write` tool access, create or update the following as needed:
+
+- **`AGENTS.md`** at the repository root — agent instructions, architecture
+  overview, command reference, forbidden actions
+- **Workspace notes** — how to start, test, and reset the dev environment
+- **`README` section** — brief note that an Orchestrator is active in this Room
+
+Report **exactly** what was created, what was updated (with the change), and
+what was already present and confirmed correct. Do not make silent changes.
+
+### If `repo_write_confirmed` is false
+
+Document the absence explicitly:
+
+- State that agent docs could not be initialized because `repo_write` is
+  unavailable
+- List what docs are missing and what they would contain
+- Note this as a risk for downstream analysis steps
+
+### In both cases
+
+Confirm the result to the human before they make the next choice.
+
+## Human gate
+
+Choose **Agent docs initialized** when docs have been created, updated, or
+confirmed present (or intentionally absent with the reason documented).
+
+Choose **Blocked** if docs cannot be safely initialized and human input is needed."""
+        )
+        self.debug("Created node: agent_docs_init")
+
+        self.nodes["repo_questions"] = self.create_node(
+            title="Repository Review Questions",
+            content="""# Repository Review Questions
+
+## What the Orchestrator should do at this node
+
+Answer all six repository review questions. For each question, provide a direct
+answer or explicitly flag it as **Unknown** with the reason.
+
+---
+
+### Q1 — Project scaffold and primary entrypoints
+
+What is the top-level structure of the project? Where are the primary entrypoints
+(routes, CLIs, background jobs, event handlers)? What are the main service
+boundaries, if any?
+
+### Q2 — Dev environment: start, test, reset
+
+What is the exact sequence of commands to:
+- Start the dev environment from a clean state
+- Run the test suite (unit, integration, E2E)
+- Reset the environment to a known-good state
+
+Include dependency installation, database migrations, and any required environment
+variables.
+
+### Q3 — Authoritative directories for agents in this Room
+
+Which repositories, directories, or files should agents in this Room treat as
+authoritative? Which areas are off-limits or require special care?
+
+### Q4 — Missing or stale documentation
+
+What docs are missing entirely? What docs are present but appear outdated,
+inconsistent with the code, or insufficient for a new agent or developer to
+get started?
+
+### Q5 — Changes safe for the Orchestrator to make now
+
+Based on the review, what changes could the Orchestrator make right now without
+risk — documentation updates, minor config fixes, missing files, stale references?
+
+### Q6 — Changes requiring human confirmation
+
+What changes should *not* be made without explicit human approval? List specific
+files, areas, or operations and explain why each requires confirmation.
+
+---
+
+## Human gate
+
+Choose **Analysis complete** when all six questions have answers or explicit
+unknowns. The Orchestrator should not proceed until every question is addressed.
+
+Choose **Blocked** if the Orchestrator cannot complete the analysis with the
+available context and needs human input or additional access."""
+        )
+        self.debug("Created node: repo_questions")
+
+        self.nodes["summary_gate"] = self.create_node(
+            title="Summary and Human Review Gate",
+            content="""# Summary and Human Review Gate
+
+## What the Orchestrator should do at this node
+
+Prepare a structured summary covering everything gathered so far. Present it
+clearly to the human before they make their choice.
+
+### Summary format
+
+**Project:** [name, owner, demo goal]
+
+**Workspace:** [type, key tools, services, constraints]
+
+**Repositories:** [list with branch status, write access, ownership]
+
+**Agent docs:** [what was created/updated/confirmed, or why absent]
+
+**Review findings:**
+- Scaffold and entrypoints: [summary]
+- Dev environment commands: [summary]
+- Authoritative areas: [summary]
+- Missing/stale docs: [list]
+- Safe changes available now: [list]
+- Changes requiring human approval: [list]
+
+**Recommended update scope:** [what the Orchestrator proposes to change, bounded
+and specific]
+
+**Open risks:** [anything that could go wrong, with mitigation notes]
+
+---
+
+**Important:** The Orchestrator presents this summary and waits. It does not
+make the next choice. The human decides whether to proceed, rewind, or stop.
+
+## Human gate
+
+Choose **Proceed** to approve a bounded repository update. The Orchestrator
+will draft a specific plan for your review before making any changes.
+
+Choose **Rewind** to send the Orchestrator back to the analysis phase with
+new direction. Your instruction will be captured at the next node.
+
+Choose **Reset** to stop the workflow entirely. Story State must be reset
+before restarting.
+
+Choose **Blocked** if the summary reveals a problem that requires external
+input before proceeding."""
+        )
+        self.debug("Created node: summary_gate")
+
+        self.nodes["update_plan"] = self.create_node(
+            title="Update Plan",
+            content="""# Update Plan
+
+## What the Orchestrator should do at this node
+
+Draft a bounded repository update plan based on the approved scope from the
+summary. The plan must be specific enough that the human can approve it without
+ambiguity.
+
+### Plan format
+
+**Target files:** [exact paths, one per line]
+
+**Intended edits:** [for each file: what changes and why]
+
+**Risk assessment:** [what could go wrong with each change]
+
+**Verification commands:** [exact commands to confirm the changes worked]
+
+**Rollback notes:** [how to undo each change if needed]
+
+**Out of scope:** [explicitly list what will NOT be changed, to prevent drift]
+
+**Reporting commitment:** [what the Orchestrator will report back after applying]
+
+---
+
+Present the plan and wait for the human to approve it before making any changes.
+
+## Human gate
+
+Choose **Plan approved** when you have reviewed the plan and are satisfied with
+the scope, risk assessment, and verification approach. The Orchestrator will
+then apply the changes.
+
+Choose **Blocked** if the plan is missing approval, `repo_write` is unavailable,
+or the plan scope is unacceptable. Clarify what needs to change before proceeding."""
+        )
+        self.debug("Created node: update_plan")
+
+        self.nodes["apply_updates"] = self.create_node(
+            title="Apply Repository Updates",
+            content="""# Apply Repository Updates
+
+## What the Orchestrator should do at this node
+
+Apply only the changes listed in the approved update plan using `repo_write`
+tool access.
+
+### Constraints
+
+- **Scope only** — do not make changes outside the approved plan
+- **Preserve user changes** — do not overwrite uncommitted work in unrelated areas
+- **Report everything** — for each file changed, state what was changed and why
+- **Stop on unexpected state** — if a file is in an unexpected state (conflicts,
+  missing, permissions error), stop and report rather than guessing
+
+### After applying
+
+Report to the human:
+
+- Files changed (with a brief summary of each change)
+- Files that were already in the desired state (no change needed)
+- Any files that could not be changed and why
+- Current worktree status
+
+## Human gate
+
+Choose **Updates applied** when all approved changes have been written and
+reported. The Orchestrator will then run validation.
+
+Choose **Blocked** if a change could not be applied safely and human input or
+additional access is needed."""
+        )
+        self.debug("Created node: apply_updates")
+
+        self.nodes["validate_evidence"] = self.create_node(
+            title="Validate and Collect Evidence",
+            content="""# Validate and Collect Evidence
+
+## What the Orchestrator should do at this node
+
+Run targeted validation for the repository updates and collect evidence for
+the demo.
+
+### Validation steps
+
+Run each relevant check and capture its output:
+
+- **Lint / format check** — report pass/fail and any new violations introduced
+- **Build** — report pass/fail
+- **Test suite** — run tests relevant to changed areas; report pass/fail and
+  any new failures
+- **Manual checks** — any checks that cannot be automated; describe what was
+  verified and how
+- **Skipped checks** — list any checks that were skipped and the reason
+
+### Evidence collection
+
+Assemble the following for the demo:
+
+- Diff summary (files changed, lines added/removed)
+- Docs initialized or modified
+- Commands run and their outcomes
+- Overall validation status
+- Remaining open items or risks
+
+Report all of this to the human before they make the next choice.
+
+## Human gate
+
+Choose **Validation passed** when checks pass and the demo evidence is complete.
+
+Choose **Validation failed — revise** to send the Orchestrator back to apply
+corrected changes. The update plan remains approved; only the execution is revised.
+
+Choose **More direction needed** if the evidence reveals that a broader
+conversation is needed before concluding. Returns to the summary gate."""
+        )
+        self.debug("Created node: validate_evidence")
+
+        self.log(f"  Created {len(self.nodes)} nodes")
+        test_results["node_ids"] = {name: node["id"] for name, node in self.nodes.items()}
+
         # Returns validate_state_schema() result once nodes and choices are added
         return False
 
