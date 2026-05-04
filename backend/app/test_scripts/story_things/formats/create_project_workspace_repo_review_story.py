@@ -1019,6 +1019,31 @@ def main():
         print(f"  State variables: {len(builder.state_vars)}")
         print(f"  Schema valid: {'Yes' if is_valid else 'No (in progress)'}")
 
+        # Visual story structure
+        print("\n  📋 STORY STRUCTURE:")
+        print("  ┌─ project_intake (START)")
+        print("  │   ├─→ workspace_repo_review")
+        print("  │   │     ├─→ agent_docs_init")
+        print("  │   │     │     ├─→ repo_questions")
+        print("  │   │     │     │     ├─→ summary_gate")
+        print("  │   │     │     │     │     ├─→ rewind → repo_questions (loop)")
+        print("  │   │     │     │     │     ├─→ update_plan")
+        print("  │   │     │     │     │     │     └─→ apply_updates")
+        print("  │   │     │     │     │     │           └─→ validate_evidence")
+        print("  │   │     │     │     │     │                 ├─→ demo_ready (END ✓)")
+        print("  │   │     │     │     │     │                 ├─→ summary_gate (loop)")
+        print("  │   │     │     │     │     │                 └─→ apply_updates (loop)")
+        print("  │   │     │     │     │     ├─→ reset (END ✗)")
+        print("  │   │     │     │     │     └─→ blocked (END ✗)")
+        print("  │   │     │     │     └─→ blocked")
+        print("  │   │     │     └─→ blocked")
+        print("  │   │     └─→ blocked")
+        print("  └─→ blocked")
+        print("")
+        print("  🔐 HUMAN-IN-THE-LOOP:")
+        print("  Agents read node content and do work. Humans make all choices.")
+        print("  No state variable is agent-settable — state flows through human decisions.")
+
         test_results["success"] = is_valid
         test_results["end_time"] = datetime.now().isoformat()
 
