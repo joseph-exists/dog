@@ -195,7 +195,146 @@ class ProjectWorkspaceRepoReviewBuilder:
         test_results["story_id"] = self.story_id
         self.log(f"  Created story: {self.story_id}")
 
-        # Returns False (scaffold) — will return validate_state_schema() result once complete
+        self.log("\n📋 Creating state schema...")
+
+        # Phase tracking
+        self.state_vars["workflow_phase"] = self.create_state_variable(
+            key="workflow_phase",
+            value_type="enum",
+            enum_values=["intake", "workspace_review", "docs_init", "analysis",
+                         "summary", "update_plan", "applying", "validating",
+                         "evidence", "complete", "blocked", "reset"],
+            default_value="intake",
+            category="phase",
+            description="Current phase of the workflow"
+        )
+        self.debug("Created state var: workflow_phase")
+
+        # Progress flags
+        self.state_vars["workspace_reviewed"] = self.create_state_variable(
+            key="workspace_reviewed",
+            value_type="boolean",
+            default_value=False,
+            category="progress",
+            description="Human confirmed workspace reviewed and understood"
+        )
+        self.debug("Created state var: workspace_reviewed")
+
+        self.state_vars["repos_inventoried"] = self.create_state_variable(
+            key="repos_inventoried",
+            value_type="boolean",
+            default_value=False,
+            category="progress",
+            description="Human confirmed repository inventory is complete"
+        )
+        self.debug("Created state var: repos_inventoried")
+
+        self.state_vars["repo_write_confirmed"] = self.create_state_variable(
+            key="repo_write_confirmed",
+            value_type="boolean",
+            default_value=False,
+            category="access",
+            description="Orchestrator has repo_write tool access to the attached repository"
+        )
+        self.debug("Created state var: repo_write_confirmed")
+
+        self.state_vars["docs_initialized"] = self.create_state_variable(
+            key="docs_initialized",
+            value_type="boolean",
+            default_value=False,
+            category="progress",
+            description="Agent-facing docs created, updated, or confirmed present"
+        )
+        self.debug("Created state var: docs_initialized")
+
+        self.state_vars["questions_answered"] = self.create_state_variable(
+            key="questions_answered",
+            value_type="boolean",
+            default_value=False,
+            category="progress",
+            description="All six repository review questions answered or explicitly flagged unknown"
+        )
+        self.debug("Created state var: questions_answered")
+
+        # Human approval flags
+        self.state_vars["summary_approved"] = self.create_state_variable(
+            key="summary_approved",
+            value_type="boolean",
+            default_value=False,
+            category="human",
+            description="Human chose to proceed with a bounded repository update after reading the summary"
+        )
+        self.debug("Created state var: summary_approved")
+
+        self.state_vars["update_plan_approved"] = self.create_state_variable(
+            key="update_plan_approved",
+            value_type="boolean",
+            default_value=False,
+            category="human",
+            description="Human approved the specific bounded update plan"
+        )
+        self.debug("Created state var: update_plan_approved")
+
+        # Execution flags
+        self.state_vars["updates_applied"] = self.create_state_variable(
+            key="updates_applied",
+            value_type="boolean",
+            default_value=False,
+            category="progress",
+            description="Approved repository changes have been written"
+        )
+        self.debug("Created state var: updates_applied")
+
+        self.state_vars["validation_passed"] = self.create_state_variable(
+            key="validation_passed",
+            value_type="boolean",
+            default_value=False,
+            category="progress",
+            description="Targeted validation checks passed after updates were applied"
+        )
+        self.debug("Created state var: validation_passed")
+
+        self.state_vars["evidence_ready"] = self.create_state_variable(
+            key="evidence_ready",
+            value_type="boolean",
+            default_value=False,
+            category="progress",
+            description="Demo evidence (diff summary, test output, remaining risks) is collected and ready"
+        )
+        self.debug("Created state var: evidence_ready")
+
+        # Control flags
+        self.state_vars["rewind_requested"] = self.create_state_variable(
+            key="rewind_requested",
+            value_type="boolean",
+            default_value=False,
+            category="control",
+            description="Human requested a return to analysis with new direction"
+        )
+        self.debug("Created state var: rewind_requested")
+
+        self.state_vars["blocked"] = self.create_state_variable(
+            key="blocked",
+            value_type="boolean",
+            default_value=False,
+            category="control",
+            description="Workflow stopped due to missing access, missing repo, or unresolved risk"
+        )
+        self.debug("Created state var: blocked")
+
+        self.state_vars["reset_requested"] = self.create_state_variable(
+            key="reset_requested",
+            value_type="boolean",
+            default_value=False,
+            category="control",
+            description="Human requested a full story reset"
+        )
+        self.debug("Created state var: reset_requested")
+
+        self.log(f"  Created {len(self.state_vars)} state variables")
+        test_results["state_variable_ids"] = {name: var["id"] for name, var in self.state_vars.items()}
+
+        # Returns validate_state_schema() result once nodes and choices are added
         return False
 
 
