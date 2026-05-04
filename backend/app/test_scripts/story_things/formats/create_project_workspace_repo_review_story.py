@@ -770,8 +770,225 @@ conversation is needed before concluding. Returns to the summary gate."""
         self.log(f"  Created {len(self.nodes)} nodes")
         test_results["node_ids"] = {name: node["id"] for name, node in self.nodes.items()}
 
-        # Returns validate_state_schema() result once nodes and choices are added
-        return False
+        # =====================================================================
+        # STEP 4: CREATE CHOICES
+        # =====================================================================
+        self.log("\n🔀 Creating choices...")
+
+        # --- project_intake ---
+        self.choices.append(self.create_choice(
+            from_node_name="project_intake",
+            to_node_name="workspace_repo_review",
+            text="Begin — I have a project, workspace, and at least one repo to review",
+            order=0,
+            sets_state={"workflow_phase": "workspace_review"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="project_intake",
+            to_node_name="blocked",
+            text="Blocked — missing context, access, or a repo to attach",
+            order=1,
+            sets_state={"blocked": True, "workflow_phase": "blocked"}
+        ))
+
+        # --- workspace_repo_review ---
+        self.choices.append(self.create_choice(
+            from_node_name="workspace_repo_review",
+            to_node_name="agent_docs_init",
+            text="Reviewed — Orchestrator has repo_write access, proceed to docs",
+            order=0,
+            sets_state={
+                "workspace_reviewed": True,
+                "repos_inventoried": True,
+                "repo_write_confirmed": True,
+                "workflow_phase": "docs_init"
+            }
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="workspace_repo_review",
+            to_node_name="agent_docs_init",
+            text="Reviewed — Orchestrator does NOT have repo_write access",
+            order=1,
+            sets_state={
+                "workspace_reviewed": True,
+                "repos_inventoried": True,
+                "repo_write_confirmed": False,
+                "workflow_phase": "docs_init"
+            }
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="workspace_repo_review",
+            to_node_name="blocked",
+            text="Blocked — workspace or repositories are unavailable or unusable",
+            order=2,
+            sets_state={"blocked": True, "workflow_phase": "blocked"}
+        ))
+
+        # --- agent_docs_init ---
+        self.choices.append(self.create_choice(
+            from_node_name="agent_docs_init",
+            to_node_name="repo_questions",
+            text="Agent docs initialized or confirmed present — proceed to review questions",
+            order=0,
+            sets_state={"docs_initialized": True, "workflow_phase": "analysis"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="agent_docs_init",
+            to_node_name="blocked",
+            text="Blocked — cannot safely initialize docs, need human input",
+            order=1,
+            sets_state={"blocked": True, "workflow_phase": "blocked"}
+        ))
+
+        # --- repo_questions ---
+        self.choices.append(self.create_choice(
+            from_node_name="repo_questions",
+            to_node_name="summary_gate",
+            text="Analysis complete — all questions answered or explicitly flagged unknown",
+            order=0,
+            sets_state={"questions_answered": True, "workflow_phase": "summary"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="repo_questions",
+            to_node_name="blocked",
+            text="Blocked — cannot complete analysis with available context",
+            order=1,
+            sets_state={"blocked": True, "workflow_phase": "blocked"}
+        ))
+
+        # --- summary_gate ---
+        self.choices.append(self.create_choice(
+            from_node_name="summary_gate",
+            to_node_name="update_plan",
+            text="Proceed — I approve a bounded repository update plan",
+            order=0,
+            requires_state={"questions_answered": True},
+            sets_state={"summary_approved": True, "workflow_phase": "update_plan"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="summary_gate",
+            to_node_name="rewind",
+            text="Rewind — return to analysis with new direction",
+            order=1,
+            sets_state={"rewind_requested": True, "workflow_phase": "analysis"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="summary_gate",
+            to_node_name="reset",
+            text="Reset — stop the workflow entirely and clear state before restarting",
+            order=2,
+            sets_state={"reset_requested": True, "workflow_phase": "reset"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="summary_gate",
+            to_node_name="blocked",
+            text="Blocked — summary reveals a problem requiring external input",
+            order=3,
+            sets_state={"blocked": True, "workflow_phase": "blocked"}
+        ))
+
+        # --- rewind ---
+        self.choices.append(self.create_choice(
+            from_node_name="rewind",
+            to_node_name="repo_questions",
+            text="Direction given — re-run analysis with updated instruction",
+            order=0,
+            requires_state={"rewind_requested": True},
+            sets_state={
+                "rewind_requested": False,
+                "questions_answered": False,
+                "workflow_phase": "analysis"
+            }
+        ))
+
+        # --- update_plan ---
+        self.choices.append(self.create_choice(
+            from_node_name="update_plan",
+            to_node_name="apply_updates",
+            text="Plan approved — apply the bounded repository updates",
+            order=0,
+            requires_state={
+                "$and": [
+                    {"summary_approved": True},
+                    {"repo_write_confirmed": True}
+                ]
+            },
+            sets_state={"update_plan_approved": True, "workflow_phase": "applying"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="update_plan",
+            to_node_name="blocked",
+            text="Blocked — plan is missing approval or repo_write is unavailable",
+            order=1,
+            sets_state={"blocked": True, "workflow_phase": "blocked"}
+        ))
+
+        # --- apply_updates ---
+        self.choices.append(self.create_choice(
+            from_node_name="apply_updates",
+            to_node_name="validate_evidence",
+            text="Updates applied — run validation and collect evidence",
+            order=0,
+            requires_state={"update_plan_approved": True},
+            sets_state={"updates_applied": True, "workflow_phase": "validating"}
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="apply_updates",
+            to_node_name="blocked",
+            text="Blocked — update could not be applied safely",
+            order=1,
+            sets_state={"blocked": True, "workflow_phase": "blocked"}
+        ))
+
+        # --- validate_evidence ---
+        self.choices.append(self.create_choice(
+            from_node_name="validate_evidence",
+            to_node_name="demo_ready",
+            text="Validation passed — demo evidence is complete and ready",
+            order=0,
+            sets_state={
+                "validation_passed": True,
+                "evidence_ready": True,
+                "workflow_phase": "complete"
+            }
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="validate_evidence",
+            to_node_name="apply_updates",
+            text="Validation failed — revise and re-apply the approved changes",
+            order=1,
+            sets_state={
+                "validation_passed": False,
+                "updates_applied": False,
+                "workflow_phase": "applying"
+            }
+        ))
+        self.choices.append(self.create_choice(
+            from_node_name="validate_evidence",
+            to_node_name="summary_gate",
+            text="More direction needed — return to summary gate for human review",
+            order=2,
+            sets_state={"evidence_ready": True, "workflow_phase": "summary"}
+        ))
+
+        self.log(f"  Created {len(self.choices)} choices")
+        test_results["choice_ids"] = [c["id"] for c in self.choices]
+
+        # =====================================================================
+        # STEP 5: VALIDATE STATE SCHEMA
+        # =====================================================================
+        self.log("\n✅ Validating state schema...")
+
+        validation = self.validate_state_schema()
+
+        if validation.get("is_valid"):
+            self.log("  Schema is VALID — all state variables defined!")
+        else:
+            self.log("  Schema has issues:")
+            for error in validation.get("errors", []):
+                self.log(f"    - {error.get('variable_key')} in {error.get('used_in')}")
+
+        return validation.get("is_valid", False)
 
 
 def main():
