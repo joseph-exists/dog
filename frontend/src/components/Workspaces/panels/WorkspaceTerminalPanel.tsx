@@ -62,7 +62,8 @@ export function WorkspaceTerminalPanel({
   const runtimeTabContent = (
     <div className="space-y-3">
       <div className="rounded-xl border bg-muted/30 p-4 text-sm">
-        Workspace status: <span className="font-medium">{workspace.status}</span>
+        Workspace status:{" "}
+        <span className="font-medium">{workspace.status}</span>
         <span className="mx-2 text-muted-foreground">·</span>
         Terminal status:{" "}
         <span className="font-medium">{workspace.terminalStatus}</span>

@@ -69,7 +69,9 @@ export function TerminalViewer({
   onViewportChange,
   debugSessionId,
 }: TerminalViewerProps) {
-  const perfIdRef = useRef<string>(`terminal-viewer-${Math.random().toString(36).slice(2, 10)}`)
+  const perfIdRef = useRef<string>(
+    `terminal-viewer-${Math.random().toString(36).slice(2, 10)}`,
+  )
   const viewerRootRef = useRef<HTMLDivElement | null>(null)
   const terminalHostRef = useRef<HTMLDivElement | null>(null)
   const terminalRef = useRef<XTermTerminal | null>(null)
@@ -88,7 +90,8 @@ export function TerminalViewer({
   const resolvedAutoScroll =
     typeof autoScroll === "boolean"
       ? autoScroll
-      : (preferences?.autoScroll ?? DEFAULT_TERMINAL_VIEWER_PREFERENCES.autoScroll)
+      : (preferences?.autoScroll ??
+        DEFAULT_TERMINAL_VIEWER_PREFERENCES.autoScroll)
   const scrollback =
     preferences?.scrollback ?? DEFAULT_TERMINAL_VIEWER_PREFERENCES.scrollback
   const themePreset =
@@ -203,6 +206,10 @@ export function TerminalViewer({
     session.ansiChunks.length,
     session.url,
     shouldInitializeEmulator,
+    fontSize,
+    lineHeight,
+    scrollback,
+    themePreset,
   ])
 
   useEffect(() => {
@@ -256,7 +263,11 @@ export function TerminalViewer({
 
       const usableWidth = Math.max(0, bounds.width - TERMINAL_PADDING_PX * 2)
       const usableHeight = Math.max(0, bounds.height - TERMINAL_PADDING_PX * 2)
-      const cols = clamp(Math.floor(usableWidth / cellWidth), MIN_COLS, MAX_COLS)
+      const cols = clamp(
+        Math.floor(usableWidth / cellWidth),
+        MIN_COLS,
+        MAX_COLS,
+      )
       const rows = clamp(
         Math.floor(usableHeight / cellHeight),
         MIN_ROWS,
@@ -285,13 +296,7 @@ export function TerminalViewer({
     return () => {
       observer.disconnect()
     }
-  }, [
-    emulatorReady,
-    shouldInitializeEmulator,
-    onViewportChange,
-    fontSize,
-    lineHeight,
-  ])
+  }, [emulatorReady, shouldInitializeEmulator, onViewportChange])
 
   useEffect(() => {
     if (!shouldInitializeEmulator) return
@@ -497,9 +502,7 @@ function buildInteractionHint(
   return `${inputLabel} • ${resizeLabel}`
 }
 
-function terminalThemeFromPreset(
-  preset: TerminalViewerThemePreset,
-) {
+function terminalThemeFromPreset(preset: TerminalViewerThemePreset) {
   if (preset === "amber") {
     return {
       background: "#110f08",
@@ -535,12 +538,14 @@ type PerfLogPayload = {
 }
 
 function performanceMark(name: string) {
-  if (typeof window === "undefined" || typeof performance === "undefined") return
+  if (typeof window === "undefined" || typeof performance === "undefined")
+    return
   performance.mark(name)
 }
 
 function performanceMeasure(name: string, startMark: string, endMark: string) {
-  if (typeof window === "undefined" || typeof performance === "undefined") return
+  if (typeof window === "undefined" || typeof performance === "undefined")
+    return
   try {
     performance.measure(name, startMark, endMark)
   } catch {

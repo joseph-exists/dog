@@ -2,15 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
   KeyRound,
   Loader2,
-  Pencil,
   Plus,
   RefreshCcw,
-  Sparkles,
-  Trash2,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { LlmProvidersService } from "@/client/sdk.gen"
 import type {
   DetailedTestResult,
@@ -26,7 +24,8 @@ import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useAuth"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { ModelPinList, ProviderStatusBadge } from "./Display"
+import { ConfiguredProviderCard } from "./Configured"
+import { ModelPinList } from "./Display"
 import { SetupSuccessPanel } from "./Flows"
 import { UserAccessProviderForm, ValidationPanel } from "./Forms"
 import { ProviderTemplateGallery } from "./Gallery"
@@ -90,6 +89,7 @@ function getProviderTypeName(
 export function UserAccessProvidersWorkspace() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const addProviderSectionRef = useRef<HTMLDivElement | null>(null)
   const [powerUserMode, setPowerUserMode] = useState(false)
   const [selectedProviderTypeId, setSelectedProviderTypeId] = useState<
     string | null
@@ -107,6 +107,10 @@ export function UserAccessProvidersWorkspace() {
   const [validationResults, setValidationResults] = useState<
     Record<string, DetailedTestResult>
   >({})
+  const [openConfiguredProviderId, setOpenConfiguredProviderId] = useState<
+    string | null
+  >(null)
+  const [yourProvidersOpen, setYourProvidersOpen] = useState(true)
 
   const providerTypesQuery = useQuery({
     queryKey: ["llm-provider-type-list"],
@@ -153,6 +157,7 @@ export function UserAccessProvidersWorkspace() {
       showSuccessToast("Provider created")
       queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
       setEditingProviderId(provider.id)
+      setOpenConfiguredProviderId(provider.id)
       setSuccessProviderId(null)
     },
     onError: handleError.bind(showErrorToast),
@@ -174,6 +179,7 @@ export function UserAccessProvidersWorkspace() {
       showSuccessToast("Provider updated")
       queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
       setEditingProviderId(provider.id)
+      setOpenConfiguredProviderId(provider.id)
     },
     onError: handleError.bind(showErrorToast),
   })
@@ -189,6 +195,7 @@ export function UserAccessProvidersWorkspace() {
       setEditingProviderId(null)
       setSuccessProviderId(null)
       setShowModelPinsForProviderId(null)
+      setOpenConfiguredProviderId(null)
     },
     onError: handleError.bind(showErrorToast),
   })
@@ -249,6 +256,36 @@ export function UserAccessProvidersWorkspace() {
     onError: handleError.bind(showErrorToast),
   })
 
+  const validateProviderMutation = useMutation({
+    mutationFn: async (provider: UserAccessProviderPublic) => ({
+      providerId: provider.id,
+      result: await LlmProvidersService.testProviderDetailed({
+        providerId: provider.id,
+      }),
+    }),
+    onSuccess: ({ providerId, result }) => {
+      queryClient.invalidateQueries({ queryKey: ["llm-providers"] })
+      queryClient.invalidateQueries({
+        queryKey: ["llm-catalog", "models-for-uap", providerId],
+      })
+      queryClient.invalidateQueries({ queryKey: ["llm-catalog", "models"] })
+
+      setValidationResults((current) => ({
+        ...current,
+        [providerId]: result,
+      }))
+
+      if (result.valid) {
+        showSuccessToast("Provider validated and models fetched")
+        setSuccessProviderId(providerId)
+        setShowModelPinsForProviderId(providerId)
+      } else {
+        showErrorToast(result.error || "Validation failed")
+      }
+    },
+    onError: handleError.bind(showErrorToast),
+  })
+
   return (
     <div className="space-y-6">
       <BlockContainer
@@ -296,9 +333,10 @@ export function UserAccessProvidersWorkspace() {
                 setEditingProviderId(null)
                 setSuccessProviderId(null)
                 setShowModelPinsForProviderId(null)
-                if (!selectedProviderTypeId && providerTypes[0]) {
-                  setSelectedProviderTypeId(providerTypes[0].id)
-                }
+                addProviderSectionRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
               }}
             >
               <Plus className="h-4 w-4" />
@@ -356,45 +394,32 @@ export function UserAccessProvidersWorkspace() {
       ) : null}
 
       {!providerTypesQuery.isLoading && !providersQuery.isLoading ? (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-          <div className="space-y-6">
-            <ProviderTemplateGallery
-              providerTypes={providerTypes}
-              configuredProviders={providers}
-              selectedProviderTypeId={
-                activeProviderType?.id ?? selectedProviderTypeId
-              }
-              powerUserMode={powerUserMode}
-              onPowerUserModeChange={setPowerUserMode}
-              onSelect={(providerType) => {
-                setSelectedProviderTypeId(providerType.id)
-                setEditingProviderId(null)
-                setSuccessProviderId(null)
-              }}
-            />
-
-            {showModelPinsForProviderId ? (
-              <ModelPinList
-                providerId={showModelPinsForProviderId}
-                providerName={
-                  providers.find(
-                    (provider) => provider.id === showModelPinsForProviderId,
-                  )?.name || "Provider"
-                }
-                shouldHighlightPins={highlightPins}
-              />
-            ) : null}
-          </div>
-
-          <div className="space-y-6">
-            <BlockContainer
-              title="Configured providers"
-              subtitle="Saved credentials, validation status, and entry points for further tuning."
-              variant="card"
-              density="default"
-              bodyClassName="space-y-3"
-            >
-              {providers.length === 0 ? (
+        <div className="space-y-6">
+          <BlockContainer
+            title="Your providers"
+            subtitle="Saved connections, validation health, and model entry points."
+            variant="card"
+            density="default"
+            headerActions={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setYourProvidersOpen((open) => !open)}
+                aria-expanded={yourProvidersOpen}
+              >
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    yourProvidersOpen ? "rotate-180" : ""
+                  }`}
+                />
+                {yourProvidersOpen ? "Minimize" : "Expand"}
+              </Button>
+            }
+            bodyClassName="space-y-3"
+          >
+            {yourProvidersOpen ? (
+              providers.length === 0 ? (
                 <div className="rounded-xl border border-dashed px-4 py-8 text-center">
                   <p className="text-sm font-medium">
                     No providers configured yet
@@ -412,117 +437,94 @@ export function UserAccessProvidersWorkspace() {
                   const isActive = editingProviderId === provider.id
 
                   return (
-                    <div
+                    <ConfiguredProviderCard
                       key={provider.id}
-                      className={`rounded-xl border px-4 py-4 transition-colors ${
-                        isActive
-                          ? "border-primary/40 bg-primary/5"
-                          : "bg-background/80"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold">
-                              {provider.name}
-                            </p>
-                            <ProviderStatusBadge
-                              status={
-                                provider.is_validated
-                                  ? "verified"
-                                  : provider.validation_error
-                                    ? "failed"
-                                    : "unknown"
-                              }
-                            />
-                            {provider.is_default ? (
-                              <Badge variant="secondary">Default</Badge>
-                            ) : null}
-                            {!provider.is_enabled ? (
-                              <Badge variant="outline">Disabled</Badge>
-                            ) : null}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {providerType?.display_name ||
-                              providerType?.name ||
-                              "Provider"}
-                            {provider.base_url
-                              ? ` • ${formatBaseUrl(provider.base_url)}`
-                              : ""}
-                          </p>
-                          {provider.description ? (
-                            <p className="text-sm text-muted-foreground">
-                              {provider.description}
-                            </p>
-                          ) : null}
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            <Badge variant="outline" className="text-[10px]">
-                              {formatRelativeValidation(provider)}
-                            </Badge>
-                            <Badge variant="outline" className="text-[10px]">
-                              {provider.available_models_cache?.length ?? 0}{" "}
-                              cached models
-                            </Badge>
-                            {isProviderStale(provider) ? (
-                              <Badge variant="outline" className="text-[10px]">
-                                Needs refresh
-                              </Badge>
-                            ) : null}
-                          </div>
-                          {provider.validation_error ? (
-                            <p className="line-clamp-2 text-xs text-destructive">
-                              {provider.validation_error}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingProviderId(provider.id)
-                              setSelectedProviderTypeId(
-                                provider.alpha_provider_type_id,
-                              )
-                              setSuccessProviderId(null)
-                            }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setShowModelPinsForProviderId(provider.id)
-                              setHighlightPins(false)
-                            }}
-                          >
-                            <Sparkles className="h-3.5 w-3.5" />
-                            Models
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Delete ${provider.name}? Agents using it may stop working.`,
-                                )
-                              ) {
-                                deleteMutation.mutate(provider.id)
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                      provider={provider}
+                      providerType={providerType ?? null}
+                      isActive={isActive}
+                      isOpen={
+                        openConfiguredProviderId === provider.id || isActive
+                      }
+                      isStale={isProviderStale(provider)}
+                      validationLabel={formatRelativeValidation(provider)}
+                      baseUrlLabel={formatBaseUrl(provider.base_url)}
+                      onToggleOpen={() =>
+                        setOpenConfiguredProviderId((current) =>
+                          current === provider.id ? null : provider.id,
+                        )
+                      }
+                      onEdit={() => {
+                        setEditingProviderId(provider.id)
+                        setOpenConfiguredProviderId(provider.id)
+                        setSelectedProviderTypeId(
+                          provider.alpha_provider_type_id,
+                        )
+                        setSuccessProviderId(null)
+                      }}
+                      onManageModels={() => {
+                        setShowModelPinsForProviderId(provider.id)
+                        setHighlightPins(false)
+                      }}
+                      onValidate={() =>
+                        validateProviderMutation.mutate(provider)
+                      }
+                      onDelete={() => {
+                        if (
+                          window.confirm(
+                            `Delete ${provider.name}? Agents using it may stop working.`,
+                          )
+                        ) {
+                          deleteMutation.mutate(provider.id)
+                        }
+                      }}
+                    />
                   )
                 })
-              )}
-            </BlockContainer>
+              )
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">
+                  {providers.length} saved provider
+                  {providers.length === 1 ? "" : "s"}
+                </Badge>
+                <Badge variant="outline">
+                  {providers.filter((provider) => provider.is_validated).length}{" "}
+                  validated
+                </Badge>
+                {staleProviders.length > 0 ? (
+                  <Badge variant="outline">{staleProviders.length} stale</Badge>
+                ) : null}
+              </div>
+            )}
+          </BlockContainer>
+
+          {showModelPinsForProviderId ? (
+            <ModelPinList
+              providerId={showModelPinsForProviderId}
+              providerName={
+                providers.find(
+                  (provider) => provider.id === showModelPinsForProviderId,
+                )?.name || "Provider"
+              }
+              shouldHighlightPins={highlightPins}
+            />
+          ) : null}
+
+          <div ref={addProviderSectionRef} className="space-y-6">
+            <ProviderTemplateGallery
+              providerTypes={providerTypes}
+              configuredProviders={providers}
+              selectedProviderTypeId={
+                selectedProvider ? null : selectedProviderTypeId
+              }
+              powerUserMode={powerUserMode}
+              onPowerUserModeChange={setPowerUserMode}
+              onSelect={(providerType) => {
+                setSelectedProviderTypeId(providerType.id)
+                setEditingProviderId(null)
+                setSuccessProviderId(null)
+              }}
+            />
 
             <UserAccessProviderForm
               providerType={activeProviderType}
@@ -530,7 +532,7 @@ export function UserAccessProvidersWorkspace() {
               powerUserMode={powerUserMode}
               isSaving={isSaving}
               onCancelCreate={() => {
-                setSelectedProviderTypeId(providerTypes[0]?.id ?? null)
+                setSelectedProviderTypeId(null)
                 setEditingProviderId(null)
               }}
               onSubmit={async (payload) => {
@@ -554,59 +556,57 @@ export function UserAccessProvidersWorkspace() {
                 })
               }}
             />
-
-            {selectedProvider ? (
-              <ValidationPanel
-                provider={selectedProvider}
-                providerTypeName={activeProviderType?.name || "default"}
-                onValidated={(result: DetailedTestResult) => {
-                  if (result.valid) {
-                    setValidationResults((current) => ({
-                      ...current,
-                      [selectedProvider.id]: result,
-                    }))
-                    setSuccessProviderId(selectedProvider.id)
-                    setShowModelPinsForProviderId(selectedProvider.id)
-                  }
-                }}
-              />
-            ) : (
-              <BlockContainer
-                title="Validation unlocks the next step"
-                subtitle="Create the provider first, then run the detailed test to fetch models and account diagnostics."
-                variant="card"
-                density="default"
-              >
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ArrowRight className="h-4 w-4" />
-                  New providers become editable and testable as soon as they are
-                  saved.
-                </div>
-              </BlockContainer>
-            )}
-
-            {selectedProvider && successProviderId === selectedProvider.id ? (
-              <SetupSuccessPanel
-                provider={selectedProvider}
-                validationResult={
-                  validationResults[selectedProvider.id] ?? null
-                }
-                onBrowseModels={() => {
-                  setShowModelPinsForProviderId(selectedProvider.id)
-                  setHighlightPins(false)
-                }}
-                onPinFavorites={() => {
-                  setShowModelPinsForProviderId(selectedProvider.id)
-                  setHighlightPins(true)
-                }}
-                onAddAnother={() => {
-                  setEditingProviderId(null)
-                  setSuccessProviderId(null)
-                }}
-                onDismiss={() => setSuccessProviderId(null)}
-              />
-            ) : null}
           </div>
+
+          {selectedProvider && successProviderId === selectedProvider.id ? (
+            <SetupSuccessPanel
+              provider={selectedProvider}
+              validationResult={validationResults[selectedProvider.id] ?? null}
+              onBrowseModels={() => {
+                setShowModelPinsForProviderId(selectedProvider.id)
+                setHighlightPins(false)
+              }}
+              onPinFavorites={() => {
+                setShowModelPinsForProviderId(selectedProvider.id)
+                setHighlightPins(true)
+              }}
+              onAddAnother={() => {
+                setEditingProviderId(null)
+                setSuccessProviderId(null)
+              }}
+              onDismiss={() => setSuccessProviderId(null)}
+            />
+          ) : null}
+
+          {selectedProvider ? (
+            <ValidationPanel
+              provider={selectedProvider}
+              providerTypeName={activeProviderType?.name || "default"}
+              onValidated={(result: DetailedTestResult) => {
+                if (result.valid) {
+                  setValidationResults((current) => ({
+                    ...current,
+                    [selectedProvider.id]: result,
+                  }))
+                  setSuccessProviderId(selectedProvider.id)
+                  setShowModelPinsForProviderId(selectedProvider.id)
+                }
+              }}
+            />
+          ) : (
+            <BlockContainer
+              title="Validation unlocks the next step"
+              subtitle="Create the provider first, then run the detailed test to fetch models and account diagnostics."
+              variant="card"
+              density="default"
+            >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ArrowRight className="h-4 w-4" />
+                New providers become editable and testable as soon as they are
+                saved.
+              </div>
+            </BlockContainer>
+          )}
         </div>
       ) : null}
     </div>

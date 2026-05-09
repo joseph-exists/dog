@@ -46,7 +46,9 @@ export function useTerminalSession({
   allowResize = true,
   defaultInputMode = "direct",
 }: UseTerminalSessionOptions) {
-  const debugSessionIdRef = useRef<string>(`termdbg-${Math.random().toString(36).slice(2, 10)}`)
+  const debugSessionIdRef = useRef<string>(
+    `termdbg-${Math.random().toString(36).slice(2, 10)}`,
+  )
   const debugEnabledRef = useRef<boolean>(isTerminalDebugEnabled())
   const [session, setSession] = useState<TerminalSessionState>(() =>
     createTerminalSession(url),
@@ -140,7 +142,10 @@ export function useTerminalSession({
         .then((decoded) => {
           pendingOutputRef.current.push(decoded)
           scheduleFrameFlush()
-          if (debugEnabledRef.current && pendingOutputRef.current.length === 1) {
+          if (
+            debugEnabledRef.current &&
+            pendingOutputRef.current.length === 1
+          ) {
             terminalDebugLog("first_output_received", {
               debugSessionId: debugSessionIdRef.current,
               chunkLength: decoded.length,
@@ -197,7 +202,7 @@ export function useTerminalSession({
         resizeTimeoutRef.current = null
       }
     }
-  }, [url, enabled, _connectionNonce, scheduleFrameFlush])
+  }, [url, enabled, scheduleFrameFlush])
 
   const connect = useCallback(() => {
     if (!url) return
@@ -221,29 +226,26 @@ export function useTerminalSession({
     setSession((current) => clearTerminalSession(current))
   }, [])
 
-  const sendInput = useCallback(
-    (data: string) => {
-      if (
-        !data ||
-        !wsRef.current ||
-        wsRef.current.readyState !== WebSocket.OPEN
-      ) {
-        return false
-      }
+  const sendInput = useCallback((data: string) => {
+    if (
+      !data ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    ) {
+      return false
+    }
 
-      wsRef.current.send(new TextEncoder().encode(data))
-      if (debugEnabledRef.current) {
-        terminalDebugLog("input_sent", {
-          debugSessionId: debugSessionIdRef.current,
-          inputLength: data.length,
-        })
-      }
-      return true
-    },
-    [],
-  )
+    wsRef.current.send(new TextEncoder().encode(data))
+    if (debugEnabledRef.current) {
+      terminalDebugLog("input_sent", {
+        debugSessionId: debugSessionIdRef.current,
+        inputLength: data.length,
+      })
+    }
+    return true
+  }, [])
 
-const flushResize = useCallback(() => {
+  const flushResize = useCallback(() => {
     resizeTimeoutRef.current = null
     const next = pendingResizeRef.current
     pendingResizeRef.current = null
@@ -311,10 +313,10 @@ const flushResize = useCallback(() => {
   const capabilities: TerminalCapabilities = {
     connect: Boolean(url),
     reconnect: Boolean(url),
-    disconnect:
-      session.status === "connecting" || session.status === "open",
+    disconnect: session.status === "connecting" || session.status === "open",
     sendInput: Boolean(url),
-    directInput: Boolean(url) && allowDirectInput && defaultInputMode === "direct",
+    directInput:
+      Boolean(url) && allowDirectInput && defaultInputMode === "direct",
     paste: Boolean(url) && allowPaste,
     sendResize: Boolean(url) && allowResize,
     transcript: true,

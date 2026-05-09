@@ -1,5 +1,5 @@
-import type { TerminalCapabilities } from "@/hooks/useTerminalSession"
 import { Badge } from "@/components/ui/badge"
+import type { TerminalCapabilities } from "@/hooks/useTerminalSession"
 import type {
   TerminalConnectionStatus,
   TerminalSessionState,
@@ -69,7 +69,11 @@ export function TerminalStatusBar({
       <span>{endpointLabel}</span>
       <span>{inputLabel}</span>
       <span>{resizeLabel}</span>
-      <span>{capabilities?.reconnect ? "Socket reconnect ready" : "Reconnect unavailable"}</span>
+      <span>
+        {capabilities?.reconnect
+          ? "Socket reconnect ready"
+          : "Reconnect unavailable"}
+      </span>
       <span>{session.frames.length} frames</span>
       {session.lastFrameAt ? (
         <span>Last activity {session.lastFrameAt.toLocaleTimeString()}</span>

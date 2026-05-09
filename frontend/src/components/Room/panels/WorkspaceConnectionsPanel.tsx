@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { AlertCircle, ExternalLink, LoaderCircle, RefreshCw } from "lucide-react"
+import {
+  AlertCircle,
+  ExternalLink,
+  LoaderCircle,
+  RefreshCw,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 import type { RoomWorkspaceConnectionPurpose } from "@/client"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { useRoomWorkspaceConnection } from "@/hooks/useRoomWorkspaceConnection"
 import { cn } from "@/lib/utils"
 import {
@@ -21,7 +27,6 @@ import {
   RoomWorkspaceRuntimeInvokeError,
   type RoomWorkspaceRuntimeInvokeResponseViewModel,
 } from "@/services/roomService"
-import { Textarea } from "@/components/ui/textarea"
 import { PanelContainer } from "../primitives"
 
 interface WorkspaceConnectionsPanelProps {
@@ -267,8 +272,9 @@ export function WorkspaceConnectionsPanel({
   }
 
   const connectedRuntimeLabel =
-    currentConnection?.endpoints.find((endpoint) => endpoint.kind === "agent-runtime")
-      ?.label ?? "Connected Runtime"
+    currentConnection?.endpoints.find(
+      (endpoint) => endpoint.kind === "agent-runtime",
+    )?.label ?? "Connected Runtime"
 
   return (
     <PanelContainer
@@ -420,7 +426,8 @@ export function WorkspaceConnectionsPanel({
                             {endpoint.label}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {getEndpointKindLabel(endpoint)} · {endpoint.protocol}
+                            {getEndpointKindLabel(endpoint)} ·{" "}
+                            {endpoint.protocol}
                             {endpoint.auth_mode
                               ? ` · ${endpoint.auth_mode}`
                               : ""}
@@ -446,7 +453,9 @@ export function WorkspaceConnectionsPanel({
                           </a>
                         ) : endpoint.url ? (
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">Backend-routed invoke</Badge>
+                            <Badge variant="outline">
+                              Backend-routed invoke
+                            </Badge>
                             <a
                               href={endpoint.url}
                               target="_blank"
@@ -502,7 +511,9 @@ export function WorkspaceConnectionsPanel({
                     path instead of opening the runtime endpoint manually.
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    Runtime: {runtimeInvokeResult?.runtime_label ?? connectedRuntimeLabel}
+                    Runtime:{" "}
+                    {runtimeInvokeResult?.runtime_label ??
+                      connectedRuntimeLabel}
                     {runtimeInvokeResult?.runtime_profile
                       ? ` · Profile ${runtimeInvokeResult.runtime_profile}`
                       : ""}
@@ -840,13 +851,15 @@ export function WorkspaceConnectionsPanel({
                                 {endpoint.label}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {getEndpointKindLabel(endpoint)} · {endpoint.protocol}
+                                {getEndpointKindLabel(endpoint)} ·{" "}
+                                {endpoint.protocol}
                                 {endpoint.auth_mode
                                   ? ` · ${endpoint.auth_mode}`
                                   : ""}
                               </div>
                             </div>
-                            {endpoint.url && endpoint.kind !== "agent-runtime" ? (
+                            {endpoint.url &&
+                            endpoint.kind !== "agent-runtime" ? (
                               <a
                                 href={endpoint.url}
                                 target="_blank"
@@ -858,7 +871,9 @@ export function WorkspaceConnectionsPanel({
                               </a>
                             ) : endpoint.url ? (
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline">Backend-routed invoke</Badge>
+                                <Badge variant="outline">
+                                  Backend-routed invoke
+                                </Badge>
                                 <a
                                   href={endpoint.url}
                                   target="_blank"

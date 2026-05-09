@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 
 interface ProviderTemplateCardProps {
   providerType: LLMProviderTypePublic
-  isConfigured: boolean
+  configuredCount: number
   isSelected: boolean
   onSelect: (providerType: LLMProviderTypePublic) => void
 }
@@ -20,7 +20,7 @@ const FALLBACK_ACCENTS: Record<string, string> = {
 
 export function ProviderTemplateCard({
   providerType,
-  isConfigured,
+  configuredCount,
   isSelected,
   onSelect,
 }: ProviderTemplateCardProps) {
@@ -61,10 +61,10 @@ export function ProviderTemplateCard({
               "Template"}
           </p>
         </div>
-        {isConfigured ? (
+        {configuredCount > 0 ? (
           <Badge variant="secondary" className="gap-1 whitespace-nowrap">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            Configured
+            {configuredCount} added
           </Badge>
         ) : null}
       </div>
@@ -108,7 +108,7 @@ export function ProviderTemplateCard({
           )}
           <Button size="sm" className="gap-1">
             <Plus className="h-3.5 w-3.5" />
-            {isConfigured ? "Add another" : "Set up"}
+            {configuredCount > 0 ? "Create another" : "Set up"}
           </Button>
         </div>
       </div>

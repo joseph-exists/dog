@@ -84,7 +84,9 @@ function normalizeHermesRuntimePreset(runtimePreset: string | null): string {
     : "hermes_typer"
 }
 
-function getDefaultAgentRuntimePreset(agentProfile: string | null): string | null {
+function getDefaultAgentRuntimePreset(
+  agentProfile: string | null,
+): string | null {
   if (agentProfile === "codex") return "codex_typer"
   if (agentProfile === "claude_code") return "claude_code_typer"
   if (agentProfile === "hermes") return "hermes_typer"
