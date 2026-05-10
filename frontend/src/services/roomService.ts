@@ -609,7 +609,8 @@ function transformRoomWorkspaceRuntimeInvokeResponse(
     protocol: response.protocol,
     success: response.success,
     output_text: response.output_text,
-    message_id: typeof response.message_id === "string" ? response.message_id : null,
+    message_id:
+      typeof response.message_id === "string" ? response.message_id : null,
   }
 }
 

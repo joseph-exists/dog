@@ -27,11 +27,10 @@ export function TerminalBlock({
     setViewport,
     capabilities,
     debugSessionId,
-  } =
-    useTerminalSession({
-      url: terminalUrl ?? null,
-      enabled: Boolean(terminalUrl) && mode === "live",
-    })
+  } = useTerminalSession({
+    url: terminalUrl ?? null,
+    enabled: Boolean(terminalUrl) && mode === "live",
+  })
   const handleViewportChange = useCallback(
     (cols: number, rows: number) => {
       setViewport(cols, rows)

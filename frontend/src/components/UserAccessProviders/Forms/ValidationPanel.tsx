@@ -17,12 +17,14 @@ interface ValidationPanelProps {
   provider: UserAccessProviderPublic
   providerTypeName: string
   onValidated: (result: DetailedTestResult) => void
+  embedded?: boolean
 }
 
 export function ValidationPanel({
   provider,
   providerTypeName,
   onValidated,
+  embedded = false,
 }: ValidationPanelProps) {
   const queryClient = useQueryClient()
   const [lastDetailedResult, setLastDetailedResult] =
@@ -63,48 +65,38 @@ export function ValidationPanel({
   })
 
   const currentResult = lastDetailedResult
+  const actions = (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => quickTestMutation.mutate()}
+        disabled={quickTestMutation.isPending || detailedTestMutation.isPending}
+      >
+        {quickTestMutation.isPending ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <TestTube2 className="h-3.5 w-3.5" />
+        )}
+        Quick test
+      </Button>
+      <Button
+        size="sm"
+        onClick={() => detailedTestMutation.mutate()}
+        disabled={quickTestMutation.isPending || detailedTestMutation.isPending}
+      >
+        {detailedTestMutation.isPending ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <RefreshCcw className="h-3.5 w-3.5" />
+        )}
+        Validate and fetch models
+      </Button>
+    </div>
+  )
 
-  return (
-    <BlockContainer
-      title="Validation"
-      subtitle="Confirm the credentials work before you rely on them in agents or prompts."
-      variant="card"
-      density="default"
-      headerActions={
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => quickTestMutation.mutate()}
-            disabled={
-              quickTestMutation.isPending || detailedTestMutation.isPending
-            }
-          >
-            {quickTestMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <TestTube2 className="h-3.5 w-3.5" />
-            )}
-            Quick test
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => detailedTestMutation.mutate()}
-            disabled={
-              quickTestMutation.isPending || detailedTestMutation.isPending
-            }
-          >
-            {detailedTestMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCcw className="h-3.5 w-3.5" />
-            )}
-            Fetch diagnostics
-          </Button>
-        </div>
-      }
-      bodyClassName="space-y-4"
-    >
+  const content = (
+    <>
       <div className="rounded-xl border bg-muted/20 px-4 py-3">
         <div className="flex items-start gap-3">
           <div
@@ -158,6 +150,36 @@ export function ValidationPanel({
       ) : null}
 
       {currentResult ? <ValidationDiagnostics result={currentResult} /> : null}
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div className="space-y-4 rounded-lg border bg-background/70 px-4 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Validation</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Confirm the credentials work before agents or prompts use them.
+            </p>
+          </div>
+          {actions}
+        </div>
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <BlockContainer
+      title="Validation"
+      subtitle="Confirm the credentials work before you rely on them in agents or prompts."
+      variant="card"
+      density="default"
+      headerActions={actions}
+      bodyClassName="space-y-4"
+    >
+      {content}
     </BlockContainer>
   )
 }

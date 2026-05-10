@@ -123,9 +123,7 @@ export function appendTerminalFrame(
   const allAnsiChunks = [...session.ansiChunks, frame.ansiText]
   const droppedFrames = Math.max(0, allFrames.length - maxFrames)
   const nextFrames = allFrames.slice(-maxFrames)
-  const nextAnsiChunks = allAnsiChunks.slice(
-    -maxFrames,
-  )
+  const nextAnsiChunks = allAnsiChunks.slice(-maxFrames)
 
   const { value: nextPlainText, droppedChars } = trimToMaxChars(
     nextFrames.map((item) => item.text).join(""),

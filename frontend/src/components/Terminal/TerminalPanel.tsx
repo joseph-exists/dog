@@ -9,10 +9,10 @@ import { TerminalStatusBar } from "./TerminalStatusBar"
 import { TerminalToolbar } from "./TerminalToolbar"
 import {
   DEFAULT_TERMINAL_VIEWER_PREFERENCES,
+  TerminalViewer,
   type TerminalViewerPreferences,
   type TerminalViewerThemePreset,
   type TerminalViewerWrapMode,
-  TerminalViewer,
 } from "./TerminalViewer"
 
 type TerminalAdjacentTab = {
@@ -59,7 +59,9 @@ export function TerminalPanel({
   endpointFetchedAt,
   className,
 }: TerminalPanelProps) {
-  const perfIdRef = useRef<string>(`terminal-panel-${Math.random().toString(36).slice(2, 10)}`)
+  const perfIdRef = useRef<string>(
+    `terminal-panel-${Math.random().toString(36).slice(2, 10)}`,
+  )
   const [activeTab, setActiveTab] = useState<string>("live")
   const [draftInput, setDraftInput] = useState("")
   const [fontSize, setFontSize] = useState(
@@ -194,10 +196,7 @@ export function TerminalPanel({
 
   const headerActions = (
     <div className="flex flex-wrap items-center gap-2">
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value)}
-      >
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value)}>
         <TabsList
           className="grid w-auto"
           style={{
@@ -290,7 +289,7 @@ export function TerminalPanel({
   )
 
   return (
-      <PanelContainer
+    <PanelContainer
       title={title}
       className={cn("h-full rounded-xl border bg-card", className)}
       headerActions={headerActions}
@@ -358,7 +357,8 @@ export function TerminalPanel({
             />
           ) : (
             <div className="h-full overflow-y-auto p-4">
-              {adjacentTabs.find((tab) => tab.id === activeTab)?.content ?? null}
+              {adjacentTabs.find((tab) => tab.id === activeTab)?.content ??
+                null}
             </div>
           )}
         </div>
@@ -392,8 +392,8 @@ export function TerminalPanel({
           <div className="border-t border-border/70 px-3 py-2 text-xs text-muted-foreground">
             Live terminal supports direct shell input. Reconnect recovers the
             websocket transport, while Request fresh endpoint asks for a new
-            terminal descriptor. Runtime diagnostics are available in the Runtime
-            tab.
+            terminal descriptor. Runtime diagnostics are available in the
+            Runtime tab.
           </div>
         ) : null}
       </div>
@@ -409,7 +409,8 @@ type PerfLogPayload = {
 }
 
 function performanceMark(name: string) {
-  if (typeof window === "undefined" || typeof performance === "undefined") return
+  if (typeof window === "undefined" || typeof performance === "undefined")
+    return
   performance.mark(name)
 }
 

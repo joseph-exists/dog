@@ -105,8 +105,8 @@ export function ImportRepoDialog({ trigger }: ImportRepoDialogProps) {
             Import Repository
           </DialogTitle>
           <DialogDescription>
-            Add an external repository to the platform workspace. Import
-            runs asynchronously after submission.
+            Add an external repository to the platform workspace. Import runs
+            asynchronously after submission.
           </DialogDescription>
         </DialogHeader>
 

@@ -871,6 +871,7 @@ const panelRenderers: Record<RuntimeDemoPanelKind, DemoPanelRenderer> = {
     ),
   debug: (_panel, ctx) => (
     <DebugPanel
+      roomId={ctx.roomId}
       messages={ctx.debugMessages}
       streamingMessage={ctx.streamingMessage}
       isConnected={ctx.isConnected}

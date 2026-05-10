@@ -251,7 +251,9 @@ function normalizeHermesRuntimePreset(runtimePreset: string | null): string {
     : "hermes_typer"
 }
 
-function getDefaultAgentRuntimePreset(agentProfile: string | null): string | null {
+function getDefaultAgentRuntimePreset(
+  agentProfile: string | null,
+): string | null {
   if (agentProfile === "codex") return "codex_typer"
   if (agentProfile === "claude_code") return "claude_code_typer"
   if (agentProfile === "hermes") return "hermes_typer"
@@ -842,13 +844,15 @@ export const WorkspaceService = {
     }
 
     const repoSource =
-      normalizedInput.repoSourceType === "external_url" && normalizedInput.repoUrl
+      normalizedInput.repoSourceType === "external_url" &&
+      normalizedInput.repoUrl
         ? ({
             type: "external_url" as const,
             repo_url: normalizedInput.repoUrl,
             ref: normalizedInput.repoRef ?? undefined,
           } satisfies WorkspaceExternalUrlRepoSource)
-        : normalizedInput.repoSourceType === "user_repo" && normalizedInput.userRepoId
+        : normalizedInput.repoSourceType === "user_repo" &&
+            normalizedInput.userRepoId
           ? ({
               type: "user_repo" as const,
               repo_id: normalizedInput.userRepoId,
@@ -874,7 +878,8 @@ export const WorkspaceService = {
       normalizedInput.bootstrapProfile ||
       (normalizedInput.runtimeFiles &&
         Object.keys(normalizedInput.runtimeFiles).length > 0) ||
-      (normalizedInput.envVars && Object.keys(normalizedInput.envVars).length > 0)
+      (normalizedInput.envVars &&
+        Object.keys(normalizedInput.envVars).length > 0)
         ? ({
             repo_source: repoSource ?? undefined,
             workspace_path: normalizedInput.workspacePath ?? undefined,

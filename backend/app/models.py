@@ -4613,6 +4613,106 @@ class RoomMessagesPublic(SQLModel):
 
 
 # ============================================================================
+# Agent Invocation Audit Models
+# ============================================================================
+
+
+class AgentInvocationBase(SQLModel):
+    """Shared fields for persisted agent invocation audit records."""
+
+    room_id: uuid.UUID = Field(foreign_key="rooms.room_id", nullable=False, index=True)
+    agent_slug: str = Field(max_length=255, nullable=False, index=True)
+    trigger_message: str
+    trigger_source: str = Field(default="room_message", max_length=50, index=True)
+    a2a_depth: int = Field(default=0)
+    acting_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", index=True)
+    room_context_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False),
+    )
+    story_runtime_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    full_prompt: str | None = None
+    full_prompt_redacted: str | None = None
+    prompt_sha256: str = Field(max_length=64, nullable=False, index=True)
+    prompt_builder_version: str = Field(max_length=100, nullable=False)
+    model_name: str | None = Field(default=None, max_length=255)
+    runtime_prompt_payload: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    runtime_prompt_provenance: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    request_limit: int | None = None
+    response_text: str | None = None
+    response_event_id: uuid.UUID | None = Field(default=None, foreign_key="room_events.event_id", index=True)
+    response_message_id: uuid.UUID | None = Field(default=None, foreign_key="room_messages.message_id", index=True)
+    success: bool | None = Field(default=None, index=True)
+    error: str | None = None
+    started_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    completed_at: datetime | None = None
+
+
+class AgentInvocation(AgentInvocationBase, table=True):
+    """Queryable audit record for exact model-facing agent inputs."""
+
+    __tablename__ = "agent_invocations"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
+class AgentInvocationPublic(SQLModel):
+    """Redacted-safe API response for agent invocation debug views."""
+
+    id: uuid.UUID
+    room_id: uuid.UUID
+    agent_slug: str
+    trigger_message: str
+    trigger_source: str
+    a2a_depth: int
+    acting_user_id: uuid.UUID | None = None
+    room_context_json: dict[str, Any]
+    story_runtime_json: dict[str, Any] | None = None
+    full_prompt: str | None = None
+    full_prompt_redacted: str | None = None
+    prompt_sha256: str
+    prompt_builder_version: str
+    model_name: str | None = None
+    runtime_prompt_payload: dict[str, Any] | None = None
+    runtime_prompt_provenance: dict[str, Any] | None = None
+    request_limit: int | None = None
+    response_text: str | None = None
+    response_event_id: uuid.UUID | None = None
+    response_message_id: uuid.UUID | None = None
+    success: bool | None = None
+    error: str | None = None
+    started_at: datetime
+    completed_at: datetime | None = None
+
+
+class AgentInvocationSummaryPublic(SQLModel):
+    """Compact redacted invocation row for room debug lists."""
+
+    id: uuid.UUID
+    room_id: uuid.UUID
+    agent_slug: str
+    trigger_source: str
+    a2a_depth: int
+    prompt_sha256: str
+    prompt_builder_version: str
+    model_name: str | None = None
+    response_event_id: uuid.UUID | None = None
+    response_message_id: uuid.UUID | None = None
+    success: bool | None = None
+    error: str | None = None
+    started_at: datetime
+    completed_at: datetime | None = None
+    story_runtime_json: dict[str, Any] | None = None
+
+
+class AgentInvocationsPublic(SQLModel):
+    """Collection response for agent invocation debug lists."""
+
+    data: list[AgentInvocationSummaryPublic]
+    count: int
+
+
+# ============================================================================
 # Page Layout Models (Agent-Authored Pages)
 # ============================================================================
 

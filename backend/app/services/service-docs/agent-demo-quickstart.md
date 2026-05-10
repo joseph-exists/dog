@@ -159,7 +159,7 @@ EOF
 **Agent 1: Topic Analyzer**
 ```json
 {
-  "name": "Topic Analyzer",
+  "name": "TopicAnalyzer",
   "slug": "topic-analyzer",
   "description": "Analyzes topics and routes to domain experts",
   "model_name": "openai:gpt-4o-mini",
@@ -174,7 +174,7 @@ EOF
 **Agent 2: Tech Expert**
 ```json
 {
-  "name": "Tech Expert",
+  "name": "TechExpert",
   "slug": "tech-expert",
   "description": "Provides technical and programming expertise",
   "model_name": "openai:gpt-4o-mini",
@@ -189,7 +189,7 @@ EOF
 **Agent 3: Creative Expert**
 ```json
 {
-  "name": "Creative Expert",
+  "name": "CreativeExpert",
   "slug": "creative-expert",
   "description": "Provides creative and writing expertise",
   "model_name": "openai:gpt-4o-mini",
@@ -243,7 +243,7 @@ done
 **Coordinator Agent**
 ```json
 {
-  "name": "Room Director",
+  "name": "RoomDirector",
   "slug": "room-director",
   "description": "Coordinates room conversations and routes to specialists",
   "model_name": "openai:gpt-4o-mini",
@@ -258,7 +258,7 @@ done
 **Specialist 1: Data Analyst**
 ```json
 {
-  "name": "Data Analyst",
+  "name": "DataAnalyst",
   "slug": "data-analyst",
   "description": "Specializes in data analysis and metrics",
   "model_name": "openai:gpt-4o-mini",
@@ -273,7 +273,7 @@ done
 **Specialist 2: Content Writer**
 ```json
 {
-  "name": "Content Writer",
+  "name": "ContentWriter",
   "slug": "content-writer",
   "description": "Specializes in writing and content creation",
   "model_name": "openai:gpt-4o-mini",
@@ -281,7 +281,7 @@ done
   "is_coordinator": false,
   "capabilities": ["writing", "editing", "content", "copywriting"],
   "scope": "system",
-  "system_prompt": "You are a Content Writer specialist. When the Room Director mentions you:\n\n1. Focus specifically on writing and content aspects\n2. Provide examples and templates\n3. Use 'quote' UI component for example text\n4. Use 'list' UI component for writing tips\n5. Offer before/after comparisons when helpful\n\nStay in your lane - don't provide data analysis advice."
+  "system_prompt": "You are a ContentWriter specialist. When the Room Director mentions you:\n\n1. Focus specifically on writing and content aspects\n2. Provide examples and templates\n3. Use 'quote' UI component for example text\n4. Use 'list' UI component for writing tips\n5. Offer before/after comparisons when helpful\n\nStay in your lane - don't provide data analysis advice."
 }
 ```
 
@@ -332,7 +332,7 @@ done
 **Primary Agent: Story Analyst**
 ```json
 {
-  "name": "Story Analyst",
+  "name": "StoryAnalyst",
   "slug": "story-analyst",
   "description": "Analyzes stories by consulting domain experts",
   "model_name": "openai:gpt-4o-mini",
@@ -347,7 +347,7 @@ done
 **Consultation Expert 1: Plot Expert**
 ```json
 {
-  "name": "Plot Expert",
+  "name": "PlotExpert",
   "slug": "plot-expert",
   "description": "Expert in story structure and plot development",
   "model_name": "openai:gpt-4o-mini",
@@ -362,7 +362,7 @@ done
 **Consultation Expert 2: Character Expert**
 ```json
 {
-  "name": "Character Expert",
+  "name": "CharacterExpert",
   "slug": "character-expert",
   "description": "Expert in character development and psychology",
   "model_name": "openai:gpt-4o-mini",
@@ -413,7 +413,7 @@ Use agents from Demos 4 and 5, plus add a **Meta-Coordinator**:
 **Meta-Coordinator**
 ```json
 {
-  "name": "Demo Orchestrator",
+  "name": "DemoOrchestrator",
   "slug": "demo-orchestrator",
   "description": "Master coordinator for full-feature demonstration",
   "model_name": "openai:gpt-4o-mini",
@@ -495,7 +495,7 @@ Authorization: Bearer $TOKEN
 Content-Type: application/json
 
 {
-  "name": "Agent Name",
+  "name": "AgentName",
   "slug": "agent-slug",
   "description": "What the agent does",
   "model_name": "openai:gpt-4o-mini",

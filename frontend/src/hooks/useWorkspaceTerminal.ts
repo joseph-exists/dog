@@ -20,15 +20,24 @@ function classifyTerminalEndpointState(
   enabled: boolean,
 ): { state: WorkspaceTerminalEndpointState; message: string | null } {
   if (!enabled) {
-    return { state: "idle", message: "Terminal endpoint has not been requested yet." }
+    return {
+      state: "idle",
+      message: "Terminal endpoint has not been requested yet.",
+    }
   }
 
   if (isLoading) {
-    return { state: "loading", message: "Requesting terminal endpoint descriptor." }
+    return {
+      state: "loading",
+      message: "Requesting terminal endpoint descriptor.",
+    }
   }
 
   if (hasTerminalDescriptor) {
-    return { state: "available", message: "Terminal endpoint descriptor is active." }
+    return {
+      state: "available",
+      message: "Terminal endpoint descriptor is active.",
+    }
   }
 
   if (error instanceof ApiError) {
@@ -41,13 +50,15 @@ function classifyTerminalEndpointState(
     if (error.status === 410 || error.status === 412) {
       return {
         state: "expired",
-        message: "Terminal endpoint expired. Request a fresh endpoint descriptor.",
+        message:
+          "Terminal endpoint expired. Request a fresh endpoint descriptor.",
       }
     }
     if (error.status === 404) {
       return {
         state: "unavailable",
-        message: "Terminal endpoint is unavailable. Request a fresh endpoint descriptor.",
+        message:
+          "Terminal endpoint is unavailable. Request a fresh endpoint descriptor.",
       }
     }
     return {

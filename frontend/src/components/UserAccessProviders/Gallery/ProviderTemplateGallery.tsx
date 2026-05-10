@@ -55,16 +55,16 @@ export function ProviderTemplateGallery({
 
   return (
     <BlockContainer
-      title="Provider templates"
-      subtitle="Start from a curated template, then expand into adapter controls only when you need them."
+      title="Add a provider"
+      subtitle="Choose a provider type, add credentials, then validate the connection."
       variant="card"
       density="comfortable"
       headerActions={
         <div className="flex items-center gap-3 rounded-full border bg-background px-3 py-1.5">
           <div className="text-right">
-            <p className="text-xs font-medium">Power user mode</p>
+            <p className="text-xs font-medium">Show advanced setup</p>
             <p className="text-[11px] text-muted-foreground">
-              Skip templates, edit raw settings
+              Show adapter and transport fields
             </p>
           </div>
           <Switch

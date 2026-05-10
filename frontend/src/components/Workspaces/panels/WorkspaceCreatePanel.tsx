@@ -1,13 +1,8 @@
-import { useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import type { WorkspaceFlavour } from "@/client"
 import { Button } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import {
   Card,
   CardContent,
@@ -15,6 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -138,7 +138,9 @@ function resolveRuntimeSummary(params: {
   const preset = runtimePreset === "none" ? null : runtimePreset
   const basePreset = getRuntimePresetBase(preset)
   const typerNotes = hasTyperEnv(preset)
-    ? ["This preset injects `TINYFOOT_API_URL` so the workspace Typer CLI can call the backend."]
+    ? [
+        "This preset injects `TINYFOOT_API_URL` so the workspace Typer CLI can call the backend.",
+      ]
     : []
   const hasBootstrapProfileOverride = bootstrapProfile.trim().length > 0
 
@@ -214,8 +216,7 @@ function resolveRuntimeSummary(params: {
         : "Backend agent-runtime bootstrap plan owns startup.",
       startupProcess:
         "Provisioning launches the backend Codex agent-runtime command (`codex`), not `codex exec`. Do not assume a bootstrap profile field alone changes that command.",
-      codexExecRole:
-        "`codex exec` is still never auto-started by this flow.",
+      codexExecRole: "`codex exec` is still never auto-started by this flow.",
       notes: hasBootstrapProfileOverride
         ? [
             "Bootstrap profile overrides are operator-level knobs.",
@@ -235,8 +236,7 @@ function resolveRuntimeSummary(params: {
         startupOwner: "Kennel runtime preset/profile owns startup.",
         startupProcess:
           "Provisioning launches kennel's Hermes runtime profile, which starts `~/.hermes/hermes-agent-launcher` (fallback to legacy `~/.hermes/hermes-agent`, then `hermes` / `hermes-agent`) as a websocket gateway runtime on port `4319`.",
-        codexExecRole:
-          "`codex exec` is not involved in this runtime path.",
+        codexExecRole: "`codex exec` is not involved in this runtime path.",
         notes: [
           "This is the default Hermes runtime-preset path.",
           "Kennel also writes default Hermes runtime files to `/home/dev/.hermes/config.yaml`, `/home/dev/.hermes/.env`, and `/home/dev/.hermes/hermes-agent-launcher`.",
@@ -256,8 +256,7 @@ function resolveRuntimeSummary(params: {
     flavourOutcome,
     startupOwner: "Backend agent-runtime bootstrap plan owns startup.",
     startupProcess: `Provisioning launches ${backendAgentCommand} as the long-running agent runtime for the selected profile \`${agentProfile}\`.`,
-    codexExecRole:
-      "`codex exec` is not involved in this runtime path.",
+    codexExecRole: "`codex exec` is not involved in this runtime path.",
     notes: [
       "Agent Runtime startup is for long-running workspace services rather than one-shot terminal commands.",
       ...typerNotes,
@@ -311,10 +310,7 @@ export function WorkspaceCreatePanel({
       setRuntimePreset(agentPreset)
       return
     }
-    if (
-      agentProfile === "hermes" &&
-      !isHermesRuntimePreset(runtimePreset)
-    ) {
+    if (agentProfile === "hermes" && !isHermesRuntimePreset(runtimePreset)) {
       setRuntimePreset(agentPreset)
     }
   }, [agentProfile, runtimePreset, startupMode])
@@ -363,7 +359,10 @@ export function WorkspaceCreatePanel({
       sshPubkey,
       envVarsText,
       bootstrapProfile,
-      runtimeFiles: runtimeFiles.map(({ path, content }) => ({ path, content })),
+      runtimeFiles: runtimeFiles.map(({ path, content }) => ({
+        path,
+        content,
+      })),
     })
     setName("")
     setRuntimePreset("none")
@@ -698,7 +697,9 @@ export function WorkspaceCreatePanel({
 
           <div className="space-y-3 rounded-xl border bg-background/85 p-4">
             <div className="space-y-1">
-              <div className="text-sm font-medium">Resolved Runtime Behavior</div>
+              <div className="text-sm font-medium">
+                Resolved Runtime Behavior
+              </div>
               <p className="text-xs text-muted-foreground">
                 This explains what the current combination of preset, startup
                 mode, and advanced overrides actually does at provision time.
@@ -710,13 +711,17 @@ export function WorkspaceCreatePanel({
                 <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Base Image
                 </div>
-                <p className="text-sm leading-6">{resolvedRuntime.flavourOutcome}</p>
+                <p className="text-sm leading-6">
+                  {resolvedRuntime.flavourOutcome}
+                </p>
               </div>
               <div className="space-y-1">
                 <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Startup Owner
                 </div>
-                <p className="text-sm leading-6">{resolvedRuntime.startupOwner}</p>
+                <p className="text-sm leading-6">
+                  {resolvedRuntime.startupOwner}
+                </p>
               </div>
               <div className="space-y-1 md:col-span-2">
                 <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
@@ -741,7 +746,10 @@ export function WorkspaceCreatePanel({
                 Notes
               </div>
               {resolvedRuntime.notes.map((note) => (
-                <p key={note} className="text-xs leading-5 text-muted-foreground">
+                <p
+                  key={note}
+                  className="text-xs leading-5 text-muted-foreground"
+                >
                   {note}
                 </p>
               ))}
@@ -863,7 +871,9 @@ export function WorkspaceCreatePanel({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor={`runtime-file-path-${entry.id}`}>Path</Label>
+                    <Label htmlFor={`runtime-file-path-${entry.id}`}>
+                      Path
+                    </Label>
                     <Input
                       id={`runtime-file-path-${entry.id}`}
                       value={entry.path}

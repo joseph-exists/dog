@@ -75,7 +75,12 @@ export function TerminalToolbar({
         Clear
       </Button>
       {onPaste ? (
-        <Button variant="ghost" size="sm" onClick={onPaste} disabled={!canPaste}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onPaste}
+          disabled={!canPaste}
+        >
           <ClipboardPaste className="mr-2 h-4 w-4" />
           Paste
         </Button>

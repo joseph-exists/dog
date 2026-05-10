@@ -15,6 +15,8 @@ import type {
 import { PanelContainer } from "../primitives/PanelContainer"
 
 interface DebugPanelProps {
+  /** Room id for exact backend invocation snapshots. */
+  roomId?: string
   /** Messages to analyze */
   messages: MessageViewModel[]
   /** Current streaming message from agent */
@@ -48,6 +50,7 @@ interface DebugPanelProps {
 }
 
 export function DebugPanel({
+  roomId,
   messages,
   streamingMessage,
   isConnected,
@@ -64,6 +67,7 @@ export function DebugPanel({
   const content = (
     <div className="p-4">
       <RoomDebugPanelContent
+        roomId={roomId}
         messages={messages}
         streamingMessage={streamingMessage}
         isConnected={isConnected}

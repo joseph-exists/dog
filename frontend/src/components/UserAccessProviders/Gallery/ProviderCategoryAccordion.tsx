@@ -61,10 +61,12 @@ export function ProviderCategoryAccordion({
             <ProviderTemplateCard
               key={providerType.id}
               providerType={providerType}
-              isConfigured={configuredProviders.some(
-                (provider) =>
-                  provider.alpha_provider_type_id === providerType.id,
-              )}
+              configuredCount={
+                configuredProviders.filter(
+                  (provider) =>
+                    provider.alpha_provider_type_id === providerType.id,
+                ).length
+              }
               isSelected={selectedProviderTypeId === providerType.id}
               onSelect={onSelect}
             />

@@ -21,13 +21,11 @@ function Dashboard() {
         <h1 className="text-2xl truncate max-w-sm">
           Hi, {currentUser?.full_name || currentUser?.email} 👋
         </h1>
-        <p className="text-muted-foreground">
-          Welcome back, nice to see you again!!!
-        </p>
+        <p className="text-muted-foreground"></p>
         <div>
           <h1 className="text-2xl truncate max-w-sm">
-            What do you think? Are you ready to answer some questions? Or are
-            you still wondering why you should?
+            Fast and Easy: Talk to a System Agent Still Fast, Still Easy: Roll
+            your own Agent Even Faster and Easier: Provider/Model Selection
           </h1>
           <p className="text-muted-foreground" />
         </div>

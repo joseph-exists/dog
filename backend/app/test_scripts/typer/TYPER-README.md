@@ -201,6 +201,21 @@ python -m backend.app.test_scripts.typer.main stories start-node STORY_ID --vers
 python -m backend.app.test_scripts.typer.main stories unpublish STORY_ID
 ```
 
+### Story Template Seeders
+
+```bash
+# Create the Project/workspace/repository review story and a bound demo
+./create_project_workspace_repo_review_story.sh
+
+# Only create the story, or publish it after validation
+./create_project_workspace_repo_review_story.sh --no-demo
+./create_project_workspace_repo_review_story.sh --publish
+
+# Create the project/workspace/repository review story (human-in-the-loop demo)
+python backend/app/test_scripts/story_things/formats/create_project_workspace_repo_review_story.py
+python backend/app/test_scripts/story_things/formats/create_project_workspace_repo_review_story.py --verbose
+```
+
 ### Story Progress (Playtesting)
 
 ```bash

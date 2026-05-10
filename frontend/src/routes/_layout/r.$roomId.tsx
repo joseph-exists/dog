@@ -685,6 +685,7 @@ function RoomView() {
     ),
     debug: () => (
       <DebugPanel
+        roomId={roomId}
         messages={messages}
         streamingMessage={streamingMessage}
         isConnected={isConnected}

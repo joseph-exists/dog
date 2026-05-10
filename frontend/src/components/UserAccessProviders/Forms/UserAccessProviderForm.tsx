@@ -194,16 +194,20 @@ export function UserAccessProviderForm({
   const title = provider
     ? `Edit ${provider.name}`
     : providerType
-      ? `Set up ${providerType.display_name || providerType.name}`
-      : "Create provider"
+      ? `Create new ${providerType.display_name || providerType.name} provider`
+      : "Select a provider type"
 
   return (
     <BlockContainer
       title={title}
       subtitle={
-        powerUserMode
-          ? "Raw adapter controls are visible. Tune the transport layer directly."
-          : "Start with the template defaults, then expand only where your account needs extra configuration."
+        provider
+          ? "Update this saved provider. Save changes before validating again."
+          : providerType
+            ? powerUserMode
+              ? "Advanced setup is enabled. Adapter and transport controls remain available below."
+              : "Add credentials using the template defaults, then validate the connection."
+            : "Choose a provider type from Add a provider to begin setup."
       }
       variant="card"
       density="comfortable"
@@ -227,165 +231,183 @@ export function UserAccessProviderForm({
     >
       <Form {...form}>
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Production OpenAI" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Friendly label used in selectors and setup flows.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="base_url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Base URL</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={
-                        providerType?.default_base_url ||
-                        "https://api.openai.com/v1"
-                      }
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Leave the template default unless your account uses a custom
-                    endpoint.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="api_key"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {provider ? "Replace API key" : "API key"}
-                </FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    placeholder="sk-..."
-                    autoComplete="off"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  {provider
-                    ? "Leave blank to keep the current encrypted key."
-                    : "Stored server-side and used only for this provider configuration."}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <ProviderConfigFields
-            providerType={providerType}
-            values={providerConfig}
-            onChange={(key, value) =>
-              setProviderConfig((current) => ({
-                ...current,
-                [key]: value,
-              }))
-            }
-          />
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    className="min-h-24"
-                    placeholder="What this provider is for, who owns it, or when to use it."
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="is_default"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Default provider</FormLabel>
-                    <FormDescription>
-                      Prefer this provider in new workflows.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="is_enabled"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Enabled</FormLabel>
-                    <FormDescription>
-                      Disable it without deleting the saved configuration.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <AdapterConfigSection form={form} />
-
-          {jsonError ? (
-            <p className="text-sm text-destructive">{jsonError}</p>
+          {!providerType && !provider ? (
+            <div className="rounded-lg border border-dashed px-4 py-8 text-center">
+              <p className="text-sm font-medium">No provider type selected</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Pick a template from Add a provider to create a saved
+                connection.
+              </p>
+            </div>
           ) : null}
 
-          <div className="flex items-center justify-between gap-3">
-            {!provider ? (
-              <Button type="button" variant="ghost" onClick={onCancelCreate}>
-                Clear draft
-              </Button>
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                Save changes before re-running validation.
-              </span>
-            )}
-            <LoadingButton type="submit" loading={isSaving}>
-              {provider ? "Save changes" : "Create provider"}
-            </LoadingButton>
-          </div>
+          {providerType || provider ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Production OpenAI" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Friendly label used in selectors and setup flows.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="base_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Base URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={
+                            providerType?.default_base_url ||
+                            "https://api.openai.com/v1"
+                          }
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Leave the template default unless your account uses a
+                        custom endpoint.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="api_key"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {provider ? "Replace API key" : "API key"}
+                    </FormLabel>
+                    <FormControl>
+                      <PasswordInput
+                        placeholder="sk-..."
+                        autoComplete="off"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {provider
+                        ? "Leave blank to keep the current encrypted key."
+                        : "Stored server-side and used only for this provider configuration."}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <ProviderConfigFields
+                providerType={providerType}
+                values={providerConfig}
+                onChange={(key, value) =>
+                  setProviderConfig((current) => ({
+                    ...current,
+                    [key]: value,
+                  }))
+                }
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        className="min-h-24"
+                        placeholder="What this provider is for, who owns it, or when to use it."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="is_default"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Default provider</FormLabel>
+                        <FormDescription>
+                          Prefer this provider in new workflows.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="is_enabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Enabled</FormLabel>
+                        <FormDescription>
+                          Disable it without deleting the saved configuration.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <AdapterConfigSection form={form} />
+
+              {jsonError ? (
+                <p className="text-sm text-destructive">{jsonError}</p>
+              ) : null}
+
+              <div className="flex items-center justify-between gap-3">
+                {!provider ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={onCancelCreate}
+                  >
+                    Clear draft
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Save changes before re-running validation.
+                  </span>
+                )}
+                <LoadingButton type="submit" loading={isSaving}>
+                  {provider ? "Save changes" : "Create provider"}
+                </LoadingButton>
+              </div>
+            </>
+          ) : null}
         </form>
       </Form>
     </BlockContainer>
