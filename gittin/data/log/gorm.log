@@ -186,3 +186,5 @@
 [0.127ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-fdf105b5-b2d4-435c-b593-dedf9ee4be13" ORDER BY `repository`.`id` LIMIT 1
 2026/05/09 20:47:20 gogs.io/gogs/internal/database/repositories.go:263 record not found
 [0.101ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-04b8d489-0e32-4830-86c7-417c8ebca5bc" ORDER BY `repository`.`id` LIMIT 1
+2026/05/09 21:07:05 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.127ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-e810ff11-a75d-4c22-8952-196144530bb9" ORDER BY `repository`.`id` LIMIT 1
