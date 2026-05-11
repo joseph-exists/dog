@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     lxc-utils \
     uidmap \
     bridge-utils \
+    cgroupfs-mount \
+    libpam-cgfs \
     iproute2 \
     iptables \
     dnsmasq \
@@ -23,7 +25,7 @@ RUN apt-get update && apt-get install -y \
 # LXC storage and runtime dirs
 RUN mkdir -p /var/lib/lxc /var/log/lxc /run/lxc
 
-# LXC default network config
+# LXC default network config: bridge networking
 COPY conf/lxc-default.conf /etc/lxc/default.conf
 COPY conf/lxc-usernet /etc/lxc/lxc-usernet
 COPY scripts/init.sh /opt/kennel/init.sh

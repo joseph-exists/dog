@@ -1,4 +1,4 @@
-# lxc-usernet — managed by kennel
-# Format: <username> <type> <bridge> <count>
-# Unprivileged container networking rules go here if/as needed
+# lxc-usernet - kennel runs as root (privileged), so this file is not consulted
+# for network veth allocation. The entry below is a harmless placeholder that
+# prevents LXC tooling warnings and future-proofs unprivileged container experiments.
 root veth lxcbr0 64

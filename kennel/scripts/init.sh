@@ -25,6 +25,15 @@ fi
 # Enable IP forwarding for container networking
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
+# Ensure lxc.pivot cgroup exists — LXC moves its monitor process here during
+# cleanup. Without it, failed starts leave stale lxc.monitor.* cgroup entries
+# that break every subsequent start of the same container.
+for cg_root in /sys/fs/cgroup /sys/fs/cgroup/unified; do
+  if [[ -d "${cg_root}" ]]; then
+    mkdir -p "${cg_root}/lxc.pivot" 2>/dev/null || true
+  fi
+done
+
 if ! iptables -t nat -C POSTROUTING -s "${LXC_SUBNET}" ! -d "${LXC_SUBNET}" -j MASQUERADE &>/dev/null; then
   iptables -t nat -A POSTROUTING -s "${LXC_SUBNET}" ! -d "${LXC_SUBNET}" -j MASQUERADE
 fi

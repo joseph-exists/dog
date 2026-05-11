@@ -18,8 +18,7 @@ import time
 from typing import Annotated, Literal
 
 import redis.asyncio as aioredis
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
-from fastapi.responses import StreamingResponse
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 import websockets
@@ -464,35 +463,15 @@ def _wait_for_attach_ready(
 
 def _start_env_container(name: str, *, kind: EnvKind) -> subprocess.CompletedProcess:
     """
-    Start a container, retrying without `-e` when the local LXC runtime does not
-    support ephemeral-start overlays.
+    Start a container with plain lxc-start.
 
-    Kennel already provisions ephemeral workspaces as overlay clones during
-    `lxc-copy -s -B overlay`, so a plain start is still the correct behavior on
-    hosts where `lxc-start -e` is unavailable.
+    Ephemerality is handled at creation time via `lxc-copy -s -B overlay`, so
+    lxc-start -e is never needed here — it would try to layer a second overlay
+    on an already-overlay-backed container, which causes lxc to create a monitor
+    cgroup and then abort without cleaning it up, leaving a stale cgroup entry
+    that breaks every subsequent start attempt on that container.
     """
-
-    start_args = ["lxc-start", "-n", name]
-    if kind != EnvKind.ephemeral:
-        return lxc(*start_args, timeout=30)
-
-    ephemeral_result = lxc(*start_args, "-e", timeout=30)
-    if ephemeral_result.returncode == 0:
-        return ephemeral_result
-
-    error_text = (
-        f"{ephemeral_result.stderr or ''}\n{ephemeral_result.stdout or ''}"
-    ).lower()
-    if (
-        "invalid option" in error_text and "'e'" in error_text
-    ) or "unrecognized option" in error_text:
-        logger.warning(
-            "lxc-start -e unsupported for env %s; retrying with plain lxc-start",
-            name,
-        )
-        return lxc(*start_args, timeout=30)
-
-    return ephemeral_result
+    return lxc("lxc-start", "-n", name, timeout=30)
 
 
 async def publish_event(env_name: str, event: str, data: dict = {}):

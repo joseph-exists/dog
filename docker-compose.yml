@@ -35,6 +35,7 @@ services:
       context: ./kennel
     restart: always
     privileged: true                        # required for LXC namespace control
+    cgroup: host                            # let nested LXC create/manage cgroups
     cap_add:
       - SYS_ADMIN
       - NET_ADMIN
