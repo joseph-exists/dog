@@ -86,8 +86,7 @@ const CreateStoryModal = () => {
           <DialogHeader>
             <DialogTitle>Create New Story</DialogTitle>
             <DialogDescription>
-              Begin crafting your adventure! Give your story a title and
-              description to get started.
+            Give your story a title and description to get started.
             </DialogDescription>
           </DialogHeader>
 
@@ -98,7 +97,7 @@ const CreateStoryModal = () => {
               </Label>
               <Input
                 id="title"
-                placeholder="The Dark Forest Adventure"
+                placeholder="Story or workflow title placeholder"
                 {...register("title", {
                   required: "Story title is required",
                   maxLength: {
@@ -119,7 +118,7 @@ const CreateStoryModal = () => {
               <Textarea
                 id="description"
                 rows={4}
-                placeholder="A spooky journey through an enchanted forest filled with mysteries and choices..."
+                placeholder="A spooky journey through an enchanted forest filled with mysteries and choices... or a workflow.  Woohoo."
                 {...register("description", {
                   maxLength: {
                     value: 500,

@@ -54,7 +54,7 @@ import type { NavItem, NavSection, SidebarUser } from "./types"
 const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", title: "Dashboard", path: "/", icon: Home },
   { id: "stories", title: "Story Desk", path: "/stories", icon: BookOpen },
-  { id: "story", title: "Library", path: "/story", icon: BookHeart },
+  { id: "story", title: "Story Library", path: "/story", icon: BookHeart },
   { id: "rooms", title: "Rooms", path: "/rooms", icon: MessageSquare },
   { id: "agents", title: "Agents", path: "/agents", icon: Bot },
   { id: "projects", title: "Projects", path: "/projects", icon: FolderKanban },

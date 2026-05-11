@@ -1,0 +1,54 @@
+{
+  "test_suite": "Story State Schema E2E Test Suite",
+  "start_time": "2026-05-11T05:19:18.011400",
+  "end_time": "2026-05-11T05:19:19.032421",
+  "duration_seconds": 1.021021,
+  "total_tests": 6,
+  "passed": 6,
+  "failed": 0,
+  "success_rate": "100.0%",
+  "tests": [
+    {
+      "name": "create_state_variables",
+      "passed": true,
+      "message": "Created 4 variables (boolean, number, string, enum)",
+      "details": {},
+      "timestamp": "2026-05-11T05:19:18.450065"
+    },
+    {
+      "name": "update_state_variable",
+      "passed": true,
+      "message": "Updated variable description and default_value",
+      "details": {},
+      "timestamp": "2026-05-11T05:19:18.483122"
+    },
+    {
+      "name": "delete_state_variable",
+      "passed": true,
+      "message": "Deleted variable, count now 3",
+      "details": {},
+      "timestamp": "2026-05-11T05:19:18.516571"
+    },
+    {
+      "name": "detect_undefined_variables",
+      "passed": true,
+      "message": "Detected 3 undefined variables: another_undefined, undefined_var_2, undefined_var_1",
+      "details": {},
+      "timestamp": "2026-05-11T05:19:18.704267"
+    },
+    {
+      "name": "recognize_defined_variables",
+      "passed": true,
+      "message": "Correctly recognized defined variable: defined_var",
+      "details": {},
+      "timestamp": "2026-05-11T05:19:18.704312"
+    },
+    {
+      "name": "valid_schema_passes",
+      "passed": true,
+      "message": "Validation passed with 0 undefined variables",
+      "details": {},
+      "timestamp": "2026-05-11T05:19:19.032361"
+    }
+  ]
+}

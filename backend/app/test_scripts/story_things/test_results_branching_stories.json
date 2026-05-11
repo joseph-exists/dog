@@ -1,0 +1,92 @@
+{
+  "test_suite": "Branching Stories E2E Test Suite",
+  "start_time": "2026-05-11T05:20:03.217501",
+  "end_time": "2026-05-11T05:20:07.114142",
+  "duration_seconds": 3.896641,
+  "stories_created": [],
+  "total_tests": 10,
+  "passed": 5,
+  "failed": 5,
+  "success_rate": "50.0%",
+  "test_entities": {},
+  "tests": [
+    {
+      "name": "create_story",
+      "passed": true,
+      "message": "Story created: \"Test Story Zed Title\" (ID: dc033b1c...), version 1",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:03.588130"
+    },
+    {
+      "name": "test_story_zed",
+      "passed": false,
+      "message": "Failed to publish story: {\"detail\":{\"message\":\"Story has undefined state variables\",\"undefined_variables\":[\"courage\",\"path\"],\"error_count\":4,\"hint\":\"Define these variables in the state schema or use force=true to publish anyway\"}}",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:03.761339"
+    },
+    {
+      "name": "create_story",
+      "passed": true,
+      "message": "Story created: \"The Enchanted Forest\" (ID: f2706512...), version 1",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:03.817704"
+    },
+    {
+      "name": "enchanted_forest_complete",
+      "passed": false,
+      "message": "Failed to publish story: {\"detail\":{\"message\":\"Story has undefined state variables\",\"undefined_variables\":[\"kindness\",\"nature_affinity\",\"magic_affinity\",\"courage\",\"path\",\"shadow_affinity\",\"wisdom\"],\"error_count\":9,\"hint\":\"Define these variables in the state schema or use force=true to publish anyway\"}}",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:04.236001"
+    },
+    {
+      "name": "create_story",
+      "passed": true,
+      "message": "Story created: \"The Dragon's Hoard\" (ID: 8ec92abe...), version 1",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:04.290825"
+    },
+    {
+      "name": "dragons_hoard_complete",
+      "passed": false,
+      "message": "Failed to publish story: {\"detail\":{\"message\":\"Story has undefined state variables\",\"undefined_variables\":[\"warrior_spirit\",\"combat_ready\",\"approach\",\"stealing\",\"diplomatic\",\"outcome\",\"shadow_affinity\",\"wisdom\"],\"error_count\":17,\"hint\":\"Define these variables in the state schema or use force=true to publish anyway\"}}",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:04.980121"
+    },
+    {
+      "name": "create_story",
+      "passed": true,
+      "message": "Story created: \"The Time Traveler's Dilemma\" (ID: 4bf4687f...), version 1",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:05.039823"
+    },
+    {
+      "name": "time_traveler_complete",
+      "passed": false,
+      "message": "Failed to publish story: {\"detail\":{\"message\":\"Story has undefined state variables\",\"undefined_variables\":[\"rebellion\",\"valor\",\"role\",\"outcome\",\"time_period\",\"justice\",\"wisdom\",\"craftsmanship\",\"divinity\",\"era\"],\"error_count\":24,\"hint\":\"Define these variables in the state schema or use force=true to publish anyway\"}}",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:06.063902"
+    },
+    {
+      "name": "create_story",
+      "passed": true,
+      "message": "Story created: \"The Detective's Case\" (ID: 3772b3bc...), version 1",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:06.124539"
+    },
+    {
+      "name": "detective_case_complete",
+      "passed": false,
+      "message": "Failed to publish story: {\"detail\":{\"message\":\"Story has undefined state variables\",\"undefined_variables\":[\"clue_torn_letter\",\"clue_footprints\",\"investigated_bedroom\",\"investigated_study\",\"clue_bloody_glove\",\"clue_medicine\",\"correct\",\"accusation\",\"clue_poison\",\"investigated_garden\",\"clue_broken_window\"],\"error_count\":27,\"hint\":\"Define these variables in the state schema or use force=true to publish anyway\"}}",
+      "details": {},
+      "timestamp": "2026-05-11T05:20:07.114071"
+    }
+  ],
+  "authentication": {
+    "status": "success",
+    "user": {
+      "id": "228d7ff2-960d-48b3-91a0-979034859cfe",
+      "email": "joseph@existentialdetectives.com",
+      "is_superuser": true
+    }
+  }
+}

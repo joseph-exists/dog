@@ -53,7 +53,6 @@ const StoryList = () => {
     return (
       <div className="container mx-auto max-w-7xl py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">STORY AUTHORS</h1>
           <CreateStoryModal />
         </div>
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -62,8 +61,7 @@ const StoryList = () => {
           </div>
           <h3 className="text-lg font-semibold">No Stories Yet</h3>
           <p className="text-muted-foreground max-w-md">
-            Create your first interactive story and start crafting branching
-            adventures!
+            Stories are state machines that move through nodes, have entrance and exit criteria, and provide direction and guidance.  Make your first one now.
           </p>
         </div>
       </div>
@@ -74,7 +72,7 @@ const StoryList = () => {
   return (
     <div className="container mx-auto max-w-7xl py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">STORY AUTHOR</h1>
+        <h1 className="text-2xl font-bold">Create a Story</h1>
         <CreateStoryModal />
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
