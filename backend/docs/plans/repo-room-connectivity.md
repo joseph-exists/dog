@@ -27,6 +27,19 @@ The useful pieces already exist:
 
 **Plan**
 
+**Implementation status**
+
+- [x] Room creation schedules `shadow_room_version_best_effort` so new rooms get a room shadow repo/version asynchronously.
+- [x] Added `backend/app/services/room_artifact_repo_service.py` as the room-scoped facade over room shadow repos.
+- [x] Added generic shadow git helpers for HEAD reads, file reads, and multi-file opaque mutations.
+- [x] Extended `read_repo_file` and `write_repo_files` so `repo_id="room"` or omitted resolves to the current room shadow repo, while UUID repo IDs still use the existing `UserRepo` path.
+- [x] Preserved the existing write hint shape for room repo reads.
+- [x] Added optimistic HEAD conflict handling and reserved system path checks for `room.json`, `room_events.redis.json`, and `.dog/`.
+- [x] Added focused tests for agent tool room repo read/write, reserved paths, non-participant writes, and stale HEAD conflicts.
+- [x] Added room artifact viewer/API endpoints for tree, file read, and commits.
+- [x] Enabled workspace bootstrap from room-scoped `WorkspaceShadowRepoSource` when `SHADOW_REPO_URL_TEMPLATE` is configured.
+- [x] Enabled Room repo panels to bind to the current room shadow repo through source-aware repo panel adapters and Repo Panel Bindings.
+
 **1. Make room shadow repo creation explicit at room creation**
 
 Today, room shadowing appears to be event/task driven. 

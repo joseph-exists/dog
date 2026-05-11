@@ -174,6 +174,8 @@ export interface RepoRoomEventInput {
   path?: string | null
   ref?: string | null
   repo_id?: string | null
+  repo_model?: "user_repo" | "room_shadow_repo" | "shadow_repo" | null
+  repo_key?: string | null
   metadata?: Record<string, unknown> | null
 }
 
@@ -997,6 +999,8 @@ export const RoomService = {
         path: event.path ?? null,
         ref: event.ref ?? null,
         repo_id: event.repo_id ?? null,
+        repo_model: event.repo_model ?? null,
+        repo_key: event.repo_key ?? null,
         metadata: event.metadata ?? {},
       },
     }

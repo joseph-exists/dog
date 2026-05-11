@@ -9,6 +9,7 @@ import {
   parseRepoExplorerPanelConfig,
   parseRepoFileViewerPanelConfig,
 } from "./config"
+import type { RepoPanelDataSourceAdapter } from "./dataSource"
 import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
 import { RepoExplorerPanel } from "./RepoExplorerPanel"
 import { RepoFileViewerPanel } from "./RepoFileViewerPanel"
@@ -17,6 +18,7 @@ import { RepoOverviewPanel } from "./RepoOverviewPanel"
 
 export interface RepoPanelRendererContext {
   repo: UserRepoPublic
+  adapter: RepoPanelDataSourceAdapter
   capabilities: {
     hasRepoIdentity: boolean
     hasFileTree: boolean
@@ -104,6 +106,7 @@ export function renderRepoPanel(
       return (
         <RepoExplorerPanel
           repo={context.repo}
+          adapter={context.adapter}
           panelId={panel.id}
           config={config}
           enabled={availability.available}
@@ -122,6 +125,7 @@ export function renderRepoPanel(
       return (
         <RepoFileViewerPanel
           repo={context.repo}
+          adapter={context.adapter}
           panelId={panel.id}
           config={config}
           enabled={availability.available}

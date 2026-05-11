@@ -34,6 +34,24 @@ class CommitError(ShadowGitError):
     pass
 
 
+class FileReadError(ShadowGitError):
+    """Raised when a file cannot be read from a shadow repository."""
+
+    pass
+
+
+class WriteConflictError(ShadowGitError):
+    """Raised when a repository HEAD does not match the expected SHA."""
+
+    pass
+
+
+class WriteValidationError(ShadowGitError):
+    """Raised when a requested file mutation is invalid."""
+
+    pass
+
+
 def _run_git(
     repo_path: Path,
     args: list[str],
@@ -293,6 +311,197 @@ def commit_text_file(
         else:
             stderr = e.stderr or str(e)
         raise CommitError(f"Failed to commit file: {stderr}") from e
+
+
+def get_head_sha(
+    repo_path: Path,
+    *,
+    remote_url: str | None = None,
+    remote_name: str = "origin",
+    default_branch: str = "main",
+) -> str | None:
+    """Return HEAD for a shadow repo, or None when the repo has no commits."""
+    ensure_repo(
+        repo_path,
+        remote_url=remote_url,
+        remote_name=remote_name,
+        default_branch=default_branch,
+    )
+    return get_latest_commit(repo_path)
+
+
+def _normalize_repo_file_path(path: str) -> str:
+    normalized = path.strip().strip("/")
+    if not normalized:
+        raise WriteValidationError("File path is required")
+    parts = normalized.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        raise WriteValidationError(f"Invalid repo path: {path}")
+    return "/".join(parts)
+
+
+def read_file_at_ref(
+    repo_path: Path,
+    *,
+    path: str,
+    ref: str | None = None,
+    remote_url: str | None = None,
+    remote_name: str = "origin",
+    default_branch: str = "main",
+) -> tuple[str, bytes]:
+    """Read a file from a shadow repo at ref and return (resolved_ref, bytes)."""
+    ensure_repo(
+        repo_path,
+        remote_url=remote_url,
+        remote_name=remote_name,
+        default_branch=default_branch,
+    )
+    normalized_path = _normalize_repo_file_path(path)
+    resolved_ref = (ref or "").strip() or default_branch
+
+    try:
+        result = _run_git(
+            repo_path,
+            ["show", f"{resolved_ref}:{normalized_path}"],
+            text=False,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = (
+            exc.stderr.decode()
+            if isinstance(exc.stderr, bytes)
+            else exc.stderr or str(exc)
+        )
+        raise FileReadError(
+            f"Cannot read {normalized_path} at {resolved_ref}: {stderr.strip()}"
+        ) from exc
+
+    return resolved_ref, result.stdout
+
+
+def commit_file_mutations(
+    repo_path: Path,
+    *,
+    mutations: list[dict[str, str | None]],
+    message: str,
+    expected_head_sha: str | None,
+    author: str = "shadow-system",
+    reserved_paths: set[str] | None = None,
+    remote_url: str | None = None,
+    remote_name: str = "origin",
+    default_branch: str = "main",
+) -> tuple[str | None, str, list[str]]:
+    """Apply opaque file mutations, commit them, and optionally push."""
+    ensure_repo(
+        repo_path,
+        remote_url=remote_url,
+        remote_name=remote_name,
+        default_branch=default_branch,
+    )
+
+    current_head = get_latest_commit(repo_path)
+    normalized_expected = (expected_head_sha or "").strip() or None
+    if normalized_expected and current_head != normalized_expected:
+        raise WriteConflictError("Repo head no longer matches expected_head_sha")
+
+    normalized_message = message.strip()
+    if not normalized_message:
+        raise WriteValidationError("commit_message is required")
+
+    if not mutations:
+        raise WriteValidationError("At least one mutation is required")
+
+    reserved = reserved_paths or set()
+    normalized_mutations: list[dict[str, str | None]] = []
+    seen_paths: set[str] = set()
+    for mutation in mutations:
+        normalized_path = _normalize_repo_file_path(str(mutation.get("path") or ""))
+        if normalized_path in seen_paths:
+            raise WriteValidationError(f"Duplicate mutation path: {normalized_path}")
+        if normalized_path in reserved or normalized_path.startswith(".dog/"):
+            raise WriteValidationError(
+                f"Path is reserved for system use: {normalized_path}"
+            )
+        seen_paths.add(normalized_path)
+
+        operation = str(mutation.get("operation") or "").strip().lower()
+        if operation not in {"upsert", "delete"}:
+            raise WriteValidationError(
+                f"Unsupported mutation operation: {mutation.get('operation')}"
+            )
+        content = mutation.get("content")
+        if operation == "upsert" and content is None:
+            raise WriteValidationError(
+                f"Mutation content is required for {normalized_path}"
+            )
+        if operation == "delete" and content is not None:
+            raise WriteValidationError(
+                f"Delete mutation must not include content for {normalized_path}"
+            )
+        normalized_mutations.append(
+            {
+                "path": normalized_path,
+                "operation": operation,
+                "content": content,
+            }
+        )
+
+    changed_paths: list[str] = []
+    try:
+        for mutation in normalized_mutations:
+            normalized_path = str(mutation["path"])
+            operation = str(mutation["operation"])
+            if operation == "upsert":
+                content = mutation.get("content")
+                file_path = repo_path / normalized_path
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text(str(content))
+                _run_git(repo_path, ["add", normalized_path])
+            else:
+                file_path = repo_path / normalized_path
+                if file_path.exists():
+                    _run_git(repo_path, ["rm", "-f", normalized_path])
+                else:
+                    _run_git(
+                        repo_path,
+                        ["rm", "-f", "--cached", normalized_path],
+                        check=False,
+                    )
+
+            changed_paths.append(normalized_path)
+
+        diff_result = _run_git(repo_path, ["diff", "--cached", "--quiet"], check=False)
+        if diff_result.returncode == 0:
+            raise WriteValidationError("Requested changes produce no diff")
+
+        commit_result = _run_git(
+            repo_path,
+            [
+                "commit",
+                "-m",
+                normalized_message,
+                "--author",
+                f"{author} <{author}@shadow>",
+            ],
+            check=False,
+            text=True,
+        )
+        if commit_result.returncode != 0:
+            raise CommitError(
+                "Failed to commit file mutations: "
+                f"{(commit_result.stderr or commit_result.stdout).strip()}"
+            )
+
+        new_head = _run_git(repo_path, ["rev-parse", "HEAD"], text=True).stdout.strip()
+        if remote_url:
+            _run_git(repo_path, ["push", remote_name, f"HEAD:{default_branch}"])
+        return current_head, new_head, changed_paths
+    except subprocess.CalledProcessError as exc:
+        stderr = (
+            exc.stderr.decode()
+            if isinstance(exc.stderr, bytes)
+            else exc.stderr or str(exc)
+        )
+        raise CommitError(f"Failed to commit file mutations: {stderr.strip()}") from exc
 
 
 def read_snapshot(

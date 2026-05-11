@@ -37,6 +37,7 @@ import {
   writeRepoLayoutWorkspaceState,
   writeUserRepoLayoutPresets,
 } from "@/components/Repo/panels/repoLayoutPresets"
+import { createRepoPanelAdapter } from "@/components/Repo/panels/dataSource"
 import {
   applyRepoPanelLayoutItems,
   type RepoPanelLayoutItem,
@@ -202,6 +203,10 @@ function RepoDetailPage() {
       repo
         ? {
             repo,
+            adapter: createRepoPanelAdapter({
+              model: "user_repo",
+              repoId: repo.id,
+            }),
             capabilities,
             panelSelections,
             setPanelSelection: (selectionKey: string, path: string | null) => {

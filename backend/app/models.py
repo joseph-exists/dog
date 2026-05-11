@@ -4507,6 +4507,15 @@ class RepoRoomEventRequest(SQLModel):
         default=None,
         description="Platform user_repo identifier for the emitted action",
     )
+    repo_model: Literal["user_repo", "room_shadow_repo", "shadow_repo"] | None = Field(
+        default=None,
+        description="Repository model for non-user-repo room panel events",
+    )
+    repo_key: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Opaque repo key for non-UUID repository targets",
+    )
     metadata: dict[str, Any] | None = Field(
         default=None,
         description="Optional opaque metadata for future expansion",
@@ -7052,6 +7061,36 @@ class UserRepoCommitResponse(SQLModel):
     repo_id: uuid.UUID
     branch: str
     previous_head_sha: str
+    new_head_sha: str
+    commit_message: str
+    committed_at: datetime
+    changed_paths: list[str] = Field(default_factory=list)
+
+
+class RoomArtifactFileContent(SQLModel):
+    room_id: uuid.UUID
+    path: str
+    ref: str
+    content: str | None = None
+    encoding: str | None = "utf-8"
+    size_bytes: int
+    content_type: str | None = None
+    is_binary: bool = False
+    is_truncated: bool = False
+    write_hint: dict[str, str | None] = Field(default_factory=dict)
+
+
+class RoomArtifactCommitRequest(SQLModel):
+    branch: str = Field(default="main", max_length=255)
+    mutations: list[UserRepoFileMutationInput] = Field(default_factory=list)
+    commit_message: str = Field(max_length=500)
+    expected_head_sha: str | None = Field(default=None, max_length=255)
+
+
+class RoomArtifactCommitResponse(SQLModel):
+    room_id: uuid.UUID
+    branch: str
+    previous_head_sha: str | None = None
     new_head_sha: str
     commit_message: str
     committed_at: datetime

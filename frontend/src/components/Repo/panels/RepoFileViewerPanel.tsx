@@ -12,19 +12,20 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import type { ApiError } from "@/client/core/ApiError"
-import { UserReposService } from "@/client/sdk.gen"
 import type { UserRepoPublic } from "@/client/types.gen"
 import { PanelContainer } from "@/components/Page/primitives"
 import {
-  getUserRepoHeadQueryOptions,
   RepoContentRenderer,
-  repoQueryKeys,
   toRepoRenderableContent,
 } from "@/components/Repo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { parseRepoFileViewerPanelConfig } from "./config"
+import {
+  createRepoPanelAdapter,
+  type RepoPanelDataSourceAdapter,
+} from "./dataSource"
 import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
 
 function extractCommitErrorCode(error: unknown): string | null {
@@ -47,6 +48,7 @@ function extractCommitErrorCode(error: unknown): string | null {
 
 export function RepoFileViewerPanel({
   repo,
+  adapter: providedAdapter,
   panelId,
   config,
   enabled,
@@ -57,6 +59,7 @@ export function RepoFileViewerPanel({
   onToggleRoomContext,
 }: {
   repo: UserRepoPublic
+  adapter?: RepoPanelDataSourceAdapter
   panelId: string
   config: unknown
   enabled: boolean
@@ -102,6 +105,9 @@ export function RepoFileViewerPanel({
   }) => Promise<void> | void
 }) {
   const queryClient = useQueryClient()
+  const adapter =
+    providedAdapter ??
+    createRepoPanelAdapter({ model: "user_repo", repoId: repo.id })
   const resolvedConfig = parseRepoFileViewerPanelConfig(config, panelId)
   const resolvedPath =
     resolvedConfig.path_mode === "fixed"
@@ -117,30 +123,35 @@ export function RepoFileViewerPanel({
     queryKey: [
       "repo-file-view",
       panelId,
-      repo.id,
+      adapter.targetKey,
       resolvedPath,
       explicitRef ?? "__default__",
       isReadmeMode ? "readme" : "file",
     ],
     queryFn: () =>
       isReadmeMode
-        ? UserReposService.getUserRepoReadme({
-            repoId: repo.id,
+        ? adapter.getReadme({
             // Only send `ref` when the panel config pins one. Default-branch
             // resolution belongs to the backend because imported repos do not
             // consistently use `main`.
             ref: explicitRef || undefined,
           })
-        : UserReposService.getUserRepoFile({
-            repoId: repo.id,
+        : adapter.getFile({
             path: resolvedPath!,
             ref: explicitRef || undefined,
           }),
     enabled: enabled && (isReadmeMode || Boolean(resolvedPath)),
   })
   const headQuery = useQuery({
-    ...getUserRepoHeadQueryOptions(repo.id, fileQuery.data?.ref || explicitRef),
+    queryKey: [
+      "repo-panel-head",
+      adapter.targetKey,
+      fileQuery.data?.ref || explicitRef || "__default__",
+    ],
+    queryFn: () => adapter.getHead({ ref: fileQuery.data?.ref || explicitRef }),
     enabled,
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
   })
 
   useEffect(() => {
@@ -212,28 +223,25 @@ export function RepoFileViewerPanel({
       branch: string
       expectedHeadSha: string
     }) =>
-      UserReposService.commitUserRepoChanges({
-        repoId: repo.id,
-        requestBody: {
-          branch: payload.branch,
-          commit_message: `Update ${payload.path}`,
-          expected_head_sha: payload.expectedHeadSha,
-          mutations: [
-            {
-              path: payload.path,
-              operation: "upsert",
-              content: payload.content,
-              encoding: payload.encoding,
-            },
-          ],
-        },
+      adapter.commit({
+        branch: payload.branch,
+        commitMessage: `Update ${payload.path}`,
+        expectedHeadSha: payload.expectedHeadSha,
+        mutations: [
+          {
+            path: payload.path,
+            operation: "upsert",
+            content: payload.content,
+            encoding: payload.encoding,
+          },
+        ],
       }),
     onSuccess: async (response, payload) => {
       setIsEditing(false)
       setDraftContent(payload.content)
       showSuccessToast(`Saved ${payload.path}.`)
       queryClient.setQueryData(
-        repoQueryKeys.head(repo.id, payload.branch),
+        ["repo-panel-head", adapter.targetKey, payload.branch],
         () => ({ ref: payload.branch, expectedHeadSha: response.new_head_sha }),
       )
       await Promise.all([
@@ -243,13 +251,13 @@ export function RepoFileViewerPanel({
           predicate: (query) =>
             Array.isArray(query.queryKey) &&
             query.queryKey[0] === "repo-explorer-view" &&
-            query.queryKey.includes(repo.id),
+            query.queryKey.includes(adapter.targetKey),
         }),
         queryClient.invalidateQueries({
           predicate: (query) =>
             Array.isArray(query.queryKey) &&
-            query.queryKey[0] === "user-repo-head" &&
-            query.queryKey[1] === repo.id,
+            query.queryKey[0] === "repo-panel-head" &&
+            query.queryKey[1] === adapter.targetKey,
         }),
       ])
     },
@@ -498,7 +506,7 @@ export function RepoFileViewerPanel({
               typeof fileQuery.data.resolved_from_path === "string"
                 ? fileQuery.data.resolved_from_path
                 : fileQuery.data.path,
-            content: fileQuery.data.content,
+            content: fileQuery.data.content ?? "",
             mimeType: fileQuery.data.content_type || undefined,
             encoding: fileQuery.data.encoding,
             sizeBytes: fileQuery.data.size_bytes,

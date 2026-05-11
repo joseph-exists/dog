@@ -114,6 +114,14 @@ function isRepoPanelKind(kind: string): kind is "repoExplorer" | "fileViewer" {
   return kind === "repoExplorer" || kind === "fileViewer"
 }
 
+function repoBindingMode(config: Record<string, unknown>) {
+  return config.source === "shadow_repo" ||
+    config.repo_model === "shadow_repo" ||
+    config.repo_id === "room"
+    ? "room"
+    : "user"
+}
+
 function toPreviewPanel(panel: PanelConfig): PreviewPanel {
   return {
     id: panel.id,
@@ -251,7 +259,18 @@ export function PanelLayoutDialog({
             ...basePanel,
             config_json: {
               ...createDefaultRepoExplorerPanelConfig(panel.id),
-              repo_id: null,
+              source: "shadow_repo",
+              repo_model: "shadow_repo",
+              entity_type: "room",
+              entity_id_source: "current_room",
+              repo_id: "room",
+            },
+            entity_binding: {
+              source: "room_attachment",
+              repo_model: "shadow_repo",
+              entity_type: "room",
+              entity_id: null,
+              repo_id: "room",
             },
           },
         ]
@@ -264,7 +283,18 @@ export function PanelLayoutDialog({
             ...basePanel,
             config_json: {
               ...createDefaultRepoFileViewerPanelConfig(panel.id),
-              repo_id: null,
+              source: "shadow_repo",
+              repo_model: "shadow_repo",
+              entity_type: "room",
+              entity_id_source: "current_room",
+              repo_id: "room",
+            },
+            entity_binding: {
+              source: "room_attachment",
+              repo_model: "shadow_repo",
+              entity_type: "room",
+              entity_id: null,
+              repo_id: "room",
             },
           },
         ]
@@ -293,6 +323,57 @@ export function PanelLayoutDialog({
         }
         return {
           ...panel,
+          config_json: normalizeRepoPanelConfig(
+            panel.kind,
+            panel.id,
+            nextConfig,
+          ),
+        }
+      }),
+    )
+    switchToCustom()
+  }
+
+  const handleUpdateRepoBindingMode = (
+    panelId: string,
+    mode: "user" | "room",
+  ) => {
+    setPanels((prev) =>
+      prev.map((panel) => {
+        if (panel.id !== panelId || !isRepoPanelKind(panel.kind)) return panel
+        const currentConfig = isObjectRecord(panel.config_json)
+          ? panel.config_json
+          : {}
+        const nextConfig =
+          mode === "room"
+            ? {
+                ...currentConfig,
+                source: "shadow_repo",
+                repo_model: "shadow_repo",
+                entity_type: "room",
+                entity_id_source: "current_room",
+                repo_id: "room",
+              }
+            : {
+                ...currentConfig,
+                source: "user_repo",
+                repo_model: "user_repo",
+                entity_type: "user_repo",
+                entity_id_source: "repo_id",
+                repo_id: null,
+              }
+        return {
+          ...panel,
+          entity_binding:
+            mode === "room"
+              ? {
+                  source: "room_attachment",
+                  repo_model: "shadow_repo",
+                  entity_type: "room",
+                  entity_id: null,
+                  repo_id: "room",
+                }
+              : null,
           config_json: normalizeRepoPanelConfig(
             panel.kind,
             panel.id,
@@ -377,6 +458,7 @@ export function PanelLayoutDialog({
                     : {}
                   const repoIdValue =
                     typeof config.repo_id === "string" ? config.repo_id : ""
+                  const bindingMode = repoBindingMode(config)
 
                   if (panel.kind === "repoExplorer") {
                     const parsed = parseRepoExplorerPanelConfig(
@@ -391,14 +473,32 @@ export function PanelLayoutDialog({
                         <div className="text-xs font-medium text-muted-foreground">
                           {panelNames[panel.kind]} ({panel.id})
                         </div>
+                        <select
+                          value={bindingMode}
+                          onChange={(event) =>
+                            handleUpdateRepoBindingMode(
+                              panel.id,
+                              event.target.value === "room" ? "room" : "user",
+                            )
+                          }
+                          className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                        >
+                          <option value="room">Room repo</option>
+                          <option value="user">User repo by ID</option>
+                        </select>
                         <Input
                           value={repoIdValue}
                           onChange={(event) =>
                             handleUpdateRepoPanelConfig(panel.id, {
+                              source: "user_repo",
+                              repo_model: "user_repo",
+                              entity_type: "user_repo",
+                              entity_id_source: "repo_id",
                               repo_id: event.target.value || null,
                             })
                           }
                           placeholder="repo_id"
+                          disabled={bindingMode === "room"}
                         />
                         <Input
                           value={parsed.initial_path}
@@ -434,14 +534,32 @@ export function PanelLayoutDialog({
                       <div className="text-xs font-medium text-muted-foreground">
                         {panelNames[panel.kind]} ({panel.id})
                       </div>
+                      <select
+                        value={bindingMode}
+                        onChange={(event) =>
+                          handleUpdateRepoBindingMode(
+                            panel.id,
+                            event.target.value === "room" ? "room" : "user",
+                          )
+                        }
+                        className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                      >
+                        <option value="room">Room repo</option>
+                        <option value="user">User repo by ID</option>
+                      </select>
                       <Input
                         value={repoIdValue}
                         onChange={(event) =>
                           handleUpdateRepoPanelConfig(panel.id, {
+                            source: "user_repo",
+                            repo_model: "user_repo",
+                            entity_type: "user_repo",
+                            entity_id_source: "repo_id",
                             repo_id: event.target.value || null,
                           })
                         }
                         placeholder="repo_id"
+                        disabled={bindingMode === "room"}
                       />
                       <select
                         value={parsed.path_mode}

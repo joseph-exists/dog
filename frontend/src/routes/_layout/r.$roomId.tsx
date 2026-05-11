@@ -16,6 +16,11 @@ import EditDrawer from "@/components/Common/EditDrawer"
 import type { PanelKind } from "@/components/Page/registry/panelTypes"
 import { getUserRepoQueryOptions, renderRepoPanel } from "@/components/Repo"
 import {
+  createRepoPanelAdapter,
+  createRoomArtifactRepoIdentity,
+  type RepoPanelTarget,
+} from "@/components/Repo/panels/dataSource"
+import {
   A2UIPanel,
   CanvasPanel,
   ChatPanel,
@@ -72,56 +77,84 @@ function getString(value: unknown): string | null {
     : null
 }
 
-function findRepoIdInBindingSource(source: unknown): string | null {
+function findRepoTargetInBindingSource(
+  source: unknown,
+  roomId: string,
+): RepoPanelTarget | null {
   const record = toRecord(source)
   if (!record) return null
 
+  const repoModel = getString(record.repo_model)
+  const sourceModel = getString(record.source)
+  const entityType = getString(record.entity_type)
+  const entityIdSource = getString(record.entity_id_source)
+  const repoId = getString(record.repo_id)
+  if (
+    repoModel === "shadow_repo" ||
+    sourceModel === "shadow_repo" ||
+    repoId === "room" ||
+    (entityType === "room" && entityIdSource === "current_room")
+  ) {
+    return {
+      model: "room_shadow_repo",
+      roomId,
+      repoId: "room",
+    }
+  }
+
   const direct =
-    getString(record.repo_id) ||
+    repoId ||
     getString(record.user_repo_id) ||
     getString(record.default_repo_id) ||
     getString(record.entity_id)
-  if (direct) return direct
+  if (direct) return { model: "user_repo", repoId: direct }
 
   const metadata = toRecord(record.metadata_json)
   if (metadata) {
-    return (
+    const metadataRepoId =
       getString(metadata.repo_id) ||
       getString(metadata.user_repo_id) ||
       getString(metadata.default_repo_id)
-    )
+    if (metadataRepoId) return { model: "user_repo", repoId: metadataRepoId }
   }
 
   const presentation = toRecord(record.presentation)
   if (presentation) {
-    return (
+    const presentationRepoId =
       getString(presentation.repo_id) ||
       getString(presentation.user_repo_id) ||
       getString(presentation.default_repo_id)
-    )
+    if (presentationRepoId) {
+      return { model: "user_repo", repoId: presentationRepoId }
+    }
   }
 
   return null
 }
 
-function resolveRepoIdForRoomPanel(params: {
+function resolveRepoTargetForRoomPanel(params: {
+  roomId: string
   panelConfigJson: unknown
   panelEntityBinding: unknown
   roomData: unknown
   storyData: unknown
-}): string | null {
-  const panelConfigRepoId = findRepoIdInBindingSource(params.panelConfigJson)
-  if (panelConfigRepoId) return panelConfigRepoId
-
-  const panelBindingRepoId = findRepoIdInBindingSource(
-    params.panelEntityBinding,
+}): RepoPanelTarget | null {
+  const panelConfigTarget = findRepoTargetInBindingSource(
+    params.panelConfigJson,
+    params.roomId,
   )
-  if (panelBindingRepoId) return panelBindingRepoId
+  if (panelConfigTarget) return panelConfigTarget
 
-  const roomRepoId = findRepoIdInBindingSource(params.roomData)
-  if (roomRepoId) return roomRepoId
+  const panelBindingTarget = findRepoTargetInBindingSource(
+    params.panelEntityBinding,
+    params.roomId,
+  )
+  if (panelBindingTarget) return panelBindingTarget
 
-  return findRepoIdInBindingSource(params.storyData)
+  const roomTarget = findRepoTargetInBindingSource(params.roomData, params.roomId)
+  if (roomTarget) return roomTarget
+
+  return findRepoTargetInBindingSource(params.storyData, params.roomId)
 }
 
 function RoomRepoPanel({
@@ -174,21 +207,34 @@ function RoomRepoPanel({
     truncationReason: string | null
   }) => Promise<void>
 }) {
-  const repoId = resolveRepoIdForRoomPanel({
+  const repoTarget = resolveRepoTargetForRoomPanel({
+    roomId,
     panelConfigJson,
     panelEntityBinding,
     roomData,
     storyData,
   })
+  const adapter = useMemo(
+    () => (repoTarget ? createRepoPanelAdapter(repoTarget) : null),
+    [repoTarget],
+  )
+  const userRepoId = repoTarget?.model === "user_repo" ? repoTarget.repoId : null
 
   const {
     data: repo,
     isLoading: isLoadingRepo,
     error: repoError,
   } = useQuery({
-    ...getUserRepoQueryOptions(repoId ?? ""),
-    enabled: Boolean(repoId),
+    ...getUserRepoQueryOptions(userRepoId ?? ""),
+    enabled: Boolean(userRepoId),
   })
+  const resolvedRepo =
+    repoTarget?.model === "room_shadow_repo"
+      ? createRoomArtifactRepoIdentity({
+          roomId,
+          roomTitle: getString(toRecord(roomData)?.title),
+        })
+      : repo
 
   const lastSelectionEmitRef = useRef<string | null>(null)
   const lastOpenEmitRef = useRef<string | null>(null)
@@ -196,7 +242,7 @@ function RoomRepoPanel({
 
   const emitSelectionEvent = useCallback(
     (selectionKey: string, path: string | null) => {
-      const activeRepoId = repo?.id
+      const activeRepoId = resolvedRepo?.id
       if (!activeRepoId) return
       const emitKey = `${panelId}|${activeRepoId}|${selectionKey}|${path ?? ""}`
       if (lastSelectionEmitRef.current === emitKey) return
@@ -207,17 +253,19 @@ function RoomRepoPanel({
         panel_id: panelId,
         selection_key: selectionKey,
         path,
-        repo_id: activeRepoId,
+        repo_id: repoTarget?.model === "user_repo" ? activeRepoId : null,
+        repo_model: repoTarget?.model,
+        repo_key: adapter?.targetKey ?? null,
       }).catch((error) => {
         console.error("Failed to emit repo selection event", error)
       })
     },
-    [panelId, repo?.id, roomId],
+    [adapter?.targetKey, panelId, repoTarget?.model, resolvedRepo?.id, roomId],
   )
 
   const emitOpenEvent = useCallback(
     (path: string, ref: string) => {
-      const activeRepoId = repo?.id
+      const activeRepoId = resolvedRepo?.id
       if (!activeRepoId) return
       const emitKey = `${panelId}|${activeRepoId}|${path}|${ref}`
       if (lastOpenEmitRef.current === emitKey) return
@@ -228,17 +276,19 @@ function RoomRepoPanel({
         panel_id: panelId,
         path,
         ref,
-        repo_id: activeRepoId,
+        repo_id: repoTarget?.model === "user_repo" ? activeRepoId : null,
+        repo_model: repoTarget?.model,
+        repo_key: adapter?.targetKey ?? null,
       }).catch((error) => {
         console.error("Failed to emit repo open event", error)
       })
     },
-    [panelId, repo?.id, roomId],
+    [adapter?.targetKey, panelId, repoTarget?.model, resolvedRepo?.id, roomId],
   )
 
   const emitRefEvent = useCallback(
     (ref: string, path?: string | null) => {
-      const activeRepoId = repo?.id
+      const activeRepoId = resolvedRepo?.id
       if (!activeRepoId) return
       const emitKey = `${panelId}|${activeRepoId}|${path ?? ""}|${ref}`
       if (lastRefEmitRef.current === emitKey) return
@@ -249,12 +299,14 @@ function RoomRepoPanel({
         panel_id: panelId,
         path,
         ref,
-        repo_id: activeRepoId,
+        repo_id: repoTarget?.model === "user_repo" ? activeRepoId : null,
+        repo_model: repoTarget?.model,
+        repo_key: adapter?.targetKey ?? null,
       }).catch((error) => {
         console.error("Failed to emit repo ref event", error)
       })
     },
-    [panelId, repo?.id, roomId],
+    [adapter?.targetKey, panelId, repoTarget?.model, resolvedRepo?.id, roomId],
   )
 
   const handleSetPanelSelection = useCallback(
@@ -279,7 +331,7 @@ function RoomRepoPanel({
     [emitRefEvent],
   )
 
-  if (!repoId) {
+  if (!repoTarget || !adapter) {
     return (
       <PanelContainer title="Repository Panel">
         <div className="p-4 text-sm text-destructive">
@@ -290,7 +342,7 @@ function RoomRepoPanel({
     )
   }
 
-  if (isLoadingRepo) {
+  if (repoTarget.model === "user_repo" && isLoadingRepo) {
     return (
       <PanelContainer title="Repository Panel">
         <div className="p-4 text-sm text-muted-foreground">
@@ -300,7 +352,7 @@ function RoomRepoPanel({
     )
   }
 
-  if (repoError || !repo) {
+  if (repoTarget.model === "user_repo" && (repoError || !resolvedRepo)) {
     return (
       <PanelContainer title="Repository Panel">
         <div className="p-4 text-sm text-destructive">
@@ -310,7 +362,17 @@ function RoomRepoPanel({
     )
   }
 
-  const capabilityEnvelope = repo.capabilities
+  if (!resolvedRepo) {
+    return (
+      <PanelContainer title="Repository Panel">
+        <div className="p-4 text-sm text-destructive">
+          Failed to resolve bound repository for this panel.
+        </div>
+      </PanelContainer>
+    )
+  }
+
+  const capabilityEnvelope = resolvedRepo.capabilities
   if (
     !capabilityEnvelope ||
     typeof capabilityEnvelope.has_file_tree !== "boolean" ||
@@ -332,7 +394,8 @@ function RoomRepoPanel({
       config_json: toRecord(panelConfigJson) ?? null,
     },
     {
-      repo,
+      repo: resolvedRepo,
+      adapter,
       capabilities: {
         hasRepoIdentity: true,
         hasFileTree: capabilityEnvelope.has_file_tree,

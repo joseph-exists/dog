@@ -16,6 +16,9 @@ from app.models import (
     AccessGrantRole,
     Project,
     ProjectResource,
+    Room,
+    RoomParticipant,
+    ShadowRepo,
     User,
     UserRepo,
     UserRepoImportStatus,
@@ -48,6 +51,8 @@ from app.models import (
 )
 from app.services import kennel_client
 from app.services.access_control import get_effective_role, has_access
+from app.services.repo_naming import shadow_repo_name
+from app.services.shadow_git import get_repo_remote_url
 from app.services.workspace_bootstrap_service import (
     WorkspaceBootstrapPlan,
     WorkspaceBootstrapValidationError,
@@ -340,6 +345,76 @@ def _materialized_user_repo_clone_url(repo: UserRepo) -> str:
         )
 
     return user_repo_service._build_authenticated_git_remote_url(user_repo=repo)  # noqa: SLF001
+
+
+async def _ensure_room_shadow_repo_for_workspace_bootstrap(
+    db: AsyncSession,
+    *,
+    room_id: uuid.UUID,
+    owner_id: uuid.UUID,
+) -> ShadowRepo:
+    room = await db.get(Room, room_id)
+    if room is None:
+        raise WorkspaceBootstrapValidationError(
+            "Room shadow repo not found.",
+            status_code=404,
+            error_code="WORKSPACE_SHADOW_REPO_NOT_FOUND",
+        )
+
+    participant_stmt = select(RoomParticipant).where(
+        RoomParticipant.room_id == room_id,
+        RoomParticipant.participant_type == "user",
+        RoomParticipant.participant_id == str(owner_id),
+        RoomParticipant.active.is_(True),
+    )
+    participant = (await db.exec(participant_stmt)).first()
+    if participant is None:
+        raise WorkspaceBootstrapValidationError(
+            "Room shadow repo not found.",
+            status_code=404,
+            error_code="WORKSPACE_SHADOW_REPO_NOT_FOUND",
+        )
+
+    shadow_stmt = select(ShadowRepo).where(
+        ShadowRepo.entity_type == "room",
+        ShadowRepo.entity_id == room_id,
+    )
+    shadow_repo = (await db.exec(shadow_stmt)).first()
+    if shadow_repo is not None:
+        return shadow_repo
+
+    owner = await db.get(User, room.creator_id)
+    shadow_repo = ShadowRepo(
+        owner_id=(owner.id if owner is not None else owner_id),
+        entity_type="room",
+        entity_id=room_id,
+        forgejo_repo_name=shadow_repo_name("room", room_id),
+        forgejo_repo_id=None,
+        created_at=datetime.utcnow(),
+    )
+    db.add(shadow_repo)
+    await db.flush()
+    await db.refresh(shadow_repo)
+    return shadow_repo
+
+
+def _materialized_shadow_repo_clone_url(
+    *,
+    entity_type: str,
+    entity_id: uuid.UUID,
+) -> str:
+    remote_url = get_repo_remote_url(
+        settings.SHADOW_REPO_URL_TEMPLATE,
+        entity_type,
+        str(entity_id),
+    )
+    if not remote_url:
+        raise WorkspaceBootstrapValidationError(
+            "Shadow repo workspace bootstrap requires SHADOW_REPO_URL_TEMPLATE.",
+            status_code=409,
+            error_code="WORKSPACE_SHADOW_REPO_REMOTE_UNAVAILABLE",
+        )
+    return remote_url
 
 
 async def spawn_workspace(
@@ -840,8 +915,8 @@ async def normalize_bootstrap_intent(
     - `user_repo` is validated and currently materializes via the repo's
       `source_repo_url` as a bridge to the richer platform-native repo execution
       path planned in later Track 2 work
-    - `shadow_repo` is recognized by the contract but held for a later execution
-      slice so we do not over-commit before its materialization semantics are clear
+    - `shadow_repo` currently supports room shadow repos only; other entity
+      types stay private until they have an explicit product contract
     """
 
     bootstrap = req.bootstrap or WorkspaceBootstrapIntent()
@@ -893,10 +968,20 @@ async def normalize_bootstrap_intent(
         materialized_repo_url = _materialized_user_repo_clone_url(repo)
 
     elif isinstance(repo_source, WorkspaceShadowRepoSource):
-        raise WorkspaceBootstrapValidationError(
-            "Shadow repo bootstrap is not enabled in this implementation slice yet.",
-            status_code=400,
-            error_code="WORKSPACE_SHADOW_REPO_UNAVAILABLE",
+        if repo_source.entity_type != "room":
+            raise WorkspaceBootstrapValidationError(
+                "Only room shadow repo bootstrap is supported.",
+                status_code=400,
+                error_code="WORKSPACE_SHADOW_REPO_ENTITY_UNSUPPORTED",
+            )
+        await _ensure_room_shadow_repo_for_workspace_bootstrap(
+            db,
+            room_id=repo_source.entity_id,
+            owner_id=owner_id,
+        )
+        materialized_repo_url = _materialized_shadow_repo_clone_url(
+            entity_type=repo_source.entity_type,
+            entity_id=repo_source.entity_id,
         )
 
     bootstrap_plan = generate_bootstrap_plan(

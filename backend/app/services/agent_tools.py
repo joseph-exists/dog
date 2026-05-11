@@ -12,6 +12,7 @@ from pydantic_ai import RunContext
 from sqlmodel import Session, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
 from app.core.db import engine
 from app.models import RoomParticipant, User
 from app.schemas.ag_ui import UIComponent, UIComponentType
@@ -29,6 +30,7 @@ from app.services.room_workspace_runtime_execution_service import (
 from app.services.room_workspace_runtime_orchestrator import (
     invoke_room_workspace_runtime,
 )
+from app.services.room_artifact_repo_service import room_artifact_repo_service
 from app.services.user_repo_service import (
     UserRepoFileMutation,
     UserRepoWriteConflict,
@@ -51,6 +53,9 @@ from app.services.user_repo_view_service import (
 logger = logging.getLogger(__name__)
 
 _a2a_orchestrator = A2AOrchestrator(max_depth=DEFAULT_MAX_A2A_DEPTH)
+
+
+ROOM_REPO_SELECTORS = {"", "room", "current_room", "room_shadow_repo"}
 
 
 @dataclass
@@ -322,6 +327,71 @@ def _write_repo_files_sync(
     )
 
 
+def _parse_repo_tool_mutations(
+    mutations: list[dict[str, Any]] | None,
+) -> list[UserRepoFileMutation] | str:
+    if mutations is None or len(mutations) == 0:
+        return "Write blocked: at least one mutation is required."
+    if len(mutations) > 100:
+        return "Write blocked: too many mutations in one request (max 100)."
+
+    parsed_mutations: list[UserRepoFileMutation] = []
+    for idx, mutation in enumerate(mutations):
+        if not isinstance(mutation, dict):
+            return f"Write blocked: mutation at index {idx} must be an object."
+        path = str(mutation.get("path") or "").strip()
+        operation = str(mutation.get("operation") or "").strip()
+        content = mutation.get("content")
+        encoding = str(mutation.get("encoding") or "utf-8").strip()
+        parsed_mutations.append(
+            UserRepoFileMutation(
+                path=path,
+                operation=operation,
+                content=(
+                    content
+                    if content is None or isinstance(content, str)
+                    else str(content)
+                ),
+                encoding=encoding,
+            )
+        )
+    return parsed_mutations
+
+
+def _write_room_repo_files_sync(
+    *,
+    room_id: uuid.UUID,
+    acting_user_id: uuid.UUID,
+    branch: str,
+    commit_message: str,
+    mutations: list[dict[str, Any]] | None,
+    expected_head_sha: str | None,
+) -> str:
+    parsed_mutations = _parse_repo_tool_mutations(mutations)
+    if isinstance(parsed_mutations, str):
+        return parsed_mutations
+
+    with Session(engine) as sync_session:
+        result = room_artifact_repo_service.commit_room_file_changes(
+            session=sync_session,
+            room_id=room_id,
+            acting_user_id=acting_user_id,
+            branch=branch,
+            commit_message=(commit_message or "").strip(),
+            mutations=parsed_mutations,
+            expected_head_sha=(expected_head_sha or "").strip() or None,
+        )
+
+    changed_paths = ", ".join(result.changed_paths[:10])
+    if len(result.changed_paths) > 10:
+        changed_paths += ", ..."
+    return (
+        f"Committed {len(result.changed_paths)} room artifact file change(s) to room "
+        f"{result.room_id} on branch '{result.branch}'. New HEAD: {result.new_head_sha}. "
+        f"Paths: {changed_paths}"
+    )
+
+
 def _read_repo_file_sync(
     *,
     room_id: uuid.UUID,
@@ -385,27 +455,95 @@ def _read_repo_file_sync(
         return json.dumps(payload, ensure_ascii=True)
 
 
+def _read_room_repo_file_sync(
+    *,
+    room_id: uuid.UUID,
+    acting_user_id: uuid.UUID,
+    path: str,
+    ref: str | None,
+) -> str:
+    with Session(engine) as sync_session:
+        file_content = room_artifact_repo_service.read_room_file(
+            session=sync_session,
+            room_id=room_id,
+            acting_user_id=acting_user_id,
+            path=path,
+            ref=ref,
+        )
+
+        payload = {
+            "repo_id": "room",
+            "repo_kind": "room_shadow_repo",
+            "room_id": str(room_id),
+            "path": file_content.path,
+            "resolved_ref": file_content.ref,
+            "is_binary": file_content.is_binary,
+            "is_truncated": file_content.is_truncated,
+            "content_type": file_content.content_type,
+            "size_bytes": file_content.size_bytes,
+            "encoding": file_content.encoding,
+            "content": file_content.content,
+            "write_hint": {
+                "branch": settings.SHADOW_REPO_DEFAULT_BRANCH,
+                "expected_head_sha": file_content.expected_head_sha,
+            },
+        }
+        return json.dumps(payload, ensure_ascii=True)
+
+
 async def write_repo_files(
     ctx: RunContext[AgentDeps],
-    repo_id: str,
-    branch: str,
-    commit_message: str,
-    mutations: list[dict[str, Any]],
+    repo_id: str = "room",
+    branch: str = "main",
+    commit_message: str = "Update room artifacts",
+    mutations: list[dict[str, Any]] | None = None,
     expected_head_sha: str | None = None,
 ) -> str:
     """
-    Write files to a user repo and commit the change.
+    Write files to a user repo or the current room artifact repo and commit the change.
 
     Mutations must be a list of objects:
     - upsert: {"path":"src/app.py","operation":"upsert","content":"...","encoding":"utf-8"}
     - delete: {"path":"old.txt","operation":"delete"}
+
+    Use repo_id="room" or omit repo_id to target the current room artifact repo.
     """
     deps = ctx.deps
     if deps.acting_user_id is None:
         return "Write blocked: no acting user context is available for this room agent run."
 
+    normalized_repo_id = (repo_id or "room").strip()
+    if normalized_repo_id.lower() in ROOM_REPO_SELECTORS:
+        try:
+            return await asyncio.to_thread(
+                _write_room_repo_files_sync,
+                room_id=deps.room_id,
+                acting_user_id=deps.acting_user_id,
+                branch=branch,
+                commit_message=commit_message,
+                mutations=mutations,
+                expected_head_sha=expected_head_sha,
+            )
+        except UserRepoWriteNotFound:
+            return "Write failed: room repo not found."
+        except UserRepoWriteUnauthorized:
+            return "Write failed: user is not allowed to modify this room repo."
+        except UserRepoWriteConflict as exc:
+            return f"Write conflict: {exc}. Refresh HEAD and retry."
+        except UserRepoWriteValidationError as exc:
+            return f"Write validation failed: {exc}"
+        except UserRepoWriteFailed as exc:
+            return f"Write failed: {exc}"
+        except Exception as exc:
+            logger.exception(
+                "write_repo_files room tool error room_id=%s agent=%s",
+                deps.room_id,
+                deps.current_agent_slug,
+            )
+            return f"Write failed due to unexpected error: {exc}"
+
     try:
-        repo_uuid = uuid.UUID(repo_id)
+        repo_uuid = uuid.UUID(normalized_repo_id)
     except ValueError:
         return f"Write blocked: invalid repo_id '{repo_id}'."
 
@@ -446,16 +584,18 @@ async def write_repo_files(
 
 async def read_repo_file(
     ctx: RunContext[AgentDeps],
-    repo_id: str,
     path: str,
+    repo_id: str = "room",
     ref: str | None = None,
 ) -> str:
     """
-    Read one file from a user repo and return JSON payload.
+    Read one file from a user repo or the current room artifact repo and return JSON payload.
 
     The JSON includes a write hint:
     - write_hint.branch
     - write_hint.expected_head_sha
+
+    Use repo_id="room" or omit repo_id to target the current room artifact repo.
     """
     deps = ctx.deps
     if deps.acting_user_id is None:
@@ -465,8 +605,35 @@ async def read_repo_file(
     if not normalized_path:
         return "Read blocked: path is required."
 
+    normalized_repo_id = (repo_id or "room").strip()
+    if normalized_repo_id.lower() in ROOM_REPO_SELECTORS:
+        try:
+            return await asyncio.to_thread(
+                _read_room_repo_file_sync,
+                room_id=deps.room_id,
+                acting_user_id=deps.acting_user_id,
+                path=normalized_path,
+                ref=(ref or "").strip() or None,
+            )
+        except UserRepoWriteNotFound:
+            return "Read failed: room repo file not found."
+        except UserRepoWriteUnauthorized:
+            return "Read failed: user is not allowed to read this room repo."
+        except UserRepoWriteValidationError as exc:
+            return f"Read failed: {exc}"
+        except UserRepoWriteFailed as exc:
+            return f"Read failed: {exc}"
+        except Exception as exc:
+            logger.exception(
+                "read_repo_file room tool error room_id=%s agent=%s path=%s",
+                deps.room_id,
+                deps.current_agent_slug,
+                normalized_path,
+            )
+            return f"Read failed due to unexpected error: {exc}"
+
     try:
-        repo_uuid = uuid.UUID(repo_id)
+        repo_uuid = uuid.UUID(normalized_repo_id)
     except ValueError:
         return f"Read blocked: invalid repo_id '{repo_id}'."
 

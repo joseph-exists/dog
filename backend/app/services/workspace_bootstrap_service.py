@@ -18,6 +18,7 @@ from app.models import (
     WorkspaceStartupIntentAgentService,
     WorkspaceStartupIntentProfile,
     WorkspaceStartupIntentTerminalOnly,
+    WorkspaceShadowRepoSource,
     WorkspaceUserRepoSource,
 )
 
@@ -279,7 +280,10 @@ def generate_bootstrap_plan(
 
     repo_source = intent.repo_source
     repo_ref = None
-    if isinstance(repo_source, WorkspaceExternalUrlRepoSource | WorkspaceUserRepoSource):
+    if isinstance(
+        repo_source,
+        WorkspaceExternalUrlRepoSource | WorkspaceUserRepoSource | WorkspaceShadowRepoSource,
+    ):
         repo_ref = repo_source.ref
     if materialized_repo_url:
         steps.append(

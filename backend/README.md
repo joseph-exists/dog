@@ -1,4 +1,6 @@
-# Tinyfoot Project - Backend
+# Dog Stack Backend README
+
+(forked and derived from tiangolo's fastapi backend readme)
 
 ## Requirements
 
@@ -27,7 +29,9 @@ source .venv/bin/activate
 
 Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/bin/python`.
 
-Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
+Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.  See the backend/docs/DATA_MODEL_RULES.md and RULES.md files for explicit guidance.
+
+
 
 ## Service Diagrams (Mermaid)
 
@@ -35,8 +39,7 @@ Modify or add SQLModel models for data and SQL tables in `./backend/app/models.p
 - Event sourcing + realtime flow: `app/services/event_sourcing_realtime_flow.mmd`
 - Shadow versioning pipeline: `app/services/shadow_versioning_pipeline.mmd`
 
-To render Mermaid locally, open the `.mmd` file in an editor with Mermaid preview
-support (for example, the Mermaid Preview extension in VS Code).
+
 
 ## VS Code
 

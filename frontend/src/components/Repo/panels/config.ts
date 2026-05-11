@@ -1,8 +1,8 @@
 import type { UserRepoPublic } from "@/client/types.gen"
 import type { RepoPanelKind } from "@/components/Repo/registry"
 
-export type RepoPanelDataSource = "user_repo"
-export type RepoPanelEntityIdSource = "repo_id"
+export type RepoPanelDataSource = "user_repo" | "shadow_repo"
+export type RepoPanelEntityIdSource = "repo_id" | "current_room"
 export type RepoFileViewerPathMode = "selection" | "fixed" | "readme"
 
 export interface RepoExplorerPanelConfig {
@@ -106,10 +106,16 @@ export function parseRepoExplorerPanelConfig(
   if (!isObjectRecord(value)) return defaults
 
   return {
-    source: "user_repo",
+    source:
+      value.source === "shadow_repo" || value.repo_model === "shadow_repo"
+        ? "shadow_repo"
+        : "user_repo",
     entity_type:
       normalizeOptionalString(value.entity_type) ?? defaults.entity_type,
-    entity_id_source: defaults.entity_id_source,
+    entity_id_source:
+      value.entity_id_source === "current_room"
+        ? "current_room"
+        : defaults.entity_id_source,
     repo_id: normalizeOptionalString(value.repo_id),
     initial_path: normalizeString(value.initial_path),
     ref: normalizeOptionalString(value.ref),
@@ -130,10 +136,16 @@ export function parseRepoFileViewerPanelConfig(
   if (!isObjectRecord(value)) return defaults
 
   return {
-    source: "user_repo",
+    source:
+      value.source === "shadow_repo" || value.repo_model === "shadow_repo"
+        ? "shadow_repo"
+        : "user_repo",
     entity_type:
       normalizeOptionalString(value.entity_type) ?? defaults.entity_type,
-    entity_id_source: defaults.entity_id_source,
+    entity_id_source:
+      value.entity_id_source === "current_room"
+        ? "current_room"
+        : defaults.entity_id_source,
     repo_id: normalizeOptionalString(value.repo_id),
     path_mode:
       value.path_mode === "fixed"

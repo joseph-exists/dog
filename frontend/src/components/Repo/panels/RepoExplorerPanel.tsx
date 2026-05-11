@@ -9,20 +9,22 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { ApiError } from "@/client/core/ApiError"
-import { UserReposService } from "@/client/sdk.gen"
 import type {
   ShadowRepoTreeEntry,
   UserRepoFileMutationInput,
   UserRepoPublic,
 } from "@/client/types.gen"
 import { PanelContainer } from "@/components/Page/primitives"
-import { getUserRepoHeadQueryOptions } from "@/components/Repo/hooks"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { showErrorToast, showSuccessToast } from "@/hooks/useCustomToast"
 import { parseRepoExplorerPanelConfig } from "./config"
+import {
+  createRepoPanelAdapter,
+  type RepoPanelDataSourceAdapter,
+} from "./dataSource"
 import { RepoCapabilityPlaceholderPanel } from "./RepoCapabilityPlaceholderPanel"
 
 function TreeEntryRow({
@@ -61,6 +63,7 @@ function TreeEntryRow({
 
 export function RepoExplorerPanel({
   repo,
+  adapter: providedAdapter,
   panelId,
   config,
   enabled,
@@ -69,6 +72,7 @@ export function RepoExplorerPanel({
   onRefObserved,
 }: {
   repo: UserRepoPublic
+  adapter?: RepoPanelDataSourceAdapter
   panelId: string
   config: unknown
   enabled: boolean
@@ -82,6 +86,9 @@ export function RepoExplorerPanel({
   }) => void
 }) {
   const queryClient = useQueryClient()
+  const adapter =
+    providedAdapter ??
+    createRepoPanelAdapter({ model: "user_repo", repoId: repo.id })
   const resolvedConfig = parseRepoExplorerPanelConfig(config, panelId)
   const [currentPath, setCurrentPath] = useState(resolvedConfig.initial_path)
   const [createMode, setCreateMode] = useState<"file" | "folder" | null>(null)
@@ -114,13 +121,12 @@ export function RepoExplorerPanel({
     queryKey: [
       "repo-explorer-view",
       panelId,
-      repo.id,
+      adapter.targetKey,
       currentPath,
       explicitRef ?? "__default__",
     ],
     queryFn: () =>
-      UserReposService.getUserRepoTree({
-        repoId: repo.id,
+      adapter.getTree({
         path: currentPath || undefined,
         // Only send `ref` when the panel author explicitly pins one.
         // Otherwise the backend resolves the live default branch from Gittin,
@@ -134,8 +140,16 @@ export function RepoExplorerPanel({
     refetchOnWindowFocus: false,
   })
   const headQuery = useQuery({
-    ...getUserRepoHeadQueryOptions(repo.id, viewQuery.data?.ref || explicitRef),
+    queryKey: [
+      "repo-panel-head",
+      adapter.targetKey,
+      viewQuery.data?.ref || explicitRef || "__default__",
+    ],
+    queryFn: () =>
+      adapter.getHead({ ref: viewQuery.data?.ref || explicitRef }),
     enabled,
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
   })
   const createMutation = useMutation({
     mutationFn: (payload: {
@@ -144,14 +158,11 @@ export function RepoExplorerPanel({
       commitMessage: string
       mutations: Array<UserRepoFileMutationInput>
     }) =>
-      UserReposService.commitUserRepoChanges({
-        repoId: repo.id,
-        requestBody: {
-          branch: payload.branch,
-          expected_head_sha: payload.expectedHeadSha,
-          commit_message: payload.commitMessage,
-          mutations: payload.mutations,
-        },
+      adapter.commit({
+        branch: payload.branch,
+        expectedHeadSha: payload.expectedHeadSha,
+        commitMessage: payload.commitMessage,
+        mutations: payload.mutations,
       }),
     onSuccess: async (_response, payload) => {
       const upsertedPath = payload.mutations.find(
@@ -171,7 +182,7 @@ export function RepoExplorerPanel({
           predicate: (query) =>
             Array.isArray(query.queryKey) &&
             query.queryKey[0] === "repo-file-view" &&
-            query.queryKey.includes(repo.id),
+            query.queryKey.includes(adapter.targetKey),
         }),
       ])
     },

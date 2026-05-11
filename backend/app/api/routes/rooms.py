@@ -20,10 +20,16 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from sqlmodel import select
 
-from app.api.deps import AsyncSessionDep, AsyncSessionTransactionDep, CurrentUser
+from app.api.deps import (
+    AsyncSessionDep,
+    AsyncSessionTransactionDep,
+    CurrentUser,
+    SessionDep,
+)
+from app.core.config import settings
 from app.crud import (
     add_participant,
     change_participant_role,
@@ -51,6 +57,9 @@ from app.models import (
     ParticipantAddRequest,
     ParticipantRoleChangeRequest,
     Room,
+    RoomArtifactCommitRequest,
+    RoomArtifactCommitResponse,
+    RoomArtifactFileContent,
     RoomCreate,
     RoomMessage,
     RoomMessagePublic,
@@ -67,6 +76,7 @@ from app.models import (
     RoomWorkspaceRuntimeInvokeResponse,
     RoomWorkspaceConnectionRequest,
     RoomWorkspaceCandidatesPublic,
+    ShadowRepoViewResponse,
     RoomsPublic,
     RoomUpdate,
     RepoRoomEventRequest,
@@ -92,6 +102,20 @@ from app.services.room_workspace_connection_service import (
 )
 from app.services.room_workspace_connection_service import (
     RoomWorkspaceRuntimeTargetResolutionError,
+)
+from app.services.room_artifact_repo_service import room_artifact_repo_service
+from app.services.shadow_tasks import shadow_room_version_best_effort
+from app.services.shadow_repo_view_service import (
+    ShadowRepoViewNotFound,
+    shadow_repo_view_service,
+)
+from app.services.user_repo_service import (
+    UserRepoFileMutation,
+    UserRepoWriteConflict,
+    UserRepoWriteFailed,
+    UserRepoWriteNotFound,
+    UserRepoWriteUnauthorized,
+    UserRepoWriteValidationError,
 )
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
@@ -135,6 +159,23 @@ def _runtime_invoke_error_detail(exc: Exception) -> dict[str, Any]:
     }
 
 
+def _raise_room_artifact_error(exc: Exception) -> None:
+    if isinstance(exc, (UserRepoWriteNotFound, ShadowRepoViewNotFound)):
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc) or "Room artifact not found",
+        ) from exc
+    if isinstance(exc, UserRepoWriteUnauthorized):
+        raise HTTPException(status_code=404, detail="Room not found") from exc
+    if isinstance(exc, UserRepoWriteConflict):
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if isinstance(exc, UserRepoWriteValidationError):
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if isinstance(exc, UserRepoWriteFailed):
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 # ============================================================================
 # Room Endpoints
 # ============================================================================
@@ -143,6 +184,7 @@ def _runtime_invoke_error_detail(exc: Exception) -> dict[str, Any]:
 @router.post("/", response_model=RoomPublic)
 async def create_new_room(
     *,
+    background_tasks: BackgroundTasks,
     session: AsyncSessionTransactionDep,
     current_user: CurrentUser,
     room_in: RoomCreate,
@@ -166,6 +208,12 @@ async def create_new_room(
         story_id=room_in.story_id,
         title=room_in.title,
         session=session,
+    )
+    background_tasks.add_task(
+        shadow_room_version_best_effort,
+        room_id=room.room_id,
+        actor_user_id=current_user.id,
+        message="Create room",
     )
     return room
 
@@ -208,6 +256,114 @@ async def get_room(
         session=session,
     )
     return room
+
+
+@router.get("/{room_id}/artifacts/tree", response_model=ShadowRepoViewResponse)
+def get_room_artifact_tree(
+    *,
+    room_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    path: str = "",
+    commit_limit: int = Query(default=10, ge=1, le=50),
+) -> ShadowRepoViewResponse:
+    try:
+        room, actor = room_artifact_repo_service.authorize_room_artifact_access(
+            session=session,
+            room_id=room_id,
+            acting_user_id=current_user.id,
+        )
+        room_artifact_repo_service.ensure_room_shadow_repo(
+            session=session,
+            room=room,
+            actor=actor,
+        )
+        return shadow_repo_view_service.get_repo_view(
+            session=session,
+            entity_type="room",
+            entity_id=room_id,
+            path=path,
+            commit_limit=commit_limit,
+        )
+    except Exception as exc:
+        _raise_room_artifact_error(exc)
+
+
+@router.get("/{room_id}/artifacts/file", response_model=RoomArtifactFileContent)
+def get_room_artifact_file(
+    *,
+    room_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    path: str = Query(..., min_length=1, max_length=2000),
+    ref: str | None = Query(default=None, max_length=255),
+) -> RoomArtifactFileContent:
+    try:
+        file_content = room_artifact_repo_service.read_room_file(
+            session=session,
+            room_id=room_id,
+            acting_user_id=current_user.id,
+            path=path,
+            ref=ref,
+        )
+    except Exception as exc:
+        _raise_room_artifact_error(exc)
+
+    return RoomArtifactFileContent(
+        room_id=file_content.room_id,
+        path=file_content.path,
+        ref=file_content.ref,
+        content=file_content.content,
+        encoding=file_content.encoding,
+        size_bytes=file_content.size_bytes,
+        content_type=file_content.content_type,
+        is_binary=file_content.is_binary,
+        is_truncated=file_content.is_truncated,
+        write_hint={
+            "branch": settings.SHADOW_REPO_DEFAULT_BRANCH,
+            "expected_head_sha": file_content.expected_head_sha,
+        },
+    )
+
+
+@router.post("/{room_id}/artifacts/commits", response_model=RoomArtifactCommitResponse)
+def commit_room_artifact_changes(
+    *,
+    room_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    commit_in: RoomArtifactCommitRequest,
+) -> RoomArtifactCommitResponse:
+    try:
+        result = room_artifact_repo_service.commit_room_file_changes(
+            session=session,
+            room_id=room_id,
+            acting_user_id=current_user.id,
+            branch=commit_in.branch,
+            mutations=[
+                UserRepoFileMutation(
+                    path=mutation.path,
+                    operation=mutation.operation,
+                    content=mutation.content,
+                    encoding=mutation.encoding,
+                )
+                for mutation in commit_in.mutations
+            ],
+            commit_message=commit_in.commit_message,
+            expected_head_sha=commit_in.expected_head_sha,
+        )
+    except Exception as exc:
+        _raise_room_artifact_error(exc)
+
+    return RoomArtifactCommitResponse(
+        room_id=result.room_id,
+        branch=result.branch,
+        previous_head_sha=result.previous_head_sha,
+        new_head_sha=result.new_head_sha,
+        commit_message=result.commit_message,
+        committed_at=result.committed_at,
+        changed_paths=result.changed_paths,
+    )
 
 
 @router.post("/{room_id}/workspace-connections", response_model=RoomWorkspaceConnectionDescriptor)
@@ -1039,6 +1195,8 @@ async def emit_repo_room_event(
         "path": event_in.path,
         "ref": event_in.ref,
         "repo_id": str(event_in.repo_id) if event_in.repo_id else None,
+        "repo_model": event_in.repo_model,
+        "repo_key": event_in.repo_key,
         "metadata": event_in.metadata or {},
     }
 
