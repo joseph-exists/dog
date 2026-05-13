@@ -1,5 +1,7 @@
 # Dog Stack Backend README
 
+*(woof, this probably needs bonkers updates, not sure.)
+
 (forked and derived from tiangolo's fastapi backend readme)
 
 ## Requirements
