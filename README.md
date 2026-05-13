@@ -1,101 +1,129 @@
-# Template Cleanup Work in Progress
+# Dog
 
---- LEGACY< NEEED UPDAAAATE SOOO MUCHHHHH >
+Dog is a local-first product workspace for rooms, stories, personas, agents, demos, and repo-backed workspaces.  the repository  contains a full application stack with a FastAPI API, React console, realtime event transport, git-backed entity/versioning services, SVG/canvas export workers, and sandboxed runtime environments using lxc for fast launching dev environments with gpu passthrough.  Note: the current kennel implementation is meant for local/owned infra only that is secured by other means. 
 
-  | AttributeError: 'UserAgentConfig' object has no attribute '_sa_instance_state'
+## What Is Here
 
+- `backend/`: FastAPI, SQLModel, Alembic, Postgres/Timescale, Redis, auth, event streaming, room/story/persona/project APIs, agent invocation services, shadow/user repo services, workspace orchestration, and integrations with Tesser, Gittin, Kennel, and MCP services.
 
-You are a deep thinking AI, you may use extremely long chains of thought to deeply consider the problem and deliberate with yourself via systematic reasoning processes to help come to a correct solution prior to answering. You should enclose your thoughts and internal monologue inside <think> </think> tags, and then provide your solution or response to the problem.
+- `frontend/`: Vite + React + TypeScript console using TanStack Router/Query, Tailwind, Radix/shadcn-style components, generated OpenAPI client code, story/page/demo/room/workspace screens, and Playwright tests.
+- `tesser/`: Python `tesserax` SVG/animation/rendering library plus a Redis-backed export service used by demos and canvas workflows.
 
+- `kennel/`: LXC-based runtime environment service for creating and managing workspace/runtime containers.
 
-## Technology Stack and Features
+- `gittin/`: Gogs-based git service used for shadow repos and user repo workflows.
 
-What makes you wonder about things as they are?  What would you want to do if you could do anything you wanted?  Have a good time, little sprout.  Do what you want.  Let us know how we can help you figure that out.
+- `mcpmvp/`: small FastAPI/MCP prototype service for affordance and story-builder surfaces.
 
-- ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
-    - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
-    - 🔍 [Pydantic](https://docs.pydantic.dev), used by FastAPI, for the data validation and settings management.
-    - 💾 [PostgreSQL](https://www.postgresql.org) as the SQL database.
-- 🚀 [React](https://react.dev) for the frontend.
-    - 💃 Using TypeScript, hooks, Vite, and other parts of a modern frontend stack.
-    - 🎨 [ShadCN](https://ui.shadcn.com) deeply integrated with [TailwindCSS] (https://tailwindcss.com/) for the frontend components.
-    - 🤖 An automatically generated frontend client.
-    - 🧪 [Playwright](https://playwright.dev) for End-to-End testing. (not current)
-    - 🦇 Dark mode support.
-- 🐋 [Docker Compose](https://www.docker.com) for development and production.
-- 🔒 Secure password hashing by default.
-- 🔑 JWT (JSON Web Token) authentication.
-- 📫 Email based password recovery.
-- ✅ Tests with [Pytest](https://pytest.org).
-- 📞 [Traefik](https://traefik.io) as a reverse proxy / load balancer.
-- 🚢 Deployment instructions using Docker Compose, including how to set up a frontend Traefik proxy to handle automatic HTTPS certificates.
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
-- 🔴 [Redis](https://redis.io) for real-time event pub/sub and caching.
-- 🌊 Real-time WebSocket streaming for multi-user collaboration.
-- 🔄 Event sourcing architecture with CQRS projections.
-- WebSocket streaming for real-time updates across all room participants
-- Token-by-token agent response streaming
-- Redis pub/sub for multi-worker event fanout
-- Sequence-based reconnection with event replay
-- Graceful degradation when Redis unavailable
-### Dashboard Login
+- `docs/`: architecture notes, implementation references, walkthroughs, and archived/exploratory design work.
 
+## Runtime Stack
 
+The default Docker Compose stack includes:
 
-## How To Use It
+- `db`: TimescaleDB/PostgreSQL 17
+- `redis`: Redis pub/sub for realtime events and worker coordination
+- `backend`: FastAPI API at `http://localhost:8000`
+- `frontend`: built frontend served at `http://localhost:5173`
+- `outbox-worker`: background shadow/user repo processing
+- `tesser`: Redis-backed SVG/canvas export worker
+- `gittin`: local Gogs service at `http://localhost:3001`
+- `kennel`: runtime environment API at `http://localhost:8090`
+- `mcpmvp`: affordance/story-builder prototype service
+- optional `mailcatcher` and `playwright` services under the `test` profile
 
-### Configure
+## Quick Start
 
-update configs in the `.env` files to customize your configurations.
+1. Create or review the root `.env`.
 
-Before deploying it, make sure you change at least the values for:
+   `copy.env.txt` is a historical example, not a safe production template. At minimum, set real values for:
 
-- `SECRET_KEY`
-- `FIRST_SUPERUSER_PASSWORD`
-- `POSTGRES_PASSWORD`
+   - `SECRET_KEY`
+   - `FIRST_SUPERUSER`
+   - `FIRST_SUPERUSER_PASSWORD`
+   - `POSTGRES_PASSWORD`
+   - `KENNEL_SECRET`
 
-You can (and should) pass these as environment variables from secrets.
+2. Start the development stack.
 
-Read the [deployment.md](./deployment.md) docs for more details.
+   ```bash
+   docker compose up -d --build
+   ```
 
-### Generate Secret Keys
+3. Open the app and API docs.
 
-Some environment variables in the `.env` file have a default value of `changethis`.
+   - Frontend: `http://localhost:5173`
+   - API: `http://localhost:8000`
+   - Swagger UI: `http://localhost:8000/docs`
+   - Gittin: `http://localhost:3001`
+   - Kennel: `http://localhost:8090`
 
-You have to change them with a secret key, to generate secret keys you can run the following command:
+4. Watch logs when something is still warming up.
+
+   ```bash
+   docker compose logs -f backend
+   docker compose logs -f tesser
+   docker compose logs -f kennel
+   ```
+
+## Local Development
+
+The Docker override maps service ports directly to localhost. You can stop one service and run it natively while the rest of the stack stays in Docker:
 
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
+docker compose stop frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-Copy the content and use that as password / secret key. And run that again to generate another secure key.
+```bash
+docker compose stop backend
+cd backend
+uv sync
+uv run fastapi dev app/main.py
+```
 
-### Env Variables
-TODO: Review
+More details are in [development.md](./development.md), [backend/README.md](./backend/README.md), and [frontend/README.md](./frontend/README.md).
 
+## Common Commands
 
-## Backend Development
+```bash
+# Start or rebuild the stack
+docker compose up -d --build
 
-Backend docs: [backend/README.md](./backend/README.md).
+# Run backend tests
+cd backend
+uv run pytest
 
-## Frontend Development
+# Run backend linting
+cd backend
+uv run ruff check app
 
-Frontend docs: [frontend/README.md](./frontend/README.md).
+# Type-check/build the frontend
+cd frontend
+npm run typecheck
+npm run build
 
-## Deployment
+# Run frontend Playwright tests through Docker
+docker compose --profile test run --rm playwright npx playwright test
+```
 
-Deployment docs: [deployment.md](./deployment.md).
+## Documentation Map
 
-## Development
+- [development.md](./development.md): local Docker and native development workflows
+- [deployment.md](./deployment.md): Docker Compose and Traefik deployment notes
+- [docs/README.md](./docs/README.md): guide to the documentation tree
+- [docs/affordances/](./docs/affordances/): affordance surfaces and walkthroughs
+- [docs/agent-services/](./docs/agent-services/): agent orchestration references
+- [docs/architecture/](./docs/architecture/): room/story/context architecture notes
+- [docs/demos/](./docs/demos/): demo builder and rendering references
+- [docs/shadow/](./docs/shadow/): shadow git/versioning implementation notes
+- [tesser/README.md](./tesser/README.md): Tesserax library and export service context
+- [kennel/README.md](./kennel/README.md): runtime environment service notes
 
-General development docs: [development.md](./development.md).
-
-This includes using Docker Compose, custom local domains, `.env` configurations, etc.
-
-## Release Notes
-
-Check the file [release-notes.md](./release-notes.md).
+Many docs under `docs/unsort/`, `docs/archived/`, and older phase folders are design history or work logs. Treat them as references, not authoritative onboarding material, unless a current feature explicitly links to them.
 
 ## License
 
-pending
+MIT. See [LICENSE](./LICENSE).
