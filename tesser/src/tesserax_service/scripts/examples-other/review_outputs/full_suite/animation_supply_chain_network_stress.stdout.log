@@ -1,3 +1,0 @@
-✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_supply_chain_network_stress.gif
-   scenario=port_delay policy=balanced phase=REROUTE packets=334 transitions=2
-   service_level=0.957 peak_backlog=17.289 peak_route_overload=1.450 reroute_utilization=0.238

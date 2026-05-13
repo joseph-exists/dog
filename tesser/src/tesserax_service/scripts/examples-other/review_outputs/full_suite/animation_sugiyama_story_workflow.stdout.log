@@ -1,3 +1,0 @@
-✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_sugiyama_story_workflow.gif
-   scenario=validation_storm policy=balanced phase=POST packets=134 transitions=4
-   service_level=0.982 peak_queue=1.046 peak_risk=1.000 mttd=2.37s mttr=5.16s

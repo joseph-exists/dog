@@ -1,3 +1,0 @@
-✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_incident_response_playbook.gif
-   scenario=credential_stuffing policy=assisted phase=POSTMORTEM attack=[2.64s,6.72s] packets=560
-   service_level=0.960 peak_impact=0.274 breach_time=0.00s mttd=0.87s mttr=2.19s

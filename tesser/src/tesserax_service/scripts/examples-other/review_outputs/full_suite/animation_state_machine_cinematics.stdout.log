@@ -1,9 +1,0 @@
-✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_state_machine_cinematics.gif
-   camera_mode=hybrid, duration=12.0s, fps=24, transitions=7
-   t= 5.46s  PATROL -> INVESTIGATE  (sensor_trigger)
-   t= 6.51s  INVESTIGATE -> CHASE  (target_in_range)
-   t= 7.11s  CHASE -> EVADE  (close_contact)
-   t= 8.55s  EVADE -> CHASE  (evade_timeout)
-   t= 8.58s  CHASE -> EVADE  (close_contact)
-   t= 9.36s  EVADE -> RESOLVE  (mission_phase)
-   t=11.07s  RESOLVE -> IDLE  (stabilized)

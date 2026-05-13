@@ -1,3 +1,0 @@
-✅ Saved: /home/josep/dog/tesser/src/tesserax_service/scripts/examples-other/review_outputs/full_suite/animation_grid_contingency_cascade.gif
-   scenario=line_trip policy=balanced phase=STABILIZE event=[2.40s,6.24s] trips=32 recovers=29
-   service_level=0.160 peak_overload=1.672 island_count=4 shed_load=20.180 recovery_time=12.00s
