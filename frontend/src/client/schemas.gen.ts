@@ -11505,6 +11505,175 @@ export const RoomAgentSettingsUpdateSchema = {
     title: 'RoomAgentSettingsUpdate'
 } as const;
 
+export const RoomArtifactCommitRequestSchema = {
+    properties: {
+        branch: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Branch',
+            default: 'main'
+        },
+        mutations: {
+            items: {
+                '$ref': '#/components/schemas/UserRepoFileMutationInput'
+            },
+            type: 'array',
+            title: 'Mutations'
+        },
+        commit_message: {
+            type: 'string',
+            maxLength: 500,
+            title: 'Commit Message'
+        },
+        expected_head_sha: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expected Head Sha'
+        }
+    },
+    type: 'object',
+    required: ['commit_message'],
+    title: 'RoomArtifactCommitRequest'
+} as const;
+
+export const RoomArtifactCommitResponseSchema = {
+    properties: {
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        branch: {
+            type: 'string',
+            title: 'Branch'
+        },
+        previous_head_sha: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Previous Head Sha'
+        },
+        new_head_sha: {
+            type: 'string',
+            title: 'New Head Sha'
+        },
+        commit_message: {
+            type: 'string',
+            title: 'Commit Message'
+        },
+        committed_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Committed At'
+        },
+        changed_paths: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Changed Paths'
+        }
+    },
+    type: 'object',
+    required: ['room_id', 'branch', 'new_head_sha', 'commit_message', 'committed_at'],
+    title: 'RoomArtifactCommitResponse'
+} as const;
+
+export const RoomArtifactFileContentSchema = {
+    properties: {
+        room_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Room Id'
+        },
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        ref: {
+            type: 'string',
+            title: 'Ref'
+        },
+        content: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content'
+        },
+        encoding: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Encoding',
+            default: 'utf-8'
+        },
+        size_bytes: {
+            type: 'integer',
+            title: 'Size Bytes'
+        },
+        content_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content Type'
+        },
+        is_binary: {
+            type: 'boolean',
+            title: 'Is Binary',
+            default: false
+        },
+        is_truncated: {
+            type: 'boolean',
+            title: 'Is Truncated',
+            default: false
+        },
+        write_hint: {
+            additionalProperties: {
+                anyOf: [
+                    {
+                        type: 'string'
+                    },
+                    {
+                        type: 'null'
+                    }
+                ]
+            },
+            type: 'object',
+            title: 'Write Hint'
+        }
+    },
+    type: 'object',
+    required: ['room_id', 'path', 'ref', 'size_bytes'],
+    title: 'RoomArtifactFileContent'
+} as const;
+
 export const RoomContextItemCreateSchema = {
     properties: {
         context_type: {

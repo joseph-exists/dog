@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { getInitials } from "@/utils"
+import {
+  AgentCardPopover,
+  type AgentCardData,
+} from "../cards/AgentCardPopover"
 
 export interface Participant {
   id: string
@@ -23,6 +27,8 @@ export interface Participant {
   role?: string
   badges?: string[]
   isActive?: boolean
+  agentCard?: AgentCardData
+  agentProfileId?: string
 }
 
 interface ParticipantStackProps {
@@ -32,6 +38,12 @@ interface ParticipantStackProps {
   maxVisible?: number
   /** Callback when participant is clicked */
   onParticipantClick?: (participant: Participant) => void
+  /** Whether agent management actions should be shown */
+  canManageAgents?: boolean
+  /** Callback when an agent should be removed from the room */
+  onRemoveAgent?: (participant: Participant) => void
+  /** Callback when an agent profile should be opened */
+  onViewAgent?: (participant: Participant) => void
   /** Additional className */
   className?: string
 }
@@ -40,6 +52,9 @@ export function ParticipantStack({
   participants,
   maxVisible = 4,
   onParticipantClick,
+  canManageAgents = false,
+  onRemoveAgent,
+  onViewAgent,
   className,
 }: ParticipantStackProps) {
   const visible = participants.slice(0, maxVisible)
@@ -89,44 +104,74 @@ export function ParticipantStack({
           </h4>
         </div>
         <div className="max-h-64 overflow-y-auto p-2">
-          {participants.map((participant) => (
-            <button
-              key={participant.id}
-              onClick={() => onParticipantClick?.(participant)}
-              className="flex items-center gap-3 w-full p-2 rounded-md hover:bg-muted text-left"
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarFallback
-                  className={cn(
-                    participant.type === "agent"
-                      ? "bg-primary/20 text-primary"
-                      : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {participant.type === "agent" ? (
-                    <Bot className="h-4 w-4" />
-                  ) : (
-                    getInitials(participant.name)
-                  )}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {participant.name}
-                </p>
-                {participant.badges && participant.badges.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {participant.badges.join(" ")}
+          {participants.map((participant) => {
+            const row = (
+              <button
+                key={participant.id}
+                onClick={() => onParticipantClick?.(participant)}
+                className="flex items-center gap-3 w-full p-2 rounded-md hover:bg-muted text-left"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback
+                    className={cn(
+                      participant.type === "agent"
+                        ? "bg-primary/20 text-primary"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {participant.type === "agent" ? (
+                      <Bot className="h-4 w-4" />
+                    ) : (
+                      getInitials(participant.name)
+                    )}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {participant.name}
                   </p>
+                  {participant.badges && participant.badges.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {participant.badges.join(" ")}
+                    </p>
+                  )}
+                </div>
+                {participant.role && (
+                  <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
+                    {participant.role}
+                  </span>
                 )}
-              </div>
-              {participant.role && (
-                <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
-                  {participant.role}
-                </span>
-              )}
-            </button>
-          ))}
+              </button>
+            )
+
+            if (participant.type !== "agent") return row
+
+            const agent = participant.agentCard ?? {
+              id: participant.id,
+              name: participant.name,
+              is_enabled: participant.isActive,
+            }
+
+            return (
+              <AgentCardPopover
+                key={participant.id}
+                agent={agent}
+                trigger={row}
+                align="end"
+                canEdit={canManageAgents}
+                onRemove={
+                  canManageAgents && onRemoveAgent
+                    ? () => onRemoveAgent(participant)
+                    : undefined
+                }
+                onViewFull={
+                  participant.agentProfileId && onViewAgent
+                    ? () => onViewAgent(participant)
+                    : undefined
+                }
+              />
+            )
+          })}
         </div>
       </PopoverContent>
     </Popover>

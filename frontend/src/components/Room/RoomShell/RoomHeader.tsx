@@ -30,6 +30,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Separator } from "@/components/ui/separator"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
 import { PanelLayoutDialog } from "../Dialogs/PanelLayoutDialog"
@@ -66,6 +68,10 @@ interface RoomHeaderProps {
   onDelete?: () => void
   /** Participant click callback */
   onParticipantClick?: (participant: Participant) => void
+  /** Agent remove callback for participant popovers */
+  onRemoveAgent?: (participant: Participant) => void
+  /** Agent profile view callback for participant popovers */
+  onViewAgent?: (participant: Participant) => void
   /** Whether debug panel is shown */
   showDebugPanel?: boolean
   /** Toggle debug panel callback */
@@ -95,6 +101,8 @@ export function RoomHeader({
   onCopyLink,
   onDelete,
   onParticipantClick,
+  onRemoveAgent,
+  onViewAgent,
   showDebugPanel,
   onToggleDebugPanel,
   devModeEnabled,
@@ -110,8 +118,10 @@ export function RoomHeader({
         className,
       )}
     >
-      {/* Left: Room identity */}
-      <div className="flex items-center gap-3">
+      {/* Left: Sidebar trigger + room identity */}
+      <div className="flex items-center gap-2">
+        <SidebarTrigger className="-ml-1 text-muted-foreground" />
+        <Separator orientation="vertical" className="h-4" />
         <TypeIcon className="h-5 w-5 text-muted-foreground" />
         <div>
           <div className="flex items-center gap-2">
@@ -131,6 +141,9 @@ export function RoomHeader({
         <ParticipantStack
           participants={participants}
           onParticipantClick={onParticipantClick}
+          canManageAgents={canEdit}
+          onRemoveAgent={onRemoveAgent}
+          onViewAgent={onViewAgent}
         />
 
         {/* Layout toggle (desktop only) */}

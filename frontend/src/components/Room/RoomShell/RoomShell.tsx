@@ -34,6 +34,10 @@ interface RoomShellProps {
   onDelete?: () => void
   /** Participant click callback */
   onParticipantClick?: (participant: Participant) => void
+  /** Agent remove callback for participant popovers */
+  onRemoveAgent?: (participant: Participant) => void
+  /** Agent profile view callback for participant popovers */
+  onViewAgent?: (participant: Participant) => void
   /** Whether debug panel is shown */
   showDebugPanel?: boolean
   /** Toggle debug panel callback */
@@ -56,6 +60,8 @@ export function RoomShell({
   onCopyLink,
   onDelete,
   onParticipantClick,
+  onRemoveAgent,
+  onViewAgent,
   showDebugPanel,
   onToggleDebugPanel,
   devModeEnabled,
@@ -80,6 +86,8 @@ export function RoomShell({
         onCopyLink={onCopyLink}
         onDelete={onDelete}
         onParticipantClick={onParticipantClick}
+        onRemoveAgent={onRemoveAgent}
+        onViewAgent={onViewAgent}
         showDebugPanel={showDebugPanel}
         onToggleDebugPanel={onToggleDebugPanel}
         devModeEnabled={devModeEnabled}

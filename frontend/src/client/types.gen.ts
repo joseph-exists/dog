@@ -2982,6 +2982,38 @@ export type RoomAgentSettingsUpdate = {
     expected_revision?: (number | null);
 };
 
+export type RoomArtifactCommitRequest = {
+    branch?: string;
+    mutations?: Array<UserRepoFileMutationInput>;
+    commit_message: string;
+    expected_head_sha?: (string | null);
+};
+
+export type RoomArtifactCommitResponse = {
+    room_id: string;
+    branch: string;
+    previous_head_sha?: (string | null);
+    new_head_sha: string;
+    commit_message: string;
+    committed_at: string;
+    changed_paths?: Array<(string)>;
+};
+
+export type RoomArtifactFileContent = {
+    room_id: string;
+    path: string;
+    ref: string;
+    content?: (string | null);
+    encoding?: (string | null);
+    size_bytes: number;
+    content_type?: (string | null);
+    is_binary?: boolean;
+    is_truncated?: boolean;
+    write_hint?: {
+        [key: string]: (string | null);
+    };
+};
+
 /**
  * Request model to attach supplemental context to a room.
  */
@@ -7329,6 +7361,29 @@ export type RoomsDeleteRoomData = {
 };
 
 export type RoomsDeleteRoomResponse = (MessageResponse);
+
+export type RoomsGetRoomArtifactTreeData = {
+    commitLimit?: number;
+    path?: string;
+    roomId: string;
+};
+
+export type RoomsGetRoomArtifactTreeResponse = (ShadowRepoViewResponse);
+
+export type RoomsGetRoomArtifactFileData = {
+    path: string;
+    ref?: (string | null);
+    roomId: string;
+};
+
+export type RoomsGetRoomArtifactFileResponse = (RoomArtifactFileContent);
+
+export type RoomsCommitRoomArtifactChangesData = {
+    requestBody: RoomArtifactCommitRequest;
+    roomId: string;
+};
+
+export type RoomsCommitRoomArtifactChangesResponse = (RoomArtifactCommitResponse);
 
 export type RoomsCreateRoomWorkspaceConnectionData = {
     requestBody: RoomWorkspaceConnectionRequest;

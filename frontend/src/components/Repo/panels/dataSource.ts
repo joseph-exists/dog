@@ -1,7 +1,7 @@
-import { OpenAPI } from "@/client/core/OpenAPI"
-import { request as __request } from "@/client/core/request"
-import { UserReposService } from "@/client/sdk.gen"
+import { RoomsService, UserReposService } from "@/client/sdk.gen"
 import type {
+  RoomArtifactFileContent,
+  ShadowRepoViewResponse,
   ShadowRepoTreeEntry,
   UserRepoCommitResponse,
   UserRepoFileContent,
@@ -66,80 +66,33 @@ export function repoPanelTargetKey(target: RepoPanelTarget): string {
 }
 
 function normalizeRoomArtifactViewResponse(
-  response: UserRepoViewResponse,
+  response: ShadowRepoViewResponse,
 ): UserRepoViewResponse {
   return {
     ...response,
+    summary: {
+      repo_id: response.summary.entity_id,
+      slug: "room",
+      display_name: "Room repo",
+      repo_available: response.summary.repo_available,
+      default_branch: response.summary.default_branch,
+      latest_commit_sha: response.summary.latest_commit_sha,
+      latest_commit_message: response.summary.latest_commit_message,
+      latest_commit_authored_at: response.summary.latest_commit_authored_at,
+    },
     tree: response.tree ?? [],
     commits: response.commits ?? [],
   }
 }
 
-async function getRoomArtifactTree(args: {
-  roomId: string
-  path?: string
-  ref?: string
-  commitLimit?: number
-}): Promise<UserRepoViewResponse> {
-  return normalizeRoomArtifactViewResponse(
-    await __request<UserRepoViewResponse>(OpenAPI, {
-      method: "GET",
-      url: "/api/v1/rooms/{room_id}/artifacts/tree",
-      path: { room_id: args.roomId },
-      query: {
-        path: args.path,
-        ref: args.ref,
-        commit_limit: args.commitLimit,
-      },
-      errors: {
-        422: "Validation Error",
-      },
-    }),
-  )
-}
-
-async function getRoomArtifactFile(args: {
-  roomId: string
-  path: string
-  ref?: string
-}): Promise<RepoPanelFileContent> {
-  return __request<RepoPanelFileContent>(OpenAPI, {
-    method: "GET",
-    url: "/api/v1/rooms/{room_id}/artifacts/file",
-    path: { room_id: args.roomId },
-    query: {
-      path: args.path,
-      ref: args.ref,
-    },
-    errors: {
-      422: "Validation Error",
-    },
-  })
-}
-
-async function commitRoomArtifactChanges(args: {
-  roomId: string
-  branch: string
-  expectedHeadSha: string
-  commitMessage: string
-  mutations: Array<UserRepoFileMutationInput>
-}): Promise<RepoPanelCommitResponse> {
-  return __request<RepoPanelCommitResponse>(OpenAPI, {
-    method: "POST",
-    url: "/api/v1/rooms/{room_id}/artifacts/commits",
-    path: { room_id: args.roomId },
-    body: {
-      branch: args.branch,
-      expected_head_sha: args.expectedHeadSha,
-      commit_message: args.commitMessage,
-      mutations: args.mutations,
-    },
-    mediaType: "application/json",
-    errors: {
-      409: "Conflict",
-      422: "Validation Error",
-    },
-  })
+function normalizeRoomArtifactFileContent(
+  response: RoomArtifactFileContent,
+): RepoPanelFileContent {
+  return {
+    ...response,
+    content: response.content ?? null,
+    encoding: response.encoding ?? undefined,
+  }
 }
 
 function createUserRepoPanelAdapter(repoId: string): RepoPanelDataSourceAdapter {
@@ -201,29 +154,31 @@ function createRoomArtifactPanelAdapter(
     target,
     targetKey: repoPanelTargetKey(target),
     getTree: (args) =>
-      getRoomArtifactTree({
+      RoomsService.getRoomArtifactTree({
         roomId,
         path: args.path,
-        ref: args.ref,
         commitLimit: args.commitLimit,
-      }),
+      }).then(normalizeRoomArtifactViewResponse),
     getFile: (args) =>
-      getRoomArtifactFile({
+      RoomsService.getRoomArtifactFile({
         roomId,
         path: args.path,
         ref: args.ref,
-      }),
+      }).then(normalizeRoomArtifactFileContent),
     getReadme: async (args) => {
       const candidates = ["README.md", "README", "readme.md", "Readme.md"]
       let lastError: unknown = null
       for (const path of candidates) {
         try {
-          const content = await getRoomArtifactFile({
+          const content = await RoomsService.getRoomArtifactFile({
             roomId,
             path,
             ref: args.ref,
           })
-          return { ...content, resolved_from_path: path }
+          return {
+            ...normalizeRoomArtifactFileContent(content),
+            resolved_from_path: path,
+          }
         } catch (error) {
           lastError = error
         }
@@ -231,17 +186,18 @@ function createRoomArtifactPanelAdapter(
       throw lastError
     },
     commit: (args) =>
-      commitRoomArtifactChanges({
+      RoomsService.commitRoomArtifactChanges({
         roomId,
-        branch: args.branch,
-        expectedHeadSha: args.expectedHeadSha,
-        commitMessage: args.commitMessage,
-        mutations: args.mutations,
+        requestBody: {
+          branch: args.branch,
+          expected_head_sha: args.expectedHeadSha,
+          commit_message: args.commitMessage,
+          mutations: args.mutations,
+        },
       }),
-    getHead: async (args) => {
-      const view = await getRoomArtifactTree({
+    getHead: async () => {
+      const view = await RoomsService.getRoomArtifactTree({
         roomId,
-        ref: args.ref || undefined,
         commitLimit: 1,
       })
       return {

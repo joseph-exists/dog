@@ -65,7 +65,7 @@ DEMO_AGENTS: dict[str, dict[str, Any]] = {
     # DEMO 1: Rich UI Agent
     # =========================================================================
     "ui-showcase": {
-        "name": "UI Showcase Agent",
+        "name": "Showcase",
         "slug": "demo-ui-showcase",
         "description": "Demonstrates rich UI components in responses",
         "model_name": "openai:gpt-4o-mini",
@@ -120,7 +120,7 @@ Combine multiple components in a single response to create a rich, informative l
     # DEMO 2: Action Button Workflow
     # =========================================================================
     "interactive-assistant": {
-        "name": "Interactive Assistant",
+        "name": "InteractiveAssistant",
         "slug": "demo-interactive-assistant",
         "description": "Offers action buttons for continued interaction",
         "model_name": "openai:gpt-4o-mini",
@@ -163,7 +163,7 @@ Always end your response with new action buttons to keep the conversation intera
     # DEMO 3: Expert Mention Chain
     # =========================================================================
     "topic-analyzer": {
-        "name": "Topic Analyzer",
+        "name": "TopicAnalyzer",
         "slug": "demo-topic-analyzer",
         "description": "Analyzes topics and routes to domain experts",
         "model_name": "openai:gpt-4o-mini",
@@ -188,7 +188,7 @@ Always use the exact @mention format so the specialist gets triggered.""",
     },
 
     "tech-expert": {
-        "name": "Tech Expert",
+        "name": "TechExpert",
         "slug": "demo-tech-expert",
         "description": "Provides technical and programming expertise",
         "model_name": "openai:gpt-4o-mini",
@@ -216,7 +216,7 @@ You may recommend @demo-creative-expert if the question has creative/UX aspects.
     },
 
     "creative-expert": {
-        "name": "Creative Expert",
+        "name": "CreativeExpert",
         "slug": "demo-creative-expert",
         "description": "Provides creative and writing expertise",
         "model_name": "openai:gpt-4o-mini",
@@ -243,7 +243,7 @@ You may recommend @demo-tech-expert if implementation details are needed.""",
     # DEMO 4: Coordinator Routing
     # =========================================================================
     "room-director": {
-        "name": "Room Director",
+        "name": "RoomDirector",
         "slug": "demo-room-director",
         "description": "Coordinates room conversations and routes to specialists",
         "model_name": "openai:gpt-4o-mini",
@@ -278,7 +278,7 @@ Always be concise - let the specialists do the detailed work.""",
     },
 
     "data-analyst": {
-        "name": "Data Analyst",
+        "name": "DataAnalyst",
         "slug": "demo-data-analyst",
         "description": "Specializes in data analysis and metrics",
         "model_name": "openai:gpt-4o-mini",
@@ -307,7 +307,7 @@ Stay in your lane - don't provide advice on content/writing unless directly data
     },
 
     "content-writer": {
-        "name": "Content Writer",
+        "name": "ContentWriter",
         "slug": "demo-content-writer",
         "description": "Specializes in writing and content creation",
         "model_name": "openai:gpt-4o-mini",
@@ -356,7 +356,7 @@ Be thorough but concise.""",
     # DEMO 5: Expert Consultation (Tool-Based A2A)
     # =========================================================================
     "story-analyst": {
-        "name": "Story Analyst",
+        "name": "StoryAnalyst",
         "slug": "demo-story-analyst",
         "description": "Analyzes stories by consulting domain experts",
         "model_name": "openai:gpt-4o-mini",
@@ -382,14 +382,14 @@ Workflow:
 ## UI Component Example (all fields go INSIDE 'data' dict):
 emit_ui_component(
   component_type="card",
-  data={"title": "Plot Analysis", "body": "Expert insights here", "variant": "info"}
+  data={"title": "PlotAnalysis", "body": "Expert insights here", "variant": "info"}
 )
 
 You are the synthesizer - combine expert opinions into actionable advice.""",
     },
 
     "plot-expert": {
-        "name": "Plot Expert",
+        "name": "PlotExpert",
         "slug": "demo-plot-expert",
         "description": "Expert in story structure and plot development",
         "model_name": "openai:gpt-4o-mini",
@@ -412,7 +412,7 @@ Respond in 2-3 focused paragraphs maximum.""",
     },
 
     "character-expert": {
-        "name": "Character Expert",
+        "name": "CharacterExpert",
         "slug": "demo-character-expert",
         "description": "Expert in character development and psychology",
         "model_name": "openai:gpt-4o-mini",
@@ -438,7 +438,7 @@ Respond in 2-3 focused paragraphs maximum.""",
     # DEMO 6: Full Showcase (Meta-Coordinator)
     # =========================================================================
     "demo-orchestrator": {
-        "name": "Demo Orchestrator",
+        "name": "Orchestrator",
         "slug": "demo-orchestrator",
         "description": "Master coordinator for full-feature demonstration",
         "model_name": "openai:gpt-4o-mini",
@@ -448,7 +448,7 @@ Respond in 2-3 focused paragraphs maximum.""",
         "enable_ag_ui_tool": True,  # Emits rich UI components
         "capabilities": ["orchestration", "demo", "showcase"],
         "scope": "system",
-        "system_prompt": """You are the Demo Orchestrator, showcasing the full agent orchestration system.
+        "system_prompt": """You are the Orchestrator, showcasing the full agent orchestration system.
 
 Your capabilities:
 1. COORDINATOR PATTERN: You run first and can route to specialists

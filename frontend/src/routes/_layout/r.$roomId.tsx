@@ -56,13 +56,53 @@ export const Route = createFileRoute("/_layout/r/$roomId")({
 /**
  * Convert ParticipantViewModel to Participant for Room components
  */
-function toParticipant(p: ParticipantViewModel): Participant {
+function asAgentParticipationMode(
+  mode: string | null | undefined,
+): "always" | "on_mention" | "manual" | undefined {
+  return mode === "always" || mode === "on_mention" || mode === "manual"
+    ? mode
+    : undefined
+}
+
+function findAgentConfigForParticipant(
+  participant: ParticipantViewModel,
+  availableAgents: UserAgentConfigPublic[],
+): UserAgentConfigPublic | undefined {
+  if (participant.participant_type !== "agent") return undefined
+  return availableAgents.find(
+    (agent) =>
+      agent.id === participant.participant_id ||
+      agent.name === participant.participant_id ||
+      agent.slug === participant.participant_id,
+  )
+}
+
+function toParticipant(
+  p: ParticipantViewModel,
+  agentConfig?: UserAgentConfigPublic,
+): Participant {
+  const isAgent = p.participant_type === "agent"
+  const agentName = agentConfig?.name ?? p.display_name
   return {
     id: p.participant_id,
-    name: p.display_name,
+    name: agentName,
     type: p.participant_type,
     role: p.role,
     isActive: p.is_active,
+    agentProfileId: agentConfig?.id,
+    agentCard: isAgent
+      ? {
+          id: p.participant_id,
+          name: agentName,
+          description: agentConfig?.description ?? null,
+          model_name: agentConfig?.model_name ?? null,
+          participation_mode: asAgentParticipationMode(
+            agentConfig?.participation_mode,
+          ),
+          is_enabled: p.is_active,
+          capabilities: agentConfig?.capabilities ?? undefined,
+        }
+      : undefined,
   }
 }
 
@@ -552,11 +592,16 @@ function RoomView() {
     removeRepoContextFile,
   } = useRoomRepoContext(roomId, canManage)
 
-  // Convert data for components
-  const roomParticipants: Participant[] = participants.map(toParticipant)
-  const activeUsers = participants.filter((p) => p.participant_type === "user")
   const availableAgents = (availableAgentsData?.data ||
     []) as UserAgentConfigPublic[]
+  // Convert data for components
+  const roomParticipants: Participant[] = participants.map((participant) =>
+    toParticipant(
+      participant,
+      findAgentConfigForParticipant(participant, availableAgents),
+    ),
+  )
+  const activeUsers = participants.filter((p) => p.participant_type === "user")
   // All agents in the room (active + inactive) for panel display
   const allRoomAgents = participants.filter(
     (p) => p.participant_type === "agent",
@@ -867,6 +912,22 @@ function RoomView() {
           }
           onCopyLink={handleCopyLink}
           onDelete={canManage ? handleDeleteRoom : undefined}
+          onRemoveAgent={
+            canManage
+              ? (participant) =>
+                  handleRemoveAgent({
+                    id: participant.id,
+                    name: participant.name,
+                  })
+              : undefined
+          }
+          onViewAgent={(participant) => {
+            if (!participant.agentProfileId) return
+            navigate({
+              to: "/agent/$agentId",
+              params: { agentId: participant.agentProfileId },
+            })
+          }}
           showDebugPanel={showDebugPanel}
           onToggleDebugPanel={() => setShowDebugPanel(!showDebugPanel)}
           devModeEnabled={showInternalMessages}

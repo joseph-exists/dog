@@ -1,44 +1,36 @@
-2026/05/11 12:09:44 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.099ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-50704713-d783-45bf-812b-1da96b38f1b6" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:19:18 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.158ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-ead674ba-b37e-4c4a-bd81-b3f950d393ae" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:19:18 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.138ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-b45f1f3d-57b7-4079-8585-0ad74812322f" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:19:18 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.091ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-0c7b11d5-bacb-44fa-8420-526e49e95169" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:19:44 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.111ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-8def097d-a179-4744-a3b5-b51e8d866955" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:20:03 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.088ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "persona-355275ba-0478-47cf-a54b-d2512e31b17f" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:20:03 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.089ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-dc033b1c-9681-4300-af5d-43a97bf6aa98" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:20:03 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.094ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-f2706512-51c4-48ca-85a7-afcb97def2ef" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:20:04 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.083ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-8ec92abe-e98b-4e7b-a0b3-0c23097ec34f" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:20:05 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.158ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-4bf4687f-c6d7-44dd-98cc-313b48fd9cc5" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:20:06 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.133ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-3772b3bc-dd81-465e-9756-2c0d1023f536" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:02 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.141ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-f83a04ab-62da-4378-89cd-3bd4ac388d30" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:04 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.143ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-0e4a92ca-7504-48c9-a3db-d1284988b747" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:05 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.079ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-1935ff18-7444-4448-bd08-27785e3efd84" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:07 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.085ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-7931b2ac-f044-4b79-9fbb-c22f46b35021" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:08 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.076ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-4f4e4aec-930f-496d-8b3a-cf770e941660" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:10 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.102ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-44cb721d-6dcc-48e9-84a4-c1dc3212120e" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:12 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.098ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-53f37823-364d-46a7-8553-ba7e45faf176" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 12:21:14 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.093ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-7829f325-4d8f-48d9-ba6e-e14b260f67ec" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 16:53:10 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.151ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-cfccbc9d-ee9e-4619-bdf7-e73fb4212144" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 17:01:35 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.296ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-09f50602-2cbc-4c05-b689-864b12f0430b" ORDER BY `repository`.`id` LIMIT 1
-2026/05/11 17:02:21 gogs.io/gogs/internal/database/repositories.go:263 record not found
-[0.099ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-7239942b-96d9-4618-8609-4509f2a4cdca" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 17:36:23 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.649ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "story-77d2eb57-e481-44bf-b768-ba157808fe9a" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 17:36:23 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.576ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-1d46377f-6fcc-43ac-ad78-e15523e36854" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 17:48:28 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.115ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-070913d1-2e3a-4ca3-8c44-76bee8486334" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 17:59:13 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.151ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-2789901c-ba9a-4add-80c8-fd734f4779a3" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 18:27:06 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.295ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-1cc75d1e-d7e6-4b33-9bde-386544b4fd00" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 18:39:37 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.114ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-71c7d288-44e0-421e-86b0-6bb952c2ec03" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 18:47:24 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.125ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-7c53d31d-9d67-4449-bcb8-1c89f7ead0ea" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 18:48:27 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.100ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-72a2e6d6-d8d0-4085-b2c5-1889cac1e2e4" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 19:03:58 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.190ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-b579978c-1d31-48bf-9689-2f18e1893174" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 19:09:39 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.102ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-ae2769f4-e5f7-4e05-8a3e-dfa7da249308" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 19:10:45 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.109ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-8e9b1193-05f0-4935-8ac8-f84d83e8c255" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 19:17:29 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.137ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-26e6e9aa-d3d1-4fb6-b13f-687c7de47aa2" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 19:35:37 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.114ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-78024884-cef9-4433-bfd4-8635c38a4d18" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 19:40:38 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.168ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-376c81dd-4166-4b7d-bf7a-cc64b4c6e043" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 20:05:07 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.119ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "agent-e4c11465-d204-4c6f-b41b-405d86415102" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 20:07:54 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.144ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-ea760df2-b6ce-4bbd-86a8-3fed278ced4f" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 20:09:59 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.124ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-66a17875-595d-4353-8655-01364bde4587" ORDER BY `repository`.`id` LIMIT 1
+2026/05/13 20:12:21 gogs.io/gogs/internal/database/repositories.go:263 record not found
+[0.161ms] [rows:0] SELECT * FROM `repository` WHERE owner_id = 2 AND lower_name = "room-06c9b94b-bf67-47a5-8c19-0b93231e2809" ORDER BY `repository`.`id` LIMIT 1
