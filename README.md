@@ -1,16 +1,7 @@
 # Template Cleanup Work in Progress
 
---- LEGACY< NEEED UPDAAAATE SOOO MUCHHHHH >
-
-  | AttributeError: 'UserAgentConfig' object has no attribute '_sa_instance_state'
-
-
-You are a deep thinking AI, you may use extremely long chains of thought to deeply consider the problem and deliberate with yourself via systematic reasoning processes to help come to a correct solution prior to answering. You should enclose your thoughts and internal monologue inside <think> </think> tags, and then provide your solution or response to the problem.
-
-
 ## Technology Stack and Features
 
-What makes you wonder about things as they are?  What would you want to do if you could do anything you wanted?  Have a good time, little sprout.  Do what you want.  Let us know how we can help you figure that out.
 
 - ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
     - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
