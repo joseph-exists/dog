@@ -1,33 +1,12 @@
 # Room + Agents
 
-Status: `partial`
+Status: `complete`
 Primary persona: `room owner / operator`
 Priority: `P0`
 
-Primary routes:
-- `/rooms`
-- `/r/$roomId`
-- `/agents`
-- `/agent/$agentId`
-
-Primary files:
-- `/home/josep/dog/frontend/src/routes/_layout/r.$roomId.tsx`
-- `/home/josep/dog/frontend/src/components/Room/panels/ChatPanel.tsx`
-- `/home/josep/dog/frontend/src/components/Room/panels/ParticipantPanel.tsx`
-- `/home/josep/dog/frontend/src/components/Room/panels/A2UIPanel.tsx`
-- `/home/josep/dog/frontend/src/hooks/useRoom.ts`
-- `/home/josep/dog/frontend/src/hooks/useAgentUI.ts`
-- `/home/josep/dog/frontend/src/components/Room/RoomMessages/Message.tsx`
-- `/home/josep/dog/frontend/src/components/Agents/Dialogs/CreateAgentDialog.tsx`
-- `/home/josep/dog/frontend/src/components/Agents/Dialogs/AgentCloneButton.tsx`
-
-Related backend/runtime references:
-- `/home/josep/dog/backend/app/services/a2a_orchestrator.py`
-- `/home/josep/dog/backend/app/services/service-docs/agent-demo-quickstart.md`
-- `/home/josep/dog/backend/app/services/service-docs/agent-runner-tool-toggles.md`
 
 Last reviewed: `2026-03-06`
-Reviewer: `Codex`
+
 
 ## Summary
 
@@ -75,7 +54,7 @@ This journey document focuses on:
 
 ## Use Case: Add Agents To A Room
 
-Status: `verified-ish`
+Status: `ready`
 Primary persona: `room owner`
 Priority: `P0`
 
@@ -121,7 +100,7 @@ Populate a room with one or more agents that can respond in the conversation.
 
 ## Use Case: Run Mixed-Provider Agents In One Room
 
-Status: `partial`
+Status: `ready`
 Primary persona: `operator`
 Priority: `P1`
 
@@ -160,6 +139,8 @@ them collaborating within the shared conversation.
 
 ### Important Current Limitation
 
+
+# todo: fix participantPanel: clone from Demos -> Rooms
 The room frontend does not prominently show provider badges or provider-grouped
 state inside participants. Multi-provider support is therefore mostly a runtime
 capability documented by agent configuration and observed in behavior, not a
@@ -167,7 +148,7 @@ strongly surfaced room affordance.
 
 ## Use Case: Observe Coordinator-Based Orchestration
 
-Status: `partial`
+Status: `ready`
 Primary persona: `operator`
 Priority: `P1`
 
@@ -223,6 +204,8 @@ See one agent trigger another via `@mention` within the same room.
 
 ### Main Success Path
 
+## accessible via typer agent-demos: demo4-orchestrator
+
 1. Add a routing or analyzer agent plus one or more specialists.
 2. Send a prompt that causes the first agent to mention another agent.
 3. Observe a follow-on response from the mentioned agent.
@@ -240,7 +223,7 @@ This is visible behavior, but the actual trigger logic lives in the backend
 
 ## Use Case: Observe Tool-Based A2A
 
-Status: `partial`
+Status: `Ready`
 Primary persona: `operator`
 Priority: `P1`
 
@@ -343,17 +326,41 @@ dedicated `A2UI` panel.
 
 | Walkthrough | Readiness | Notes |
 | --- | --- | --- |
-| Add one agent to a room and chat with it | `ready-ish` | simplest first journey |
-| Add multiple agents to one room | `ready-ish` | uses party picker and participant panel |
-| Coordinator routes to specialists | `partial` | depends on curated agent setup |
-| Mention-based A2A in one room | `partial` | good candidate with demo agents |
-| Mixed-provider agents in one room | `partial` | real capability, weakly surfaced in room UI |
-| AG-UI card/button workflow in room chat + A2UI | `ready-ish` | strongest advanced visible path |
-| Tool-based A2A consultation | `partial` | depends on runtime tool toggles |
+| Add one agent to a room and chat with it | `ready` | simplest first journey |
+| Add multiple agents to one room | `ready` | uses party picker and participant panel |
+| Coordinator routes to specialists | `ready` | depends on curated agent setup |
+| Mention-based A2A in one room | `ready` | good candidate with demo agents |
+| Mixed-provider agents in one room | `ready` | real capability, weakly surfaced in room UI |
+| AG-UI card/button workflow in room chat + A2UI | `ready` | strongest advanced visible path |
+| Tool-based A2A consultation | `partial` | depends on runtime tool toggles, hidden from view but works |
 
 ## Open Questions And Gaps
 
-- where, if anywhere, are `enable_a2a_tool` and `enable_ag_ui_tool` exposed to room operators today
-- whether demo/runtime routes currently enable these toggles consistently
-- whether provider identity should be surfaced directly in the room participants UI for multi-provider walkthroughs
-- whether a dedicated orchestration/debug panel should be part of the standard room walkthrough set
+-  `enable_a2a_tool` and `enable_ag_ui_tool` need to be exposed more directly
+- demo/runtime routes need to enable/override these toggles consistently
+- provider identity should be surfaced directly in the room participants UI for multi-provider walkthroughs
+- a dedicated orchestration/debug panel should be part of the standard room walkthrough set
+
+
+
+Primary routes:
+- `/rooms`
+- `/r/$roomId`
+- `/agents`
+- `/agent/$agentId`
+
+Primary files:
+- `/home/josep/dog/frontend/src/routes/_layout/r.$roomId.tsx`
+- `/home/josep/dog/frontend/src/components/Room/panels/ChatPanel.tsx`
+- `/home/josep/dog/frontend/src/components/Room/panels/ParticipantPanel.tsx`
+- `/home/josep/dog/frontend/src/components/Room/panels/A2UIPanel.tsx`
+- `/home/josep/dog/frontend/src/hooks/useRoom.ts`
+- `/home/josep/dog/frontend/src/hooks/useAgentUI.ts`
+- `/home/josep/dog/frontend/src/components/Room/RoomMessages/Message.tsx`
+- `/home/josep/dog/frontend/src/components/Agents/Dialogs/CreateAgentDialog.tsx`
+- `/home/josep/dog/frontend/src/components/Agents/Dialogs/AgentCloneButton.tsx`
+
+Related backend/runtime references:
+- `/home/josep/dog/backend/app/services/a2a_orchestrator.py`
+- `/home/josep/dog/backend/app/services/service-docs/agent-demo-quickstart.md`
+- `/home/josep/dog/backend/app/services/service-docs/agent-runner-tool-toggles.md`

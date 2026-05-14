@@ -1,34 +1,9 @@
 # Agent -> Story Runtime
 
-Status: `partial, evidence-backed`
+Status: `ready, evidence-backed`
 Primary persona: `operator / story author / orchestrator designer`
 Priority: `P0`
 
-Primary routes:
-- `/r/$roomId`
-
-Primary files:
-- `/home/josep/dog/frontend/src/components/Room/panels/StoryPanel/StoryPanel.tsx`
-- `/home/josep/dog/frontend/src/components/Room/panels/RoomDebugPanel.tsx`
-- `/home/josep/dog/frontend/src/components/Room/Dialogs/AddParticipantDialog.tsx`
-- `/home/josep/dog/frontend/src/components/Room/Dialogs/PanelLayoutDialog.tsx`
-- `/home/josep/dog/frontend/src/hooks/useRoom.ts`
-- `/home/josep/dog/frontend/src/hooks/useRoomRuntime.ts`
-- `/home/josep/dog/frontend/src/services/roomRuntimeService.ts`
-- `/home/josep/dog/frontend/src/services/roomService.ts`
-- `/home/josep/dog/backend/app/services/context_provider.py`
-- `/home/josep/dog/backend/app/services/agent_prompt.py`
-- `/home/josep/dog/backend/app/services/agent_runner.py`
-- `/home/josep/dog/backend/app/api/routes/rooms.py`
-
-Related backend/runtime references:
-- `run_agents_for_message`
-- `build_room_context`
-- room runtime APIs
-- room participant APIs
-
-Last reviewed: `2026-03-06`
-Reviewer: `Codex`
 
 ## Summary
 
@@ -44,6 +19,7 @@ The central claim is satisfiable:
 - users can observe resulting agent responses in the room
 
 The stronger claim is not yet satisfiable from the current code evidence:
+
 - I did not find proof that agents directly advance, rewind, reset, or otherwise mutate shared `storyRuntime`
 - I did not find proof that runtime transitions alone automatically trigger agents without a user message, mention, or UI action
 
@@ -170,7 +146,7 @@ implements that behavior.
 
 These are the most important gaps surfaced by this audit.
 
-### 1. No visible frontend inspector for full agent story-runtime payload
+### 1. No visible frontend inspector for full agent story-runtime payload : Fixed.
 
 Evidence:
 - debug panel shows message context payload approximation, not the story-runtime
@@ -182,7 +158,7 @@ Evidence:
 Interpretation:
 - this may be wired in backend but hidden in frontend
 
-### 2. No verified direct agent -> shared runtime mutation path
+### 2. No verified direct agent -> shared runtime mutation path : needs plumbing
 
 Evidence:
 - runtime mutation path found in room runtime APIs and user-facing hook:
@@ -192,7 +168,7 @@ Evidence:
 Interpretation:
 - this may be missing rather than hidden
 
-### 3. No verified auto-trigger on runtime transition alone
+### 3. No verified auto-trigger on runtime transition alone : needs plumbing 
 
 Evidence:
 - user messages trigger agents: [rooms.py](/home/josep/dog/backend/app/api/routes/rooms.py):379
@@ -202,3 +178,32 @@ Evidence:
 Interpretation:
 - if desired behavior is “agents react when workflow advances,” an additional
   backend contract or event-consumer path may still be needed
+
+
+
+Primary routes:
+- `/r/$roomId`
+
+
+Primary files:
+- `/home/josep/dog/frontend/src/components/Room/panels/StoryPanel/StoryPanel.tsx`
+- `/home/josep/dog/frontend/src/components/Room/panels/RoomDebugPanel.tsx`
+- `/home/josep/dog/frontend/src/components/Room/Dialogs/AddParticipantDialog.tsx`
+- `/home/josep/dog/frontend/src/components/Room/Dialogs/PanelLayoutDialog.tsx`
+- `/home/josep/dog/frontend/src/hooks/useRoom.ts`
+- `/home/josep/dog/frontend/src/hooks/useRoomRuntime.ts`
+- `/home/josep/dog/frontend/src/services/roomRuntimeService.ts`
+- `/home/josep/dog/frontend/src/services/roomService.ts`
+- `/home/josep/dog/backend/app/services/context_provider.py`
+- `/home/josep/dog/backend/app/services/agent_prompt.py`
+- `/home/josep/dog/backend/app/services/agent_runner.py`
+- `/home/josep/dog/backend/app/api/routes/rooms.py`
+
+Related backend/runtime references:
+- `run_agents_for_message`
+- `build_room_context`
+- room runtime APIs
+- room participant APIs
+
+Last reviewed: `2026-03-06`
+Reviewer: `Codex`
