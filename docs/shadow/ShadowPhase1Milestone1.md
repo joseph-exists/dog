@@ -1,7 +1,8 @@
-
 # BIG OLD FIX
 # DOC UPDATE NEEDED
 **Incomplete.  Working through in Milestone 1.1.**
+
+> Historical planning note: this milestone doc predates the current local-git Shadow runtime. Treat it as background only; use [shadow-overview.md](shadow-overview.md) for the current implementation.
 
 
 
@@ -75,4 +76,3 @@ Constraints:
   - If `participant_type='agent'` then `agent_id IS NOT NULL`
 
 Implementation note for juniors: the “close old row then insert new row” must be done in a single transaction, otherwise you can temporarily violate the “one active row” invariant under concurrency.
-

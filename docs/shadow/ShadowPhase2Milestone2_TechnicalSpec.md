@@ -1,90 +1,27 @@
-# Shadow — Milestone 2 Technical Specification (Read-path + Context Provider)
+# Shadow Read Path and Context Provider
 
-This document specifies the Milestone 2 implementation for Shadow as a first-class, *invisible* context source for agents. It is written to be actionable for implementation and extensible for future entity types.
+This document describes the current read path for Shadow snapshots and the way those snapshots become agent context. It replaces the older Forgejo-first milestone plan. The implementation is now local-git-first with DB fallback, and optional remote sync is handled separately by the git helpers and Gogs/Gittin provisioning service.
 
-## Summary
+## Goals
 
-Milestone 2 adds:
+- Load the latest or pinned snapshot for `(entity_type, entity_id)`.
+- Prefer committed git content when available.
+- Fall back to the JSON stored on `ShadowVersion.snapshot_json` when git content is missing, stale, or not yet committed.
+- Summarize large snapshots into prompt-friendly `ContextItem`s.
+- Keep Shadow mechanics mostly backend-owned while exposing limited authorized repo views for debugging and inspection.
 
-1. A **Shadow read service** that can load snapshots from Forgejo for `(entity_type, entity_id)` and also load pinned snapshots by `commit_sha` or `version_number`, with DB fallback.
-2. Deterministic **“what to load” rules** driven by `room_participant_bindings` (room-scoped runtime truth).
-3. A **context pipeline integration** that emits Shadow-derived context as `ContextItem`s (source=`shadow`) into the existing `extra_contexts` mechanism, including A2A tool calls with correct `agent_slug`.
+## ShadowReadService Contract
 
-All Shadow operations remain invisible to end users:
+`backend/app/services/shadow_read_service.py` exposes:
 
-- Users do not authenticate to Forgejo.
-- Users do not see Shadow repos, commit SHAs, or versions in UI.
-- Shadow reads are best-effort; agent behavior degrades gracefully if Forgejo is unavailable.
+```python
+class ShadowReadService:
+    def get_latest_snapshot(...): ...
+    def get_snapshot_by_version(...): ...
+    def get_snapshot_by_commit(...): ...
+```
 
-## Related implementation context (current code)
-
-- Shadow write service: `backend/app/services/shadow_service.py`
-- Snapshot exporters (write side): `backend/app/services/shadow_exporters.py`
-- Room runtime truth (Milestone 1.1): `backend/app/models.py` (`RoomParticipantBinding`)
-- Room binding write-path (Milestone 1.1): `backend/app/api/routes/room_participant_bindings.py`
-- Context pipeline:
-  - `backend/app/services/context_provider.py` (`build_room_context`, `extra_contexts`)
-  - `backend/app/services/context_store.py` (`ContextItem`, `ContextItemStore`, `RedisContextStore`)
-  - `backend/app/services/agent_prompt.py` (renders `extra_contexts` into prompt)
-  - `backend/app/services/agent_tools.py` (A2A tool calls)
-
-## Goals and non-goals
-
-### Goals
-
-- **Forgejo-first reads**: latest snapshot comes from Forgejo when possible; fallback to DB `ShadowVersion.snapshot_json` if not.
-- **Pinned reads**: can load snapshot at a specific `commit_sha` or `version_number` (via `ShadowVersion` metadata).
-- **Deterministic context selection** for both:
-  - room-wide context (room/story)
-  - agent-scoped context (active persona + runtime model/provider)
-- **Invisible transparency**: no user-facing exposure of Shadow mechanics; no UI changes required.
-- **Performance**: cache reads by `(repo_name, commit_sha)` to avoid repeated Forgejo calls.
-
-### Non-goals (Milestone 3)
-
-- Async Forgejo IO via outbox/worker for writes (Milestone 3).
-- Global “reference index” repo materialization (Milestone 3).
-- Full backfill/reconciliation tooling (Milestone 3).
-
-## Entity type contract
-
-Shadow `entity_type` strings are part of an internal contract spanning:
-
-- service account selection (token)
-- repo naming (`{entity_type}-{entity_id_short}`)
-- snapshot file naming (`{entity_type}.json`)
-- context item typing/summary logic
-
-Milestone 2 entity types (minimum viable for context):
-
-- `room`
-- `story`
-- `agent`
-- `persona`
-- `llm_model`
-- `user_llm_provider`
-
-Recommended reserved entity types (useful soon, but not required to ship Milestone 2):
-
-- `room_policy` (room-level policy/config artifact)
-- `prompt` (system prompts + reusable templates)
-- `tool` (tool definitions/metadata)
-- `mcp_server` (MCP server configs/manifests; never secrets)
-- `external_doc` (snapshotted external documentation, e.g. `pydantic-ai-v2`)
-- `context_pack` (curated bundles of references to other entities)
-- `reference_index` (graph/index of references to pinned SHAs across entities)
-
-## ShadowReadService (Forgejo + DB fallback)
-
-### Responsibilities
-
-- Resolve the correct `ShadowRepo` from DB for `(entity_type, entity_id)`.
-- Retrieve snapshot JSON:
-  - **Preferred**: read `{entity_type}.json` from Forgejo at the latest commit (or at a pinned commit SHA).
-  - **Fallback**: use `ShadowVersion.snapshot_json` from DB and mark result as stale.
-- Return a normalized response envelope including provenance metadata.
-
-### Proposed interface (Python)
+Each call returns:
 
 ```python
 @dataclass(frozen=True)
@@ -93,285 +30,69 @@ class ShadowSnapshotResult:
     entity_id: uuid.UUID
     version_number: int | None
     commit_sha: str | None
-    source: Literal["forgejo", "db"]
+    source: Literal["git", "db"]
     is_stale: bool
     snapshot_json: dict[str, Any]
-
-class ShadowReadService:
-    def get_latest_snapshot(self, *, session: Session, entity_type: str, entity_id: uuid.UUID) -> ShadowSnapshotResult: ...
-    def get_snapshot_by_version(self, *, session: Session, entity_type: str, entity_id: uuid.UUID, version_number: int) -> ShadowSnapshotResult: ...
-    def get_snapshot_by_commit(self, *, session: Session, entity_type: str, entity_id: uuid.UUID, commit_sha: str) -> ShadowSnapshotResult: ...
 ```
 
-### Forgejo fetch details
+The normal path resolves `ShadowRepo`, finds the latest committed `ShadowVersion`, reads `{entity_type}.json` from local git at the recorded commit SHA, and returns `source="git"`. If no committed version exists, or git cannot provide the file, the service returns the DB snapshot with `source="db"` and `is_stale=True`.
 
-- Use the same per-entity-type service tokens as `ShadowService` (Forgejo access remains service-account scoped).
-- Read file path: `{entity_type}.json` from the repo for that entity.
-- If Forgejo read fails (network, 404, auth, SHA conflict, etc.), fallback to DB:
-  - read latest `ShadowVersion` for the entity
-  - return `source="db"`, `is_stale=True`
+## Entity Contract
 
-### Caching (Redis)
+The current snapshot/export contract includes:
 
-Cache key: `shadow:snapshot:{shadow_repo_id}:{commit_sha}` (or `{repo_name}:{commit_sha}`)
+- `room`
+- `story`
+- `agent`
+- `persona`
+- `llm_model`
+- `user_access_provider`
+- `quality`
+- `trait`
 
-Value: JSON blob containing:
+The snapshot file name is usually `{entity_type}.json`. Room repos also include `room_events.redis.json`, which is generated by the worker from durable room event rows.
 
-- `snapshot_json` (or a summarized form; see “Summaries”)
-- `commit_sha`
-- `version_number`
-- `cached_at`
+## Summary Layer
 
-TTL recommendations:
+`backend/app/services/shadow_summary_service.py` converts full snapshots into stable summaries. Summary payloads preserve provenance fields such as entity type, entity id, version number, commit SHA, and stale state, while reducing the domain payload to what agents actually need.
 
-- latest snapshot cache: 1–5 minutes
-- pinned commit snapshot cache: 1–24 hours (commit SHA is immutable)
+Minimum useful summary contents:
 
-If Redis is unavailable, read-through still works (no hard dependency).
+- `room`: title, story id, participants, and active bindings.
+- `story`: story metadata, requirements, nodes, choices, and state variables in a prompt-friendly shape.
+- `agent`: slug/name/configuration plus linked personas.
+- `persona`: persona metadata plus traits and qualities.
+- `llm_model`: model/provider metadata used by runtime selection.
+- `user_access_provider`: provider gateway metadata and `api_key_present`; secrets are never snapshotted.
 
-## Summaries (prompt-friendly views)
+## Context Selection
 
-Milestone 2 introduces a summary layer that turns large snapshots into prompt-friendly, stable shapes.
+`backend/app/services/shadow_context_loader.py` builds Shadow-derived context items for the room runtime.
 
-### Summary format
+Room-wide context:
 
-All summaries should follow a consistent envelope:
+- `shadow.room.summary` for the active room.
+- `shadow.story.summary` when the room has a story.
 
-```json
-{
-  "entity_type": "room",
-  "entity_id": "…",
-  "commit_sha": "…",
-  "version_number": 12,
-  "is_stale": false,
-  "summary": { "…domain-specific fields…" }
-}
-```
+Agent-scoped context:
 
-### Recommended summary contents (minimum viable)
+- `shadow.agent.summary` for the current agent slug.
+- `shadow.persona.summary` from the active `RoomParticipantBinding`.
+- Model and provider summaries from the same active binding when available.
 
-- `room`: title, story_id, participants, active bindings (participant_id/type → persona_id/model/provider)
-- `story`: title, description, published/current version pointers (do not embed full graph unless needed)
-- `agent`: slug, name, system prompt (or safe excerpt), capabilities, agent_personas list (persona IDs + nicknames)
-- `persona`: name, description, a short “persona intent” snippet
-- `llm_model`: display_name/model_id/provider_type/context_window
-- `user_llm_provider`: provider_type/name/base_url/is_default/last_test_* + `api_key_present` (never include keys)
+The loader uses current DB projections to decide what to ask Shadow for. If a snapshot is missing, it either logs the miss or emits a stale/missing context item, depending on the context type.
 
-Implementation note:
-- Summary functions should be pure and deterministic (same input snapshot → same output).
+## Visibility and Access
 
-## Deterministic “what to load” rules (context selection)
+Most Shadow data is internal runtime infrastructure. Users do not authenticate to the backing git service and do not need to understand commit SHAs to use rooms or agents.
 
-### Inputs
+For inspection workflows, `backend/app/api/routes/shadow_repos.py` exposes authorized shadow repo views. `ShadowRepoViewService` only allows the owner or a superuser to list commits, trees, or file content. Missing or unauthorized repos are hidden with not-found style behavior.
 
-- `room_id`
-- `agent_slug` (optional; required for agent-scoped loading)
-- Current DB projections:
-  - `rooms`
-  - `room_participants`
-  - `room_participant_bindings` (active rows; ended_at IS NULL)
+## Failure Semantics
 
-### Core addressing rule (no ambiguity)
+- Pending/error versions return their DB snapshot and `is_stale=True`.
+- Missing git files return the DB snapshot and `is_stale=True`.
+- Missing `ShadowRepo` or `ShadowVersion` rows raise typed read errors.
+- Git failures are logged without leaking remote credentials.
 
-For agents, always resolve:
-
-`current_agent_slug` → `AgentConfig` → `(participant_type='agent', participant_id=<slug>)` binding row
-
-This rule requires that agent `participant_id` is standardized to `AgentConfig.slug` (Milestone 1.1 Task 1).
-
-### Load algorithm
-
-1. **Room-wide**
-   - Load latest `room` snapshot summary for `room_id`.
-   - If room has `story_id`, load latest `story` snapshot summary for that story.
-2. **Agent-scoped** (only if `agent_slug` provided)
-   - Resolve agent by slug.
-   - Find the agent participant’s active binding row for the room.
-   - Load:
-     - active persona summary (if `persona_id` set)
-     - runtime model/provider summary (if `model_name` and/or `user_llm_provider_id` set)
-   - Optionally include the `agent` snapshot summary for the agent itself (capabilities, config, persona library).
-
-### ContextItem types
-
-Emit `ContextItem`s using stable `context_type` strings:
-
-- `shadow.room.summary`
-- `shadow.story.summary`
-- `shadow.agent.summary` (agent-scoped)
-- `shadow.persona.summary` (agent-scoped)
-- `shadow.runtime.summary` (agent-scoped; derived from binding row + provider snapshot)
-
-## Feeding the existing context pipeline
-
-### Where Shadow context is produced
-
-Introduce a new service (or module) responsible for building `ContextItem`s:
-
-`ShadowContextLoader.build_context_items(room_id, agent_slug)`:
-
-- queries DB for bindings and agent resolution
-- calls ShadowReadService for snapshots
-- summarizes them
-- returns a list of `ContextItem`s
-
-### Where Shadow context is stored/attached
-
-Milestone 2 should use the existing `ContextItemStore` pattern:
-
-- Prefer writing Shadow items to `RedisContextStore` with an expiration (e.g., 1–5 minutes).
-- `build_room_context` already loads items from `context_store.list(room_id, agent_slug)` and exposes them as `extra_contexts`.
-
-This keeps Shadow fully invisible and pluggable:
-
-- if store is unavailable, agents still run (just without Shadow context)
-- if Forgejo is unavailable, fallback snapshots can still populate context (marked stale)
-
-### A2A tool calls
-
-`backend/app/services/agent_tools.py` must pass `agent_slug` into `build_room_context` for tool calls so agent-scoped items are correct.
-
-Example adjustment (conceptual):
-
-```python
-context = await build_room_context(
-    room_id=room_id,
-    session=session,
-    agent_slug=agent_slug,
-    context_store=RedisContextStore(),
-)
-```
-
-## Explicit examples
-
-### Example 1: Building shadow context items (room-wide + agent-scoped)
-
-Given:
-- `room_id = 111…`
-- `agent_slug = "storyadvisor"`
-
-Expected emitted `ContextItem`s (illustrative):
-
-```python
-[
-  ContextItem(
-    id="shadow:room:111...:latest",
-    room_id=room_id,
-    agent_slug=None,
-    context_type="shadow.room.summary",
-    payload={...room summary...},
-    source="shadow",
-    created_at=now,
-    expires_at=now + timedelta(minutes=2),
-  ),
-  ContextItem(
-    id="shadow:story:222...:latest",
-    room_id=room_id,
-    agent_slug=None,
-    context_type="shadow.story.summary",
-    payload={...story summary...},
-    source="shadow",
-    created_at=now,
-    expires_at=now + timedelta(minutes=5),
-  ),
-  ContextItem(
-    id="shadow:agent:333...:latest",
-    room_id=room_id,
-    agent_slug="storyadvisor",
-    context_type="shadow.agent.summary",
-    payload={...agent summary...},
-    source="shadow",
-    created_at=now,
-    expires_at=now + timedelta(minutes=5),
-  ),
-  ContextItem(
-    id="shadow:persona:444...:latest",
-    room_id=room_id,
-    agent_slug="storyadvisor",
-    context_type="shadow.persona.summary",
-    payload={...persona summary...},
-    source="shadow",
-    created_at=now,
-    expires_at=now + timedelta(minutes=5),
-  ),
-  ContextItem(
-    id="shadow:runtime:binding:555...:active",
-    room_id=room_id,
-    agent_slug="storyadvisor",
-    context_type="shadow.runtime.summary",
-    payload={
-      "model_name": "openai:gpt-4o-mini",
-      "user_llm_provider": { "provider_type": "openai", "name": "My OpenAI", "api_key_present": True, ... },
-      "binding": { "effective_at": "...", "participant_id": "storyadvisor", ... },
-    },
-    source="shadow",
-    created_at=now,
-    expires_at=now + timedelta(minutes=2),
-  ),
-]
-```
-
-### Example 2: Pinned loads (commit SHA)
-
-When a room is “pinned” to a specific ShadowVersion (future UI or admin action), Milestone 2 supports deterministic reads:
-
-- Fetch `ShadowVersion` (DB) by `(entity_type, entity_id, version_number)` to get `commit_sha`.
-- Use `get_snapshot_by_commit(...)` to load the exact Forgejo file version.
-
-This enables reproducible “what did the agent know at the time” debugging without exposing any Shadow UI to end users.
-
-### Example 3: Extending to a new entity type
-
-To add `entity_type="room_policy"` in the future:
-
-1. Add a token setting + map entry in `Settings` and `SERVICE_ACCOUNT_MAP`.
-2. Add an exporter for write-path snapshots (Milestone 1/3 style).
-3. Add read-path summary logic and a new context type `shadow.room_policy.summary`.
-4. Update the deterministic load rules to include it.
-
-## Security and “invisible transparency”
-
-- **Never expose** repo names, commit SHAs, or version numbers to end users.
-- **Never store secrets** (plaintext or encrypted) in Shadow snapshots (provider snapshots must remain redacted).
-- Shadow reads should be:
-  - best-effort
-  - time-bounded (timeouts)
-  - observable (log warnings, include `is_stale` in payload)
-
-## Operational considerations
-
-- Logging:
-  - warn on Forgejo failures and fallback usage (without leaking tokens/urls)
-  - include `entity_type`, `entity_id`, `shadow_repo_id`, and `commit_sha` (server logs only)
-- Metrics (optional):
-  - cache hit rate
-  - Forgejo latency/error rate
-  - fallback rate to DB snapshots
-
-## Milestone 2 “definition of done”
-
-- `build_room_context(..., agent_slug=...)` includes Shadow-derived `extra_contexts` from `ContextItemStore`.
-- A2A tool calls include agent-scoped Shadow context (not caller’s).
-- Forgejo outage triggers DB fallback with `is_stale=true` and no hard failures.
-- Provider snapshots remain redacted.
-
-
-Additional Definitions:
-
-SERVICE_ACCOUNT_MAP is the code-level registry that maps each entity_type string (e.g. room, prompt) to the env var name that holds the Forgejo token for the service account that owns repos of that type.
-
-So “verify and document SERVICE_ACCOUNT_MAP” includes both:
-
-In-repo code + docs (what we control here)
-Add/verify entries in shadow_service.py:
-SERVICE_ACCOUNT_MAP contains every entity_type you’ve locked/reserved.
-SERVICE_ACCOUNT_USERNAMES contains the corresponding Forgejo usernames (e.g. shadow-rooms).
-Add/verify env vars in config.py (the Settings fields) for each token.
-Document the contract in your Shadow docs (entity_type → username → env var name).
-
-Out-of-repo operational setup (creating the actual Forgejo accounts)
-Yes: it also implies you must create those Forgejo users (service accounts) and generate tokens for them, then set the env vars in deployment.
-That operational work typically lives in:
-your infra/deployment docs (or a runbook), and/or
-a one-time setup script outside the app (since it requires admin access to Forgejo).
-In short: the repo task is “make sure the map is complete and clearly documented”; the real-world counterpart is “ensure the Forgejo service accounts actually exist and tokens are configured to match the map.”
+This keeps agent context best-effort: Shadow can improve provenance and runtime grounding without making every chat turn depend on git availability.

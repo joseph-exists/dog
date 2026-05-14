@@ -1,19 +1,16 @@
+# Shadow Agent Route Integration
 
-# from backend/app/api/routes/agent_routes.py
+Agent route integration should use the current enqueue/outbox flow:
 
-in create_agent:
+1. Persist the agent domain mutation.
+2. Build the snapshot through `backend/app/services/shadow_exporters.py`.
+3. Call `ShadowService.enqueue_entity_version(...)`.
+4. Let `backend/app/services/shadow_outbox_worker.py` commit the snapshot to local git asynchronously.
 
-        # Shadow versioning (non-blocking - skips if user not set up)
-        try:
-            version = shadow_service.create_entity_version(
-                session=session,
-                user=current_user,
-                entity_type="agent",
-                entity_id=config.id,
-                entity_data=config.model_dump(mode="json"),
-                message=f"Create agent: {config.name}",
-            )
-            if version:
-                logger.info(f"Shadow version {version.version_number} created for agent {config.slug}")
-        except Exception as e:
-            logger.warning(f"Shadow versioning failed for agent {config.slug}: {e}")
+Request handlers should not commit directly to git. They should treat Shadow versioning as best-effort around the product write: log failures, preserve the primary user action, and rely on repair modes for missed outbox work.
+
+Related docs:
+
+- [Shadow System Overview](shadow-overview.md)
+- [Shadow Outbox Worker](ShadowOutboxWorker.md)
+- [Shadow Implementation Guide](ShadowPhase2Milestone2_ImplementationGuide.md)

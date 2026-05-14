@@ -1,5 +1,7 @@
 # Shadow — Milestone 2 Test Tasklist (Delegation Checklist)
 
+> Maintenance note: this checklist has been updated for the current local-git read path. Older test names may still exist in the suite for compatibility, but new tests should avoid Forgejo-specific fixtures and wording.
+
 This file lists the test cases needed to fully satisfy Milestone 2’s reliability goals (per `backend/docs/shadow/ShadowPhase2Milestone2_TechnicalSpec.md`) and to resolve the `[~]` items in `backend/docs/shadow/ShadowPhase2Milestone2_ImplementationGuide.md`.
 
 ## Notes for implementers
@@ -19,8 +21,8 @@ Target: `backend/app/services/shadow_read_service.py`
   - Setup: create `ShadowVersion(commit_sha="abc123...")`.
   - Assert: `get_snapshot_by_commit(commit_sha="abc123")` resolves the same version.
 
-- [x] `test_shadow_read_service_forgejo_failure_falls_back_to_db`
-  - Approach A (recommended): monkeypatch `ShadowReadService._read_json_file_from_forgejo` to raise `ShadowReadError`.
+- [x] `test_shadow_read_service_git_failure_falls_back_to_db`
+  - Approach A (recommended): monkeypatch the git snapshot read path to raise `SnapshotNotFoundError`.
   - Assert: result uses `source="db"`, `is_stale=True`, and returns DB `snapshot_json`.
 
 - [x] `test_shadow_read_service_missing_shadow_repo_raises_typed_error`
@@ -120,4 +122,3 @@ Important maintenance task (existing tests):
 - [IN PROGRESS] Update `backend/docs/shadow/ShadowPhase2Milestone2_ImplementationGuide.md`:
   - mark items `[~]` → `[x]` once tests above exist
   - mark optional caching tests if you decide to ship them
-

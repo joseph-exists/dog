@@ -1,5 +1,7 @@
 # Shadow — Milestone 1.1 (Bindings + Write-Path Hardening)
 
+> Historical planning note: this checklist predates the current local-git Shadow runtime. It remains useful for binding context, but the authoritative Shadow architecture is [shadow-overview.md](shadow-overview.md).
+
 This is a follow-on artifact to Milestone 1 that turns the remaining Milestone 1 gaps into an executable, ordered checklist. It assumes these decisions are locked:
 
 - Room integration bindings are event-sourced: emit `participant.binding_changed` and update `room_participant_bindings` during projection updates.
@@ -8,7 +10,7 @@ This is a follow-on artifact to Milestone 1 that turns the remaining Milestone 1
 ## Current state (what’s already done)
 
 - `agent_personas` exists end-to-end: model + CRUD + routes + Alembic migration.
-- Shadow versioning currently covers **agents** and **stories** only (create/update).
+- Shadow versioning originally covered **agents** and **stories** only; current coverage is broader and documented in [shadow-overview.md](shadow-overview.md).
 
 ## 1.1 Goals (what “better place” means)
 
@@ -114,7 +116,7 @@ Update `backend/app/core/config.py` + `backend/app/services/shadow_service.py`:
   - `persona`
   - `llm_model` (or `model`)
   - `user_llm_provider`
-- Decide and document exact `entity_type` strings once; treat them as an API/DB/Forgejo contract.
+- Decide and document exact `entity_type` strings once; treat them as an API/DB/git contract.
 
 Implement a **room snapshot exporter** (can start minimal):
 

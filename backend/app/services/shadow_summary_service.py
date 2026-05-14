@@ -218,7 +218,7 @@ class ShadowSummaryService:
                 entity_id=uuid.UUID(data["entity_id"]),
                 version_number=data.get("version_number"),
                 commit_sha=data.get("commit_sha"),
-                source=data.get("source", "forgejo"),
+                source=data.get("source", "git"),
                 is_stale=bool(data.get("is_stale")),
                 summary=data.get("summary", {}),
             )

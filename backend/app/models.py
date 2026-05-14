@@ -6756,11 +6756,13 @@ class TesserExamplesIndexResponse(SQLModel):
 
 class ShadowUserBase(SQLModel):
     """
-    Base model for Shadow Forgejo user profile mappings.
+    Base model for Shadow user profile mappings.
 
     Maps application users to their shadow profile repository.
-    This is system-managed and invisible to end users - they never
-    interact with Forgejo directly. Acts like a CMS for user profiles.
+    This is system-managed and invisible to end users.
+
+    The forgejo_* field names are legacy schema names. Current Shadow
+    repos are local git repos with optional Gogs/Gittin remote metadata.
     """
     forgejo_repo_name: str = Field(max_length=255)
     forgejo_repo_id: int | None = Field(default=None)
@@ -6782,9 +6784,8 @@ class ShadowUser(ShadowUserBase, table=True):
 
     System-managed mapping between application User and their
     shadow profile repository. Users don't see or control this -
-    all operations happen automatically via service accounts.
+    all operations happen automatically through Shadow services.
 
-    The shadow-users service account owns all user profile repos.
     Repo naming: user-{uuid}
     """
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -6816,10 +6817,10 @@ class ShadowRepoBase(SQLModel):
     Base model for entity-to-repository mappings.
 
     Each versioned entity (agent, story, etc.) gets its own
-    Forgejo repository following repo-per-entity pattern.
+    local git repository following the repo-per-entity pattern.
 
-    Repos are owned by service accounts (shadow-agents, shadow-stories)
-    not by individual users. This is invisible to end users.
+    Repos are backend-managed and invisible to end users. Optional
+    remote metadata may point at Gogs/Gittin when configured.
     """
     entity_type: str = Field(max_length=50)  # 'agent', 'story', 'user'
     entity_id: uuid.UUID
@@ -6846,10 +6847,8 @@ class ShadowRepo(ShadowRepoBase, table=True):
     Repo naming convention: {entity_type}-{entity_id_short}
     e.g., agent-550e8400
 
-    Service account ownership by entity_type:
-    - 'agent' → shadow-agents service account
-    - 'story' → shadow-stories service account
-    - 'user'  → shadow-users service account
+    The forgejo_* field names are legacy schema names. The current
+    runtime commits to local git and optionally syncs to Gogs/Gittin.
 
     forked_from_id enables clone/fork tracking for branching.
     """
@@ -7302,7 +7301,7 @@ class ShadowVersion(ShadowVersionBase, table=True):
         description="User who created this version"
     )
     created_at: datetime = Field(default_factory=datetime.now)
-    # Milestone 3: async Forgejo commit finalization metadata
+    # Async git commit finalization metadata
     status: str = Field(default="committed", max_length=20)
     committed_at: datetime | None = Field(default=None)
     last_error: str | None = Field(default=None)
@@ -7332,9 +7331,9 @@ class ShadowVersionsPublic(SQLModel):
 
 class ShadowOutboxJobBase(SQLModel):
     """
-    Durable outbox job for asynchronous Shadow Forgejo writes.
+    Durable outbox job for asynchronous Shadow git writes.
 
-    One row represents one intended Forgejo write for one ShadowVersion.
+    One row represents one intended git write for one ShadowVersion.
     """
     shadow_repo_id: uuid.UUID = Field(foreign_key="shadowrepo.id", nullable=False, index=True)
     shadow_version_id: uuid.UUID = Field(
@@ -7416,7 +7415,7 @@ class ShadowRepoVersionCounter(ShadowRepoVersionCounterBase, table=True):
     __tablename__ = "shadow_repo_version_counters"
 
 # ============================================================================
-# Shadow Forgejo Relationships
+# Shadow Relationships
 # ============================================================================
 
 # ShadowUser → User (many-to-one)
