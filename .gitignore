@@ -11,3 +11,5 @@ backend/app/test_scripts/typer/.env
 .volumes/
 volumes/
 /__pycache__/
+/test_scripts/typer/.env
+.env

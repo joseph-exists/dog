@@ -1,5 +1,6 @@
 # Tesserax: A Lightweight SVG Rendering Library
 
+
 Tesserax is a modern Python 3.12 library designed for programmatic SVG generation with a focus on ease of use, layout management, and flexible geometric primitives. It is particularly well-suited for visualizing data structures, algorithms, and technical diagrams.
 
 Beyond static diagrams, Tesserax now includes a **deterministic physics engine** and a **cinematic animation system**, making it a complete toolkit for scientific communication.
